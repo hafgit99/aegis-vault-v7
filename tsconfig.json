@@ -22,5 +22,12 @@
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
-  }
+  },
+  "exclude": [
+    "dist",
+    "coverage",
+    "node_modules",
+    "src-tauri/target",
+    "src-tauri/gen"
+  ]
 }
