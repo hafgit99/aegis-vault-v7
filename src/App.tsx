@@ -4,7 +4,6 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { VaultItem } from './types';
 import { calculatePasswordScore } from './lib/security';
 import LockScreen from './components/LockScreen';
 import MobileSidebarBackdrop from './components/MobileSidebarBackdrop';
@@ -26,6 +25,7 @@ import { useVaultData } from './hooks/useVaultData';
 import { useAttachmentDownload } from './hooks/useAttachmentDownload';
 import { useTrashActions } from './hooks/useTrashActions';
 import { useAppNavigation } from './hooks/useAppNavigation';
+import { useVaultFormState } from './hooks/useVaultFormState';
 
 export default function App() {
   const [unlocked, setUnlocked] = useState(false);
@@ -34,10 +34,6 @@ export default function App() {
   // Responsive & Filter States
   const [filterFavoritesOnly, setFilterFavoritesOnly] = useState(false);
   const [mobileActiveView, setMobileActiveView] = useState<'list' | 'detail'>('list');
-
-  // Modal and CRUD States
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<VaultItem | null>(null);
 
   const { copiedField, copyText: handleCopyText, clearCopiedField } = useClipboardFeedback();
   const { revealed, toggleReveal, resetReveals } = useSensitiveReveal();
@@ -59,6 +55,14 @@ export default function App() {
     openAuditTab: handleOpenAuditTab,
     openGeneratorTab: handleOpenGeneratorTab,
   } = useAppNavigation();
+
+  const {
+    isVaultFormOpen,
+    editingItem,
+    openNewItemForm: handleTriggerNew,
+    openEditItemForm,
+    closeVaultForm: handleCloseVaultForm,
+  } = useVaultFormState();
 
   const {
     items,
@@ -183,21 +187,8 @@ export default function App() {
     setMobileActiveView('list');
   };
 
-  // Trigger Edit Form
   const handleTriggerEdit = () => {
-    if (!selectedItem) return;
-    setEditingItem(selectedItem);
-    setIsModalOpen(true);
-  };
-
-  // Trigger New Item
-  const handleTriggerNew = () => {
-    setEditingItem(null);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseVaultForm = () => {
-    setIsModalOpen(false);
+    openEditItemForm(selectedItem);
   };
 
   // If locked, return the beautiful LockScreen UI
@@ -288,7 +279,7 @@ export default function App() {
       />
 
       <AppModals
-        isVaultFormOpen={isModalOpen}
+        isVaultFormOpen={isVaultFormOpen}
         editingItem={editingItem}
         isProfileOpen={isProfileModalOpen}
         profileAvatar={profileAvatar}
