@@ -52,6 +52,8 @@ import VaultFormModal from './components/VaultFormModal';
 import ConfirmModal from './components/ConfirmModal';
 import ProfileModal, { isGradient } from './components/ProfileModal';
 import { useAutoLock } from './hooks/useAutoLock';
+import { useClipboardFeedback } from './hooks/useClipboardFeedback';
+import { useSensitiveReveal } from './hooks/useSensitiveReveal';
 
 export default function App() {
   const [unlocked, setUnlocked] = useState(false);
@@ -69,13 +71,13 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<VaultItem | null>(null);
 
-  // Copy and Reveal states
-  const [copiedField, setCopiedField] = useState<string | null>(null);
-  const [isPasswordRevealed, setIsPasswordRevealed] = useState(false);
-  const [isCardNumRevealed, setIsCardNumRevealed] = useState(false);
-  const [isCvvRevealed, setIsCvvRevealed] = useState(false);
-  const [isPinRevealed, setIsPinRevealed] = useState(false);
-  const [isPasskeyExpRevealed, setIsPasskeyExpRevealed] = useState(false);
+  const { copiedField, copyText: handleCopyText, clearCopiedField } = useClipboardFeedback();
+  const { revealed, toggleReveal, resetReveals } = useSensitiveReveal();
+  const isPasswordRevealed = revealed.password;
+  const isCardNumRevealed = revealed.cardNumber;
+  const isCvvRevealed = revealed.cardCvv;
+  const isPinRevealed = revealed.cardPin;
+  const isPasskeyExpRevealed = revealed.passkeyPrivateExponent;
 
   // Rotating 2FA Countdown
   const [totpCountdown, setTotpCountdown] = useState(30);
@@ -153,13 +155,9 @@ export default function App() {
 
   const handleAutoLock = useCallback(() => {
     setUnlocked(false);
-    setIsPasswordRevealed(false);
-    setIsCardNumRevealed(false);
-    setIsCvvRevealed(false);
-    setIsPinRevealed(false);
-    setIsPasskeyExpRevealed(false);
-    setCopiedField(null);
-  }, []);
+    resetReveals();
+    clearCopiedField();
+  }, [clearCopiedField, resetReveals]);
 
   useAutoLock({
     unlocked,
@@ -194,29 +192,18 @@ export default function App() {
   // Handle Select Item
   const handleSelectItem = (item: VaultItem) => {
     setSelectedItem(item);
-    setIsPasswordRevealed(false);
-    setIsCardNumRevealed(false);
-    setIsCvvRevealed(false);
-    setIsPinRevealed(false);
-    setIsPasskeyExpRevealed(false);
-    setCopiedField(null);
+    resetReveals();
+    clearCopiedField();
     setMobileActiveView('detail');
   };
 
   // Select Item and move tab (used inside security audit)
   const handleAuditSelectItem = (item: VaultItem) => {
     setSelectedItem(item);
-    setIsPasswordRevealed(false);
-    setCopiedField(null);
+    resetReveals();
+    clearCopiedField();
     setActiveTab('vault');
     setMobileActiveView('detail');
-  };
-
-  // Clipboard copy feedback helper
-  const handleCopyText = (text: string, fieldName: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedField(fieldName);
-    setTimeout(() => setCopiedField(null), 2000);
   };
 
   // Format file size helper
@@ -262,8 +249,8 @@ export default function App() {
       onConfirm: () => {
         const updated = moveToTrash(id);
         setItems(updated);
-        setIsPasswordRevealed(false);
-        setCopiedField(null);
+        resetReveals();
+        clearCopiedField();
         
         const activeRemaining = updated.filter((item) => !item.deleted);
         if (activeRemaining.length > 0) {
@@ -837,7 +824,7 @@ export default function App() {
                                 </span>
                                 <div className="flex items-center gap-2 shrink-0 ml-2">
                                   <button
-                                    onClick={() => setIsPasswordRevealed(!isPasswordRevealed)}
+                                    onClick={() => toggleReveal('password')}
                                     className="text-on-surface-variant hover:text-brand-primary transition-colors focus:outline-none p-1.5 hover:bg-[#1a1c1a]/50 rounded-lg cursor-pointer"
                                     title={isPasswordRevealed ? 'Gizle' : 'Göster'}
                                   >
@@ -932,7 +919,7 @@ export default function App() {
                                 </span>
                                 <div className="flex items-center gap-2 shrink-0 ml-2">
                                   <button
-                                    onClick={() => setIsCardNumRevealed(!isCardNumRevealed)}
+                                    onClick={() => toggleReveal('cardNumber')}
                                     className="text-on-surface-variant hover:text-brand-primary transition-colors focus:outline-none p-1.5 hover:bg-[#1a1c1a]/50 rounded-lg cursor-pointer"
                                   >
                                     {isCardNumRevealed ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -975,7 +962,7 @@ export default function App() {
                                   </span>
                                   <div className="flex items-center gap-1 shrink-0">
                                     <button
-                                      onClick={() => setIsCvvRevealed(!isCvvRevealed)}
+                                      onClick={() => toggleReveal('cardCvv')}
                                       className="text-on-surface-variant hover:text-brand-primary p-0.5"
                                     >
                                       {isCvvRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -1000,7 +987,7 @@ export default function App() {
                                   </span>
                                   <div className="flex items-center gap-1 shrink-0">
                                     <button
-                                      onClick={() => setIsPinRevealed(!isPinRevealed)}
+                                      onClick={() => toggleReveal('cardPin')}
                                       className="text-on-surface-variant hover:text-brand-primary p-0.5"
                                     >
                                       {isPinRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -1058,7 +1045,7 @@ export default function App() {
                                 </span>
                                 <div className="flex flex-col gap-1.5 shrink-0">
                                   <button
-                                    onClick={() => setIsPasskeyExpRevealed(!isPasskeyExpRevealed)}
+                                    onClick={() => toggleReveal('passkeyPrivateExponent')}
                                     className="text-on-surface-variant hover:text-brand-primary transition-colors focus:outline-none p-1.5 hover:bg-[#1a1c1a]/50 rounded-lg cursor-pointer"
                                   >
                                     {isPasskeyExpRevealed ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

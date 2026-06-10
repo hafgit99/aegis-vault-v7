@@ -17,6 +17,7 @@
 - [ ] Split `src/App.tsx` into route/view/layout components.
 - [ ] Extract vault item selection, reveal state, and auto-lock logic into hooks.
   - [x] Auto-lock behavior extracted to `useAutoLock`.
+  - [x] Copy feedback and sensitive reveal state extracted to dedicated hooks.
 - [ ] Replace `alert()` calls with the existing modal/toast pattern.
 - [ ] Normalize naming: `AegisVault`, `Aegis Vault`, and `Aegis Vault 7`.
 - [ ] Add component tests for lock screen, vault form, settings import/export, and trash.
