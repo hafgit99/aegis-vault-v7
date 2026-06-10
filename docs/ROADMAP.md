@@ -89,7 +89,7 @@
 - [x] Remove base64 master password storage from `sessionStorage`.
 - [x] Replace attachment XOR encryption with authenticated encryption.
 - [x] Introduce a versioned vault database format and migration tests.
-- [ ] Define the desktop threat model and recovery model.
+- [x] Define the desktop threat model and recovery model.
 - [ ] Add security regression tests for import/export, attachments, and lock/unlock flows.
   - [x] Encrypted backup envelope roundtrip and wrong-password rejection tests.
 

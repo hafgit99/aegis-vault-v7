@@ -9,6 +9,7 @@ This project is a password vault, so security claims must stay conservative unti
 - Active vault unlock state now uses an in-memory session helper instead of storing the master password in browser `sessionStorage`.
 - New attachment writes use WebCrypto AES-GCM with per-attachment keys derived from the active vault session.
 - Vault database payloads now include a versioned schema envelope with migration tests for legacy unversioned state.
+- Desktop threat and recovery boundaries are documented in `docs/THREAT_MODEL.md`.
 - Unit tests cover random helper boundaries and password audit behavior.
 - Desktop build is available through Tauri.
 
@@ -25,7 +26,7 @@ This project is a password vault, so security claims must stay conservative unti
 
 1. Add regression tests around remaining encryption/decryption roundtrips and corrupted payload failures.
 2. Define a migration plan for legacy XOR attachment records.
-3. Define the final desktop vault session and recovery model.
+3. Decide the final desktop storage backend and vault session handling.
 4. Decide whether desktop storage uses Tauri filesystem APIs, SQLite, Stronghold, or a hybrid.
 5. Replace the demo OTP generator with standards-compatible HOTP/TOTP.
 6. Update UI copy after the implementation matches the claim.
