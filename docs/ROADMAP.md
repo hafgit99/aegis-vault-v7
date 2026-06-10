@@ -104,7 +104,7 @@
 - [x] Add app data directory integration for desktop vault persistence.
 - [x] Add controlled native file dialogs for import/export.
 - [x] Add safe clipboard clearing behavior.
-- [ ] Add CI build workflow for Windows desktop artifacts.
+- [x] Add CI build workflow for Windows desktop artifacts.
 - [ ] Add release checklist and signed build plan.
 
 ## Phase 5: Android Preparation
