@@ -1,0 +1,5 @@
+{
+  "name": "Aegis Vault 7",
+  "description": "Local-first secure vault for passwords, cards, identities, secure notes, TOTP secrets, and encrypted backups.",
+  "requestFramePermissions": []
+}

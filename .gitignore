@@ -1,0 +1,19 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+
+# Desktop / mobile build outputs
+src-tauri/target/
+src-tauri/gen/
+target/
+
+# Tooling caches
+.vite/
+.vitest/
+playwright-report/
+test-results/

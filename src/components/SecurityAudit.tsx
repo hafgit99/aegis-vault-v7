@@ -1,0 +1,232 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React from 'react';
+import { ShieldCheck, AlertTriangle, AlertCircle, Sparkles, ArrowRight, User } from 'lucide-react';
+import { VaultItem } from '../types';
+import { runVaultAudit, calculatePasswordScore } from '../lib/security';
+
+interface SecurityAuditProps {
+  items: VaultItem[];
+  onSelectItem: (item: VaultItem) => void;
+}
+
+export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProps) {
+  const audit = runVaultAudit(items);
+
+  // Group items by security status
+  const weakItems = items.filter((i) => {
+    const pw = i.password || '';
+    return pw.length < 8 || calculatePasswordScore(pw) < 40;
+  });
+
+  // Calculate reused items
+  const passwordFreq: Record<string, number> = {};
+  items.forEach((item) => {
+    const pw = item.password || '';
+    if (pw) {
+      passwordFreq[pw] = (passwordFreq[pw] || 0) + 1;
+    }
+  });
+  const reusedItems = items.filter((i) => {
+    const pw = i.password || '';
+    return pw && passwordFreq[pw] > 1;
+  });
+
+  const secureItems = items.filter((i) => {
+    const pw = i.password || '';
+    return pw.length >= 8 && calculatePasswordScore(pw) >= 80 && !reusedItems.includes(i);
+  });
+
+  // Custom feedback text based on vault score
+  let scoreFeedback = {
+    title: 'Mükemmel Güvenlik',
+    desc: 'Tüm parolalarınız endüstri lideri standartlara uygun şekilde şifrelenmiş durumda.',
+    colorBorder: 'border-l-brand-tertiary',
+    textColor: 'text-brand-tertiary',
+  };
+
+  if (audit.score < 50) {
+    scoreFeedback = {
+      title: 'Kritik Risk Durumu',
+      desc: 'Kasanızda zayıf veya tekrar eden şifreler bulunmaktadır. Güvenliğinizi artırmak için bunları derhal güncelleyin.',
+      colorBorder: 'border-l-brand-error',
+      textColor: 'text-brand-error',
+    };
+  } else if (audit.score < 80) {
+    scoreFeedback = {
+      title: 'İyileştirme Gerekli',
+      desc: 'Genel parola sağlığınız makul ancak bazı zayıf veya ortak parolaları ortadan kaldırarak tam koruma sağlayabilirsiniz.',
+      colorBorder: 'border-l-brand-secondary',
+      textColor: 'text-brand-secondary',
+    };
+  }
+
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto">
+      <div className="flex items-center gap-3 mb-2">
+        <div className="w-10 h-10 rounded-xl bg-brand-tertiary/10 flex items-center justify-center border border-brand-tertiary/20 animate-pulse">
+          <ShieldCheck className="w-5 h-5 text-brand-tertiary" />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold font-display text-on-surface">Güvenlik Denetimi</h2>
+          <p className="text-xs text-on-surface-variant">Parola sızıntılarını önlemek için kasanızı sürekli analiz edin.</p>
+        </div>
+      </div>
+
+      {/* Main Score Visualizer matching user mockup card precisely */}
+      <div className={`glass-panel p-6 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-6 border-l-4 ${scoreFeedback.colorBorder}`}>
+        <div className="flex flex-col sm:flex-row items-center gap-6">
+          {/* Circular SVG dial */}
+          <div className="relative w-24 h-24 shrink-0">
+            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+              <path
+                className="text-[#1e201e] stroke-current"
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                fill="none"
+                strokeWidth="3.2"
+              ></path>
+              <path
+                className={`${scoreFeedback.textColor} stroke-current transition-all duration-1000`}
+                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                fill="none"
+                strokeDasharray={`${audit.score}, 100`}
+                strokeLinecap="round"
+                strokeWidth="3.2"
+              ></path>
+            </svg>
+            <div className={`absolute inset-0 flex items-center justify-center font-mono font-bold text-xl ${scoreFeedback.textColor}`}>
+              %{audit.score}
+            </div>
+          </div>
+          <div className="text-center sm:text-left">
+            <h4 className="font-bold text-lg font-display text-on-surface">{scoreFeedback.title}</h4>
+            <p className="text-on-surface-variant text-sm mt-1 max-w-lg">{scoreFeedback.desc}</p>
+          </div>
+        </div>
+        <div className="flex gap-4 items-center shrink-0">
+          <div className="text-right text-xs text-on-surface-variant/40 font-mono hidden md:block">
+            Denetlenen: {items.length} Öğe
+          </div>
+        </div>
+      </div>
+
+      {/* Metric quick stats dashboard */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="glass-panel p-5 rounded-xl bg-brand-error/5 border border-brand-error/10">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold tracking-wider text-on-surface-variant uppercase">Zayıf Parolalar</span>
+            <AlertCircle className="w-5 h-5 text-brand-error" />
+          </div>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="text-3xl font-bold font-sans text-brand-error">{weakItems.length}</span>
+            <span className="text-xs text-on-surface-variant">Yetersiz Karakter</span>
+          </div>
+        </div>
+
+        <div className="glass-panel p-5 rounded-xl bg-amber-500/5 border border-amber-500/10">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold tracking-wider text-on-surface-variant uppercase">Aynı Parolalar</span>
+            <AlertTriangle className="w-5 h-5 text-amber-400" />
+          </div>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="text-3xl font-bold font-sans text-amber-400">{reusedItems.length}</span>
+            <span className="text-xs text-on-surface-variant">Güvenliği Azaltır</span>
+          </div>
+        </div>
+
+        <div className="glass-panel p-5 rounded-xl bg-brand-tertiary/5 border border-brand-tertiary/10">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold tracking-wider text-on-surface-variant uppercase">Güçlü / Güvenli</span>
+            <Sparkles className="w-5 h-5 text-brand-tertiary" />
+          </div>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="text-3xl font-bold font-sans text-brand-tertiary">{secureItems.length}</span>
+            <span className="text-xs text-on-surface-variant">Askeri Koruma</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Action lists for correcting credentials */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
+        {/* WEAK CRITICAL GROUP */}
+        <div className="space-y-4">
+          <h3 className="text-sm font-bold text-brand-error uppercase tracking-wider flex items-center gap-2">
+            <AlertCircle className="w-4 h-4" />
+            <span>ZAYIF VE RISKLI HESAPLAR ({weakItems.length})</span>
+          </h3>
+
+          <div className="space-y-2.5">
+            {weakItems.length === 0 ? (
+              <div className="p-4 bg-[#141614] rounded-xl text-xs text-on-surface-variant/40 italic text-center border border-outline-variant/5">
+                Kritik derecede zayıf parola bulunmadı. Tebrikler!
+              </div>
+            ) : (
+              weakItems.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => onSelectItem(item)}
+                  className="flex items-center justify-between p-4 bg-[#181212]/80 hover:bg-[#201515] border border-brand-error/15 rounded-xl cursor-pointer transition-all group"
+                >
+                  <div className="overflow-hidden pr-2">
+                    <h4 className="font-semibold text-sm text-brand-error group-hover:underline truncate">
+                      {item.title}
+                    </h4>
+                    <div className="flex items-center gap-1.5 text-xs text-on-surface-variant mt-0.5">
+                      <User className="w-3.5 h-3.5 shrink-0 text-on-surface-variant/50" />
+                      <span className="font-mono truncate">{item.username}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs font-semibold text-brand-error bg-brand-error/10 px-2.5 py-1 rounded-full shrink-0">
+                    <span>Eriş ve Düzelt</span>
+                    <ArrowRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* REUSED GROUPS */}
+        <div className="space-y-4">
+          <h3 className="text-sm font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" />
+            <span>ORANGE TEKRAR EDEN ŞİFRELER ({reusedItems.length})</span>
+          </h3>
+
+          <div className="space-y-2.5">
+            {reusedItems.length === 0 ? (
+              <div className="p-4 bg-[#141614] rounded-xl text-xs text-on-surface-variant/40 italic text-center border border-outline-variant/5">
+                Kasanızda çakışan tekrar eden parola yoktur.
+              </div>
+            ) : (
+              reusedItems.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => onSelectItem(item)}
+                  className="flex items-center justify-between p-4 bg-[#181612]/80 hover:bg-[#221e15] border border-amber-500/10 rounded-xl cursor-pointer transition-all group"
+                >
+                  <div className="overflow-hidden pr-2">
+                    <h4 className="font-semibold text-sm text-amber-300 group-hover:underline truncate">
+                      {item.title}
+                    </h4>
+                    <div className="flex items-center gap-1.5 text-xs text-on-surface-variant mt-0.5">
+                      <User className="w-3.5 h-3.5 shrink-0 text-on-surface-variant/50" />
+                      <span className="font-mono truncate">{item.username}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs font-semibold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full shrink-0">
+                    <span>Değiştir</span>
+                    <ArrowRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
