@@ -103,6 +103,7 @@
   - [x] Attachment wrong-session and tampered-tag rejection tests.
   - [x] Manual and automatic lock session clearing tests.
 - [x] Add unit coverage baseline and conservative coverage thresholds.
+  - [x] Expand importer fixtures for JSON, CSV, encrypted envelopes, and malformed inputs.
 
 ## Phase 4: Desktop Productization
 

@@ -172,7 +172,11 @@ export function parseUniversalImport(fileContent: string): ImportResult {
 
   // Helper helper to locate column index by aliases
   const findColumnIndex = (aliases: string[]): number => {
-    return headers.findIndex(h => aliases.some(alias => h.includes(alias) || h === alias));
+    const exactMatch = headers.findIndex(h => aliases.some(alias => h === alias));
+    if (exactMatch !== -1) {
+      return exactMatch;
+    }
+    return headers.findIndex(h => aliases.some(alias => h.includes(alias)));
   };
 
   // 1. Bitwarden CSV detection: "folder,favorite,type,name,notes,fields,login_uri,login_username,login_password,login_totp"
