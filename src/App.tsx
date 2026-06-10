@@ -55,6 +55,7 @@ import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
 import { useVaultQueries } from './hooks/useVaultQueries';
+import { useVaultSelection } from './hooks/useVaultSelection';
 
 export default function App() {
   const [unlocked, setUnlocked] = useState(false);
@@ -192,29 +193,20 @@ export default function App() {
     favoritesOnly: filterFavoritesOnly,
   });
 
+  const { selectItem: handleSelectItem, selectAuditItem: handleAuditSelectItem } = useVaultSelection({
+    setSelectedItem,
+    resetReveals,
+    clearCopiedField,
+    setActiveTab,
+    setMobileActiveView,
+  });
+
   // Toggle Favorite
   const handleToggleFavorite = (item: VaultItem) => {
     const updatedItem = { ...item, favorite: !item.favorite };
     const updated = saveVaultItem(updatedItem);
     setItems(updated);
     setSelectedItem(updatedItem);
-  };
-
-  // Handle Select Item
-  const handleSelectItem = (item: VaultItem) => {
-    setSelectedItem(item);
-    resetReveals();
-    clearCopiedField();
-    setMobileActiveView('detail');
-  };
-
-  // Select Item and move tab (used inside security audit)
-  const handleAuditSelectItem = (item: VaultItem) => {
-    setSelectedItem(item);
-    resetReveals();
-    clearCopiedField();
-    setActiveTab('vault');
-    setMobileActiveView('detail');
   };
 
   // Format file size helper
