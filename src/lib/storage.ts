@@ -103,7 +103,7 @@ export async function setupMasterPassword(password: string): Promise<void> {
   localStorage.setItem(STORAGE_KEYS.IS_SET_UP, 'true');
 
   // Seed default items in SQLite
-  sqliteOPFSInstance.reseedDemo(password, INITIAL_DEMO_ITEMS);
+  await sqliteOPFSInstance.reseedDemo(password, INITIAL_DEMO_ITEMS);
 }
 
 /**
@@ -123,14 +123,15 @@ function getSessionMasterPassword(): string | null {
 /**
  * Retrieves of clean vault items from database.
  */
-export function getVaultItems(): VaultItem[] {
+export async function getVaultItems(): Promise<VaultItem[]> {
   const password = getSessionMasterPassword();
   if (!password) return [];
   
-  const rawItems = sqliteOPFSInstance.getVaultItems(password);
+  const rawItems = await sqliteOPFSInstance.getVaultItems(password);
 
   // Auto clean trash items older than 15 days
   let hasChanges = false;
+  const expiredIds: string[] = [];
   const now = new Date().getTime();
   const cleanItems = rawItems.filter((item) => {
     if (item.deleted && item.deletedAt) {
@@ -138,7 +139,7 @@ export function getVaultItems(): VaultItem[] {
       const diffDays = (now - deletedTime) / (1000 * 60 * 60 * 24);
       if (diffDays >= 15) {
         hasChanges = true;
-        sqliteOPFSInstance.deletePermanently(item.id, password);
+        expiredIds.push(item.id);
         return false;
       }
     }
@@ -146,6 +147,9 @@ export function getVaultItems(): VaultItem[] {
   });
 
   if (hasChanges) {
+    for (const id of expiredIds) {
+      await sqliteOPFSInstance.deletePermanently(id, password);
+    }
     return sqliteOPFSInstance.getVaultItems(password);
   }
   return cleanItems;
@@ -154,7 +158,7 @@ export function getVaultItems(): VaultItem[] {
 /**
  * Saves or updates a vault item inside SQLite row.
  */
-export function saveVaultItem(item: VaultItem): VaultItem[] {
+export async function saveVaultItem(item: VaultItem): Promise<VaultItem[]> {
   const password = getSessionMasterPassword();
   if (!password) return [];
   return sqliteOPFSInstance.saveVaultItem(item, password);
@@ -163,7 +167,7 @@ export function saveVaultItem(item: VaultItem): VaultItem[] {
 /**
  * Deletes a vault item directly.
  */
-export function deleteVaultItem(id: string): VaultItem[] {
+export async function deleteVaultItem(id: string): Promise<VaultItem[]> {
   const password = getSessionMasterPassword();
   if (!password) return [];
   return sqliteOPFSInstance.deletePermanently(id, password);
@@ -172,16 +176,16 @@ export function deleteVaultItem(id: string): VaultItem[] {
 /**
  * Moves a vault item to trash in SQLite.
  */
-export function moveToTrash(id: string): VaultItem[] {
+export async function moveToTrash(id: string): Promise<VaultItem[]> {
   const password = getSessionMasterPassword();
   if (!password) return [];
   
-  const items = sqliteOPFSInstance.getVaultItems(password);
+  const items = await sqliteOPFSInstance.getVaultItems(password);
   const found = items.find(x => x.id === id);
   if (found) {
     found.deleted = true;
     found.deletedAt = new Date().toISOString();
-    sqliteOPFSInstance.saveVaultItem(found, password);
+    await sqliteOPFSInstance.saveVaultItem(found, password);
   }
   return sqliteOPFSInstance.getVaultItems(password);
 }
@@ -189,16 +193,16 @@ export function moveToTrash(id: string): VaultItem[] {
 /**
  * Restores a vault item from trash in SQLite.
  */
-export function restoreFromTrash(id: string): VaultItem[] {
+export async function restoreFromTrash(id: string): Promise<VaultItem[]> {
   const password = getSessionMasterPassword();
   if (!password) return [];
 
-  const items = sqliteOPFSInstance.getVaultItems(password);
+  const items = await sqliteOPFSInstance.getVaultItems(password);
   const found = items.find(x => x.id === id);
   if (found) {
     found.deleted = false;
     delete found.deletedAt;
-    sqliteOPFSInstance.saveVaultItem(found, password);
+    await sqliteOPFSInstance.saveVaultItem(found, password);
   }
   return sqliteOPFSInstance.getVaultItems(password);
 }
@@ -206,7 +210,7 @@ export function restoreFromTrash(id: string): VaultItem[] {
 /**
  * Permanently deletes a vault item from the database.
  */
-export function deletePermanently(id: string): VaultItem[] {
+export async function deletePermanently(id: string): Promise<VaultItem[]> {
   const password = getSessionMasterPassword();
   if (!password) return [];
   return sqliteOPFSInstance.deletePermanently(id, password);
@@ -215,23 +219,23 @@ export function deletePermanently(id: string): VaultItem[] {
 /**
  * Empties the trash completely in SQLite.
  */
-export function emptyTrashComplete(): VaultItem[] {
+export async function emptyTrashComplete(): Promise<VaultItem[]> {
   const password = getSessionMasterPassword();
   if (!password) return [];
 
-  const items = sqliteOPFSInstance.getVaultItems(password);
-  items.forEach(item => {
+  const items = await sqliteOPFSInstance.getVaultItems(password);
+  for (const item of items) {
     if (item.deleted) {
-      sqliteOPFSInstance.deletePermanently(item.id, password);
+      await sqliteOPFSInstance.deletePermanently(item.id, password);
     }
-  });
+  }
   return sqliteOPFSInstance.getVaultItems(password);
 }
 
 /**
  * Re-seeds the system with default demo items inside SQLite.
  */
-export function reseedDemoData(): VaultItem[] {
+export async function reseedDemoData(): Promise<VaultItem[]> {
   const password = getSessionMasterPassword();
   if (!password) return [];
   return sqliteOPFSInstance.reseedDemo(password, INITIAL_DEMO_ITEMS);

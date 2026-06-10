@@ -28,10 +28,10 @@ const vaultItems: VaultItem[] = [
 ];
 
 vi.mock('../lib/storage', () => ({
-  getVaultItems: vi.fn(() => vaultItems),
+  getVaultItems: vi.fn(async () => vaultItems),
   resetSystem: vi.fn(),
-  reseedDemoData: vi.fn(),
-  saveVaultItem: vi.fn(),
+  reseedDemoData: vi.fn(async () => vaultItems),
+  saveVaultItem: vi.fn(async () => vaultItems),
   setupMasterPassword: vi.fn(),
   verifyMasterPassword: vi.fn(),
 }));

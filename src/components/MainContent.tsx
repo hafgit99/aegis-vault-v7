@@ -37,13 +37,13 @@ interface MainContentProps {
   onBackToList: () => void;
   onSelectItem: (item: VaultItem) => void;
   onSelectAuditItem: (item: VaultItem) => void;
-  onToggleFavorite: (item: VaultItem) => void;
+  onToggleFavorite: (item: VaultItem) => void | Promise<void>;
   onEdit: () => void;
   onDelete: (id: string) => void;
   onToggleReveal: (field: 'password' | 'cardNumber' | 'cardCvv' | 'cardPin' | 'passkeyPrivateExponent') => void;
   onCopyText: (text: string, field: string) => void;
   onDownloadAttachment: (id: string, name: string) => void;
-  onDatabaseChanged: () => void;
+  onDatabaseChanged: () => void | Promise<void>;
   onAutoLockDurationChange: (duration: number) => void;
   onNotify: (notification: AppNotification) => void;
   onEmptyTrash: () => void;

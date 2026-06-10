@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { 
   Settings, 
   ShieldAlert, 
@@ -34,7 +34,7 @@ import { openDesktopImportFile, saveDesktopExportFile } from '../lib/desktopFile
 import { isDesktopRuntime } from '../lib/desktopStorage';
 
 interface SettingsPanelProps {
-  onDatabaseChanged: () => void;
+  onDatabaseChanged: () => void | Promise<void>;
   autoLockDuration: number;
   onAutoLockDurationChange: (duration: number) => void;
   onNotify?: (notification: AppNotification) => void;
@@ -87,9 +87,21 @@ export default function SettingsPanel({
   const [pendingEnvelope, setPendingEnvelope] = useState<any | null>(null);
   const [decryptPasswordInput, setDecryptPasswordInput] = useState('');
   const [decryptError, setDecryptError] = useState<string | null>(null);
+  const [items, setItems] = useState<VaultItem[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const items = getVaultItems();
+
+  useEffect(() => {
+    let isMounted = true;
+    getVaultItems().then((loaded) => {
+      if (isMounted) {
+        setItems(loaded);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const currentDateSlug = () => new Date().toISOString().split('T')[0];
 
@@ -187,8 +199,10 @@ export default function SettingsPanel({
   const handleExportPlain = async () => {
     setBackupSuccess(null);
     setBackupError(null);
+    const latestItems = await getVaultItems();
+    setItems(latestItems);
     const filename = `aegis_acik_yedek_${currentDateSlug()}.json`;
-    const contents = JSON.stringify(items, null, 2);
+    const contents = JSON.stringify(latestItems, null, 2);
 
     try {
       const savedWithDialog = await saveDesktopExportFile(filename, contents);
@@ -227,7 +241,9 @@ export default function SettingsPanel({
     }
 
     try {
-      const encryptedJsonString = await encryptDataWithPasswordSecure(JSON.stringify(items), passwordToUse);
+      const latestItems = await getVaultItems();
+      setItems(latestItems);
+      const encryptedJsonString = await encryptDataWithPasswordSecure(JSON.stringify(latestItems), passwordToUse);
       const filename = `aegis_guvenli_yedek_${currentDateSlug()}.aegis`;
       const savedWithDialog = await saveDesktopExportFile(filename, encryptedJsonString);
       if (!savedWithDialog) {
@@ -244,11 +260,11 @@ export default function SettingsPanel({
   };
 
   // Normalize dynamic fields and saves parsed list items
-  const handleImportedItems = (itemsList: any[]) => {
+  const handleImportedItems = async (itemsList: any[]) => {
     let successCount = 0;
-    itemsList.forEach((x) => {
+    for (const x of itemsList) {
       if (x.title || x.username) {
-        saveVaultItem({
+        await saveVaultItem({
           id: x.id || secureRandomToken(9),
           title: x.title || 'İçeri Aktarılan Kayıt',
           username: x.username || '',
@@ -282,9 +298,10 @@ export default function SettingsPanel({
         });
         successCount++;
       }
-    });
+    }
 
     onDatabaseChanged();
+    setItems(await getVaultItems());
     return successCount;
   };
 
@@ -306,7 +323,7 @@ export default function SettingsPanel({
         throw new Error('Yedek dosyasının içi liste yapısında değil.');
       }
 
-      const importedNum = handleImportedItems(parsedItemsList);
+      const importedNum = await handleImportedItems(parsedItemsList);
       setImportSuccess(`✓ Şifreli .aegis yedeği başarıyla çözüldü! ${importedNum} adet parola kasaya eklendi.`);
       setPendingEnvelope(null);
       setDecryptPasswordInput('');
@@ -322,28 +339,30 @@ export default function SettingsPanel({
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      try {
-        const result = e.target?.result as string;
-        const scanResult = parseUniversalImport(result);
+      void (async () => {
+        try {
+          const result = e.target?.result as string;
+          const scanResult = parseUniversalImport(result);
 
-        if (scanResult.type === 'error') {
-          throw new Error(scanResult.message);
-        }
+          if (scanResult.type === 'error') {
+            throw new Error(scanResult.message);
+          }
 
-        if (scanResult.type === 'encrypted_aegis') {
-          // Encrypted flow: display decryption dialog
-          setDetectedFormat('Şifreli Aegis Kasa Yedeği (.aegis)');
-          setPendingEnvelope(scanResult.envelope);
-        } else {
-          // Success plaintext flow
-          const count = handleImportedItems(scanResult.items);
-          setImportSuccess(`✓ ${scanResult.formatName} başarıyla tespit edildi! ${count} adet kayıt kasaya yüklendi.`);
+          if (scanResult.type === 'encrypted_aegis') {
+            // Encrypted flow: display decryption dialog
+            setDetectedFormat('Şifreli Aegis Kasa Yedeği (.aegis)');
+            setPendingEnvelope(scanResult.envelope);
+          } else {
+            // Success plaintext flow
+            const count = await handleImportedItems(scanResult.items);
+            setImportSuccess(`✓ ${scanResult.formatName} başarıyla tespit edildi! ${count} adet kayıt kasaya yüklendi.`);
+          }
+        } catch (err: any) {
+          setImportError(err?.message || 'İçe aktarım başarısız oldu. Dosya formatını kontrol edin.');
+        } finally {
+          setImporting(false);
         }
-      } catch (err: any) {
-        setImportError(err?.message || 'İçe aktarım başarısız oldu. Dosya formatını kontrol edin.');
-      } finally {
-        setImporting(false);
-      }
+      })();
     };
     reader.readAsText(file);
   };
@@ -388,13 +407,16 @@ export default function SettingsPanel({
   };
 
   const triggerReseed = () => {
-    reseedDemoData();
-    onDatabaseChanged();
-    onNotify?.({
-      title: 'Demo Veriler Yüklendi',
-      message: 'Varsayılan demo veriler başarıyla yeniden yüklendi!',
-      type: 'success',
-    });
+    void (async () => {
+      const reseeded = await reseedDemoData();
+      setItems(reseeded);
+      onDatabaseChanged();
+      onNotify?.({
+        title: 'Demo Veriler Yüklendi',
+        message: 'Varsayılan demo veriler başarıyla yeniden yüklendi!',
+        type: 'success',
+      });
+    })();
   };
 
   const triggerResetAll = () => {

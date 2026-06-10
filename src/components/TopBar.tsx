@@ -12,7 +12,7 @@ interface TopBarProps {
   profileAvatar: string;
   onSearchChange: (value: string) => void;
   onOpenSidebar: () => void;
-  onRefresh: () => void;
+  onRefresh: () => void | Promise<void>;
   onOpenVaultStatus: () => void;
   onOpenProfile: () => void;
 }

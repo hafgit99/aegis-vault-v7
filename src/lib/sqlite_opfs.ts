@@ -13,7 +13,7 @@ import {
   aes256GcmDecrypt,
   EncryptedPayload
 } from './encryption';
-import { secureRandomToken } from './random';
+import { secureRandomBytes, secureRandomToken } from './random';
 import {
   createEmptyVaultDatabaseState,
   normalizeVaultDatabaseState,
@@ -23,6 +23,7 @@ import {
 } from './vaultDatabaseFormat';
 import { createArgon2idHash, verifyArgon2idHash } from './argon2id';
 import { deriveArgon2idKey as deriveVettedArgon2idKey } from './argon2id';
+import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, type WebCryptoAesGcmPayload } from './webcrypto';
 import {
   readDesktopVaultDatabase,
   writeDesktopVaultDatabase,
@@ -115,7 +116,7 @@ class SQLiteOPFS {
           fileHandle = await root.getFileHandle(DB_FILENAME);
         } catch (e) {
           // File does not exist yet. Initialize using localStorage backup or start fresh
-          this.migrateLegacyLocalStorage();
+          await this.migrateLegacyLocalStorage();
           await this.saveToPersistentStorage();
           return;
         }
@@ -129,11 +130,11 @@ class SQLiteOPFS {
         }
       } else {
         // Fallback to standard sandbox-compliant simulated OPFS persistence
-        this.migrateLegacyLocalStorage();
+        await this.migrateLegacyLocalStorage();
       }
     } catch (err) {
       console.warn("OPFS Loading failed, running in-memory fallback:", err);
-      this.migrateLegacyLocalStorage();
+      await this.migrateLegacyLocalStorage();
     }
   }
 
@@ -174,7 +175,7 @@ class SQLiteOPFS {
   /**
    * Migrate legacy plaintext vault items into relational SQLite rows with GCM encryption.
    */
-  private migrateLegacyLocalStorage() {
+  private async migrateLegacyLocalStorage() {
     const fallback = localStorage.getItem('aegis_sqlite_fallback');
     if (fallback) {
       try {
@@ -199,11 +200,12 @@ class SQLiteOPFS {
         }];
 
         const items: VaultItem[] = JSON.parse(legacyItemsStr);
-        const derivedKey = this.deriveLegacyEncryptionKey(passwordPlain);
+        await this.prepareEncryptionKey(passwordPlain);
+        const derivedKey = this.deriveEncryptionKey(passwordPlain);
 
-        this.state.vault_items = items.map(item => {
+        this.state.vault_items = await Promise.all(items.map(async (item) => {
           const sensitivePayload = JSON.stringify(item);
-          const encrypted = aes256GcmEncrypt(sensitivePayload, derivedKey);
+          const encrypted = await webCryptoAesGcmEncrypt(sensitivePayload, derivedKey, secureRandomBytes(12));
           
           return {
             id: item.id,
@@ -219,9 +221,9 @@ class SQLiteOPFS {
             password_db: '[encrypted: aes-256-gcm]',
             notes_db: item.notes ? '[encrypted: aes-256-gcm]' : '',
             enc_metadata: JSON.stringify(encrypted),
-            enc_kdf: LEGACY_VAULT_ITEM_KDF,
+            enc_kdf: VAULT_ITEM_KDF,
           };
-        });
+        }));
 
         this.logQuery('CREATE TABLE vault_items (id TEXT PRIMARY KEY, title TEXT, category TEXT, favorite INTEGER, deleted INTEGER, username_db TEXT, password_db TEXT, enc_metadata TEXT);', 'SUCCESS', this.state.vault_items.length);
       } catch (e) {
@@ -298,7 +300,7 @@ class SQLiteOPFS {
   /**
    * Retrieves and decrypts SQLite relational items on-the-fly.
    */
-  public getVaultItems(masterPasswordPlain: string): VaultItem[] {
+  public async getVaultItems(masterPasswordPlain: string): Promise<VaultItem[]> {
     const queryStr = 'SELECT id, title, category, favorite, deleted, username_db, enc_metadata FROM vault_items;';
     
     if (this.state.vault_items.length === 0) {
@@ -312,15 +314,17 @@ class SQLiteOPFS {
       const list: VaultItem[] = [];
       let migratedLegacyRows = false;
 
-      this.state.vault_items.forEach(row => {
+      for (const row of this.state.vault_items) {
         try {
           const encryptedPayload: EncryptedPayload = JSON.parse(row.enc_metadata);
           const isLegacyRow = row.enc_kdf !== VAULT_ITEM_KDF;
-          const decryptedJson = aes256GcmDecrypt(encryptedPayload, isLegacyRow ? legacyDerivedKey : derivedKey);
+          const decryptedJson = isLegacyRow
+            ? aes256GcmDecrypt(encryptedPayload, legacyDerivedKey)
+            : await webCryptoAesGcmDecrypt(encryptedPayload as WebCryptoAesGcmPayload, derivedKey);
           const originalItem: VaultItem = JSON.parse(decryptedJson);
 
           if (isLegacyRow) {
-            row.enc_metadata = JSON.stringify(aes256GcmEncrypt(decryptedJson, derivedKey));
+            row.enc_metadata = JSON.stringify(await webCryptoAesGcmEncrypt(decryptedJson, derivedKey, secureRandomBytes(12)));
             row.enc_kdf = VAULT_ITEM_KDF;
             migratedLegacyRows = true;
           }
@@ -351,7 +355,7 @@ class SQLiteOPFS {
             deleted: row.deleted === 1,
           });
         }
-      });
+      }
 
       if (migratedLegacyRows) {
         this.saveToPersistentStorage();
@@ -368,14 +372,14 @@ class SQLiteOPFS {
   /**
    * Saves or updates a specific Item row inside SQLite and OPFS with separate fresh 12-byte GCM IV.
    */
-  public saveVaultItem(item: VaultItem, masterPasswordPlain: string): VaultItem[] {
+  public async saveVaultItem(item: VaultItem, masterPasswordPlain: string): Promise<VaultItem[]> {
     const derivedKey = this.deriveEncryptionKey(masterPasswordPlain);
     const index = this.state.vault_items.findIndex(x => x.id === item.id);
 
     // Build fresh serialized payload
     const rawSensitive = JSON.stringify(item);
     // Uses separate secure 12-byte IV for this encryption action automatically inside aes256GcmEncrypt!
-    const encrypted = aes256GcmEncrypt(rawSensitive, derivedKey);
+    const encrypted = await webCryptoAesGcmEncrypt(rawSensitive, derivedKey, secureRandomBytes(12));
 
     const nowStr = new Date().toISOString().split('T')[0];
     const category = item.category || 'login';
@@ -519,7 +523,7 @@ class SQLiteOPFS {
   /**
    * Permanently purges an item
    */
-  public deletePermanently(id: string, passwordPlain: string): VaultItem[] {
+  public async deletePermanently(id: string, passwordPlain: string): Promise<VaultItem[]> {
     this.state.vault_items = this.state.vault_items.filter(row => row.id !== id);
     this.logQuery(`DELETE FROM vault_items WHERE id = "${id}";`, 'SUCCESS', 1);
     this.saveToPersistentStorage();
@@ -529,12 +533,12 @@ class SQLiteOPFS {
   /**
    * Seeds demo data.
    */
-  public reseedDemo(passwordPlain: string, demoItems: VaultItem[]): VaultItem[] {
+  public async reseedDemo(passwordPlain: string, demoItems: VaultItem[]): Promise<VaultItem[]> {
     const derivedKey = this.deriveEncryptionKey(passwordPlain);
     
-    this.state.vault_items = demoItems.map(item => {
+    this.state.vault_items = await Promise.all(demoItems.map(async (item) => {
       const sensitivePayload = JSON.stringify(item);
-      const encrypted = aes256GcmEncrypt(sensitivePayload, derivedKey);
+      const encrypted = await webCryptoAesGcmEncrypt(sensitivePayload, derivedKey, secureRandomBytes(12));
       
       return {
         id: item.id,
@@ -552,7 +556,7 @@ class SQLiteOPFS {
         enc_metadata: JSON.stringify(encrypted),
         enc_kdf: VAULT_ITEM_KDF,
       };
-    });
+    }));
 
     this.logQuery(`RESEED: INSERT ${demoItems.length} rows into 'vault_items'`, 'SUCCESS', demoItems.length);
     this.saveToPersistentStorage();

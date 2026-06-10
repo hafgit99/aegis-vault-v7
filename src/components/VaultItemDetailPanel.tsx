@@ -23,7 +23,7 @@ interface VaultItemDetailPanelProps {
   totpCountdown: number;
   onBackToList: () => void;
   onOpenAudit: () => void;
-  onToggleFavorite: (item: VaultItem) => void;
+  onToggleFavorite: (item: VaultItem) => void | Promise<void>;
   onEdit: () => void;
   onDelete: (id: string) => void;
   onToggleReveal: (field: 'password' | 'cardNumber' | 'cardCvv' | 'cardPin' | 'passkeyPrivateExponent') => void;

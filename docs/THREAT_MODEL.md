@@ -81,6 +81,7 @@ Vault database:
 - Database persistence payloads use a versioned schema envelope.
 - Legacy unversioned database payloads are normalized to the current schema.
 - Vault rows store sensitive item data inside encrypted metadata.
+- New vault item metadata writes use Argon2id-derived keys and WebCrypto AES-GCM.
 - The current SQLite/OPFS layer is still a simulated persistence layer and must be replaced or finalized before production claims.
 
 Backups:
@@ -134,7 +135,7 @@ Required user-facing recovery rules:
 
 | Risk | Current status | Planned mitigation |
 | --- | --- | --- |
-| Custom cryptographic primitives still exist in legacy storage/biometric paths | Open | Replace remaining custom AES/GCM simulation with WebCrypto or vetted library paths |
+| Custom cryptographic primitives still exist in legacy backup and compatibility paths | Open | Replace or remove remaining custom AES/GCM simulation fallbacks |
 | Simulated SQLite/OPFS persistence naming overstates implementation | Open | Decide final desktop storage adapter and align naming |
 | Legacy XOR attachment fallback remains readable | Partially mitigated | Run AES-GCM migration for legacy records, then remove fallback |
 | Active master password lives in process memory while unlocked | Accepted for current desktop phase | Minimize lifetime, lock aggressively, evaluate native secret handling |
@@ -149,6 +150,7 @@ Allowed current claims:
 - "Local-first desktop vault."
 - "Secure backups use Argon2id and WebCrypto AES-GCM."
 - "New attachments are protected with WebCrypto AES-GCM."
+- "New vault item metadata is protected with WebCrypto AES-GCM."
 - "The master password is not stored in browser sessionStorage."
 
 Claims to avoid until fixed:
@@ -163,6 +165,6 @@ Claims to avoid until fixed:
 
 1. Align the simulated SQLite naming with the finalized Tauri app data persistence strategy.
 2. Wire the legacy XOR attachment migration into a startup or settings maintenance flow.
-3. Replace remaining custom AES/GCM simulation paths.
+3. Replace remaining legacy custom AES/GCM simulation fallbacks.
 4. Decide whether plaintext JSON export remains available in release builds.
 5. Review public release branding and installer identity before publishing signed artifacts.

@@ -32,56 +32,66 @@ afterEach(() => {
 });
 
 describe('useVaultData', () => {
-  it('refreshes items and selects the first active item', () => {
-    vi.mocked(getVaultItems).mockReturnValue([item('trash', { deleted: true }), item('mail')]);
+  it('refreshes items and selects the first active item', async () => {
+    vi.mocked(getVaultItems).mockResolvedValue([item('trash', { deleted: true }), item('mail')]);
     const { result } = renderHook(() => useVaultData());
 
-    act(() => result.current.refreshDatabase());
+    await act(async () => {
+      await result.current.refreshDatabase();
+    });
 
     expect(result.current.items).toHaveLength(2);
     expect(result.current.selectedItem?.id).toBe('mail');
   });
 
-  it('preserves the selected item when it still exists', () => {
+  it('preserves the selected item when it still exists', async () => {
     const selected = item('github');
-    vi.mocked(getVaultItems).mockReturnValue([item('mail'), selected]);
+    vi.mocked(getVaultItems).mockResolvedValue([item('mail'), selected]);
     const { result, rerender } = renderHook(() => useVaultData());
 
     act(() => result.current.setSelectedItem(selected));
     rerender();
-    act(() => result.current.refreshDatabase());
+    await act(async () => {
+      await result.current.refreshDatabase();
+    });
 
     expect(result.current.selectedItem?.id).toBe('github');
   });
 
-  it('clears selection when no active items remain', () => {
-    vi.mocked(getVaultItems).mockReturnValue([item('trash', { deleted: true })]);
+  it('clears selection when no active items remain', async () => {
+    vi.mocked(getVaultItems).mockResolvedValue([item('trash', { deleted: true })]);
     const { result } = renderHook(() => useVaultData());
 
-    act(() => result.current.refreshDatabase());
+    await act(async () => {
+      await result.current.refreshDatabase();
+    });
 
     expect(result.current.selectedItem).toBeNull();
   });
 
-  it('saves an item and selects the saved entry', () => {
+  it('saves an item and selects the saved entry', async () => {
     const saved = item('mail', { title: 'Mail', username: 'user@example.com' });
-    vi.mocked(saveVaultItem).mockReturnValue([saved]);
+    vi.mocked(saveVaultItem).mockResolvedValue([saved]);
     const { result } = renderHook(() => useVaultData());
 
-    act(() => result.current.saveItem({ ...saved, id: 'draft' }));
+    await act(async () => {
+      await result.current.saveItem({ ...saved, id: 'draft' });
+    });
 
     expect(saveVaultItem).toHaveBeenCalledWith(expect.objectContaining({ title: 'Mail' }));
     expect(result.current.items).toEqual([saved]);
     expect(result.current.selectedItem).toEqual(saved);
   });
 
-  it('toggles favorite state and selects the updated item', () => {
+  it('toggles favorite state and selects the updated item', async () => {
     const entry = item('mail', { favorite: false });
     const updated = item('mail', { favorite: true });
-    vi.mocked(saveVaultItem).mockReturnValue([updated]);
+    vi.mocked(saveVaultItem).mockResolvedValue([updated]);
     const { result } = renderHook(() => useVaultData());
 
-    act(() => result.current.toggleFavorite(entry));
+    await act(async () => {
+      await result.current.toggleFavorite(entry);
+    });
 
     expect(saveVaultItem).toHaveBeenCalledWith(expect.objectContaining({ favorite: true }));
     expect(result.current.items).toEqual([updated]);

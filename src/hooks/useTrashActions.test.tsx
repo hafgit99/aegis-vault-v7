@@ -51,15 +51,17 @@ afterEach(() => {
 });
 
 describe('useTrashActions', () => {
-  it('opens a move-to-trash confirmation and updates active selection on confirm', () => {
+  it('opens a move-to-trash confirmation and updates active selection on confirm', async () => {
     const active = item('active');
     const deleted = item('deleted', { deleted: true });
-    vi.mocked(moveToTrash).mockReturnValue([deleted, active]);
+    vi.mocked(moveToTrash).mockResolvedValue([deleted, active]);
     const { result, options } = renderTrashActions();
 
     act(() => result.current.deleteItem('deleted'));
     const confirm = options.openConfirm.mock.calls[0][0];
-    act(() => confirm.onConfirm());
+    await act(async () => {
+      confirm.onConfirm();
+    });
 
     expect(confirm).toMatchObject({
       title: 'Çöp Kutusuna Taşı',
@@ -73,24 +75,28 @@ describe('useTrashActions', () => {
     expect(options.setSelectedItem).toHaveBeenCalledWith(active);
   });
 
-  it('clears selection when moving the last active item to trash', () => {
+  it('clears selection when moving the last active item to trash', async () => {
     const deleted = item('deleted', { deleted: true });
-    vi.mocked(moveToTrash).mockReturnValue([deleted]);
+    vi.mocked(moveToTrash).mockResolvedValue([deleted]);
     const { result, options } = renderTrashActions();
 
     act(() => result.current.deleteItem('deleted'));
-    act(() => options.openConfirm.mock.calls[0][0].onConfirm());
+    await act(async () => {
+      options.openConfirm.mock.calls[0][0].onConfirm();
+    });
 
     expect(options.setSelectedItem).toHaveBeenCalledWith(null);
   });
 
-  it('opens empty-trash confirmation and follows with a success alert', () => {
-    vi.mocked(emptyTrashComplete).mockReturnValue([]);
+  it('opens empty-trash confirmation and follows with a success alert', async () => {
+    vi.mocked(emptyTrashComplete).mockResolvedValue([]);
     const { result, options } = renderTrashActions();
 
     act(() => result.current.emptyTrash());
     const confirm = options.openConfirm.mock.calls[0][0];
-    act(() => confirm.onConfirm());
+    await act(async () => {
+      confirm.onConfirm();
+    });
 
     expect(confirm).toMatchObject({
       title: 'Çöp Kutusunu Boşalt',
@@ -105,12 +111,14 @@ describe('useTrashActions', () => {
     });
   });
 
-  it('restores a trash item immediately and shows success', () => {
+  it('restores a trash item immediately and shows success', async () => {
     const restored = item('restored');
-    vi.mocked(restoreFromTrash).mockReturnValue([restored]);
+    vi.mocked(restoreFromTrash).mockResolvedValue([restored]);
     const { result, options } = renderTrashActions();
 
-    act(() => result.current.restoreTrashItem(item('restored')));
+    await act(async () => {
+      result.current.restoreTrashItem(item('restored'));
+    });
 
     expect(restoreFromTrash).toHaveBeenCalledWith('restored');
     expect(options.setItems).toHaveBeenCalledWith([restored]);
@@ -123,13 +131,15 @@ describe('useTrashActions', () => {
     );
   });
 
-  it('opens permanent delete confirmation and deletes on confirm', () => {
-    vi.mocked(deletePermanently).mockReturnValue([]);
+  it('opens permanent delete confirmation and deletes on confirm', async () => {
+    vi.mocked(deletePermanently).mockResolvedValue([]);
     const { result, options } = renderTrashActions();
 
     act(() => result.current.deleteTrashItemPermanently(item('gone')));
     const confirm = options.openConfirm.mock.calls[0][0];
-    act(() => confirm.onConfirm());
+    await act(async () => {
+      confirm.onConfirm();
+    });
 
     expect(confirm).toMatchObject({
       title: 'Kalıcı Olarak Sil',

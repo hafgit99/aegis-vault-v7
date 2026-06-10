@@ -6,7 +6,7 @@ import { VaultItem } from '../types';
 interface VaultItemDetailHeaderProps {
   item: VaultItem;
   copiedField: string | null;
-  onToggleFavorite: (item: VaultItem) => void;
+  onToggleFavorite: (item: VaultItem) => void | Promise<void>;
   onEdit: () => void;
   onCopyText: (text: string, field: string) => void;
   onDelete: (id: string) => void;
@@ -60,7 +60,9 @@ export default function VaultItemDetailHeader({
 
       <div className="flex gap-2.5">
         <button
-          onClick={() => onToggleFavorite(item)}
+          onClick={() => {
+            void onToggleFavorite(item);
+          }}
           className={`p-2.5 rounded-lg transition-all cursor-pointer border border-outline-variant/10 bg-surface-high hover:bg-[#202220] ${
             item.favorite ? 'text-red-500' : 'text-on-surface-variant hover:text-red-400'
           }`}

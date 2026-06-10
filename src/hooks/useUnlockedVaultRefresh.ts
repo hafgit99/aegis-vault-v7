@@ -2,13 +2,13 @@ import { useEffect } from 'react';
 
 interface UseUnlockedVaultRefreshOptions {
   unlocked: boolean;
-  onRefresh: () => void;
+  onRefresh: () => void | Promise<void>;
 }
 
 export function useUnlockedVaultRefresh({ unlocked, onRefresh }: UseUnlockedVaultRefreshOptions) {
   useEffect(() => {
     if (unlocked) {
-      onRefresh();
+      void onRefresh();
     }
   }, [onRefresh, unlocked]);
 }

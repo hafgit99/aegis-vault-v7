@@ -27,13 +27,15 @@ export function useTrashActions({
       confirmText: 'Çöpe Taşı',
       cancelText: 'Vazgeç',
       onConfirm: () => {
-        const updated = moveToTrash(id);
-        setItems(updated);
-        resetReveals();
-        clearCopiedField();
+        void (async () => {
+          const updated = await moveToTrash(id);
+          setItems(updated);
+          resetReveals();
+          clearCopiedField();
 
-        const activeRemaining = updated.filter((item) => !item.deleted);
-        setSelectedItem(activeRemaining.length > 0 ? activeRemaining[0] : null);
+          const activeRemaining = updated.filter((item) => !item.deleted);
+          setSelectedItem(activeRemaining.length > 0 ? activeRemaining[0] : null);
+        })();
       },
     });
   };
@@ -47,29 +49,33 @@ export function useTrashActions({
       confirmText: 'Sıfırla ve Kalıcı Sil',
       cancelText: 'Vazgeç',
       onConfirm: () => {
-        const updated = emptyTrashComplete();
-        setItems(updated);
-        openConfirm({
-          title: 'Çöp Kutusu Boşaltıldı',
-          message: 'Çöp kutusundaki tüm şifreler kalıcı olarak silindi.',
-          type: 'success',
-          isAlert: true,
-          onConfirm: () => {},
-        });
+        void (async () => {
+          const updated = await emptyTrashComplete();
+          setItems(updated);
+          openConfirm({
+            title: 'Çöp Kutusu Boşaltıldı',
+            message: 'Çöp kutusundaki tüm şifreler kalıcı olarak silindi.',
+            type: 'success',
+            isAlert: true,
+            onConfirm: () => {},
+          });
+        })();
       },
     });
   };
 
   const restoreTrashItem = (trashItem: VaultItem) => {
-    const updated = restoreFromTrash(trashItem.id);
-    setItems(updated);
-    openConfirm({
-      title: 'Geri Yüklendi',
-      message: `"${trashItem.title}" şifre kaydı başarıyla kasaya geri yüklendi!`,
-      type: 'success',
-      isAlert: true,
-      onConfirm: () => {},
-    });
+    void (async () => {
+      const updated = await restoreFromTrash(trashItem.id);
+      setItems(updated);
+      openConfirm({
+        title: 'Geri Yüklendi',
+        message: `"${trashItem.title}" şifre kaydı başarıyla kasaya geri yüklendi!`,
+        type: 'success',
+        isAlert: true,
+        onConfirm: () => {},
+      });
+    })();
   };
 
   const deleteTrashItemPermanently = (trashItem: VaultItem) => {
@@ -80,8 +86,10 @@ export function useTrashActions({
       confirmText: 'Kalıcı Olarak Sil',
       cancelText: 'Vazgeç',
       onConfirm: () => {
-        const updated = deletePermanently(trashItem.id);
-        setItems(updated);
+        void (async () => {
+          const updated = await deletePermanently(trashItem.id);
+          setItems(updated);
+        })();
       },
     });
   };

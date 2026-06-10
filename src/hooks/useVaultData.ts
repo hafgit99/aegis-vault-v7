@@ -7,8 +7,8 @@ export function useVaultData() {
   const [items, setItems] = useState<VaultItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<VaultItem | null>(null);
 
-  const refreshDatabase = useCallback(() => {
-    const loaded = getVaultItems();
+  const refreshDatabase = useCallback(async () => {
+    const loaded = await getVaultItems();
     setItems(loaded);
 
     const activeLoaded = loaded.filter((item) => !item.deleted);
@@ -27,8 +27,8 @@ export function useVaultData() {
     });
   }, []);
 
-  const saveItem = (item: VaultItem) => {
-    const updated = saveVaultItem(item);
+  const saveItem = async (item: VaultItem) => {
+    const updated = await saveVaultItem(item);
     setItems(updated);
 
     const saved = updated.find((entry) => entry.title === item.title && entry.username === item.username);
@@ -37,9 +37,9 @@ export function useVaultData() {
     }
   };
 
-  const toggleFavorite = (item: VaultItem) => {
+  const toggleFavorite = async (item: VaultItem) => {
     const updatedItem = { ...item, favorite: !item.favorite };
-    const updated = saveVaultItem(updatedItem);
+    const updated = await saveVaultItem(updatedItem);
     setItems(updated);
     setSelectedItem(updatedItem);
   };

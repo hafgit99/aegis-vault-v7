@@ -11,7 +11,7 @@ interface AppModalsProps {
   profileName: string;
   confirmConfig: AppConfirmConfig;
   onCloseVaultForm: () => void;
-  onSaveVaultItem: (item: VaultItem) => void;
+  onSaveVaultItem: (item: VaultItem) => void | Promise<void>;
   onNotify: (notification: AppNotification) => void;
   onCloseProfile: () => void;
   onSaveProfile: (name: string, avatar: string) => void;

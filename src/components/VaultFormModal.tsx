@@ -39,7 +39,7 @@ import { formatFileSize } from '../lib/display';
 interface VaultFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (item: VaultItem) => void;
+  onSave: (item: VaultItem) => void | Promise<void>;
   editingItem: VaultItem | null;
   onNotify?: (notification: AppNotification) => void;
 }
