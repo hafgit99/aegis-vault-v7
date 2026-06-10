@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { calculatePasswordScore } from './lib/security';
 import LockScreen from './components/LockScreen';
 import MobileSidebarBackdrop from './components/MobileSidebarBackdrop';
@@ -27,13 +27,9 @@ import { useAppNavigation } from './hooks/useAppNavigation';
 import { useVaultFormState } from './hooks/useVaultFormState';
 import { useVaultMobileView } from './hooks/useVaultMobileView';
 import { useVaultLock } from './hooks/useVaultLock';
+import { useVaultFilters } from './hooks/useVaultFilters';
 
 export default function App() {
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Responsive & Filter States
-  const [filterFavoritesOnly, setFilterFavoritesOnly] = useState(false);
-
   const { copiedField, copyText: handleCopyText, clearCopiedField } = useClipboardFeedback();
   const { revealed, toggleReveal, resetReveals } = useSensitiveReveal();
   const isPasswordRevealed = revealed.password;
@@ -84,6 +80,13 @@ export default function App() {
     autoLockDuration,
     changeAutoLockDuration: handleAutoLockDurationChange,
   } = useAutoLockDuration();
+
+  const {
+    searchQuery,
+    setSearchQuery,
+    filterFavoritesOnly,
+    setFilterFavoritesOnly,
+  } = useVaultFilters();
 
   const {
     unlocked,
