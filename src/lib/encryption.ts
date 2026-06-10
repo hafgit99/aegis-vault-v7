@@ -5,6 +5,7 @@
 
 import { secureRandomBytes } from './random';
 import { deriveArgon2idKey } from './argon2id';
+import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt } from './webcrypto';
 
 /**
  * Encrypted payload representation for safe storage
@@ -26,7 +27,7 @@ export async function encryptDataWithPasswordSecure(rawData: string, password: s
   };
 
   const aesKey = await deriveArgon2idKey(password, saltHex, kdfParams);
-  const bundle = aes256GcmEncrypt(rawData, aesKey);
+  const bundle = await webCryptoAesGcmEncrypt(rawData, aesKey, secureRandomBytes(12));
 
   const encoder = new TextEncoder();
   const cipherBytes = encoder.encode(bundle.ciphertext);
@@ -40,7 +41,7 @@ export async function encryptDataWithPasswordSecure(rawData: string, password: s
       kdf: 'Argon2id',
       kdfImplementation: 'argon2-browser',
       kdfParams,
-      cipher: 'AES-256-GCM',
+      cipher: 'WebCrypto AES-256-GCM',
       salt: saltHex,
       iv: bundle.iv,
       tag: bundle.tag,
@@ -79,7 +80,7 @@ export async function decryptDataWithPasswordSecure(envelopeJsonStr: string, pas
 
   const aesKey = await deriveArgon2idKey(password, parsed.salt, parsed.kdfParams);
 
-  return aes256GcmDecrypt(
+  return webCryptoAesGcmDecrypt(
     {
       iv: parsed.iv,
       tag: parsed.tag,

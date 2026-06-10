@@ -18,7 +18,7 @@ describe('secure encrypted backup envelope', () => {
       version: '1.2',
       kdf: 'Argon2id',
       kdfImplementation: 'argon2-browser',
-      cipher: 'AES-256-GCM',
+      cipher: 'WebCrypto AES-256-GCM',
       kdfParams: {
         memoryKiB: 65536,
         iterations: 3,
@@ -37,5 +37,13 @@ describe('secure encrypted backup envelope', () => {
     const envelope = await encryptDataWithPasswordSecure('secret export', 'backup-password');
 
     await expect(decryptDataWithPasswordSecure(envelope, 'backup-password')).resolves.toBe('secret export');
+  });
+
+  it('rejects tampered secure exports through WebCrypto authentication', async () => {
+    const envelope = await encryptDataWithPasswordSecure('secret export', 'backup-password');
+    const parsed = JSON.parse(envelope);
+    parsed.tag = `00${parsed.tag.slice(2)}`;
+
+    await expect(decryptDataWithPasswordSecure(JSON.stringify(parsed), 'backup-password')).rejects.toThrow();
   });
 });
