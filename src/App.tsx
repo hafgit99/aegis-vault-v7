@@ -4,9 +4,6 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import {
-  Plus,
-} from 'lucide-react';
 import { VaultItem, ActiveTab, AppNotification } from './types';
 import { getVaultItems, saveVaultItem, deleteVaultItem, moveToTrash, restoreFromTrash, deletePermanently, emptyTrashComplete } from './lib/storage';
 import { getTOTPTimeRemaining } from './lib/otp';
@@ -20,6 +17,7 @@ import MobileSidebarBackdrop from './components/MobileSidebarBackdrop';
 import SidebarNavigation from './components/SidebarNavigation';
 import TopBar from './components/TopBar';
 import MainContent from './components/MainContent';
+import FloatingVaultAction from './components/FloatingVaultAction';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -469,16 +467,11 @@ export default function App() {
         />
       </main>
 
-      {/* Floating Action Button (FAB) context support for adding a password */}
-      {activeTab === 'vault' && !(selectedItem && mobileActiveView === 'detail') && (
-        <button
-          onClick={handleTriggerNew}
-          className="lg:bottom-8 lg:right-8 bottom-6 right-6 fixed w-14 h-14 bg-brand-primary text-brand-on-primary rounded-full shadow-2xl flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95 transition-all group z-40 hover:brightness-110"
-          title="Yeni Şifre Ekle"
-        >
-          <Plus className="w-8 h-8 text-brand-on-primary transition-transform group-hover:rotate-90" />
-        </button>
-      )}
+      <FloatingVaultAction
+        activeTab={activeTab}
+        isDetailOpenOnMobile={Boolean(selectedItem && mobileActiveView === 'detail')}
+        onNewItem={handleTriggerNew}
+      />
 
       {/* Adding/Editing Modal Drawer */}
       <VaultFormModal
