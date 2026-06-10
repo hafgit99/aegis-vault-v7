@@ -54,6 +54,7 @@ import ConfirmModal from './components/ConfirmModal';
 import ProfileModal, { isGradient } from './components/ProfileModal';
 import MobileSidebarBackdrop from './components/MobileSidebarBackdrop';
 import LocalStorageBadge from './components/LocalStorageBadge';
+import TrashEmptyState from './components/TrashEmptyState';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -1651,15 +1652,7 @@ export default function App() {
 
               {/* Trash Items List */}
               {trashItems.length === 0 ? (
-                <div className="bg-[#161816]/30 border border-outline-variant/10 rounded-2xl p-12 text-center text-on-surface-variant/40">
-                  <div className="w-16 h-16 rounded-2xl bg-surface-high border border-outline-variant/20 flex items-center justify-center mx-auto mb-4 text-on-surface-variant/30">
-                    <Trash2 className="w-8 h-8" />
-                  </div>
-                  <h3 className="font-bold text-sm text-on-surface">Çöp Kutusu Boş</h3>
-                  <p className="text-xs max-w-sm mx-auto mt-1">
-                    Şu anda çöp kutusunda bekleyen silinmiş herhangi bir parola veya kart kaydı bulunmuyor.
-                  </p>
-                </div>
+                <TrashEmptyState />
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {trashItems.map((item) => {

@@ -17,6 +17,7 @@
 - [ ] Split `src/App.tsx` into route/view/layout components.
   - [x] Mobile sidebar backdrop extracted to `MobileSidebarBackdrop`.
   - [x] Local storage status badge extracted to `LocalStorageBadge`.
+  - [x] Trash empty state extracted to `TrashEmptyState`.
 - [ ] Extract vault item selection, reveal state, and auto-lock logic into hooks.
   - [x] Auto-lock behavior extracted to `useAutoLock`.
   - [x] Copy feedback and sensitive reveal state extracted to dedicated hooks.
