@@ -19,7 +19,7 @@ export default function VaultItemAttachmentCard({ item, onDownload }: VaultItemA
           <span>GÜVENLİ ŞİFRELİ KASA ELEMANI</span>
         </h4>
         <span className="text-[9px] text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-0.5 rounded border border-emerald-500/15 font-mono">
-          XOR AES SECURE
+          AES-GCM SECURE
         </span>
       </div>
 

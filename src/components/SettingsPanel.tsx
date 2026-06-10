@@ -397,7 +397,7 @@ export default function SettingsPanel({
             <div className="flex justify-between items-center text-sm border-b border-outline-variant/10 pb-2">
               <span className="text-on-surface-variant">Güvenli Yapı</span>
               <span className="text-[#10b981] font-bold text-xs flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5" /> PBKDF2 AES-XOR
+                <ShieldCheck className="w-3.5 h-3.5" /> AES-GCM
               </span>
             </div>
             <div className="flex justify-between items-center text-sm border-b border-outline-variant/10 pb-2">

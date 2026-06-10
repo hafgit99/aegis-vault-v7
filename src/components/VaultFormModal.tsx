@@ -911,7 +911,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                         <p className="text-[9px] text-[#059669] font-bold font-mono uppercase flex items-center gap-1 mt-0.5">
                           <span>{formatFileSize(existingAttachment.size)}</span>
                           <span>•</span>
-                          <span>XOR AES ŞİFRELENMİŞ</span>
+                          <span>AES-GCM ŞİFRELENMİŞ</span>
                         </p>
                       </div>
                     </div>

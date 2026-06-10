@@ -3,9 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { secureRandomBytes } from './random';
+import { getActiveMasterPassword } from './vaultSession';
+import { webCryptoAesGcmDecryptBytes, webCryptoAesGcmEncryptBytes } from './webcrypto';
+
 const DB_NAME = 'aegis_attachments_db';
 const STORE_NAME = 'attachments';
 const DB_VERSION = 1;
+const ATTACHMENT_KEY_CONTEXT = 'aegis-vault-v7:attachment-key';
 
 /**
  * Initializes IndexedDB for attachments.
@@ -33,11 +38,13 @@ export interface AttachmentRecord {
   size: number;
   data: ArrayBuffer; // Encrypted ArrayBuffer
   encrypted: boolean;
+  algorithm?: 'AES-256-GCM' | 'XOR-LEGACY';
+  iv?: string;
+  tag?: string;
 }
 
 /**
- * Encrypts or decrypts bytes with a simple XOR/cipher rotation (to simulate elite AES-256 local-first client-side encryption).
- * This works smoothly and rapidly even on 250MB files without blocking the main event thread, or causing memory crashes.
+ * Legacy attachment fallback for records written before the AES-GCM attachment format.
  */
 function encryptDecryptBuffer(buffer: ArrayBuffer, keyStr: string = 'aegis_secure_file'): ArrayBuffer {
   const view = new Uint8Array(buffer);
@@ -45,10 +52,60 @@ function encryptDecryptBuffer(buffer: ArrayBuffer, keyStr: string = 'aegis_secur
   const result = new Uint8Array(view.length);
   
   for (let i = 0; i < view.length; i++) {
-    // XOR cipher rotation
     result[i] = view[i] ^ keyBytes[i % keyBytes.length];
   }
   return result.buffer;
+}
+
+async function deriveAttachmentKey(masterPassword: string, attachmentId: string): Promise<Uint8Array> {
+  const keyMaterial = new TextEncoder().encode(`${ATTACHMENT_KEY_CONTEXT}:${attachmentId}:${masterPassword}`);
+  return new Uint8Array(await crypto.subtle.digest('SHA-256', keyMaterial));
+}
+
+function getRequiredMasterPassword(): string {
+  const masterPassword = getActiveMasterPassword();
+  if (!masterPassword) {
+    throw new Error('Aktif kasa oturumu bulunamadı. Lütfen kasayı tekrar açın.');
+  }
+  return masterPassword;
+}
+
+export async function encryptAttachmentData(
+  attachmentId: string,
+  rawBuffer: ArrayBuffer,
+): Promise<Pick<AttachmentRecord, 'algorithm' | 'data' | 'encrypted' | 'iv' | 'tag'>> {
+  const masterPassword = getRequiredMasterPassword();
+  const key = await deriveAttachmentKey(masterPassword, attachmentId);
+  const encrypted = await webCryptoAesGcmEncryptBytes(rawBuffer, key, secureRandomBytes(12));
+
+  return {
+    algorithm: 'AES-256-GCM',
+    data: encrypted.ciphertext,
+    encrypted: true,
+    iv: encrypted.iv,
+    tag: encrypted.tag,
+  };
+}
+
+export async function decryptAttachmentData(record: AttachmentRecord): Promise<ArrayBuffer> {
+  if (record.algorithm === 'AES-256-GCM') {
+    if (!record.iv || !record.tag) {
+      throw new Error('Ek dosya şifreleme bilgisi eksik.');
+    }
+
+    const masterPassword = getRequiredMasterPassword();
+    const key = await deriveAttachmentKey(masterPassword, record.id);
+    return webCryptoAesGcmDecryptBytes(
+      {
+        iv: record.iv,
+        tag: record.tag,
+        ciphertext: record.data,
+      },
+      key,
+    );
+  }
+
+  return encryptDecryptBuffer(record.data);
 }
 
 /**
@@ -73,8 +130,7 @@ export async function saveAttachment(
         progressCallback?.(50);
         
         const rawBuffer = e.target.result as ArrayBuffer;
-        // Perform local client-side encryption
-        const encryptedBuffer = encryptDecryptBuffer(rawBuffer);
+        const encryptedAttachment = await encryptAttachmentData(id, rawBuffer);
         
         progressCallback?.(80);
 
@@ -83,8 +139,7 @@ export async function saveAttachment(
           name: file.name,
           type: file.type || 'application/octet-stream',
           size: file.size,
-          data: encryptedBuffer,
-          encrypted: true
+          ...encryptedAttachment,
         };
 
         const transaction = db.transaction(STORE_NAME, 'readwrite');
@@ -121,7 +176,7 @@ export async function getAttachmentBlob(id: string): Promise<{ blob: Blob, name:
     const store = transaction.objectStore(STORE_NAME);
     const request = store.get(id);
 
-    request.onsuccess = () => {
+    request.onsuccess = async () => {
       const record = request.result as AttachmentRecord | undefined;
       if (!record) {
         resolve(null);
@@ -129,8 +184,7 @@ export async function getAttachmentBlob(id: string): Promise<{ blob: Blob, name:
       }
 
       try {
-        // Safe decryption
-        const decryptedBuffer = encryptDecryptBuffer(record.data);
+        const decryptedBuffer = await decryptAttachmentData(record);
         const blob = new Blob([decryptedBuffer], { type: record.type });
         resolve({ blob, name: record.name });
       } catch (err) {

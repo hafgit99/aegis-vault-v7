@@ -4,6 +4,12 @@ export interface WebCryptoAesGcmPayload {
   ciphertext: string;
 }
 
+export interface WebCryptoAesGcmBytesPayload {
+  iv: string;
+  tag: string;
+  ciphertext: ArrayBuffer;
+}
+
 const AUTH_TAG_BYTES = 16;
 
 function bytesToHex(bytes: Uint8Array): string {
@@ -75,4 +81,39 @@ export async function webCryptoAesGcmDecrypt(
   );
 
   return new TextDecoder().decode(plaintextBytes);
+}
+
+export async function webCryptoAesGcmEncryptBytes(
+  plaintext: ArrayBuffer,
+  rawKey: Uint8Array,
+  iv: Uint8Array,
+): Promise<WebCryptoAesGcmBytesPayload> {
+  const key = await importAesGcmKey(rawKey);
+  const encrypted = new Uint8Array(
+    await crypto.subtle.encrypt({ name: 'AES-GCM', iv, tagLength: 128 }, key, plaintext),
+  );
+  const ciphertext = encrypted.slice(0, encrypted.length - AUTH_TAG_BYTES);
+  const tag = encrypted.slice(encrypted.length - AUTH_TAG_BYTES);
+
+  return {
+    iv: bytesToHex(iv),
+    tag: bytesToHex(tag),
+    ciphertext: ciphertext.buffer.slice(ciphertext.byteOffset, ciphertext.byteOffset + ciphertext.byteLength),
+  };
+}
+
+export async function webCryptoAesGcmDecryptBytes(
+  payload: WebCryptoAesGcmBytesPayload,
+  rawKey: Uint8Array,
+): Promise<ArrayBuffer> {
+  const key = await importAesGcmKey(rawKey);
+  const iv = hexToBytes(payload.iv);
+  const tag = hexToBytes(payload.tag);
+  const ciphertext = new Uint8Array(payload.ciphertext);
+  const encrypted = new Uint8Array(ciphertext.length + tag.length);
+  encrypted.set(ciphertext);
+  encrypted.set(tag, ciphertext.length);
+
+  const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv, tagLength: 128 }, key, encrypted);
+  return plaintext;
 }
