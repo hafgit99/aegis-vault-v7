@@ -86,6 +86,7 @@
   - [x] Encrypted backup export/import uses vetted Argon2id adapter.
 - [ ] Replace custom AES/GCM simulation with WebCrypto AES-GCM or a vetted crypto library.
   - [x] Encrypted backup export/import uses WebCrypto AES-GCM.
+  - [x] Biometric master-password wrapping uses WebCrypto AES-GCM.
 - [x] Remove base64 master password storage from `sessionStorage`.
 - [x] Replace attachment XOR encryption with authenticated encryption.
 - [x] Introduce a versioned vault database format and migration tests.

@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { hmacSha256, aes256GcmEncrypt, aes256GcmDecrypt } from './encryption';
+import { hmacSha256, aes256GcmDecrypt } from './encryption';
 import { secureRandomBytes } from './random';
 import { APP_NAME, APP_SHORT_NAME } from './branding';
+import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, type WebCryptoAesGcmPayload } from './webcrypto';
 
 /**
  * PBKDF2-SHA256 Implementation using pure TS hmacSha256
@@ -43,6 +44,43 @@ export function pbkdf2Sha256(password: Uint8Array, salt: Uint8Array, iterations:
   }
   
   return dk;
+}
+
+async function deriveWebCryptoPbkdf2Key(password: Uint8Array, salt: Uint8Array, iterations: number, keyLen: number): Promise<Uint8Array> {
+  const keyMaterial = await crypto.subtle.importKey('raw', password, 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      hash: 'SHA-256',
+      salt,
+      iterations,
+    },
+    keyMaterial,
+    keyLen * 8,
+  );
+
+  return new Uint8Array(bits);
+}
+
+interface BiometricInfoV2 {
+  version: 2;
+  kdf: 'WebCrypto PBKDF2-SHA256';
+  cipher: 'WebCrypto AES-256-GCM';
+  credentialId: string;
+  salt: string;
+  bundle: WebCryptoAesGcmPayload;
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary);
+}
+
+function base64ToBytes(value: string): Uint8Array {
+  return new Uint8Array(atob(value).split('').map((char) => char.charCodeAt(0)));
 }
 
 export function isBiometricSupported(): boolean {
@@ -102,16 +140,16 @@ export async function registerBiometric(masterPassword: string): Promise<void> {
   // Clean generated 16-byte random salt for PBKDF2-SHA256
   const salt = secureRandomBytes(16);
 
-  // Stretch key using PBKDF2-SHA256
-  const wrappingKey = pbkdf2Sha256(rawIdBytes, salt, 10000, 32);
+  const wrappingKey = await deriveWebCryptoPbkdf2Key(rawIdBytes, salt, 10000, 32);
 
-  // Wrap master password in AES-256-GCM
-  const bundle = aes256GcmEncrypt(masterPassword, wrappingKey);
+  const bundle = await webCryptoAesGcmEncrypt(masterPassword, wrappingKey, secureRandomBytes(12));
 
-  // Convert array and values to base64
-  const biometricInfo = {
-    credentialId: btoa(String.fromCharCode(...new Uint8Array(credential.rawId))),
-    salt: btoa(String.fromCharCode(...salt)),
+  const biometricInfo: BiometricInfoV2 = {
+    version: 2,
+    kdf: 'WebCrypto PBKDF2-SHA256',
+    cipher: 'WebCrypto AES-256-GCM',
+    credentialId: bytesToBase64(new Uint8Array(credential.rawId)),
+    salt: bytesToBase64(salt),
     bundle: bundle
   };
 
@@ -125,8 +163,8 @@ export async function authenticateBiometric(): Promise<string> {
   }
 
   const biometricInfo = JSON.parse(storedStr);
-  const credIdBytes = new Uint8Array(atob(biometricInfo.credentialId).split("").map(c => c.charCodeAt(0)));
-  const saltBytes = new Uint8Array(atob(biometricInfo.salt).split("").map(c => c.charCodeAt(0)));
+  const credIdBytes = base64ToBytes(biometricInfo.credentialId);
+  const saltBytes = base64ToBytes(biometricInfo.salt);
 
   const challenge = secureRandomBytes(32);
 
@@ -151,13 +189,14 @@ export async function authenticateBiometric(): Promise<string> {
 
   const rawIdBytes = new Uint8Array(assertion.rawId);
 
-  // Derive the exact encryption key again
-  const wrappingKey = pbkdf2Sha256(rawIdBytes, saltBytes, 10000, 32);
-
-  // Try decrypting GCM
   try {
-    const masterPassword = aes256GcmDecrypt(biometricInfo.bundle, wrappingKey);
-    return masterPassword;
+    if (biometricInfo.version === 2 && biometricInfo.cipher === 'WebCrypto AES-256-GCM') {
+      const wrappingKey = await deriveWebCryptoPbkdf2Key(rawIdBytes, saltBytes, 10000, 32);
+      return webCryptoAesGcmDecrypt(biometricInfo.bundle, wrappingKey);
+    }
+
+    const legacyWrappingKey = pbkdf2Sha256(rawIdBytes, saltBytes, 10000, 32);
+    return aes256GcmDecrypt(biometricInfo.bundle, legacyWrappingKey);
   } catch (e) {
     throw new Error("Şifre çözme doğrulaması başarısız! Biyometrik veriler veya anahtar bütünlüğü eşleşmiyor.");
   }
