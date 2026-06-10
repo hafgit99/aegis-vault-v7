@@ -26,6 +26,7 @@ import { useAttachmentDownload } from './hooks/useAttachmentDownload';
 import { useTrashActions } from './hooks/useTrashActions';
 import { useAppNavigation } from './hooks/useAppNavigation';
 import { useVaultFormState } from './hooks/useVaultFormState';
+import { useVaultMobileView } from './hooks/useVaultMobileView';
 
 export default function App() {
   const [unlocked, setUnlocked] = useState(false);
@@ -33,7 +34,6 @@ export default function App() {
 
   // Responsive & Filter States
   const [filterFavoritesOnly, setFilterFavoritesOnly] = useState(false);
-  const [mobileActiveView, setMobileActiveView] = useState<'list' | 'detail'>('list');
 
   const { copiedField, copyText: handleCopyText, clearCopiedField } = useClipboardFeedback();
   const { revealed, toggleReveal, resetReveals } = useSensitiveReveal();
@@ -73,6 +73,13 @@ export default function App() {
     saveItem: handleSaveItem,
     toggleFavorite: handleToggleFavorite,
   } = useVaultData();
+
+  const {
+    mobileActiveView,
+    setMobileActiveView,
+    selectDashboard: handleSelectDashboard,
+    backToList: handleBackToList,
+  } = useVaultMobileView({ setSelectedItem });
 
   const {
     autoLockDuration,
@@ -176,15 +183,6 @@ export default function App() {
       isAlert: true,
       onConfirm: () => {},
     });
-  };
-
-  const handleSelectDashboard = () => {
-    setSelectedItem(null);
-    setMobileActiveView('detail');
-  };
-
-  const handleBackToList = () => {
-    setMobileActiveView('list');
   };
 
   const handleTriggerEdit = () => {
