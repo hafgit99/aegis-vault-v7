@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Lock,
   Unlock,
@@ -51,6 +51,7 @@ import SettingsPanel from './components/SettingsPanel';
 import VaultFormModal from './components/VaultFormModal';
 import ConfirmModal from './components/ConfirmModal';
 import ProfileModal, { isGradient } from './components/ProfileModal';
+import { useAutoLock } from './hooks/useAutoLock';
 
 export default function App() {
   const [unlocked, setUnlocked] = useState(false);
@@ -150,51 +151,21 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Auto-Lock idle tracking mechanism
-  useEffect(() => {
-    if (!unlocked) return;
-    if (autoLockDuration === 0) return; // 0 represents Never lock
+  const handleAutoLock = useCallback(() => {
+    setUnlocked(false);
+    setIsPasswordRevealed(false);
+    setIsCardNumRevealed(false);
+    setIsCvvRevealed(false);
+    setIsPinRevealed(false);
+    setIsPasskeyExpRevealed(false);
+    setCopiedField(null);
+  }, []);
 
-    let timeoutId: any;
-
-    const resetTimer = () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        setUnlocked(false);
-        // Reset sensitive reveal states for security
-        setIsPasswordRevealed(false);
-        setIsCardNumRevealed(false);
-        setIsCvvRevealed(false);
-        setIsPinRevealed(false);
-        setIsPasskeyExpRevealed(false);
-        setCopiedField(null);
-      }, autoLockDuration * 1000);
-    };
-
-    const activityEvents = [
-      'mousedown', 'mousemove', 'keydown', 
-      'scroll', 'touchstart', 'click'
-    ];
-
-    const handleUserActivity = () => {
-      resetTimer();
-    };
-
-    // Initialize Timer
-    resetTimer();
-
-    // Attach interaction listeners
-    activityEvents.forEach((ev) => {
-      window.addEventListener(ev, handleUserActivity, { passive: true });
-    });
-
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      activityEvents.forEach((ev) => {
-        window.removeEventListener(ev, handleUserActivity);
-      });
-    };
-  }, [unlocked, autoLockDuration]);
+  useAutoLock({
+    unlocked,
+    durationSeconds: autoLockDuration,
+    onLock: handleAutoLock,
+  });
 
   // Filter vault items in real time (excluding deleted items in main view)
   const activeItems = items.filter((item) => !item.deleted);

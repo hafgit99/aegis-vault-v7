@@ -16,9 +16,11 @@
 - [x] Replace password generator randomness with secure randomness.
 - [ ] Split `src/App.tsx` into route/view/layout components.
 - [ ] Extract vault item selection, reveal state, and auto-lock logic into hooks.
+  - [x] Auto-lock behavior extracted to `useAutoLock`.
 - [ ] Replace `alert()` calls with the existing modal/toast pattern.
 - [ ] Normalize naming: `AegisVault`, `Aegis Vault`, and `Aegis Vault 7`.
 - [ ] Add component tests for lock screen, vault form, settings import/export, and trash.
+- [x] Add core regression tests for encrypted backup envelopes and universal imports.
 
 ## Phase 3: Security Hardening
 
@@ -29,6 +31,7 @@
 - [ ] Introduce a versioned vault database format and migration tests.
 - [ ] Define the desktop threat model and recovery model.
 - [ ] Add security regression tests for import/export, attachments, and lock/unlock flows.
+  - [x] Encrypted backup envelope roundtrip and wrong-password rejection tests.
 
 ## Phase 4: Desktop Productization
 
