@@ -57,6 +57,7 @@ import VaultItemSideInfo from './components/VaultItemSideInfo';
 import VaultItemSecurityAssessment from './components/VaultItemSecurityAssessment';
 import VaultItemDetailHeader from './components/VaultItemDetailHeader';
 import VaultItemAttachmentCard from './components/VaultItemAttachmentCard';
+import SecureNoteDetail from './components/SecureNoteDetail';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -950,25 +951,7 @@ export default function App() {
                           </div>
                         )}
 
-                        {/* 5. GÜVENLİ NOT CATEGORY */}
-                        {selectedItem.category === 'secure_note' && (
-                          <div className="glass-panel p-5 rounded-xl space-y-4">
-                            <div className="flex justify-between items-center border-b border-outline-variant/10 pb-2">
-                              <label className="block text-[10px] font-bold tracking-wider text-brand-secondary uppercase">
-                                GÜVENLİ NOT ENKRİPTED DETAYI
-                              </label>
-                              <button
-                                onClick={() => handleCopyText(selectedItem.notes || '', 'secure_notes_copy')}
-                                className="text-xs text-brand-primary hover:underline hover:brightness-110 flex items-center gap-1 focus:outline-none focus:ring-0"
-                              >
-                                {copiedField === 'secure_notes_copy' ? 'Tümü Kopyalandı!' : 'Metni Kopyala'}
-                              </button>
-                            </div>
-                            <p className="text-sm text-on-surface leading-relaxed whitespace-pre-wrap select-all font-mono py-1.5 max-h-96 overflow-y-auto bg-[#131513] p-4 rounded-xl border border-outline-variant/5">
-                              {selectedItem.notes || 'Herhangi bir içerik yazılmamış.'}
-                            </p>
-                          </div>
-                        )}
+                        <SecureNoteDetail item={selectedItem} copiedField={copiedField} onCopyText={handleCopyText} />
 
                         <VaultItemAttachmentCard item={selectedItem} onDownload={handleDownloadAttachment} />
 
