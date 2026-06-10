@@ -10,14 +10,12 @@ import { getTOTPTimeRemaining } from './lib/otp';
 import { calculatePasswordScore } from './lib/security';
 import { getAttachmentBlob } from './lib/attachments';
 import LockScreen from './components/LockScreen';
-import VaultFormModal from './components/VaultFormModal';
-import ConfirmModal from './components/ConfirmModal';
-import ProfileModal from './components/ProfileModal';
 import MobileSidebarBackdrop from './components/MobileSidebarBackdrop';
 import SidebarNavigation from './components/SidebarNavigation';
 import TopBar from './components/TopBar';
 import MainContent from './components/MainContent';
 import FloatingVaultAction from './components/FloatingVaultAction';
+import AppModals, { type AppConfirmConfig } from './components/AppModals';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -72,16 +70,7 @@ export default function App() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // Custom alert / confirmation state
-  const [confirmConfig, setConfirmConfig] = useState<{
-    isOpen: boolean;
-    title: string;
-    message: string;
-    type: 'danger' | 'warning' | 'info' | 'success';
-    confirmText?: string;
-    cancelText?: string;
-    isAlert?: boolean;
-    onConfirm: () => void;
-  }>({
+  const [confirmConfig, setConfirmConfig] = useState<AppConfirmConfig>({
     isOpen: false,
     title: '',
     message: '',
@@ -473,35 +462,19 @@ export default function App() {
         onNewItem={handleTriggerNew}
       />
 
-      {/* Adding/Editing Modal Drawer */}
-      <VaultFormModal
-        isOpen={isModalOpen}
-        onClose={handleCloseVaultForm}
-        onSave={handleSaveItem}
+      <AppModals
+        isVaultFormOpen={isModalOpen}
         editingItem={editingItem}
+        isProfileOpen={isProfileModalOpen}
+        profileAvatar={profileAvatar}
+        profileName={profileName}
+        confirmConfig={confirmConfig}
+        onCloseVaultForm={handleCloseVaultForm}
+        onSaveVaultItem={handleSaveItem}
         onNotify={showNotification}
-      />
-
-      {/* Profile Settings Modal */}
-      <ProfileModal
-        isOpen={isProfileModalOpen}
-        onClose={handleCloseProfile}
-        currentAvatar={profileAvatar}
-        currentName={profileName}
-        onSave={handleSaveProfile}
-      />
-
-      {/* Premium Confirm Modal */}
-      <ConfirmModal
-        isOpen={confirmConfig.isOpen}
-        title={confirmConfig.title}
-        message={confirmConfig.message}
-        type={confirmConfig.type}
-        confirmText={confirmConfig.confirmText}
-        cancelText={confirmConfig.cancelText}
-        isAlert={confirmConfig.isAlert}
-        onConfirm={confirmConfig.onConfirm}
-        onCancel={handleCloseConfirm}
+        onCloseProfile={handleCloseProfile}
+        onSaveProfile={handleSaveProfile}
+        onCancelConfirm={handleCloseConfirm}
       />
     </div>
   );
