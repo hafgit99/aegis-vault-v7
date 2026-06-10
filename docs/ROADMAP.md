@@ -14,7 +14,7 @@
 
 - [x] Centralize secure random helpers.
 - [x] Replace password generator randomness with secure randomness.
-- [ ] Split `src/App.tsx` into route/view/layout components.
+- [x] Split `src/App.tsx` into route/view/layout components.
   - [x] Mobile sidebar backdrop extracted to `MobileSidebarBackdrop`.
   - [x] Local storage status badge extracted to `LocalStorageBadge`.
   - [x] Trash empty state extracted to `TrashEmptyState`.
@@ -47,7 +47,7 @@
   - [x] Main tab content renderer extracted to `MainContent`.
   - [x] Floating vault action extracted to `FloatingVaultAction`.
   - [x] App modal host extracted to `AppModals`.
-- [ ] Extract vault item selection, reveal state, and auto-lock logic into hooks.
+- [x] Extract vault item selection, reveal state, and auto-lock logic into hooks.
   - [x] Auto-lock behavior extracted to `useAutoLock`.
   - [x] Copy feedback and sensitive reveal state extracted to dedicated hooks.
   - [x] Vault filtering, trash, counters, and audit summary extracted to `useVaultQueries`.
