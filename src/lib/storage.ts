@@ -61,6 +61,10 @@ const INITIAL_DEMO_ITEMS: VaultItem[] = [
   },
 ];
 
+export async function initializeStorage(): Promise<void> {
+  await sqliteOPFSInstance.hydrate();
+}
+
 /**
  * Checks if a master password has already been set up in SQLite database.
  */
@@ -81,6 +85,7 @@ export function isMasterPasswordSet(): boolean {
  * Validates the master password against the SQLite Argon2id signature.
  */
 export async function verifyMasterPassword(password: string): Promise<boolean> {
+  await initializeStorage();
   const isCorrect = await sqliteOPFSInstance.verifyPassword(password);
   if (isCorrect) {
     openVaultSession(password);
@@ -92,6 +97,7 @@ export async function verifyMasterPassword(password: string): Promise<boolean> {
  * Safe utility to store the master password with Argon2id signature.
  */
 export async function setupMasterPassword(password: string): Promise<void> {
+  await initializeStorage();
   await sqliteOPFSInstance.setupMaster(password);
   openVaultSession(password);
   localStorage.setItem(STORAGE_KEYS.IS_SET_UP, 'true');

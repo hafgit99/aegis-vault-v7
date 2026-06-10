@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const sqliteOPFSInstance = vi.hoisted(() => ({
   deletePermanently: vi.fn(),
   getVaultItems: vi.fn(() => []),
+  hydrate: vi.fn(async () => undefined),
   reseedDemo: vi.fn(),
   resetAll: vi.fn(),
   saveVaultItem: vi.fn(),

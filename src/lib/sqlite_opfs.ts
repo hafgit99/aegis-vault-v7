@@ -22,6 +22,10 @@ import {
   type VersionedVaultDatabaseState,
 } from './vaultDatabaseFormat';
 import { createArgon2idHash, verifyArgon2idHash } from './argon2id';
+import {
+  readDesktopVaultDatabase,
+  writeDesktopVaultDatabase,
+} from './desktopStorage';
 
 /**
  * SQLite simulated schema and data manager storing DB blocks in private OPFS.
@@ -43,9 +47,14 @@ class SQLiteOPFS {
 
   private logs: SQLCommandLog[] = [];
   private onLogsChangedCallbacks: (() => void)[] = [];
+  private hydratePromise: Promise<void>;
 
   constructor() {
-    this.loadFromOPFS();
+    this.hydratePromise = this.loadFromPersistentStorage();
+  }
+
+  public async hydrate(): Promise<void> {
+    await this.hydratePromise;
   }
 
   // Registers callback for console query updates
@@ -78,8 +87,16 @@ class SQLiteOPFS {
   /**
    * Loads SQLite file from OPFS (Origin Private File System) sandboxed directory.
    */
-  private async loadFromOPFS() {
+  private async loadFromPersistentStorage() {
     try {
+      const desktopPayload = await readDesktopVaultDatabase();
+      if (desktopPayload) {
+        this.state = parseVaultDatabaseState(desktopPayload);
+        localStorage.setItem('aegis_sqlite_fallback', JSON.stringify(this.state, null, 2));
+        this.logQuery(`sqlite3_open("appdata:///${DB_FILENAME}")`, 'SUCCESS', 1);
+        return;
+      }
+
       if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.getDirectory) {
         const root = await navigator.storage.getDirectory();
         let fileHandle;
@@ -88,7 +105,7 @@ class SQLiteOPFS {
         } catch (e) {
           // File does not exist yet. Initialize using localStorage backup or start fresh
           this.migrateLegacyLocalStorage();
-          await this.saveToOPFS();
+          await this.saveToPersistentStorage();
           return;
         }
         
@@ -97,7 +114,7 @@ class SQLiteOPFS {
         if (content) {
           this.state = parseVaultDatabaseState(content);
           this.logQuery(`sqlite3_open("opfs:///${DB_FILENAME}")`, 'SUCCESS', 1);
-          await this.saveToOPFS();
+          await this.saveToPersistentStorage();
         }
       } else {
         // Fallback to standard sandbox-compliant simulated OPFS persistence
@@ -112,12 +129,13 @@ class SQLiteOPFS {
   /**
    * Saves raw DB state to private OPFS.
    */
-  private async saveToOPFS() {
+  private async saveToPersistentStorage() {
     try {
       const payloadStr = JSON.stringify(this.state, null, 2);
       
       // Save locally to localStorage as immediate mirror fallback
       localStorage.setItem('aegis_sqlite_fallback', payloadStr);
+      await writeDesktopVaultDatabase(payloadStr);
 
       if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.getDirectory) {
         const root = await navigator.storage.getDirectory();
@@ -138,7 +156,7 @@ class SQLiteOPFS {
         }
       }
     } catch (err) {
-      console.error("Failed writing SQLite OPFS block:", err);
+      console.error("Failed writing SQLite persistence block:", err);
     }
   }
 
@@ -206,6 +224,7 @@ class SQLiteOPFS {
    * Verifies the user's password using the strict Argon2id scheme.
    */
   public async verifyPassword(password: string): Promise<boolean> {
+    await this.hydrate();
     this.logQuery('SELECT argon_hash FROM user_secrets WHERE username = "owner";', 'SUCCESS', 1);
     if (this.state.user_secrets.length === 0) {
       return false;
@@ -218,7 +237,7 @@ class SQLiteOPFS {
     const isLegacyMatch = verifyLegacyArgon2idHash(password, expectedHash);
     if (isLegacyMatch) {
       this.state.user_secrets[0].argon_hash = await createArgon2idHash(password, secureRandomToken(16));
-      await this.saveToOPFS();
+      await this.saveToPersistentStorage();
     }
     return isLegacyMatch;
   }
@@ -227,13 +246,14 @@ class SQLiteOPFS {
    * Configures primary master verification keys.
    */
   public async setupMaster(password: string): Promise<void> {
+    await this.hydrate();
     const argonHash = await createArgon2idHash(password, secureRandomToken(16));
     this.state.user_secrets = [{
       username: 'owner',
       argon_hash: argonHash,
     }];
     this.logQuery('INSERT INTO user_secrets (username, argon_hash) VALUES ("owner", "[argon2id verification hash]");', 'SUCCESS', 1);
-    await this.saveToOPFS();
+    await this.saveToPersistentStorage();
   }
 
   /**
@@ -346,7 +366,7 @@ class SQLiteOPFS {
     }
 
     this.logQuery(query, 'SUCCESS', 1);
-    this.saveToOPFS();
+    this.saveToPersistentStorage();
     return this.getVaultItems(masterPasswordPlain);
   }
 
@@ -446,7 +466,7 @@ class SQLiteOPFS {
   public resetAll() {
     this.state = createEmptyVaultDatabaseState();
     this.logQuery('DROP TABLE user_secrets; DROP TABLE vault_items;', 'SUCCESS', 1);
-    this.saveToOPFS();
+    this.saveToPersistentStorage();
   }
 
   /**
@@ -455,7 +475,7 @@ class SQLiteOPFS {
   public deletePermanently(id: string, passwordPlain: string): VaultItem[] {
     this.state.vault_items = this.state.vault_items.filter(row => row.id !== id);
     this.logQuery(`DELETE FROM vault_items WHERE id = "${id}";`, 'SUCCESS', 1);
-    this.saveToOPFS();
+    this.saveToPersistentStorage();
     return this.getVaultItems(passwordPlain);
   }
 
@@ -487,7 +507,7 @@ class SQLiteOPFS {
     });
 
     this.logQuery(`RESEED: INSERT ${demoItems.length} rows into 'vault_items'`, 'SUCCESS', demoItems.length);
-    this.saveToOPFS();
+    this.saveToPersistentStorage();
     return this.getVaultItems(passwordPlain);
   }
 }
