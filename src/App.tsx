@@ -53,12 +53,12 @@ import TrashEmptyState from './components/TrashEmptyState';
 import TrashInfoBanner from './components/TrashInfoBanner';
 import TrashItemCard from './components/TrashItemCard';
 import VaultListItem from './components/VaultListItem';
-import RecentVaultItem from './components/RecentVaultItem';
 import CryptoShieldPanel from './components/CryptoShieldPanel';
 import AegisGuardReport from './components/AegisGuardReport';
 import DashboardCategoryStats from './components/DashboardCategoryStats';
 import DashboardSecurityScoreCard from './components/DashboardSecurityScoreCard';
 import DashboardQuickActions from './components/DashboardQuickActions';
+import RecentVaultPanel from './components/RecentVaultPanel';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -1221,38 +1221,12 @@ export default function App() {
                     {/* Recent & Premium Stats Row */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in text-left">
                       
-                      {/* Left: Recent Entries list */}
-                      <div className="bg-[#101210]/60 border border-outline-variant/15 rounded-2xl p-6 flex flex-col justify-between gap-4">
-                        <div>
-                          <div className="flex items-center justify-between border-b border-outline-variant/10 pb-3 mb-3">
-                            <h3 className="font-display text-xs font-bold uppercase tracking-widest text-[#059669] flex items-center gap-2">
-                              <Clock className="w-4 h-4 text-brand-primary" />
-                              <span>Son Eklenen Parolalar</span>
-                            </h3>
-                            <span className="text-[10px] text-on-surface-variant font-mono">Hızlı Erişim</span>
-                          </div>
-                          <div className="space-y-2.5">
-                            {activeItems.length === 0 ? (
-                              <p className="text-xs text-on-surface-variant/40 italic py-4 text-center">Henüz kayıtlı parola bulunmuyor.</p>
-                            ) : (
-                              activeItems
-                                .slice(-3)
-                                .slice()
-                                .reverse()
-                                .map((item) => (
-                                  <React.Fragment key={item.id}>
-                                    <RecentVaultItem
-                                      item={item}
-                                      copiedField={copiedField}
-                                      onSelect={handleSelectItem}
-                                      onCopyText={handleCopyText}
-                                    />
-                                  </React.Fragment>
-                                ))
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                      <RecentVaultPanel
+                        items={activeItems}
+                        copiedField={copiedField}
+                        onSelect={handleSelectItem}
+                        onCopyText={handleCopyText}
+                      />
 
                       <CryptoShieldPanel />
 

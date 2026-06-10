@@ -27,6 +27,7 @@
   - [x] Dashboard category stats extracted to `DashboardCategoryStats`.
   - [x] Dashboard security score card extracted to `DashboardSecurityScoreCard`.
   - [x] Dashboard quick actions extracted to `DashboardQuickActions`.
+  - [x] Dashboard recent vault panel extracted to `RecentVaultPanel`.
 - [ ] Extract vault item selection, reveal state, and auto-lock logic into hooks.
   - [x] Auto-lock behavior extracted to `useAutoLock`.
   - [x] Copy feedback and sensitive reveal state extracted to dedicated hooks.
