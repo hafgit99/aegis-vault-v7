@@ -5,11 +5,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useClipboardFeedback } from './useClipboardFeedback';
 
 describe('useClipboardFeedback', () => {
+  let clipboardText = '';
+  let readText: ReturnType<typeof vi.fn>;
+  let writeText: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
     vi.useFakeTimers();
+    clipboardText = '';
+    readText = vi.fn().mockImplementation(() => Promise.resolve(clipboardText));
+    writeText = vi.fn().mockImplementation((text: string) => {
+      clipboardText = text;
+      return Promise.resolve();
+    });
     Object.assign(navigator, {
       clipboard: {
-        writeText: vi.fn().mockResolvedValue(undefined),
+        readText,
+        writeText,
       },
     });
   });
@@ -20,13 +31,13 @@ describe('useClipboardFeedback', () => {
   });
 
   it('marks a field as copied and clears it after the delay', () => {
-    const { result } = renderHook(() => useClipboardFeedback(2000));
+    const { result } = renderHook(() => useClipboardFeedback(2000, 30000));
 
     act(() => {
       result.current.copyText('secret', 'password');
     });
 
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('secret');
+    expect(writeText).toHaveBeenCalledWith('secret');
     expect(result.current.copiedField).toBe('password');
 
     act(() => {
@@ -36,16 +47,54 @@ describe('useClipboardFeedback', () => {
     expect(result.current.copiedField).toBeNull();
   });
 
-  it('can clear copied feedback immediately', () => {
-    const { result } = renderHook(() => useClipboardFeedback(2000));
+  it('clears the clipboard after the secure clear delay when unchanged', async () => {
+    const { result } = renderHook(() => useClipboardFeedback(2000, 30000));
 
     act(() => {
       result.current.copyText('secret', 'password');
     });
-    act(() => {
-      result.current.clearCopiedField();
+
+    await act(async () => {
+      vi.advanceTimersByTime(30000);
+      await Promise.resolve();
     });
 
+    expect(readText).toHaveBeenCalled();
+    expect(writeText).toHaveBeenLastCalledWith('');
+    expect(clipboardText).toBe('');
+  });
+
+  it('does not clear the clipboard when the user copied something else', async () => {
+    const { result } = renderHook(() => useClipboardFeedback(2000, 30000));
+
+    act(() => {
+      result.current.copyText('secret', 'password');
+    });
+    clipboardText = 'new clipboard value';
+
+    await act(async () => {
+      vi.advanceTimersByTime(30000);
+      await Promise.resolve();
+    });
+
+    expect(readText).toHaveBeenCalled();
+    expect(writeText).not.toHaveBeenLastCalledWith('');
+    expect(clipboardText).toBe('new clipboard value');
+  });
+
+  it('can clear copied feedback and unchanged clipboard immediately', async () => {
+    const { result } = renderHook(() => useClipboardFeedback(2000, 30000));
+
+    act(() => {
+      result.current.copyText('secret', 'password');
+    });
+
+    await act(async () => {
+      result.current.clearCopiedField();
+      await Promise.resolve();
+    });
+
+    expect(writeText).toHaveBeenLastCalledWith('');
     expect(result.current.copiedField).toBeNull();
   });
 });

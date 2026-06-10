@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Sliders, 
   Copy, 
@@ -20,6 +20,11 @@ import {
 import { GeneratorOptions } from '../types';
 import { generatePassword, calculatePasswordScore, getStrengthLabel } from '../lib/security';
 import { generateDiceware, DicewareOptions } from '../lib/diceware';
+import {
+  clearClipboardIfUnchanged,
+  DEFAULT_CLIPBOARD_CLEAR_DELAY_MS,
+  writeClipboardText,
+} from '../lib/clipboard';
 
 export default function PasswordGenerator() {
   const [mode, setMode] = useState<'character' | 'diceware'>('character');
@@ -45,13 +50,50 @@ export default function PasswordGenerator() {
 
   const [password, setPassword] = useState('');
   const [copied, setCopied] = useState(false);
+  const copiedResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clipboardClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastCopiedPasswordRef = useRef<string | null>(null);
+
+  const clearCopiedResetTimer = () => {
+    if (copiedResetTimerRef.current) {
+      clearTimeout(copiedResetTimerRef.current);
+      copiedResetTimerRef.current = null;
+    }
+  };
+
+  const clearClipboardTimer = () => {
+    if (clipboardClearTimerRef.current) {
+      clearTimeout(clipboardClearTimerRef.current);
+      clipboardClearTimerRef.current = null;
+    }
+  };
+
+  const clearLastCopiedPassword = () => {
+    const lastCopiedPassword = lastCopiedPasswordRef.current;
+    lastCopiedPasswordRef.current = null;
+    if (lastCopiedPassword) {
+      void clearClipboardIfUnchanged(lastCopiedPassword);
+    }
+  };
 
   // Auto generate on mount or options / mode change
   useEffect(() => {
     handleGenerate();
   }, [mode, options, dicewareOptions]);
 
+  useEffect(
+    () => () => {
+      clearCopiedResetTimer();
+      clearClipboardTimer();
+      clearLastCopiedPassword();
+    },
+    [],
+  );
+
   const handleGenerate = () => {
+    clearCopiedResetTimer();
+    clearClipboardTimer();
+    clearLastCopiedPassword();
     if (mode === 'character') {
       const pw = generatePassword(options);
       setPassword(pw);
@@ -64,9 +106,19 @@ export default function PasswordGenerator() {
 
   const handleCopy = () => {
     if (!password) return;
-    navigator.clipboard.writeText(password);
+    void writeClipboardText(password);
+    clearCopiedResetTimer();
+    clearClipboardTimer();
+    lastCopiedPasswordRef.current = password;
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    copiedResetTimerRef.current = setTimeout(() => {
+      setCopied(false);
+      copiedResetTimerRef.current = null;
+    }, 2000);
+    clipboardClearTimerRef.current = setTimeout(() => {
+      clearLastCopiedPassword();
+      clipboardClearTimerRef.current = null;
+    }, DEFAULT_CLIPBOARD_CLEAR_DELAY_MS);
   };
 
   const score = calculatePasswordScore(password);
