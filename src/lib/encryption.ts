@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { secureRandomBytes } from './random';
+
 /**
  * Encrypted payload representation for safe storage
  */
@@ -347,12 +349,7 @@ export function aes256GcmEncrypt(plaintext: string, key: Uint8Array): EncryptedP
   const rawBytes = encoder.encode(plaintext);
 
   // Generate completely unique, separate 12-byte IV for every encryption action
-  const iv = new Uint8Array(12);
-  if (typeof window !== 'undefined' && window.crypto) {
-    window.crypto.getRandomValues(iv);
-  } else {
-    for (let i = 0; i < 12; i++) iv[i] = Math.floor(Math.random() * 256);
-  }
+  const iv = secureRandomBytes(12);
 
   const roundKeys = aesExpandKey(key);
 
@@ -440,12 +437,7 @@ export function aes256GcmDecrypt(payload: EncryptedPayload, key: Uint8Array): st
 
 export function encryptDataWithPassword(rawData: string, password: string): string {
   // Generate random salt
-  const saltBytes = new Uint8Array(16);
-  if (typeof window !== 'undefined' && window.crypto) {
-    window.crypto.getRandomValues(saltBytes);
-  } else {
-    for (let i = 0; i < 16; i++) saltBytes[i] = Math.floor(Math.random() * 256);
-  }
+  const saltBytes = secureRandomBytes(16);
   const saltHex = Array.from(saltBytes).map(b => b.toString(16).padStart(2, '0')).join('');
 
   // 1. Password-based KDF using Argon2id

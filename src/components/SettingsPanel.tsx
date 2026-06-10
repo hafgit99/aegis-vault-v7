@@ -27,6 +27,7 @@ import { getVaultItems, setupMasterPassword, resetSystem, reseedDemoData, saveVa
 import { VaultItem } from '../types';
 import { encryptDataWithPassword, decryptDataWithPassword } from '../lib/encryption';
 import { parseUniversalImport } from '../lib/importer';
+import { secureRandomToken } from '../lib/random';
 import { registerBiometric, isBiometricEnabled, disableBiometric, isBiometricSupported } from '../lib/biometric';
 
 interface SettingsPanelProps {
@@ -227,7 +228,7 @@ export default function SettingsPanel({
     itemsList.forEach((x) => {
       if (x.title || x.username) {
         saveVaultItem({
-          id: x.id || Math.random().toString(36).substring(2, 11),
+          id: x.id || secureRandomToken(9),
           title: x.title || 'İçeri Aktarılan Kayıt',
           username: x.username || '',
           password: x.password || '',

@@ -33,6 +33,7 @@ import {
 import { VaultItem } from '../types';
 import { generatePassword } from '../lib/security';
 import { saveAttachment, getAttachmentBlob } from '../lib/attachments';
+import { secureRandomIndex, secureRandomToken } from '../lib/random';
 
 interface VaultFormModalProps {
   isOpen: boolean;
@@ -182,7 +183,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem }:
     const chars = '0123456789ABCDEFabcdef';
     let hex = '';
     for (let i = 0; i < 64; i++) {
-      hex += chars[Math.floor(Math.random() * chars.length)];
+      hex += chars[secureRandomIndex(chars.length)];
     }
     setPasskeyPrivateExponent(hex);
   };
@@ -270,7 +271,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem }:
     // Save attachment in IndexedDB if selected
     if (selectedFile) {
       try {
-        const newAttachmentId = Math.random().toString(36).substr(2, 9);
+        const newAttachmentId = secureRandomToken(9);
         await saveAttachment(newAttachmentId, selectedFile, (percent) => {
           setUploadProgress(percent);
         });

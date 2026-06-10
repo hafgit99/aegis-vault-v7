@@ -4,6 +4,7 @@
  */
 
 import { hmacSha256, aes256GcmEncrypt, aes256GcmDecrypt } from './encryption';
+import { secureRandomBytes } from './random';
 
 /**
  * PBKDF2-SHA256 Implementation using pure TS hmacSha256
@@ -61,20 +62,10 @@ export async function registerBiometric(masterPassword: string): Promise<void> {
   }
 
   // Create a randomized challenge
-  const challenge = new Uint8Array(32);
-  if (typeof window !== 'undefined' && window.crypto) {
-    window.crypto.getRandomValues(challenge);
-  } else {
-    for (let i = 0; i < 32; i++) challenge[i] = Math.floor(Math.random() * 256);
-  }
+  const challenge = secureRandomBytes(32);
 
   // Create a randomized userId
-  const userId = new Uint8Array(16);
-  if (typeof window !== 'undefined' && window.crypto) {
-    window.crypto.getRandomValues(userId);
-  } else {
-    for (let i = 0; i < 16; i++) userId[i] = Math.floor(Math.random() * 256);
-  }
+  const userId = secureRandomBytes(16);
 
   const creationOptions: CredentialCreationOptions = {
     publicKey: {
@@ -108,12 +99,7 @@ export async function registerBiometric(masterPassword: string): Promise<void> {
   const rawIdBytes = new Uint8Array(credential.rawId);
   
   // Clean generated 16-byte random salt for PBKDF2-SHA256
-  const salt = new Uint8Array(16);
-  if (typeof window !== 'undefined' && window.crypto) {
-    window.crypto.getRandomValues(salt);
-  } else {
-    for (let i = 0; i < 16; i++) salt[i] = Math.floor(Math.random() * 256);
-  }
+  const salt = secureRandomBytes(16);
 
   // Stretch key using PBKDF2-SHA256
   const wrappingKey = pbkdf2Sha256(rawIdBytes, salt, 10000, 32);
@@ -141,12 +127,7 @@ export async function authenticateBiometric(): Promise<string> {
   const credIdBytes = new Uint8Array(atob(biometricInfo.credentialId).split("").map(c => c.charCodeAt(0)));
   const saltBytes = new Uint8Array(atob(biometricInfo.salt).split("").map(c => c.charCodeAt(0)));
 
-  const challenge = new Uint8Array(32);
-  if (typeof window !== 'undefined' && window.crypto) {
-    window.crypto.getRandomValues(challenge);
-  } else {
-    for (let i = 0; i < 32; i++) challenge[i] = Math.floor(Math.random() * 256);
-  }
+  const challenge = secureRandomBytes(32);
 
   const requestOptions: CredentialRequestOptions = {
     publicKey: {

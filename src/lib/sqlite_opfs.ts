@@ -13,6 +13,7 @@ import {
   aes256GcmDecrypt,
   EncryptedPayload
 } from './encryption';
+import { secureRandomToken } from './random';
 
 /**
  * SQLite simulated schema and data manager storing DB blocks in private OPFS.
@@ -89,7 +90,7 @@ class SQLiteOPFS {
 
   public logQuery(query: string, status: 'SUCCESS' | 'ERROR', rowsAffected: number) {
     this.logs.push({
-      id: Math.random().toString(36).substring(2, 9),
+      id: secureRandomToken(7),
       timestamp: new Date().toLocaleTimeString(),
       query,
       status,
@@ -327,7 +328,7 @@ class SQLiteOPFS {
     const category = item.category || 'login';
 
     const row: SQLiteRow = {
-      id: item.id || Math.random().toString(36).substring(2, 11),
+      id: item.id || secureRandomToken(9),
       title: item.title || 'İçeri Aktarılan Kayıt',
       category: category,
       favorite: item.favorite ? 1 : 0,

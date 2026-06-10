@@ -3,16 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// Cryptographically secure random integer selection
-function getRandomInt(max: number): number {
-  if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
-    const array = new Uint32Array(1);
-    window.crypto.getRandomValues(array);
-    return array[0] % max;
-  }
-  // Fallback if crypto is unavailable (highly unlikely in modern browsers)
-  return Math.floor(Math.random() * max);
-}
+import { secureRandomIndex } from './random';
 
 // 300 Memorable Turkish Words (Clean, positive, easy to write, no Turkish characters that might break some legacy systems, or clean Turkish characters fully preserved)
 // Let's use clean Turkish characters since we are a super modern system!
@@ -97,7 +88,7 @@ export function generateDiceware(options: DicewareOptions): string {
   const pickedWords: string[] = [];
 
   for (let i = 0; i < options.wordCount; i++) {
-    const randomIndex = getRandomInt(wordPool.length);
+    const randomIndex = secureRandomIndex(wordPool.length);
     let word = wordPool[randomIndex];
 
     if (options.capitalize) {
@@ -130,9 +121,9 @@ export function generateDiceware(options: DicewareOptions): string {
 
   // Optionally append or insert a number
   if (options.addNumber) {
-    const randomNum = getRandomInt(100); // 0-99
+    const randomNum = secureRandomIndex(100); // 0-99
     // Append or pre-pend based on a random toggle
-    if (getRandomInt(2) === 0) {
+    if (secureRandomIndex(2) === 0) {
       finalPassphrase = randomNum + (options.separator === 'none' || options.separator === 'camel' ? '' : sep) + finalPassphrase;
     } else {
       finalPassphrase = finalPassphrase + (options.separator === 'none' || options.separator === 'camel' ? '' : sep) + randomNum;
@@ -142,8 +133,8 @@ export function generateDiceware(options: DicewareOptions): string {
   // Optionally append or insert a symbol
   if (options.addSymbol) {
     const symbols = '!@#$%&*?+-=';
-    const randomSymbol = symbols[getRandomInt(symbols.length)];
-    if (getRandomInt(2) === 0) {
+    const randomSymbol = symbols[secureRandomIndex(symbols.length)];
+    if (secureRandomIndex(2) === 0) {
       finalPassphrase = randomSymbol + (options.separator === 'none' || options.separator === 'camel' ? '' : sep) + finalPassphrase;
     } else {
       finalPassphrase = finalPassphrase + (options.separator === 'none' || options.separator === 'camel' ? '' : sep) + randomSymbol;

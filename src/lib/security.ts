@@ -4,6 +4,7 @@
  */
 
 import { VaultItem, GeneratorOptions, AuditReport } from '../types';
+import { secureRandomIndex } from './random';
 
 /**
  * Calculates security score for a single password from 0 to 100.
@@ -104,24 +105,6 @@ export function runVaultAudit(items: VaultItem[]): AuditReport {
     secureCount,
     totalCount: items.length,
   };
-}
-
-function secureRandomIndex(max: number): number {
-  if (max <= 0) return 0;
-
-  const cryptoApi = globalThis.crypto;
-  if (!cryptoApi?.getRandomValues) {
-    return Math.floor(Math.random() * max);
-  }
-
-  const array = new Uint32Array(1);
-  const limit = Math.floor(0xffffffff / max) * max;
-
-  do {
-    cryptoApi.getRandomValues(array);
-  } while (array[0] >= limit);
-
-  return array[0] % max;
 }
 
 /**
