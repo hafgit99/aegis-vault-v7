@@ -165,4 +165,4 @@ Claims to avoid until fixed:
 2. Wire the legacy XOR attachment migration into a startup or settings maintenance flow.
 3. Replace remaining custom AES/GCM simulation paths.
 4. Decide whether plaintext JSON export remains available in release builds.
-5. Replace generated Tauri icons with branded assets before public release.
+5. Review public release branding and installer identity before publishing signed artifacts.

@@ -130,7 +130,7 @@ If a release is found to be broken:
 Before the first public release, decide:
 
 - Whether plaintext JSON export remains enabled.
-- Whether generated Tauri icons have been replaced with branded icons.
+- Whether the branded icon source still matches the current release branding.
 - Whether remaining legacy crypto compatibility paths are acceptable for beta only.
 - Whether unsigned builds are internal-only.
 - Whether the app should display a stronger backup/recovery warning during setup.
