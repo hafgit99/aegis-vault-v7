@@ -20,7 +20,6 @@ import {
   Globe,
   Heart,
   ShieldAlert,
-  ArrowLeft,
   Menu,
   LayoutDashboard,
 } from 'lucide-react';
@@ -49,15 +48,7 @@ import DashboardSecurityScoreCard from './components/DashboardSecurityScoreCard'
 import DashboardQuickActions from './components/DashboardQuickActions';
 import RecentVaultPanel from './components/RecentVaultPanel';
 import DashboardHeader from './components/DashboardHeader';
-import VaultItemSideInfo from './components/VaultItemSideInfo';
-import VaultItemSecurityAssessment from './components/VaultItemSecurityAssessment';
-import VaultItemDetailHeader from './components/VaultItemDetailHeader';
-import VaultItemAttachmentCard from './components/VaultItemAttachmentCard';
-import SecureNoteDetail from './components/SecureNoteDetail';
-import PasskeyDetail from './components/PasskeyDetail';
-import IdentityDetail from './components/IdentityDetail';
-import CardDetail from './components/CardDetail';
-import LoginDetail from './components/LoginDetail';
+import VaultItemDetailPanel from './components/VaultItemDetailPanel';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -588,72 +579,25 @@ export default function App() {
                 !selectedItem || mobileActiveView === 'list' ? 'hidden lg:block' : 'block'
               }`}>
                 {selectedItem ? (
-                  <div className="max-w-3xl mx-auto space-y-6 lg:space-y-8">
-                    {/* Mobile Back Button Header */}
-                    <div className="lg:hidden flex items-center justify-between pb-2 border-b border-outline-variant/10 mb-4">
-                      <button
-                        onClick={() => setMobileActiveView('list')}
-                        className="flex items-center gap-2 text-xs font-bold bg-[#1a1c1a] border border-outline-variant/15 px-3 py-2 rounded-lg text-on-surface hover:text-brand-primary active:scale-95 transition-all cursor-pointer"
-                      >
-                        <ArrowLeft className="w-4 h-4 text-brand-primary" strokeWidth={2.5} />
-                        <span>Geri Dön</span>
-                      </button>
-                      <span className="text-[10px] text-on-surface-variant uppercase tracking-widest font-bold">KART DETAYLARI</span>
-                    </div>
-
-                    <VaultItemDetailHeader
-                      item={selectedItem}
-                      copiedField={copiedField}
-                      onToggleFavorite={handleToggleFavorite}
-                      onEdit={handleTriggerEdit}
-                      onCopyText={handleCopyText}
-                      onDelete={handleDeleteItem}
-                    />
-
-                    <VaultItemSecurityAssessment score={score} onOpenAudit={() => setActiveTab('audit')} />
-
-                    {/* Data Fields */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div className="md:col-span-2 space-y-4">
-                        
-                        <LoginDetail
-                          item={selectedItem}
-                          copiedField={copiedField}
-                          isPasswordRevealed={isPasswordRevealed}
-                          totpCountdown={totpCountdown}
-                          onTogglePasswordReveal={() => toggleReveal('password')}
-                          onCopyText={handleCopyText}
-                        />
-
-                        <CardDetail
-                          item={selectedItem}
-                          copiedField={copiedField}
-                          isCardNumberRevealed={isCardNumRevealed}
-                          isCvvRevealed={isCvvRevealed}
-                          isPinRevealed={isPinRevealed}
-                          onToggleReveal={toggleReveal}
-                          onCopyText={handleCopyText}
-                        />
-
-                        <PasskeyDetail
-                          item={selectedItem}
-                          copiedField={copiedField}
-                          isPrivateExponentRevealed={isPasskeyExpRevealed}
-                          onToggleReveal={() => toggleReveal('passkeyPrivateExponent')}
-                          onCopyText={handleCopyText}
-                        />
-
-                        <IdentityDetail item={selectedItem} copiedField={copiedField} onCopyText={handleCopyText} />
-
-                        <SecureNoteDetail item={selectedItem} copiedField={copiedField} onCopyText={handleCopyText} />
-
-                        <VaultItemAttachmentCard item={selectedItem} onDownload={handleDownloadAttachment} />
-
-                      </div>
-
-                      <VaultItemSideInfo item={selectedItem} />
-                    </div>
-                  </div>
+                  <VaultItemDetailPanel
+                    item={selectedItem}
+                    copiedField={copiedField}
+                    score={score}
+                    isPasswordRevealed={isPasswordRevealed}
+                    isCardNumberRevealed={isCardNumRevealed}
+                    isCvvRevealed={isCvvRevealed}
+                    isPinRevealed={isPinRevealed}
+                    isPasskeyPrivateExponentRevealed={isPasskeyExpRevealed}
+                    totpCountdown={totpCountdown}
+                    onBackToList={() => setMobileActiveView('list')}
+                    onOpenAudit={() => setActiveTab('audit')}
+                    onToggleFavorite={handleToggleFavorite}
+                    onEdit={handleTriggerEdit}
+                    onDelete={handleDeleteItem}
+                    onToggleReveal={toggleReveal}
+                    onCopyText={handleCopyText}
+                    onDownloadAttachment={handleDownloadAttachment}
+                  />
                 ) : (
                   <div className="max-w-4xl mx-auto space-y-8 py-4 lg:py-6 animate-fade-in text-left">
                     <DashboardHeader profileName={profileName} onOpenProfile={() => setIsProfileModalOpen(true)} />
