@@ -73,6 +73,7 @@
 - [x] Replace `alert()` calls with the existing modal/toast pattern.
 - [x] Normalize naming: `AegisVault`, `Aegis Vault`, and `Aegis Vault 7`.
 - [ ] Add component tests for lock screen, vault form, settings import/export, and trash.
+  - [x] Vault form create/edit behavior covered by component tests.
 - [x] Add core regression tests for encrypted backup envelopes and universal imports.
 
 ## Phase 3: Security Hardening
