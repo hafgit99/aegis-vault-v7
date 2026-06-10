@@ -21,6 +21,7 @@
   - [x] Trash info banner extracted to `TrashInfoBanner`.
   - [x] Trash item card extracted to `TrashItemCard`.
   - [x] Vault list row extracted to `VaultListItem`.
+  - [x] Dashboard recent item row extracted to `RecentVaultItem`.
 - [ ] Extract vault item selection, reveal state, and auto-lock logic into hooks.
   - [x] Auto-lock behavior extracted to `useAutoLock`.
   - [x] Copy feedback and sensitive reveal state extracted to dedicated hooks.
