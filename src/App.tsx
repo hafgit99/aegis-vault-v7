@@ -60,6 +60,7 @@ import VaultItemAttachmentCard from './components/VaultItemAttachmentCard';
 import SecureNoteDetail from './components/SecureNoteDetail';
 import PasskeyDetail from './components/PasskeyDetail';
 import IdentityDetail from './components/IdentityDetail';
+import CardDetail from './components/CardDetail';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -716,123 +717,15 @@ export default function App() {
                           </div>
                         )}
 
-                        {/* 2. KREDİ KARTI CATEGORY */}
-                        {selectedItem.category === 'card' && (
-                          <div className="space-y-4">
-                            {/* Card Holder Name */}
-                            <div className="glass-panel p-5 rounded-xl">
-                              <label className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase mb-2">
-                                KART SAHİBİ
-                              </label>
-                              <div className="flex items-center justify-between">
-                                <span className="font-bold text-base text-on-surface uppercase">{selectedItem.cardholderName || 'Belirtilmemiş'}</span>
-                                <button
-                                  onClick={() => handleCopyText(selectedItem.cardholderName || '', 'cardholderName')}
-                                  className="text-on-surface-variant hover:text-brand-primary transition-colors focus:outline-none p-1.5 hover:bg-[#1a1c1a]/50 rounded-lg cursor-pointer ml-2 shrink-0"
-                                >
-                                  {copiedField === 'cardholderName' ? <Check className="w-4 h-4 text-brand-tertiary" /> : <Copy className="w-4 h-4" />}
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Card Number */}
-                            <div className="glass-panel p-5 rounded-xl">
-                              <label className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase mb-2">
-                                KART NUMARASI
-                              </label>
-                              <div className="flex items-center justify-between">
-                                <span className="font-mono text-base tracking-widest text-on-surface select-all font-semibold">
-                                  {isCardNumRevealed 
-                                    ? (selectedItem.cardNumber || '').replace(/(\d{4})/g, '$1 ').trim() 
-                                    : '•••• •••• •••• ' + (selectedItem.cardNumber || '').slice(-4)}
-                                </span>
-                                <div className="flex items-center gap-2 shrink-0 ml-2">
-                                  <button
-                                    onClick={() => toggleReveal('cardNumber')}
-                                    className="text-on-surface-variant hover:text-brand-primary transition-colors focus:outline-none p-1.5 hover:bg-[#1a1c1a]/50 rounded-lg cursor-pointer"
-                                  >
-                                    {isCardNumRevealed ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                  </button>
-                                  <button
-                                    onClick={() => handleCopyText(selectedItem.cardNumber || '', 'cardNumber')}
-                                    className="text-on-surface-variant hover:text-brand-primary transition-colors focus:outline-none p-1.5 hover:bg-[#1a1c1a]/50 rounded-lg cursor-pointer"
-                                    title="Kopyala"
-                                  >
-                                    {copiedField === 'cardNumber' ? <Check className="w-4 h-4 text-brand-tertiary" /> : <Copy className="w-4 h-4" />}
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Expiry, CVV, Pin Grid */}
-                            <div className="grid grid-cols-3 gap-4">
-                              <div className="glass-panel p-4 rounded-xl">
-                                <label className="block text-[9px] font-bold tracking-wider text-on-surface-variant uppercase mb-1">
-                                  SON GEÇERLİLİK
-                                </label>
-                                <div className="flex items-center justify-between">
-                                  <span className="font-mono font-bold text-sm text-on-surface">{selectedItem.cardExpiry || 'AA/YY'}</span>
-                                  <button
-                                    onClick={() => handleCopyText(selectedItem.cardExpiry || '', 'cardExpiry')}
-                                    className="text-on-surface-variant hover:text-brand-primary transition-colors p-1"
-                                  >
-                                    {copiedField === 'cardExpiry' ? '✓' : <Copy className="w-3.5 h-3.5" />}
-                                  </button>
-                                </div>
-                              </div>
-
-                              <div className="glass-panel p-4 rounded-xl">
-                                <label className="block text-[9px] font-bold tracking-wider text-on-surface-variant uppercase mb-1">
-                                  GÜVENLİK KODU (CVV)
-                                </label>
-                                <div className="flex items-center justify-between">
-                                  <span className="font-mono font-bold text-sm text-on-surface">
-                                    {isCvvRevealed ? selectedItem.cardCvv || '***' : '***'}
-                                  </span>
-                                  <div className="flex items-center gap-1 shrink-0">
-                                    <button
-                                      onClick={() => toggleReveal('cardCvv')}
-                                      className="text-on-surface-variant hover:text-brand-primary p-0.5"
-                                    >
-                                      {isCvvRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                                    </button>
-                                    <button
-                                      onClick={() => handleCopyText(selectedItem.cardCvv || '', 'cardCvv')}
-                                      className="text-on-surface-variant hover:text-brand-primary p-0.5"
-                                    >
-                                      {copiedField === 'cardCvv' ? '✓' : <Copy className="w-3.5 h-3.5" />}
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="glass-panel p-4 rounded-xl">
-                                <label className="block text-[9px] font-bold tracking-wider text-on-surface-variant uppercase mb-1">
-                                  ATM / BANKA ŞİFRESİ
-                                </label>
-                                <div className="flex items-center justify-between">
-                                  <span className="font-mono font-bold text-sm text-on-surface">
-                                    {isPinRevealed ? selectedItem.cardPin || '****' : '****'}
-                                  </span>
-                                  <div className="flex items-center gap-1 shrink-0">
-                                    <button
-                                      onClick={() => toggleReveal('cardPin')}
-                                      className="text-on-surface-variant hover:text-brand-primary p-0.5"
-                                    >
-                                      {isPinRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                                    </button>
-                                    <button
-                                      onClick={() => handleCopyText(selectedItem.cardPin || '', 'cardPin')}
-                                      className="text-on-surface-variant hover:text-brand-primary p-0.5"
-                                    >
-                                      {copiedField === 'cardPin' ? '✓' : <Copy className="w-3.5 h-3.5" />}
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
+                        <CardDetail
+                          item={selectedItem}
+                          copiedField={copiedField}
+                          isCardNumberRevealed={isCardNumRevealed}
+                          isCvvRevealed={isCvvRevealed}
+                          isPinRevealed={isPinRevealed}
+                          onToggleReveal={toggleReveal}
+                          onCopyText={handleCopyText}
+                        />
 
                         <PasskeyDetail
                           item={selectedItem}
