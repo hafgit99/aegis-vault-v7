@@ -106,6 +106,7 @@
   - [x] Expand importer fixtures for JSON, CSV, encrypted envelopes, and malformed inputs.
   - [x] Expand attachment IndexedDB persistence and migration coverage.
   - [x] Expand SQLite OPFS persistence engine coverage.
+  - [x] Expand storage lifecycle wrapper coverage.
 
 ## Phase 4: Desktop Productization
 

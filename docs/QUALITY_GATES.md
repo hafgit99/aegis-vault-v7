@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 74.83% |
-| Statements | 74.83% |
-| Functions | 74.52% |
-| Branches | 73.70% |
+| Lines | 76.00% |
+| Statements | 76.00% |
+| Functions | 76.71% |
+| Branches | 74.58% |
 
 Initial thresholds are intentionally below the current baseline:
 
@@ -32,14 +32,14 @@ These thresholds prevent large regressions while leaving room to add tests aroun
 
 ## Priority Coverage Targets
 
-1. `src/lib/storage.ts`: add coverage for trash, reseed, and item lifecycle wrappers.
-2. `src/components/VaultFormModal.tsx` and `src/components/PasswordGenerator.tsx`: add workflow-focused component tests.
+1. `src/components/VaultFormModal.tsx` and `src/components/PasswordGenerator.tsx`: add workflow-focused component tests.
 
 Recently improved:
 
 - `src/lib/importer.ts`: covered supported JSON/CSV formats, encrypted envelope detection, malformed inputs, and quote-aware CSV parsing.
 - `src/lib/attachments.ts`: covered IndexedDB save/read/delete paths, bulk legacy migration, missing records, and connection cleanup behavior.
 - `src/lib/sqlite_opfs.ts`: covered master setup/verification, encrypted row persistence, read-only SQL console behavior, reseed/delete/reset flows, query log subscriptions, and localStorage fallback hydration.
+- `src/lib/storage.ts`: covered setup detection, no-session guards, save/delete/reseed wrappers, trash move/restore, expired trash cleanup, and full trash emptying.
 
 ## Next Gates
 
