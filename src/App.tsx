@@ -6,7 +6,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { VaultItem, ActiveTab } from './types';
 import { getVaultItems, saveVaultItem, deleteVaultItem, moveToTrash, restoreFromTrash, deletePermanently, emptyTrashComplete } from './lib/storage';
-import { getTOTPTimeRemaining } from './lib/otp';
 import { calculatePasswordScore } from './lib/security';
 import { getAttachmentBlob } from './lib/attachments';
 import LockScreen from './components/LockScreen';
@@ -24,6 +23,7 @@ import { useVaultSelection } from './hooks/useVaultSelection';
 import { useProfileSettings } from './hooks/useProfileSettings';
 import { useAutoLockDuration } from './hooks/useAutoLockDuration';
 import { useConfirmModal } from './hooks/useConfirmModal';
+import { useTotpCountdown } from './hooks/useTotpCountdown';
 
 export default function App() {
   const [unlocked, setUnlocked] = useState(false);
@@ -49,8 +49,7 @@ export default function App() {
   const isPinRevealed = revealed.cardPin;
   const isPasskeyExpRevealed = revealed.passkeyPrivateExponent;
 
-  // Rotating 2FA Countdown
-  const [totpCountdown, setTotpCountdown] = useState(30);
+  const totpCountdown = useTotpCountdown();
 
   const {
     autoLockDuration,
@@ -104,14 +103,6 @@ export default function App() {
       refreshDatabase();
     }
   }, [unlocked]);
-
-  // Handle active 2FA ticking countdown
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setTotpCountdown(getTOTPTimeRemaining());
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleAutoLock = useCallback(() => {
     setUnlocked(false);
