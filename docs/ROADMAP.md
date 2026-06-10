@@ -84,6 +84,7 @@
 - [ ] Replace simulated Argon2id with a vetted Argon2id implementation.
   - [x] Browser Argon2id adapter added around `argon2-browser`.
   - [x] Encrypted backup export/import uses vetted Argon2id adapter.
+  - [x] Master password verification hashes use vetted Argon2id with legacy hash upgrade.
 - [ ] Replace custom AES/GCM simulation with WebCrypto AES-GCM or a vetted crypto library.
   - [x] Encrypted backup export/import uses WebCrypto AES-GCM.
   - [x] Biometric master-password wrapping uses WebCrypto AES-GCM.

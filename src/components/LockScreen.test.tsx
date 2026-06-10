@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { APP_NAME } from '../lib/branding';
@@ -15,7 +15,7 @@ import LockScreen from './LockScreen';
 
 vi.mock('../lib/storage', () => ({
   isMasterPasswordSet: vi.fn(),
-  setupMasterPassword: vi.fn(),
+  setupMasterPassword: vi.fn(async () => undefined),
   verifyMasterPassword: vi.fn(),
 }));
 
@@ -31,7 +31,7 @@ function passwordInputs(): HTMLInputElement[] {
 
 beforeEach(() => {
   vi.mocked(isMasterPasswordSet).mockReturnValue(false);
-  vi.mocked(verifyMasterPassword).mockReturnValue(false);
+  vi.mocked(verifyMasterPassword).mockResolvedValue(false);
 });
 
 afterEach(() => {
@@ -46,29 +46,31 @@ describe('LockScreen', () => {
     const [password, confirmation] = passwordInputs();
     fireEvent.change(password, { target: { value: '12345' } });
     fireEvent.change(confirmation, { target: { value: '12345' } });
-    fireEvent.click(screen.getByText('Güvenli Kasayı Başlat'));
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 
     expect(screen.getByText('Ana şifre en az 6 karakterden oluşmalıdır.')).toBeTruthy();
     expect(setupMasterPassword).not.toHaveBeenCalled();
   });
 
-  it('sets up the master password and unlocks when confirmation matches', () => {
+  it('sets up the master password and unlocks when confirmation matches', async () => {
     const onUnlock = vi.fn();
     render(<LockScreen onUnlock={onUnlock} />);
 
     const [password, confirmation] = passwordInputs();
     fireEvent.change(password, { target: { value: 'strong-pass' } });
     fireEvent.change(confirmation, { target: { value: 'strong-pass' } });
-    fireEvent.click(screen.getByText('Güvenli Kasayı Başlat'));
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 
-    expect(setupMasterPassword).toHaveBeenCalledWith('strong-pass');
-    expect(onUnlock).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(setupMasterPassword).toHaveBeenCalledWith('strong-pass');
+      expect(onUnlock).toHaveBeenCalledTimes(1);
+    });
   });
 
-  it('unlocks an existing vault only when the password verifies', () => {
+  it('unlocks an existing vault only when the password verifies', async () => {
     const onUnlock = vi.fn();
     vi.mocked(isMasterPasswordSet).mockReturnValue(true);
-    vi.mocked(verifyMasterPassword).mockReturnValueOnce(false).mockReturnValueOnce(true);
+    vi.mocked(verifyMasterPassword).mockResolvedValueOnce(false).mockResolvedValueOnce(true);
 
     render(<LockScreen onUnlock={onUnlock} />);
 
@@ -77,16 +79,20 @@ describe('LockScreen', () => {
 
     const [password] = passwordInputs();
     fireEvent.change(password, { target: { value: 'wrong-pass' } });
-    fireEvent.click(screen.getByText('Sistem Kilidini Aç'));
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 
-    expect(screen.getByText('Hatalı Ana Şifre! Lütfen girilen şifreyi kontrol ederek tekrar deneyiniz.')).toBeTruthy();
-    expect(onUnlock).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.getByText('Hatalı Ana Şifre! Lütfen girilen şifreyi kontrol ederek tekrar deneyiniz.')).toBeTruthy();
+      expect(onUnlock).not.toHaveBeenCalled();
+    });
 
     fireEvent.change(password, { target: { value: 'correct-pass' } });
-    fireEvent.click(screen.getByText('Sistem Kilidini Aç'));
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 
-    expect(verifyMasterPassword).toHaveBeenCalledWith('wrong-pass');
-    expect(verifyMasterPassword).toHaveBeenCalledWith('correct-pass');
-    expect(onUnlock).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(verifyMasterPassword).toHaveBeenCalledWith('wrong-pass');
+      expect(verifyMasterPassword).toHaveBeenCalledWith('correct-pass');
+      expect(onUnlock).toHaveBeenCalledTimes(1);
+    });
   });
 });

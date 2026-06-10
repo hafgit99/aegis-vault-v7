@@ -10,7 +10,7 @@ const sqliteOPFSInstance = vi.hoisted(() => ({
   reseedDemo: vi.fn(),
   resetAll: vi.fn(),
   saveVaultItem: vi.fn(),
-  setupMaster: vi.fn(),
+  setupMaster: vi.fn(async () => undefined),
   verifyPassword: vi.fn(),
 }));
 
@@ -34,18 +34,18 @@ afterEach(() => {
 });
 
 describe('vault session storage', () => {
-  it('opens an in-memory session during setup without writing the master password to sessionStorage', () => {
-    setupMasterPassword('master-pass');
+  it('opens an in-memory session during setup without writing the master password to sessionStorage', async () => {
+    await setupMasterPassword('master-pass');
 
     expect(sqliteOPFSInstance.setupMaster).toHaveBeenCalledWith('master-pass');
     expect(getActiveMasterPassword()).toBe('master-pass');
     expect(sessionStorage.getItem('aegis_session_master_pass')).toBeNull();
   });
 
-  it('opens an in-memory session after a successful password verification', () => {
-    sqliteOPFSInstance.verifyPassword.mockReturnValue(true);
+  it('opens an in-memory session after a successful password verification', async () => {
+    sqliteOPFSInstance.verifyPassword.mockResolvedValue(true);
 
-    expect(verifyMasterPassword('master-pass')).toBe(true);
+    await expect(verifyMasterPassword('master-pass')).resolves.toBe(true);
 
     expect(getActiveMasterPassword()).toBe('master-pass');
     expect(sessionStorage.getItem('aegis_session_master_pass')).toBeNull();

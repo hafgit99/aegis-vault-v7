@@ -80,8 +80,8 @@ export function isMasterPasswordSet(): boolean {
 /**
  * Validates the master password against the SQLite Argon2id signature.
  */
-export function verifyMasterPassword(password: string): boolean {
-  const isCorrect = sqliteOPFSInstance.verifyPassword(password);
+export async function verifyMasterPassword(password: string): Promise<boolean> {
+  const isCorrect = await sqliteOPFSInstance.verifyPassword(password);
   if (isCorrect) {
     openVaultSession(password);
   }
@@ -91,8 +91,8 @@ export function verifyMasterPassword(password: string): boolean {
 /**
  * Safe utility to store the master password with Argon2id signature.
  */
-export function setupMasterPassword(password: string): void {
-  sqliteOPFSInstance.setupMaster(password);
+export async function setupMasterPassword(password: string): Promise<void> {
+  await sqliteOPFSInstance.setupMaster(password);
   openVaultSession(password);
   localStorage.setItem(STORAGE_KEYS.IS_SET_UP, 'true');
 

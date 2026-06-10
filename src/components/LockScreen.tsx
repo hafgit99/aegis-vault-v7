@@ -51,7 +51,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
         throw new Error("Cihazınızda veya tarayıcınızda biyometrik kilit açma (WebAuthn) desteklenmiyor.");
       }
       const decryptedMaster = await authenticateBiometric();
-      if (verifyMasterPassword(decryptedMaster)) {
+      if (await verifyMasterPassword(decryptedMaster)) {
         onUnlock();
       } else {
         throw new Error("Ana şifre bütünlük doğrulaması başarısız! Lütfen manuel olarak giriş yapın.");
@@ -77,7 +77,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
     }
   }, [isSetup]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setBiometricError(null);
@@ -91,10 +91,10 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
         setError('Belirlediğiniz şifreler birbiriyle eşleşmiyor. Lütfen kontrol edin.');
         return;
       }
-      setupMasterPassword(password);
+      await setupMasterPassword(password);
       onUnlock();
     } else {
-      if (verifyMasterPassword(password)) {
+      if (await verifyMasterPassword(password)) {
         onUnlock();
       } else {
         setError('Hatalı Ana Şifre! Lütfen girilen şifreyi kontrol ederek tekrar deneyiniz.');

@@ -142,12 +142,12 @@ export default function SettingsPanel({
   };
 
   // Handle Master Password updating
-  const handlePasswordChange = (e: React.FormEvent) => {
+  const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError(null);
     setPasswordSuccess(false);
 
-    const isCorrectOld = verifyMasterPassword(oldPassword);
+    const isCorrectOld = await verifyMasterPassword(oldPassword);
     if (!isCorrectOld) {
       setPasswordError('Mevcut Ana Şifrenizi hatalı girdiniz.');
       return;
@@ -161,7 +161,7 @@ export default function SettingsPanel({
       return;
     }
 
-    setupMasterPassword(newPassword);
+    await setupMasterPassword(newPassword);
     setOldPassword('');
     setNewPassword('');
     setConfirmPassword('');

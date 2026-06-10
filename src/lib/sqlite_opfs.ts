@@ -5,8 +5,8 @@
 
 import { VaultItem } from '../types';
 import { 
-  generateArgon2idHash, 
-  verifyArgon2idHash, 
+  generateArgon2idHash as generateLegacyArgon2idHash,
+  verifyArgon2idHash as verifyLegacyArgon2idHash,
   generateArgon2idKey, 
   hkdfSha256, 
   aes256GcmEncrypt, 
@@ -21,6 +21,7 @@ import {
   type VaultDatabaseRow,
   type VersionedVaultDatabaseState,
 } from './vaultDatabaseFormat';
+import { createArgon2idHash, verifyArgon2idHash } from './argon2id';
 
 /**
  * SQLite simulated schema and data manager storing DB blocks in private OPFS.
@@ -161,7 +162,7 @@ class SQLiteOPFS {
     if (isSetup && legacyPass && legacyItemsStr) {
       try {
         const passwordPlain = atob(legacyPass);
-        const argonHash = generateArgon2idHash(passwordPlain);
+        const argonHash = generateLegacyArgon2idHash(passwordPlain);
         
         this.state.user_secrets = [{
           username: 'owner',
@@ -204,26 +205,35 @@ class SQLiteOPFS {
   /**
    * Verifies the user's password using the strict Argon2id scheme.
    */
-  public verifyPassword(password: string): boolean {
+  public async verifyPassword(password: string): Promise<boolean> {
     this.logQuery('SELECT argon_hash FROM user_secrets WHERE username = "owner";', 'SUCCESS', 1);
     if (this.state.user_secrets.length === 0) {
       return false;
     }
     const expectedHash = this.state.user_secrets[0].argon_hash;
-    return verifyArgon2idHash(password, expectedHash);
+    if (expectedHash.startsWith('$argon2id$')) {
+      return verifyArgon2idHash(password, expectedHash);
+    }
+
+    const isLegacyMatch = verifyLegacyArgon2idHash(password, expectedHash);
+    if (isLegacyMatch) {
+      this.state.user_secrets[0].argon_hash = await createArgon2idHash(password, secureRandomToken(16));
+      await this.saveToOPFS();
+    }
+    return isLegacyMatch;
   }
 
   /**
    * Configures primary master verification keys.
    */
-  public setupMaster(password: string) {
-    const argonHash = generateArgon2idHash(password);
+  public async setupMaster(password: string): Promise<void> {
+    const argonHash = await createArgon2idHash(password, secureRandomToken(16));
     this.state.user_secrets = [{
       username: 'owner',
       argon_hash: argonHash,
     }];
     this.logQuery('INSERT INTO user_secrets (username, argon_hash) VALUES ("owner", "[argon2id verification hash]");', 'SUCCESS', 1);
-    this.saveToOPFS();
+    await this.saveToOPFS();
   }
 
   /**

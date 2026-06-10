@@ -6,6 +6,7 @@ This project is a password vault, so security claims must stay conservative unti
 
 - Password generation now uses a centralized secure randomness helper.
 - Diceware, biometric challenge generation, import IDs, attachment IDs, and simulated SQLite log IDs now use the same helper.
+- Master password verification now uses vetted Argon2id hashes and upgrades legacy simulated hashes after successful unlock.
 - Active vault unlock state now uses an in-memory session helper instead of storing the master password in browser `sessionStorage`.
 - New attachment writes use WebCrypto AES-GCM with per-attachment keys derived from the active vault session.
 - New biometric master-password wrapping uses WebCrypto PBKDF2-SHA256 and AES-GCM.
