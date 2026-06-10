@@ -1,8 +1,18 @@
-import { describe, expect, it } from 'vitest';
-import { decryptDataWithPassword, encryptDataWithPassword } from './encryption';
+import { describe, expect, it, vi } from 'vitest';
+import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from './encryption';
+
+vi.mock('./argon2id', () => ({
+  deriveArgon2idKey: vi.fn(async (password: string) => {
+    const key = new Uint8Array(32);
+    for (let index = 0; index < key.length; index++) {
+      key[index] = password.charCodeAt(index % password.length) & 0xff;
+    }
+    return key;
+  }),
+}));
 
 describe('encrypted backup envelope', () => {
-  it('roundtrips encrypted backup data with the correct password', () => {
+  it('roundtrips encrypted backup data with the correct password', async () => {
     const rawData = JSON.stringify([
       {
         title: 'GitHub',
@@ -11,20 +21,21 @@ describe('encrypted backup envelope', () => {
       },
     ]);
 
-    const envelope = encryptDataWithPassword(rawData, 'correct horse battery staple');
-    const decrypted = decryptDataWithPassword(envelope, 'correct horse battery staple');
+    const envelope = await encryptDataWithPasswordSecure(rawData, 'correct horse battery staple');
+    const decrypted = await decryptDataWithPasswordSecure(envelope, 'correct horse battery staple');
 
     expect(JSON.parse(envelope)).toMatchObject({
-      version: '1.1',
+      version: '1.2',
       kdf: 'Argon2id',
-      cipher: 'AES-256-GCM',
+      kdfImplementation: 'argon2-browser',
+      cipher: 'WebCrypto AES-256-GCM',
     });
     expect(decrypted).toBe(rawData);
   });
 
-  it('rejects encrypted backup data with the wrong password', () => {
-    const envelope = encryptDataWithPassword('sensitive vault export', 'right-password');
+  it('rejects encrypted backup data with the wrong password', async () => {
+    const envelope = await encryptDataWithPasswordSecure('sensitive vault export', 'right-password');
 
-    expect(() => decryptDataWithPassword(envelope, 'wrong-password')).toThrow();
+    await expect(decryptDataWithPasswordSecure(envelope, 'wrong-password')).rejects.toThrow();
   });
 });

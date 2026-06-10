@@ -62,7 +62,7 @@ export async function decryptDataWithPasswordSecure(envelopeJsonStr: string, pas
   }
 
   if (parsed.kdfImplementation !== 'argon2-browser') {
-    return decryptDataWithPassword(envelopeJsonStr, password);
+    return decryptLegacyDataWithPassword(envelopeJsonStr, password);
   }
 
   if (!parsed.salt || !parsed.iv || !parsed.tag || !parsed.payload || !parsed.checksum) {
@@ -420,48 +420,6 @@ function aesExpandKey(key: Uint8Array): Uint32Array {
 // 5. AES-256-GCM ENCRYPT / DECRYPT AEAD
 // ==========================================
 
-export function aes256GcmEncrypt(plaintext: string, key: Uint8Array): EncryptedPayload {
-  const encoder = new TextEncoder();
-  const rawBytes = encoder.encode(plaintext);
-
-  // Generate completely unique, separate 12-byte IV for every encryption action
-  const iv = secureRandomBytes(12);
-
-  const roundKeys = aesExpandKey(key);
-
-  const counterVal = new Uint8Array(16);
-  counterVal.set(iv);
-  counterVal[15] = 1;
-
-  const ciphertext = new Uint8Array(rawBytes.length);
-  for (let i = 0; i < rawBytes.length; i += 16) {
-    const keystream = aesEncryptBlock(counterVal, roundKeys);
-    
-    for (let c = 15; c >= 12; c--) {
-      counterVal[c]++;
-      if (counterVal[c] !== 0) break;
-    }
-
-    const chunkLen = Math.min(16, rawBytes.length - i);
-    for (let j = 0; j < chunkLen; j++) {
-      ciphertext[i + j] = rawBytes[i + j] ^ keystream[j];
-    }
-  }
-
-  // Create standard-grade 16-byte authentication tag
-  const tagBytes = hmacSha256(key, hmacSha256(iv, ciphertext)).subarray(0, 16);
-
-  const ivHex = Array.from(iv).map(b => b.toString(16).padStart(2, '0')).join('');
-  const tagHex = Array.from(tagBytes).map(b => b.toString(16).padStart(2, '0')).join('');
-  const ciphertextBase64 = btoa(String.fromCharCode(...ciphertext));
-
-  return {
-    iv: ivHex,
-    tag: tagHex,
-    ciphertext: ciphertextBase64,
-  };
-}
-
 export function aes256GcmDecrypt(payload: EncryptedPayload, key: Uint8Array): string {
   const iv = new Uint8Array(payload.iv.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
   const tag = new Uint8Array(payload.tag.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
@@ -507,43 +465,7 @@ export function aes256GcmDecrypt(payload: EncryptedPayload, key: Uint8Array): st
   return decoder.decode(plaintextBytes);
 }
 
-// ==========================================
-// 6. PASSWORD-BASED SECURE IMPORT/EXPORT ENVELOPE FORMAT v1.1
-// ==========================================
-
-export function encryptDataWithPassword(rawData: string, password: string): string {
-  // Generate random salt
-  const saltBytes = secureRandomBytes(16);
-  const saltHex = Array.from(saltBytes).map(b => b.toString(16).padStart(2, '0')).join('');
-
-  // 1. Password-based KDF using Argon2id
-  const aesKey = generateArgon2idKey(password, saltHex, 1024, 3, 2, 32);
-
-  // 2. Encrypt under AES-256-GCM (auto-creates fresh 12-byte IV + 16-byte GCM TAG)
-  const bundle = aes256GcmEncrypt(rawData, aesKey);
-
-  // 3. Generate SHA-256 manifest checksum over the cipher ciphertext block for Version 1.1 specs
-  const encoder = new TextEncoder();
-  const cipherBytes = encoder.encode(bundle.ciphertext);
-  const checksumBytes = sha256(cipherBytes);
-  const manifestChecksumHex = Array.from(checksumBytes).map(b => b.toString(16).padStart(2, '0')).join('');
-
-  const envelope = {
-    version: "1.1",
-    generator: "Aegis Secure Core",
-    kdf: "Argon2id",
-    cipher: "AES-256-GCM",
-    salt: saltHex,
-    iv: bundle.iv,
-    tag: bundle.tag,
-    payload: bundle.ciphertext,
-    checksum: manifestChecksumHex // SHA-256 checksum of payload manifest
-  };
-
-  return JSON.stringify(envelope, null, 2);
-}
-
-export function decryptDataWithPassword(envelopeJsonStr: string, password: string): string {
+function decryptLegacyDataWithPassword(envelopeJsonStr: string, password: string): string {
   let parsed: any;
   try {
     parsed = JSON.parse(envelopeJsonStr);

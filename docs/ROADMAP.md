@@ -90,6 +90,7 @@
   - [x] Encrypted backup export/import uses WebCrypto AES-GCM.
   - [x] Biometric master-password wrapping uses WebCrypto AES-GCM.
   - [x] New vault item metadata writes and localStorage migration writes use WebCrypto AES-GCM.
+  - [x] Legacy backup encryption writer removed; remaining custom AES is read-only compatibility fallback.
 - [x] Remove base64 master password storage from `sessionStorage`.
 - [x] Replace attachment XOR encryption with authenticated encryption.
 - [x] Introduce a versioned vault database format and migration tests.

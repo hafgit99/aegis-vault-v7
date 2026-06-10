@@ -9,7 +9,6 @@ import {
   verifyArgon2idHash as verifyLegacyArgon2idHash,
   generateArgon2idKey, 
   hkdfSha256, 
-  aes256GcmEncrypt, 
   aes256GcmDecrypt,
   EncryptedPayload
 } from './encryption';

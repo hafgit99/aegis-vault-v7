@@ -11,6 +11,7 @@ This project is a password vault, so security claims must stay conservative unti
 - New attachment writes use WebCrypto AES-GCM with per-attachment keys derived from the active vault session.
 - New biometric master-password wrapping uses WebCrypto PBKDF2-SHA256 and AES-GCM.
 - New vault item metadata writes use WebCrypto AES-GCM with keys derived through the vetted Argon2id adapter.
+- Legacy backup encryption writer paths have been removed from the public API.
 - Vault database payloads now include a versioned schema envelope with migration tests for legacy unversioned state.
 - Desktop vault persistence now mirrors database state through the Tauri app data directory.
 - Desktop import/export now uses controlled native Windows file dialogs.
@@ -23,7 +24,7 @@ This project is a password vault, so security claims must stay conservative unti
 
 ## Known Security Debt
 
-- `src/lib/encryption.ts` contains custom cryptographic primitives used by remaining legacy backup and compatibility fallbacks. These should be replaced or removed before production use.
+- `src/lib/encryption.ts` contains custom cryptographic primitives used by remaining read-only legacy backup and compatibility fallbacks. These should be replaced or removed before production use.
 - Legacy XOR attachment records are still readable as migration fallback and can now be rewritten to AES-GCM by the migration helper.
 - `src/lib/vaultSession.ts` keeps the active master password in process memory during an unlocked session. This is safer than browser storage, but native desktop secret handling still needs a final threat-model decision.
 - `src/lib/sqlite_opfs.ts` is a simulated SQLite/OPFS layer backed by versioned serialized JSON state. The naming and implementation should be aligned with the actual persistence strategy.

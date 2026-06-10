@@ -135,7 +135,7 @@ Required user-facing recovery rules:
 
 | Risk | Current status | Planned mitigation |
 | --- | --- | --- |
-| Custom cryptographic primitives still exist in legacy backup and compatibility paths | Open | Replace or remove remaining custom AES/GCM simulation fallbacks |
+| Custom cryptographic primitives still exist in read-only legacy backup and compatibility paths | Open | Replace or remove remaining custom AES/GCM simulation fallbacks |
 | Simulated SQLite/OPFS persistence naming overstates implementation | Open | Decide final desktop storage adapter and align naming |
 | Legacy XOR attachment fallback remains readable | Partially mitigated | Run AES-GCM migration for legacy records, then remove fallback |
 | Active master password lives in process memory while unlocked | Accepted for current desktop phase | Minimize lifetime, lock aggressively, evaluate native secret handling |
