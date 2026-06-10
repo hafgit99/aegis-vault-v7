@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { VaultItem, ActiveTab } from './types';
-import { getVaultItems, saveVaultItem, deleteVaultItem, moveToTrash, restoreFromTrash, deletePermanently, emptyTrashComplete } from './lib/storage';
+import { moveToTrash, restoreFromTrash, deletePermanently, emptyTrashComplete } from './lib/storage';
 import { calculatePasswordScore } from './lib/security';
 import { getAttachmentBlob } from './lib/attachments';
 import LockScreen from './components/LockScreen';
@@ -24,13 +24,12 @@ import { useProfileSettings } from './hooks/useProfileSettings';
 import { useAutoLockDuration } from './hooks/useAutoLockDuration';
 import { useConfirmModal } from './hooks/useConfirmModal';
 import { useTotpCountdown } from './hooks/useTotpCountdown';
+import { useVaultData } from './hooks/useVaultData';
 
 export default function App() {
   const [unlocked, setUnlocked] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>('vault');
   const [searchQuery, setSearchQuery] = useState('');
-  const [items, setItems] = useState<VaultItem[]>([]);
-  const [selectedItem, setSelectedItem] = useState<VaultItem | null>(null);
 
   // Responsive & Filter States
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -50,6 +49,16 @@ export default function App() {
   const isPasskeyExpRevealed = revealed.passkeyPrivateExponent;
 
   const totpCountdown = useTotpCountdown();
+
+  const {
+    items,
+    selectedItem,
+    setItems,
+    setSelectedItem,
+    refreshDatabase,
+    saveItem: handleSaveItem,
+    toggleFavorite: handleToggleFavorite,
+  } = useVaultData();
 
   const {
     autoLockDuration,
@@ -79,30 +88,11 @@ export default function App() {
       }),
   });
 
-  // Retrieve data on state initialization
-  const refreshDatabase = () => {
-    const loaded = getVaultItems();
-    setItems(loaded);
-    
-    // Maintain or reset selection with active items only
-    const activeLoaded = loaded.filter(x => !x.deleted);
-    if (activeLoaded.length > 0) {
-      if (selectedItem && !selectedItem.deleted) {
-        const stillExists = activeLoaded.find((x) => x.id === selectedItem.id);
-        setSelectedItem(stillExists || activeLoaded[0]);
-      } else {
-        setSelectedItem(activeLoaded[0]);
-      }
-    } else {
-      setSelectedItem(null);
-    }
-  };
-
   useEffect(() => {
     if (unlocked) {
       refreshDatabase();
     }
-  }, [unlocked]);
+  }, [refreshDatabase, unlocked]);
 
   const handleAutoLock = useCallback(() => {
     setUnlocked(false);
@@ -185,14 +175,6 @@ export default function App() {
 
   const handleBackToList = () => {
     setMobileActiveView('list');
-  };
-
-  // Toggle Favorite
-  const handleToggleFavorite = (item: VaultItem) => {
-    const updatedItem = { ...item, favorite: !item.favorite };
-    const updated = saveVaultItem(updatedItem);
-    setItems(updated);
-    setSelectedItem(updatedItem);
   };
 
   // Attachment downloading utility
@@ -294,17 +276,6 @@ export default function App() {
         setItems(updated);
       },
     });
-  };
-
-  // Save handler
-  const handleSaveItem = (item: VaultItem) => {
-    const updated = saveVaultItem(item);
-    setItems(updated);
-    // Auto select updated item
-    const saved = updated.find((x) => x.title === item.title && x.username === item.username);
-    if (saved) {
-      setSelectedItem(saved);
-    }
   };
 
   // Trigger Edit Form
