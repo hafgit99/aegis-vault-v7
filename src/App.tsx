@@ -39,7 +39,7 @@ import {
   Download,
   File,
 } from 'lucide-react';
-import { VaultItem, ActiveTab } from './types';
+import { VaultItem, ActiveTab, AppNotification } from './types';
 import { getVaultItems, saveVaultItem, deleteVaultItem, moveToTrash, restoreFromTrash, deletePermanently, emptyTrashComplete } from './lib/storage';
 import { generateTOTP, getTOTPTimeRemaining } from './lib/otp';
 import { calculatePasswordScore, getStrengthLabel, runVaultAudit } from './lib/security';
@@ -119,6 +119,17 @@ export default function App() {
     type: 'info',
     onConfirm: () => {},
   });
+
+  const showNotification = useCallback((notification: AppNotification) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: notification.title,
+      message: notification.message,
+      type: notification.type || 'info',
+      isAlert: true,
+      onConfirm: () => {},
+    });
+  }, []);
 
   // Retrieve data on state initialization
   const refreshDatabase = () => {
@@ -229,11 +240,19 @@ export default function App() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
       } else {
-        alert('Seçili dosya yerel kasanızda bulunamadı veya silinmiş.');
+        showNotification({
+          title: 'Dosya Bulunamadı',
+          message: 'Seçili dosya yerel kasanızda bulunamadı veya silinmiş.',
+          type: 'warning',
+        });
       }
     } catch (err) {
       console.error(err);
-      alert('Dosya şifresi çözülürken bir hata ile karşılaşıldı.');
+      showNotification({
+        title: 'Dosya Açılamadı',
+        message: 'Dosya şifresi çözülürken bir hata ile karşılaşıldı.',
+        type: 'danger',
+      });
     }
   };
 
@@ -1595,6 +1614,7 @@ export default function App() {
                 onDatabaseChanged={refreshDatabase} 
                 autoLockDuration={autoLockDuration}
                 onAutoLockDurationChange={handleAutoLockDurationChange}
+                onNotify={showNotification}
               />
             </div>
           )}
@@ -1770,6 +1790,7 @@ export default function App() {
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveItem}
         editingItem={editingItem}
+        onNotify={showNotification}
       />
 
       {/* Profile Settings Modal */}

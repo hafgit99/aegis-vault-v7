@@ -61,3 +61,9 @@ export interface AuditReport {
   secureCount: number;
   totalCount: number;
 }
+
+export interface AppNotification {
+  title: string;
+  message: string;
+  type?: 'danger' | 'warning' | 'info' | 'success';
+}

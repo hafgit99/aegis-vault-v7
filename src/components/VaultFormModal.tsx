@@ -30,7 +30,7 @@ import {
   Layers,
   Sparkle
 } from 'lucide-react';
-import { VaultItem } from '../types';
+import { AppNotification, VaultItem } from '../types';
 import { generatePassword } from '../lib/security';
 import { saveAttachment, getAttachmentBlob } from '../lib/attachments';
 import { secureRandomIndex, secureRandomToken } from '../lib/random';
@@ -40,9 +40,10 @@ interface VaultFormModalProps {
   onClose: () => void;
   onSave: (item: VaultItem) => void;
   editingItem: VaultItem | null;
+  onNotify?: (notification: AppNotification) => void;
 }
 
-export default function VaultFormModal({ isOpen, onClose, onSave, editingItem }: VaultFormModalProps) {
+export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, onNotify }: VaultFormModalProps) {
   // Category Selector Strategy
   const [category, setCategory] = useState<'login' | 'card' | 'passkey' | 'identity' | 'secure_note'>('login');
   
@@ -244,11 +245,19 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem }:
         document.body.removeChild(link);
         URL.revokeObjectURL(url_dl);
       } else {
-        alert('Eklenti bulunamadı veya yerel veritabanında silinmiş.');
+        onNotify?.({
+          title: 'Eklenti Bulunamadı',
+          message: 'Eklenti bulunamadı veya yerel veritabanında silinmiş.',
+          type: 'warning',
+        });
       }
     } catch (e) {
       console.error(e);
-      alert('Dosya şifresi çözülürken bir hata oluştu.');
+      onNotify?.({
+        title: 'Dosya Açılamadı',
+        message: 'Dosya şifresi çözülürken bir hata oluştu.',
+        type: 'danger',
+      });
     }
   };
 

@@ -24,7 +24,7 @@ import {
   Fingerprint
 } from 'lucide-react';
 import { getVaultItems, setupMasterPassword, resetSystem, reseedDemoData, saveVaultItem, verifyMasterPassword } from '../lib/storage';
-import { VaultItem } from '../types';
+import { AppNotification, VaultItem } from '../types';
 import { encryptDataWithPassword, decryptDataWithPassword } from '../lib/encryption';
 import { parseUniversalImport } from '../lib/importer';
 import { secureRandomToken } from '../lib/random';
@@ -34,12 +34,14 @@ interface SettingsPanelProps {
   onDatabaseChanged: () => void;
   autoLockDuration: number;
   onAutoLockDurationChange: (duration: number) => void;
+  onNotify?: (notification: AppNotification) => void;
 }
 
 export default function SettingsPanel({ 
   onDatabaseChanged, 
   autoLockDuration, 
-  onAutoLockDurationChange 
+  onAutoLockDurationChange,
+  onNotify,
 }: SettingsPanelProps) {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -353,7 +355,11 @@ export default function SettingsPanel({
   const triggerReseed = () => {
     reseedDemoData();
     onDatabaseChanged();
-    alert('Varsayılan demo veriler başarıyla yeniden yüklendi!');
+    onNotify?.({
+      title: 'Demo Veriler Yüklendi',
+      message: 'Varsayılan demo veriler başarıyla yeniden yüklendi!',
+      type: 'success',
+    });
   };
 
   const triggerResetAll = () => {
