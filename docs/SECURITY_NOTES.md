@@ -18,6 +18,7 @@ This project is a password vault, so security claims must stay conservative unti
 - Clipboard clearing now removes copied secrets after the safety delay when the clipboard remains unchanged.
 - Desktop threat and recovery boundaries are documented in `docs/THREAT_MODEL.md`.
 - Release gates and the signed Windows build plan are documented in `docs/RELEASE_PLAN.md`.
+- Unit coverage gates and current baseline are documented in `docs/QUALITY_GATES.md`.
 - Security regression tests now cover active-session export, encrypted import, attachment authentication, and lock session clearing.
 - Unit tests cover random helper boundaries and password audit behavior.
 - Desktop build is available through Tauri.

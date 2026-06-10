@@ -102,6 +102,7 @@
   - [x] Active-session encrypted export and encrypted import flow tests.
   - [x] Attachment wrong-session and tampered-tag rejection tests.
   - [x] Manual and automatic lock session clearing tests.
+- [x] Add unit coverage baseline and conservative coverage thresholds.
 
 ## Phase 4: Desktop Productization
 
