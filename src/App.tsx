@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { VaultItem, ActiveTab, AppNotification } from './types';
+import { VaultItem, ActiveTab } from './types';
 import { getVaultItems, saveVaultItem, deleteVaultItem, moveToTrash, restoreFromTrash, deletePermanently, emptyTrashComplete } from './lib/storage';
 import { getTOTPTimeRemaining } from './lib/otp';
 import { calculatePasswordScore } from './lib/security';
@@ -15,7 +15,7 @@ import SidebarNavigation from './components/SidebarNavigation';
 import TopBar from './components/TopBar';
 import MainContent from './components/MainContent';
 import FloatingVaultAction from './components/FloatingVaultAction';
-import AppModals, { type AppConfirmConfig } from './components/AppModals';
+import AppModals from './components/AppModals';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -23,6 +23,7 @@ import { useVaultQueries } from './hooks/useVaultQueries';
 import { useVaultSelection } from './hooks/useVaultSelection';
 import { useProfileSettings } from './hooks/useProfileSettings';
 import { useAutoLockDuration } from './hooks/useAutoLockDuration';
+import { useConfirmModal } from './hooks/useConfirmModal';
 
 export default function App() {
   const [unlocked, setUnlocked] = useState(false);
@@ -56,25 +57,12 @@ export default function App() {
     changeAutoLockDuration: handleAutoLockDurationChange,
   } = useAutoLockDuration();
 
-  // Custom alert / confirmation state
-  const [confirmConfig, setConfirmConfig] = useState<AppConfirmConfig>({
-    isOpen: false,
-    title: '',
-    message: '',
-    type: 'info',
-    onConfirm: () => {},
-  });
-
-  const showNotification = useCallback((notification: AppNotification) => {
-    setConfirmConfig({
-      isOpen: true,
-      title: notification.title,
-      message: notification.message,
-      type: notification.type || 'info',
-      isAlert: true,
-      onConfirm: () => {},
-    });
-  }, []);
+  const {
+    confirmConfig,
+    openConfirm,
+    showNotification,
+    closeConfirm: handleCloseConfirm,
+  } = useConfirmModal();
 
   const {
     profileName,
@@ -190,8 +178,7 @@ export default function App() {
   };
 
   const handleOpenVaultStatus = () => {
-    setConfirmConfig({
-      isOpen: true,
+    openConfirm({
       title: 'Kasa Durumu',
       message: 'Kasa durumu güncel ve tamamen koruma altında. Herhangi bir sızıntı veya zayıf halka tespit edilmedi.',
       type: 'success',
@@ -207,10 +194,6 @@ export default function App() {
 
   const handleBackToList = () => {
     setMobileActiveView('list');
-  };
-
-  const handleCloseConfirm = () => {
-    setConfirmConfig(prev => ({ ...prev, isOpen: false }));
   };
 
   // Toggle Favorite
@@ -253,8 +236,7 @@ export default function App() {
 
   // Delete handler (moves to trash)
   const handleDeleteItem = (id: string) => {
-    setConfirmConfig({
-      isOpen: true,
+    openConfirm({
       title: 'Çöp Kutusuna Taşı',
       message: 'Bu şifre kaydını çöp kutusuna taşımak istediğinize emin misiniz? Çöp kutusundaki veriler 15 gün sonra otomatik olarak temizlenecektir.',
       type: 'warning',
@@ -277,8 +259,7 @@ export default function App() {
   };
 
   const handleEmptyTrash = () => {
-    setConfirmConfig({
-      isOpen: true,
+    openConfirm({
       title: 'Çöp Kutusunu Boşalt',
       message: 'Çöp kutusundaki TÜM şifreleri tamamen kalıcı olarak silmek istediğinize emin misiniz? Bu işlem asla geri alınamaz!',
       type: 'danger',
@@ -287,8 +268,7 @@ export default function App() {
       onConfirm: () => {
         const updated = emptyTrashComplete();
         setItems(updated);
-        setConfirmConfig({
-          isOpen: true,
+        openConfirm({
           title: 'Çöp Kutusu Boşaltıldı',
           message: 'Çöp kutusundaki tüm şifreler kalıcı olarak silindi.',
           type: 'success',
@@ -302,8 +282,7 @@ export default function App() {
   const handleRestoreTrashItem = (trashItem: VaultItem) => {
     const updated = restoreFromTrash(trashItem.id);
     setItems(updated);
-    setConfirmConfig({
-      isOpen: true,
+    openConfirm({
       title: 'Geri Yüklendi',
       message: `"${trashItem.title}" şifre kaydı başarıyla kasaya geri yüklendi!`,
       type: 'success',
@@ -313,8 +292,7 @@ export default function App() {
   };
 
   const handleDeleteTrashItemPermanently = (trashItem: VaultItem) => {
-    setConfirmConfig({
-      isOpen: true,
+    openConfirm({
       title: 'Kalıcı Olarak Sil',
       message: `"${trashItem.title}" kaydını tamamen kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri ALINAMAZ.`,
       type: 'danger',

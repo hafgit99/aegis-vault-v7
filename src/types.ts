@@ -67,3 +67,14 @@ export interface AppNotification {
   message: string;
   type?: 'danger' | 'warning' | 'info' | 'success';
 }
+
+export interface AppConfirmConfig {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  type: 'danger' | 'warning' | 'info' | 'success';
+  confirmText?: string;
+  cancelText?: string;
+  isAlert?: boolean;
+  onConfirm: () => void;
+}

@@ -1,18 +1,7 @@
-import { AppNotification, VaultItem } from '../types';
+import { AppConfirmConfig, AppNotification, VaultItem } from '../types';
 import ConfirmModal from './ConfirmModal';
 import ProfileModal from './ProfileModal';
 import VaultFormModal from './VaultFormModal';
-
-export interface AppConfirmConfig {
-  isOpen: boolean;
-  title: string;
-  message: string;
-  type: 'danger' | 'warning' | 'info' | 'success';
-  confirmText?: string;
-  cancelText?: string;
-  isAlert?: boolean;
-  onConfirm: () => void;
-}
 
 interface AppModalsProps {
   isVaultFormOpen: boolean;

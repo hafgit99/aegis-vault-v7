@@ -54,6 +54,7 @@
   - [x] Vault selection and audit-selection behavior extracted to `useVaultSelection`.
   - [x] Profile settings persistence extracted to `useProfileSettings`.
   - [x] Auto-lock duration persistence extracted to `useAutoLockDuration`.
+  - [x] Confirm and notification modal state extracted to `useConfirmModal`.
 - [x] Extract display helpers for file sizes and trash retention calculations.
   - [x] Platform logo resolver moved into display helpers.
   - [x] Vault form attachment size labels use shared display helpers.
