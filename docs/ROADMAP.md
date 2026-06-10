@@ -59,6 +59,7 @@
   - [x] Vault item loading, saving, and favorite state extracted to `useVaultData`.
   - [x] Attachment download flow extracted to `useAttachmentDownload`.
   - [x] Trash action confirmations and storage updates extracted to `useTrashActions`.
+  - [x] Tab and sidebar navigation state extracted to `useAppNavigation`.
 - [x] Extract display helpers for file sizes and trash retention calculations.
   - [x] Platform logo resolver moved into display helpers.
   - [x] Vault form attachment size labels use shared display helpers.

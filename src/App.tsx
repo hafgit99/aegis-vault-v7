@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { VaultItem, ActiveTab } from './types';
+import { VaultItem } from './types';
 import { calculatePasswordScore } from './lib/security';
 import LockScreen from './components/LockScreen';
 import MobileSidebarBackdrop from './components/MobileSidebarBackdrop';
@@ -25,14 +25,13 @@ import { useTotpCountdown } from './hooks/useTotpCountdown';
 import { useVaultData } from './hooks/useVaultData';
 import { useAttachmentDownload } from './hooks/useAttachmentDownload';
 import { useTrashActions } from './hooks/useTrashActions';
+import { useAppNavigation } from './hooks/useAppNavigation';
 
 export default function App() {
   const [unlocked, setUnlocked] = useState(false);
-  const [activeTab, setActiveTab] = useState<ActiveTab>('vault');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Responsive & Filter States
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [filterFavoritesOnly, setFilterFavoritesOnly] = useState(false);
   const [mobileActiveView, setMobileActiveView] = useState<'list' | 'detail'>('list');
 
@@ -49,6 +48,17 @@ export default function App() {
   const isPasskeyExpRevealed = revealed.passkeyPrivateExponent;
 
   const totpCountdown = useTotpCountdown();
+
+  const {
+    activeTab,
+    setActiveTab,
+    isSidebarOpen,
+    openSidebar: handleOpenSidebar,
+    closeSidebar: handleCloseSidebar,
+    changeTab: handleTabChange,
+    openAuditTab: handleOpenAuditTab,
+    openGeneratorTab: handleOpenGeneratorTab,
+  } = useAppNavigation();
 
   const {
     items,
@@ -125,14 +135,6 @@ export default function App() {
     setUnlocked(false);
   };
 
-  const handleOpenSidebar = () => {
-    setIsSidebarOpen(true);
-  };
-
-  const handleCloseSidebar = () => {
-    setIsSidebarOpen(false);
-  };
-
   useAutoLock({
     unlocked,
     durationSeconds: autoLockDuration,
@@ -161,19 +163,6 @@ export default function App() {
     setActiveTab,
     setMobileActiveView,
   });
-
-  const handleTabChange = (tab: ActiveTab) => {
-    setActiveTab(tab);
-    setIsSidebarOpen(false);
-  };
-
-  const handleOpenAuditTab = () => {
-    handleTabChange('audit');
-  };
-
-  const handleOpenGeneratorTab = () => {
-    handleTabChange('generator');
-  };
 
   const handleOpenVaultStatus = () => {
     openConfirm({
