@@ -82,6 +82,7 @@
 ## Phase 3: Security Hardening
 
 - [ ] Replace simulated Argon2id with a vetted Argon2id implementation.
+  - [x] Browser Argon2id adapter added around `argon2-browser`.
 - [ ] Replace custom AES/GCM simulation with WebCrypto AES-GCM or a vetted crypto library.
 - [ ] Remove base64 master password storage from `sessionStorage`.
 - [ ] Replace attachment XOR encryption with authenticated encryption.
