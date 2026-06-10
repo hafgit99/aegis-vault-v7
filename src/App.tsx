@@ -21,6 +21,7 @@ import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
 import { useVaultQueries } from './hooks/useVaultQueries';
 import { useVaultSelection } from './hooks/useVaultSelection';
+import { useProfileSettings } from './hooks/useProfileSettings';
 
 export default function App() {
   const [unlocked, setUnlocked] = useState(false);
@@ -60,15 +61,6 @@ export default function App() {
     setAutoLockDuration(duration);
   };
 
-  // Profile settings state
-  const [profileName, setProfileName] = useState(() => {
-    return localStorage.getItem('profile_name') || 'Aegis Kullanıcısı';
-  });
-  const [profileAvatar, setProfileAvatar] = useState(() => {
-    return localStorage.getItem('profile_avatar') || 'https://lh3.googleusercontent.com/aida-public/AB6AXuCH67zv7w_c2Gt3Yi8tRFwGe5bb7gJZYlMCHpd55hfAikMyKhRLMtmZTlLWl678ehHejkJGx6MqpODYIBZua1auVdcHjT8vVlOiB0MPntKW2JQY4zFA_AzO8WJNfo1LML8kIr6t1YRAjbi4Y6uFpdk-C5fT4KUYAP_OtMbO1qFJoVDdIJ5p6VgH-7vQiiqT51yHfwKBOgGFA1tyoib-DmocRb4Rabo1ZRHBLIDouFbA7votkCi_xxvrHSVHOj11xZHDnTpBaauKm7Ui';
-  });
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-
   // Custom alert / confirmation state
   const [confirmConfig, setConfirmConfig] = useState<AppConfirmConfig>({
     isOpen: false,
@@ -88,6 +80,22 @@ export default function App() {
       onConfirm: () => {},
     });
   }, []);
+
+  const {
+    profileName,
+    profileAvatar,
+    isProfileModalOpen,
+    openProfile: handleOpenProfile,
+    closeProfile: handleCloseProfile,
+    saveProfile: handleSaveProfile,
+  } = useProfileSettings({
+    onSaved: () =>
+      showNotification({
+        title: 'Profil Güncellendi',
+        message: 'Profil resminiz ve adınız başarıyla kaydedildi.',
+        type: 'success',
+      }),
+  });
 
   // Retrieve data on state initialization
   const refreshDatabase = () => {
@@ -195,14 +203,6 @@ export default function App() {
       isAlert: true,
       onConfirm: () => {},
     });
-  };
-
-  const handleOpenProfile = () => {
-    setIsProfileModalOpen(true);
-  };
-
-  const handleCloseProfile = () => {
-    setIsProfileModalOpen(false);
   };
 
   const handleSelectDashboard = () => {
@@ -358,21 +358,6 @@ export default function App() {
 
   const handleCloseVaultForm = () => {
     setIsModalOpen(false);
-  };
-
-  const handleSaveProfile = (name: string, avatar: string) => {
-    localStorage.setItem('profile_name', name);
-    localStorage.setItem('profile_avatar', avatar);
-    setProfileName(name);
-    setProfileAvatar(avatar);
-    setConfirmConfig({
-      isOpen: true,
-      title: 'Profil Güncellendi',
-      message: 'Profil resminiz ve adınız başarıyla kaydedildi.',
-      type: 'success',
-      isAlert: true,
-      onConfirm: () => {},
-    });
   };
 
   // If locked, return the beautiful LockScreen UI
