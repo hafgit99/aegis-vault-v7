@@ -23,6 +23,7 @@
   - [x] Vault list row extracted to `VaultListItem`.
   - [x] Dashboard recent item row extracted to `RecentVaultItem`.
   - [x] Dashboard crypto shield panel extracted to `CryptoShieldPanel`.
+  - [x] Dashboard Aegis Guard report extracted to `AegisGuardReport`.
 - [ ] Extract vault item selection, reveal state, and auto-lock logic into hooks.
   - [x] Auto-lock behavior extracted to `useAutoLock`.
   - [x] Copy feedback and sensitive reveal state extracted to dedicated hooks.

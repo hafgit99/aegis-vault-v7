@@ -27,7 +27,6 @@ import {
   Clock,
   Globe,
   Heart,
-  AlertTriangle,
   ShieldAlert,
   ArrowLeft,
   Menu,
@@ -59,6 +58,7 @@ import TrashItemCard from './components/TrashItemCard';
 import VaultListItem from './components/VaultListItem';
 import RecentVaultItem from './components/RecentVaultItem';
 import CryptoShieldPanel from './components/CryptoShieldPanel';
+import AegisGuardReport from './components/AegisGuardReport';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -1427,25 +1427,7 @@ export default function App() {
 
                     </div>
 
-                    {/* Intelligent Custom Health Notification Row */}
-                    <div className="bg-[#111211] border border-outline-variant/10 rounded-2xl p-4 flex gap-4 text-xs">
-                      <div className="w-10 h-10 rounded-xl bg-[#141614] border border-outline-variant/15 flex items-center justify-center shrink-0">
-                        {auditReport.score >= 85 ? (
-                          <ShieldCheck className="w-5 h-5 text-brand-tertiary" />
-                        ) : (
-                          <AlertTriangle className="w-5 h-5 text-amber-400 animate-pulse" />
-                        )}
-                      </div>
-                      <div className="space-y-1">
-                        <h4 className="font-bold text-on-surface">Aegis Guard Güvenlik Raporu</h4>
-                        <p className="text-on-surface-variant text-[11px] leading-relaxed opacity-90">
-                          {auditReport.score >= 85 
-                            ? 'Parola koruma mekanizmalarınız tam performans çalışmaktadır. Hiçbir riskli nokta tespit edilemedi. Yerel kasanız güvenli tutulmaktadır.'
-                            : `Hassas senedinizde ${auditReport.weakCount} adet zayıf ve ${auditReport.reusedCount} adet çift kullanılmış parola tespit edilmiştir. Kritik sızıntıları önlemek için Şifre Denetleyicisi sayfamızı ziyaret etmenizi tavsiye ederiz.`
-                          }
-                        </p>
-                      </div>
-                    </div>
+                    <AegisGuardReport auditReport={auditReport} />
 
                   </div>
                 )}
