@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect } from 'react';
 import { calculatePasswordScore } from './lib/security';
 import LockScreen from './components/LockScreen';
 import MobileSidebarBackdrop from './components/MobileSidebarBackdrop';
@@ -28,6 +27,7 @@ import { useVaultFormState } from './hooks/useVaultFormState';
 import { useVaultMobileView } from './hooks/useVaultMobileView';
 import { useVaultLock } from './hooks/useVaultLock';
 import { useVaultFilters } from './hooks/useVaultFilters';
+import { useUnlockedVaultRefresh } from './hooks/useUnlockedVaultRefresh';
 
 export default function App() {
   const { copiedField, copyText: handleCopyText, clearCopiedField } = useClipboardFeedback();
@@ -138,11 +138,10 @@ export default function App() {
     clearCopiedField,
   });
 
-  useEffect(() => {
-    if (unlocked) {
-      refreshDatabase();
-    }
-  }, [refreshDatabase, unlocked]);
+  useUnlockedVaultRefresh({
+    unlocked,
+    onRefresh: refreshDatabase,
+  });
 
   const {
     activeItems,
