@@ -60,6 +60,7 @@ import DashboardQuickActions from './components/DashboardQuickActions';
 import RecentVaultPanel from './components/RecentVaultPanel';
 import DashboardHeader from './components/DashboardHeader';
 import VaultItemSideInfo from './components/VaultItemSideInfo';
+import VaultItemSecurityAssessment from './components/VaultItemSecurityAssessment';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -675,60 +676,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Security assessment badge */}
-                    <div className={`glass-panel p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 border-l-4 ${
-                      score >= 85 ? 'border-l-brand-tertiary' : score >= 50 ? 'border-l-brand-secondary' : 'border-l-brand-error'
-                    }`}>
-                      <div className="flex items-center gap-4">
-                        <div className="relative w-14 h-14">
-                          <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                            <path
-                              className="text-[#1e201e] stroke-current"
-                              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                              fill="none"
-                              strokeWidth="3"
-                            ></path>
-                            <path
-                              className={`${
-                                score >= 85 ? 'text-brand-tertiary' : score >= 50 ? 'text-brand-secondary' : 'text-brand-error'
-                              } stroke-current`}
-                              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                              fill="none"
-                              strokeDasharray={`${score}, 100`}
-                              strokeLinecap="round"
-                              strokeWidth="3"
-                            ></path>
-                          </svg>
-                          <div className={`absolute inset-0 flex items-center justify-center font-mono font-bold text-xs truncate ${
-                            score >= 85 ? 'text-brand-tertiary' : score >= 50 ? 'text-brand-secondary' : 'text-brand-error'
-                          }`}>
-                            %{score}
-                          </div>
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-sm text-on-surface">Güvenlik Değerlendirmesi</h4>
-                          <p className="text-on-surface-variant text-[11px] mt-0.5">
-                            {score >= 85
-                              ? 'Muazzam güç. Bu parolanın siber saldırılarla ele geçirilmesi neredeyse imkansızdır.'
-                              : score >= 50
-                              ? 'Güçlü yapıda, fakat semboller veya uzunluk artırılarak askeri aşamaya taşınabilir.'
-                              : 'Kritik derecede zayıf veya kısa parola! En kısa sürede Şifre Üretici ile değiştirin.'}
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setActiveTab('audit')}
-                        className={`text-xs font-bold px-3 py-2 rounded-lg shrink-0 ${
-                          score >= 85
-                            ? 'bg-brand-tertiary/15 text-brand-tertiary hover:bg-brand-tertiary/20'
-                            : score >= 50
-                            ? 'bg-brand-secondary/15 text-brand-secondary hover:bg-brand-secondary/20'
-                            : 'bg-brand-error/15 text-brand-error hover:bg-brand-error/20 animate-pulse'
-                        }`}
-                      >
-                        Tümünü Denetle
-                      </button>
-                    </div>
+                    <VaultItemSecurityAssessment score={score} onOpenAudit={() => setActiveTab('audit')} />
 
                     {/* Data Fields */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
