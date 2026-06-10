@@ -55,6 +55,22 @@ describe('attachment encryption', () => {
     await expect(decryptAttachmentData(record)).rejects.toThrow();
   });
 
+  it('rejects AES-GCM attachments when opened with a different vault session', async () => {
+    openVaultSession('master-pass');
+    const encrypted = await encryptAttachmentData('attachment-1', bytes('private file'));
+    closeVaultSession();
+    openVaultSession('other-master-pass');
+    const record: AttachmentRecord = {
+      id: 'attachment-1',
+      name: 'secret.txt',
+      type: 'text/plain',
+      size: 12,
+      ...encrypted,
+    };
+
+    await expect(decryptAttachmentData(record)).rejects.toThrow();
+  });
+
   it('requires an active vault session for new attachment encryption', async () => {
     await expect(encryptAttachmentData('attachment-1', bytes('private file'))).rejects.toThrow(
       'Aktif kasa oturumu bulunamadı.',

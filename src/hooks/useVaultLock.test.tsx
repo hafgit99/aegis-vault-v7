@@ -5,10 +5,11 @@
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { getActiveMasterPassword, openVaultSession } from '../lib/vaultSession';
+import { closeVaultSession, getActiveMasterPassword, openVaultSession } from '../lib/vaultSession';
 import { useVaultLock } from './useVaultLock';
 
 afterEach(() => {
+  closeVaultSession();
   cleanup();
   vi.useRealTimers();
 });
@@ -55,6 +56,7 @@ describe('useVaultLock', () => {
     vi.useFakeTimers();
     const resetReveals = vi.fn();
     const clearCopiedField = vi.fn();
+    openVaultSession('master-pass');
     const { result } = renderHook(() =>
       useVaultLock({
         autoLockDuration: 5,
@@ -67,6 +69,7 @@ describe('useVaultLock', () => {
     act(() => vi.advanceTimersByTime(5_000));
 
     expect(result.current.unlocked).toBe(false);
+    expect(getActiveMasterPassword()).toBeNull();
     expect(resetReveals).toHaveBeenCalledTimes(1);
     expect(clearCopiedField).toHaveBeenCalledTimes(1);
   });

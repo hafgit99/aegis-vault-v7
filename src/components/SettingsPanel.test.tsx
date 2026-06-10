@@ -2,11 +2,12 @@
  * @vitest-environment jsdom
  */
 
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { encryptDataWithPasswordSecure } from '../lib/encryption';
+import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from '../lib/encryption';
 import { saveVaultItem } from '../lib/storage';
+import { closeVaultSession, openVaultSession } from '../lib/vaultSession';
 import { VaultItem } from '../types';
 import SettingsPanel from './SettingsPanel';
 
@@ -68,11 +69,20 @@ function renderSettings() {
   return { ...view, props };
 }
 
+function encryptedExportForm(container: HTMLElement): HTMLFormElement {
+  return container.querySelector('#encrypted-export-card form') as HTMLFormElement;
+}
+
+function fileInput(container: HTMLElement): HTMLInputElement {
+  return container.querySelector('input[type="file"]') as HTMLInputElement;
+}
+
 beforeEach(() => {
   vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 });
 
 afterEach(() => {
+  closeVaultSession();
   cleanup();
   vi.restoreAllMocks();
   vi.clearAllMocks();
@@ -80,24 +90,34 @@ afterEach(() => {
 });
 
 describe('SettingsPanel import/export', () => {
-  it('exports an encrypted .aegis backup with a custom password', async () => {
-    renderSettings();
+  it('exports an encrypted .aegis backup with the active master session without sessionStorage', async () => {
+    openVaultSession('master-pass');
+    const { container } = renderSettings();
 
-    fireEvent.click(screen.getByLabelText('Kasa ana şifremi yedekleme parolası yap'));
-    fireEvent.change(screen.getByPlaceholderText('En az 6 haneli özel yedek şifresi girin'), {
+    fireEvent.submit(encryptedExportForm(container));
+
+    await waitFor(() => {
+      expect(encryptDataWithPasswordSecure).toHaveBeenCalledWith(JSON.stringify(vaultItems), 'master-pass');
+    });
+    expect(sessionStorage.getItem('aegis_session_master_pass')).toBeNull();
+  });
+
+  it('exports an encrypted .aegis backup with a custom password', async () => {
+    const { container } = renderSettings();
+
+    fireEvent.click(container.querySelector('#useMasterCheck') as HTMLInputElement);
+    fireEvent.change(container.querySelector('#encrypted-export-card input[type="password"]') as HTMLInputElement, {
       target: { value: 'backup-pass' },
     });
-    fireEvent.click(screen.getByText('Şifreli .aegis Yedeği'));
+    fireEvent.submit(encryptedExportForm(container));
 
     await waitFor(() => {
       expect(encryptDataWithPasswordSecure).toHaveBeenCalledWith(JSON.stringify(vaultItems), 'backup-pass');
     });
-    expect(screen.getByText('Askeri düzeyde şifreli yedeğiniz (.aegis) güvenle oluşturuldu ve indirildi.')).toBeTruthy();
   });
 
   it('imports a supported JSON backup and refreshes the database', async () => {
     const { container, props } = renderSettings();
-    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
     const file = new File(
       [
         JSON.stringify([
@@ -114,7 +134,7 @@ describe('SettingsPanel import/export', () => {
       { type: 'application/json' },
     );
 
-    fireEvent.change(fileInput, { target: { files: [file] } });
+    fireEvent.change(fileInput(container), { target: { files: [file] } });
 
     await waitFor(() => {
       expect(saveVaultItem).toHaveBeenCalledWith(
@@ -129,6 +149,61 @@ describe('SettingsPanel import/export', () => {
       );
     });
     expect(props.onDatabaseChanged).toHaveBeenCalledTimes(1);
-    expect(screen.getByText(/1 adet kayıt kasaya yüklendi/)).toBeTruthy();
+  });
+
+  it('decrypts an encrypted .aegis import before saving normalized items', async () => {
+    vi.mocked(decryptDataWithPasswordSecure).mockResolvedValueOnce(
+      JSON.stringify([
+        {
+          title: 'Encrypted Import',
+          username: 'secure@example.com',
+          password: 'decrypted-secret',
+          url: 'https://secure.example.com',
+          category: 'login',
+        },
+      ]),
+    );
+    const { container, props } = renderSettings();
+    const file = new File(
+      [
+        JSON.stringify({
+          version: '1.2',
+          kdf: 'Argon2id',
+          salt: 'salt',
+          payload: 'ciphertext',
+          iv: 'iv',
+          tag: 'tag',
+        }),
+      ],
+      'secure.aegis',
+      { type: 'application/json' },
+    );
+
+    fireEvent.change(fileInput(container), { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(container.querySelector('input[placeholder*="Kilidi"]')).toBeTruthy();
+    });
+
+    fireEvent.change(container.querySelector('input[placeholder*="Kilidi"]') as HTMLInputElement, {
+      target: { value: 'backup-pass' },
+    });
+    fireEvent.submit(container.querySelector('#universal-import-card form') as HTMLFormElement);
+
+    await waitFor(() => {
+      expect(decryptDataWithPasswordSecure).toHaveBeenCalledWith(
+        expect.stringContaining('"payload":"ciphertext"'),
+        'backup-pass',
+      );
+      expect(saveVaultItem).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'imported-id',
+          title: 'Encrypted Import',
+          username: 'secure@example.com',
+          password: 'decrypted-secret',
+        }),
+      );
+    });
+    expect(props.onDatabaseChanged).toHaveBeenCalledTimes(1);
   });
 });

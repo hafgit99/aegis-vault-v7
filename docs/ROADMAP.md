@@ -90,8 +90,11 @@
 - [x] Replace attachment XOR encryption with authenticated encryption.
 - [x] Introduce a versioned vault database format and migration tests.
 - [x] Define the desktop threat model and recovery model.
-- [ ] Add security regression tests for import/export, attachments, and lock/unlock flows.
+- [x] Add security regression tests for import/export, attachments, and lock/unlock flows.
   - [x] Encrypted backup envelope roundtrip and wrong-password rejection tests.
+  - [x] Active-session encrypted export and encrypted import flow tests.
+  - [x] Attachment wrong-session and tampered-tag rejection tests.
+  - [x] Manual and automatic lock session clearing tests.
 
 ## Phase 4: Desktop Productization
 

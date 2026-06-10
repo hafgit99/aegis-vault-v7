@@ -10,6 +10,7 @@ This project is a password vault, so security claims must stay conservative unti
 - New attachment writes use WebCrypto AES-GCM with per-attachment keys derived from the active vault session.
 - Vault database payloads now include a versioned schema envelope with migration tests for legacy unversioned state.
 - Desktop threat and recovery boundaries are documented in `docs/THREAT_MODEL.md`.
+- Security regression tests now cover active-session export, encrypted import, attachment authentication, and lock session clearing.
 - Unit tests cover random helper boundaries and password audit behavior.
 - Desktop build is available through Tauri.
 
