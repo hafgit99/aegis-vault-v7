@@ -18,10 +18,8 @@ import {
   Trash2,
   Clock,
   Globe,
-  Heart,
   ShieldAlert,
   Menu,
-  LayoutDashboard,
 } from 'lucide-react';
 import { VaultItem, ActiveTab, AppNotification } from './types';
 import { getVaultItems, saveVaultItem, deleteVaultItem, moveToTrash, restoreFromTrash, deletePermanently, emptyTrashComplete } from './lib/storage';
@@ -40,15 +38,7 @@ import LocalStorageBadge from './components/LocalStorageBadge';
 import TrashEmptyState from './components/TrashEmptyState';
 import TrashInfoBanner from './components/TrashInfoBanner';
 import TrashItemCard from './components/TrashItemCard';
-import VaultListItem from './components/VaultListItem';
-import CryptoShieldPanel from './components/CryptoShieldPanel';
-import AegisGuardReport from './components/AegisGuardReport';
-import DashboardCategoryStats from './components/DashboardCategoryStats';
-import DashboardSecurityScoreCard from './components/DashboardSecurityScoreCard';
-import DashboardQuickActions from './components/DashboardQuickActions';
-import RecentVaultPanel from './components/RecentVaultPanel';
-import DashboardHeader from './components/DashboardHeader';
-import VaultItemDetailPanel from './components/VaultItemDetailPanel';
+import VaultWorkspace from './components/VaultWorkspace';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -484,163 +474,44 @@ export default function App() {
         {/* Tab content renderer */}
         <div className="flex flex-1 overflow-hidden">
           {activeTab === 'vault' && (
-            <>
-              {/* Middle column: Vault Item list */}
-              <section className={`w-full lg:w-[400px] border-r border-outline-variant/10 flex flex-col bg-surface-lowest/40 overflow-y-auto scrollbar-hide ${
-                selectedItem && mobileActiveView === 'detail' ? 'hidden lg:flex' : 'flex'
-              }`}>
-                <div className="p-6 pb-2 space-y-3">
-                  <h2 className="font-display text-lg font-bold text-on-surface flex items-center justify-between">
-                    <span>Kişisel Kasa</span>
-                    <button
-                      onClick={handleTriggerNew}
-                      className="text-on-surface-variant hover:text-brand-primary transition-all cursor-pointer"
-                      title="Yeni Şifre Ekle"
-                    >
-                      <Plus className="w-5 h-5" />
-                    </button>
-                  </h2>
-
-                  {/* Tümü vs Favoriler Filter buttons */}
-                  <div className="flex bg-[#161816]/70 p-1 rounded-lg border border-outline-variant/15 text-xs">
-                    <button
-                      onClick={() => setFilterFavoritesOnly(false)}
-                      className={`flex-1 py-1.5 rounded-md font-bold transition-all text-center cursor-pointer ${
-                        !filterFavoritesOnly
-                          ? 'bg-brand-primary/15 text-brand-primary border border-brand-primary/20'
-                          : 'text-on-surface-variant hover:text-on-surface'
-                      }`}
-                    >
-                      Tümü ({activeItems.length})
-                    </button>
-                    <button
-                      onClick={() => setFilterFavoritesOnly(true)}
-                      className={`flex-1 py-1.5 rounded-md font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer ${
-                        filterFavoritesOnly
-                          ? 'bg-brand-primary/15 text-brand-primary border border-brand-primary/20'
-                          : 'text-on-surface-variant hover:text-on-surface'
-                      }`}
-                    >
-                      <Heart className="w-3.5 h-3.5 fill-red-500 text-red-500" />
-                      <span>Favoriler ({favoriteCount})</span>
-                    </button>
-                  </div>
-
-                  <p className="text-on-surface-variant text-xs mt-1">
-                    {filteredItems.length} öğe listeleniyor
-                  </p>
-                </div>
-
-                <div className="flex flex-col p-3 space-y-1.5">
-                  {/* Dashboard link button */}
-                  <div
-                    onClick={() => {
-                      setSelectedItem(null);
-                      setMobileActiveView('detail');
-                    }}
-                    className={`group p-3 mb-2 rounded-xl border flex items-center gap-3 cursor-pointer transition-all ${
-                      selectedItem === null
-                        ? 'border-brand-primary/20 bg-brand-primary/10 shadow-[0_0_15px_rgba(220,225,255,0.03)]'
-                        : 'border-outline-variant/10 hover:border-brand-primary/10 hover:bg-[#1a1c1a]/30'
-                    }`}
-                  >
-                    <div className="w-9 h-9 rounded-lg bg-brand-primary/10 flex items-center justify-center border border-brand-primary/25 shrink-0 select-none">
-                      <LayoutDashboard className="w-4.5 h-4.5 text-brand-primary group-hover:rotate-6 transition-transform" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-display font-bold text-xs text-brand-primary tracking-wider uppercase flex items-center gap-1.5">
-                        <span>Aegis Kontrol Paneli</span>
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                      </h3>
-                      <p className="text-[10px] text-on-surface-variant font-mono truncate">Detaylı istatistikleri ve analizleri gör</p>
-                    </div>
-                  </div>
-
-                  {filteredItems.length === 0 ? (
-                    <div className="text-center py-10 px-4 text-xs text-on-surface-variant/40 italic">
-                      Arama sonucu veya kayıtlı favori veri bulunamadı. Ekle butonuna tıklayarak yeni veri oluşturabilirsiniz.
-                    </div>
-                  ) : (
-                    filteredItems.map((item) => (
-                      <React.Fragment key={item.id}>
-                        <VaultListItem
-                          item={item}
-                          isSelected={selectedItem?.id === item.id}
-                          onSelect={handleSelectItem}
-                        />
-                      </React.Fragment>
-                    ))
-                  )}
-                </div>
-              </section>
-
-              {/* Right Detail Pane */}
-              <section className={`flex-1 p-4 lg:p-8 overflow-y-auto scrollbar-hide bg-[#0c0d0c]/30 ${
-                !selectedItem || mobileActiveView === 'list' ? 'hidden lg:block' : 'block'
-              }`}>
-                {selectedItem ? (
-                  <VaultItemDetailPanel
-                    item={selectedItem}
-                    copiedField={copiedField}
-                    score={score}
-                    isPasswordRevealed={isPasswordRevealed}
-                    isCardNumberRevealed={isCardNumRevealed}
-                    isCvvRevealed={isCvvRevealed}
-                    isPinRevealed={isPinRevealed}
-                    isPasskeyPrivateExponentRevealed={isPasskeyExpRevealed}
-                    totpCountdown={totpCountdown}
-                    onBackToList={() => setMobileActiveView('list')}
-                    onOpenAudit={() => setActiveTab('audit')}
-                    onToggleFavorite={handleToggleFavorite}
-                    onEdit={handleTriggerEdit}
-                    onDelete={handleDeleteItem}
-                    onToggleReveal={toggleReveal}
-                    onCopyText={handleCopyText}
-                    onDownloadAttachment={handleDownloadAttachment}
-                  />
-                ) : (
-                  <div className="max-w-4xl mx-auto space-y-8 py-4 lg:py-6 animate-fade-in text-left">
-                    <DashboardHeader profileName={profileName} onOpenProfile={() => setIsProfileModalOpen(true)} />
-
-                    {/* Bento Grid: Core Analytics & Circular Security Meter */}
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                      
-                      <DashboardSecurityScoreCard auditReport={auditReport} activeItemCount={activeItems.length} />
-
-                      <DashboardCategoryStats
-                        loginCount={loginCount}
-                        cardCount={cardCount}
-                        secureNoteCount={secureNoteCount}
-                      />
-
-                    </div>
-
-                    <DashboardQuickActions
-                      onNewItem={handleTriggerNew}
-                      onOpenAudit={() => setActiveTab('audit')}
-                      onOpenGenerator={() => setActiveTab('generator')}
-                    />
-
-                    {/* Recent & Premium Stats Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in text-left">
-                      
-                      <RecentVaultPanel
-                        items={activeItems}
-                        copiedField={copiedField}
-                        onSelect={handleSelectItem}
-                        onCopyText={handleCopyText}
-                      />
-
-                      <CryptoShieldPanel />
-
-                    </div>
-
-                    <AegisGuardReport auditReport={auditReport} />
-
-                  </div>
-                )}
-              </section>
-            </>
+            <VaultWorkspace
+              selectedItem={selectedItem}
+              mobileActiveView={mobileActiveView}
+              filteredItems={filteredItems}
+              activeItems={activeItems}
+              filterFavoritesOnly={filterFavoritesOnly}
+              favoriteCount={favoriteCount}
+              loginCount={loginCount}
+              cardCount={cardCount}
+              secureNoteCount={secureNoteCount}
+              auditReport={auditReport}
+              profileName={profileName}
+              copiedField={copiedField}
+              score={score}
+              isPasswordRevealed={isPasswordRevealed}
+              isCardNumberRevealed={isCardNumRevealed}
+              isCvvRevealed={isCvvRevealed}
+              isPinRevealed={isPinRevealed}
+              isPasskeyPrivateExponentRevealed={isPasskeyExpRevealed}
+              totpCountdown={totpCountdown}
+              onNewItem={handleTriggerNew}
+              onOpenProfile={() => setIsProfileModalOpen(true)}
+              onOpenAudit={() => setActiveTab('audit')}
+              onOpenGenerator={() => setActiveTab('generator')}
+              onSetFavoritesOnly={setFilterFavoritesOnly}
+              onSelectDashboard={() => {
+                setSelectedItem(null);
+                setMobileActiveView('detail');
+              }}
+              onBackToList={() => setMobileActiveView('list')}
+              onSelectItem={handleSelectItem}
+              onToggleFavorite={handleToggleFavorite}
+              onEdit={handleTriggerEdit}
+              onDelete={handleDeleteItem}
+              onToggleReveal={toggleReveal}
+              onCopyText={handleCopyText}
+              onDownloadAttachment={handleDownloadAttachment}
+            />
           )}
 
           {activeTab === 'audit' && (

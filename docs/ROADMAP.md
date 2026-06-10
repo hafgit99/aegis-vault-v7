@@ -39,6 +39,7 @@
   - [x] Card detail extracted to `CardDetail`.
   - [x] Login detail extracted to `LoginDetail`.
   - [x] Selected vault item panel extracted to `VaultItemDetailPanel`.
+  - [x] Vault list and detail workspace extracted to `VaultWorkspace`.
 - [ ] Extract vault item selection, reveal state, and auto-lock logic into hooks.
   - [x] Auto-lock behavior extracted to `useAutoLock`.
   - [x] Copy feedback and sensitive reveal state extracted to dedicated hooks.
