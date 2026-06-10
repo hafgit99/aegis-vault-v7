@@ -5,13 +5,12 @@
 
 import { VaultItem } from '../types';
 import { 
-  generateArgon2idHash as generateLegacyArgon2idHash,
-  verifyArgon2idHash as verifyLegacyArgon2idHash,
-  generateArgon2idKey, 
-  hkdfSha256, 
-  aes256GcmDecrypt,
-  EncryptedPayload
-} from './encryption';
+  decryptLegacyAes256Gcm,
+  generateLegacyArgon2idHash,
+  generateLegacyArgon2idKey,
+  verifyLegacyArgon2idHash,
+  type EncryptedPayload,
+} from './legacyCrypto';
 import { secureRandomBytes, secureRandomToken } from './random';
 import {
   createEmptyVaultDatabaseState,
@@ -293,7 +292,7 @@ class SQLiteOPFS {
   }
 
   private deriveLegacyEncryptionKey(password: string): Uint8Array {
-    return generateArgon2idKey(password, 'static_db_salt', 1024, 3, 2, 32);
+    return generateLegacyArgon2idKey(password, 'static_db_salt', 1024, 3, 2, 32);
   }
 
   /**
@@ -318,7 +317,7 @@ class SQLiteOPFS {
           const encryptedPayload: EncryptedPayload = JSON.parse(row.enc_metadata);
           const isLegacyRow = row.enc_kdf !== VAULT_ITEM_KDF;
           const decryptedJson = isLegacyRow
-            ? aes256GcmDecrypt(encryptedPayload, legacyDerivedKey)
+            ? decryptLegacyAes256Gcm(encryptedPayload, legacyDerivedKey)
             : await webCryptoAesGcmDecrypt(encryptedPayload as WebCryptoAesGcmPayload, derivedKey);
           const originalItem: VaultItem = JSON.parse(decryptedJson);
 

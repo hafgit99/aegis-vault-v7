@@ -24,7 +24,7 @@ This project is a password vault, so security claims must stay conservative unti
 
 ## Known Security Debt
 
-- `src/lib/encryption.ts` contains custom cryptographic primitives used by remaining read-only legacy backup and compatibility fallbacks. These should be replaced or removed before production use.
+- `src/lib/legacyCrypto.ts` contains custom cryptographic primitives used only by remaining read-only legacy backup and compatibility fallbacks. These should be replaced or removed before production use.
 - Legacy XOR attachment records are still readable as migration fallback and can now be rewritten to AES-GCM by the migration helper.
 - `src/lib/vaultSession.ts` keeps the active master password in process memory during an unlocked session. This is safer than browser storage, but native desktop secret handling still needs a final threat-model decision.
 - `src/lib/sqlite_opfs.ts` is a simulated SQLite/OPFS layer backed by versioned serialized JSON state. The naming and implementation should be aligned with the actual persistence strategy.

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { hmacSha256, aes256GcmDecrypt } from './encryption';
+import { decryptLegacyAes256Gcm, hmacSha256 } from './legacyCrypto';
 import { secureRandomBytes } from './random';
 import { APP_NAME, APP_SHORT_NAME } from './branding';
 import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, type WebCryptoAesGcmPayload } from './webcrypto';
@@ -196,7 +196,7 @@ export async function authenticateBiometric(): Promise<string> {
     }
 
     const legacyWrappingKey = pbkdf2Sha256(rawIdBytes, saltBytes, 10000, 32);
-    return aes256GcmDecrypt(biometricInfo.bundle, legacyWrappingKey);
+    return decryptLegacyAes256Gcm(biometricInfo.bundle, legacyWrappingKey);
   } catch (e) {
     throw new Error("Şifre çözme doğrulaması başarısız! Biyometrik veriler veya anahtar bütünlüğü eşleşmiyor.");
   }
