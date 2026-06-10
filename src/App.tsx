@@ -28,6 +28,7 @@ import { useVaultLock } from './hooks/useVaultLock';
 import { useVaultFilters } from './hooks/useVaultFilters';
 import { useUnlockedVaultRefresh } from './hooks/useUnlockedVaultRefresh';
 import { useSelectedItemScore } from './hooks/useSelectedItemScore';
+import { useVaultStatusAction } from './hooks/useVaultStatusAction';
 
 export default function App() {
   const { copiedField, copyText: handleCopyText, clearCopiedField } = useClipboardFeedback();
@@ -106,6 +107,10 @@ export default function App() {
   } = useConfirmModal();
 
   const {
+    openVaultStatus: handleOpenVaultStatus,
+  } = useVaultStatusAction({ openConfirm });
+
+  const {
     profileName,
     profileAvatar,
     isProfileModalOpen,
@@ -165,16 +170,6 @@ export default function App() {
     setActiveTab,
     setMobileActiveView,
   });
-
-  const handleOpenVaultStatus = () => {
-    openConfirm({
-      title: 'Kasa Durumu',
-      message: 'Kasa durumu güncel ve tamamen koruma altında. Herhangi bir sızıntı veya zayıf halka tespit edilmedi.',
-      type: 'success',
-      isAlert: true,
-      onConfirm: () => {},
-    });
-  };
 
   const handleTriggerEdit = () => {
     openEditItemForm(selectedItem);
