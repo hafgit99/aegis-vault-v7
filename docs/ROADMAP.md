@@ -102,7 +102,7 @@
 
 - [ ] Replace generated Tauri icons with Aegis Vault 7 branded icons.
 - [x] Add app data directory integration for desktop vault persistence.
-- [ ] Add controlled native file dialogs for import/export.
+- [x] Add controlled native file dialogs for import/export.
 - [x] Add safe clipboard clearing behavior.
 - [ ] Add CI build workflow for Windows desktop artifacts.
 - [ ] Add release checklist and signed build plan.

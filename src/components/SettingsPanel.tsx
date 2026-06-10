@@ -30,6 +30,8 @@ import { parseUniversalImport } from '../lib/importer';
 import { secureRandomToken } from '../lib/random';
 import { registerBiometric, isBiometricEnabled, disableBiometric, isBiometricSupported } from '../lib/biometric';
 import { getActiveMasterPassword } from '../lib/vaultSession';
+import { openDesktopImportFile, saveDesktopExportFile } from '../lib/desktopFiles';
+import { isDesktopRuntime } from '../lib/desktopStorage';
 
 interface SettingsPanelProps {
   onDatabaseChanged: () => void;
@@ -88,6 +90,18 @@ export default function SettingsPanel({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const items = getVaultItems();
+
+  const currentDateSlug = () => new Date().toISOString().split('T')[0];
+
+  const downloadTextFile = (filename: string, contents: string) => {
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(contents);
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', dataStr);
+    downloadAnchor.setAttribute('download', filename);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
 
   // Helper clear-out
   const resetImportFlowState = () => {
@@ -170,14 +184,22 @@ export default function SettingsPanel({
   };
 
   // Generate a plain (unencrypted) json export download
-  const handleExportPlain = () => {
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(items, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `aegis_acik_yedek_${new Date().toISOString().split('T')[0]}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+  const handleExportPlain = async () => {
+    setBackupSuccess(null);
+    setBackupError(null);
+    const filename = `aegis_acik_yedek_${currentDateSlug()}.json`;
+    const contents = JSON.stringify(items, null, 2);
+
+    try {
+      const savedWithDialog = await saveDesktopExportFile(filename, contents);
+      if (!savedWithDialog) {
+        if (isDesktopRuntime()) return;
+        downloadTextFile(filename, contents);
+      }
+    } catch (err: any) {
+      setBackupError(`DÄ±ÅŸa aktarÄ±m hatasÄ±: ${err?.message || 'Dosya kaydedilemedi.'}`);
+      return;
+    }
     setBackupSuccess('Açık metin parola yedeği başarıyla indirildi.');
     setTimeout(() => setBackupSuccess(null), 4000);
   };
@@ -206,14 +228,12 @@ export default function SettingsPanel({
 
     try {
       const encryptedJsonString = await encryptDataWithPasswordSecure(JSON.stringify(items), passwordToUse);
-      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(encryptedJsonString);
-      
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute('href', dataStr);
-      downloadAnchor.setAttribute('download', `aegis_guvenli_yedek_${new Date().toISOString().split('T')[0]}.aegis`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
+      const filename = `aegis_guvenli_yedek_${currentDateSlug()}.aegis`;
+      const savedWithDialog = await saveDesktopExportFile(filename, encryptedJsonString);
+      if (!savedWithDialog) {
+        if (isDesktopRuntime()) return;
+        downloadTextFile(filename, encryptedJsonString);
+      }
 
       setBackupSuccess('Askeri düzeyde şifreli yedeğiniz (.aegis) güvenle oluşturuldu ve indirildi.');
       setCustomBackupPassword('');
@@ -326,6 +346,22 @@ export default function SettingsPanel({
       }
     };
     reader.readAsText(file);
+  };
+
+  const triggerImportSelect = async () => {
+    try {
+      const selectedFile = await openDesktopImportFile();
+      if (selectedFile) {
+        processImportFile(new File([selectedFile.contents], selectedFile.name));
+        return;
+      }
+
+      if (isDesktopRuntime()) return;
+      fileInputRef.current?.click();
+    } catch (err: any) {
+      resetImportFlowState();
+      setImportError(err?.message || 'Dosya seÃ§imi baÅŸarÄ±sÄ±z oldu.');
+    }
   };
 
   const onDragOver = (e: React.DragEvent) => {
@@ -729,7 +765,9 @@ export default function SettingsPanel({
                 onDragOver={onDragOver}
                 onDragLeave={onDragLeave}
                 onDrop={onDrop}
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => {
+                  void triggerImportSelect();
+                }}
                 className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${
                   isDragOver
                     ? 'border-brand-primary bg-brand-primary/10'

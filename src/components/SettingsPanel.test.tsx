@@ -6,6 +6,7 @@ import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from '../lib/encryption';
+import { openDesktopImportFile, saveDesktopExportFile } from '../lib/desktopFiles';
 import { saveVaultItem } from '../lib/storage';
 import { closeVaultSession, openVaultSession } from '../lib/vaultSession';
 import { VaultItem } from '../types';
@@ -49,6 +50,11 @@ vi.mock('../lib/random', () => ({
   secureRandomToken: vi.fn(() => 'imported-id'),
 }));
 
+vi.mock('../lib/desktopFiles', () => ({
+  openDesktopImportFile: vi.fn(async () => null),
+  saveDesktopExportFile: vi.fn(async () => false),
+}));
+
 vi.mock('../lib/biometric', () => ({
   disableBiometric: vi.fn(),
   isBiometricEnabled: vi.fn(() => false),
@@ -79,6 +85,9 @@ function fileInput(container: HTMLElement): HTMLInputElement {
 
 beforeEach(() => {
   vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+  delete window.__TAURI_INTERNALS__;
+  vi.mocked(openDesktopImportFile).mockResolvedValue(null);
+  vi.mocked(saveDesktopExportFile).mockResolvedValue(false);
 });
 
 afterEach(() => {
@@ -87,6 +96,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.clearAllMocks();
   sessionStorage.clear();
+  delete window.__TAURI_INTERNALS__;
 });
 
 describe('SettingsPanel import/export', () => {
@@ -99,6 +109,7 @@ describe('SettingsPanel import/export', () => {
     await waitFor(() => {
       expect(encryptDataWithPasswordSecure).toHaveBeenCalledWith(JSON.stringify(vaultItems), 'master-pass');
     });
+    expect(saveDesktopExportFile).toHaveBeenCalledWith(expect.stringMatching(/\.aegis$/), expect.stringContaining('"encrypted":true'));
     expect(sessionStorage.getItem('aegis_session_master_pass')).toBeNull();
   });
 
@@ -114,6 +125,52 @@ describe('SettingsPanel import/export', () => {
     await waitFor(() => {
       expect(encryptDataWithPasswordSecure).toHaveBeenCalledWith(JSON.stringify(vaultItems), 'backup-pass');
     });
+  });
+
+  it('does not fall back to browser download when the desktop save dialog is cancelled', async () => {
+    window.__TAURI_INTERNALS__ = {};
+    openVaultSession('master-pass');
+    const { container } = renderSettings();
+
+    fireEvent.submit(encryptedExportForm(container));
+
+    await waitFor(() => {
+      expect(saveDesktopExportFile).toHaveBeenCalled();
+    });
+    expect(HTMLAnchorElement.prototype.click).not.toHaveBeenCalled();
+  });
+
+  it('imports a file selected through the native desktop dialog', async () => {
+    vi.mocked(openDesktopImportFile).mockResolvedValueOnce({
+      name: 'native-backup.json',
+      contents: JSON.stringify([
+        {
+          title: 'Native Import',
+          username: 'native@example.com',
+          password: 'native-secret',
+          url: 'https://native.example.com',
+          category: 'login',
+        },
+      ]),
+    });
+    const { container, props } = renderSettings();
+
+    fireEvent.click(container.querySelector('#drop-zone-select') as HTMLElement);
+
+    await waitFor(() => {
+      expect(openDesktopImportFile).toHaveBeenCalledTimes(1);
+      expect(saveVaultItem).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'imported-id',
+          title: 'Native Import',
+          username: 'native@example.com',
+          password: 'native-secret',
+          url: 'https://native.example.com',
+          category: 'login',
+        }),
+      );
+    });
+    expect(props.onDatabaseChanged).toHaveBeenCalledTimes(1);
   });
 
   it('imports a supported JSON backup and refreshes the database', async () => {
