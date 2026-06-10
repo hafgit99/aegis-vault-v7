@@ -15,6 +15,7 @@
 - [x] Centralize secure random helpers.
 - [x] Replace password generator randomness with secure randomness.
 - [ ] Split `src/App.tsx` into route/view/layout components.
+  - [x] Mobile sidebar backdrop extracted to `MobileSidebarBackdrop`.
 - [ ] Extract vault item selection, reveal state, and auto-lock logic into hooks.
   - [x] Auto-lock behavior extracted to `useAutoLock`.
   - [x] Copy feedback and sensitive reveal state extracted to dedicated hooks.

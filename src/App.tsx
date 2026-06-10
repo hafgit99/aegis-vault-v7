@@ -51,6 +51,7 @@ import SettingsPanel from './components/SettingsPanel';
 import VaultFormModal from './components/VaultFormModal';
 import ConfirmModal from './components/ConfirmModal';
 import ProfileModal, { isGradient } from './components/ProfileModal';
+import MobileSidebarBackdrop from './components/MobileSidebarBackdrop';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -328,13 +329,7 @@ export default function App() {
 
   return (
     <div className="flex h-screen w-full bg-[#121412] text-[#e2e3df] overflow-hidden font-sans">
-      {/* Mobile Sidebar Overlay Backdrop */}
-      {isSidebarOpen && (
-        <div
-          onClick={() => setIsSidebarOpen(false)}
-          className="lg:hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-40 transition-opacity"
-        />
-      )}
+      <MobileSidebarBackdrop isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
       {/* Sidebar navigation */}
       <aside className={`fixed left-0 top-0 h-full w-[280px] bg-surface-lowest border-r border-outline-variant/10 flex flex-col p-4 z-50 transition-transform duration-300 ${
