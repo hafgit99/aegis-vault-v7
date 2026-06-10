@@ -104,6 +104,7 @@
   - [x] Manual and automatic lock session clearing tests.
 - [x] Add unit coverage baseline and conservative coverage thresholds.
   - [x] Expand importer fixtures for JSON, CSV, encrypted envelopes, and malformed inputs.
+  - [x] Expand attachment IndexedDB persistence and migration coverage.
 
 ## Phase 4: Desktop Productization
 

@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 69.35% |
-| Statements | 69.35% |
-| Functions | 72.42% |
-| Branches | 74.25% |
+| Lines | 70.86% |
+| Statements | 70.86% |
+| Functions | 72.83% |
+| Branches | 74.82% |
 
 Initial thresholds are intentionally below the current baseline:
 
@@ -33,13 +33,13 @@ These thresholds prevent large regressions while leaving room to add tests aroun
 ## Priority Coverage Targets
 
 1. `src/lib/sqlite_opfs.ts`: currently under-tested because persistence behavior is mostly exercised through higher-level storage tests.
-2. `src/lib/attachments.ts`: encryption helpers are covered, but IndexedDB save/read/delete and bulk migration paths need stronger tests.
-3. `src/lib/storage.ts`: add coverage for trash, reseed, and item lifecycle wrappers.
-4. `src/components/VaultFormModal.tsx` and `src/components/PasswordGenerator.tsx`: add workflow-focused component tests.
+2. `src/lib/storage.ts`: add coverage for trash, reseed, and item lifecycle wrappers.
+3. `src/components/VaultFormModal.tsx` and `src/components/PasswordGenerator.tsx`: add workflow-focused component tests.
 
 Recently improved:
 
 - `src/lib/importer.ts`: covered supported JSON/CSV formats, encrypted envelope detection, malformed inputs, and quote-aware CSV parsing.
+- `src/lib/attachments.ts`: covered IndexedDB save/read/delete paths, bulk legacy migration, missing records, and connection cleanup behavior.
 
 ## Next Gates
 

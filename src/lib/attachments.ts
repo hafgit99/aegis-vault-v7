@@ -128,39 +128,42 @@ export async function migrateLegacyAttachmentsToAesGcm(): Promise<number> {
   }
 
   const db = await initDB();
+  try {
+    const legacyRecords = await new Promise<AttachmentRecord[]>((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.getAll();
 
-  const legacyRecords = await new Promise<AttachmentRecord[]>((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, 'readonly');
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.getAll();
+      request.onsuccess = () => {
+        resolve((request.result as AttachmentRecord[]).filter((record) => record.algorithm !== 'AES-256-GCM'));
+      };
 
-    request.onsuccess = () => {
-      resolve((request.result as AttachmentRecord[]).filter((record) => record.algorithm !== 'AES-256-GCM'));
-    };
-
-    request.onerror = () => reject(request.error);
-    transaction.onerror = () => reject(transaction.error);
-  });
-
-  if (legacyRecords.length === 0) {
-    return 0;
-  }
-
-  const migratedRecords = await Promise.all(legacyRecords.map((record) => migrateAttachmentRecordToAesGcm(record)));
-
-  await new Promise<void>((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, 'readwrite');
-    const store = transaction.objectStore(STORE_NAME);
-
-    migratedRecords.forEach((record) => {
-      store.put(record);
+      request.onerror = () => reject(request.error);
+      transaction.onerror = () => reject(transaction.error);
     });
 
-    transaction.oncomplete = () => resolve();
-    transaction.onerror = () => reject(transaction.error);
-  });
+    if (legacyRecords.length === 0) {
+      return 0;
+    }
 
-  return migratedRecords.length;
+    const migratedRecords = await Promise.all(legacyRecords.map((record) => migrateAttachmentRecordToAesGcm(record)));
+
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+
+      migratedRecords.forEach((record) => {
+        store.put(record);
+      });
+
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+
+    return migratedRecords.length;
+  } finally {
+    db.close();
+  }
 }
 
 /**
@@ -202,18 +205,24 @@ export async function saveAttachment(
         const request = store.put(record);
 
         transaction.oncomplete = () => {
+          db.close();
           progressCallback?.(100);
           resolve();
         };
         transaction.onerror = () => {
+          db.close();
           reject(transaction.error);
         };
       } catch (err) {
+        db.close();
         reject(err);
       }
     };
 
-    reader.onerror = () => reject(reader.error);
+    reader.onerror = () => {
+      db.close();
+      reject(reader.error);
+    };
     
     // Read files as ArrayBuffer (highly optimal for raw binary data and large chunks)
     reader.readAsArrayBuffer(file);
@@ -234,6 +243,7 @@ export async function getAttachmentBlob(id: string): Promise<{ blob: Blob, name:
     request.onsuccess = async () => {
       const record = request.result as AttachmentRecord | undefined;
       if (!record) {
+        db.close();
         resolve(null);
         return;
       }
@@ -241,13 +251,16 @@ export async function getAttachmentBlob(id: string): Promise<{ blob: Blob, name:
       try {
         const decryptedBuffer = await decryptAttachmentData(record);
         const blob = new Blob([decryptedBuffer], { type: record.type });
+        db.close();
         resolve({ blob, name: record.name });
       } catch (err) {
+        db.close();
         reject(err);
       }
     };
 
     request.onerror = () => {
+      db.close();
       reject(request.error);
     };
   });
@@ -264,7 +277,13 @@ export async function deleteAttachment(id: string): Promise<void> {
     const store = transaction.objectStore(STORE_NAME);
     const request = store.delete(id);
 
-    transaction.oncomplete = () => resolve();
-    transaction.onerror = () => reject(transaction.error);
+    transaction.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    transaction.onerror = () => {
+      db.close();
+      reject(transaction.error);
+    };
   });
 }

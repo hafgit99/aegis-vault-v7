@@ -2,16 +2,24 @@
  * @vitest-environment jsdom
  */
 
-import { afterEach, describe, expect, it } from 'vitest';
+import 'fake-indexeddb/auto';
+
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  deleteAttachment,
   decryptAttachmentData,
   encryptAttachmentData,
+  getAttachmentBlob,
   migrateLegacyAttachmentsToAesGcm,
   migrateAttachmentRecordToAesGcm,
+  saveAttachment,
   type AttachmentRecord,
 } from './attachments';
 import { closeVaultSession, openVaultSession } from './vaultSession';
+
+const DB_NAME = 'aegis_attachments_db';
+const STORE_NAME = 'attachments';
 
 function bytes(value: string): ArrayBuffer {
   return new TextEncoder().encode(value).buffer;
@@ -21,13 +29,84 @@ async function text(buffer: ArrayBuffer): Promise<string> {
   return new TextDecoder().decode(buffer);
 }
 
+async function blobText(blob: Blob | undefined): Promise<string> {
+  if (!blob) return '';
+  const buffer = await new Promise<ArrayBuffer>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (reader.result instanceof ArrayBuffer) {
+        resolve(reader.result);
+      } else {
+        reject(new Error('Blob could not be read as ArrayBuffer.'));
+      }
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsArrayBuffer(blob);
+  });
+  return text(buffer);
+}
+
 function legacyXorEncrypt(buffer: ArrayBuffer): ArrayBuffer {
   const key = new TextEncoder().encode('aegis_secure_file');
   return new Uint8Array(buffer).map((byte, index) => byte ^ key[index % key.length]).buffer;
 }
 
-afterEach(() => {
+function deleteAttachmentDatabase(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.deleteDatabase(DB_NAME);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+    request.onblocked = () => resolve();
+  });
+}
+
+async function putAttachmentRecord(record: AttachmentRecord): Promise<void> {
+  const db = await new Promise<IDBDatabase>((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains(STORE_NAME)) {
+        request.result.createObjectStore(STORE_NAME, { keyPath: 'id' });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readwrite');
+    transaction.objectStore(STORE_NAME).put(record);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+  });
+
+  db.close();
+}
+
+async function getStoredAttachmentRecord(id: string): Promise<AttachmentRecord | undefined> {
+  const db = await new Promise<IDBDatabase>((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+
+  const record = await new Promise<AttachmentRecord | undefined>((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readonly');
+    const request = transaction.objectStore(STORE_NAME).get(id);
+    request.onsuccess = () => resolve(request.result as AttachmentRecord | undefined);
+    request.onerror = () => reject(request.error);
+  });
+
+  db.close();
+  return record;
+}
+
+beforeEach(async () => {
+  await deleteAttachmentDatabase();
+});
+
+afterEach(async () => {
   closeVaultSession();
+  await deleteAttachmentDatabase();
 });
 
 describe('attachment encryption', () => {
@@ -106,6 +185,88 @@ describe('attachment encryption', () => {
     expect(migrated.iv).toHaveLength(24);
     expect(migrated.tag).toHaveLength(32);
     await expect(decryptAttachmentData(migrated).then(text)).resolves.toBe('private file');
+  });
+
+  it('leaves AES-GCM attachment records unchanged during single-record migration', async () => {
+    openVaultSession('master-pass');
+    const encrypted = await encryptAttachmentData('attachment-1', bytes('private file'));
+    const record: AttachmentRecord = {
+      id: 'attachment-1',
+      name: 'secret.txt',
+      type: 'text/plain',
+      size: 12,
+      ...encrypted,
+    };
+
+    await expect(migrateAttachmentRecordToAesGcm(record)).resolves.toBe(record);
+  });
+
+  it('saves, retrieves, and deletes encrypted attachments through IndexedDB', async () => {
+    openVaultSession('master-pass');
+    const progress: number[] = [];
+    const file = new File([bytes('private file')], 'secret.txt', { type: 'text/plain' });
+
+    await saveAttachment('attachment-1', file, (percent) => progress.push(percent));
+
+    expect(progress).toEqual([50, 80, 100]);
+    const stored = await getStoredAttachmentRecord('attachment-1');
+    expect(stored).toMatchObject({
+      id: 'attachment-1',
+      name: 'secret.txt',
+      type: 'text/plain',
+      size: file.size,
+      encrypted: true,
+      algorithm: 'AES-256-GCM',
+    });
+    expect(stored?.iv).toHaveLength(24);
+    expect(stored?.tag).toHaveLength(32);
+
+    const result = await getAttachmentBlob('attachment-1');
+    expect(result?.name).toBe('secret.txt');
+    await expect(blobText(result?.blob)).resolves.toBe('private file');
+
+    await deleteAttachment('attachment-1');
+    await expect(getAttachmentBlob('attachment-1')).resolves.toBeNull();
+  });
+
+  it('returns null when an attachment id is not found', async () => {
+    await expect(getAttachmentBlob('missing')).resolves.toBeNull();
+  });
+
+  it('migrates legacy IndexedDB attachment records in bulk', async () => {
+    openVaultSession('master-pass');
+    await putAttachmentRecord({
+      id: 'legacy-attachment',
+      name: 'legacy.txt',
+      type: 'text/plain',
+      size: 12,
+      data: legacyXorEncrypt(bytes('private file')),
+      encrypted: true,
+      algorithm: 'XOR-LEGACY',
+    });
+
+    await expect(migrateLegacyAttachmentsToAesGcm()).resolves.toBe(1);
+
+    const migrated = await getStoredAttachmentRecord('legacy-attachment');
+    expect(migrated?.algorithm).toBe('AES-256-GCM');
+    expect(migrated?.iv).toHaveLength(24);
+    expect(migrated?.tag).toHaveLength(32);
+    const result = await getAttachmentBlob('legacy-attachment');
+    await expect(blobText(result?.blob)).resolves.toBe('private file');
+  });
+
+  it('returns zero when bulk migration finds no legacy records', async () => {
+    openVaultSession('master-pass');
+    const encrypted = await encryptAttachmentData('attachment-1', bytes('private file'));
+    await putAttachmentRecord({
+      id: 'attachment-1',
+      name: 'secret.txt',
+      type: 'text/plain',
+      size: 12,
+      ...encrypted,
+    });
+
+    await expect(migrateLegacyAttachmentsToAesGcm()).resolves.toBe(0);
   });
 
   it('skips bulk legacy migration when IndexedDB is unavailable', async () => {
