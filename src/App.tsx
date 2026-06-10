@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Lock,
   Unlock,
@@ -35,10 +35,8 @@ import ConfirmModal from './components/ConfirmModal';
 import ProfileModal, { isGradient } from './components/ProfileModal';
 import MobileSidebarBackdrop from './components/MobileSidebarBackdrop';
 import LocalStorageBadge from './components/LocalStorageBadge';
-import TrashEmptyState from './components/TrashEmptyState';
-import TrashInfoBanner from './components/TrashInfoBanner';
-import TrashItemCard from './components/TrashItemCard';
 import VaultWorkspace from './components/VaultWorkspace';
+import TrashWorkspace from './components/TrashWorkspace';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -249,6 +247,57 @@ export default function App() {
           setSelectedItem(null);
         }
       }
+    });
+  };
+
+  const handleEmptyTrash = () => {
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Çöp Kutusunu Boşalt',
+      message: 'Çöp kutusundaki TÜM şifreleri tamamen kalıcı olarak silmek istediğinize emin misiniz? Bu işlem asla geri alınamaz!',
+      type: 'danger',
+      confirmText: 'Sıfırla ve Kalıcı Sil',
+      cancelText: 'Vazgeç',
+      onConfirm: () => {
+        const updated = emptyTrashComplete();
+        setItems(updated);
+        setConfirmConfig({
+          isOpen: true,
+          title: 'Çöp Kutusu Boşaltıldı',
+          message: 'Çöp kutusundaki tüm şifreler kalıcı olarak silindi.',
+          type: 'success',
+          isAlert: true,
+          onConfirm: () => {},
+        });
+      },
+    });
+  };
+
+  const handleRestoreTrashItem = (trashItem: VaultItem) => {
+    const updated = restoreFromTrash(trashItem.id);
+    setItems(updated);
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Geri Yüklendi',
+      message: `"${trashItem.title}" şifre kaydı başarıyla kasaya geri yüklendi!`,
+      type: 'success',
+      isAlert: true,
+      onConfirm: () => {},
+    });
+  };
+
+  const handleDeleteTrashItemPermanently = (trashItem: VaultItem) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Kalıcı Olarak Sil',
+      message: `"${trashItem.title}" kaydını tamamen kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri ALINAMAZ.`,
+      type: 'danger',
+      confirmText: 'Kalıcı Olarak Sil',
+      cancelText: 'Vazgeç',
+      onConfirm: () => {
+        const updated = deletePermanently(trashItem.id);
+        setItems(updated);
+      },
     });
   };
 
@@ -538,92 +587,12 @@ export default function App() {
           )}
 
           {activeTab === 'trash' && (
-            <div className="flex-1 p-6 lg:p-10 overflow-y-auto scrollbar-hide max-w-5xl mx-auto w-full space-y-8 animate-fade-in">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-outline-variant/10 pb-6">
-                <div>
-                  <h1 className="font-display text-2xl font-bold text-on-surface flex items-center gap-3">
-                    <Trash2 className="w-7 h-7 text-red-500" />
-                    <span>Çöp Kutusu (Trash Bin)</span>
-                  </h1>
-                  <p className="text-on-surface-variant text-xs mt-1">
-                    Silinen şifre kartlarınız burada depolanır ve 15 gün sonra tamamen temizlenir.
-                  </p>
-                </div>
-                {trashItems.length > 0 && (
-                  <button
-                    onClick={() => {
-                      setConfirmConfig({
-                        isOpen: true,
-                        title: 'Çöp Kutusunu Boşalt',
-                        message: 'Çöp kutusundaki TÜM şifreleri tamamen kalıcı olarak silmek istediğinize emin misiniz? Bu işlem asla geri alınamaz!',
-                        type: 'danger',
-                        confirmText: 'Sıfırla ve Kalıcı Sil',
-                        cancelText: 'Vazgeç',
-                        onConfirm: () => {
-                          const updated = emptyTrashComplete();
-                          setItems(updated);
-                          setConfirmConfig({
-                            isOpen: true,
-                            title: 'Çöp Kutusu Boşaltıldı',
-                            message: 'Çöp kutusundaki tüm şifreler kalıcı olarak silindi.',
-                            type: 'success',
-                            isAlert: true,
-                            onConfirm: () => {},
-                          });
-                        }
-                      });
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-xl font-bold text-xs transition-colors cursor-pointer"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span>Çöp Kutusunu Tamamen Boşalt</span>
-                  </button>
-                )}
-              </div>
-
-              <TrashInfoBanner />
-
-              {/* Trash Items List */}
-              {trashItems.length === 0 ? (
-                <TrashEmptyState />
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {trashItems.map((item) => (
-                    <React.Fragment key={item.id}>
-                      <TrashItemCard
-                        item={item}
-                        onRestore={(trashItem) => {
-                          const updated = restoreFromTrash(trashItem.id);
-                          setItems(updated);
-                          setConfirmConfig({
-                            isOpen: true,
-                            title: 'Geri Yüklendi',
-                            message: `"${trashItem.title}" şifre kaydı başarıyla kasaya geri yüklendi!`,
-                            type: 'success',
-                            isAlert: true,
-                            onConfirm: () => {},
-                          });
-                        }}
-                        onDeletePermanently={(trashItem) => {
-                          setConfirmConfig({
-                            isOpen: true,
-                            title: 'Kalıcı Olarak Sil',
-                            message: `"${trashItem.title}" kaydını tamamen kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri ALINAMAZ.`,
-                            type: 'danger',
-                            confirmText: 'Kalıcı Olarak Sil',
-                            cancelText: 'Vazgeç',
-                            onConfirm: () => {
-                              const updated = deletePermanently(trashItem.id);
-                              setItems(updated);
-                            },
-                          });
-                        }}
-                      />
-                    </React.Fragment>
-                  ))}
-                </div>
-              )}
-            </div>
+            <TrashWorkspace
+              items={trashItems}
+              onEmptyTrash={handleEmptyTrash}
+              onRestore={handleRestoreTrashItem}
+              onDeletePermanently={handleDeleteTrashItemPermanently}
+            />
           )}
         </div>
       </main>
