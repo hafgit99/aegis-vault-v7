@@ -44,6 +44,7 @@
   - [x] App shell event handlers normalized.
   - [x] Sidebar navigation extracted to `SidebarNavigation`.
   - [x] Top bar extracted to `TopBar`.
+  - [x] Main tab content renderer extracted to `MainContent`.
 - [ ] Extract vault item selection, reveal state, and auto-lock logic into hooks.
   - [x] Auto-lock behavior extracted to `useAutoLock`.
   - [x] Copy feedback and sensitive reveal state extracted to dedicated hooks.

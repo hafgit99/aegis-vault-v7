@@ -13,17 +13,13 @@ import { getTOTPTimeRemaining } from './lib/otp';
 import { calculatePasswordScore } from './lib/security';
 import { getAttachmentBlob } from './lib/attachments';
 import LockScreen from './components/LockScreen';
-import PasswordGenerator from './components/PasswordGenerator';
-import SecurityAudit from './components/SecurityAudit';
-import SettingsPanel from './components/SettingsPanel';
 import VaultFormModal from './components/VaultFormModal';
 import ConfirmModal from './components/ConfirmModal';
 import ProfileModal from './components/ProfileModal';
 import MobileSidebarBackdrop from './components/MobileSidebarBackdrop';
-import VaultWorkspace from './components/VaultWorkspace';
-import TrashWorkspace from './components/TrashWorkspace';
 import SidebarNavigation from './components/SidebarNavigation';
 import TopBar from './components/TopBar';
+import MainContent from './components/MainContent';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -426,78 +422,51 @@ export default function App() {
           onOpenProfile={handleOpenProfile}
         />
 
-        {/* Tab content renderer */}
-        <div className="flex flex-1 overflow-hidden">
-          {activeTab === 'vault' && (
-            <VaultWorkspace
-              selectedItem={selectedItem}
-              mobileActiveView={mobileActiveView}
-              filteredItems={filteredItems}
-              activeItems={activeItems}
-              filterFavoritesOnly={filterFavoritesOnly}
-              favoriteCount={favoriteCount}
-              loginCount={loginCount}
-              cardCount={cardCount}
-              secureNoteCount={secureNoteCount}
-              auditReport={auditReport}
-              profileName={profileName}
-              copiedField={copiedField}
-              score={score}
-              isPasswordRevealed={isPasswordRevealed}
-              isCardNumberRevealed={isCardNumRevealed}
-              isCvvRevealed={isCvvRevealed}
-              isPinRevealed={isPinRevealed}
-              isPasskeyPrivateExponentRevealed={isPasskeyExpRevealed}
-              totpCountdown={totpCountdown}
-              onNewItem={handleTriggerNew}
-              onOpenProfile={handleOpenProfile}
-              onOpenAudit={handleOpenAuditTab}
-              onOpenGenerator={handleOpenGeneratorTab}
-              onSetFavoritesOnly={setFilterFavoritesOnly}
-              onSelectDashboard={handleSelectDashboard}
-              onBackToList={handleBackToList}
-              onSelectItem={handleSelectItem}
-              onToggleFavorite={handleToggleFavorite}
-              onEdit={handleTriggerEdit}
-              onDelete={handleDeleteItem}
-              onToggleReveal={toggleReveal}
-              onCopyText={handleCopyText}
-              onDownloadAttachment={handleDownloadAttachment}
-            />
-          )}
-
-          {activeTab === 'audit' && (
-            <div className="flex-1 p-8 overflow-y-auto scrollbar-hide">
-              <SecurityAudit items={activeItems} onSelectItem={handleAuditSelectItem} />
-            </div>
-          )}
-
-          {activeTab === 'generator' && (
-            <div className="flex-1 p-8 overflow-y-auto scrollbar-hide">
-              <PasswordGenerator />
-            </div>
-          )}
-
-          {activeTab === 'settings' && (
-            <div className="flex-1 p-8 overflow-y-auto scrollbar-hide">
-              <SettingsPanel 
-                onDatabaseChanged={refreshDatabase} 
-                autoLockDuration={autoLockDuration}
-                onAutoLockDurationChange={handleAutoLockDurationChange}
-                onNotify={showNotification}
-              />
-            </div>
-          )}
-
-          {activeTab === 'trash' && (
-            <TrashWorkspace
-              items={trashItems}
-              onEmptyTrash={handleEmptyTrash}
-              onRestore={handleRestoreTrashItem}
-              onDeletePermanently={handleDeleteTrashItemPermanently}
-            />
-          )}
-        </div>
+        <MainContent
+          activeTab={activeTab}
+          selectedItem={selectedItem}
+          mobileActiveView={mobileActiveView}
+          filteredItems={filteredItems}
+          activeItems={activeItems}
+          trashItems={trashItems}
+          filterFavoritesOnly={filterFavoritesOnly}
+          favoriteCount={favoriteCount}
+          loginCount={loginCount}
+          cardCount={cardCount}
+          secureNoteCount={secureNoteCount}
+          auditReport={auditReport}
+          profileName={profileName}
+          copiedField={copiedField}
+          score={score}
+          isPasswordRevealed={isPasswordRevealed}
+          isCardNumberRevealed={isCardNumRevealed}
+          isCvvRevealed={isCvvRevealed}
+          isPinRevealed={isPinRevealed}
+          isPasskeyPrivateExponentRevealed={isPasskeyExpRevealed}
+          totpCountdown={totpCountdown}
+          autoLockDuration={autoLockDuration}
+          onNewItem={handleTriggerNew}
+          onOpenProfile={handleOpenProfile}
+          onOpenAudit={handleOpenAuditTab}
+          onOpenGenerator={handleOpenGeneratorTab}
+          onSetFavoritesOnly={setFilterFavoritesOnly}
+          onSelectDashboard={handleSelectDashboard}
+          onBackToList={handleBackToList}
+          onSelectItem={handleSelectItem}
+          onSelectAuditItem={handleAuditSelectItem}
+          onToggleFavorite={handleToggleFavorite}
+          onEdit={handleTriggerEdit}
+          onDelete={handleDeleteItem}
+          onToggleReveal={toggleReveal}
+          onCopyText={handleCopyText}
+          onDownloadAttachment={handleDownloadAttachment}
+          onDatabaseChanged={refreshDatabase}
+          onAutoLockDurationChange={handleAutoLockDurationChange}
+          onNotify={showNotification}
+          onEmptyTrash={handleEmptyTrash}
+          onRestoreTrashItem={handleRestoreTrashItem}
+          onDeleteTrashItemPermanently={handleDeleteTrashItemPermanently}
+        />
       </main>
 
       {/* Floating Action Button (FAB) context support for adding a password */}
