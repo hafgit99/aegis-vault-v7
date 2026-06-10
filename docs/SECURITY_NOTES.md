@@ -8,6 +8,7 @@ This project is a password vault, so security claims must stay conservative unti
 - Diceware, biometric challenge generation, import IDs, attachment IDs, and simulated SQLite log IDs now use the same helper.
 - Active vault unlock state now uses an in-memory session helper instead of storing the master password in browser `sessionStorage`.
 - New attachment writes use WebCrypto AES-GCM with per-attachment keys derived from the active vault session.
+- Vault database payloads now include a versioned schema envelope with migration tests for legacy unversioned state.
 - Unit tests cover random helper boundaries and password audit behavior.
 - Desktop build is available through Tauri.
 
@@ -16,7 +17,7 @@ This project is a password vault, so security claims must stay conservative unti
 - `src/lib/encryption.ts` contains custom cryptographic primitives. These should be replaced with vetted primitives before production use.
 - Legacy XOR attachment records are still readable as migration fallback and need a dedicated migration plan.
 - `src/lib/vaultSession.ts` keeps the active master password in process memory during an unlocked session. This is safer than browser storage, but native desktop secret handling still needs a final threat-model decision.
-- `src/lib/sqlite_opfs.ts` is a simulated SQLite/OPFS layer backed by serialized JSON state. The naming and implementation should be aligned with the actual persistence strategy.
+- `src/lib/sqlite_opfs.ts` is a simulated SQLite/OPFS layer backed by versioned serialized JSON state. The naming and implementation should be aligned with the actual persistence strategy.
 - `src/lib/otp.ts` is a deterministic demo OTP generator, not an RFC 6238-compatible TOTP implementation.
 - Some UI labels currently overstate security guarantees. Product copy should match the real implementation.
 

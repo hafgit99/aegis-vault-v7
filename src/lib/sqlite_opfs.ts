@@ -14,31 +14,18 @@ import {
   EncryptedPayload
 } from './encryption';
 import { secureRandomToken } from './random';
+import {
+  createEmptyVaultDatabaseState,
+  normalizeVaultDatabaseState,
+  parseVaultDatabaseState,
+  type VaultDatabaseRow,
+  type VersionedVaultDatabaseState,
+} from './vaultDatabaseFormat';
 
 /**
  * SQLite simulated schema and data manager storing DB blocks in private OPFS.
  */
-export interface SQLiteRow {
-  id: string;
-  title: string;
-  category: string;
-  favorite: number;
-  deleted: number;
-  deleted_at: string | null;
-  created_at: string;
-  updated_at: string;
-  
-  // Decrypted representation (transient-only)
-  username: string;
-  
-  // SQLite stored row-representation (delicate entries are marked [encrypted] or kept empty)
-  username_db: string; // "[encrypted: aes-256-gcm]"
-  password_db: string; // "[encrypted: aes-256-gcm]"
-  notes_db: string; // "[encrypted: aes-256-gcm]" or empty
-  
-  // AES-256-GCM package containing all true sensitive fields
-  enc_metadata: string; // JSON representation of EncryptedPayload
-}
+export type SQLiteRow = VaultDatabaseRow;
 
 export interface SQLCommandLog {
   id: string;
@@ -48,22 +35,10 @@ export interface SQLCommandLog {
   rowsAffected: number;
 }
 
-// In-Memory SQLite state containing tables
-interface SQLiteDatabaseState {
-  user_secrets: {
-    username: string;
-    argon_hash: string;
-  }[];
-  vault_items: SQLiteRow[];
-}
-
 const DB_FILENAME = 'aegis_sqlite.db';
 
 class SQLiteOPFS {
-  private state: SQLiteDatabaseState = {
-    user_secrets: [],
-    vault_items: [],
-  };
+  private state: VersionedVaultDatabaseState = createEmptyVaultDatabaseState();
 
   private logs: SQLCommandLog[] = [];
   private onLogsChangedCallbacks: (() => void)[] = [];
@@ -119,8 +94,9 @@ class SQLiteOPFS {
         const file = await fileHandle.getFile();
         const content = await file.text();
         if (content) {
-          this.state = JSON.parse(content);
+          this.state = parseVaultDatabaseState(content);
           this.logQuery(`sqlite3_open("opfs:///${DB_FILENAME}")`, 'SUCCESS', 1);
+          await this.saveToOPFS();
         }
       } else {
         // Fallback to standard sandbox-compliant simulated OPFS persistence
@@ -172,7 +148,7 @@ class SQLiteOPFS {
     const fallback = localStorage.getItem('aegis_sqlite_fallback');
     if (fallback) {
       try {
-        this.state = JSON.parse(fallback);
+        this.state = parseVaultDatabaseState(fallback);
         return;
       } catch (e) {}
     }
@@ -221,6 +197,8 @@ class SQLiteOPFS {
         console.error("Migration error:", e);
       }
     }
+
+    this.state = normalizeVaultDatabaseState(this.state);
   }
 
   /**
@@ -456,10 +434,7 @@ class SQLiteOPFS {
    * Resets entire SQLite database schemas.
    */
   public resetAll() {
-    this.state = {
-      user_secrets: [],
-      vault_items: []
-    };
+    this.state = createEmptyVaultDatabaseState();
     this.logQuery('DROP TABLE user_secrets; DROP TABLE vault_items;', 'SUCCESS', 1);
     this.saveToOPFS();
   }
