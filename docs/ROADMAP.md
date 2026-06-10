@@ -34,6 +34,7 @@
   - [x] Vault item detail header extracted to `VaultItemDetailHeader`.
   - [x] Vault item attachment card extracted to `VaultItemAttachmentCard`.
   - [x] Secure note detail extracted to `SecureNoteDetail`.
+  - [x] Passkey detail extracted to `PasskeyDetail`.
 - [ ] Extract vault item selection, reveal state, and auto-lock logic into hooks.
   - [x] Auto-lock behavior extracted to `useAutoLock`.
   - [x] Copy feedback and sensitive reveal state extracted to dedicated hooks.

@@ -58,6 +58,7 @@ import VaultItemSecurityAssessment from './components/VaultItemSecurityAssessmen
 import VaultItemDetailHeader from './components/VaultItemDetailHeader';
 import VaultItemAttachmentCard from './components/VaultItemAttachmentCard';
 import SecureNoteDetail from './components/SecureNoteDetail';
+import PasskeyDetail from './components/PasskeyDetail';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -832,63 +833,13 @@ export default function App() {
                           </div>
                         )}
 
-                        {/* 3. PASSKEY & CRYPTO API CATEGORY */}
-                        {selectedItem.category === 'passkey' && (
-                          <div className="space-y-4">
-                            {/* Passkey Service */}
-                            <div className="glass-panel p-5 rounded-xl">
-                              <label className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase mb-2">
-                                HİZMET ADI
-                              </label>
-                              <div className="flex items-center justify-between">
-                                <span className="font-bold text-base text-on-surface">{selectedItem.passkeyService || 'Google Login'}</span>
-                              </div>
-                            </div>
-
-                            {/* Public ID */}
-                            <div className="glass-panel p-5 rounded-xl">
-                              <label className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase mb-2">
-                                ORTAK ANAHTAR ORTAK ID (PUBLIC KEY ID)
-                              </label>
-                              <div className="flex items-center justify-between">
-                                <span className="font-mono text-sm text-on-surface break-all">{selectedItem.username || 'boş'}</span>
-                                <button
-                                  onClick={() => handleCopyText(selectedItem.username || '', 'passkeyPublicId')}
-                                  className="text-on-surface-variant hover:text-brand-primary transition-colors focus:outline-none p-1.5 hover:bg-[#1a1c1a]/50 rounded-lg cursor-pointer ml-2 shrink-0"
-                                >
-                                  {copiedField === 'passkeyPublicId' ? <Check className="w-4 h-4 text-brand-tertiary" /> : <Copy className="w-4 h-4" />}
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Private Secret Value */}
-                            <div className="glass-panel p-5 rounded-xl">
-                              <label className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase mb-2">
-                                BİLİNMEYEN ÖZEL BİLEŞEN (PRIVATE KEY / SECURE SHIELDS EXPONENT)
-                              </label>
-                              <div className="flex items-start justify-between">
-                                <span className="font-mono text-xs text-on-surface-variant select-all break-all leading-relaxed whitespace-pre bg-[#151715] p-3 rounded-lg border border-outline-variant/10 flex-1 mr-3 h-20 overflow-y-auto">
-                                  {isPasskeyExpRevealed ? selectedItem.passkeyPrivateExponent || '(Değer Girilmedi)' : '••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••'}
-                                </span>
-                                <div className="flex flex-col gap-1.5 shrink-0">
-                                  <button
-                                    onClick={() => toggleReveal('passkeyPrivateExponent')}
-                                    className="text-on-surface-variant hover:text-brand-primary transition-colors focus:outline-none p-1.5 hover:bg-[#1a1c1a]/50 rounded-lg cursor-pointer"
-                                  >
-                                    {isPasskeyExpRevealed ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                  </button>
-                                  <button
-                                    onClick={() => handleCopyText(selectedItem.passkeyPrivateExponent || '', 'passkeyPrivateExponent')}
-                                    className="text-on-surface-variant hover:text-brand-primary transition-colors focus:outline-none p-1.5 hover:bg-[#1a1c1a]/50 rounded-lg cursor-pointer"
-                                    title="Kopyala"
-                                  >
-                                    {copiedField === 'passkeyPrivateExponent' ? <Check className="w-4 h-4 text-brand-tertiary" /> : <Copy className="w-4 h-4" />}
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
+                        <PasskeyDetail
+                          item={selectedItem}
+                          copiedField={copiedField}
+                          isPrivateExponentRevealed={isPasskeyExpRevealed}
+                          onToggleReveal={() => toggleReveal('passkeyPrivateExponent')}
+                          onCopyText={handleCopyText}
+                        />
 
                         {/* 4. KİMLİK / KİŞİSEL BELGE CATEGORY */}
                         {selectedItem.category === 'identity' && (
