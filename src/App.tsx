@@ -5,7 +5,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { VaultItem, ActiveTab } from './types';
-import { moveToTrash, restoreFromTrash, deletePermanently, emptyTrashComplete } from './lib/storage';
 import { calculatePasswordScore } from './lib/security';
 import LockScreen from './components/LockScreen';
 import MobileSidebarBackdrop from './components/MobileSidebarBackdrop';
@@ -25,6 +24,7 @@ import { useConfirmModal } from './hooks/useConfirmModal';
 import { useTotpCountdown } from './hooks/useTotpCountdown';
 import { useVaultData } from './hooks/useVaultData';
 import { useAttachmentDownload } from './hooks/useAttachmentDownload';
+import { useTrashActions } from './hooks/useTrashActions';
 
 export default function App() {
   const [unlocked, setUnlocked] = useState(false);
@@ -90,6 +90,19 @@ export default function App() {
 
   const { downloadAttachment: handleDownloadAttachment } = useAttachmentDownload({
     onNotify: showNotification,
+  });
+
+  const {
+    deleteItem: handleDeleteItem,
+    emptyTrash: handleEmptyTrash,
+    restoreTrashItem: handleRestoreTrashItem,
+    deleteTrashItemPermanently: handleDeleteTrashItemPermanently,
+  } = useTrashActions({
+    openConfirm,
+    setItems,
+    setSelectedItem,
+    resetReveals,
+    clearCopiedField,
   });
 
   useEffect(() => {
@@ -179,77 +192,6 @@ export default function App() {
 
   const handleBackToList = () => {
     setMobileActiveView('list');
-  };
-
-  // Delete handler (moves to trash)
-  const handleDeleteItem = (id: string) => {
-    openConfirm({
-      title: 'Çöp Kutusuna Taşı',
-      message: 'Bu şifre kaydını çöp kutusuna taşımak istediğinize emin misiniz? Çöp kutusundaki veriler 15 gün sonra otomatik olarak temizlenecektir.',
-      type: 'warning',
-      confirmText: 'Çöpe Taşı',
-      cancelText: 'Vazgeç',
-      onConfirm: () => {
-        const updated = moveToTrash(id);
-        setItems(updated);
-        resetReveals();
-        clearCopiedField();
-        
-        const activeRemaining = updated.filter((item) => !item.deleted);
-        if (activeRemaining.length > 0) {
-          setSelectedItem(activeRemaining[0]);
-        } else {
-          setSelectedItem(null);
-        }
-      }
-    });
-  };
-
-  const handleEmptyTrash = () => {
-    openConfirm({
-      title: 'Çöp Kutusunu Boşalt',
-      message: 'Çöp kutusundaki TÜM şifreleri tamamen kalıcı olarak silmek istediğinize emin misiniz? Bu işlem asla geri alınamaz!',
-      type: 'danger',
-      confirmText: 'Sıfırla ve Kalıcı Sil',
-      cancelText: 'Vazgeç',
-      onConfirm: () => {
-        const updated = emptyTrashComplete();
-        setItems(updated);
-        openConfirm({
-          title: 'Çöp Kutusu Boşaltıldı',
-          message: 'Çöp kutusundaki tüm şifreler kalıcı olarak silindi.',
-          type: 'success',
-          isAlert: true,
-          onConfirm: () => {},
-        });
-      },
-    });
-  };
-
-  const handleRestoreTrashItem = (trashItem: VaultItem) => {
-    const updated = restoreFromTrash(trashItem.id);
-    setItems(updated);
-    openConfirm({
-      title: 'Geri Yüklendi',
-      message: `"${trashItem.title}" şifre kaydı başarıyla kasaya geri yüklendi!`,
-      type: 'success',
-      isAlert: true,
-      onConfirm: () => {},
-    });
-  };
-
-  const handleDeleteTrashItemPermanently = (trashItem: VaultItem) => {
-    openConfirm({
-      title: 'Kalıcı Olarak Sil',
-      message: `"${trashItem.title}" kaydını tamamen kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri ALINAMAZ.`,
-      type: 'danger',
-      confirmText: 'Kalıcı Olarak Sil',
-      cancelText: 'Vazgeç',
-      onConfirm: () => {
-        const updated = deletePermanently(trashItem.id);
-        setItems(updated);
-      },
-    });
   };
 
   // Trigger Edit Form
