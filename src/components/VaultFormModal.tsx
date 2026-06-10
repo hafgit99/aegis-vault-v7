@@ -34,6 +34,7 @@ import { AppNotification, VaultItem } from '../types';
 import { generatePassword } from '../lib/security';
 import { saveAttachment, getAttachmentBlob } from '../lib/attachments';
 import { secureRandomIndex, secureRandomToken } from '../lib/random';
+import { formatFileSize } from '../lib/display';
 
 interface VaultFormModalProps {
   isOpen: boolean;
@@ -345,14 +346,6 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
     onSave(itemData);
     setIsUploading(false);
     onClose();
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   return (

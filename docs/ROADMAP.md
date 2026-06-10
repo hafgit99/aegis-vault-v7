@@ -27,6 +27,7 @@
   - [x] Vault selection and audit-selection behavior extracted to `useVaultSelection`.
 - [x] Extract display helpers for file sizes and trash retention calculations.
   - [x] Platform logo resolver moved into display helpers.
+  - [x] Vault form attachment size labels use shared display helpers.
 - [x] Replace `alert()` calls with the existing modal/toast pattern.
 - [ ] Normalize naming: `AegisVault`, `Aegis Vault`, and `Aegis Vault 7`.
 - [ ] Add component tests for lock screen, vault form, settings import/export, and trash.
