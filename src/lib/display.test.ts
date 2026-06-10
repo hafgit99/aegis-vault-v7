@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatFileSize, getTrashRemainingDays } from './display';
+import { formatFileSize, getLogoForPlatform, getTrashRemainingDays } from './display';
 
 describe('display helpers', () => {
   it('formats file sizes with compact units', () => {
@@ -24,5 +24,16 @@ describe('display helpers', () => {
     const now = new Date('2026-06-10T12:00:00.000Z').getTime();
 
     expect(getTrashRemainingDays('not-a-date', now)).toBe(15);
+  });
+
+  it('resolves known platform logos from title or url', () => {
+    expect(getLogoForPlatform('GitHub', '')).toContain('googleusercontent.com');
+    expect(getLogoForPlatform('Team Workspace', 'https://workspace.google.com')).toContain('googleusercontent.com');
+    expect(getLogoForPlatform('Bank', 'https://secure.chase.com')).toContain('googleusercontent.com');
+    expect(getLogoForPlatform('Music', 'https://spotify.com')).toContain('googleusercontent.com');
+  });
+
+  it('returns null for unknown platform logos', () => {
+    expect(getLogoForPlatform('Internal Wiki', 'https://wiki.example.com')).toBeNull();
   });
 });

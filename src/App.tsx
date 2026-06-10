@@ -44,7 +44,7 @@ import { getVaultItems, saveVaultItem, deleteVaultItem, moveToTrash, restoreFrom
 import { generateTOTP, getTOTPTimeRemaining } from './lib/otp';
 import { calculatePasswordScore, getStrengthLabel } from './lib/security';
 import { getAttachmentBlob } from './lib/attachments';
-import { formatFileSize } from './lib/display';
+import { formatFileSize, getLogoForPlatform } from './lib/display';
 import LockScreen from './components/LockScreen';
 import PasswordGenerator from './components/PasswordGenerator';
 import SecurityAudit from './components/SecurityAudit';
@@ -292,26 +292,6 @@ export default function App() {
   const handleTriggerNew = () => {
     setEditingItem(null);
     setIsModalOpen(true);
-  };
-
-  // Platform icon resolver
-  const getLogoForPlatform = (title: string, url: string) => {
-    const normTitle = title.toLowerCase();
-    const normUrl = url.toLowerCase();
-
-    if (normTitle.includes('github') || normUrl.includes('github')) {
-      return 'https://lh3.googleusercontent.com/aida-public/AB6AXuDfVLUjhqYP7nUa4eCqDYzKwPibJiJkTQnZwGERtZEt0kOneuAOYNW78pzFWXziZJG0HF_vmXJDRQn8KfbWA7G0_Uj6V4nvR215U6cG_L1rLzncemyFWMjTGG89aZxZt3VuIjMKsmtMpnvqc5iyyXQkg_R9Ecxhwd60FcpiFpeOM2wXD0rOYMfTz3_CoYbLxFSNxiucs5HYXIaNZB2EsA46Jo69MrjtHM7HUG0OeBrJXb-DKHADGTrTr28Iv81Jnpdtwg9IVI18XuKq';
-    }
-    if (normTitle.includes('google') || normUrl.includes('google') || normUrl.includes('workspace')) {
-      return 'https://lh3.googleusercontent.com/aida-public/AB6AXuCKWnh8NuDTiB8vbPvoaLePQzjGtDZ6OWa3AwuoekNwym1hE_Txm_xvigIWWouJctKjWezcRM_lLNmzV4-v628GM_0QuwtmIeM5251TE7ihLroSxezm7bXlt7Y93zqGEmn-NuXf8TezDqtyGp-yelcD1qKVqQaBQf2132Yberh5jT4ZbCULapQCQ5ycTy9buEeCJ9DA7ahTpg0bl7ku6qzkdTup36ty9XBgsFeT5-QpvaEnbR4GjXf6_P5RtP7CC17SZBL97gI7mD3-';
-    }
-    if (normTitle.includes('chase') || normUrl.includes('chase')) {
-      return 'https://lh3.googleusercontent.com/aida-public/AB6AXuD6Q53OHpe_lUiwoVm9J9BYnvc2l24B2lquFtwp2aEDyJpSmfTbP3TCwoSHEtbjyuxirj4zlzN5y1vm1ONZ2IC3G0Gc7uI7a0nQYo2gBFFVH9xwE9w27TQpWHyiFTe4Ct54c6HYuUl3SAzQwPm4kA3mn69IkLbc76JPX0VwjWk7-3_xHYwejj-sOTt0I7gkJ6UxVkRZLWMjmk14OeRaxZaTDWKiysbF7PW-xyK6fSXhgHCeiJv5dwMal_VKLQamGEIMa9RU2GqW7ZJz';
-    }
-    if (normTitle.includes('spotify') || normUrl.includes('spotify')) {
-      return 'https://lh3.googleusercontent.com/aida-public/AB6AXuDun4IlYsiiHy7wgY5-1el8XAF_aiTuom2CObk-n4-vdMDBMECh7Rg2kEeQeWcyZREveF_LhkGxApCcKY934v9Qqq1VO3UwktV2R7cunAtkY_zNUNw95OqUKqoUDmg6j4DceJWwHUKGSgnxNp0JMSP90tYeXSjdGqPpkWAIoB3Dvq0AxpDgyWONeV_WVqcIz-BPmyiR9G_dFcY4K2RMXVotX0P2rxrW3N0gjoxWmTwnWFSd7VdK0R6hx3IZoR6osfURmTw9hfip35U6';
-    }
-    return null;
   };
 
   // If locked, return the beautiful LockScreen UI
