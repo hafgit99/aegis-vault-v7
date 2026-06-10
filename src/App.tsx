@@ -16,10 +16,6 @@ import {
   RefreshCw,
   Bell,
   Trash2,
-  Eye,
-  EyeOff,
-  Copy,
-  Check,
   Clock,
   Globe,
   Heart,
@@ -30,7 +26,7 @@ import {
 } from 'lucide-react';
 import { VaultItem, ActiveTab, AppNotification } from './types';
 import { getVaultItems, saveVaultItem, deleteVaultItem, moveToTrash, restoreFromTrash, deletePermanently, emptyTrashComplete } from './lib/storage';
-import { generateTOTP, getTOTPTimeRemaining } from './lib/otp';
+import { getTOTPTimeRemaining } from './lib/otp';
 import { calculatePasswordScore, getStrengthLabel } from './lib/security';
 import { getAttachmentBlob } from './lib/attachments';
 import LockScreen from './components/LockScreen';
@@ -61,6 +57,7 @@ import SecureNoteDetail from './components/SecureNoteDetail';
 import PasskeyDetail from './components/PasskeyDetail';
 import IdentityDetail from './components/IdentityDetail';
 import CardDetail from './components/CardDetail';
+import LoginDetail from './components/LoginDetail';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -619,103 +616,14 @@ export default function App() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div className="md:col-span-2 space-y-4">
                         
-                        {/* 1. GİRİŞ BİLGİLERİ CATEGORY */}
-                        {(selectedItem.category === 'login' || !selectedItem.category) && (
-                          <div className="space-y-4">
-                            {/* Username */}
-                            <div className="glass-panel p-5 rounded-xl">
-                              <label className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase mb-2">
-                                KULLANICI ADI VEYA E-POSTA
-                              </label>
-                              <div className="flex items-center justify-between">
-                                <span className="font-bold text-base text-on-surface break-all">{selectedItem.username}</span>
-                                <button
-                                  onClick={() => handleCopyText(selectedItem.username, 'username')}
-                                  className="text-on-surface-variant hover:text-brand-primary transition-colors focus:outline-none p-1.5 hover:bg-[#1a1c1a]/50 rounded-lg cursor-pointer shrink-0 ml-2"
-                                  title="Kopyala"
-                                >
-                                  {copiedField === 'username' ? (
-                                    <Check className="w-4 h-4 text-brand-tertiary" />
-                                  ) : (
-                                    <Copy className="w-4 h-4" />
-                                  )}
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Password */}
-                            <div className="glass-panel p-5 rounded-xl">
-                              <label className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase mb-2">
-                                PAROLA (PASSWORD)
-                              </label>
-                              <div className="flex items-center justify-between">
-                                <span className="font-mono text-base tracking-wider break-all text-on-surface select-all">
-                                  {isPasswordRevealed ? selectedItem.password || '(Boş Şifre)' : '••••••••••••••••'}
-                                </span>
-                                <div className="flex items-center gap-2 shrink-0 ml-2">
-                                  <button
-                                    onClick={() => toggleReveal('password')}
-                                    className="text-on-surface-variant hover:text-brand-primary transition-colors focus:outline-none p-1.5 hover:bg-[#1a1c1a]/50 rounded-lg cursor-pointer"
-                                    title={isPasswordRevealed ? 'Gizle' : 'Göster'}
-                                  >
-                                    {isPasswordRevealed ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                  </button>
-                                  <button
-                                    onClick={() => handleCopyText(selectedItem.password || '', 'password')}
-                                    className="text-on-surface-variant hover:text-brand-primary transition-colors focus:outline-none p-1.5 hover:bg-[#1a1c1a]/50 rounded-lg cursor-pointer"
-                                    title="Kopyala"
-                                  >
-                                    {copiedField === 'password' ? (
-                                      <Check className="w-4 h-4 text-brand-tertiary" />
-                                    ) : (
-                                      <Copy className="w-4 h-4" />
-                                    )}
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* OTP (Google Authenticator 2FA) */}
-                            <div className="glass-panel p-5 rounded-xl">
-                              <label className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase mb-2 flex justify-between">
-                                <span>İKİ FAKTÖRLÜ DOĞRULAMA (2FA TOTP CODES)</span>
-                                {selectedItem.totpSecret && (
-                                  <span className="text-brand-primary font-mono lowercase">mfa yetkin</span>
-                                )}
-                              </label>
-                              <div className="flex items-center justify-between">
-                                {selectedItem.totpSecret ? (
-                                  <>
-                                    <span className="font-mono text-xl md:text-2xl font-bold text-brand-primary tracking-widest">
-                                      {generateTOTP(selectedItem.totpSecret)}
-                                    </span>
-                                    <div className="flex items-center gap-2.5">
-                                      <span className="text-[11px] text-on-surface-variant font-mono bg-[#141614] px-2.5 py-1 rounded-md border border-outline-variant/15 flex items-center gap-1.5">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-ping"></span>
-                                        <span>{totpCountdown} sn kaldı</span>
-                                      </span>
-                                      <button
-                                        onClick={() => handleCopyText(generateTOTP(selectedItem.totpSecret || '').replace(' ', ''), 'totp')}
-                                        className="text-on-surface-variant hover:text-brand-primary transition-colors focus:outline-none p-1.5 hover:bg-[#1a1c1a]/50 rounded-lg cursor-pointer"
-                                        title="Doğrulama Kodunu Kopyala"
-                                      >
-                                        {copiedField === 'totp' ? (
-                                          <Check className="w-4 h-4 text-brand-tertiary" />
-                                        ) : (
-                                          <Copy className="w-4 h-4" />
-                                        )}
-                                      </button>
-                                    </div>
-                                  </>
-                                ) : (
-                                  <div className="text-xs text-on-surface-variant/40 italic py-1 text-left">
-                                    Bu hesapta OTP kurulumu aktif değil. Düzenleyip Gizli Anahtar girerek başlatabilirsiniz.
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        )}
+                        <LoginDetail
+                          item={selectedItem}
+                          copiedField={copiedField}
+                          isPasswordRevealed={isPasswordRevealed}
+                          totpCountdown={totpCountdown}
+                          onTogglePasswordReveal={() => toggleReveal('password')}
+                          onCopyText={handleCopyText}
+                        />
 
                         <CardDetail
                           item={selectedItem}

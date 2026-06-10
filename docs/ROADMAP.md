@@ -37,6 +37,7 @@
   - [x] Passkey detail extracted to `PasskeyDetail`.
   - [x] Identity detail extracted to `IdentityDetail`.
   - [x] Card detail extracted to `CardDetail`.
+  - [x] Login detail extracted to `LoginDetail`.
 - [ ] Extract vault item selection, reveal state, and auto-lock logic into hooks.
   - [x] Auto-lock behavior extracted to `useAutoLock`.
   - [x] Copy feedback and sensitive reveal state extracted to dedicated hooks.
