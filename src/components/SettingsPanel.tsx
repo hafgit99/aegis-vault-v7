@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { getVaultItems, setupMasterPassword, resetSystem, reseedDemoData, saveVaultItem, verifyMasterPassword } from '../lib/storage';
 import { AppNotification, VaultItem } from '../types';
-import { encryptDataWithPassword, decryptDataWithPassword } from '../lib/encryption';
+import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from '../lib/encryption';
 import { parseUniversalImport } from '../lib/importer';
 import { secureRandomToken } from '../lib/random';
 import { registerBiometric, isBiometricEnabled, disableBiometric, isBiometricSupported } from '../lib/biometric';
@@ -183,7 +183,7 @@ export default function SettingsPanel({
   };
 
   // Generate an ENCRYPTED secure export download
-  const handleExportEncrypted = (e: React.FormEvent) => {
+  const handleExportEncrypted = async (e: React.FormEvent) => {
     e.preventDefault();
     setBackupSuccess(null);
     setBackupError(null);
@@ -206,7 +206,7 @@ export default function SettingsPanel({
     }
 
     try {
-      const encryptedJsonString = encryptDataWithPassword(JSON.stringify(items), passwordToUse);
+      const encryptedJsonString = await encryptDataWithPasswordSecure(JSON.stringify(items), passwordToUse);
       const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(encryptedJsonString);
       
       const downloadAnchor = document.createElement('a');
@@ -270,7 +270,7 @@ export default function SettingsPanel({
   };
 
   // Decrypts and unpacks encrypted .aegis uploads
-  const handleDecryptAndImport = (e: React.FormEvent) => {
+  const handleDecryptAndImport = async (e: React.FormEvent) => {
     e.preventDefault();
     setDecryptError(null);
 
@@ -280,7 +280,7 @@ export default function SettingsPanel({
     }
 
     try {
-      const decryptedDataStr = decryptDataWithPassword(JSON.stringify(pendingEnvelope), decryptPasswordInput);
+      const decryptedDataStr = await decryptDataWithPasswordSecure(JSON.stringify(pendingEnvelope), decryptPasswordInput);
       const parsedItemsList = JSON.parse(decryptedDataStr);
 
       if (!Array.isArray(parsedItemsList)) {

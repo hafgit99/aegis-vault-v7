@@ -5,7 +5,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { encryptDataWithPassword } from '../lib/encryption';
+import { encryptDataWithPasswordSecure } from '../lib/encryption';
 import { saveVaultItem } from '../lib/storage';
 import { VaultItem } from '../types';
 import SettingsPanel from './SettingsPanel';
@@ -39,8 +39,8 @@ vi.mock('../lib/encryption', async () => {
 
   return {
     ...actual,
-    decryptDataWithPassword: vi.fn(),
-    encryptDataWithPassword: vi.fn(() => '{"encrypted":true,"salt":"salt","payload":"payload"}'),
+    decryptDataWithPasswordSecure: vi.fn(),
+    encryptDataWithPasswordSecure: vi.fn(async () => '{"encrypted":true,"salt":"salt","payload":"payload"}'),
   };
 });
 
@@ -90,7 +90,7 @@ describe('SettingsPanel import/export', () => {
     fireEvent.click(screen.getByText('Şifreli .aegis Yedeği'));
 
     await waitFor(() => {
-      expect(encryptDataWithPassword).toHaveBeenCalledWith(JSON.stringify(vaultItems), 'backup-pass');
+      expect(encryptDataWithPasswordSecure).toHaveBeenCalledWith(JSON.stringify(vaultItems), 'backup-pass');
     });
     expect(screen.getByText('Askeri düzeyde şifreli yedeğiniz (.aegis) güvenle oluşturuldu ve indirildi.')).toBeTruthy();
   });

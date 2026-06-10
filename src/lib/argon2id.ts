@@ -1,5 +1,3 @@
-import wasmUrl from 'argon2-browser/dist/argon2.wasm?url';
-
 export interface Argon2idOptions {
   memoryKiB?: number;
   iterations?: number;
@@ -52,25 +50,8 @@ function resolveOptions(options: Argon2idOptions = {}): Required<Argon2idOptions
   };
 }
 
-function installWasmBinaryLoader(): void {
-  const target = globalThis as typeof globalThis & {
-    loadArgon2WasmBinary?: () => Promise<Uint8Array>;
-  };
-
-  target.loadArgon2WasmBinary ??= async () => {
-    const response = await fetch(wasmUrl);
-    if (!response.ok) {
-      throw new Error(`Argon2 WASM binary could not be loaded: ${response.status}`);
-    }
-
-    return new Uint8Array(await response.arrayBuffer());
-  };
-}
-
 async function loadArgon2(): Promise<Argon2BrowserModule> {
-  installWasmBinaryLoader();
-
-  argon2ModulePromise ??= import('argon2-browser').then((module: Argon2BrowserImport) => {
+  argon2ModulePromise ??= import('argon2-browser/dist/argon2-bundled.min.js').then((module: Argon2BrowserImport) => {
     const argon2 = module.default ?? (module as unknown as Argon2BrowserModule);
     if (!argon2?.hash || !argon2?.verify || !argon2.ArgonType?.Argon2id) {
       throw new Error('Argon2 browser module did not expose the expected API.');

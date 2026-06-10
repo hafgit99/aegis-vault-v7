@@ -14,7 +14,7 @@ const verify = vi.fn(async ({ pass }) => {
   return { hash: new Uint8Array([1]), encoded: 'verified' };
 });
 
-vi.mock('argon2-browser', () => ({
+vi.mock('argon2-browser/dist/argon2-bundled.min.js', () => ({
   default: {
     ArgonType: {
       Argon2id: 2,

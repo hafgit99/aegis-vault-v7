@@ -4,6 +4,7 @@
  */
 
 import { secureRandomBytes } from './random';
+import { deriveArgon2idKey } from './argon2id';
 
 /**
  * Encrypted payload representation for safe storage
@@ -12,6 +13,80 @@ export interface EncryptedPayload {
   iv: string; // Hex IV (12 bytes)
   tag: string; // Hex Tag (16 bytes)
   ciphertext: string; // Base64 ciphertext
+}
+
+export async function encryptDataWithPasswordSecure(rawData: string, password: string): Promise<string> {
+  const saltBytes = secureRandomBytes(16);
+  const saltHex = Array.from(saltBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  const kdfParams = {
+    memoryKiB: 64 * 1024,
+    iterations: 3,
+    parallelism: 1,
+    hashLength: 32,
+  };
+
+  const aesKey = await deriveArgon2idKey(password, saltHex, kdfParams);
+  const bundle = aes256GcmEncrypt(rawData, aesKey);
+
+  const encoder = new TextEncoder();
+  const cipherBytes = encoder.encode(bundle.ciphertext);
+  const checksumBytes = sha256(cipherBytes);
+  const manifestChecksumHex = Array.from(checksumBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+
+  return JSON.stringify(
+    {
+      version: '1.2',
+      generator: 'Aegis Secure Core',
+      kdf: 'Argon2id',
+      kdfImplementation: 'argon2-browser',
+      kdfParams,
+      cipher: 'AES-256-GCM',
+      salt: saltHex,
+      iv: bundle.iv,
+      tag: bundle.tag,
+      payload: bundle.ciphertext,
+      checksum: manifestChecksumHex,
+    },
+    null,
+    2,
+  );
+}
+
+export async function decryptDataWithPasswordSecure(envelopeJsonStr: string, password: string): Promise<string> {
+  let parsed: any;
+  try {
+    parsed = JSON.parse(envelopeJsonStr);
+  } catch (e) {
+    throw new Error("Yedekleme dosyasÄ± geÃ§erli JSON formatÄ±nda deÄŸil.");
+  }
+
+  if (parsed.kdfImplementation !== 'argon2-browser') {
+    return decryptDataWithPassword(envelopeJsonStr, password);
+  }
+
+  if (!parsed.salt || !parsed.iv || !parsed.tag || !parsed.payload || !parsed.checksum) {
+    throw new Error("GeÃ§ersiz yedekleme zarfÄ±: Kritik gÃ¼venlik alanlarÄ± eksik.");
+  }
+
+  const encoder = new TextEncoder();
+  const cipherBytes = encoder.encode(parsed.payload);
+  const calculatedChecksumBytes = sha256(cipherBytes);
+  const calculatedChecksumHex = Array.from(calculatedChecksumBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+
+  if (calculatedChecksumHex !== parsed.checksum) {
+    throw new Error("SHA-256 Manifest bÃ¼tÃ¼nlÃ¼k kontrolÃ¼ baÅŸarÄ±sÄ±z oldu! Veri bozulmuÅŸ veya tahrif edilmiÅŸ olabilir.");
+  }
+
+  const aesKey = await deriveArgon2idKey(password, parsed.salt, parsed.kdfParams);
+
+  return aes256GcmDecrypt(
+    {
+      iv: parsed.iv,
+      tag: parsed.tag,
+      ciphertext: parsed.payload,
+    },
+    aesKey,
+  );
 }
 
 // ==========================================
