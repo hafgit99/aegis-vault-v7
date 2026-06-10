@@ -36,6 +36,7 @@ describe('vault database format migrations', () => {
           password_db: '[encrypted: aes-256-gcm]',
           notes_db: '',
           enc_metadata: '{}',
+          enc_kdf: 'argon2-browser',
         },
       ],
     });
@@ -45,6 +46,7 @@ describe('vault database format migrations', () => {
     expect(migrated.migratedFrom).toBe(1);
     expect(migrated.user_secrets).toHaveLength(1);
     expect(migrated.vault_items).toHaveLength(1);
+    expect(migrated.vault_items[0].enc_kdf).toBe('argon2-browser');
   });
 
   it('preserves current versioned database arrays when parsing serialized state', () => {

@@ -1,4 +1,4 @@
-export const CURRENT_VAULT_DB_SCHEMA_VERSION = 2;
+export const CURRENT_VAULT_DB_SCHEMA_VERSION = 3;
 export const VAULT_DB_APP_ID = 'aegis-vault-v7';
 
 export interface VaultDatabaseUserSecret {
@@ -20,6 +20,7 @@ export interface VaultDatabaseRow {
   password_db: string;
   notes_db: string;
   enc_metadata: string;
+  enc_kdf?: 'argon2-browser' | 'legacy-simulated-argon2id';
 }
 
 export interface VersionedVaultDatabaseState {

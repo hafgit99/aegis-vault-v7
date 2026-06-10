@@ -22,6 +22,7 @@ import {
   type VersionedVaultDatabaseState,
 } from './vaultDatabaseFormat';
 import { createArgon2idHash, verifyArgon2idHash } from './argon2id';
+import { deriveArgon2idKey as deriveVettedArgon2idKey } from './argon2id';
 import {
   readDesktopVaultDatabase,
   writeDesktopVaultDatabase,
@@ -41,6 +42,15 @@ export interface SQLCommandLog {
 }
 
 const DB_FILENAME = 'aegis_sqlite.db';
+const VAULT_ITEM_KDF = 'argon2-browser' as const;
+const LEGACY_VAULT_ITEM_KDF = 'legacy-simulated-argon2id' as const;
+const VAULT_ITEM_KDF_SALT = 'aegis_vault_v7_db_encryption_salt';
+const VAULT_ITEM_KDF_PARAMS = {
+  memoryKiB: 64 * 1024,
+  iterations: 3,
+  parallelism: 1,
+  hashLength: 32,
+};
 
 class SQLiteOPFS {
   private state: VersionedVaultDatabaseState = createEmptyVaultDatabaseState();
@@ -48,6 +58,7 @@ class SQLiteOPFS {
   private logs: SQLCommandLog[] = [];
   private onLogsChangedCallbacks: (() => void)[] = [];
   private hydratePromise: Promise<void>;
+  private encryptionKeyCache = new Map<string, Uint8Array>();
 
   constructor() {
     this.hydratePromise = this.loadFromPersistentStorage();
@@ -188,7 +199,7 @@ class SQLiteOPFS {
         }];
 
         const items: VaultItem[] = JSON.parse(legacyItemsStr);
-        const derivedKey = generateArgon2idKey(passwordPlain, 'static_db_salt', 1024, 3, 2, 32);
+        const derivedKey = this.deriveLegacyEncryptionKey(passwordPlain);
 
         this.state.vault_items = items.map(item => {
           const sensitivePayload = JSON.stringify(item);
@@ -208,6 +219,7 @@ class SQLiteOPFS {
             password_db: '[encrypted: aes-256-gcm]',
             notes_db: item.notes ? '[encrypted: aes-256-gcm]' : '',
             enc_metadata: JSON.stringify(encrypted),
+            enc_kdf: LEGACY_VAULT_ITEM_KDF,
           };
         });
 
@@ -231,12 +243,17 @@ class SQLiteOPFS {
     }
     const expectedHash = this.state.user_secrets[0].argon_hash;
     if (expectedHash.startsWith('$argon2id$')) {
-      return verifyArgon2idHash(password, expectedHash);
+      const isVettedMatch = await verifyArgon2idHash(password, expectedHash);
+      if (isVettedMatch) {
+        await this.prepareEncryptionKey(password);
+        return true;
+      }
     }
 
     const isLegacyMatch = verifyLegacyArgon2idHash(password, expectedHash);
     if (isLegacyMatch) {
       this.state.user_secrets[0].argon_hash = await createArgon2idHash(password, secureRandomToken(16));
+      await this.prepareEncryptionKey(password);
       await this.saveToPersistentStorage();
     }
     return isLegacyMatch;
@@ -248,6 +265,7 @@ class SQLiteOPFS {
   public async setupMaster(password: string): Promise<void> {
     await this.hydrate();
     const argonHash = await createArgon2idHash(password, secureRandomToken(16));
+    await this.prepareEncryptionKey(password);
     this.state.user_secrets = [{
       username: 'owner',
       argon_hash: argonHash,
@@ -259,7 +277,21 @@ class SQLiteOPFS {
   /**
    * Returns derived encryption key from master password using Argon2id with 32 bytes derived output.
    */
+  public async prepareEncryptionKey(password: string): Promise<void> {
+    if (this.encryptionKeyCache.has(password)) return;
+    const key = await deriveVettedArgon2idKey(password, VAULT_ITEM_KDF_SALT, VAULT_ITEM_KDF_PARAMS);
+    this.encryptionKeyCache.set(password, key);
+  }
+
   public deriveEncryptionKey(password: string): Uint8Array {
+    const preparedKey = this.encryptionKeyCache.get(password);
+    if (!preparedKey) {
+      throw new Error('Vault encryption key is not prepared for the active session.');
+    }
+    return preparedKey;
+  }
+
+  private deriveLegacyEncryptionKey(password: string): Uint8Array {
     return generateArgon2idKey(password, 'static_db_salt', 1024, 3, 2, 32);
   }
 
@@ -276,13 +308,22 @@ class SQLiteOPFS {
 
     try {
       const derivedKey = this.deriveEncryptionKey(masterPasswordPlain);
+      const legacyDerivedKey = this.deriveLegacyEncryptionKey(masterPasswordPlain);
       const list: VaultItem[] = [];
+      let migratedLegacyRows = false;
 
       this.state.vault_items.forEach(row => {
         try {
           const encryptedPayload: EncryptedPayload = JSON.parse(row.enc_metadata);
-          const decryptedJson = aes256GcmDecrypt(encryptedPayload, derivedKey);
+          const isLegacyRow = row.enc_kdf !== VAULT_ITEM_KDF;
+          const decryptedJson = aes256GcmDecrypt(encryptedPayload, isLegacyRow ? legacyDerivedKey : derivedKey);
           const originalItem: VaultItem = JSON.parse(decryptedJson);
+
+          if (isLegacyRow) {
+            row.enc_metadata = JSON.stringify(aes256GcmEncrypt(decryptedJson, derivedKey));
+            row.enc_kdf = VAULT_ITEM_KDF;
+            migratedLegacyRows = true;
+          }
           
           // Make sure properties match up correctly
           list.push({
@@ -311,6 +352,10 @@ class SQLiteOPFS {
           });
         }
       });
+
+      if (migratedLegacyRows) {
+        this.saveToPersistentStorage();
+      }
 
       this.logQuery(queryStr, 'SUCCESS', list.length);
       return list;
@@ -354,6 +399,7 @@ class SQLiteOPFS {
       notes_db: item.notes ? '[encrypted: aes-256-gcm]' : '',
       
       enc_metadata: JSON.stringify(encrypted),
+      enc_kdf: VAULT_ITEM_KDF,
     };
 
     let query = '';
@@ -465,6 +511,7 @@ class SQLiteOPFS {
    */
   public resetAll() {
     this.state = createEmptyVaultDatabaseState();
+    this.encryptionKeyCache.clear();
     this.logQuery('DROP TABLE user_secrets; DROP TABLE vault_items;', 'SUCCESS', 1);
     this.saveToPersistentStorage();
   }
@@ -503,6 +550,7 @@ class SQLiteOPFS {
         password_db: '[encrypted: aes-256-gcm]',
         notes_db: item.notes ? '[encrypted: aes-256-gcm]' : '',
         enc_metadata: JSON.stringify(encrypted),
+        enc_kdf: VAULT_ITEM_KDF,
       };
     });
 
