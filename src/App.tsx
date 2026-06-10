@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { calculatePasswordScore } from './lib/security';
 import LockScreen from './components/LockScreen';
 import MobileSidebarBackdrop from './components/MobileSidebarBackdrop';
 import SidebarNavigation from './components/SidebarNavigation';
@@ -28,6 +27,7 @@ import { useVaultMobileView } from './hooks/useVaultMobileView';
 import { useVaultLock } from './hooks/useVaultLock';
 import { useVaultFilters } from './hooks/useVaultFilters';
 import { useUnlockedVaultRefresh } from './hooks/useUnlockedVaultRefresh';
+import { useSelectedItemScore } from './hooks/useSelectedItemScore';
 
 export default function App() {
   const { copiedField, copyText: handleCopyText, clearCopiedField } = useClipboardFeedback();
@@ -180,13 +180,12 @@ export default function App() {
     openEditItemForm(selectedItem);
   };
 
+  const score = useSelectedItemScore(selectedItem);
+
   // If locked, return the beautiful LockScreen UI
   if (!unlocked) {
     return <LockScreen onUnlock={handleUnlock} />;
   }
-
-  // Active password score and parameters for selected details
-  const score = selectedItem ? calculatePasswordScore(selectedItem.password || '') : 0;
 
   return (
     <div className="flex h-screen w-full bg-[#121412] text-[#e2e3df] overflow-hidden font-sans">

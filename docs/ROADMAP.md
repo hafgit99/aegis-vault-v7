@@ -65,6 +65,7 @@
   - [x] Lock/unlock and auto-lock orchestration extracted to `useVaultLock`.
   - [x] Search and favorite filter state extracted to `useVaultFilters`.
   - [x] Unlock-triggered vault refresh extracted to `useUnlockedVaultRefresh`.
+  - [x] Selected item password score extracted to `useSelectedItemScore`.
 - [x] Extract display helpers for file sizes and trash retention calculations.
   - [x] Platform logo resolver moved into display helpers.
   - [x] Vault form attachment size labels use shared display helpers.
