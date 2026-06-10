@@ -52,6 +52,7 @@ import VaultFormModal from './components/VaultFormModal';
 import ConfirmModal from './components/ConfirmModal';
 import ProfileModal, { isGradient } from './components/ProfileModal';
 import MobileSidebarBackdrop from './components/MobileSidebarBackdrop';
+import LocalStorageBadge from './components/LocalStorageBadge';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -462,12 +463,7 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-4 lg:gap-6">
-            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-brand-tertiary/10 border border-brand-tertiary/20 rounded-full">
-              <Shield className="text-brand-tertiary w-3.5 h-3.5 fill-brand-tertiary" />
-              <span className="font-display font-bold text-[9px] text-brand-tertiary uppercase tracking-wider">
-                LOCAL STORAGE ONLY
-              </span>
-            </div>
+            <LocalStorageBadge />
 
             <div className="flex items-center gap-4 text-on-surface-variant">
               <button
