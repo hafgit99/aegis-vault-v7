@@ -18,6 +18,7 @@
 - [ ] Extract vault item selection, reveal state, and auto-lock logic into hooks.
   - [x] Auto-lock behavior extracted to `useAutoLock`.
   - [x] Copy feedback and sensitive reveal state extracted to dedicated hooks.
+  - [x] Vault filtering, trash, counters, and audit summary extracted to `useVaultQueries`.
 - [x] Replace `alert()` calls with the existing modal/toast pattern.
 - [ ] Normalize naming: `AegisVault`, `Aegis Vault`, and `Aegis Vault 7`.
 - [ ] Add component tests for lock screen, vault form, settings import/export, and trash.

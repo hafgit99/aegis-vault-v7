@@ -42,7 +42,7 @@ import {
 import { VaultItem, ActiveTab, AppNotification } from './types';
 import { getVaultItems, saveVaultItem, deleteVaultItem, moveToTrash, restoreFromTrash, deletePermanently, emptyTrashComplete } from './lib/storage';
 import { generateTOTP, getTOTPTimeRemaining } from './lib/otp';
-import { calculatePasswordScore, getStrengthLabel, runVaultAudit } from './lib/security';
+import { calculatePasswordScore, getStrengthLabel } from './lib/security';
 import { getAttachmentBlob } from './lib/attachments';
 import LockScreen from './components/LockScreen';
 import PasswordGenerator from './components/PasswordGenerator';
@@ -54,6 +54,7 @@ import ProfileModal, { isGradient } from './components/ProfileModal';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
+import { useVaultQueries } from './hooks/useVaultQueries';
 
 export default function App() {
   const [unlocked, setUnlocked] = useState(false);
@@ -176,20 +177,19 @@ export default function App() {
     onLock: handleAutoLock,
   });
 
-  // Filter vault items in real time (excluding deleted items in main view)
-  const activeItems = items.filter((item) => !item.deleted);
-
-  const filteredItems = activeItems.filter((item) => {
-    const query = searchQuery.toLowerCase();
-    const matchesSearch = (
-      item.title.toLowerCase().includes(query) ||
-      item.username.toLowerCase().includes(query) ||
-      (item.url && item.url.toLowerCase().includes(query))
-    );
-    if (filterFavoritesOnly) {
-      return matchesSearch && item.favorite;
-    }
-    return matchesSearch;
+  const {
+    activeItems,
+    trashItems,
+    filteredItems,
+    favoriteCount,
+    loginCount,
+    cardCount,
+    secureNoteCount,
+    auditReport,
+  } = useVaultQueries({
+    items,
+    searchQuery,
+    favoritesOnly: filterFavoritesOnly,
   });
 
   // Toggle Favorite
@@ -419,9 +419,9 @@ export default function App() {
               <Trash2 className="w-4 h-4" />
               <span>Çöp Kutusu</span>
             </div>
-            {items.filter(x => x.deleted).length > 0 && (
+            {trashItems.length > 0 && (
               <span className="px-2 py-0.5 text-[10px] rounded-full bg-red-500/20 text-red-400 font-mono font-bold">
-                {items.filter(x => x.deleted).length}
+                {trashItems.length}
               </span>
             )}
           </button>
@@ -572,7 +572,7 @@ export default function App() {
                       }`}
                     >
                       <Heart className="w-3.5 h-3.5 fill-red-500 text-red-500" />
-                      <span>Favoriler ({activeItems.filter(x => x.favorite).length})</span>
+                      <span>Favoriler ({favoriteCount})</span>
                     </button>
                   </div>
 
@@ -1303,35 +1303,35 @@ export default function App() {
                               ></path>
                               <path
                                 className={`${
-                                  runVaultAudit(activeItems).score >= 85
+                                  auditReport.score >= 85
                                     ? 'text-brand-tertiary'
-                                    : runVaultAudit(activeItems).score >= 50
+                                    : auditReport.score >= 50
                                     ? 'text-brand-secondary'
                                     : 'text-brand-error'
                                 } stroke-current`}
                                 d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                                 fill="none"
-                                strokeDasharray={`${runVaultAudit(activeItems).score}, 100`}
+                                strokeDasharray={`${auditReport.score}, 100`}
                                 strokeLinecap="round"
                                 strokeWidth="3.5"
                               ></path>
                             </svg>
                             <div className="absolute inset-0 flex flex-col items-center justify-center font-display">
-                              <span className="text-2xl font-bold font-mono text-on-surface">%{runVaultAudit(activeItems).score}</span>
+                              <span className="text-2xl font-bold font-mono text-on-surface">%{auditReport.score}</span>
                               <span className="text-[9px] text-on-surface-variant/70 tracking-widest uppercase">Güç</span>
                             </div>
                           </div>
 
                           <div className="space-y-2 text-center sm:text-left">
                             <h3 className="font-display font-bold text-base text-on-surface">
-                              {runVaultAudit(activeItems).score >= 85
+                              {auditReport.score >= 85
                                 ? 'Kasanız Tamamen Güvende'
-                                : runVaultAudit(activeItems).score >= 50
+                                : auditReport.score >= 50
                                 ? 'Orta Düzey Güvenlik Seviyesi'
                                 : 'Kritik Parola Güvenliği Açığı!'}
                             </h3>
                             <p className="text-on-surface-variant text-xs leading-relaxed">
-                              {runVaultAudit(activeItems).score >= 85
+                              {auditReport.score >= 85
                                 ? 'Tüm parolalarınız mükemmel karmaşıklık standartlarında ayarlanmış. Aegis kalkanı tam güvenlikle çalışıyor.'
                                 : 'Bazı zayıf veya birbiriyle aynı olan şifreleriniz var. Şifrelerinizi özelleştirerek koruma seviyesini artırabilirsiniz.'}
                             </p>
@@ -1346,14 +1346,14 @@ export default function App() {
                           </div>
                           <div className="space-y-0.5 border-x border-outline-variant/10">
                             <p className="text-[10px] text-on-surface-variant">Zayıf Şifre</p>
-                            <p className={`text-sm font-bold font-mono ${runVaultAudit(activeItems).weakCount > 0 ? 'text-red-400' : 'text-brand-tertiary'}`}>
-                              {runVaultAudit(activeItems).weakCount}
+                            <p className={`text-sm font-bold font-mono ${auditReport.weakCount > 0 ? 'text-red-400' : 'text-brand-tertiary'}`}>
+                              {auditReport.weakCount}
                             </p>
                           </div>
                           <div className="space-y-0.5 font-mono">
                             <p className="text-[10px] text-on-surface-variant font-sans">Ortak Şifre</p>
-                            <p className={`text-sm font-bold ${runVaultAudit(activeItems).reusedCount > 0 ? 'text-amber-300' : 'text-brand-tertiary'}`}>
-                              {runVaultAudit(activeItems).reusedCount}
+                            <p className={`text-sm font-bold ${auditReport.reusedCount > 0 ? 'text-amber-300' : 'text-brand-tertiary'}`}>
+                              {auditReport.reusedCount}
                             </p>
                           </div>
                         </div>
@@ -1375,7 +1375,7 @@ export default function App() {
                             </div>
                           </div>
                           <span className="font-mono text-sm font-bold text-on-surface bg-surface-high border border-outline-variant/10 px-2.5 py-1 rounded-lg">
-                            {activeItems.filter(x => x.category === 'login').length}
+                            {loginCount}
                           </span>
                         </div>
 
@@ -1391,7 +1391,7 @@ export default function App() {
                             </div>
                           </div>
                           <span className="font-mono text-sm font-bold text-on-surface bg-surface-high border border-outline-variant/10 px-2.5 py-1 rounded-lg">
-                            {activeItems.filter(x => x.category === 'card').length}
+                            {cardCount}
                           </span>
                         </div>
 
@@ -1407,7 +1407,7 @@ export default function App() {
                             </div>
                           </div>
                           <span className="font-mono text-sm font-bold text-on-surface bg-surface-high border border-outline-variant/10 px-2.5 py-1 rounded-lg font-mono">
-                            {activeItems.filter(x => x.category === 'secure_note').length}
+                            {secureNoteCount}
                           </span>
                         </div>
 
@@ -1573,7 +1573,7 @@ export default function App() {
                     {/* Intelligent Custom Health Notification Row */}
                     <div className="bg-[#111211] border border-outline-variant/10 rounded-2xl p-4 flex gap-4 text-xs">
                       <div className="w-10 h-10 rounded-xl bg-[#141614] border border-outline-variant/15 flex items-center justify-center shrink-0">
-                        {runVaultAudit(activeItems).score >= 85 ? (
+                        {auditReport.score >= 85 ? (
                           <ShieldCheck className="w-5 h-5 text-brand-tertiary" />
                         ) : (
                           <AlertTriangle className="w-5 h-5 text-amber-400 animate-pulse" />
@@ -1582,9 +1582,9 @@ export default function App() {
                       <div className="space-y-1">
                         <h4 className="font-bold text-on-surface">Aegis Guard Güvenlik Raporu</h4>
                         <p className="text-on-surface-variant text-[11px] leading-relaxed opacity-90">
-                          {runVaultAudit(activeItems).score >= 85 
+                          {auditReport.score >= 85 
                             ? 'Parola koruma mekanizmalarınız tam performans çalışmaktadır. Hiçbir riskli nokta tespit edilemedi. Yerel kasanız güvenli tutulmaktadır.'
-                            : `Hassas senedinizde ${runVaultAudit(activeItems).weakCount} adet zayıf ve ${runVaultAudit(activeItems).reusedCount} adet çift kullanılmış parola tespit edilmiştir. Kritik sızıntıları önlemek için Şifre Denetleyicisi sayfamızı ziyaret etmenizi tavsiye ederiz.`
+                            : `Hassas senedinizde ${auditReport.weakCount} adet zayıf ve ${auditReport.reusedCount} adet çift kullanılmış parola tespit edilmiştir. Kritik sızıntıları önlemek için Şifre Denetleyicisi sayfamızı ziyaret etmenizi tavsiye ederiz.`
                           }
                         </p>
                       </div>
@@ -1631,7 +1631,7 @@ export default function App() {
                     Silinen şifre kartlarınız burada depolanır ve 15 gün sonra tamamen temizlenir.
                   </p>
                 </div>
-                {items.filter(x => x.deleted).length > 0 && (
+                {trashItems.length > 0 && (
                   <button
                     onClick={() => {
                       setConfirmConfig({
@@ -1675,7 +1675,7 @@ export default function App() {
               </div>
 
               {/* Trash Items List */}
-              {items.filter(x => x.deleted).length === 0 ? (
+              {trashItems.length === 0 ? (
                 <div className="bg-[#161816]/30 border border-outline-variant/10 rounded-2xl p-12 text-center text-on-surface-variant/40">
                   <div className="w-16 h-16 rounded-2xl bg-surface-high border border-outline-variant/20 flex items-center justify-center mx-auto mb-4 text-on-surface-variant/30">
                     <Trash2 className="w-8 h-8" />
@@ -1687,7 +1687,7 @@ export default function App() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {items.filter(x => x.deleted).map((item) => {
+                  {trashItems.map((item) => {
                     const remainingDays = (() => {
                       if (!item.deletedAt) return 15;
                       const deletedTime = new Date(item.deletedAt).getTime();
