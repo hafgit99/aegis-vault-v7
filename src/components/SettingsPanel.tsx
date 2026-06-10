@@ -29,6 +29,7 @@ import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from '..
 import { parseUniversalImport } from '../lib/importer';
 import { secureRandomToken } from '../lib/random';
 import { registerBiometric, isBiometricEnabled, disableBiometric, isBiometricSupported } from '../lib/biometric';
+import { getActiveMasterPassword } from '../lib/vaultSession';
 
 interface SettingsPanelProps {
   onDatabaseChanged: () => void;
@@ -120,11 +121,10 @@ export default function SettingsPanel({
           throw new Error("Cihazınızda veya tarayıcınızda biyometrik kilit açma özelliği (WebAuthn / PublicKeyCredential) desteklenmiyor veya devre dışı.");
         }
         
-        const stored = sessionStorage.getItem('aegis_session_master_pass');
-        if (!stored) {
+        const masterPassword = getActiveMasterPassword();
+        if (!masterPassword) {
           throw new Error("Oturum doğrulaması eksik. Lütfen sayfayı yenileyip tekrar giriş yapın.");
         }
-        const masterPassword = atob(stored);
         
         await registerBiometric(masterPassword);
         setBiometricEnabled(true);
@@ -190,13 +190,12 @@ export default function SettingsPanel({
 
     let passwordToUse = '';
     if (useMasterForBackup) {
-      const stored = sessionStorage.getItem('aegis_session_master_pass');
-      if (stored) {
-        passwordToUse = atob(stored);
-      } else {
+      const masterPassword = getActiveMasterPassword();
+      if (!masterPassword) {
         setBackupError('Lütfen önce bir ana şifre oluşturun.');
         return;
       }
+      passwordToUse = masterPassword;
     } else {
       if (!customBackupPassword) {
         setBackupError('Lütfen şifre alanını doldurun.');

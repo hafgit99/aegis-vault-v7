@@ -5,6 +5,7 @@
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { getActiveMasterPassword, openVaultSession } from '../lib/vaultSession';
 import { useVaultLock } from './useVaultLock';
 
 afterEach(() => {
@@ -32,6 +33,7 @@ describe('useVaultLock', () => {
   it('locks manually and clears sensitive UI state', () => {
     const resetReveals = vi.fn();
     const clearCopiedField = vi.fn();
+    openVaultSession('master-pass');
     const { result } = renderHook(() =>
       useVaultLock({
         autoLockDuration: 300,
@@ -44,6 +46,7 @@ describe('useVaultLock', () => {
     act(() => result.current.lock());
 
     expect(result.current.unlocked).toBe(false);
+    expect(getActiveMasterPassword()).toBeNull();
     expect(resetReveals).toHaveBeenCalledTimes(1);
     expect(clearCopiedField).toHaveBeenCalledTimes(1);
   });

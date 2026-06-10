@@ -5,6 +5,7 @@
 
 import { VaultItem } from '../types';
 import { sqliteOPFSInstance } from './sqlite_opfs';
+import { closeVaultSession, getActiveMasterPassword, openVaultSession } from './vaultSession';
 
 const STORAGE_KEYS = {
   IS_SET_UP: 'aegis_is_setup',
@@ -82,8 +83,7 @@ export function isMasterPasswordSet(): boolean {
 export function verifyMasterPassword(password: string): boolean {
   const isCorrect = sqliteOPFSInstance.verifyPassword(password);
   if (isCorrect) {
-    // Cache password in sessionStorage securely for the active browser tab session only
-    sessionStorage.setItem('aegis_session_master_pass', btoa(password));
+    openVaultSession(password);
   }
   return isCorrect;
 }
@@ -93,7 +93,7 @@ export function verifyMasterPassword(password: string): boolean {
  */
 export function setupMasterPassword(password: string): void {
   sqliteOPFSInstance.setupMaster(password);
-  sessionStorage.setItem('aegis_session_master_pass', btoa(password));
+  openVaultSession(password);
   localStorage.setItem(STORAGE_KEYS.IS_SET_UP, 'true');
 
   // Seed default items in SQLite
@@ -105,18 +105,21 @@ export function setupMasterPassword(password: string): void {
  */
 export function resetSystem(): void {
   sqliteOPFSInstance.resetAll();
-  sessionStorage.removeItem('aegis_session_master_pass');
+  closeVaultSession();
   localStorage.removeItem(STORAGE_KEYS.IS_SET_UP);
   localStorage.removeItem('aegis_sqlite_fallback');
+}
+
+function getSessionMasterPassword(): string | null {
+  return getActiveMasterPassword();
 }
 
 /**
  * Retrieves of clean vault items from database.
  */
 export function getVaultItems(): VaultItem[] {
-  const stored = sessionStorage.getItem('aegis_session_master_pass');
-  if (!stored) return [];
-  const password = atob(stored);
+  const password = getSessionMasterPassword();
+  if (!password) return [];
   
   const rawItems = sqliteOPFSInstance.getVaultItems(password);
 
@@ -146,9 +149,8 @@ export function getVaultItems(): VaultItem[] {
  * Saves or updates a vault item inside SQLite row.
  */
 export function saveVaultItem(item: VaultItem): VaultItem[] {
-  const stored = sessionStorage.getItem('aegis_session_master_pass');
-  if (!stored) return [];
-  const password = atob(stored);
+  const password = getSessionMasterPassword();
+  if (!password) return [];
   return sqliteOPFSInstance.saveVaultItem(item, password);
 }
 
@@ -156,9 +158,8 @@ export function saveVaultItem(item: VaultItem): VaultItem[] {
  * Deletes a vault item directly.
  */
 export function deleteVaultItem(id: string): VaultItem[] {
-  const stored = sessionStorage.getItem('aegis_session_master_pass');
-  if (!stored) return [];
-  const password = atob(stored);
+  const password = getSessionMasterPassword();
+  if (!password) return [];
   return sqliteOPFSInstance.deletePermanently(id, password);
 }
 
@@ -166,9 +167,8 @@ export function deleteVaultItem(id: string): VaultItem[] {
  * Moves a vault item to trash in SQLite.
  */
 export function moveToTrash(id: string): VaultItem[] {
-  const stored = sessionStorage.getItem('aegis_session_master_pass');
-  if (!stored) return [];
-  const password = atob(stored);
+  const password = getSessionMasterPassword();
+  if (!password) return [];
   
   const items = sqliteOPFSInstance.getVaultItems(password);
   const found = items.find(x => x.id === id);
@@ -184,9 +184,8 @@ export function moveToTrash(id: string): VaultItem[] {
  * Restores a vault item from trash in SQLite.
  */
 export function restoreFromTrash(id: string): VaultItem[] {
-  const stored = sessionStorage.getItem('aegis_session_master_pass');
-  if (!stored) return [];
-  const password = atob(stored);
+  const password = getSessionMasterPassword();
+  if (!password) return [];
 
   const items = sqliteOPFSInstance.getVaultItems(password);
   const found = items.find(x => x.id === id);
@@ -202,9 +201,8 @@ export function restoreFromTrash(id: string): VaultItem[] {
  * Permanently deletes a vault item from the database.
  */
 export function deletePermanently(id: string): VaultItem[] {
-  const stored = sessionStorage.getItem('aegis_session_master_pass');
-  if (!stored) return [];
-  const password = atob(stored);
+  const password = getSessionMasterPassword();
+  if (!password) return [];
   return sqliteOPFSInstance.deletePermanently(id, password);
 }
 
@@ -212,9 +210,8 @@ export function deletePermanently(id: string): VaultItem[] {
  * Empties the trash completely in SQLite.
  */
 export function emptyTrashComplete(): VaultItem[] {
-  const stored = sessionStorage.getItem('aegis_session_master_pass');
-  if (!stored) return [];
-  const password = atob(stored);
+  const password = getSessionMasterPassword();
+  if (!password) return [];
 
   const items = sqliteOPFSInstance.getVaultItems(password);
   items.forEach(item => {
@@ -229,8 +226,7 @@ export function emptyTrashComplete(): VaultItem[] {
  * Re-seeds the system with default demo items inside SQLite.
  */
 export function reseedDemoData(): VaultItem[] {
-  const stored = sessionStorage.getItem('aegis_session_master_pass');
-  if (!stored) return [];
-  const password = atob(stored);
+  const password = getSessionMasterPassword();
+  if (!password) return [];
   return sqliteOPFSInstance.reseedDemo(password, INITIAL_DEMO_ITEMS);
 }
