@@ -24,7 +24,7 @@ import {
 import { VaultItem, ActiveTab, AppNotification } from './types';
 import { getVaultItems, saveVaultItem, deleteVaultItem, moveToTrash, restoreFromTrash, deletePermanently, emptyTrashComplete } from './lib/storage';
 import { getTOTPTimeRemaining } from './lib/otp';
-import { calculatePasswordScore, getStrengthLabel } from './lib/security';
+import { calculatePasswordScore } from './lib/security';
 import { getAttachmentBlob } from './lib/attachments';
 import LockScreen from './components/LockScreen';
 import PasswordGenerator from './components/PasswordGenerator';
@@ -158,6 +158,22 @@ export default function App() {
     clearCopiedField();
   }, [clearCopiedField, resetReveals]);
 
+  const handleUnlock = () => {
+    setUnlocked(true);
+  };
+
+  const handleManualLock = () => {
+    setUnlocked(false);
+  };
+
+  const handleOpenSidebar = () => {
+    setIsSidebarOpen(true);
+  };
+
+  const handleCloseSidebar = () => {
+    setIsSidebarOpen(false);
+  };
+
   useAutoLock({
     unlocked,
     durationSeconds: autoLockDuration,
@@ -186,6 +202,51 @@ export default function App() {
     setActiveTab,
     setMobileActiveView,
   });
+
+  const handleTabChange = (tab: ActiveTab) => {
+    setActiveTab(tab);
+    setIsSidebarOpen(false);
+  };
+
+  const handleOpenAuditTab = () => {
+    handleTabChange('audit');
+  };
+
+  const handleOpenGeneratorTab = () => {
+    handleTabChange('generator');
+  };
+
+  const handleOpenVaultStatus = () => {
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Kasa Durumu',
+      message: 'Kasa durumu güncel ve tamamen koruma altında. Herhangi bir sızıntı veya zayıf halka tespit edilmedi.',
+      type: 'success',
+      isAlert: true,
+      onConfirm: () => {},
+    });
+  };
+
+  const handleOpenProfile = () => {
+    setIsProfileModalOpen(true);
+  };
+
+  const handleCloseProfile = () => {
+    setIsProfileModalOpen(false);
+  };
+
+  const handleSelectDashboard = () => {
+    setSelectedItem(null);
+    setMobileActiveView('detail');
+  };
+
+  const handleBackToList = () => {
+    setMobileActiveView('list');
+  };
+
+  const handleCloseConfirm = () => {
+    setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+  };
 
   // Toggle Favorite
   const handleToggleFavorite = (item: VaultItem) => {
@@ -325,18 +386,36 @@ export default function App() {
     setIsModalOpen(true);
   };
 
+  const handleCloseVaultForm = () => {
+    setIsModalOpen(false);
+  };
+
+  const handleSaveProfile = (name: string, avatar: string) => {
+    localStorage.setItem('profile_name', name);
+    localStorage.setItem('profile_avatar', avatar);
+    setProfileName(name);
+    setProfileAvatar(avatar);
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Profil Güncellendi',
+      message: 'Profil resminiz ve adınız başarıyla kaydedildi.',
+      type: 'success',
+      isAlert: true,
+      onConfirm: () => {},
+    });
+  };
+
   // If locked, return the beautiful LockScreen UI
   if (!unlocked) {
-    return <LockScreen onUnlock={() => setUnlocked(true)} />;
+    return <LockScreen onUnlock={handleUnlock} />;
   }
 
   // Active password score and parameters for selected details
   const score = selectedItem ? calculatePasswordScore(selectedItem.password || '') : 0;
-  const strength = selectedItem ? getStrengthLabel(selectedItem.password || '') : { label: 'WEAK', colorClass: '' };
 
   return (
     <div className="flex h-screen w-full bg-[#121412] text-[#e2e3df] overflow-hidden font-sans">
-      <MobileSidebarBackdrop isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <MobileSidebarBackdrop isOpen={isSidebarOpen} onClose={handleCloseSidebar} />
 
       {/* Sidebar navigation */}
       <aside className={`fixed left-0 top-0 h-full w-[280px] bg-surface-lowest border-r border-outline-variant/10 flex flex-col p-4 z-50 transition-transform duration-300 ${
@@ -354,7 +433,7 @@ export default function App() {
 
         <nav className="flex-1 space-y-1">
           <button
-            onClick={() => { setActiveTab('vault'); setIsSidebarOpen(false); }}
+            onClick={() => handleTabChange('vault')}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-bold text-sm transition-all focus:outline-none cursor-pointer ${
               activeTab === 'vault'
                 ? 'bg-brand-primary/10 text-brand-primary border-l-2 border-brand-primary pl-4'
@@ -366,7 +445,7 @@ export default function App() {
           </button>
 
           <button
-            onClick={() => { setActiveTab('audit'); setIsSidebarOpen(false); }}
+            onClick={() => handleTabChange('audit')}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-bold text-sm transition-all focus:outline-none cursor-pointer ${
               activeTab === 'audit'
                 ? 'bg-brand-primary/10 text-brand-primary border-l-2 border-brand-primary pl-4'
@@ -378,7 +457,7 @@ export default function App() {
           </button>
 
           <button
-            onClick={() => { setActiveTab('generator'); setIsSidebarOpen(false); }}
+            onClick={() => handleTabChange('generator')}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-bold text-sm transition-all focus:outline-none cursor-pointer ${
               activeTab === 'generator'
                 ? 'bg-brand-primary/10 text-brand-primary border-l-2 border-brand-primary pl-4'
@@ -390,7 +469,7 @@ export default function App() {
           </button>
 
           <button
-            onClick={() => { setActiveTab('settings'); setIsSidebarOpen(false); }}
+            onClick={() => handleTabChange('settings')}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-bold text-sm transition-all focus:outline-none cursor-pointer ${
               activeTab === 'settings'
                 ? 'bg-brand-primary/10 text-brand-primary border-l-2 border-brand-primary pl-4'
@@ -402,7 +481,7 @@ export default function App() {
           </button>
 
           <button
-            onClick={() => { setActiveTab('trash'); setIsSidebarOpen(false); }}
+            onClick={() => handleTabChange('trash')}
             className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg font-bold text-sm transition-all focus:outline-none cursor-pointer ${
               activeTab === 'trash'
                 ? 'bg-brand-primary/10 text-brand-primary border-l-2 border-brand-primary pl-4'
@@ -433,7 +512,7 @@ export default function App() {
             </div>
           </div>
           <button
-            onClick={() => setUnlocked(false)}
+            onClick={handleManualLock}
             className="w-full flex items-center justify-center gap-2 bg-[#1a1c1a] border border-outline-variant/20 text-on-surface py-3 rounded-lg font-bold text-xs hover:bg-[#252825] transition-all cursor-pointer"
           >
             <Lock className="w-4 h-4" />
@@ -448,7 +527,7 @@ export default function App() {
         <header className="h-[64px] border-b border-outline-variant/10 bg-surface-lowest/60 backdrop-blur-xl flex justify-between items-center px-4 lg:px-8 z-30">
           <div className="flex items-center gap-3 w-1/2 lg:w-1/3">
             <button
-              onClick={() => setIsSidebarOpen(true)}
+              onClick={handleOpenSidebar}
               className="lg:hidden p-2 text-on-surface-variant hover:text-brand-primary hover:bg-surface-high rounded-xl cursor-pointer shrink-0"
               title="Menüyü Aç"
             >
@@ -480,14 +559,7 @@ export default function App() {
                 <RefreshCw className="w-4.5 h-4.5" />
               </button>
               <button
-                onClick={() => setConfirmConfig({
-                  isOpen: true,
-                  title: 'Kasa Durumu',
-                  message: 'Kasa durumu güncel ve tamamen koruma altında. Herhangi bir sızıntı veya zayıf halka tespit edilmedi.',
-                  type: 'success',
-                  isAlert: true,
-                  onConfirm: () => {},
-                })}
+                onClick={handleOpenVaultStatus}
                 className="hover:text-brand-primary transition-colors focus:outline-none p-1.5 rounded-md hover:bg-surface-high relative cursor-pointer"
                 title="Bildirimler"
               >
@@ -496,7 +568,7 @@ export default function App() {
               </button>
 
               <button
-                onClick={() => setIsProfileModalOpen(true)}
+                onClick={handleOpenProfile}
                 className="w-8 h-8 rounded-full overflow-hidden border border-outline-variant/20 cursor-pointer hover:border-brand-primary hover:scale-[1.05] active:scale-95 transition-all text-left focus:outline-none focus:ring-1 focus:ring-brand-primary/40 flex items-center justify-center shrink-0"
                 title={`${profileName} - Profili Düzenle`}
               >
@@ -544,15 +616,12 @@ export default function App() {
               isPasskeyPrivateExponentRevealed={isPasskeyExpRevealed}
               totpCountdown={totpCountdown}
               onNewItem={handleTriggerNew}
-              onOpenProfile={() => setIsProfileModalOpen(true)}
-              onOpenAudit={() => setActiveTab('audit')}
-              onOpenGenerator={() => setActiveTab('generator')}
+              onOpenProfile={handleOpenProfile}
+              onOpenAudit={handleOpenAuditTab}
+              onOpenGenerator={handleOpenGeneratorTab}
               onSetFavoritesOnly={setFilterFavoritesOnly}
-              onSelectDashboard={() => {
-                setSelectedItem(null);
-                setMobileActiveView('detail');
-              }}
-              onBackToList={() => setMobileActiveView('list')}
+              onSelectDashboard={handleSelectDashboard}
+              onBackToList={handleBackToList}
               onSelectItem={handleSelectItem}
               onToggleFavorite={handleToggleFavorite}
               onEdit={handleTriggerEdit}
@@ -611,7 +680,7 @@ export default function App() {
       {/* Adding/Editing Modal Drawer */}
       <VaultFormModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={handleCloseVaultForm}
         onSave={handleSaveItem}
         editingItem={editingItem}
         onNotify={showNotification}
@@ -620,23 +689,10 @@ export default function App() {
       {/* Profile Settings Modal */}
       <ProfileModal
         isOpen={isProfileModalOpen}
-        onClose={() => setIsProfileModalOpen(false)}
+        onClose={handleCloseProfile}
         currentAvatar={profileAvatar}
         currentName={profileName}
-        onSave={(name, avatar) => {
-          localStorage.setItem('profile_name', name);
-          localStorage.setItem('profile_avatar', avatar);
-          setProfileName(name);
-          setProfileAvatar(avatar);
-          setConfirmConfig({
-            isOpen: true,
-            title: 'Profil Güncellendi',
-            message: 'Profil resminiz ve adınız başarıyla kaydedildi.',
-            type: 'success',
-            isAlert: true,
-            onConfirm: () => {},
-          });
-        }}
+        onSave={handleSaveProfile}
       />
 
       {/* Premium Confirm Modal */}
@@ -649,7 +705,7 @@ export default function App() {
         cancelText={confirmConfig.cancelText}
         isAlert={confirmConfig.isAlert}
         onConfirm={confirmConfig.onConfirm}
-        onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+        onCancel={handleCloseConfirm}
       />
     </div>
   );
