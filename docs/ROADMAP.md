@@ -19,6 +19,7 @@
   - [x] Local storage status badge extracted to `LocalStorageBadge`.
   - [x] Trash empty state extracted to `TrashEmptyState`.
   - [x] Trash info banner extracted to `TrashInfoBanner`.
+  - [x] Trash item card extracted to `TrashItemCard`.
 - [ ] Extract vault item selection, reveal state, and auto-lock logic into hooks.
   - [x] Auto-lock behavior extracted to `useAutoLock`.
   - [x] Copy feedback and sensitive reveal state extracted to dedicated hooks.
