@@ -5,20 +5,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Lock,
-  Unlock,
-  Shield,
-  ShieldCheck,
-  KeyRound,
-  Settings,
   Search,
   Plus,
   RefreshCw,
   Bell,
-  Trash2,
-  Clock,
-  Globe,
-  ShieldAlert,
   Menu,
 } from 'lucide-react';
 import { VaultItem, ActiveTab, AppNotification } from './types';
@@ -37,6 +27,7 @@ import MobileSidebarBackdrop from './components/MobileSidebarBackdrop';
 import LocalStorageBadge from './components/LocalStorageBadge';
 import VaultWorkspace from './components/VaultWorkspace';
 import TrashWorkspace from './components/TrashWorkspace';
+import SidebarNavigation from './components/SidebarNavigation';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -417,109 +408,13 @@ export default function App() {
     <div className="flex h-screen w-full bg-[#121412] text-[#e2e3df] overflow-hidden font-sans">
       <MobileSidebarBackdrop isOpen={isSidebarOpen} onClose={handleCloseSidebar} />
 
-      {/* Sidebar navigation */}
-      <aside className={`fixed left-0 top-0 h-full w-[280px] bg-surface-lowest border-r border-outline-variant/10 flex flex-col p-4 z-50 transition-transform duration-300 ${
-        isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-      }`}>
-        <div className="mb-8 px-2 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-brand-primary flex items-center justify-center shadow-md">
-            <Shield className="w-6 h-6 text-brand-on-primary fill-brand-on-primary" />
-          </div>
-          <div>
-            <h1 className="font-display text-[21px] font-bold text-brand-primary leading-tight">AegisVault</h1>
-            <p className="text-[10px] text-on-surface-variant uppercase tracking-widest font-semibold">Local-First Secure</p>
-          </div>
-        </div>
-
-        <nav className="flex-1 space-y-1">
-          <button
-            onClick={() => handleTabChange('vault')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-bold text-sm transition-all focus:outline-none cursor-pointer ${
-              activeTab === 'vault'
-                ? 'bg-brand-primary/10 text-brand-primary border-l-2 border-brand-primary pl-4'
-                : 'text-on-surface-variant hover:bg-surface-high hover:text-on-surface'
-            }`}
-          >
-            <Lock className="w-4 h-4" />
-            <span>Kasa (Vault)</span>
-          </button>
-
-          <button
-            onClick={() => handleTabChange('audit')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-bold text-sm transition-all focus:outline-none cursor-pointer ${
-              activeTab === 'audit'
-                ? 'bg-brand-primary/10 text-brand-primary border-l-2 border-brand-primary pl-4'
-                : 'text-on-surface-variant hover:bg-surface-high hover:text-on-surface'
-            }`}
-          >
-            <ShieldCheck className="w-4 h-4" />
-            <span>Güvenlik Analizi</span>
-          </button>
-
-          <button
-            onClick={() => handleTabChange('generator')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-bold text-sm transition-all focus:outline-none cursor-pointer ${
-              activeTab === 'generator'
-                ? 'bg-brand-primary/10 text-brand-primary border-l-2 border-brand-primary pl-4'
-                : 'text-on-surface-variant hover:bg-surface-high hover:text-on-surface'
-            }`}
-          >
-            <KeyRound className="w-4 h-4" />
-            <span>Şifre Üretici</span>
-          </button>
-
-          <button
-            onClick={() => handleTabChange('settings')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-bold text-sm transition-all focus:outline-none cursor-pointer ${
-              activeTab === 'settings'
-                ? 'bg-brand-primary/10 text-brand-primary border-l-2 border-brand-primary pl-4'
-                : 'text-on-surface-variant hover:bg-surface-high hover:text-on-surface'
-            }`}
-          >
-            <Settings className="w-4 h-4" />
-            <span>Ayarlar</span>
-          </button>
-
-          <button
-            onClick={() => handleTabChange('trash')}
-            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg font-bold text-sm transition-all focus:outline-none cursor-pointer ${
-              activeTab === 'trash'
-                ? 'bg-brand-primary/10 text-brand-primary border-l-2 border-brand-primary pl-4'
-                : 'text-on-surface-variant hover:bg-surface-high hover:text-on-surface'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <Trash2 className="w-4 h-4" />
-              <span>Çöp Kutusu</span>
-            </div>
-            {trashItems.length > 0 && (
-              <span className="px-2 py-0.5 text-[10px] rounded-full bg-red-500/20 text-red-400 font-mono font-bold">
-                {trashItems.length}
-              </span>
-            )}
-          </button>
-        </nav>
-
-        {/* Sidebar Footer element */}
-        <div className="mt-auto pt-4 border-t border-outline-variant/10">
-          <div className="space-y-1 mb-4">
-            <div className="flex items-center justify-between px-3 py-2 text-on-surface-variant text-xs">
-              <div className="flex items-center gap-2.5">
-                <Clock className="w-4 h-4" />
-                <span>System Health</span>
-              </div>
-              <div className="w-2.5 h-2.5 rounded-full bg-brand-tertiary security-pulse"></div>
-            </div>
-          </div>
-          <button
-            onClick={handleManualLock}
-            className="w-full flex items-center justify-center gap-2 bg-[#1a1c1a] border border-outline-variant/20 text-on-surface py-3 rounded-lg font-bold text-xs hover:bg-[#252825] transition-all cursor-pointer"
-          >
-            <Lock className="w-4 h-4" />
-            <span>Kilitli (Lock Vault)</span>
-          </button>
-        </div>
-      </aside>
+      <SidebarNavigation
+        activeTab={activeTab}
+        isOpen={isSidebarOpen}
+        trashCount={trashItems.length}
+        onTabChange={handleTabChange}
+        onLock={handleManualLock}
+      />
 
       {/* Primary content dashboard area */}
       <main className="lg:ml-[280px] ml-0 flex-1 flex flex-col h-full bg-brand-bg">

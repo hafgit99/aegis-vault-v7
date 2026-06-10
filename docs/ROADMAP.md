@@ -42,6 +42,7 @@
   - [x] Vault list and detail workspace extracted to `VaultWorkspace`.
   - [x] Trash workspace extracted to `TrashWorkspace`.
   - [x] App shell event handlers normalized.
+  - [x] Sidebar navigation extracted to `SidebarNavigation`.
 - [ ] Extract vault item selection, reveal state, and auto-lock logic into hooks.
   - [x] Auto-lock behavior extracted to `useAutoLock`.
   - [x] Copy feedback and sensitive reveal state extracted to dedicated hooks.
