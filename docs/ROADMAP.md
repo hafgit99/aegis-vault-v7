@@ -92,6 +92,7 @@
   - [x] New vault item metadata writes and localStorage migration writes use WebCrypto AES-GCM.
   - [x] Legacy backup encryption writer removed; remaining custom AES is read-only compatibility fallback.
   - [x] Read-only legacy crypto fallbacks isolated from the secure backup module.
+  - [x] Legacy XOR attachment migration runs automatically after successful unlock.
 - [x] Remove base64 master password storage from `sessionStorage`.
 - [x] Replace attachment XOR encryption with authenticated encryption.
 - [x] Introduce a versioned vault database format and migration tests.

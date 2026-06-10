@@ -15,8 +15,14 @@ const sqliteOPFSInstance = vi.hoisted(() => ({
   verifyPassword: vi.fn(),
 }));
 
+const migrateLegacyAttachmentsToAesGcm = vi.hoisted(() => vi.fn(async () => 0));
+
 vi.mock('./sqlite_opfs', () => ({
   sqliteOPFSInstance,
+}));
+
+vi.mock('./attachments', () => ({
+  migrateLegacyAttachmentsToAesGcm,
 }));
 
 import {
@@ -49,7 +55,26 @@ describe('vault session storage', () => {
     await expect(verifyMasterPassword('master-pass')).resolves.toBe(true);
 
     expect(getActiveMasterPassword()).toBe('master-pass');
+    expect(migrateLegacyAttachmentsToAesGcm).toHaveBeenCalledTimes(1);
     expect(sessionStorage.getItem('aegis_session_master_pass')).toBeNull();
+  });
+
+  it('keeps a successful unlock when legacy attachment migration fails', async () => {
+    sqliteOPFSInstance.verifyPassword.mockResolvedValue(true);
+    migrateLegacyAttachmentsToAesGcm.mockRejectedValueOnce(new Error('migration failed'));
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      await expect(verifyMasterPassword('master-pass')).resolves.toBe(true);
+
+      expect(getActiveMasterPassword()).toBe('master-pass');
+      expect(warnSpy).toHaveBeenCalledWith(
+        'Legacy attachment migration failed after unlock:',
+        expect.any(Error),
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   it('uses the active in-memory session for vault reads', () => {

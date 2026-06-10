@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   decryptAttachmentData,
   encryptAttachmentData,
+  migrateLegacyAttachmentsToAesGcm,
   migrateAttachmentRecordToAesGcm,
   type AttachmentRecord,
 } from './attachments';
@@ -105,5 +106,23 @@ describe('attachment encryption', () => {
     expect(migrated.iv).toHaveLength(24);
     expect(migrated.tag).toHaveLength(32);
     await expect(decryptAttachmentData(migrated).then(text)).resolves.toBe('private file');
+  });
+
+  it('skips bulk legacy migration when IndexedDB is unavailable', async () => {
+    const originalIndexedDB = globalThis.indexedDB;
+
+    try {
+      Object.defineProperty(globalThis, 'indexedDB', {
+        configurable: true,
+        value: undefined,
+      });
+
+      await expect(migrateLegacyAttachmentsToAesGcm()).resolves.toBe(0);
+    } finally {
+      Object.defineProperty(globalThis, 'indexedDB', {
+        configurable: true,
+        value: originalIndexedDB,
+      });
+    }
   });
 });

@@ -95,7 +95,7 @@ Attachments:
 - New attachment writes use WebCrypto AES-GCM.
 - Attachment keys are derived from the active vault session and attachment id.
 - AES-GCM tag verification rejects tampered attachment records.
-- Legacy XOR attachment records remain readable for migration compatibility and can be rewritten to AES-GCM through the attachment migration helper.
+- Legacy XOR attachment records remain readable for migration compatibility and are rewritten to AES-GCM after successful unlock.
 
 Biometric unlock:
 
@@ -137,7 +137,7 @@ Required user-facing recovery rules:
 | --- | --- | --- |
 | Custom cryptographic primitives are isolated in read-only legacy backup and compatibility paths | Open | Replace or remove remaining custom AES/GCM simulation fallbacks |
 | Simulated SQLite/OPFS persistence naming overstates implementation | Open | Decide final desktop storage adapter and align naming |
-| Legacy XOR attachment fallback remains readable | Partially mitigated | Run AES-GCM migration for legacy records, then remove fallback |
+| Legacy XOR attachment fallback remains readable | Partially mitigated | Remove fallback after migrated installs have aged out |
 | Active master password lives in process memory while unlocked | Accepted for current desktop phase | Minimize lifetime, lock aggressively, evaluate native secret handling |
 | Clipboard can keep copied secrets after OS capture or user clipboard changes | Partially mitigated | Safe clearing removes unchanged copied secrets; hostile OS clipboard capture remains out of scope |
 | Demo OTP generator is not RFC 6238 compatible | Open | Replace with standards-compatible HOTP/TOTP |
@@ -164,7 +164,6 @@ Claims to avoid until fixed:
 ## Next Decisions
 
 1. Align the simulated SQLite naming with the finalized Tauri app data persistence strategy.
-2. Wire the legacy XOR attachment migration into a startup or settings maintenance flow.
-3. Replace remaining legacy custom AES/GCM simulation fallbacks.
-4. Decide whether plaintext JSON export remains available in release builds.
-5. Review public release branding and installer identity before publishing signed artifacts.
+2. Replace remaining legacy custom AES/GCM simulation fallbacks.
+3. Decide whether plaintext JSON export remains available in release builds.
+4. Review public release branding and installer identity before publishing signed artifacts.

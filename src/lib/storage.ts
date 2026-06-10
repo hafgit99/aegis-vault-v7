@@ -4,6 +4,7 @@
  */
 
 import { VaultItem } from '../types';
+import { migrateLegacyAttachmentsToAesGcm } from './attachments';
 import { sqliteOPFSInstance } from './sqlite_opfs';
 import { closeVaultSession, getActiveMasterPassword, openVaultSession } from './vaultSession';
 
@@ -89,6 +90,11 @@ export async function verifyMasterPassword(password: string): Promise<boolean> {
   const isCorrect = await sqliteOPFSInstance.verifyPassword(password);
   if (isCorrect) {
     openVaultSession(password);
+    try {
+      await migrateLegacyAttachmentsToAesGcm();
+    } catch (err) {
+      console.warn('Legacy attachment migration failed after unlock:', err);
+    }
   }
   return isCorrect;
 }
@@ -100,6 +106,11 @@ export async function setupMasterPassword(password: string): Promise<void> {
   await initializeStorage();
   await sqliteOPFSInstance.setupMaster(password);
   openVaultSession(password);
+  try {
+    await migrateLegacyAttachmentsToAesGcm();
+  } catch (err) {
+    console.warn('Legacy attachment migration failed after setup:', err);
+  }
   localStorage.setItem(STORAGE_KEYS.IS_SET_UP, 'true');
 
   // Seed default items in SQLite

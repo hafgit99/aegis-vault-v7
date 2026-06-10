@@ -25,7 +25,7 @@ This project is a password vault, so security claims must stay conservative unti
 ## Known Security Debt
 
 - `src/lib/legacyCrypto.ts` contains custom cryptographic primitives used only by remaining read-only legacy backup and compatibility fallbacks. These should be replaced or removed before production use.
-- Legacy XOR attachment records are still readable as migration fallback and can now be rewritten to AES-GCM by the migration helper.
+- Legacy XOR attachment records are still readable as migration fallback and are rewritten to AES-GCM automatically after a successful unlock.
 - `src/lib/vaultSession.ts` keeps the active master password in process memory during an unlocked session. This is safer than browser storage, but native desktop secret handling still needs a final threat-model decision.
 - `src/lib/sqlite_opfs.ts` is a simulated SQLite/OPFS layer backed by versioned serialized JSON state. The naming and implementation should be aligned with the actual persistence strategy.
 - `src/lib/otp.ts` is a deterministic demo OTP generator, not an RFC 6238-compatible TOTP implementation.
@@ -34,7 +34,6 @@ This project is a password vault, so security claims must stay conservative unti
 ## Near-Term Security Plan
 
 1. Add regression tests around remaining encryption/decryption roundtrips and corrupted payload failures.
-2. Wire the legacy XOR attachment migration into a startup or settings maintenance flow.
-3. Decide the final vault session handling and whether native secret handling is needed.
-4. Replace the demo OTP generator with standards-compatible HOTP/TOTP.
-5. Update UI copy after the implementation matches the claim.
+2. Decide the final vault session handling and whether native secret handling is needed.
+3. Replace the demo OTP generator with standards-compatible HOTP/TOTP.
+4. Update UI copy after the implementation matches the claim.

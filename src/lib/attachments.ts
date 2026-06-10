@@ -123,28 +123,44 @@ export async function migrateAttachmentRecordToAesGcm(record: AttachmentRecord):
 }
 
 export async function migrateLegacyAttachmentsToAesGcm(): Promise<number> {
+  if (typeof indexedDB === 'undefined') {
+    return 0;
+  }
+
   const db = await initDB();
 
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, 'readwrite');
+  const legacyRecords = await new Promise<AttachmentRecord[]>((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readonly');
     const store = transaction.objectStore(STORE_NAME);
     const request = store.getAll();
 
-    request.onsuccess = async () => {
-      try {
-        const records = (request.result as AttachmentRecord[]).filter((record) => record.algorithm !== 'AES-256-GCM');
-        for (const record of records) {
-          store.put(await migrateAttachmentRecordToAesGcm(record));
-        }
-        resolve(records.length);
-      } catch (err) {
-        reject(err);
-      }
+    request.onsuccess = () => {
+      resolve((request.result as AttachmentRecord[]).filter((record) => record.algorithm !== 'AES-256-GCM'));
     };
 
     request.onerror = () => reject(request.error);
     transaction.onerror = () => reject(transaction.error);
   });
+
+  if (legacyRecords.length === 0) {
+    return 0;
+  }
+
+  const migratedRecords = await Promise.all(legacyRecords.map((record) => migrateAttachmentRecordToAesGcm(record)));
+
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+
+    migratedRecords.forEach((record) => {
+      store.put(record);
+    });
+
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+  });
+
+  return migratedRecords.length;
 }
 
 /**
