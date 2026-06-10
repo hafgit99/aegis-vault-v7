@@ -44,6 +44,7 @@ import { getVaultItems, saveVaultItem, deleteVaultItem, moveToTrash, restoreFrom
 import { generateTOTP, getTOTPTimeRemaining } from './lib/otp';
 import { calculatePasswordScore, getStrengthLabel } from './lib/security';
 import { getAttachmentBlob } from './lib/attachments';
+import { formatFileSize, getTrashRemainingDays } from './lib/display';
 import LockScreen from './components/LockScreen';
 import PasswordGenerator from './components/PasswordGenerator';
 import SecurityAudit from './components/SecurityAudit';
@@ -209,15 +210,6 @@ export default function App() {
     const updated = saveVaultItem(updatedItem);
     setItems(updated);
     setSelectedItem(updatedItem);
-  };
-
-  // Format file size helper
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   // Attachment downloading utility
@@ -1671,13 +1663,7 @@ export default function App() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {trashItems.map((item) => {
-                    const remainingDays = (() => {
-                      if (!item.deletedAt) return 15;
-                      const deletedTime = new Date(item.deletedAt).getTime();
-                      const now = new Date().getTime();
-                      const diffDays = Math.ceil((15 * 24 * 60 * 60 * 1000 - (now - deletedTime)) / (24 * 60 * 60 * 1000));
-                      return Math.max(0, Math.min(15, diffDays));
-                    })();
+                    const remainingDays = getTrashRemainingDays(item.deletedAt);
 
                     return (
                       <div
