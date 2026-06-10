@@ -11,7 +11,11 @@ This project is a password vault, so security claims must stay conservative unti
 - New attachment writes use WebCrypto AES-GCM with per-attachment keys derived from the active vault session.
 - New biometric master-password wrapping uses WebCrypto PBKDF2-SHA256 and AES-GCM.
 - Vault database payloads now include a versioned schema envelope with migration tests for legacy unversioned state.
+- Desktop vault persistence now mirrors database state through the Tauri app data directory.
+- Desktop import/export now uses controlled native Windows file dialogs.
+- Clipboard clearing now removes copied secrets after the safety delay when the clipboard remains unchanged.
 - Desktop threat and recovery boundaries are documented in `docs/THREAT_MODEL.md`.
+- Release gates and the signed Windows build plan are documented in `docs/RELEASE_PLAN.md`.
 - Security regression tests now cover active-session export, encrypted import, attachment authentication, and lock session clearing.
 - Unit tests cover random helper boundaries and password audit behavior.
 - Desktop build is available through Tauri.
@@ -29,7 +33,6 @@ This project is a password vault, so security claims must stay conservative unti
 
 1. Add regression tests around remaining encryption/decryption roundtrips and corrupted payload failures.
 2. Wire the legacy XOR attachment migration into a startup or settings maintenance flow.
-3. Decide the final desktop storage backend and vault session handling.
-4. Decide whether desktop storage uses Tauri filesystem APIs, SQLite, Stronghold, or a hybrid.
-5. Replace the demo OTP generator with standards-compatible HOTP/TOTP.
-6. Update UI copy after the implementation matches the claim.
+3. Decide the final vault session handling and whether native secret handling is needed.
+4. Replace the demo OTP generator with standards-compatible HOTP/TOTP.
+5. Update UI copy after the implementation matches the claim.

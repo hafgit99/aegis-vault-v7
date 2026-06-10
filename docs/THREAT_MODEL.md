@@ -138,7 +138,7 @@ Required user-facing recovery rules:
 | Simulated SQLite/OPFS persistence naming overstates implementation | Open | Decide final desktop storage adapter and align naming |
 | Legacy XOR attachment fallback remains readable | Partially mitigated | Run AES-GCM migration for legacy records, then remove fallback |
 | Active master password lives in process memory while unlocked | Accepted for current desktop phase | Minimize lifetime, lock aggressively, evaluate native secret handling |
-| Clipboard can keep copied secrets after app lock or OS capture | Open | Add safe clipboard clearing behavior |
+| Clipboard can keep copied secrets after OS capture or user clipboard changes | Partially mitigated | Safe clearing removes unchanged copied secrets; hostile OS clipboard capture remains out of scope |
 | Demo OTP generator is not RFC 6238 compatible | Open | Replace with standards-compatible HOTP/TOTP |
 | Plaintext export option can create unsafe files | Open | Add stronger warning, require confirmation, or remove for release builds |
 
@@ -161,8 +161,8 @@ Claims to avoid until fixed:
 
 ## Next Decisions
 
-1. Choose the final desktop storage backend: Tauri filesystem, SQLite plugin, Stronghold, or a hybrid.
+1. Align the simulated SQLite naming with the finalized Tauri app data persistence strategy.
 2. Wire the legacy XOR attachment migration into a startup or settings maintenance flow.
 3. Replace remaining custom AES/GCM simulation paths.
-4. Add safe clipboard clearing.
-5. Decide whether plaintext JSON export remains available in release builds.
+4. Decide whether plaintext JSON export remains available in release builds.
+5. Replace generated Tauri icons with branded assets before public release.

@@ -105,7 +105,7 @@
 - [x] Add controlled native file dialogs for import/export.
 - [x] Add safe clipboard clearing behavior.
 - [x] Add CI build workflow for Windows desktop artifacts.
-- [ ] Add release checklist and signed build plan.
+- [x] Add release checklist and signed build plan.
 
 ## Phase 5: Android Preparation
 
