@@ -5,6 +5,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { APP_PROFILE_ALT } from '../lib/branding';
 import TopBar from './TopBar';
 
 afterEach(() => {
@@ -62,6 +63,6 @@ describe('TopBar', () => {
     );
 
     expect(screen.queryByPlaceholderText('Vault içinde ara...')).toBeNull();
-    expect(screen.getByAltText('AegisUser Profile')).toBeTruthy();
+    expect(screen.getByAltText(APP_PROFILE_ALT)).toBeTruthy();
   });
 });

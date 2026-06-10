@@ -6,6 +6,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { APP_NAME } from '../lib/branding';
 import { AuditReport, VaultItem } from '../types';
 import VaultWorkspace from './VaultWorkspace';
 
@@ -87,7 +88,7 @@ describe('VaultWorkspace', () => {
     expect(screen.getAllByText('Aegis Mail').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Aegis Bank').length).toBeGreaterThan(0);
     expect(screen.getByText('Kasa Paneli')).toBeTruthy();
-    expect(screen.getByText('AegisHub')).toBeTruthy();
+    expect(screen.getByText(APP_NAME)).toBeTruthy();
   });
 
   it('forwards list, filter and dashboard actions', () => {

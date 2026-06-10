@@ -1,3 +1,5 @@
+import { APP_NAME } from '../lib/branding';
+
 interface DashboardHeaderProps {
   profileName: string;
   onOpenProfile: () => void;
@@ -9,7 +11,7 @@ export default function DashboardHeader({ profileName, onOpenProfile }: Dashboar
       <div className="space-y-1">
         <h2 className="font-display text-2xl lg:text-3xl font-bold text-on-surface flex items-center gap-2.5">
           <span>Kasa Paneli</span>
-          <span className="text-brand-primary">AegisHub</span>
+          <span className="text-brand-primary">{APP_NAME}</span>
         </h2>
         <p className="text-on-surface-variant text-xs">
           Kişisel şifreli kasanızın genel analizini ve güvenlik durumunu buradan izleyin.

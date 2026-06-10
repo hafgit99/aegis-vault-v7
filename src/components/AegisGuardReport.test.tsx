@@ -5,6 +5,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { APP_SECURITY_BRAND } from '../lib/branding';
 import AegisGuardReport from './AegisGuardReport';
 
 afterEach(() => {
@@ -25,7 +26,7 @@ describe('AegisGuardReport', () => {
       />,
     );
 
-    expect(screen.getByText('Aegis Guard Güvenlik Raporu')).toBeTruthy();
+    expect(screen.getByText(`${APP_SECURITY_BRAND} Güvenlik Raporu`)).toBeTruthy();
     expect(screen.getByText(/Hiçbir riskli nokta tespit edilemedi/)).toBeTruthy();
   });
 

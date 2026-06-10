@@ -1,5 +1,6 @@
 import { Bell, Menu, RefreshCw, Search } from 'lucide-react';
 
+import { APP_PROFILE_ALT } from '../lib/branding';
 import { ActiveTab } from '../types';
 import LocalStorageBadge from './LocalStorageBadge';
 import { isGradient } from './ProfileModal';
@@ -85,7 +86,7 @@ export default function TopBar({
               </div>
             ) : (
               <img
-                alt="AegisUser Profile"
+                alt={APP_PROFILE_ALT}
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"
                 src={profileAvatar}

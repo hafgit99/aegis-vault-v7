@@ -1,5 +1,6 @@
 import { AlertTriangle, ShieldCheck } from 'lucide-react';
 
+import { APP_SECURITY_BRAND } from '../lib/branding';
 import { AuditReport } from '../types';
 
 interface AegisGuardReportProps {
@@ -19,7 +20,7 @@ export default function AegisGuardReport({ auditReport }: AegisGuardReportProps)
         )}
       </div>
       <div className="space-y-1">
-        <h4 className="font-bold text-on-surface">Aegis Guard Güvenlik Raporu</h4>
+        <h4 className="font-bold text-on-surface">{APP_SECURITY_BRAND} Güvenlik Raporu</h4>
         <p className="text-on-surface-variant text-[11px] leading-relaxed opacity-90">
           {isSecure
             ? 'Parola koruma mekanizmalarınız tam performans çalışmaktadır. Hiçbir riskli nokta tespit edilemedi. Yerel kasanız güvenli tutulmaktadır.'

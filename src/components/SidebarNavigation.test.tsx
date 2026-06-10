@@ -5,6 +5,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { APP_NAME } from '../lib/branding';
 import SidebarNavigation from './SidebarNavigation';
 
 afterEach(() => {
@@ -23,7 +24,7 @@ describe('SidebarNavigation', () => {
       />,
     );
 
-    expect(screen.getByText('AegisVault')).toBeTruthy();
+    expect(screen.getByText(APP_NAME)).toBeTruthy();
     expect(screen.getByText('Kasa (Vault)')).toBeTruthy();
     expect(screen.getByText('Güvenlik Analizi')).toBeTruthy();
     expect(screen.getByText('Şifre Üretici')).toBeTruthy();

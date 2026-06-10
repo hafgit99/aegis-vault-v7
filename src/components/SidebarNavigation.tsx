@@ -1,5 +1,6 @@
 import { Clock, KeyRound, Lock, Settings, Shield, ShieldCheck, Trash2 } from 'lucide-react';
 
+import { APP_NAME } from '../lib/branding';
 import { ActiveTab } from '../types';
 
 interface SidebarNavigationProps {
@@ -36,7 +37,7 @@ export default function SidebarNavigation({
           <Shield className="w-6 h-6 text-brand-on-primary fill-brand-on-primary" />
         </div>
         <div>
-          <h1 className="font-display text-[21px] font-bold text-brand-primary leading-tight">AegisVault</h1>
+          <h1 className="font-display text-[21px] font-bold text-brand-primary leading-tight">{APP_NAME}</h1>
           <p className="text-[10px] text-on-surface-variant uppercase tracking-widest font-semibold">Local-First Secure</p>
         </div>
       </div>

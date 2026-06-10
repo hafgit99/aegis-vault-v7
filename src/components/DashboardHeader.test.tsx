@@ -5,6 +5,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { APP_NAME } from '../lib/branding';
 import DashboardHeader from './DashboardHeader';
 
 afterEach(() => {
@@ -16,7 +17,7 @@ describe('DashboardHeader', () => {
     render(<DashboardHeader profileName="Aegis Kullanıcısı" onOpenProfile={vi.fn()} />);
 
     expect(screen.getByText('Kasa Paneli')).toBeTruthy();
-    expect(screen.getByText('AegisHub')).toBeTruthy();
+    expect(screen.getByText(APP_NAME)).toBeTruthy();
     expect(screen.getByText('Aegis Kullanıcısı')).toBeTruthy();
     expect(screen.getByText('A')).toBeTruthy();
   });

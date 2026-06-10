@@ -5,6 +5,7 @@
 
 import { hmacSha256, aes256GcmEncrypt, aes256GcmDecrypt } from './encryption';
 import { secureRandomBytes } from './random';
+import { APP_NAME, APP_SHORT_NAME } from './branding';
 
 /**
  * PBKDF2-SHA256 Implementation using pure TS hmacSha256
@@ -71,12 +72,12 @@ export async function registerBiometric(masterPassword: string): Promise<void> {
     publicKey: {
       challenge: challenge,
       rp: {
-        name: "AegisVault"
+        name: APP_NAME,
       },
       user: {
         id: userId,
         name: "aegis_user_" + Date.now(),
-        displayName: "Aegis Vault User",
+        displayName: `${APP_SHORT_NAME} User`,
       },
       pubKeyCredParams: [
         { alg: -7, type: "public-key" }, // ES256

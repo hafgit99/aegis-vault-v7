@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { isMasterPasswordSet, setupMasterPassword, verifyMasterPassword } from '../lib/storage';
 import { isBiometricEnabled, isBiometricSupported, authenticateBiometric } from '../lib/biometric';
+import { APP_FOOTER_NAME, APP_NAME, APP_SHORT_NAME } from '../lib/branding';
 
 interface LockScreenProps {
   onUnlock: () => void;
@@ -126,7 +127,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                 <span className="text-brand-primary bg-gradient-to-r from-brand-primary to-emerald-400 bg-clip-text text-transparent">Askeri Standartta</span> Koruyun
               </h1>
               <p className="text-on-surface-variant text-sm md:text-base max-w-xl leading-relaxed">
-                AegisVault; kişisel parolalarınızı, kredi kartlarınızı ve güvenli notlarınızı en zorlu dijital tehlikelere karşı korumak için tasarlanmış yenilikçi, yerel öncelikli (local-first) bir koruma kalkanıdır.
+                {APP_NAME}; kişisel parolalarınızı, kredi kartlarınızı ve güvenli notlarınızı en zorlu dijital tehlikelere karşı korumak için tasarlanmış yenilikçi, yerel öncelikli (local-first) bir koruma kalkanıdır.
               </p>
             </div>
 
@@ -208,7 +209,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                 <p className="text-on-surface-variant text-xs mt-2.5 max-w-xs leading-relaxed">
                   {isSetup
                     ? 'Tarayıcınıza kaydedilmiş askeri düzey şifreli verilerinize erişmek için ana şifrenizi girmeniz gerekmektedir.'
-                    : 'AegisVault yerel koruma sistemini aktifleştirmek için kendinize her zaman hatırlayacağınız güçlü bir Ana Şifre belirleyin.'}
+                    : `${APP_SHORT_NAME} yerel koruma sistemini aktifleştirmek için kendinize her zaman hatırlayacağınız güçlü bir Ana Şifre belirleyin.`}
                 </p>
               </div>
 
@@ -334,7 +335,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
 
       {/* Futuristic clean footer */}
       <footer className="w-full border-t border-outline-variant/5 py-4 bg-[#0a0b0a]/40 text-center text-[10px] text-on-surface-variant/30 font-mono flex flex-col sm:flex-row items-center justify-between px-6 gap-2">
-        <span>© 2026 AegisVault Siber Güvenlik Altyapısı</span>
+        <span>© 2026 {APP_FOOTER_NAME}</span>
         <span>AES-256-GCM End-To-End Client-Side Cryptography</span>
       </footer>
     </div>
