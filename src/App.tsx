@@ -5,11 +5,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Search,
   Plus,
-  RefreshCw,
-  Bell,
-  Menu,
 } from 'lucide-react';
 import { VaultItem, ActiveTab, AppNotification } from './types';
 import { getVaultItems, saveVaultItem, deleteVaultItem, moveToTrash, restoreFromTrash, deletePermanently, emptyTrashComplete } from './lib/storage';
@@ -22,12 +18,12 @@ import SecurityAudit from './components/SecurityAudit';
 import SettingsPanel from './components/SettingsPanel';
 import VaultFormModal from './components/VaultFormModal';
 import ConfirmModal from './components/ConfirmModal';
-import ProfileModal, { isGradient } from './components/ProfileModal';
+import ProfileModal from './components/ProfileModal';
 import MobileSidebarBackdrop from './components/MobileSidebarBackdrop';
-import LocalStorageBadge from './components/LocalStorageBadge';
 import VaultWorkspace from './components/VaultWorkspace';
 import TrashWorkspace from './components/TrashWorkspace';
 import SidebarNavigation from './components/SidebarNavigation';
+import TopBar from './components/TopBar';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -418,74 +414,17 @@ export default function App() {
 
       {/* Primary content dashboard area */}
       <main className="lg:ml-[280px] ml-0 flex-1 flex flex-col h-full bg-brand-bg">
-        {/* Top bar */}
-        <header className="h-[64px] border-b border-outline-variant/10 bg-surface-lowest/60 backdrop-blur-xl flex justify-between items-center px-4 lg:px-8 z-30">
-          <div className="flex items-center gap-3 w-1/2 lg:w-1/3">
-            <button
-              onClick={handleOpenSidebar}
-              className="lg:hidden p-2 text-on-surface-variant hover:text-brand-primary hover:bg-surface-high rounded-xl cursor-pointer shrink-0"
-              title="Menüyü Aç"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            {activeTab === 'vault' && (
-              <div className="relative w-full max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px] w-4 h-4" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-surface-high border-none rounded-full pl-9 pr-4 py-2 text-sm focus:ring-2 focus:ring-brand-primary/20 text-on-surface placeholder-on-surface-variant/50 focus:outline-none transition-all"
-                  placeholder="Vault içinde ara..."
-                />
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-4 lg:gap-6">
-            <LocalStorageBadge />
-
-            <div className="flex items-center gap-4 text-on-surface-variant">
-              <button
-                onClick={refreshDatabase}
-                className="hover:text-brand-primary transition-colors focus:outline-none p-1.5 rounded-md hover:bg-surface-high cursor-pointer"
-                title="Yenile"
-              >
-                <RefreshCw className="w-4.5 h-4.5" />
-              </button>
-              <button
-                onClick={handleOpenVaultStatus}
-                className="hover:text-brand-primary transition-colors focus:outline-none p-1.5 rounded-md hover:bg-surface-high relative cursor-pointer"
-                title="Bildirimler"
-              >
-                <Bell className="w-4.5 h-4.5" />
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-brand-error rounded-full animate-bounce"></span>
-              </button>
-
-              <button
-                onClick={handleOpenProfile}
-                className="w-8 h-8 rounded-full overflow-hidden border border-outline-variant/20 cursor-pointer hover:border-brand-primary hover:scale-[1.05] active:scale-95 transition-all text-left focus:outline-none focus:ring-1 focus:ring-brand-primary/40 flex items-center justify-center shrink-0"
-                title={`${profileName} - Profili Düzenle`}
-              >
-                {isGradient(profileAvatar) ? (
-                  <div
-                    style={{ background: profileAvatar }}
-                    className="w-full h-full text-white text-[11px] font-bold font-display flex items-center justify-center select-none"
-                  >
-                    {profileName.charAt(0).toUpperCase()}
-                  </div>
-                ) : (
-                  <img
-                    alt="AegisUser Profile"
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                    src={profileAvatar}
-                  />
-                )}
-              </button>
-            </div>
-          </div>
-        </header>
+        <TopBar
+          activeTab={activeTab}
+          searchQuery={searchQuery}
+          profileName={profileName}
+          profileAvatar={profileAvatar}
+          onSearchChange={setSearchQuery}
+          onOpenSidebar={handleOpenSidebar}
+          onRefresh={refreshDatabase}
+          onOpenVaultStatus={handleOpenVaultStatus}
+          onOpenProfile={handleOpenProfile}
+        />
 
         {/* Tab content renderer */}
         <div className="flex flex-1 overflow-hidden">
