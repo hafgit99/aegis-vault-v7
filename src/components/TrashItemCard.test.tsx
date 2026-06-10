@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { VaultItem } from '../types';
 import TrashItemCard from './TrashItemCard';
 
@@ -19,8 +19,14 @@ const trashItem: VaultItem = {
 };
 
 describe('TrashItemCard', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-12T12:00:00.000Z'));
+  });
+
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
   });
 
   it('renders trash item details and actions', () => {
@@ -28,8 +34,21 @@ describe('TrashItemCard', () => {
 
     expect(screen.getByText('Deleted GitHub')).toBeTruthy();
     expect(screen.getByText('octo@example.com')).toBeTruthy();
-    expect(screen.getByText(/Gün Kaldı/)).toBeTruthy();
-    expect(screen.getByText('Geri Yükle')).toBeTruthy();
+    expect(screen.getByText(/13/)).toBeTruthy();
+    expect(screen.getByText(/Geri/)).toBeTruthy();
+  });
+
+  it('falls back when deletion date is missing', () => {
+    render(
+      <TrashItemCard
+        item={{ ...trashItem, deletedAt: undefined }}
+        onRestore={vi.fn()}
+        onDeletePermanently={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/15/)).toBeTruthy();
+    expect(screen.getByText('Silindi: Bilinmiyor')).toBeTruthy();
   });
 
   it('calls restore and permanent delete callbacks with the item', () => {
