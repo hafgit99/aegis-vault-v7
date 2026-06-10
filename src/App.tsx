@@ -59,6 +59,7 @@ import VaultItemDetailHeader from './components/VaultItemDetailHeader';
 import VaultItemAttachmentCard from './components/VaultItemAttachmentCard';
 import SecureNoteDetail from './components/SecureNoteDetail';
 import PasskeyDetail from './components/PasskeyDetail';
+import IdentityDetail from './components/IdentityDetail';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -841,66 +842,7 @@ export default function App() {
                           onCopyText={handleCopyText}
                         />
 
-                        {/* 4. KİMLİK / KİŞİSEL BELGE CATEGORY */}
-                        {selectedItem.category === 'identity' && (
-                          <div className="space-y-4">
-                            {/* Full Name */}
-                            <div className="glass-panel p-5 rounded-xl bg-gradient-to-r from-surface-high to-surface-high/30">
-                              <label className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase mb-2">
-                                BELGEDEKİ TAM AD SOYAD
-                              </label>
-                              <div className="flex items-center justify-between">
-                                <span className="font-bold text-base text-on-surface uppercase select-all">{selectedItem.idFullName || 'Girilmedi'}</span>
-                                <button
-                                  onClick={() => handleCopyText(selectedItem.idFullName || '', 'idFullName')}
-                                  className="text-on-surface-variant hover:text-brand-primary transition-colors focus:outline-none p-1.5 hover:bg-[#1a1c1a]/50 rounded-lg cursor-pointer"
-                                >
-                                  {copiedField === 'idFullName' ? <Check className="w-4 h-4 text-brand-tertiary" /> : <Copy className="w-4 h-4" />}
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* ID / Passport Number */}
-                            <div className="glass-panel p-5 rounded-xl">
-                              <label className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase mb-2">
-                                BELGE / KİMLİK / PASAPORT NUMARASI
-                              </label>
-                              <div className="flex items-center justify-between">
-                                <span className="font-mono text-base font-bold text-brand-primary tracking-widest">{selectedItem.username}</span>
-                                <button
-                                  onClick={() => handleCopyText(selectedItem.username, 'idNumber')}
-                                  className="text-on-surface-variant hover:text-brand-primary transition-colors focus:outline-none p-1.5 hover:bg-[#1a1c1a]/50 rounded-lg cursor-pointer"
-                                >
-                                  {copiedField === 'idNumber' ? <Check className="w-4 h-4 text-brand-tertiary" /> : <Copy className="w-4 h-4" />}
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Dates Grid */}
-                            <div className="grid grid-cols-3 gap-4">
-                              <div className="glass-panel p-4 rounded-xl">
-                                <label className="block text-[9px] font-bold tracking-wider text-on-surface-variant uppercase mb-1">
-                                  DOĞUM TARİHİ
-                                </label>
-                                <span className="text-xs text-on-surface font-semibold">{selectedItem.idBirthDate || 'Belirtilmedi'}</span>
-                              </div>
-
-                              <div className="glass-panel p-4 rounded-xl">
-                                <label className="block text-[9px] font-bold tracking-wider text-on-surface-variant uppercase mb-1">
-                                  SON GEÇERLİLİK
-                                </label>
-                                <span className="text-xs text-on-surface font-semibold">{selectedItem.idExpiryDate || 'Sınırsız / Yok'}</span>
-                              </div>
-
-                              <div className="glass-panel p-4 rounded-xl">
-                                <label className="block text-[9px] font-bold tracking-wider text-on-surface-variant uppercase mb-1">
-                                  CİNSİYET
-                                </label>
-                                <span className="text-xs text-brand-secondary font-bold uppercase">{selectedItem.idGender === 'Male' ? 'Erkek / M' : (selectedItem.idGender === 'Female' ? 'Kadın / F' : 'Belirtilmedi')}</span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
+                        <IdentityDetail item={selectedItem} copiedField={copiedField} onCopyText={handleCopyText} />
 
                         <SecureNoteDetail item={selectedItem} copiedField={copiedField} onCopyText={handleCopyText} />
 
