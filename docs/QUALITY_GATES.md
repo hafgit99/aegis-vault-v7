@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 70.86% |
-| Statements | 70.86% |
-| Functions | 72.83% |
-| Branches | 74.82% |
+| Lines | 74.83% |
+| Statements | 74.83% |
+| Functions | 74.52% |
+| Branches | 73.70% |
 
 Initial thresholds are intentionally below the current baseline:
 
@@ -32,14 +32,14 @@ These thresholds prevent large regressions while leaving room to add tests aroun
 
 ## Priority Coverage Targets
 
-1. `src/lib/sqlite_opfs.ts`: currently under-tested because persistence behavior is mostly exercised through higher-level storage tests.
-2. `src/lib/storage.ts`: add coverage for trash, reseed, and item lifecycle wrappers.
-3. `src/components/VaultFormModal.tsx` and `src/components/PasswordGenerator.tsx`: add workflow-focused component tests.
+1. `src/lib/storage.ts`: add coverage for trash, reseed, and item lifecycle wrappers.
+2. `src/components/VaultFormModal.tsx` and `src/components/PasswordGenerator.tsx`: add workflow-focused component tests.
 
 Recently improved:
 
 - `src/lib/importer.ts`: covered supported JSON/CSV formats, encrypted envelope detection, malformed inputs, and quote-aware CSV parsing.
 - `src/lib/attachments.ts`: covered IndexedDB save/read/delete paths, bulk legacy migration, missing records, and connection cleanup behavior.
+- `src/lib/sqlite_opfs.ts`: covered master setup/verification, encrypted row persistence, read-only SQL console behavior, reseed/delete/reset flows, query log subscriptions, and localStorage fallback hydration.
 
 ## Next Gates
 
