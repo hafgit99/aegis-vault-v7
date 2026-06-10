@@ -29,6 +29,7 @@
   - [x] Dashboard quick actions extracted to `DashboardQuickActions`.
   - [x] Dashboard recent vault panel extracted to `RecentVaultPanel`.
   - [x] Dashboard header extracted to `DashboardHeader`.
+  - [x] Vault item side info extracted to `VaultItemSideInfo`.
 - [ ] Extract vault item selection, reveal state, and auto-lock logic into hooks.
   - [x] Auto-lock behavior extracted to `useAutoLock`.
   - [x] Copy feedback and sensitive reveal state extracted to dedicated hooks.

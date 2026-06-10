@@ -23,7 +23,6 @@ import {
   EyeOff,
   Copy,
   Check,
-  Calendar,
   Clock,
   Globe,
   Heart,
@@ -60,6 +59,7 @@ import DashboardSecurityScoreCard from './components/DashboardSecurityScoreCard'
 import DashboardQuickActions from './components/DashboardQuickActions';
 import RecentVaultPanel from './components/RecentVaultPanel';
 import DashboardHeader from './components/DashboardHeader';
+import VaultItemSideInfo from './components/VaultItemSideInfo';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -1127,49 +1127,7 @@ export default function App() {
 
                       </div>
 
-                      {/* Right metadata and Notes */}
-                      <div className="space-y-4 text-left">
-                        {/* Meta info card */}
-                        <div className="glass-panel p-5 rounded-xl space-y-3">
-                          <label className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase mb-2">
-                            BİLGİLER VE TARİHÇE
-                          </label>
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="text-on-surface-variant">Oluşturuldu</span>
-                            <span className="text-on-surface font-semibold flex items-center gap-1">
-                              <Calendar className="w-3 h-3 text-on-surface-variant" />
-                              <span>{selectedItem.createdAt}</span>
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center text-xs border-t border-outline-variant/10 pt-2.5">
-                            <span className="text-on-surface-variant">Son Değişiklik</span>
-                            <span className="text-on-surface font-semibold flex items-center gap-1">
-                              <Calendar className="w-3 h-3 text-on-surface-variant" />
-                              <span>{selectedItem.updatedAt}</span>
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center text-xs border-t border-outline-variant/10 pt-2.5">
-                            <span className="text-on-surface-variant">Kasa Kategorisi</span>
-                            <span className="text-brand-secondary font-bold md:text-[11px]">
-                              {selectedItem.category === 'login' && 'Giriş Bilgisi'}
-                              {selectedItem.category === 'card' && 'Ödeme Kartı'}
-                              {selectedItem.category === 'passkey' && 'Passkey / API'}
-                              {selectedItem.category === 'identity' && 'Kimlik Belgesi'}
-                              {selectedItem.category === 'secure_note' && 'Güvenli Not'}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Notes card (Available if not secure note type, as secure note already has the gigantic render above) */}
-                        {selectedItem.category !== 'secure_note' && (
-                          <div className="bg-surface-high p-5 rounded-xl border border-outline-variant/10 space-y-2">
-                            <h5 className="font-bold text-xs uppercase tracking-wider text-on-surface">Özel Notlar</h5>
-                            <p className="text-xs text-on-surface-variant italic leading-relaxed break-words whitespace-pre-wrap">
-                              {selectedItem.notes || 'Herhangi bir özel kurtarma veya yedek kod notu eklenmedi.'}
-                            </p>
-                          </div>
-                        )}
-                      </div>
+                      <VaultItemSideInfo item={selectedItem} />
                     </div>
                   </div>
                 ) : (
