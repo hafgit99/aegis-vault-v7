@@ -59,6 +59,7 @@ import DashboardCategoryStats from './components/DashboardCategoryStats';
 import DashboardSecurityScoreCard from './components/DashboardSecurityScoreCard';
 import DashboardQuickActions from './components/DashboardQuickActions';
 import RecentVaultPanel from './components/RecentVaultPanel';
+import DashboardHeader from './components/DashboardHeader';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -1173,31 +1174,7 @@ export default function App() {
                   </div>
                 ) : (
                   <div className="max-w-4xl mx-auto space-y-8 py-4 lg:py-6 animate-fade-in text-left">
-                    {/* Welcome Header with Time */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-outline-variant/10 pb-6">
-                      <div className="space-y-1">
-                        <h2 className="font-display text-2xl lg:text-3xl font-bold text-on-surface flex items-center gap-2.5">
-                          <span>Kasa Paneli</span>
-                          <span className="text-brand-primary">AegisHub</span>
-                        </h2>
-                        <p className="text-on-surface-variant text-xs">
-                          Kişisel şifreli kasanızın genel analizini ve güvenlik durumunu buradan izleyin.
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="text-right hidden sm:block">
-                          <p className="text-xs text-on-surface font-semibold">{profileName}</p>
-                          <p className="text-[10px] text-on-surface-variant">Otomatik Kilit Koruma</p>
-                        </div>
-                        <button 
-                          type="button" 
-                          onClick={() => setIsProfileModalOpen(true)}
-                          className="w-10 h-10 rounded-xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center text-brand-primary text-sm font-bold font-display select-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-primary/40 hover:scale-[1.05] active:scale-95 transition-all"
-                        >
-                          {profileName.charAt(0).toUpperCase()}
-                        </button>
-                      </div>
-                    </div>
+                    <DashboardHeader profileName={profileName} onOpenProfile={() => setIsProfileModalOpen(true)} />
 
                     {/* Bento Grid: Core Analytics & Circular Security Meter */}
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
