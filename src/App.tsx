@@ -22,6 +22,7 @@ import { useSensitiveReveal } from './hooks/useSensitiveReveal';
 import { useVaultQueries } from './hooks/useVaultQueries';
 import { useVaultSelection } from './hooks/useVaultSelection';
 import { useProfileSettings } from './hooks/useProfileSettings';
+import { useAutoLockDuration } from './hooks/useAutoLockDuration';
 
 export default function App() {
   const [unlocked, setUnlocked] = useState(false);
@@ -50,16 +51,10 @@ export default function App() {
   // Rotating 2FA Countdown
   const [totpCountdown, setTotpCountdown] = useState(30);
 
-  // Auto-Lock Duration State (Seconds, defaulting to 5 minutes / 300 seconds)
-  const [autoLockDuration, setAutoLockDuration] = useState<number>(() => {
-    const saved = localStorage.getItem('auto_lock_duration');
-    return saved !== null ? parseInt(saved, 10) : 300;
-  });
-
-  const handleAutoLockDurationChange = (duration: number) => {
-    localStorage.setItem('auto_lock_duration', duration.toString());
-    setAutoLockDuration(duration);
-  };
+  const {
+    autoLockDuration,
+    changeAutoLockDuration: handleAutoLockDurationChange,
+  } = useAutoLockDuration();
 
   // Custom alert / confirmation state
   const [confirmConfig, setConfirmConfig] = useState<AppConfirmConfig>({

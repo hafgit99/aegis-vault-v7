@@ -53,6 +53,7 @@
   - [x] Vault filtering, trash, counters, and audit summary extracted to `useVaultQueries`.
   - [x] Vault selection and audit-selection behavior extracted to `useVaultSelection`.
   - [x] Profile settings persistence extracted to `useProfileSettings`.
+  - [x] Auto-lock duration persistence extracted to `useAutoLockDuration`.
 - [x] Extract display helpers for file sizes and trash retention calculations.
   - [x] Platform logo resolver moved into display helpers.
   - [x] Vault form attachment size labels use shared display helpers.
