@@ -27,15 +27,12 @@ import {
   ArrowLeft,
   Menu,
   LayoutDashboard,
-  Download,
-  File,
 } from 'lucide-react';
 import { VaultItem, ActiveTab, AppNotification } from './types';
 import { getVaultItems, saveVaultItem, deleteVaultItem, moveToTrash, restoreFromTrash, deletePermanently, emptyTrashComplete } from './lib/storage';
 import { generateTOTP, getTOTPTimeRemaining } from './lib/otp';
 import { calculatePasswordScore, getStrengthLabel } from './lib/security';
 import { getAttachmentBlob } from './lib/attachments';
-import { formatFileSize } from './lib/display';
 import LockScreen from './components/LockScreen';
 import PasswordGenerator from './components/PasswordGenerator';
 import SecurityAudit from './components/SecurityAudit';
@@ -59,6 +56,7 @@ import DashboardHeader from './components/DashboardHeader';
 import VaultItemSideInfo from './components/VaultItemSideInfo';
 import VaultItemSecurityAssessment from './components/VaultItemSecurityAssessment';
 import VaultItemDetailHeader from './components/VaultItemDetailHeader';
+import VaultItemAttachmentCard from './components/VaultItemAttachmentCard';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -972,41 +970,7 @@ export default function App() {
                           </div>
                         )}
 
-                        {/* MILITARY DOSYA EKLENTİSİ İNDİRİCİ - INTEGRATED LOCKS WIDGET */}
-                        {selectedItem.attachmentId && (
-                          <div className="bg-[#101210]/60 p-5 rounded-xl border border-brand-primary/15 space-y-3.5 text-left">
-                            <div className="flex items-center justify-between border-b border-outline-variant/5 pb-2">
-                              <h4 className="text-[10px] font-bold text-brand-primary tracking-widest uppercase flex items-center gap-2">
-                                <File className="w-4 h-4 text-brand-primary" />
-                                <span>GÜVENLİ ŞİFRELİ KASA ELEMANI</span>
-                              </h4>
-                              <span className="text-[9px] text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-0.5 rounded border border-emerald-500/15 font-mono">XOR AES SECURE</span>
-                            </div>
-
-                            <div className="flex items-center justify-between p-3.5 bg-[#171a17]/50 rounded-xl border border-outline-variant/10 hover:border-brand-primary/25 transition-all">
-                              <div className="flex items-center gap-3 min-w-0">
-                                <div className="w-9 h-9 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary shrink-0 border border-brand-primary/10">
-                                  <File className="w-4.5 h-4.5" />
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="font-bold text-xs text-on-surface truncate pr-2">{selectedItem.attachmentName}</p>
-                                  <p className="text-[10px] text-on-surface-variant font-mono mt-0.5 font-bold">
-                                    <span>{formatFileSize(selectedItem.attachmentSize || 0)}</span>
-                                    <span className="text-[#059669] ml-2">İNDİRİLİRKEN ÇÖZÜLÜR</span>
-                                  </p>
-                                </div>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => handleDownloadAttachment(selectedItem.attachmentId!, selectedItem.attachmentName!)}
-                                className="p-2.5 bg-brand-primary text-brand-on-primary rounded-xl hover:brightness-110 active:scale-95 transition-all shadow-md shadow-brand-primary/10 flex items-center justify-center shrink-0"
-                                title="İndir ve Güvenle Çöz"
-                              >
-                                <Download className="w-4.5 h-4.5" />
-                              </button>
-                            </div>
-                          </div>
-                        )}
+                        <VaultItemAttachmentCard item={selectedItem} onDownload={handleDownloadAttachment} />
 
                       </div>
 
