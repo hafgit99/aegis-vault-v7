@@ -7,7 +7,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { VaultItem, ActiveTab } from './types';
 import { moveToTrash, restoreFromTrash, deletePermanently, emptyTrashComplete } from './lib/storage';
 import { calculatePasswordScore } from './lib/security';
-import { getAttachmentBlob } from './lib/attachments';
 import LockScreen from './components/LockScreen';
 import MobileSidebarBackdrop from './components/MobileSidebarBackdrop';
 import SidebarNavigation from './components/SidebarNavigation';
@@ -25,6 +24,7 @@ import { useAutoLockDuration } from './hooks/useAutoLockDuration';
 import { useConfirmModal } from './hooks/useConfirmModal';
 import { useTotpCountdown } from './hooks/useTotpCountdown';
 import { useVaultData } from './hooks/useVaultData';
+import { useAttachmentDownload } from './hooks/useAttachmentDownload';
 
 export default function App() {
   const [unlocked, setUnlocked] = useState(false);
@@ -86,6 +86,10 @@ export default function App() {
         message: 'Profil resminiz ve adınız başarıyla kaydedildi.',
         type: 'success',
       }),
+  });
+
+  const { downloadAttachment: handleDownloadAttachment } = useAttachmentDownload({
+    onNotify: showNotification,
   });
 
   useEffect(() => {
@@ -175,36 +179,6 @@ export default function App() {
 
   const handleBackToList = () => {
     setMobileActiveView('list');
-  };
-
-  // Attachment downloading utility
-  const handleDownloadAttachment = async (id: string, name: string) => {
-    try {
-      const res = await getAttachmentBlob(id);
-      if (res) {
-        const url = URL.createObjectURL(res.blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = name;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      } else {
-        showNotification({
-          title: 'Dosya Bulunamadı',
-          message: 'Seçili dosya yerel kasanızda bulunamadı veya silinmiş.',
-          type: 'warning',
-        });
-      }
-    } catch (err) {
-      console.error(err);
-      showNotification({
-        title: 'Dosya Açılamadı',
-        message: 'Dosya şifresi çözülürken bir hata ile karşılaşıldı.',
-        type: 'danger',
-      });
-    }
   };
 
   // Delete handler (moves to trash)
