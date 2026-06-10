@@ -4,8 +4,13 @@
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+import {
+  decryptAttachmentData,
+  encryptAttachmentData,
+  migrateAttachmentRecordToAesGcm,
+  type AttachmentRecord,
+} from './attachments';
 import { closeVaultSession, openVaultSession } from './vaultSession';
-import { decryptAttachmentData, encryptAttachmentData, type AttachmentRecord } from './attachments';
 
 function bytes(value: string): ArrayBuffer {
   return new TextEncoder().encode(value).buffer;
@@ -13,6 +18,11 @@ function bytes(value: string): ArrayBuffer {
 
 async function text(buffer: ArrayBuffer): Promise<string> {
   return new TextDecoder().decode(buffer);
+}
+
+function legacyXorEncrypt(buffer: ArrayBuffer): ArrayBuffer {
+  const key = new TextEncoder().encode('aegis_secure_file');
+  return new Uint8Array(buffer).map((byte, index) => byte ^ key[index % key.length]).buffer;
 }
 
 afterEach(() => {
@@ -75,5 +85,25 @@ describe('attachment encryption', () => {
     await expect(encryptAttachmentData('attachment-1', bytes('private file'))).rejects.toThrow(
       'Aktif kasa oturumu bulunamadı.',
     );
+  });
+
+  it('migrates legacy XOR attachment records to AES-GCM', async () => {
+    openVaultSession('master-pass');
+    const legacyRecord: AttachmentRecord = {
+      id: 'legacy-attachment',
+      name: 'legacy.txt',
+      type: 'text/plain',
+      size: 12,
+      data: legacyXorEncrypt(bytes('private file')),
+      encrypted: true,
+      algorithm: 'XOR-LEGACY',
+    };
+
+    const migrated = await migrateAttachmentRecordToAesGcm(legacyRecord);
+
+    expect(migrated.algorithm).toBe('AES-256-GCM');
+    expect(migrated.iv).toHaveLength(24);
+    expect(migrated.tag).toHaveLength(32);
+    await expect(decryptAttachmentData(migrated).then(text)).resolves.toBe('private file');
   });
 });

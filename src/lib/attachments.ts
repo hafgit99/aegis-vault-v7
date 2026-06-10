@@ -108,6 +108,45 @@ export async function decryptAttachmentData(record: AttachmentRecord): Promise<A
   return encryptDecryptBuffer(record.data);
 }
 
+export async function migrateAttachmentRecordToAesGcm(record: AttachmentRecord): Promise<AttachmentRecord> {
+  if (record.algorithm === 'AES-256-GCM') {
+    return record;
+  }
+
+  const rawBuffer = await decryptAttachmentData(record);
+  const encryptedAttachment = await encryptAttachmentData(record.id, rawBuffer);
+
+  return {
+    ...record,
+    ...encryptedAttachment,
+  };
+}
+
+export async function migrateLegacyAttachmentsToAesGcm(): Promise<number> {
+  const db = await initDB();
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.getAll();
+
+    request.onsuccess = async () => {
+      try {
+        const records = (request.result as AttachmentRecord[]).filter((record) => record.algorithm !== 'AES-256-GCM');
+        for (const record of records) {
+          store.put(await migrateAttachmentRecordToAesGcm(record));
+        }
+        resolve(records.length);
+      } catch (err) {
+        reject(err);
+      }
+    };
+
+    request.onerror = () => reject(request.error);
+    transaction.onerror = () => reject(transaction.error);
+  });
+}
+
 /**
  * Saves a file to IndexedDB with local byte-level encryption.
  */

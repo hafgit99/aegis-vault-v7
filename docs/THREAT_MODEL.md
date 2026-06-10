@@ -56,7 +56,7 @@ Defended against:
 Partially defended against:
 
 - Someone with local user-account access to application storage. Vault item payloads and new attachments are encrypted, but profile settings, UI preferences, and some metadata may remain readable.
-- Someone with access to legacy data written before current hardening. Legacy XOR attachment records are readable through a migration fallback until a dedicated migration removes that support.
+- Someone with access to legacy data written before current hardening. Legacy XOR attachment records are readable through a compatibility fallback until the AES-GCM migration is run and fallback support is removed.
 - Someone with a valid unlocked desktop session. Auto-lock and reveal reset reduce exposure, but unlocked state is still trusted state.
 
 Not defended against:
@@ -94,7 +94,7 @@ Attachments:
 - New attachment writes use WebCrypto AES-GCM.
 - Attachment keys are derived from the active vault session and attachment id.
 - AES-GCM tag verification rejects tampered attachment records.
-- Legacy XOR attachment records remain readable for migration compatibility.
+- Legacy XOR attachment records remain readable for migration compatibility and can be rewritten to AES-GCM through the attachment migration helper.
 
 Biometric unlock:
 
@@ -136,7 +136,7 @@ Required user-facing recovery rules:
 | --- | --- | --- |
 | Custom cryptographic primitives still exist in legacy storage/biometric paths | Open | Replace remaining custom AES/GCM simulation with WebCrypto or vetted library paths |
 | Simulated SQLite/OPFS persistence naming overstates implementation | Open | Decide final desktop storage adapter and align naming |
-| Legacy XOR attachment fallback remains readable | Open | Add migration that rewrites legacy attachments to AES-GCM, then remove fallback |
+| Legacy XOR attachment fallback remains readable | Partially mitigated | Run AES-GCM migration for legacy records, then remove fallback |
 | Active master password lives in process memory while unlocked | Accepted for current desktop phase | Minimize lifetime, lock aggressively, evaluate native secret handling |
 | Clipboard can keep copied secrets after app lock or OS capture | Open | Add safe clipboard clearing behavior |
 | Demo OTP generator is not RFC 6238 compatible | Open | Replace with standards-compatible HOTP/TOTP |
@@ -162,7 +162,7 @@ Claims to avoid until fixed:
 ## Next Decisions
 
 1. Choose the final desktop storage backend: Tauri filesystem, SQLite plugin, Stronghold, or a hybrid.
-2. Design and test legacy XOR attachment migration.
+2. Wire the legacy XOR attachment migration into a startup or settings maintenance flow.
 3. Replace remaining custom AES/GCM simulation paths.
 4. Add safe clipboard clearing.
 5. Decide whether plaintext JSON export remains available in release builds.
