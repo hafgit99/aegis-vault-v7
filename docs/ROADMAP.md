@@ -31,6 +31,7 @@
   - [x] Dashboard header extracted to `DashboardHeader`.
   - [x] Vault item side info extracted to `VaultItemSideInfo`.
   - [x] Vault item security assessment extracted to `VaultItemSecurityAssessment`.
+  - [x] Vault item detail header extracted to `VaultItemDetailHeader`.
 - [ ] Extract vault item selection, reveal state, and auto-lock logic into hooks.
   - [x] Auto-lock behavior extracted to `useAutoLock`.
   - [x] Copy feedback and sensitive reveal state extracted to dedicated hooks.

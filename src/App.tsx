@@ -15,9 +15,6 @@ import {
   Plus,
   RefreshCw,
   Bell,
-  ExternalLink,
-  Edit,
-  Share2,
   Trash2,
   Eye,
   EyeOff,
@@ -38,7 +35,7 @@ import { getVaultItems, saveVaultItem, deleteVaultItem, moveToTrash, restoreFrom
 import { generateTOTP, getTOTPTimeRemaining } from './lib/otp';
 import { calculatePasswordScore, getStrengthLabel } from './lib/security';
 import { getAttachmentBlob } from './lib/attachments';
-import { formatFileSize, getLogoForPlatform } from './lib/display';
+import { formatFileSize } from './lib/display';
 import LockScreen from './components/LockScreen';
 import PasswordGenerator from './components/PasswordGenerator';
 import SecurityAudit from './components/SecurityAudit';
@@ -61,6 +58,7 @@ import RecentVaultPanel from './components/RecentVaultPanel';
 import DashboardHeader from './components/DashboardHeader';
 import VaultItemSideInfo from './components/VaultItemSideInfo';
 import VaultItemSecurityAssessment from './components/VaultItemSecurityAssessment';
+import VaultItemDetailHeader from './components/VaultItemDetailHeader';
 import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -604,77 +602,14 @@ export default function App() {
                       <span className="text-[10px] text-on-surface-variant uppercase tracking-widest font-bold">KART DETAYLARI</span>
                     </div>
 
-                    {/* Detail Header */}
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-outline-variant/10 animate-fade-in">
-                      <div className="flex items-center gap-6">
-                        <div className="w-20 h-20 rounded-2xl bg-surface-high flex items-center justify-center border border-outline-variant/30 custom-shadow overflow-hidden shrink-0">
-                          {getLogoForPlatform(selectedItem.title, selectedItem.url) ? (
-                            <img
-                              alt={`${selectedItem.title} Logo`}
-                              className="w-12 h-12 object-contain"
-                              referrerPolicy="no-referrer"
-                              src={getLogoForPlatform(selectedItem.title, selectedItem.url) || ''}
-                            />
-                          ) : (
-                            <span className="font-display font-bold text-3xl text-brand-primary">
-                              {selectedItem.title.charAt(0).toUpperCase()}
-                            </span>
-                          )}
-                        </div>
-                        <div>
-                          <h1 className="font-display text-2xl font-bold text-on-surface flex items-center gap-2">
-                            <span>{selectedItem.title}</span>
-                            {selectedItem.favorite && (
-                              <Heart className="w-5 h-5 fill-red-500 text-red-500 shrink-0" />
-                            )}
-                          </h1>
-                          {selectedItem.url && (
-                             <a
-                               className="text-brand-primary hover:underline text-xs flex items-center gap-1 mt-1.5 font-semibold"
-                               href={`https://${selectedItem.url}`}
-                               target="_blank"
-                               rel="noreferrer"
-                             >
-                               <span>{selectedItem.url}</span>
-                               <ExternalLink className="w-3.5 h-3.5" />
-                             </a>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2.5">
-                        <button
-                          onClick={() => handleToggleFavorite(selectedItem)}
-                          className={`p-2.5 rounded-lg transition-all cursor-pointer border border-outline-variant/10 bg-surface-high hover:bg-[#202220] ${
-                            selectedItem.favorite ? 'text-red-500' : 'text-on-surface-variant hover:text-red-400'
-                          }`}
-                          title={selectedItem.favorite ? 'Favorilerden Çıkar' : 'Favorilere Ekle'}
-                        >
-                          <Heart className={`w-4.5 h-4.5 ${selectedItem.favorite ? 'fill-red-500' : ''}`} />
-                        </button>
-                        <button
-                          onClick={handleTriggerEdit}
-                          className="p-2.5 rounded-lg bg-surface-high text-on-surface-variant hover:text-brand-primary hover:bg-[#202220] transition-all cursor-pointer border border-outline-variant/10"
-                          title="Düzenle"
-                        >
-                          <Edit className="w-4.5 h-4.5" />
-                        </button>
-                        <button
-                          onClick={() => handleCopyText(JSON.stringify(selectedItem, null, 2), 'item_export')}
-                          className="p-2.5 rounded-lg bg-surface-high text-on-surface-variant hover:text-brand-primary hover:bg-[#202220] transition-all cursor-pointer border border-outline-variant/10"
-                          title="Paylaş / JSON Kopyala"
-                        >
-                          {copiedField === 'item_export' ? <Check className="w-4.5 h-4.5 text-brand-tertiary" /> : <Share2 className="w-4.5 h-4.5" />}
-                        </button>
-                        <button
-                          onClick={() => handleDeleteItem(selectedItem.id)}
-                          className="p-2.5 rounded-lg bg-surface-high text-brand-error hover:bg-brand-error/15 hover:text-brand-error transition-all cursor-pointer border border-outline-variant/10"
-                          title="Sil"
-                        >
-                          <Trash2 className="w-4.5 h-4.5" />
-                        </button>
-                      </div>
-                    </div>
+                    <VaultItemDetailHeader
+                      item={selectedItem}
+                      copiedField={copiedField}
+                      onToggleFavorite={handleToggleFavorite}
+                      onEdit={handleTriggerEdit}
+                      onCopyText={handleCopyText}
+                      onDelete={handleDeleteItem}
+                    />
 
                     <VaultItemSecurityAssessment score={score} onOpenAudit={() => setActiveTab('audit')} />
 

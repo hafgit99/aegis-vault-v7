@@ -1,0 +1,73 @@
+/**
+ * @vitest-environment jsdom
+ */
+
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { VaultItem } from '../types';
+import VaultItemDetailHeader from './VaultItemDetailHeader';
+
+const item: VaultItem = {
+  id: 'item-1',
+  title: 'Internal Wiki',
+  username: 'team@example.com',
+  password: 'secret',
+  url: 'wiki.example.com',
+  notes: 'private note',
+  createdAt: '2026-06-10T12:00:00.000Z',
+  updatedAt: '2026-06-11T12:00:00.000Z',
+  category: 'login',
+  favorite: true,
+};
+
+afterEach(() => {
+  cleanup();
+});
+
+describe('VaultItemDetailHeader', () => {
+  it('renders item identity and link', () => {
+    render(
+      <VaultItemDetailHeader
+        item={item}
+        copiedField={null}
+        onToggleFavorite={vi.fn()}
+        onEdit={vi.fn()}
+        onCopyText={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Internal Wiki')).toBeTruthy();
+    expect(screen.getByText('wiki.example.com')).toBeTruthy();
+    expect(screen.getByRole('link')).toHaveProperty('href', 'https://wiki.example.com/');
+  });
+
+  it('fires favorite, edit, export, and delete actions', () => {
+    const onToggleFavorite = vi.fn();
+    const onEdit = vi.fn();
+    const onCopyText = vi.fn();
+    const onDelete = vi.fn();
+
+    render(
+      <VaultItemDetailHeader
+        item={item}
+        copiedField={null}
+        onToggleFavorite={onToggleFavorite}
+        onEdit={onEdit}
+        onCopyText={onCopyText}
+        onDelete={onDelete}
+      />,
+    );
+
+    fireEvent.click(screen.getByTitle('Favorilerden Çıkar'));
+    fireEvent.click(screen.getByTitle('Düzenle'));
+    fireEvent.click(screen.getByTitle('Paylaş / JSON Kopyala'));
+    fireEvent.click(screen.getByTitle('Sil'));
+
+    expect(onToggleFavorite).toHaveBeenCalledWith(item);
+    expect(onEdit).toHaveBeenCalledTimes(1);
+    expect(onCopyText).toHaveBeenCalledWith(JSON.stringify(item, null, 2), 'item_export');
+    expect(onDelete).toHaveBeenCalledWith('item-1');
+  });
+});
