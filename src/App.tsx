@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { calculatePasswordScore } from './lib/security';
 import LockScreen from './components/LockScreen';
 import MobileSidebarBackdrop from './components/MobileSidebarBackdrop';
@@ -12,7 +12,6 @@ import TopBar from './components/TopBar';
 import MainContent from './components/MainContent';
 import FloatingVaultAction from './components/FloatingVaultAction';
 import AppModals from './components/AppModals';
-import { useAutoLock } from './hooks/useAutoLock';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
 import { useVaultQueries } from './hooks/useVaultQueries';
@@ -27,9 +26,9 @@ import { useTrashActions } from './hooks/useTrashActions';
 import { useAppNavigation } from './hooks/useAppNavigation';
 import { useVaultFormState } from './hooks/useVaultFormState';
 import { useVaultMobileView } from './hooks/useVaultMobileView';
+import { useVaultLock } from './hooks/useVaultLock';
 
 export default function App() {
-  const [unlocked, setUnlocked] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Responsive & Filter States
@@ -87,6 +86,16 @@ export default function App() {
   } = useAutoLockDuration();
 
   const {
+    unlocked,
+    unlock: handleUnlock,
+    lock: handleLock,
+  } = useVaultLock({
+    autoLockDuration,
+    resetReveals,
+    clearCopiedField,
+  });
+
+  const {
     confirmConfig,
     openConfirm,
     showNotification,
@@ -131,26 +140,6 @@ export default function App() {
       refreshDatabase();
     }
   }, [refreshDatabase, unlocked]);
-
-  const handleAutoLock = useCallback(() => {
-    setUnlocked(false);
-    resetReveals();
-    clearCopiedField();
-  }, [clearCopiedField, resetReveals]);
-
-  const handleUnlock = () => {
-    setUnlocked(true);
-  };
-
-  const handleManualLock = () => {
-    setUnlocked(false);
-  };
-
-  useAutoLock({
-    unlocked,
-    durationSeconds: autoLockDuration,
-    onLock: handleAutoLock,
-  });
 
   const {
     activeItems,
@@ -206,7 +195,7 @@ export default function App() {
         isOpen={isSidebarOpen}
         trashCount={trashItems.length}
         onTabChange={handleTabChange}
-        onLock={handleManualLock}
+        onLock={handleLock}
       />
 
       {/* Primary content dashboard area */}

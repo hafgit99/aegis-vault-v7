@@ -62,6 +62,7 @@
   - [x] Tab and sidebar navigation state extracted to `useAppNavigation`.
   - [x] Vault form open/edit state extracted to `useVaultFormState`.
   - [x] Mobile vault list/detail state extracted to `useVaultMobileView`.
+  - [x] Lock/unlock and auto-lock orchestration extracted to `useVaultLock`.
 - [x] Extract display helpers for file sizes and trash retention calculations.
   - [x] Platform logo resolver moved into display helpers.
   - [x] Vault form attachment size labels use shared display helpers.
