@@ -5,6 +5,8 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 import { VaultItem } from '../types';
 import CardDetail from './CardDetail';
 
@@ -25,6 +27,7 @@ const cardItem: VaultItem = {
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
 });
 
 describe('CardDetail', () => {
@@ -189,5 +192,38 @@ describe('CardDetail', () => {
     expect(onCopyText).toHaveBeenCalledWith('', 'cardExpiry');
     expect(onCopyText).toHaveBeenCalledWith('', 'cardCvv');
     expect(onCopyText).toHaveBeenCalledWith('', 'cardPin');
+  });
+
+  it('renders card detail labels and controls in the selected language', () => {
+    window.localStorage.setItem(languageStorageKey, 'en');
+
+    render(
+      <LanguageProvider>
+        <CardDetail
+          item={{
+            ...cardItem,
+            cardholderName: undefined,
+            cardNumber: undefined,
+            cardExpiry: undefined,
+          }}
+          copiedField={null}
+          isCardNumberRevealed={true}
+          isCvvRevealed={false}
+          isPinRevealed={false}
+          onToggleReveal={vi.fn()}
+          onCopyText={vi.fn()}
+        />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByText('CARDHOLDER')).toBeTruthy();
+    expect(screen.getByText('CARD NUMBER')).toBeTruthy();
+    expect(screen.getByText('EXPIRY')).toBeTruthy();
+    expect(screen.getByText('SECURITY CODE (CVV)')).toBeTruthy();
+    expect(screen.getByText('ATM / BANK PIN')).toBeTruthy();
+    expect(screen.getByText('Not specified')).toBeTruthy();
+    expect(screen.getByText('MM/YY')).toBeTruthy();
+    expect(screen.getAllByTitle('Copy').length).toBeGreaterThan(0);
+    expect(screen.getAllByTitle('Show').length).toBeGreaterThan(0);
   });
 });

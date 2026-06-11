@@ -85,6 +85,7 @@ Recently improved:
 - Vault row components: covered selected-language rendering for strength badges and recent-item copy controls.
 - Vault detail shell components: covered selected-language rendering for header actions, security assessment, metadata labels, categories, and empty notes.
 - Login detail panel: covered selected-language rendering for username/password labels, empty-password fallback, TOTP status, and copy/reveal controls.
+- Card detail panel: covered selected-language rendering for card labels, fallback values, and copy/reveal controls.
 - `src/components/VaultFormModal.tsx`: covered edit-save identity preservation, title validation, password visibility/autogeneration, selected file removal, attachment upload failures, existing attachment removal before save, and download error notifications.
 - `src/components/CardDetail.tsx`: covered copied states, PIN copy action, missing-field fallbacks, and empty-string copy behavior.
 - `src/components/LoginDetail.tsx`: covered copied states, empty-password fallback, and safe empty-password copy behavior.
