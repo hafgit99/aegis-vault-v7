@@ -8,6 +8,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { VaultItem } from '../types';
 import VaultFormModal from './VaultFormModal';
 import { getAttachmentBlob, saveAttachment } from '../lib/attachments';
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 
 vi.mock('../lib/attachments', () => ({
   getAttachmentBlob: vi.fn(),
@@ -64,6 +66,7 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   vi.unstubAllGlobals();
+  window.localStorage.clear();
 });
 
 describe('VaultFormModal', () => {
@@ -78,6 +81,37 @@ describe('VaultFormModal', () => {
     );
 
     expect(screen.queryByText('Kasaya Güvenli Öge Ekle')).toBeNull();
+  });
+
+  it('renders the shell and common fields in the selected language', () => {
+    window.localStorage.setItem(languageStorageKey, 'en');
+
+    render(
+      <LanguageProvider>
+        <VaultFormModal
+          isOpen={true}
+          editingItem={null}
+          onClose={vi.fn()}
+          onSave={vi.fn()}
+        />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByText('Add Secure Vault Item')).toBeTruthy();
+    expect(screen.getByText('Your data is encrypted locally in your browser processor instantly.')).toBeTruthy();
+    expect(screen.getByText('Login')).toBeTruthy();
+    expect(screen.getByText('Card')).toBeTruthy();
+    expect(screen.getByText('Passkey')).toBeTruthy();
+    expect(screen.getByText('Identity')).toBeTruthy();
+    expect(screen.getByText('Note')).toBeTruthy();
+    expect(screen.getByText('GENERAL DETAILS')).toBeTruthy();
+    expect(screen.getByText('ITEM TITLE / PLATFORM')).toBeTruthy();
+    expect(screen.getByPlaceholderText('e.g. GitHub, Chase Bank, National ID')).toBeTruthy();
+    expect(screen.getByText('SECURE URL')).toBeTruthy();
+    expect(screen.getByPlaceholderText('e.g. github.com')).toBeTruthy();
+    expect(screen.getByText('Cancel')).toBeTruthy();
+    expect(screen.getByText('Save Securely')).toBeTruthy();
+    expect(screen.getByTitle('Close')).toBeTruthy();
   });
 
   it('saves a new login item with trimmed fields', async () => {

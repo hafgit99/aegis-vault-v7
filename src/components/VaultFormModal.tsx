@@ -35,6 +35,7 @@ import { generatePassword } from '../lib/security';
 import { saveAttachment, getAttachmentBlob } from '../lib/attachments';
 import { secureRandomIndex, secureRandomToken } from '../lib/random';
 import { formatFileSize } from '../lib/display';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface VaultFormModalProps {
   isOpen: boolean;
@@ -45,6 +46,8 @@ interface VaultFormModalProps {
 }
 
 export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, onNotify }: VaultFormModalProps) {
+  const { t } = useLanguage();
+
   // Category Selector Strategy
   const [category, setCategory] = useState<'login' | 'card' | 'passkey' | 'identity' | 'secure_note'>('login');
   
@@ -126,7 +129,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
       if (editingItem.attachmentId) {
         setExistingAttachment({
           id: editingItem.attachmentId,
-          name: editingItem.attachmentName || 'Ekli Dosya',
+          name: editingItem.attachmentName || t('vaultForm.attachment.fallbackName'),
           size: editingItem.attachmentSize || 0,
           type: editingItem.attachmentType || 'application/octet-stream'
         });
@@ -166,7 +169,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
     setIsUploading(false);
     setUploadProgress(0);
     setErrorMessage(null);
-  }, [editingItem, isOpen]);
+  }, [editingItem, isOpen, t]);
 
   if (!isOpen) return null;
 
@@ -268,7 +271,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
 
     // Dynamic field validation per category
     if (!title.trim()) {
-      setErrorMessage('Lütfen kayıt için açıklayıcı bir başlık belirleyin.');
+      setErrorMessage(t('vaultForm.validation.titleRequired'));
       return;
     }
 
@@ -373,14 +376,15 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
             </div>
             <div>
               <h3 className="font-display font-bold text-base text-on-surface">
-                {editingItem ? 'Kasa Ögesini Güncelle' : 'Kasaya Güvenli Öge Ekle'}
+                {editingItem ? t('vaultForm.title.edit') : t('vaultForm.title.create')}
               </h3>
-              <p className="text-[10px] text-on-surface-variant leading-relaxed">Verileriniz anlık olarak tarayıcı işlemcinizde yerel olarak kriptolanır.</p>
+              <p className="text-[10px] text-on-surface-variant leading-relaxed">{t('vaultForm.subtitle')}</p>
             </div>
           </div>
           <button
             onClick={onClose}
             type="button"
+            title={t('vaultForm.close')}
             className="p-2 rounded-lg hover:bg-surface-high text-on-surface-variant hover:text-on-surface transition-all cursor-pointer border border-transparent hover:border-outline-variant/20 focus:outline-none"
           >
             <X className="w-5 h-5" />
@@ -400,7 +404,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
             }`}
           >
             <KeyRound className="w-4 h-4" />
-            <span className="text-[9px] sm:text-[10px] font-sans">Giriş</span>
+            <span className="text-[9px] sm:text-[10px] font-sans">{t('vaultForm.category.login')}</span>
           </button>
 
           <button
@@ -413,7 +417,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
             }`}
           >
             <CreditCard className="w-4 h-4" />
-            <span className="text-[9px] sm:text-[10px] font-sans">Kart</span>
+            <span className="text-[9px] sm:text-[10px] font-sans">{t('vaultForm.category.card')}</span>
           </button>
 
           <button
@@ -426,7 +430,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
             }`}
           >
             <Fingerprint className="w-4 h-4" />
-            <span className="text-[9px] sm:text-[10px] font-sans">Passkey</span>
+            <span className="text-[9px] sm:text-[10px] font-sans">{t('vaultForm.category.passkey')}</span>
           </button>
 
           <button
@@ -439,7 +443,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
             }`}
           >
             <User className="w-4 h-4" />
-            <span className="text-[9px] sm:text-[10px] font-sans">Kimlik</span>
+            <span className="text-[9px] sm:text-[10px] font-sans">{t('vaultForm.category.identity')}</span>
           </button>
 
           <button
@@ -452,7 +456,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
             }`}
           >
             <FileText className="w-4 h-4" />
-            <span className="text-[9px] sm:text-[10px] font-sans">Not</span>
+            <span className="text-[9px] sm:text-[10px] font-sans">{t('vaultForm.category.secureNote')}</span>
           </button>
 
         </div>
@@ -471,12 +475,12 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
           <div className="bg-[#121412]/50 p-4 rounded-xl border border-outline-variant/10 space-y-4">
             <h4 className="text-[10px] font-bold text-brand-primary tracking-widest uppercase flex items-center gap-1.5">
               <Sparkle className="w-3.5 h-3.5 fill-current" />
-              <span>GENEL TANIMLAMA</span>
+              <span>{t('vaultForm.general.title')}</span>
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                  ÖGE BAŞLIĞI / PLATFORM
+                  {t('vaultForm.field.title')}
                 </label>
                 <div className="relative">
                   <Shield className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
@@ -487,14 +491,14 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-semibold"
-                    placeholder="örn. GitHub, Chase Bank, Nüfus Cüzdanı"
+                    placeholder={t('vaultForm.placeholder.title')}
                   />
                 </div>
               </div>
 
               <div>
                 <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                  GÜVENLİ BAĞLANTI (URL)
+                  {t('vaultForm.field.url')}
                 </label>
                 <div className="relative">
                   <Globe className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
@@ -504,7 +508,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
-                    placeholder="örn. github.com"
+                    placeholder={t('vaultForm.placeholder.url')}
                   />
                 </div>
               </div>
@@ -1015,7 +1019,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
               disabled={isUploading}
               className="px-5 py-2.5 bg-[#1b1d1b] hover:bg-[#232623] border border-outline-variant/15 rounded-xl font-bold text-xs text-on-surface transition-colors cursor-pointer focus:outline-none disabled:opacity-50"
             >
-              İptal
+              {t('vaultForm.footer.cancel')}
             </button>
             <button
               data-testid="vault-item-save-button"
@@ -1026,12 +1030,12 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
               {isUploading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>İşleniyor...</span>
+                  <span>{t('vaultForm.footer.processing')}</span>
                 </>
               ) : (
                 <>
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>Güvenle Kaydet</span>
+                  <span>{t('vaultForm.footer.save')}</span>
                 </>
               )}
             </button>
