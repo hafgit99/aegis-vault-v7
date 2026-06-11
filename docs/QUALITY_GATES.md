@@ -17,7 +17,7 @@ Current measured baseline:
 | Lines | 93.85% |
 | Statements | 93.85% |
 | Functions | 92.04% |
-| Branches | 85.16% |
+| Branches | 85.68% |
 
 Initial thresholds are intentionally below the current baseline:
 
@@ -32,8 +32,8 @@ These thresholds prevent large regressions while leaving room to add tests aroun
 
 ## Priority Coverage Targets
 
-1. `src/components/SecurityAudit.tsx`: cover remaining severity threshold branch labels.
-2. `src/components/ProfileModal.tsx`: cover remaining file-reader and save-callback branches.
+1. `src/components/ProfileModal.tsx`: cover remaining file-reader and save-callback branches.
+2. `src/components/SettingsPanel.tsx`: reduce remaining safety-control, import, and export branch gaps.
 
 Recently improved:
 
@@ -62,6 +62,7 @@ Recently improved:
 - `src/components/VaultWorkspace.tsx`: covered favorite filter active state, empty filtered-list fallback, dashboard quick actions, and profile action forwarding.
 - `src/components/SettingsPanel.tsx`: covered biometric missing-session, WebAuthn permission, and disable-error paths plus encrypted export guards, file-picker error handling, drag-state styling, and encrypted import cancellation.
 - `src/components/VaultFormModal.tsx`: covered drag-and-drop attachment selection and selected-file removal behavior when the hidden input has already unmounted.
+- `src/components/SecurityAudit.tsx`: covered missing-password audit classification so empty credentials are weak, non-reused, non-secure, and selectable.
 
 ## Next Gates
 

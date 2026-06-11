@@ -127,6 +127,7 @@
   - [x] Expand vault workspace filter, empty-state, and dashboard action coverage.
   - [x] Expand settings panel biometric, export guard, and import interaction coverage.
   - [x] Expand vault form drag-and-drop attachment coverage.
+  - [x] Expand security audit missing-password classification coverage.
 
 ## Phase 4: Desktop Productization
 

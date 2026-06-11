@@ -90,6 +90,28 @@ describe('SecurityAudit', () => {
     expect(screen.getByText(/TEKRAR EDEN/)).toBeTruthy();
   });
 
+  it('treats items without a password as weak but not reused or secure', () => {
+    const missingPasswordItem = makeItem({
+      id: 'missing-password',
+      title: 'SSH Profile',
+      username: 'ops@example.com',
+      password: undefined,
+    });
+    const onSelectItem = vi.fn();
+
+    render(<SecurityAudit items={[missingPasswordItem]} onSelectItem={onSelectItem} />);
+
+    expect(screen.getByText(/Kritik Risk/)).toBeTruthy();
+    expect(screen.getByText(/ZAYIF VE RISKLI HESAPLAR \(1\)/)).toBeTruthy();
+    expect(screen.getByText(/ORANGE TEKRAR EDEN/)).toBeTruthy();
+    expect(screen.getByText('SSH Profile')).toBeTruthy();
+    expect(screen.getAllByText('0')).toHaveLength(2);
+
+    fireEvent.click(screen.getByText('SSH Profile'));
+
+    expect(onSelectItem).toHaveBeenCalledWith(missingPasswordItem);
+  });
+
   it('renders excellent feedback and secure count for strong unique passwords', () => {
     render(
       <SecurityAudit
