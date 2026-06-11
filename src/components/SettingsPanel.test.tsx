@@ -2,12 +2,13 @@
  * @vitest-environment jsdom
  */
 
-import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from '../lib/encryption';
 import { openDesktopImportFile, saveDesktopExportFile } from '../lib/desktopFiles';
-import { saveVaultItem } from '../lib/storage';
+import { disableBiometric, isBiometricEnabled, isBiometricSupported, registerBiometric } from '../lib/biometric';
+import { getVaultItems, resetSystem, reseedDemoData, saveVaultItem, setupMasterPassword, verifyMasterPassword } from '../lib/storage';
 import { closeVaultSession, openVaultSession } from '../lib/vaultSession';
 import { VaultItem } from '../types';
 import SettingsPanel from './SettingsPanel';
@@ -83,11 +84,23 @@ function fileInput(container: HTMLElement): HTMLInputElement {
   return container.querySelector('input[type="file"]') as HTMLInputElement;
 }
 
+function passwordChangeForm(container: HTMLElement): HTMLFormElement {
+  return container.querySelector('#pass-change-form') as HTMLFormElement;
+}
+
+function passwordChangeInputs(container: HTMLElement): HTMLInputElement[] {
+  return Array.from(container.querySelectorAll('#pass-change-form input[type="password"]')) as HTMLInputElement[];
+}
+
 beforeEach(() => {
   vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+  vi.spyOn(window, 'confirm').mockReturnValue(false);
   delete window.__TAURI_INTERNALS__;
+  vi.mocked(getVaultItems).mockResolvedValue(vaultItems);
   vi.mocked(openDesktopImportFile).mockResolvedValue(null);
+  vi.mocked(reseedDemoData).mockResolvedValue(vaultItems);
   vi.mocked(saveDesktopExportFile).mockResolvedValue(false);
+  vi.mocked(verifyMasterPassword).mockResolvedValue(true);
 });
 
 afterEach(() => {
@@ -262,5 +275,166 @@ describe('SettingsPanel import/export', () => {
       );
     });
     expect(props.onDatabaseChanged).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('SettingsPanel account and safety controls', () => {
+  it('changes the master password after validating old password, length, and confirmation', async () => {
+    vi.mocked(verifyMasterPassword)
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(true);
+    const { container } = renderSettings();
+    const [oldPassword, newPassword, confirmPassword] = passwordChangeInputs(container);
+
+    fireEvent.change(oldPassword, { target: { value: 'wrong-old' } });
+    fireEvent.change(newPassword, { target: { value: 'new-secret' } });
+    fireEvent.change(confirmPassword, { target: { value: 'new-secret' } });
+    fireEvent.submit(passwordChangeForm(container));
+
+    await waitFor(() => {
+      expect(container.textContent).toContain('hatal');
+    });
+    expect(setupMasterPassword).not.toHaveBeenCalled();
+
+    fireEvent.change(oldPassword, { target: { value: 'correct-old' } });
+    fireEvent.change(newPassword, { target: { value: 'short' } });
+    fireEvent.change(confirmPassword, { target: { value: 'short' } });
+    fireEvent.submit(passwordChangeForm(container));
+
+    await waitFor(() => {
+      expect(container.textContent).toContain('en az 6');
+    });
+    expect(setupMasterPassword).not.toHaveBeenCalled();
+
+    fireEvent.change(newPassword, { target: { value: 'new-secret' } });
+    fireEvent.change(confirmPassword, { target: { value: 'different-secret' } });
+    fireEvent.submit(passwordChangeForm(container));
+
+    await waitFor(() => {
+      expect(container.textContent).toContain('uyu');
+    });
+    expect(setupMasterPassword).not.toHaveBeenCalled();
+
+    fireEvent.change(confirmPassword, { target: { value: 'new-secret' } });
+    fireEvent.submit(passwordChangeForm(container));
+
+    await waitFor(() => {
+      expect(setupMasterPassword).toHaveBeenCalledWith('new-secret');
+    });
+    expect(oldPassword.value).toBe('');
+    expect(newPassword.value).toBe('');
+    expect(confirmPassword.value).toBe('');
+  });
+
+  it('changes the auto-lock duration from the option grid', () => {
+    const { props } = renderSettings();
+
+    fireEvent.click(screen.getByText('5 Dakika'));
+
+    expect(props.onAutoLockDurationChange).toHaveBeenCalledWith(300);
+  });
+
+  it('reseeds demo data and sends a success notification', async () => {
+    const { container, props } = renderSettings();
+
+    fireEvent.click(container.querySelector('#demo-reseed-btn') as HTMLButtonElement);
+
+    await waitFor(() => {
+      expect(reseedDemoData).toHaveBeenCalledTimes(1);
+      expect(props.onDatabaseChanged).toHaveBeenCalledTimes(1);
+      expect(props.onNotify).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'success',
+        }),
+      );
+    });
+  });
+
+  it('keeps reset safe when the destructive confirmation is cancelled', () => {
+    const { container } = renderSettings();
+
+    fireEvent.click(container.querySelector('#danger-zone-section button') as HTMLButtonElement);
+
+    expect(window.confirm).toHaveBeenCalledTimes(1);
+    expect(resetSystem).not.toHaveBeenCalled();
+  });
+});
+
+describe('SettingsPanel biometric controls', () => {
+  it('shows an unsupported-device error when enabling biometrics is unavailable', async () => {
+    vi.mocked(isBiometricSupported).mockReturnValue(false);
+    const { container } = renderSettings();
+
+    fireEvent.click(screen.getByText(/Biyometriyi/));
+
+    await waitFor(() => {
+      expect(container.textContent).toContain('desteklenmiyor');
+    });
+    expect(registerBiometric).not.toHaveBeenCalled();
+  });
+
+  it('registers biometrics with the active master password', async () => {
+    openVaultSession('master-pass');
+    vi.mocked(isBiometricSupported).mockReturnValue(true);
+    vi.mocked(registerBiometric).mockResolvedValueOnce(undefined);
+    const { container } = renderSettings();
+
+    fireEvent.click(screen.getByText(/Biyometriyi/));
+
+    await waitFor(() => {
+      expect(registerBiometric).toHaveBeenCalledWith('master-pass');
+      expect(container.textContent).toContain('AKT');
+    });
+  });
+
+  it('disables biometrics when currently enabled', async () => {
+    vi.mocked(isBiometricEnabled).mockReturnValueOnce(true);
+    const { container } = renderSettings();
+
+    fireEvent.click(screen.getByText(/Biyometriyi/));
+
+    await waitFor(() => {
+      expect(disableBiometric).toHaveBeenCalledTimes(1);
+      expect(container.textContent).toContain('devre');
+    });
+  });
+});
+
+describe('SettingsPanel plain export and import errors', () => {
+  it('exports a plain JSON backup through the browser fallback', async () => {
+    const { container } = renderSettings();
+    const buttons = Array.from(container.querySelectorAll('#encrypted-export-card button')) as HTMLButtonElement[];
+
+    fireEvent.click(buttons[1]);
+
+    await waitFor(() => {
+      expect(saveDesktopExportFile).toHaveBeenCalledWith(expect.stringMatching(/\.json$/), JSON.stringify(vaultItems, null, 2));
+      expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('shows an export error when the save dialog fails', async () => {
+    vi.mocked(saveDesktopExportFile).mockRejectedValueOnce(new Error('disk full'));
+    const { container } = renderSettings();
+    const buttons = Array.from(container.querySelectorAll('#encrypted-export-card button')) as HTMLButtonElement[];
+
+    fireEvent.click(buttons[1]);
+
+    await waitFor(() => {
+      expect(container.textContent).toContain('disk full');
+    });
+  });
+
+  it('shows an import error for unsupported file contents', async () => {
+    const { container } = renderSettings();
+    const file = new File(['not,a,supported,backup'], 'broken.csv', { type: 'text/csv' });
+
+    fireEvent.change(fileInput(container), { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(container.textContent).toContain('başlık satırı eksik');
+    });
   });
 });
