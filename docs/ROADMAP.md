@@ -92,6 +92,7 @@
   - [x] Translate security audit score feedback, metric cards, action groups, and empty states.
   - [x] Translate password generator controls, character settings, Diceware settings, copy states, and guidance copy.
   - [x] Translate vault form shell, category tabs, common fields, validation, and default actions.
+  - [x] Translate vault form login credentials, password controls, and TOTP fields.
 - [x] Add component tests for lock screen, vault form, settings import/export, and trash.
   - [x] Lock screen setup and unlock behavior covered by component tests.
   - [x] Settings encrypted export and JSON import behavior covered by component tests.

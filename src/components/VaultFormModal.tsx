@@ -519,14 +519,14 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
           {category === 'login' && (
             <div className="space-y-4 animate-fade-in text-left">
               <div className="border-l-2 border-brand-primary pl-3.5 py-0.5">
-                <h4 className="text-xs font-bold text-on-surface">Kullanıcı Oturum Bilgileri</h4>
-                <p className="text-[10px] text-on-surface-variant">Web siteleri ve bulut hizmetlerde kullanılan kimlik doğrulayıcı verileri.</p>
+                <h4 className="text-xs font-bold text-on-surface">{t('vaultForm.login.title')}</h4>
+                <p className="text-[10px] text-on-surface-variant">{t('vaultForm.login.description')}</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                    KULLANICI ADI VEYA E-POSTA
+                    {t('vaultForm.login.username')}
                   </label>
                   <div className="relative">
                     <User className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
@@ -537,21 +537,21 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface"
-                      placeholder="örn. blt1.koc@gmail.com"
+                      placeholder={t('vaultForm.login.usernamePlaceholder')}
                     />
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5 flex justify-between items-center">
-                    <span>GÜVENLİ ŞİFRE</span>
+                    <span>{t('vaultForm.login.password')}</span>
                     <button
                       type="button"
                       onClick={handleAutoGenerate}
                       className="text-[9px] text-brand-primary hover:underline flex items-center gap-0.5"
                     >
                       <Wand2 className="w-3 h-3" />
-                      <span>Güçlü Üret</span>
+                      <span>{t('vaultForm.login.generateStrong')}</span>
                     </button>
                   </label>
                   <div className="relative">
@@ -562,14 +562,14 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-20 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
-                      placeholder="Şifrenizi belirleyin"
+                      placeholder={t('vaultForm.login.passwordPlaceholder')}
                     />
                     <div className="absolute right-3 top-2 flex items-center gap-1.5">
                       <button
                         type="button"
                         onClick={() => setIsPasswordVisible(!isPasswordVisible)}
                         className="text-on-surface-variant hover:text-brand-primary transition-colors p-1.5"
-                        title={isPasswordVisible ? 'Gizle' : 'Göster'}
+                        title={isPasswordVisible ? t('vaultForm.login.hide') : t('vaultForm.login.show')}
                       >
                         {isPasswordVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
@@ -577,7 +577,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                         type="button"
                         onClick={handleAutoGenerate}
                         className="text-on-surface-variant hover:text-brand-primary transition-colors p-1.5"
-                        title="Otomatik Şifre Oluştur"
+                        title={t('vaultForm.login.generatePasswordTitle')}
                       >
                         <Wand2 className="w-4 h-4" />
                       </button>
@@ -588,7 +588,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
 
               <div>
                 <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                  İKİ FAKTÖRLÜ (2FA / TOTP) AUTH ANAHTARI (STEPS RAPID CODES - OPSİYONEL)
+                  {t('vaultForm.login.totp')}
                 </label>
                 <div className="relative">
                   <KeyRound className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
@@ -597,7 +597,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                     value={totpSecret}
                     onChange={(e) => setTotpSecret(e.target.value)}
                     className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface uppercase font-mono"
-                    placeholder="Örn: JBSWY3DPEHPK3PXP"
+                    placeholder={t('vaultForm.login.totpPlaceholder')}
                   />
                 </div>
               </div>

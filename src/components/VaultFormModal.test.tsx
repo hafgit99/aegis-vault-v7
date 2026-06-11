@@ -109,6 +109,17 @@ describe('VaultFormModal', () => {
     expect(screen.getByPlaceholderText('e.g. GitHub, Chase Bank, National ID')).toBeTruthy();
     expect(screen.getByText('SECURE URL')).toBeTruthy();
     expect(screen.getByPlaceholderText('e.g. github.com')).toBeTruthy();
+    expect(screen.getByText('User Login Credentials')).toBeTruthy();
+    expect(screen.getByText('Authenticator data used for websites and cloud services.')).toBeTruthy();
+    expect(screen.getByText('USERNAME OR EMAIL')).toBeTruthy();
+    expect(screen.getByPlaceholderText('e.g. blt1.koc@gmail.com')).toBeTruthy();
+    expect(screen.getByText('SECURE PASSWORD')).toBeTruthy();
+    expect(screen.getByText('Generate Strong')).toBeTruthy();
+    expect(screen.getByPlaceholderText('Enter your password')).toBeTruthy();
+    expect(screen.getByTitle('Show')).toBeTruthy();
+    expect(screen.getByTitle('Generate Password Automatically')).toBeTruthy();
+    expect(screen.getByText('TWO-FACTOR (2FA / TOTP) AUTH KEY (STEP-BASED RAPID CODES - OPTIONAL)')).toBeTruthy();
+    expect(screen.getByPlaceholderText('E.g. JBSWY3DPEHPK3PXP')).toBeTruthy();
     expect(screen.getByText('Cancel')).toBeTruthy();
     expect(screen.getByText('Save Securely')).toBeTruthy();
     expect(screen.getByTitle('Close')).toBeTruthy();
