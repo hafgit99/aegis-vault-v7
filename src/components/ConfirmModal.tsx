@@ -65,6 +65,7 @@ export default function ConfirmModal({
         <div className="absolute top-0 right-0 w-32 h-32 bg-brand-primary/5 rounded-full blur-3xl pointer-events-none" />
 
         <button
+          data-testid="confirm-modal-close-button"
           onClick={onCancel}
           className="absolute right-4 top-4 text-on-surface-variant hover:text-on-surface p-1 hover:bg-surface-high rounded-lg transition-all cursor-pointer"
           title="Kapat"
@@ -87,6 +88,7 @@ export default function ConfirmModal({
           <div className="flex items-center gap-3 w-full">
             {!isAlert && (
               <button
+                data-testid="confirm-modal-cancel-button"
                 onClick={onCancel}
                 className="flex-1 py-2.5 rounded-xl border border-outline-variant/15 bg-surface-high hover:bg-[#202220] font-bold text-xs text-on-surface hover:text-brand-primary active:scale-95 transition-all cursor-pointer"
               >
@@ -94,6 +96,7 @@ export default function ConfirmModal({
               </button>
             )}
             <button
+              data-testid="confirm-modal-confirm-button"
               onClick={() => {
                 onConfirm();
                 onCancel(); // Close current modal automatically after confirming

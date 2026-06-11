@@ -51,6 +51,8 @@ Current smoke scope:
 - Lock the vault.
 - Unlock with the same master password.
 - Verify the saved item is still available after unlock.
+- Move a saved item to trash.
+- Restore the trash item back to the vault.
 
 Recently improved:
 
@@ -93,6 +95,6 @@ Recently improved:
 
 ## Next Gates
 
-- Expand smoke E2E coverage for export/import, trash/restore, favorite filters, and desktop persistence.
+- Expand smoke E2E coverage for export/import, favorite filters, and desktop persistence.
 - Add mutation tests only for critical `src/lib` modules first.
 - Raise global coverage thresholds after the low-coverage critical modules improve.

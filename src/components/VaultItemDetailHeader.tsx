@@ -89,6 +89,7 @@ export default function VaultItemDetailHeader({
           )}
         </button>
         <button
+          data-testid="delete-vault-item-button"
           onClick={() => onDelete(item.id)}
           className="p-2.5 rounded-lg bg-surface-high text-brand-error hover:bg-brand-error/15 hover:text-brand-error transition-all cursor-pointer border border-outline-variant/10"
           title="Sil"

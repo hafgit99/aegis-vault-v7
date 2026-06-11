@@ -43,7 +43,11 @@ export default function SidebarNavigation({
       </div>
 
       <nav className="flex-1 space-y-1">
-        <button onClick={() => onTabChange('vault')} className={getNavButtonClass(activeTab, 'vault')}>
+        <button
+          data-testid="nav-vault-button"
+          onClick={() => onTabChange('vault')}
+          className={getNavButtonClass(activeTab, 'vault')}
+        >
           <Lock className="w-4 h-4" />
           <span>Kasa (Vault)</span>
         </button>
@@ -64,6 +68,7 @@ export default function SidebarNavigation({
         </button>
 
         <button
+          data-testid="nav-trash-button"
           onClick={() => onTabChange('trash')}
           className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg font-bold text-sm transition-all focus:outline-none cursor-pointer ${
             activeTab === 'trash'

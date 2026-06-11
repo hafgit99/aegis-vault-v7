@@ -12,7 +12,10 @@ export default function TrashItemCard({ item, onRestore, onDeletePermanently }: 
   const remainingDays = getTrashRemainingDays(item.deletedAt);
 
   return (
-    <div className="bg-[#161816] hover:bg-[#1a1c1a] border border-outline-variant/15 hover:border-outline-variant/25 rounded-2xl p-5 flex flex-col justify-between gap-4 transition-all hover:scale-[1.01]">
+    <div
+      data-testid="trash-list-item"
+      className="bg-[#161816] hover:bg-[#1a1c1a] border border-outline-variant/15 hover:border-outline-variant/25 rounded-2xl p-5 flex flex-col justify-between gap-4 transition-all hover:scale-[1.01]"
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-surface-high border border-outline-variant/20 flex items-center justify-center shrink-0">
@@ -35,6 +38,7 @@ export default function TrashItemCard({ item, onRestore, onDeletePermanently }: 
         </span>
         <div className="flex items-center gap-2">
           <button
+            data-testid="restore-trash-item-button"
             onClick={() => onRestore(item)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary rounded-lg font-bold transition-all cursor-pointer"
             title="Kasaya Geri Yükle"
@@ -43,6 +47,7 @@ export default function TrashItemCard({ item, onRestore, onDeletePermanently }: 
             <span>Geri Yükle</span>
           </button>
           <button
+            data-testid="permanent-delete-trash-item-button"
             onClick={() => onDeletePermanently(item)}
             className="p-1.5 bg-surface-high hover:bg-red-500/15 text-on-surface-variant hover:text-red-500 border border-outline-variant/15 rounded-lg transition-all cursor-pointer"
             title="Kalıcı Olarak Sil"
