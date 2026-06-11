@@ -1,11 +1,14 @@
 import { AppNotification } from '../types';
 import { getAttachmentBlob } from '../lib/attachments';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface UseAttachmentDownloadOptions {
   onNotify: (notification: AppNotification) => void;
 }
 
 export function useAttachmentDownload({ onNotify }: UseAttachmentDownloadOptions) {
+  const { t } = useLanguage();
+
   const downloadAttachment = async (id: string, name: string) => {
     try {
       const res = await getAttachmentBlob(id);
@@ -20,16 +23,16 @@ export function useAttachmentDownload({ onNotify }: UseAttachmentDownloadOptions
         URL.revokeObjectURL(url);
       } else {
         onNotify({
-          title: 'Dosya Bulunamadı',
-          message: 'Seçili dosya yerel kasanızda bulunamadı veya silinmiş.',
+          title: t('attachmentDownload.notFoundTitle'),
+          message: t('attachmentDownload.notFoundMessage'),
           type: 'warning',
         });
       }
     } catch (err) {
       console.error(err);
       onNotify({
-        title: 'Dosya Açılamadı',
-        message: 'Dosya şifresi çözülürken bir hata ile karşılaşıldı.',
+        title: t('attachmentDownload.openFailedTitle'),
+        message: t('attachmentDownload.openFailedMessage'),
         type: 'danger',
       });
     }
