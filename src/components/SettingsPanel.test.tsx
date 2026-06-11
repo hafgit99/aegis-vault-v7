@@ -177,6 +177,9 @@ describe('SettingsPanel import/export', () => {
     expect(screen.getByText(/Alongside your own encrypted/)).toBeTruthy();
     expect(screen.getByText('Click to Select or Drag a File')).toBeTruthy();
     expect(screen.getByText('SUPPORTED: .JSON / .CSV / .AEGIS')).toBeTruthy();
+    expect(screen.getByText('DANGER ZONE')).toBeTruthy();
+    expect(screen.getByText(/permanently deletes every saved password/)).toBeTruthy();
+    expect(screen.getByText('Permanently Reset Entire Vault')).toBeTruthy();
 
     fireEvent.click(screen.getByText('Use my vault master password as the backup password'));
 

@@ -415,15 +415,15 @@ export default function SettingsPanel({
       setItems(reseeded);
       onDatabaseChanged();
       onNotify?.({
-        title: 'Demo Veriler Yüklendi',
-        message: 'Varsayılan demo veriler başarıyla yeniden yüklendi!',
+        title: t('settings.demo.loadedTitle'),
+        message: t('settings.demo.loadedMessage'),
         type: 'success',
       });
     })();
   };
 
   const triggerResetAll = () => {
-    const confirmation = window.confirm('Kritik Uyarı!\nTüm parolalarınız ve şifreleme anahtarınız silinecek. Kasa sıfırlanacaktır.\nDevam etmek istiyor musunuz?');
+    const confirmation = window.confirm(t('settings.danger.confirm'));
     if (confirmation) {
       resetSystem();
       window.location.reload();
@@ -882,17 +882,17 @@ export default function SettingsPanel({
       <div className="p-6 bg-brand-error/5 border border-brand-error/20 rounded-2xl space-y-4" id="danger-zone-section">
         <h3 className="font-bold text-sm text-brand-error uppercase tracking-wider flex items-center gap-2 border-b border-brand-error/10 pb-2">
           <Trash2 className="w-4 h-4" />
-          <span>TEHLİKELİ BÖLGE (DANGER ZONE)</span>
+          <span>{t('settings.danger.title')}</span>
         </h3>
         <p className="text-xs text-on-surface-variant leading-relaxed">
-          Aşağıdaki sıfırlama işlemi kasanızdaki tüm kayıtlı şifreleri, kimlik belgelerini, özel notları, güvenli ekleri ve Master Password şifrelemesini geri alınamayacak şekilde kalıcı olarak silecektir. Lütfen bu işlemi geri yedeğiniz olmadan yapmayınız.
+          {t('settings.danger.description')}
         </p>
         <button
           onClick={triggerResetAll}
           className="flex items-center gap-2 px-5 py-3 rounded-lg border-2 border-brand-error hover:bg-brand-error hover:text-brand-on-error font-bold text-xs text-brand-error transition-all cursor-pointer"
         >
           <Trash2 className="w-4" />
-          <span>Tüm Kasayı Kalıcı Olarak Sıfırla</span>
+          <span>{t('settings.danger.resetAll')}</span>
         </button>
       </div>
     </div>
