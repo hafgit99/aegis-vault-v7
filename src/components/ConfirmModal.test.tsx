@@ -5,10 +5,13 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 import ConfirmModal from './ConfirmModal';
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
   vi.clearAllMocks();
 });
 
@@ -99,5 +102,47 @@ describe('ConfirmModal', () => {
 
     expect(onConfirm).toHaveBeenCalledTimes(1);
     expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders default actions in the selected language', () => {
+    window.localStorage.setItem(languageStorageKey, 'en');
+
+    render(
+      <LanguageProvider>
+        <ConfirmModal
+          isOpen={true}
+          title="Default actions"
+          message="Use translated defaults."
+          type="info"
+          onConfirm={vi.fn()}
+          onCancel={vi.fn()}
+        />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByText('Confirm')).toBeTruthy();
+    expect(screen.getByText('Cancel')).toBeTruthy();
+    expect(screen.getByTitle('Close')).toBeTruthy();
+  });
+
+  it('renders alert action in the selected language', () => {
+    window.localStorage.setItem(languageStorageKey, 'en');
+
+    render(
+      <LanguageProvider>
+        <ConfirmModal
+          isOpen={true}
+          title="Saved"
+          message="Your changes were saved."
+          type="success"
+          isAlert={true}
+          onConfirm={vi.fn()}
+          onCancel={vi.fn()}
+        />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByText('OK')).toBeTruthy();
+    expect(screen.queryByText('Cancel')).toBeNull();
   });
 });

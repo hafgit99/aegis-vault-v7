@@ -1,6 +1,8 @@
 import React from 'react';
 import { X, AlertTriangle, Trash2, HelpCircle, CheckCircle, Info } from 'lucide-react';
 
+import { useLanguage } from '../i18n/LanguageContext';
+
 interface ConfirmModalProps {
   isOpen: boolean;
   title: string;
@@ -18,12 +20,14 @@ export default function ConfirmModal({
   title,
   message,
   type,
-  confirmText = 'Onayla',
-  cancelText = 'Vazgeç',
+  confirmText,
+  cancelText,
   isAlert = false,
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
+  const { t } = useLanguage();
+
   if (!isOpen) return null;
 
   // Icon selection
@@ -68,7 +72,7 @@ export default function ConfirmModal({
           data-testid="confirm-modal-close-button"
           onClick={onCancel}
           className="absolute right-4 top-4 text-on-surface-variant hover:text-on-surface p-1 hover:bg-surface-high rounded-lg transition-all cursor-pointer"
-          title="Kapat"
+          title={t('confirm.close')}
         >
           <X className="w-5 h-5" />
         </button>
@@ -92,7 +96,7 @@ export default function ConfirmModal({
                 onClick={onCancel}
                 className="flex-1 py-2.5 rounded-xl border border-outline-variant/15 bg-surface-high hover:bg-[#202220] font-bold text-xs text-on-surface hover:text-brand-primary active:scale-95 transition-all cursor-pointer"
               >
-                {cancelText}
+                {cancelText ?? t('confirm.defaultCancel')}
               </button>
             )}
             <button
@@ -103,7 +107,7 @@ export default function ConfirmModal({
               }}
               className={`flex-1 py-2.5 rounded-xl font-bold text-xs active:scale-95 transition-all cursor-pointer shadow-md ${buttonColors[type]}`}
             >
-              {isAlert ? 'Tamam' : confirmText}
+              {isAlert ? t('confirm.defaultAlert') : confirmText ?? t('confirm.defaultConfirm')}
             </button>
           </div>
         </div>

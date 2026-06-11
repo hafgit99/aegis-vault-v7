@@ -86,6 +86,7 @@
   - [x] Translate secure note detail title, copy states, and empty-note fallback.
   - [x] Translate vault attachment card title, decrypt-on-download label, and download tooltip.
   - [x] Translate trash workspace, empty state, protection notice, item actions, and deletion metadata.
+  - [x] Translate top bar tooltips and confirmation modal default controls.
 - [x] Add component tests for lock screen, vault form, settings import/export, and trash.
   - [x] Lock screen setup and unlock behavior covered by component tests.
   - [x] Settings encrypted export and JSON import behavior covered by component tests.

@@ -38,7 +38,7 @@ export default function TopBar({
           data-testid="topbar-menu-button"
           onClick={onOpenSidebar}
           className="lg:hidden p-2 text-on-surface-variant hover:text-brand-primary hover:bg-surface-high rounded-xl cursor-pointer shrink-0"
-          title="Menüyü Aç"
+          title={t('top.openMenu')}
         >
           <Menu className="w-5 h-5" />
         </button>
@@ -65,7 +65,7 @@ export default function TopBar({
             data-testid="topbar-refresh-button"
             onClick={onRefresh}
             className="hover:text-brand-primary transition-colors focus:outline-none p-1.5 rounded-md hover:bg-surface-high cursor-pointer"
-            title="Yenile"
+            title={t('top.refresh')}
           >
             <RefreshCw className="w-4.5 h-4.5" />
           </button>
@@ -73,7 +73,7 @@ export default function TopBar({
             data-testid="topbar-status-button"
             onClick={onOpenVaultStatus}
             className="hover:text-brand-primary transition-colors focus:outline-none p-1.5 rounded-md hover:bg-surface-high relative cursor-pointer"
-            title="Bildirimler"
+            title={t('top.notifications')}
           >
             <Bell className="w-4.5 h-4.5" />
             <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-brand-error rounded-full animate-bounce"></span>
@@ -83,7 +83,7 @@ export default function TopBar({
             data-testid="topbar-profile-button"
             onClick={onOpenProfile}
             className="w-8 h-8 rounded-full overflow-hidden border border-outline-variant/20 cursor-pointer hover:border-brand-primary hover:scale-[1.05] active:scale-95 transition-all text-left focus:outline-none focus:ring-1 focus:ring-brand-primary/40 flex items-center justify-center shrink-0"
-            title={`${profileName} - Profili Düzenle`}
+            title={`${profileName} - ${t('top.editProfile')}`}
           >
             {isGradient(profileAvatar) ? (
               <div

@@ -5,11 +5,14 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 import { APP_PROFILE_ALT } from '../lib/branding';
 import TopBar from './TopBar';
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
 });
 
 describe('TopBar', () => {
@@ -64,5 +67,31 @@ describe('TopBar', () => {
 
     expect(screen.queryByTestId('vault-search-input')).toBeNull();
     expect(screen.getByAltText(APP_PROFILE_ALT)).toBeTruthy();
+  });
+
+  it('renders top bar tooltips in the selected language', () => {
+    window.localStorage.setItem(languageStorageKey, 'en');
+
+    render(
+      <LanguageProvider>
+        <TopBar
+          activeTab="vault"
+          searchQuery=""
+          profileName="Ada"
+          profileAvatar="linear-gradient(135deg, #10b981 0%, #059669 100%)"
+          onSearchChange={vi.fn()}
+          onOpenSidebar={vi.fn()}
+          onRefresh={vi.fn()}
+          onOpenVaultStatus={vi.fn()}
+          onOpenProfile={vi.fn()}
+        />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByTitle('Open Menu')).toBeTruthy();
+    expect(screen.getByTitle('Refresh')).toBeTruthy();
+    expect(screen.getByTitle('Notifications')).toBeTruthy();
+    expect(screen.getByTitle('Ada - Edit Profile')).toBeTruthy();
+    expect(screen.getByPlaceholderText('Search inside vault...')).toBeTruthy();
   });
 });
