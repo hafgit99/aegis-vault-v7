@@ -138,6 +138,7 @@
   - [x] Expand importer sparse JSON, Bitwarden type, CSV category, and fallback-default coverage.
   - [x] Expand SQLite desktop payload, legacy migration, SQL projection, update/default, and missing-key guard coverage.
   - [x] Expand legacy crypto hash, KDF, authenticated decrypt, tamper, stream fallback, and malformed-envelope coverage.
+  - [x] Expand biometric PBKDF2, WebAuthn option, request option, metadata, and legacy unwrap failure coverage.
 
 ## Phase 4: Desktop Productization
 

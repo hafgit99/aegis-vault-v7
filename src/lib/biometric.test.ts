@@ -9,10 +9,20 @@ import {
   disableBiometric,
   isBiometricEnabled,
   isBiometricSupported,
+  pbkdf2Sha256,
   registerBiometric,
 } from './biometric';
 
 const rawId = new Uint8Array([1, 2, 3, 4]).buffer;
+const encoder = new TextEncoder();
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes));
+}
 
 function mockWebAuthn({
   createCredential = { rawId },
@@ -45,6 +55,17 @@ afterEach(() => {
 });
 
 describe('biometric master password wrapper', () => {
+  it('derives deterministic PBKDF2-SHA256 keys for legacy biometric bundles', () => {
+    const singleBlock = pbkdf2Sha256(encoder.encode('password'), encoder.encode('salt'), 1, 32);
+    const multiBlock = pbkdf2Sha256(encoder.encode('password'), encoder.encode('salt'), 2, 48);
+
+    expect(bytesToHex(singleBlock)).toBe('120fb6cffcf8b32c43e7225256c4f837a86548c92ccc35480805987cb70be17b');
+    expect(bytesToHex(multiBlock).slice(0, 64)).toBe(
+      'ae4d0c95af6b46d32d0adff928f06dd02a303f8ef3c251dfd6e2d85a95474c43',
+    );
+    expect(multiBlock).toHaveLength(48);
+  });
+
   it('reports support and disabled state before setup', () => {
     expect(isBiometricSupported()).toBe(true);
     expect(isBiometricEnabled()).toBe(false);
@@ -64,6 +85,8 @@ describe('biometric master password wrapper', () => {
     await registerBiometric('master-pass');
 
     const stored = JSON.parse(localStorage.getItem('aegis_biometric_info') ?? '{}');
+    const create = vi.mocked(navigator.credentials.create);
+    const creationOptions = create.mock.calls[0][0] as CredentialCreationOptions;
 
     expect(isBiometricEnabled()).toBe(true);
     expect(stored).toMatchObject({
@@ -79,6 +102,16 @@ describe('biometric master password wrapper', () => {
       }),
     );
     expect(stored.bundle.ciphertext).not.toContain('master-pass');
+    expect(stored.credentialId).toBe(bytesToBase64(new Uint8Array(rawId)));
+    expect(creationOptions.publicKey).toMatchObject({
+      rp: { name: 'Aegis Vault 7' },
+      authenticatorSelection: {
+        authenticatorAttachment: 'platform',
+        userVerification: 'required',
+      },
+      timeout: 60000,
+    });
+    expect(creationOptions.publicKey?.user.displayName).toBe('Aegis Vault User');
   });
 
   it('can disable a stored biometric bundle', async () => {
@@ -100,6 +133,19 @@ describe('biometric master password wrapper', () => {
     await registerBiometric('master-pass');
 
     await expect(authenticateBiometric()).resolves.toBe('master-pass');
+
+    const get = vi.mocked(navigator.credentials.get);
+    const requestOptions = get.mock.calls[0][0] as CredentialRequestOptions;
+    expect(requestOptions.publicKey).toMatchObject({
+      allowCredentials: [
+        {
+          id: new Uint8Array(rawId),
+          type: 'public-key',
+        },
+      ],
+      userVerification: 'required',
+      timeout: 60000,
+    });
   });
 
   it('rejects authentication when no biometric bundle is stored', async () => {
@@ -116,6 +162,21 @@ describe('biometric master password wrapper', () => {
   it('rejects biometric unwrap when the authenticator raw id changes', async () => {
     await registerBiometric('master-pass');
     mockWebAuthn({ getCredential: { rawId: new Uint8Array([9, 9, 9, 9]).buffer } });
+
+    await expect(authenticateBiometric()).rejects.toThrow();
+  });
+
+  it('rejects legacy biometric bundles that fail compatibility decrypt checks', async () => {
+    localStorage.setItem('aegis_biometric_info', JSON.stringify({
+      version: 1,
+      credentialId: bytesToBase64(new Uint8Array(rawId)),
+      salt: bytesToBase64(new Uint8Array([5, 6, 7, 8])),
+      bundle: {
+        iv: '000000000000000000000000',
+        tag: '00000000000000000000000000000000',
+        ciphertext: bytesToBase64(encoder.encode('legacy-master-pass')),
+      },
+    }));
 
     await expect(authenticateBiometric()).rejects.toThrow();
   });
