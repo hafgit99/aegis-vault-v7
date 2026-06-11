@@ -5,6 +5,8 @@
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 import { useProfileSettings } from './useProfileSettings';
 
 afterEach(() => {
@@ -29,6 +31,16 @@ describe('useProfileSettings', () => {
 
     expect(result.current.profileName).toBe('Ada');
     expect(result.current.profileAvatar).toBe('avatar-current');
+  });
+
+  it('uses the selected language for the default profile name', () => {
+    localStorage.setItem(languageStorageKey, 'en');
+
+    const { result } = renderHook(() => useProfileSettings(), {
+      wrapper: ({ children }) => <LanguageProvider>{children}</LanguageProvider>,
+    });
+
+    expect(result.current.profileName).toBe('Aegis User');
   });
 
   it('opens and closes the profile modal', () => {

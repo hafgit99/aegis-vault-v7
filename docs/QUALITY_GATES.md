@@ -108,6 +108,7 @@ Recently improved:
 - Settings backup/import controls: covered selected-language rendering for export buttons, import drop zone, and locked-backup prompts.
 - Settings danger controls: covered selected-language rendering for demo reseed and destructive reset warning copy.
 - Settings biometric errors: covered selected-language rendering for generic biometric failure fallback text.
+- Profile settings hook: covered selected-language rendering for the default profile identity fallback.
 - Notification hooks: covered selected-language rendering for the vault status alert and profile-save notification keys.
 - Trash action hooks: covered selected-language rendering for move, empty, restore, and permanent-delete confirmation flows.
 - Attachment download hook: covered selected-language rendering for missing-file and decrypt-failure notifications.
