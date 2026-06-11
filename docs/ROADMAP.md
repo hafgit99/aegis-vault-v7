@@ -144,6 +144,7 @@
   - [x] Add Playwright smoke E2E coverage for setup, create item, lock, unlock, and persistence.
   - [x] Add Playwright smoke E2E coverage for trash move and restore.
   - [x] Add Playwright smoke E2E coverage for encrypted export and plain JSON import.
+  - [x] Add Playwright smoke E2E coverage for encrypted `.aegis` import.
 
 ## Phase 4: Desktop Productization
 

@@ -110,3 +110,26 @@ test('imports a plain JSON backup file', async ({ page }) => {
   await expect(importedItem).toBeVisible();
   await expect(importedItem).toContainText('imported-user');
 });
+
+test('imports an encrypted aegis backup file', async ({ page }) => {
+  await setupVault(page);
+  await createLoginItem(page, 'E2E Encrypted Import');
+  await openSettings(page);
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByTestId('encrypted-export-button').click();
+  const download = await downloadPromise;
+  const downloadPath = await download.path();
+
+  expect(downloadPath).toBeTruthy();
+
+  await page.getByTestId('import-file-input').setInputFiles(downloadPath!);
+  await page.getByTestId('decrypt-import-password-input').fill(masterPassword);
+  await page.getByTestId('decrypt-import-submit-button').click();
+
+  await expect(page.getByTestId('import-success-message')).toBeVisible();
+  await expect(page.getByTestId('import-success-message')).toContainText('başarıyla çözüldü');
+
+  await page.getByTestId('nav-vault-button').click();
+  await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Encrypted Import' })).toBeVisible();
+});
