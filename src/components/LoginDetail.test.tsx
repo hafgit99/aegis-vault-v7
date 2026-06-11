@@ -74,6 +74,28 @@ describe('LoginDetail', () => {
     expect(screen.getByText('CorrectHorseBatteryStaple')).toBeTruthy();
   });
 
+  it('shows an empty-password fallback and copies an empty password safely', () => {
+    const onCopyText = vi.fn();
+
+    render(
+      <LoginDetail
+        item={{ ...loginItem, password: undefined }}
+        copiedField={null}
+        isPasswordRevealed={true}
+        totpCountdown={30}
+        onTogglePasswordReveal={vi.fn()}
+        onCopyText={onCopyText}
+      />,
+    );
+
+    expect(screen.getByText('(Boş Şifre)')).toBeTruthy();
+
+    const copyButtons = screen.getAllByTitle('Kopyala');
+    fireEvent.click(copyButtons[1]);
+
+    expect(onCopyText).toHaveBeenCalledWith('', 'password');
+  });
+
   it('shows a fallback when TOTP is not configured', () => {
     render(
       <LoginDetail
@@ -114,5 +136,23 @@ describe('LoginDetail', () => {
     expect(onTogglePasswordReveal).toHaveBeenCalledTimes(1);
     expect(onCopyText).toHaveBeenCalledWith('CorrectHorseBatteryStaple', 'password');
     expect(onCopyText).toHaveBeenCalledWith(expect.any(String), 'totp');
+  });
+
+  it('renders copied states for username, password, and TOTP fields', () => {
+    ['username', 'password', 'totp'].forEach((copiedField) => {
+      const { container, unmount } = render(
+        <LoginDetail
+          item={loginItem}
+          copiedField={copiedField}
+          isPasswordRevealed={copiedField === 'password'}
+          totpCountdown={30}
+          onTogglePasswordReveal={vi.fn()}
+          onCopyText={vi.fn()}
+        />,
+      );
+
+      expect(container.querySelector('.text-brand-tertiary')).toBeTruthy();
+      unmount();
+    });
   });
 });
