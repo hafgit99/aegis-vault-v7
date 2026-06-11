@@ -140,7 +140,7 @@ export default function SettingsPanel({
         setBiometricEnabled(false);
         setBiometricSuccess(t('settings.biometric.disabledSuccess'));
       } catch (err: any) {
-        setBiometricError(err?.message || "İşlem sırasında bir hata oluştu.");
+        setBiometricError(err?.message || t('settings.biometric.genericError'));
       } finally {
         setBiometricLoading(false);
       }

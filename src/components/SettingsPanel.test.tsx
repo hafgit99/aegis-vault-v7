@@ -523,6 +523,20 @@ describe('SettingsPanel biometric controls', () => {
       expect(container.textContent).toContain('remove failed');
     });
   });
+
+  it('shows the localized fallback when biometric removal fails without a message', async () => {
+    vi.mocked(isBiometricEnabled).mockReturnValueOnce(true);
+    vi.mocked(disableBiometric).mockImplementationOnce(() => {
+      throw new Error();
+    });
+    const { container } = renderSettingsWithLanguage('en');
+
+    fireEvent.click(screen.getByText('Remove Biometrics'));
+
+    await waitFor(() => {
+      expect(container.textContent).toContain('An error occurred during the operation.');
+    });
+  });
 });
 
 describe('SettingsPanel plain export and import errors', () => {

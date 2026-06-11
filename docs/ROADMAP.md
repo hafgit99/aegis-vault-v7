@@ -102,6 +102,7 @@
   - [x] Translate settings auto-lock and biometric unlock controls, status, and feedback.
   - [x] Translate settings encrypted/plain export and universal import controls, prompts, and feedback.
   - [x] Translate settings demo reseed and destructive reset warning controls.
+  - [x] Translate biometric fallback error handling in Settings.
   - [x] Translate profile-save and vault-status notifications.
   - [x] Translate trash action confirmations, destructive prompts, and success alerts.
   - [x] Translate attachment download failure notifications.
