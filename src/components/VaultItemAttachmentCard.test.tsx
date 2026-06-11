@@ -5,6 +5,8 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 import { VaultItem } from '../types';
 import VaultItemAttachmentCard from './VaultItemAttachmentCard';
 
@@ -21,6 +23,7 @@ const baseItem: VaultItem = {
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
 });
 
 describe('VaultItemAttachmentCard', () => {
@@ -67,5 +70,27 @@ describe('VaultItemAttachmentCard', () => {
 
     expect(screen.getByText('empty.txt')).toBeTruthy();
     expect(screen.getByText('0 B')).toBeTruthy();
+  });
+
+  it('renders attachment labels in the selected language', () => {
+    window.localStorage.setItem(languageStorageKey, 'en');
+
+    render(
+      <LanguageProvider>
+        <VaultItemAttachmentCard
+          item={{
+            ...baseItem,
+            attachmentId: 'attachment-3',
+            attachmentName: 'backup.zip',
+            attachmentSize: 2048,
+          }}
+          onDownload={vi.fn()}
+        />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByText('SECURE ENCRYPTED VAULT ITEM')).toBeTruthy();
+    expect(screen.getByText('DECRYPTS ON DOWNLOAD')).toBeTruthy();
+    expect(screen.getByTitle('Download and Decrypt Safely')).toBeTruthy();
   });
 });

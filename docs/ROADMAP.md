@@ -84,6 +84,7 @@
   - [x] Translate passkey detail fields, fallback values, and copy/reveal controls.
   - [x] Translate identity detail fields, fallback values, gender labels, and copy controls.
   - [x] Translate secure note detail title, copy states, and empty-note fallback.
+  - [x] Translate vault attachment card title, decrypt-on-download label, and download tooltip.
 - [x] Add component tests for lock screen, vault form, settings import/export, and trash.
   - [x] Lock screen setup and unlock behavior covered by component tests.
   - [x] Settings encrypted export and JSON import behavior covered by component tests.
