@@ -135,6 +135,7 @@
   - [x] Expand secure backup envelope malformed JSON, legacy routing, and checksum tamper coverage.
   - [x] Expand biometric WebAuthn support, cancellation, disable, and missing-bundle coverage.
   - [x] Expand random helper fallback, UUID formatting, unbiased-index retry, and empty-token coverage.
+  - [x] Expand importer sparse JSON, Bitwarden type, CSV category, and fallback-default coverage.
 
 ## Phase 4: Desktop Productization
 

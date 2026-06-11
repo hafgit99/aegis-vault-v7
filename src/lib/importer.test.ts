@@ -60,6 +60,23 @@ describe('universal importer', () => {
     });
   });
 
+  it('applies safe defaults for sparse native Aegis JSON items', () => {
+    const result = parseUniversalImport(JSON.stringify([{}]));
+
+    expect(result.type).toBe('success');
+    if (result.type !== 'success') return;
+    expect(result.items[0]).toMatchObject({
+      title: 'Untitled Import',
+      username: '',
+      password: '',
+      url: '',
+      notes: '',
+      totpSecret: '',
+      category: 'login',
+      favorite: false,
+    });
+  });
+
   it('parses Bitwarden JSON exports across item types', () => {
     const result = parseUniversalImport(
       JSON.stringify({
@@ -132,6 +149,46 @@ describe('universal importer', () => {
     });
   });
 
+  it('applies Bitwarden JSON defaults for sparse and unknown item types', () => {
+    const result = parseUniversalImport(
+      JSON.stringify({
+        items: [
+          { type: 1 },
+          { type: 3, card: { expMonth: '1' } },
+          { type: 4, identity: { ssn: '111-22-3333' } },
+          { type: 99, name: '' },
+        ],
+      }),
+    );
+
+    expect(result.type).toBe('success');
+    if (result.type !== 'success') return;
+    expect(result.items[0]).toMatchObject({
+      title: 'Untitled Bitwarden',
+      notes: '',
+      favorite: false,
+      category: 'login',
+    });
+    expect(result.items[1]).toMatchObject({
+      category: 'card',
+      cardholderName: '',
+      cardNumber: '',
+      cardCvv: '',
+      cardPin: '',
+      cardExpiry: '',
+    });
+    expect(result.items[2]).toMatchObject({
+      category: 'identity',
+      idFullName: '',
+      idNumber: '111-22-3333',
+      idGender: '',
+    });
+    expect(result.items[3]).toMatchObject({
+      title: 'Untitled Bitwarden',
+      category: 'login',
+    });
+  });
+
   it('returns an error for unsupported JSON objects', () => {
     const result = parseUniversalImport(JSON.stringify({ vault: 'unknown' }));
 
@@ -188,6 +245,31 @@ describe('universal importer', () => {
     });
   });
 
+  it('parses Bitwarden CSV numeric category and favorite variants', () => {
+    const result = parseUniversalImport(
+      [
+        'favorite,type,name,login_username,login_password',
+        '1,3,Payment,,',
+        '0,4,Identity,,',
+      ].join('\n'),
+    );
+
+    expect(result.type).toBe('success');
+    if (result.type !== 'success') return;
+    expect(result.items[0]).toMatchObject({
+      title: 'Payment',
+      favorite: true,
+      category: 'card',
+      username: '',
+      password: '',
+    });
+    expect(result.items[1]).toMatchObject({
+      title: 'Identity',
+      favorite: false,
+      category: 'identity',
+    });
+  });
+
   it('parses LastPass CSV exports', () => {
     const result = parseUniversalImport(
       'url,username,password,extra,name,grouping,fav\nhttps://mail.example.com,mail@example.com,secret,"note, with comma",Mail,Email,1',
@@ -203,6 +285,22 @@ describe('universal importer', () => {
       url: 'https://mail.example.com',
       notes: 'note, with comma',
       favorite: true,
+      category: 'login',
+    });
+  });
+
+  it('applies LastPass CSV fallbacks for missing optional credential columns', () => {
+    const result = parseUniversalImport('grouping,extra\nPersonal,');
+
+    expect(result.type).toBe('success');
+    if (result.type !== 'success') return;
+    expect(result.items[0]).toMatchObject({
+      title: 'Untitled LastPass',
+      username: '',
+      password: '',
+      url: '',
+      notes: '',
+      favorite: false,
       category: 'login',
     });
   });
@@ -240,6 +338,22 @@ describe('universal importer', () => {
       url: 'https://internal.example.com',
       notes: 'private',
       totpSecret: 'JBSWY3DPEHPK3PXP',
+      category: 'login',
+    });
+  });
+
+  it('uses universal CSV fallback when only username and password columns are present', () => {
+    const result = parseUniversalImport('email,pwd\nowner@example.com,secret');
+
+    expect(result.type).toBe('success');
+    if (result.type !== 'success') return;
+    expect(result.items[0]).toMatchObject({
+      title: expect.stringContaining('simsiz'),
+      username: 'owner@example.com',
+      password: 'secret',
+      url: '',
+      notes: '',
+      totpSecret: '',
       category: 'login',
     });
   });
