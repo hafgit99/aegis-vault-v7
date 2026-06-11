@@ -5,6 +5,8 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 import { VaultItem } from '../types';
 import VaultListItem from './VaultListItem';
 
@@ -22,6 +24,7 @@ const vaultItem: VaultItem = {
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
 });
 
 describe('VaultListItem', () => {
@@ -31,7 +34,7 @@ describe('VaultListItem', () => {
     expect(screen.getByText('Internal Wiki')).toBeTruthy();
     expect(screen.getByText('team@example.com')).toBeTruthy();
     expect(screen.getByText('I')).toBeTruthy();
-    expect(screen.getByText('WEAK')).toBeTruthy();
+    expect(screen.getByText('ZAYIF')).toBeTruthy();
   });
 
   it('notifies parent when selected', () => {
@@ -54,7 +57,7 @@ describe('VaultListItem', () => {
 
     const logo = screen.getByAltText('GitHub logo') as HTMLImageElement;
     expect(logo.src).toContain('googleusercontent.com');
-    expect(screen.getByText('SECURE')).toBeTruthy();
+    expect(screen.getByText('GÜVENLİ')).toBeTruthy();
   });
 
   it('uses an empty password fallback for strength labeling', () => {
@@ -66,6 +69,22 @@ describe('VaultListItem', () => {
       />,
     );
 
-    expect(screen.getByText('WEAK')).toBeTruthy();
+    expect(screen.getByText('ZAYIF')).toBeTruthy();
+  });
+
+  it('renders password strength in the selected language', () => {
+    window.localStorage.setItem(languageStorageKey, 'zh');
+
+    render(
+      <LanguageProvider>
+        <VaultListItem
+          item={{ ...vaultItem, password: 'StrongPassphrase123!' }}
+          isSelected={false}
+          onSelect={vi.fn()}
+        />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByText('安全')).toBeTruthy();
   });
 });

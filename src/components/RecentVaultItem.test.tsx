@@ -5,6 +5,8 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 import { VaultItem } from '../types';
 import RecentVaultItem from './RecentVaultItem';
 
@@ -21,6 +23,7 @@ const recentItem: VaultItem = {
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
 });
 
 describe('RecentVaultItem', () => {
@@ -63,6 +66,21 @@ describe('RecentVaultItem', () => {
     );
 
     expect(screen.getByText('✓')).toBeTruthy();
+  });
+
+  it('renders copy controls in the selected language', () => {
+    window.localStorage.setItem(languageStorageKey, 'en');
+
+    render(
+      <LanguageProvider>
+        <RecentVaultItem item={recentItem} copiedField={null} onSelect={vi.fn()} onCopyText={vi.fn()} />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByTitle('Copy Username')).toBeTruthy();
+    expect(screen.getByTitle('Copy Password')).toBeTruthy();
+    expect(screen.getByText('Email')).toBeTruthy();
+    expect(screen.getByText('Password')).toBeTruthy();
   });
 
   it('renders a known platform logo when available', () => {

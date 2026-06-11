@@ -1,5 +1,7 @@
 import { Heart } from 'lucide-react';
 
+import { useLanguage } from '../i18n/LanguageContext';
+import { TranslationKey } from '../i18n/translations';
 import { getLogoForPlatform } from '../lib/display';
 import { getStrengthLabel } from '../lib/security';
 import { VaultItem } from '../types';
@@ -10,7 +12,15 @@ interface VaultListItemProps {
   onSelect: (item: VaultItem) => void;
 }
 
+const strengthLabelKeys: Record<ReturnType<typeof getStrengthLabel>['label'], TranslationKey> = {
+  WEAK: 'vaultItem.strength.weak',
+  MEDIUM: 'vaultItem.strength.medium',
+  STRONG: 'vaultItem.strength.strong',
+  SECURE: 'vaultItem.strength.secure',
+};
+
 export default function VaultListItem({ item, isSelected, onSelect }: VaultListItemProps) {
+  const { t } = useLanguage();
   const logoUrl = getLogoForPlatform(item.title, item.url);
   const itemStrength = getStrengthLabel(item.password || '');
 
@@ -45,7 +55,7 @@ export default function VaultListItem({ item, isSelected, onSelect }: VaultListI
       <div className="shrink-0 flex flex-col items-end gap-1.5">
         {item.favorite && <Heart className="w-3.5 h-3.5 fill-red-500 text-red-500 animate-pulse shrink-0" />}
         <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider ${itemStrength.colorClass}`}>
-          {itemStrength.label}
+          {t(strengthLabelKeys[itemStrength.label])}
         </span>
       </div>
     </div>

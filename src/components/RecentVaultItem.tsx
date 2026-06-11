@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n/LanguageContext';
 import { getLogoForPlatform } from '../lib/display';
 import { VaultItem } from '../types';
 
@@ -9,6 +10,7 @@ interface RecentVaultItemProps {
 }
 
 export default function RecentVaultItem({ item, copiedField, onSelect, onCopyText }: RecentVaultItemProps) {
+  const { t } = useLanguage();
   const logoUrl = getLogoForPlatform(item.title, item.url);
   const usernameCopyField = `recent-user-${item.id}`;
   const passwordCopyField = `recent-pass-${item.id}`;
@@ -36,16 +38,16 @@ export default function RecentVaultItem({ item, copiedField, onSelect, onCopyTex
         <button
           onClick={() => onCopyText(item.username, usernameCopyField)}
           className="p-1 px-1.5 rounded bg-[#1a1c1a] border border-outline-variant/10 text-[9px] text-on-surface-variant hover:text-brand-primary hover:bg-brand-primary/5 transition-all font-mono whitespace-nowrap cursor-pointer"
-          title="Kullanıcı Adını Kopyala"
+          title={t('vaultItem.copyUsername')}
         >
-          {copiedField === usernameCopyField ? '✓' : 'E-posta'}
+          {copiedField === usernameCopyField ? '✓' : t('vaultItem.usernameLabel')}
         </button>
         <button
           onClick={() => onCopyText(item.password || '', passwordCopyField)}
           className="p-1 px-1.5 rounded bg-[#1a1c1a] border border-outline-variant/10 text-[9px] text-on-surface-variant hover:text-brand-primary hover:bg-brand-primary/5 transition-all font-mono whitespace-nowrap cursor-pointer"
-          title="Şifreyi Kopyala"
+          title={t('vaultItem.copyPassword')}
         >
-          {copiedField === passwordCopyField ? '✓' : 'Şifre'}
+          {copiedField === passwordCopyField ? '✓' : t('vaultItem.passwordLabel')}
         </button>
       </div>
     </div>

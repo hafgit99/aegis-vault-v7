@@ -82,6 +82,7 @@ Recently improved:
 - `src/components/VaultWorkspace.tsx` and `src/components/FloatingVaultAction.tsx`: covered selected-language rendering for vault list controls and new-item actions.
 - Dashboard summary components: covered selected-language rendering for quick actions, security score copy, and category summary labels.
 - Dashboard information panels: covered selected-language rendering for recent items, cryptology shield details, and Aegis Guard report copy.
+- Vault row components: covered selected-language rendering for strength badges and recent-item copy controls.
 - `src/components/VaultFormModal.tsx`: covered edit-save identity preservation, title validation, password visibility/autogeneration, selected file removal, attachment upload failures, existing attachment removal before save, and download error notifications.
 - `src/components/CardDetail.tsx`: covered copied states, PIN copy action, missing-field fallbacks, and empty-string copy behavior.
 - `src/components/LoginDetail.tsx`: covered copied states, empty-password fallback, and safe empty-password copy behavior.
