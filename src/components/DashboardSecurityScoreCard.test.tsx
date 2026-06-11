@@ -5,10 +5,13 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 import DashboardSecurityScoreCard from './DashboardSecurityScoreCard';
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
 });
 
 describe('DashboardSecurityScoreCard', () => {
@@ -66,5 +69,28 @@ describe('DashboardSecurityScoreCard', () => {
 
     expect(screen.getByText('Kritik Parola Güvenliği Açığı!')).toBeTruthy();
     expect(screen.getByText('3')).toBeTruthy();
+  });
+
+  it('renders security score copy in the selected language', () => {
+    window.localStorage.setItem(languageStorageKey, 'zh');
+
+    render(
+      <LanguageProvider>
+        <DashboardSecurityScoreCard
+          activeItemCount={3}
+          auditReport={{
+            score: 91,
+            weakCount: 0,
+            reusedCount: 0,
+            secureCount: 3,
+            totalCount: 3,
+          }}
+        />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByText('虚拟保护评分')).toBeTruthy();
+    expect(screen.getByText('您的保险库完全安全')).toBeTruthy();
+    expect(screen.getByText('已保存项目')).toBeTruthy();
   });
 });

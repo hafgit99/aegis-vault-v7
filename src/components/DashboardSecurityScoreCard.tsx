@@ -1,5 +1,7 @@
 import { ShieldCheck } from 'lucide-react';
 
+import { useLanguage } from '../i18n/LanguageContext';
+import { TranslationKey } from '../i18n/translations';
 import { AuditReport } from '../types';
 
 interface DashboardSecurityScoreCardProps {
@@ -13,21 +15,19 @@ function getScoreTone(score: number): string {
   return 'text-brand-error';
 }
 
-function getScoreTitle(score: number): string {
-  if (score >= 85) return 'Kasanız Tamamen Güvende';
-  if (score >= 50) return 'Orta Düzey Güvenlik Seviyesi';
-  return 'Kritik Parola Güvenliği Açığı!';
+function getScoreTitleKey(score: number): TranslationKey {
+  if (score >= 85) return 'dashboard.score.secureTitle';
+  if (score >= 50) return 'dashboard.score.mediumTitle';
+  return 'dashboard.score.criticalTitle';
 }
 
-function getScoreDescription(score: number): string {
-  if (score >= 85) {
-    return 'Tüm parolalarınız mükemmel karmaşıklık standartlarında ayarlanmış. Aegis kalkanı tam güvenlikle çalışıyor.';
-  }
-
-  return 'Bazı zayıf veya birbiriyle aynı olan şifreleriniz var. Şifrelerinizi özelleştirerek koruma seviyesini artırabilirsiniz.';
+function getScoreDescriptionKey(score: number): TranslationKey {
+  return score >= 85 ? 'dashboard.score.secureDescription' : 'dashboard.score.riskyDescription';
 }
 
 export default function DashboardSecurityScoreCard({ auditReport, activeItemCount }: DashboardSecurityScoreCardProps) {
+  const { t } = useLanguage();
+
   return (
     <div className="md:col-span-7 bg-[#101210]/60 border border-outline-variant/15 rounded-2xl p-6 flex flex-col justify-between gap-6 relative overflow-hidden group hover:border-brand-primary/15 transition-all">
       <div className="absolute top-0 right-0 w-32 h-32 bg-brand-primary/5 rounded-full blur-3xl pointer-events-none" />
@@ -36,10 +36,10 @@ export default function DashboardSecurityScoreCard({ auditReport, activeItemCoun
         <div className="space-y-1">
           <span className="text-[10px] font-bold tracking-widest text-[#059669] uppercase flex items-center gap-1.5 bg-[#059669]/10 px-2.5 py-1 rounded-full w-fit">
             <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Sanal Koruma Skoru</span>
+            <span>{t('dashboard.score.label')}</span>
           </span>
         </div>
-        <span className="text-[10px] text-on-surface-variant font-mono">Çift Kademeli AES-256</span>
+        <span className="text-[10px] text-on-surface-variant font-mono">{t('dashboard.score.crypto')}</span>
       </div>
 
       <div className="flex flex-col sm:flex-row items-center gap-6 my-2">
@@ -62,29 +62,29 @@ export default function DashboardSecurityScoreCard({ auditReport, activeItemCoun
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center font-display">
             <span className="text-2xl font-bold font-mono text-on-surface">%{auditReport.score}</span>
-            <span className="text-[9px] text-on-surface-variant/70 tracking-widest uppercase">Güç</span>
+            <span className="text-[9px] text-on-surface-variant/70 tracking-widest uppercase">{t('dashboard.score.power')}</span>
           </div>
         </div>
 
         <div className="space-y-2 text-center sm:text-left">
-          <h3 className="font-display font-bold text-base text-on-surface">{getScoreTitle(auditReport.score)}</h3>
-          <p className="text-on-surface-variant text-xs leading-relaxed">{getScoreDescription(auditReport.score)}</p>
+          <h3 className="font-display font-bold text-base text-on-surface">{t(getScoreTitleKey(auditReport.score))}</h3>
+          <p className="text-on-surface-variant text-xs leading-relaxed">{t(getScoreDescriptionKey(auditReport.score))}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-3 pt-4 border-t border-outline-variant/10 text-center">
         <div className="space-y-0.5">
-          <p className="text-[10px] text-on-surface-variant">Kayıtlı Öğe</p>
+          <p className="text-[10px] text-on-surface-variant">{t('dashboard.score.savedItems')}</p>
           <p className="text-sm font-bold text-on-surface font-mono">{activeItemCount}</p>
         </div>
         <div className="space-y-0.5 border-x border-outline-variant/10">
-          <p className="text-[10px] text-on-surface-variant">Zayıf Şifre</p>
+          <p className="text-[10px] text-on-surface-variant">{t('dashboard.score.weakPasswords')}</p>
           <p className={`text-sm font-bold font-mono ${auditReport.weakCount > 0 ? 'text-red-400' : 'text-brand-tertiary'}`}>
             {auditReport.weakCount}
           </p>
         </div>
         <div className="space-y-0.5 font-mono">
-          <p className="text-[10px] text-on-surface-variant font-sans">Ortak Şifre</p>
+          <p className="text-[10px] text-on-surface-variant font-sans">{t('dashboard.score.reusedPasswords')}</p>
           <p className={`text-sm font-bold ${auditReport.reusedCount > 0 ? 'text-amber-300' : 'text-brand-tertiary'}`}>
             {auditReport.reusedCount}
           </p>

@@ -1,5 +1,7 @@
 import { Plus, Shield, Sparkles } from 'lucide-react';
 
+import { useLanguage } from '../i18n/LanguageContext';
+
 interface DashboardQuickActionsProps {
   onNewItem: () => void;
   onOpenAudit: () => void;
@@ -7,9 +9,11 @@ interface DashboardQuickActionsProps {
 }
 
 export default function DashboardQuickActions({ onNewItem, onOpenAudit, onOpenGenerator }: DashboardQuickActionsProps) {
+  const { t } = useLanguage();
+
   return (
     <div className="space-y-3">
-      <h3 className="font-display text-xs font-bold uppercase tracking-widest text-[#059669]">HIZLI ERİŞİM VE ARAÇLAR</h3>
+      <h3 className="font-display text-xs font-bold uppercase tracking-widest text-[#059669]">{t('dashboard.quick.title')}</h3>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <button
           onClick={onNewItem}
@@ -19,8 +23,8 @@ export default function DashboardQuickActions({ onNewItem, onOpenAudit, onOpenGe
             <Plus className="w-5 h-5" />
           </div>
           <div className="space-y-0.5">
-            <h4 className="font-bold text-xs text-on-surface">Yeni Şifre Ekle</h4>
-            <p className="text-[10px] text-on-surface-variant font-display">Öğeleri kategorize ederek kasaya kaydedin.</p>
+            <h4 className="font-bold text-xs text-on-surface">{t('dashboard.quick.newItem.title')}</h4>
+            <p className="text-[10px] text-on-surface-variant font-display">{t('dashboard.quick.newItem.description')}</p>
           </div>
         </button>
 
@@ -32,8 +36,8 @@ export default function DashboardQuickActions({ onNewItem, onOpenAudit, onOpenGe
             <Shield className="w-5 h-5" />
           </div>
           <div className="space-y-0.5">
-            <h4 className="font-bold text-xs text-on-surface">Güvenlik Denetle</h4>
-            <p className="text-[10px] text-on-surface-variant">Tüm hesaplarınızdaki şifreleri tek tıkla tarayın.</p>
+            <h4 className="font-bold text-xs text-on-surface">{t('dashboard.quick.audit.title')}</h4>
+            <p className="text-[10px] text-on-surface-variant">{t('dashboard.quick.audit.description')}</p>
           </div>
         </button>
 
@@ -45,8 +49,8 @@ export default function DashboardQuickActions({ onNewItem, onOpenAudit, onOpenGe
             <Sparkles className="w-5 h-5 animate-pulse" />
           </div>
           <div className="space-y-0.5">
-            <h4 className="font-bold text-xs text-on-surface font-display">Güçlü Şifre Üret</h4>
-            <p className="text-[10px] text-on-surface-variant">Saniyeler içinde aşılması imkansız şifre yapın.</p>
+            <h4 className="font-bold text-xs text-on-surface font-display">{t('dashboard.quick.generator.title')}</h4>
+            <p className="text-[10px] text-on-surface-variant">{t('dashboard.quick.generator.description')}</p>
           </div>
         </button>
       </div>

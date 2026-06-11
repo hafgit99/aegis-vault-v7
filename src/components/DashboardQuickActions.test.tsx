@@ -5,10 +5,13 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 import DashboardQuickActions from './DashboardQuickActions';
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
 });
 
 describe('DashboardQuickActions', () => {
@@ -41,5 +44,20 @@ describe('DashboardQuickActions', () => {
     expect(onNewItem).toHaveBeenCalledTimes(1);
     expect(onOpenAudit).toHaveBeenCalledTimes(1);
     expect(onOpenGenerator).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders shortcuts in the selected language', () => {
+    window.localStorage.setItem(languageStorageKey, 'en');
+
+    render(
+      <LanguageProvider>
+        <DashboardQuickActions onNewItem={vi.fn()} onOpenAudit={vi.fn()} onOpenGenerator={vi.fn()} />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByText('QUICK ACCESS AND TOOLS')).toBeTruthy();
+    expect(screen.getByText('Add New Password')).toBeTruthy();
+    expect(screen.getByText('Run Security Audit')).toBeTruthy();
+    expect(screen.getByText('Generate Strong Password')).toBeTruthy();
   });
 });

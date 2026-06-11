@@ -1,5 +1,7 @@
 import { CreditCard, FileText, KeyRound } from 'lucide-react';
 
+import { useLanguage } from '../i18n/LanguageContext';
+
 interface DashboardCategoryStatsProps {
   loginCount: number;
   cardCount: number;
@@ -7,6 +9,8 @@ interface DashboardCategoryStatsProps {
 }
 
 export default function DashboardCategoryStats({ loginCount, cardCount, secureNoteCount }: DashboardCategoryStatsProps) {
+  const { t } = useLanguage();
+
   return (
     <div className="md:col-span-5 flex flex-col gap-4">
       <div className="bg-surface-container/60 hover:bg-surface-container border border-outline-variant/15 hover:border-brand-primary/10 p-4 rounded-xl flex items-center justify-between transition-all group">
@@ -15,8 +19,8 @@ export default function DashboardCategoryStats({ loginCount, cardCount, secureNo
             <KeyRound className="w-5 h-5 focus:outline-none" />
           </div>
           <div>
-            <p className="font-bold text-xs text-on-surface">Hesap Parolaları</p>
-            <p className="text-[10px] text-on-surface-variant">E-posta ve web oturumları</p>
+            <p className="font-bold text-xs text-on-surface">{t('dashboard.category.logins.title')}</p>
+            <p className="text-[10px] text-on-surface-variant">{t('dashboard.category.logins.description')}</p>
           </div>
         </div>
         <span className="font-mono text-sm font-bold text-on-surface bg-surface-high border border-outline-variant/10 px-2.5 py-1 rounded-lg">
@@ -30,8 +34,8 @@ export default function DashboardCategoryStats({ loginCount, cardCount, secureNo
             <CreditCard className="w-5 h-5" />
           </div>
           <div>
-            <p className="font-bold text-xs text-on-surface">Ödeme Kartları</p>
-            <p className="text-[10px] text-on-surface-variant">Kredi ve banka kartları</p>
+            <p className="font-bold text-xs text-on-surface">{t('dashboard.category.cards.title')}</p>
+            <p className="text-[10px] text-on-surface-variant">{t('dashboard.category.cards.description')}</p>
           </div>
         </div>
         <span className="font-mono text-sm font-bold text-on-surface bg-surface-high border border-outline-variant/10 px-2.5 py-1 rounded-lg">
@@ -45,8 +49,8 @@ export default function DashboardCategoryStats({ loginCount, cardCount, secureNo
             <FileText className="w-5 h-5" />
           </div>
           <div>
-            <p className="font-bold text-xs text-on-surface">Güvenli Notlar</p>
-            <p className="text-[10px] text-on-surface-variant">Lisanslar ve gizli notlar</p>
+            <p className="font-bold text-xs text-on-surface">{t('dashboard.category.notes.title')}</p>
+            <p className="text-[10px] text-on-surface-variant">{t('dashboard.category.notes.description')}</p>
           </div>
         </div>
         <span className="font-mono text-sm font-bold text-on-surface bg-surface-high border border-outline-variant/10 px-2.5 py-1 rounded-lg">
