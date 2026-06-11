@@ -16,6 +16,7 @@ export const attachmentErrorCodes = {
   missingVaultSession: 'attachment.missingVaultSession',
   missingEncryptionMetadata: 'attachment.missingEncryptionMetadata',
   unreadableFileData: 'attachment.unreadableFileData',
+  legacyEncryptionBlocked: 'attachment.legacyEncryptionBlocked',
 } as const;
 
 export type AttachmentErrorCode = (typeof attachmentErrorCodes)[keyof typeof attachmentErrorCodes];
@@ -61,7 +62,7 @@ export interface AttachmentRecord {
 /**
  * Legacy attachment fallback for records written before the AES-GCM attachment format.
  */
-function encryptDecryptBuffer(buffer: ArrayBuffer, keyStr: string = 'aegis_secure_file'): ArrayBuffer {
+function decryptLegacyXorBufferForMigration(buffer: ArrayBuffer, keyStr: string = 'aegis_secure_file'): ArrayBuffer {
   const view = new Uint8Array(buffer);
   const keyBytes = new TextEncoder().encode(keyStr);
   const result = new Uint8Array(view.length);
@@ -120,7 +121,7 @@ export async function decryptAttachmentData(record: AttachmentRecord): Promise<A
     );
   }
 
-  return encryptDecryptBuffer(record.data);
+  throw new AttachmentError(attachmentErrorCodes.legacyEncryptionBlocked);
 }
 
 export async function migrateAttachmentRecordToAesGcm(record: AttachmentRecord): Promise<AttachmentRecord> {
@@ -128,7 +129,7 @@ export async function migrateAttachmentRecordToAesGcm(record: AttachmentRecord):
     return record;
   }
 
-  const rawBuffer = await decryptAttachmentData(record);
+  const rawBuffer = decryptLegacyXorBufferForMigration(record.data);
   const encryptedAttachment = await encryptAttachmentData(record.id, rawBuffer);
 
   return {

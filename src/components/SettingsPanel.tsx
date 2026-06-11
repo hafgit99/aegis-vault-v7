@@ -215,7 +215,7 @@ export default function SettingsPanel({
       setPasswordError(t('settings.password.error.current'));
       return;
     }
-    if (newPassword.length < 6) {
+    if (newPassword.length < 12) {
       setPasswordError(t('settings.password.error.length'));
       return;
     }
@@ -272,6 +272,10 @@ export default function SettingsPanel({
     } else {
       if (!customBackupPassword) {
         setBackupError(t('settings.export.missingPassword'));
+        return;
+      }
+      if (customBackupPassword.length < 12) {
+        setBackupError(t('settings.export.passwordTooShort'));
         return;
       }
       passwordToUse = customBackupPassword;

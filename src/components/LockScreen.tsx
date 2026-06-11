@@ -36,6 +36,51 @@ import {
   normalizeAccountSecretKey,
 } from '../lib/secretKey';
 
+const MIN_MASTER_PASSWORD_LENGTH = 12;
+const LOCKOUT_STORAGE_KEY = 'aegis_lockout_state';
+const MAX_LOCKOUT_MS = 5 * 60 * 1000;
+
+interface LockoutState {
+  failedAttempts: number;
+  lockedUntil: number;
+}
+
+function readLockoutState(): LockoutState {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(LOCKOUT_STORAGE_KEY) || '{}') as Partial<LockoutState>;
+    return {
+      failedAttempts: Math.max(0, Number(parsed.failedAttempts) || 0),
+      lockedUntil: Math.max(0, Number(parsed.lockedUntil) || 0),
+    };
+  } catch {
+    return { failedAttempts: 0, lockedUntil: 0 };
+  }
+}
+
+function writeLockoutState(state: LockoutState): void {
+  localStorage.setItem(LOCKOUT_STORAGE_KEY, JSON.stringify(state));
+}
+
+function clearLockoutState(): void {
+  localStorage.removeItem(LOCKOUT_STORAGE_KEY);
+}
+
+function recordFailedUnlockAttempt(now = Date.now()): LockoutState {
+  const previous = readLockoutState();
+  const failedAttempts = previous.failedAttempts + 1;
+  const delayMs = Math.min(MAX_LOCKOUT_MS, 1000 * 2 ** Math.min(failedAttempts - 1, 8));
+  const state = {
+    failedAttempts,
+    lockedUntil: now + delayMs,
+  };
+  writeLockoutState(state);
+  return state;
+}
+
+function getLockoutRemainingMs(now = Date.now()): number {
+  return Math.max(0, readLockoutState().lockedUntil - now);
+}
+
 function getBiometricUnlockErrorMessage(err: any, t: ReturnType<typeof useLanguage>['t']): string {
   if (err?.name === "SecurityError" || err?.name === "NotAllowedError") {
     return t('lock.error.biometricPermission');
@@ -70,11 +115,27 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lockoutRemainingMs, setLockoutRemainingMs] = useState(() => getLockoutRemainingMs());
 
   // Biometric Unlock States
   const [biometricError, setBiometricError] = useState<string | null>(null);
   const [biometricLoading, setBiometricLoading] = useState(false);
   const isBioEnabled = isBiometricEnabled();
+  const lockoutRemainingSeconds = Math.ceil(lockoutRemainingMs / 1000);
+  const isLockedOut = lockoutRemainingMs > 0;
+
+  React.useEffect(() => {
+    if (!isLockedOut) return;
+
+    const interval = window.setInterval(() => {
+      setLockoutRemainingMs(getLockoutRemainingMs());
+    }, 250);
+
+    return () => window.clearInterval(interval);
+  }, [isLockedOut]);
+
+  const getRateLimitMessage = (remainingSeconds: number) =>
+    `${t('lock.error.rateLimitedPrefix')} ${remainingSeconds} ${t('lock.error.rateLimitedSuffix')}`;
 
   const handleBiometricUnlock = async () => {
     setBiometricError(null);
@@ -114,7 +175,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
     setBiometricError(null);
 
     if (!isSetup) {
-      if (password.length < 6) {
+      if (password.length < MIN_MASTER_PASSWORD_LENGTH) {
         setError(t('lock.error.minimumLength'));
         return;
       }
@@ -127,17 +188,30 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
         return;
       }
       await setupMasterPasswordWithSecretKey(password, secretKey, rememberSecretKey);
+      clearLockoutState();
       onUnlock();
     } else {
+      const remainingMs = getLockoutRemainingMs();
+      if (remainingMs > 0) {
+        setLockoutRemainingMs(remainingMs);
+        setError(getRateLimitMessage(Math.ceil(remainingMs / 1000)));
+        return;
+      }
+
       const submittedSecretKey = requiresSecretKey ? secretKey : null;
       if (requiresSecretKey && !rememberedSecretKey && !isAccountSecretKeyFormatValid(submittedSecretKey || '')) {
         setError(t('lock.error.secretKeyRequired'));
         return;
       }
       if (await verifyMasterPassword(password, submittedSecretKey)) {
+        clearLockoutState();
+        setLockoutRemainingMs(0);
         onUnlock();
       } else {
-        setError(t('lock.error.invalidPassword'));
+        const lockout = recordFailedUnlockAttempt();
+        const remainingSeconds = Math.ceil((lockout.lockedUntil - Date.now()) / 1000);
+        setLockoutRemainingMs(Math.max(0, lockout.lockedUntil - Date.now()));
+        setError(`${t('lock.error.invalidPassword')} ${getRateLimitMessage(remainingSeconds)}`);
       }
     }
   };
@@ -404,12 +478,13 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                 <button
                   data-testid="lock-submit-button"
                   type="submit"
+                  disabled={isSetup && isLockedOut}
                   className="w-full flex items-center justify-center gap-2.5 bg-brand-primary text-brand-on-primary py-4 rounded-xl font-bold transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-lg shadow-brand-primary/10 hover:brightness-110"
                 >
                   {isSetup ? (
                     <>
                       <Unlock className="w-4.5 h-4.5" />
-                      <span>{t('lock.action.unlock')}</span>
+                      <span>{isLockedOut ? `${lockoutRemainingSeconds}s` : t('lock.action.unlock')}</span>
                     </>
                   ) : (
                     <>

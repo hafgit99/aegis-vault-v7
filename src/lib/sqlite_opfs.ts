@@ -43,7 +43,7 @@ export interface SQLCommandLog {
 const DB_FILENAME = 'aegis_sqlite.db';
 const VAULT_ITEM_KDF = 'argon2-browser' as const;
 const LEGACY_VAULT_ITEM_KDF = 'legacy-simulated-argon2id' as const;
-const VAULT_ITEM_KDF_SALT = 'aegis_vault_v7_db_encryption_salt';
+const LEGACY_VAULT_ITEM_KDF_SALT = 'aegis_vault_v7_db_encryption_salt';
 const VAULT_ITEM_KDF_PARAMS = {
   memoryKiB: 64 * 1024,
   iterations: 3,
@@ -57,7 +57,6 @@ class SQLiteOPFS {
   private logs: SQLCommandLog[] = [];
   private onLogsChangedCallbacks: (() => void)[] = [];
   private hydratePromise: Promise<void>;
-  private encryptionKeyCache = new Map<string, Uint8Array>();
 
   constructor() {
     this.hydratePromise = this.loadFromPersistentStorage();
@@ -92,6 +91,23 @@ class SQLiteOPFS {
       rowsAffected,
     });
     this.notifyLogsChanged();
+  }
+
+  private bytesToHex(bytes: Uint8Array): string {
+    return Array.from(bytes).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  }
+
+  private createVaultEncryptionSalt(): string {
+    return this.bytesToHex(secureRandomBytes(16));
+  }
+
+  private ensureVaultEncryptionSalt(): string {
+    this.state.encryption_salt ??= this.createVaultEncryptionSalt();
+    return this.state.encryption_salt;
+  }
+
+  private getCurrentVaultEncryptionSalt(): string {
+    return this.state.encryption_salt || LEGACY_VAULT_ITEM_KDF_SALT;
   }
 
   /**
@@ -198,8 +214,8 @@ class SQLiteOPFS {
         }];
 
         const items: VaultItem[] = JSON.parse(legacyItemsStr);
-        await this.prepareEncryptionKey(passwordPlain);
-        const derivedKey = this.deriveEncryptionKey(passwordPlain);
+        this.state.encryption_salt = this.createVaultEncryptionSalt();
+        const derivedKey = await this.deriveEncryptionKey(passwordPlain);
 
         this.state.vault_items = await Promise.all(items.map(async (item) => {
           const sensitivePayload = JSON.stringify(item);
@@ -245,7 +261,6 @@ class SQLiteOPFS {
     if (expectedHash.startsWith('$argon2id$')) {
       const isVettedMatch = await verifyArgon2idHash(password, expectedHash);
       if (isVettedMatch) {
-        await this.prepareEncryptionKey(password);
         return true;
       }
     }
@@ -253,7 +268,6 @@ class SQLiteOPFS {
     const isLegacyMatch = verifyLegacyArgon2idHash(password, expectedHash);
     if (isLegacyMatch) {
       this.state.user_secrets[0].argon_hash = await createArgon2idHash(password, secureRandomToken(16));
-      await this.prepareEncryptionKey(password);
       await this.saveToPersistentStorage();
     }
     return isLegacyMatch;
@@ -265,7 +279,7 @@ class SQLiteOPFS {
   public async setupMaster(password: string): Promise<void> {
     await this.hydrate();
     const argonHash = await createArgon2idHash(password, secureRandomToken(16));
-    await this.prepareEncryptionKey(password);
+    this.state.encryption_salt = this.createVaultEncryptionSalt();
     this.state.user_secrets = [{
       username: 'owner',
       argon_hash: argonHash,
@@ -275,20 +289,10 @@ class SQLiteOPFS {
   }
 
   /**
-   * Returns derived encryption key from master password using Argon2id with 32 bytes derived output.
+   * Returns a derived encryption key from the active vault salt using Argon2id.
    */
-  public async prepareEncryptionKey(password: string): Promise<void> {
-    if (this.encryptionKeyCache.has(password)) return;
-    const key = await deriveVettedArgon2idKey(password, VAULT_ITEM_KDF_SALT, VAULT_ITEM_KDF_PARAMS);
-    this.encryptionKeyCache.set(password, key);
-  }
-
-  public deriveEncryptionKey(password: string): Uint8Array {
-    const preparedKey = this.encryptionKeyCache.get(password);
-    if (!preparedKey) {
-      throw new Error('Vault encryption key is not prepared for the active session.');
-    }
-    return preparedKey;
+  public async deriveEncryptionKey(password: string, salt = this.getCurrentVaultEncryptionSalt()): Promise<Uint8Array> {
+    return deriveVettedArgon2idKey(password, salt, VAULT_ITEM_KDF_PARAMS);
   }
 
   private deriveLegacyEncryptionKey(password: string): Uint8Array {
@@ -307,8 +311,14 @@ class SQLiteOPFS {
     }
 
     try {
-      const derivedKey = this.deriveEncryptionKey(masterPasswordPlain);
+      const originalSalt = this.getCurrentVaultEncryptionSalt();
+      const derivedKey = await this.deriveEncryptionKey(masterPasswordPlain, originalSalt);
       const legacyDerivedKey = this.deriveLegacyEncryptionKey(masterPasswordPlain);
+      const shouldMigrateStaticSalt = !this.state.encryption_salt;
+      const migratedSalt = shouldMigrateStaticSalt ? this.createVaultEncryptionSalt() : this.state.encryption_salt;
+      const migrationKey = shouldMigrateStaticSalt
+        ? await this.deriveEncryptionKey(masterPasswordPlain, migratedSalt)
+        : derivedKey;
       const list: VaultItem[] = [];
       let migratedLegacyRows = false;
 
@@ -321,8 +331,8 @@ class SQLiteOPFS {
             : await webCryptoAesGcmDecrypt(encryptedPayload as WebCryptoAesGcmPayload, derivedKey);
           const originalItem: VaultItem = JSON.parse(decryptedJson);
 
-          if (isLegacyRow) {
-            row.enc_metadata = JSON.stringify(await webCryptoAesGcmEncrypt(decryptedJson, derivedKey, secureRandomBytes(12)));
+          if (isLegacyRow || shouldMigrateStaticSalt) {
+            row.enc_metadata = JSON.stringify(await webCryptoAesGcmEncrypt(decryptedJson, migrationKey, secureRandomBytes(12)));
             row.enc_kdf = VAULT_ITEM_KDF;
             migratedLegacyRows = true;
           }
@@ -356,6 +366,9 @@ class SQLiteOPFS {
       }
 
       if (migratedLegacyRows) {
+        if (shouldMigrateStaticSalt) {
+          this.state.encryption_salt = migratedSalt;
+        }
         this.saveToPersistentStorage();
       }
 
@@ -371,7 +384,8 @@ class SQLiteOPFS {
    * Saves or updates a specific Item row inside SQLite and OPFS with separate fresh 12-byte GCM IV.
    */
   public async saveVaultItem(item: VaultItem, masterPasswordPlain: string): Promise<VaultItem[]> {
-    const derivedKey = this.deriveEncryptionKey(masterPasswordPlain);
+    this.ensureVaultEncryptionSalt();
+    const derivedKey = await this.deriveEncryptionKey(masterPasswordPlain);
     const index = this.state.vault_items.findIndex(x => x.id === item.id);
 
     // Build fresh serialized payload
@@ -513,7 +527,6 @@ class SQLiteOPFS {
    */
   public resetAll() {
     this.state = createEmptyVaultDatabaseState();
-    this.encryptionKeyCache.clear();
     this.logQuery('DROP TABLE user_secrets; DROP TABLE vault_items;', 'SUCCESS', 1);
     this.saveToPersistentStorage();
   }
@@ -532,7 +545,8 @@ class SQLiteOPFS {
    * Seeds demo data.
    */
   public async reseedDemo(passwordPlain: string, demoItems: VaultItem[]): Promise<VaultItem[]> {
-    const derivedKey = this.deriveEncryptionKey(passwordPlain);
+    this.ensureVaultEncryptionSalt();
+    const derivedKey = await this.deriveEncryptionKey(passwordPlain);
     
     this.state.vault_items = await Promise.all(demoItems.map(async (item) => {
       const sensitivePayload = JSON.stringify(item);

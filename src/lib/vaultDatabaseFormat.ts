@@ -27,6 +27,7 @@ export interface VersionedVaultDatabaseState {
   schemaVersion: number;
   appId: string;
   migratedFrom?: number;
+  encryption_salt?: string;
   user_secrets: VaultDatabaseUserSecret[];
   vault_items: VaultDatabaseRow[];
 }
@@ -39,6 +40,7 @@ export function createEmptyVaultDatabaseState(): VersionedVaultDatabaseState {
   return {
     schemaVersion: CURRENT_VAULT_DB_SCHEMA_VERSION,
     appId: VAULT_DB_APP_ID,
+    encryption_salt: undefined,
     user_secrets: [],
     vault_items: [],
   };
@@ -60,6 +62,7 @@ export function normalizeVaultDatabaseState(raw: unknown): VersionedVaultDatabas
     schemaVersion: CURRENT_VAULT_DB_SCHEMA_VERSION,
     appId: input.appId || VAULT_DB_APP_ID,
     migratedFrom: sourceVersion < CURRENT_VAULT_DB_SCHEMA_VERSION ? sourceVersion : input.migratedFrom,
+    encryption_salt: typeof input.encryption_salt === 'string' ? input.encryption_salt : undefined,
     user_secrets: arrayOrEmpty<VaultDatabaseUserSecret>(input.user_secrets),
     vault_items: arrayOrEmpty<VaultDatabaseRow>(input.vault_items),
   };

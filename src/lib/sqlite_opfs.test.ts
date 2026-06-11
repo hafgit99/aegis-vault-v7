@@ -91,6 +91,7 @@ describe('SQLite OPFS persistence engine', () => {
     });
 
     const persisted = JSON.parse(localStorage.getItem('aegis_sqlite_fallback') ?? '{}');
+    expect(persisted.encryption_salt).toMatch(/^[0-9a-f]{32}$/);
     expect(persisted.vault_items[0]).toMatchObject({
       id: 'item-login-1',
       username_db: '[encrypted: aes-256-gcm]',
@@ -355,6 +356,26 @@ describe('SQLite OPFS persistence engine', () => {
     );
   });
 
+  it('migrates existing static-salt vault rows to a persisted per-vault salt', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    await sqlite.saveVaultItem(sampleItem({ id: 'static-salt-row' }), 'master-pass');
+
+    const persisted = JSON.parse(localStorage.getItem('aegis_sqlite_fallback') ?? '{}');
+    delete persisted.encryption_salt;
+    localStorage.setItem('aegis_sqlite_fallback', JSON.stringify(persisted));
+
+    const legacyStaticSaltSqlite = await freshSqliteInstance();
+
+    await expect(legacyStaticSaltSqlite.verifyPassword('master-pass')).resolves.toBe(true);
+    await expect(legacyStaticSaltSqlite.getVaultItems('master-pass')).resolves.toEqual([
+      expect.objectContaining({ id: 'static-salt-row', password: 'secret-password' }),
+    ]);
+
+    const migrated = JSON.parse(localStorage.getItem('aegis_sqlite_fallback') ?? '{}');
+    expect(migrated.encryption_salt).toMatch(/^[0-9a-f]{32}$/);
+  });
+
   it('returns an error result for unsupported SQL read targets and unknown commands', async () => {
     const sqlite = await freshSqliteInstance();
 
@@ -462,7 +483,7 @@ describe('SQLite OPFS persistence engine', () => {
     );
   });
 
-  it('guards vault item decryption until an encryption key is prepared', async () => {
+  it('derives vault item keys on demand without requiring a plaintext password cache', async () => {
     const state: VersionedVaultDatabaseState = {
       ...createEmptyVaultDatabaseState(),
       user_secrets: [{ username: 'owner', argon_hash: '$argon2id$salt$master-pass' }],
@@ -489,11 +510,17 @@ describe('SQLite OPFS persistence engine', () => {
     localStorage.setItem('aegis_sqlite_fallback', JSON.stringify(state));
     const sqlite = await freshSqliteInstance();
 
-    expect(() => sqlite.deriveEncryptionKey('master-pass')).toThrow('not prepared');
-    await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual([]);
+    await expect(sqlite.deriveEncryptionKey('master-pass')).resolves.toBeInstanceOf(Uint8Array);
+    await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual([
+      expect.objectContaining({
+        id: 'encrypted-row',
+        title: 'Encrypted Row',
+        username: '[encrypted: aes-256-gcm]',
+      }),
+    ]);
     expect(sqlite.getQueryLogs()[0]).toMatchObject({
       query: 'SELECT id, title, category, favorite, deleted, username_db, enc_metadata FROM vault_items;',
-      status: 'ERROR',
+      status: 'SUCCESS',
     });
   });
 });

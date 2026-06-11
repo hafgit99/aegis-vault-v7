@@ -72,7 +72,7 @@ describe('LockScreen', () => {
     fireEvent.change(confirmation, { target: { value: '12345' } });
     fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 
-    expect(screen.getByText('Ana şifre en az 6 karakterden oluşmalıdır.')).toBeTruthy();
+    expect(screen.getByText(/en az 12/)).toBeTruthy();
     expect(setupMasterPasswordWithSecretKey).not.toHaveBeenCalled();
   });
 
@@ -95,7 +95,7 @@ describe('LockScreen', () => {
     fireEvent.change(confirmation, { target: { value: '12345' } });
     fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 
-    expect(screen.getByText('The master password must be at least 6 characters.')).toBeTruthy();
+    expect(screen.getByText('The master password must be at least 12 characters.')).toBeTruthy();
     expect(setupMasterPasswordWithSecretKey).not.toHaveBeenCalled();
   });
 
@@ -105,13 +105,13 @@ describe('LockScreen', () => {
 
     const password = passwordInput();
     const confirmation = confirmationInput();
-    fireEvent.change(password, { target: { value: 'strong-pass' } });
-    fireEvent.change(confirmation, { target: { value: 'strong-pass' } });
+    fireEvent.change(password, { target: { value: 'strong-pass-12' } });
+    fireEvent.change(confirmation, { target: { value: 'strong-pass-12' } });
     fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 
     await waitFor(() => {
       expect(setupMasterPasswordWithSecretKey).toHaveBeenCalledWith(
-        'strong-pass',
+        'strong-pass-12',
         expect.stringMatching(/^A3-/),
         false,
       );
@@ -123,14 +123,14 @@ describe('LockScreen', () => {
     const onUnlock = vi.fn();
     render(<LockScreen onUnlock={onUnlock} />);
 
-    fireEvent.change(passwordInput(), { target: { value: 'strong-pass' } });
-    fireEvent.change(confirmationInput(), { target: { value: 'strong-pass' } });
+    fireEvent.change(passwordInput(), { target: { value: 'strong-pass-12' } });
+    fireEvent.change(confirmationInput(), { target: { value: 'strong-pass-12' } });
     fireEvent.click(screen.getByTestId('lock-remember-secret-key-checkbox'));
     fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 
     await waitFor(() => {
       expect(setupMasterPasswordWithSecretKey).toHaveBeenCalledWith(
-        'strong-pass',
+        'strong-pass-12',
         expect.stringMatching(/^A3-/),
         true,
       );
@@ -143,7 +143,7 @@ describe('LockScreen', () => {
 
     const password = passwordInput();
     const confirmation = confirmationInput();
-    fireEvent.change(password, { target: { value: 'strong-pass' } });
+    fireEvent.change(password, { target: { value: 'strong-pass-12' } });
     fireEvent.change(confirmation, { target: { value: 'different-pass' } });
     fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 
@@ -189,9 +189,11 @@ describe('LockScreen', () => {
     fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 
     await waitFor(() => {
-      expect(screen.getByText('Hatalı Ana Şifre! Lütfen girilen şifreyi kontrol ederek tekrar deneyiniz.')).toBeTruthy();
+      expect(screen.getByText(/Güvenlik gecikmesi/i)).toBeTruthy();
       expect(onUnlock).not.toHaveBeenCalled();
     });
+
+    window.localStorage.removeItem('aegis_lockout_state');
 
     fireEvent.change(password, { target: { value: 'correct-pass' } });
     fireEvent.submit(document.querySelector('form') as HTMLFormElement);
@@ -201,6 +203,24 @@ describe('LockScreen', () => {
       expect(verifyMasterPassword).toHaveBeenCalledWith('correct-pass', null);
       expect(onUnlock).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('applies progressive lockout after a failed unlock attempt', async () => {
+    vi.mocked(isMasterPasswordSet).mockReturnValue(true);
+    vi.mocked(verifyMasterPassword).mockResolvedValue(false);
+
+    render(<LockScreen onUnlock={vi.fn()} />);
+
+    fireEvent.change(passwordInput(), { target: { value: 'wrong-pass' } });
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Güvenlik gecikmesi/i)).toBeTruthy();
+    });
+
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement);
+
+    expect(verifyMasterPassword).toHaveBeenCalledTimes(1);
   });
 
   it('requires the account secret key when the vault profile uses one', async () => {

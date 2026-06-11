@@ -184,7 +184,7 @@ describe('SettingsPanel import/export', () => {
     fireEvent.click(screen.getByText('Use my vault master password as the backup password'));
 
     expect(screen.getByText('Backup Security Password')).toBeTruthy();
-    expect(screen.getByPlaceholderText('Enter a custom backup password with at least 6 characters')).toBeTruthy();
+    expect(screen.getByPlaceholderText('Enter a custom backup password with at least 12 characters')).toBeTruthy();
   });
 
   it('exports an encrypted .aegis backup with the active master session without sessionStorage', async () => {
@@ -205,12 +205,12 @@ describe('SettingsPanel import/export', () => {
 
     fireEvent.click(container.querySelector('#useMasterCheck') as HTMLInputElement);
     fireEvent.change(container.querySelector('#encrypted-export-card input[type="password"]') as HTMLInputElement, {
-      target: { value: 'backup-pass' },
+      target: { value: 'backup-pass-12' },
     });
     fireEvent.submit(encryptedExportForm(container));
 
     await waitFor(() => {
-      expect(encryptDataWithPasswordSecure).toHaveBeenCalledWith(JSON.stringify(vaultItems), 'backup-pass');
+      expect(encryptDataWithPasswordSecure).toHaveBeenCalledWith(JSON.stringify(vaultItems), 'backup-pass-12');
     });
   });
 
@@ -363,8 +363,8 @@ describe('SettingsPanel account and safety controls', () => {
     const [oldPassword, newPassword, confirmPassword] = passwordChangeInputs(container);
 
     fireEvent.change(oldPassword, { target: { value: 'wrong-old' } });
-    fireEvent.change(newPassword, { target: { value: 'new-secret' } });
-    fireEvent.change(confirmPassword, { target: { value: 'new-secret' } });
+    fireEvent.change(newPassword, { target: { value: 'new-secret-12' } });
+    fireEvent.change(confirmPassword, { target: { value: 'new-secret-12' } });
     fireEvent.submit(passwordChangeForm(container));
 
     await waitFor(() => {
@@ -378,11 +378,11 @@ describe('SettingsPanel account and safety controls', () => {
     fireEvent.submit(passwordChangeForm(container));
 
     await waitFor(() => {
-      expect(container.textContent).toContain('en az 6');
+      expect(container.textContent).toContain('en az 12');
     });
     expect(setupMasterPassword).not.toHaveBeenCalled();
 
-    fireEvent.change(newPassword, { target: { value: 'new-secret' } });
+    fireEvent.change(newPassword, { target: { value: 'new-secret-12' } });
     fireEvent.change(confirmPassword, { target: { value: 'different-secret' } });
     fireEvent.submit(passwordChangeForm(container));
 
@@ -391,11 +391,11 @@ describe('SettingsPanel account and safety controls', () => {
     });
     expect(setupMasterPassword).not.toHaveBeenCalled();
 
-    fireEvent.change(confirmPassword, { target: { value: 'new-secret' } });
+    fireEvent.change(confirmPassword, { target: { value: 'new-secret-12' } });
     fireEvent.submit(passwordChangeForm(container));
 
     await waitFor(() => {
-      expect(setupMasterPassword).toHaveBeenCalledWith('new-secret');
+      expect(setupMasterPassword).toHaveBeenCalledWith('new-secret-12');
     });
     expect(oldPassword.value).toBe('');
     expect(newPassword.value).toBe('');
@@ -559,6 +559,21 @@ describe('SettingsPanel plain export and import errors', () => {
 
     await waitFor(() => {
       expect(container.textContent).toContain('alan');
+    });
+    expect(encryptDataWithPasswordSecure).not.toHaveBeenCalled();
+  });
+
+  it('requires a strong custom encrypted-export password', async () => {
+    const { container } = renderSettings();
+
+    fireEvent.click(container.querySelector('#useMasterCheck') as HTMLInputElement);
+    fireEvent.change(container.querySelector('#encrypted-export-card input[type="password"]') as HTMLInputElement, {
+      target: { value: 'short' },
+    });
+    fireEvent.submit(encryptedExportForm(container));
+
+    await waitFor(() => {
+      expect(container.textContent).toContain('en az 12');
     });
     expect(encryptDataWithPasswordSecure).not.toHaveBeenCalled();
   });

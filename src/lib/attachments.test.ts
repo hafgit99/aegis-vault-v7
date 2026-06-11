@@ -181,7 +181,7 @@ describe('attachment encryption', () => {
     });
   });
 
-  it('decrypts legacy attachment records without an explicit algorithm', async () => {
+  it('blocks direct reads of legacy XOR attachment records before migration', async () => {
     await expect(decryptAttachmentData({
       id: 'legacy-attachment',
       name: 'legacy.txt',
@@ -189,7 +189,10 @@ describe('attachment encryption', () => {
       size: 12,
       data: legacyXorEncrypt(bytes('private file')),
       encrypted: true,
-    }).then(text)).resolves.toBe('private file');
+    })).rejects.toMatchObject({
+      code: attachmentErrorCodes.legacyEncryptionBlocked,
+      name: 'AttachmentError',
+    });
   });
 
   it('requires an active vault session for new attachment encryption', async () => {
