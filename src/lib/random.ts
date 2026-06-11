@@ -2,14 +2,11 @@ export function secureRandomBytes(length: number): Uint8Array {
   const bytes = new Uint8Array(Math.max(0, length));
   const cryptoApi = globalThis.crypto;
 
-  if (cryptoApi?.getRandomValues) {
-    cryptoApi.getRandomValues(bytes);
-    return bytes;
+  if (!cryptoApi?.getRandomValues) {
+    throw new Error('CSPRNG not available. Aegis Vault requires crypto.getRandomValues.');
   }
 
-  for (let i = 0; i < bytes.length; i++) {
-    bytes[i] = Math.floor(Math.random() * 256);
-  }
+  cryptoApi.getRandomValues(bytes);
   return bytes;
 }
 
@@ -18,7 +15,7 @@ export function secureRandomIndex(max: number): number {
 
   const cryptoApi = globalThis.crypto;
   if (!cryptoApi?.getRandomValues) {
-    return Math.floor(Math.random() * max);
+    throw new Error('CSPRNG not available. Aegis Vault requires crypto.getRandomValues.');
   }
 
   const array = new Uint32Array(1);

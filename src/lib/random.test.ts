@@ -4,6 +4,7 @@ import { secureRandomBytes, secureRandomId, secureRandomIndex, secureRandomToken
 describe('random helpers', () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('creates random byte arrays with the requested length', () => {
@@ -15,12 +16,12 @@ describe('random helpers', () => {
     expect(secureRandomBytes(-10)).toHaveLength(0);
   });
 
-  it('falls back to Math.random when WebCrypto random values are unavailable', () => {
+  it('fails closed when WebCrypto random values are unavailable', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     vi.stubGlobal('crypto', {});
 
-    expect(Array.from(secureRandomBytes(3))).toEqual([128, 128, 128]);
-    expect(secureRandomIndex(10)).toBe(5);
+    expect(() => secureRandomBytes(3)).toThrow('CSPRNG not available');
+    expect(() => secureRandomIndex(10)).toThrow('CSPRNG not available');
   });
 
   it('returns indexes inside the requested range', () => {

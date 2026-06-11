@@ -10,6 +10,18 @@ describe('otp helpers', () => {
     expect(generateTOTP('')).toBe('000 000');
   });
 
+  it('matches the RFC 6238 SHA-1 test vector', () => {
+    expect(generateTOTP('GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', {
+      digits: 8,
+      timestampMs: 59_000,
+      formatted: false,
+    })).toBe('94287082');
+  });
+
+  it('returns a safe placeholder for invalid Base32 secrets', () => {
+    expect(generateTOTP('not-a-valid-secret!')).toBe('000 000');
+  });
+
   it('generates a stable six-digit code inside the same 30-second step', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-06-10T09:00:05.000Z'));
