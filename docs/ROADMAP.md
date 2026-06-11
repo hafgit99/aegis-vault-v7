@@ -102,6 +102,7 @@
   - [x] Translate settings auto-lock and biometric unlock controls, status, and feedback.
   - [x] Translate settings encrypted/plain export and universal import controls, prompts, and feedback.
   - [x] Translate settings demo reseed and destructive reset warning controls.
+  - [x] Translate profile-save and vault-status notifications.
 - [x] Add component tests for lock screen, vault form, settings import/export, and trash.
   - [x] Lock screen setup and unlock behavior covered by component tests.
   - [x] Settings encrypted export and JSON import behavior covered by component tests.

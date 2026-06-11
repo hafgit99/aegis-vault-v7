@@ -1,4 +1,5 @@
 import { AppConfirmConfig } from '../types';
+import { useLanguage } from '../i18n/LanguageContext';
 
 type OpenConfirm = (config: Omit<AppConfirmConfig, 'isOpen'>) => void;
 
@@ -7,11 +8,12 @@ interface UseVaultStatusActionOptions {
 }
 
 export function useVaultStatusAction({ openConfirm }: UseVaultStatusActionOptions) {
+  const { t } = useLanguage();
+
   const openVaultStatus = () => {
     openConfirm({
-      title: 'Kasa Durumu',
-      message:
-        'Kasa durumu güncel ve tamamen koruma altında. Herhangi bir sızıntı veya zayıf halka tespit edilmedi.',
+      title: t('vaultStatus.title'),
+      message: t('vaultStatus.message'),
       type: 'success',
       isAlert: true,
       onConfirm: () => {},

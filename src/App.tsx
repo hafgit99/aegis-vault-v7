@@ -29,8 +29,10 @@ import { useVaultFilters } from './hooks/useVaultFilters';
 import { useUnlockedVaultRefresh } from './hooks/useUnlockedVaultRefresh';
 import { useSelectedItemScore } from './hooks/useSelectedItemScore';
 import { useVaultStatusAction } from './hooks/useVaultStatusAction';
+import { useLanguage } from './i18n/LanguageContext';
 
 export default function App() {
+  const { t } = useLanguage();
   const { copiedField, copyText: handleCopyText, clearCopiedField } = useClipboardFeedback();
   const { revealed, toggleReveal, resetReveals } = useSensitiveReveal();
   const isPasswordRevealed = revealed.password;
@@ -120,8 +122,8 @@ export default function App() {
   } = useProfileSettings({
     onSaved: () =>
       showNotification({
-        title: 'Profil Güncellendi',
-        message: 'Profil resminiz ve adınız başarıyla kaydedildi.',
+        title: t('profile.savedTitle'),
+        message: t('profile.savedMessage'),
         type: 'success',
       }),
   });

@@ -107,6 +107,7 @@ Recently improved:
 - Settings lock controls: covered selected-language rendering for auto-lock options and biometric unlock status/actions.
 - Settings backup/import controls: covered selected-language rendering for export buttons, import drop zone, and locked-backup prompts.
 - Settings danger controls: covered selected-language rendering for demo reseed and destructive reset warning copy.
+- Notification hooks: covered selected-language rendering for the vault status alert and profile-save notification keys.
 - `src/components/VaultFormModal.tsx`: covered edit-save identity preservation, title validation, password visibility/autogeneration, selected file removal, attachment upload failures, existing attachment removal before save, and download error notifications.
 - `src/components/CardDetail.tsx`: covered copied states, PIN copy action, missing-field fallbacks, and empty-string copy behavior.
 - `src/components/LoginDetail.tsx`: covered copied states, empty-password fallback, and safe empty-password copy behavior.
