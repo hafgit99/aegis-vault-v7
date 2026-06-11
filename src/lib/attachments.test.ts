@@ -4,7 +4,7 @@
 
 import 'fake-indexeddb/auto';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   deleteAttachment,
@@ -161,6 +161,32 @@ describe('attachment encryption', () => {
     await expect(decryptAttachmentData(record)).rejects.toThrow();
   });
 
+  it('rejects AES-GCM attachment records with missing metadata', async () => {
+    openVaultSession('master-pass');
+
+    await expect(decryptAttachmentData({
+      id: 'broken-attachment',
+      name: 'broken.txt',
+      type: 'text/plain',
+      size: 12,
+      data: bytes('encrypted bytes'),
+      encrypted: true,
+      algorithm: 'AES-256-GCM',
+      iv: '000000000000000000000000',
+    })).rejects.toThrow('bilgisi eksik');
+  });
+
+  it('decrypts legacy attachment records without an explicit algorithm', async () => {
+    await expect(decryptAttachmentData({
+      id: 'legacy-attachment',
+      name: 'legacy.txt',
+      type: 'text/plain',
+      size: 12,
+      data: legacyXorEncrypt(bytes('private file')),
+      encrypted: true,
+    }).then(text)).resolves.toBe('private file');
+  });
+
   it('requires an active vault session for new attachment encryption', async () => {
     await expect(encryptAttachmentData('attachment-1', bytes('private file'))).rejects.toThrow(
       'Aktif kasa oturumu bulunamadı.',
@@ -227,6 +253,83 @@ describe('attachment encryption', () => {
 
     await deleteAttachment('attachment-1');
     await expect(getAttachmentBlob('attachment-1')).resolves.toBeNull();
+  });
+
+  it('uses a binary MIME fallback when saved files omit a type', async () => {
+    openVaultSession('master-pass');
+    const file = new File([bytes('private file')], 'secret.bin');
+
+    await saveAttachment('attachment-1', file);
+
+    const stored = await getStoredAttachmentRecord('attachment-1');
+    expect(stored?.type).toBe('application/octet-stream');
+  });
+
+  it('rejects save when FileReader returns unreadable content', async () => {
+    openVaultSession('master-pass');
+    const originalFileReader = globalThis.FileReader;
+
+    class StringResultFileReader {
+      public onload: ((event: ProgressEvent<FileReader>) => void) | null = null;
+      public onerror: (() => void) | null = null;
+      public error: Error | null = null;
+
+      readAsArrayBuffer() {
+        this.onload?.({ target: { result: 'not-an-array-buffer' } } as ProgressEvent<FileReader>);
+      }
+    }
+
+    vi.stubGlobal('FileReader', StringResultFileReader);
+
+    try {
+      await expect(saveAttachment('attachment-1', new File([bytes('private file')], 'secret.txt'))).rejects.toThrow(
+        'Dosya verisi okunamad',
+      );
+    } finally {
+      vi.stubGlobal('FileReader', originalFileReader);
+    }
+  });
+
+  it('rejects save when FileReader reports an error', async () => {
+    openVaultSession('master-pass');
+    const originalFileReader = globalThis.FileReader;
+    const readError = new Error('read failed');
+
+    class ErrorFileReader {
+      public onload: ((event: ProgressEvent<FileReader>) => void) | null = null;
+      public onerror: (() => void) | null = null;
+      public error: Error | null = readError;
+
+      readAsArrayBuffer() {
+        this.onerror?.();
+      }
+    }
+
+    vi.stubGlobal('FileReader', ErrorFileReader);
+
+    try {
+      await expect(saveAttachment('attachment-1', new File([bytes('private file')], 'secret.txt'))).rejects.toBe(
+        readError,
+      );
+    } finally {
+      vi.stubGlobal('FileReader', originalFileReader);
+    }
+  });
+
+  it('rejects retrieval when stored AES-GCM attachment metadata is incomplete', async () => {
+    openVaultSession('master-pass');
+    await putAttachmentRecord({
+      id: 'broken-attachment',
+      name: 'broken.txt',
+      type: 'text/plain',
+      size: 12,
+      data: bytes('encrypted bytes'),
+      encrypted: true,
+      algorithm: 'AES-256-GCM',
+      iv: '000000000000000000000000',
+    });
+
+    await expect(getAttachmentBlob('broken-attachment')).rejects.toThrow('bilgisi eksik');
   });
 
   it('returns null when an attachment id is not found', async () => {
