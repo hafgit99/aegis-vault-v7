@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, fireEvent, render } from '@testing-library/react';
+import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PasswordGenerator from './PasswordGenerator';
 
@@ -8,7 +8,12 @@ const generatePassword = vi.hoisted(() => vi.fn(() => 'CharPassword-123!'));
 const generateDiceware = vi.hoisted(() => vi.fn(() => 'Dice-Ware-123'));
 
 vi.mock('../lib/security', () => ({
-  calculatePasswordScore: vi.fn((password: string) => password.length > 12 ? 92 : 45),
+  calculatePasswordScore: vi.fn((password: string) => {
+    if (password.includes('Strong')) return 75;
+    if (password.includes('Medium')) return 45;
+    if (password.includes('Weak')) return 10;
+    return password.length > 12 ? 92 : 45;
+  }),
   generatePassword,
   getStrengthLabel: vi.fn((password: string) => ({
     label: password.length > 12 ? 'Güçlü' : 'Orta',
@@ -45,6 +50,7 @@ describe('PasswordGenerator', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    cleanup();
     vi.restoreAllMocks();
   });
 
@@ -94,6 +100,42 @@ describe('PasswordGenerator', () => {
     expect(generatePassword).toHaveBeenCalledTimes(4);
   });
 
+  it('forwards every character option toggle to the generator', () => {
+    const { container } = render(<PasswordGenerator />);
+    const checkboxes = container.querySelectorAll<HTMLInputElement>('#chars-spec-panel input[type="checkbox"]');
+
+    fireEvent.click(checkboxes[1]);
+    expect(generatePassword).toHaveBeenLastCalledWith(expect.objectContaining({ lowercase: false }));
+
+    fireEvent.click(checkboxes[2]);
+    expect(generatePassword).toHaveBeenLastCalledWith(expect.objectContaining({ numbers: false }));
+
+    fireEvent.click(checkboxes[3]);
+    expect(generatePassword).toHaveBeenLastCalledWith(expect.objectContaining({ symbols: false }));
+  });
+
+  it('renders each strength bar tone from the generated password score', () => {
+    generatePassword
+      .mockReturnValueOnce('SecurePassword-123!')
+      .mockReturnValueOnce('StrongPassword')
+      .mockReturnValueOnce('MediumPassword')
+      .mockReturnValueOnce('Weak');
+    const { container } = render(<PasswordGenerator />);
+    const refreshButton = container.querySelector<HTMLButtonElement>('#refresh-password-btn');
+    const getStrengthBar = () => container.querySelector<HTMLElement>('.h-full.transition-all');
+
+    expect(getStrengthBar()?.className).toContain('bg-brand-tertiary');
+
+    fireEvent.click(refreshButton!);
+    expect(getStrengthBar()?.className).toContain('bg-brand-secondary');
+
+    fireEvent.click(refreshButton!);
+    expect(getStrengthBar()?.className).toContain('bg-amber-400');
+
+    fireEvent.click(refreshButton!);
+    expect(getStrengthBar()?.className).toContain('bg-brand-error');
+  });
+
   it('switches to diceware mode and forwards word options to the generator', () => {
     const { container } = render(<PasswordGenerator />);
     const dicewareTab = container.querySelector<HTMLButtonElement>('#mode-diceware-tab');
@@ -128,6 +170,36 @@ describe('PasswordGenerator', () => {
     expect(generateDiceware).toHaveBeenLastCalledWith(expect.objectContaining({ addSymbol: true }));
   });
 
+  it('renders diceware strength descriptions across word-count boundaries', () => {
+    const { container } = render(<PasswordGenerator />);
+    const dicewareTab = container.querySelector<HTMLButtonElement>('#mode-diceware-tab');
+
+    fireEvent.click(dicewareTab!);
+    const wordSlider = container.querySelector<HTMLInputElement>('#diceware-spec-panel input[type="range"]');
+
+    fireEvent.change(wordSlider!, { target: { value: '3' } });
+    expect(container.textContent).toContain('Orta');
+
+    fireEvent.change(wordSlider!, { target: { value: '5' } });
+    expect(container.textContent).toContain('Çok Yüksek');
+
+    fireEvent.change(wordSlider!, { target: { value: '10' } });
+    expect(container.textContent).toContain('Askeri Seviye');
+  });
+
+  it('forwards diceware capitalization and number toggles', () => {
+    const { container } = render(<PasswordGenerator />);
+    fireEvent.click(container.querySelector<HTMLButtonElement>('#mode-diceware-tab')!);
+
+    const dicewareCheckboxes = container.querySelectorAll<HTMLInputElement>('#diceware-options-checkboxes input[type="checkbox"]');
+
+    fireEvent.click(dicewareCheckboxes[0]);
+    expect(generateDiceware).toHaveBeenLastCalledWith(expect.objectContaining({ capitalize: false }));
+
+    fireEvent.click(dicewareCheckboxes[1]);
+    expect(generateDiceware).toHaveBeenLastCalledWith(expect.objectContaining({ addNumber: false }));
+  });
+
   it('resets copy feedback without clearing a clipboard value changed by the user', async () => {
     const { container } = render(<PasswordGenerator />);
     const copyButton = container.querySelector<HTMLButtonElement>('#copy-password-btn');
@@ -151,5 +223,21 @@ describe('PasswordGenerator', () => {
     expect(readText).toHaveBeenCalled();
     expect(writeText).not.toHaveBeenLastCalledWith('');
     expect(clipboardText).toBe('user-overrode-clipboard');
+  });
+
+  it('clears pending timers and unchanged clipboard content when unmounted', async () => {
+    const { container, unmount } = render(<PasswordGenerator />);
+    const copyButton = container.querySelector<HTMLButtonElement>('#copy-password-btn');
+
+    fireEvent.click(copyButton!);
+    const copiedPassword = clipboardText;
+
+    unmount();
+    await Promise.resolve();
+
+    expect(readText).toHaveBeenCalled();
+    expect(writeText).toHaveBeenLastCalledWith('');
+    expect(clipboardText).toBe('');
+    expect(copiedPassword).toBeTruthy();
   });
 });

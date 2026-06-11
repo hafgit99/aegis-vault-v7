@@ -113,6 +113,7 @@
   - [x] Expand security audit rendering and action coverage.
   - [x] Expand settings panel password, biometric, export, import, and safety-control coverage.
   - [x] Expand lock screen setup, unlock, visibility, and biometric edge-case coverage.
+  - [x] Expand password generator strength, diceware, toggle, and clipboard cleanup coverage.
 
 ## Phase 4: Desktop Productization
 

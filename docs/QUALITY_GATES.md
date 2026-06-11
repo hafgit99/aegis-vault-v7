@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 92.43% |
-| Statements | 92.43% |
-| Functions | 88.06% |
-| Branches | 79.97% |
+| Lines | 92.60% |
+| Statements | 92.60% |
+| Functions | 89.38% |
+| Branches | 80.54% |
 
 Initial thresholds are intentionally below the current baseline:
 
@@ -32,8 +32,8 @@ These thresholds prevent large regressions while leaving room to add tests aroun
 
 ## Priority Coverage Targets
 
-1. `src/components/PasswordGenerator.tsx`: add uncovered diceware/password mode edge cases.
-2. `src/components/VaultFormModal.tsx`: add remaining edit/reset and conditional-field branch coverage.
+1. `src/components/VaultFormModal.tsx`: add remaining edit/reset and conditional-field branch coverage.
+2. `src/components/SettingsPanel.tsx`: continue reducing import/export and biometric branch gaps.
 
 Recently improved:
 
@@ -41,7 +41,7 @@ Recently improved:
 - `src/lib/attachments.ts`: covered IndexedDB save/read/delete paths, bulk legacy migration, missing records, and connection cleanup behavior.
 - `src/lib/sqlite_opfs.ts`: covered master setup/verification, encrypted row persistence, read-only SQL console behavior, reseed/delete/reset flows, query log subscriptions, and localStorage fallback hydration.
 - `src/lib/storage.ts`: covered setup detection, no-session guards, save/delete/reseed wrappers, trash move/restore, expired trash cleanup, and full trash emptying.
-- `src/components/PasswordGenerator.tsx`: covered character option changes, diceware mode settings, copy feedback, and safe clipboard clearing behavior.
+- `src/components/PasswordGenerator.tsx`: covered character option changes, all character toggles, strength bar tone branches, diceware mode settings, word-count descriptions, diceware toggles, copy feedback, unmount cleanup, and safe clipboard clearing behavior.
 - `src/lib/diceware.ts`: covered Turkish/English word selection, separator formats, capitalization, random number placement, and symbol placement.
 - `src/components/VaultFormModal.tsx`: covered card, passkey, identity, secure note, attachment upload, oversized-file rejection, existing attachment download/removal, and non-login username normalization.
 - `src/components/ProfileModal.tsx`: covered gradient detection, profile name validation, preset selection, image file validation, local image loading, save, and cancel flows.
