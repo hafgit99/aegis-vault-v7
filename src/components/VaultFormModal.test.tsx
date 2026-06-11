@@ -142,6 +142,76 @@ describe('VaultFormModal', () => {
     expect(screen.getByDisplayValue('Recovery codes are stored offline.')).toBeTruthy();
   });
 
+  it('saves edits with the original identity, favorite flag, and created date', async () => {
+    const onSave = vi.fn();
+    const onClose = vi.fn();
+    render(
+      <VaultFormModal
+        isOpen={true}
+        editingItem={editingItem}
+        onClose={onClose}
+        onSave={onSave}
+      />,
+    );
+
+    fireEvent.change(screen.getByDisplayValue('GitHub'), {
+      target: { value: '  GitHub Updated  ' },
+    });
+
+    submitForm();
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+        id: 'item-1',
+        title: 'GitHub Updated',
+        createdAt: '2026-06-10',
+        favorite: true,
+      }));
+    });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows validation feedback when submitted without a title', () => {
+    const onSave = vi.fn();
+    render(
+      <VaultFormModal
+        isOpen={true}
+        editingItem={null}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />,
+    );
+
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement);
+
+    expect(screen.getByText(/başlık belirleyin/)).toBeTruthy();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('toggles login password visibility and fills a generated password', () => {
+    render(
+      <VaultFormModal
+        isOpen={true}
+        editingItem={null}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    const passwordInput = screen.getByPlaceholderText('Şifrenizi belirleyin') as HTMLInputElement;
+    const toggleButton = Array.from(document.querySelectorAll<HTMLButtonElement>('button'))
+      .find((button) => button.title.includes('Göster'))!;
+    const generateButton = Array.from(document.querySelectorAll<HTMLButtonElement>('button'))
+      .find((button) => button.title.includes('Otomatik'))!;
+
+    expect(passwordInput.type).toBe('password');
+    fireEvent.click(toggleButton);
+    expect(passwordInput.type).toBe('text');
+
+    fireEvent.click(generateButton);
+    expect(passwordInput.value).toBe('Generated-Password-123!');
+  });
+
   it('saves credit card fields and maps the visible username to the card number', async () => {
     const onSave = vi.fn();
     render(
@@ -315,6 +385,55 @@ describe('VaultFormModal', () => {
     });
   });
 
+  it('shows an upload error when attachment encryption fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(saveAttachment).mockRejectedValueOnce(new Error('encrypt failed'));
+    const onSave = vi.fn();
+    render(
+      <VaultFormModal
+        isOpen={true}
+        editingItem={null}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />,
+    );
+
+    fireEvent.change(formInputs()[0], { target: { value: 'Login With Broken File' } });
+    const file = new File(['secret attachment'], 'broken.txt', { type: 'text/plain' });
+    fireEvent.change(document.querySelector<HTMLInputElement>('input[type="file"]')!, {
+      target: { files: [file] },
+    });
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement);
+
+    await waitFor(() => {
+      expect(screen.getByText(/yerel şifrelenirken/)).toBeTruthy();
+    });
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('can remove a selected file before saving', () => {
+    render(
+      <VaultFormModal
+        isOpen={true}
+        editingItem={null}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    const file = new File(['temporary'], 'temporary.txt', { type: 'text/plain' });
+    fireEvent.change(document.querySelector<HTMLInputElement>('input[type="file"]')!, {
+      target: { files: [file] },
+    });
+    expect(screen.getByText('temporary.txt')).toBeTruthy();
+
+    const removeButton = Array.from(document.querySelectorAll<HTMLButtonElement>('button'))
+      .find((button) => button.title.includes('Seçimi'))!;
+    fireEvent.click(removeButton);
+
+    expect(screen.queryByText('temporary.txt')).toBeNull();
+  });
+
   it('rejects files above the attachment size limit before upload', () => {
     render(
       <VaultFormModal
@@ -373,6 +492,32 @@ describe('VaultFormModal', () => {
     expect(screen.queryByText('contract.pdf')).toBeNull();
   });
 
+  it('clears existing attachment metadata when removed before saving', async () => {
+    const onSave = vi.fn();
+    render(
+      <VaultFormModal
+        isOpen={true}
+        editingItem={editingItemWithAttachment}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />,
+    );
+
+    const removeButton = Array.from(document.querySelectorAll<HTMLButtonElement>('button'))
+      .find((button) => button.title.includes('Eki'))!;
+    fireEvent.click(removeButton);
+    submitForm();
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+        attachmentId: undefined,
+        attachmentName: undefined,
+        attachmentSize: undefined,
+        attachmentType: undefined,
+      }));
+    });
+  });
+
   it('notifies when an existing attachment cannot be downloaded', async () => {
     vi.mocked(getAttachmentBlob).mockResolvedValue(null);
     const onNotify = vi.fn();
@@ -394,6 +539,32 @@ describe('VaultFormModal', () => {
     await waitFor(() => {
       expect(onNotify).toHaveBeenCalledWith(expect.objectContaining({
         type: 'warning',
+      }));
+    });
+  });
+
+  it('notifies when downloading an existing attachment throws', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(getAttachmentBlob).mockRejectedValueOnce(new Error('decrypt failed'));
+    const onNotify = vi.fn();
+
+    render(
+      <VaultFormModal
+        isOpen={true}
+        editingItem={editingItemWithAttachment}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+        onNotify={onNotify}
+      />,
+    );
+
+    const downloadButton = Array.from(document.querySelectorAll<HTMLButtonElement>('button'))
+      .find((button) => button.title.includes('ndir'))!;
+    fireEvent.click(downloadButton);
+
+    await waitFor(() => {
+      expect(onNotify).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'danger',
       }));
     });
   });

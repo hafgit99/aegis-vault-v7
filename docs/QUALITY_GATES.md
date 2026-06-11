@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 92.60% |
-| Statements | 92.60% |
-| Functions | 89.38% |
-| Branches | 80.54% |
+| Lines | 92.99% |
+| Statements | 92.99% |
+| Functions | 90.18% |
+| Branches | 81.40% |
 
 Initial thresholds are intentionally below the current baseline:
 
@@ -32,8 +32,8 @@ These thresholds prevent large regressions while leaving room to add tests aroun
 
 ## Priority Coverage Targets
 
-1. `src/components/VaultFormModal.tsx`: add remaining edit/reset and conditional-field branch coverage.
-2. `src/components/SettingsPanel.tsx`: continue reducing import/export and biometric branch gaps.
+1. `src/components/SettingsPanel.tsx`: continue reducing import/export and biometric branch gaps.
+2. `src/components/CardDetail.tsx`: add remaining copy/reveal branch coverage.
 
 Recently improved:
 
@@ -49,6 +49,7 @@ Recently improved:
 - `src/components/SecurityAudit.tsx`: covered empty secure state, critical weak/reused groups, medium-score feedback, excellent-score feedback, metric rendering, and audit item selection.
 - `src/components/SettingsPanel.tsx`: covered master password validation/update, auto-lock selection, demo reseed notification, safe destructive confirmation, biometric enable/disable/error paths, plain export fallback/error paths, and import error feedback.
 - `src/components/LockScreen.tsx`: covered setup mismatch, password visibility toggles, manual unlock, biometric unsupported/success/integrity/permission-error paths, and auto-triggered biometric unlock.
+- `src/components/VaultFormModal.tsx`: covered edit-save identity preservation, title validation, password visibility/autogeneration, selected file removal, attachment upload failures, existing attachment removal before save, and download error notifications.
 
 ## Next Gates
 
