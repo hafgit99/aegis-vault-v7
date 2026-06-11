@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 93.87% |
-| Statements | 93.87% |
-| Functions | 92.83% |
-| Branches | 85.88% |
+| Lines | 94.21% |
+| Statements | 94.21% |
+| Functions | 93.10% |
+| Branches | 86.43% |
 
 Initial thresholds are intentionally below the current baseline:
 
@@ -32,7 +32,7 @@ These thresholds prevent large regressions while leaving room to add tests aroun
 
 ## Priority Coverage Targets
 
-1. `src/components/SettingsPanel.tsx`: reduce remaining safety-control, import, and export branch gaps.
+1. `src/components/SettingsPanel.tsx`: reduce remaining fallback-message and desktop-runtime branch gaps.
 2. `src/components/VaultFormModal.tsx`: decide whether the unmounted file-input reset branch should be refactored or left as defensive code.
 
 Recently improved:
@@ -64,6 +64,7 @@ Recently improved:
 - `src/components/VaultFormModal.tsx`: covered drag-and-drop attachment selection and selected-file removal behavior when the hidden input has already unmounted.
 - `src/components/SecurityAudit.tsx`: covered missing-password audit classification so empty credentials are weak, non-reused, non-secure, and selectable.
 - `src/components/ProfileModal.tsx`: covered file-reader failures, empty file selections, fallback avatar initials, and upload button forwarding so the modal now reports full component coverage.
+- `src/components/SettingsPanel.tsx`: covered destructive reset confirmation, drag-and-drop JSON import, desktop import cancellation, decrypt-password validation, malformed decrypted backups, and encrypted export failures.
 
 ## Next Gates
 

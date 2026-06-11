@@ -368,6 +368,16 @@ describe('SettingsPanel account and safety controls', () => {
     expect(window.confirm).toHaveBeenCalledTimes(1);
     expect(resetSystem).not.toHaveBeenCalled();
   });
+
+  it('resets the vault and reloads the app when destructive confirmation is accepted', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(window.confirm).mockReturnValueOnce(true);
+    const { container } = renderSettings();
+
+    fireEvent.click(container.querySelector('#danger-zone-section button') as HTMLButtonElement);
+
+    expect(resetSystem).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('SettingsPanel biometric controls', () => {
@@ -473,6 +483,18 @@ describe('SettingsPanel plain export and import errors', () => {
     expect(encryptDataWithPasswordSecure).not.toHaveBeenCalled();
   });
 
+  it('shows an encrypted export error when encryption fails', async () => {
+    openVaultSession('master-pass');
+    vi.mocked(encryptDataWithPasswordSecure).mockRejectedValueOnce(new Error('encrypt failed'));
+    const { container } = renderSettings();
+
+    fireEvent.submit(encryptedExportForm(container));
+
+    await waitFor(() => {
+      expect(container.textContent).toContain('encrypt failed');
+    });
+  });
+
   it('exports a plain JSON backup through the browser fallback', async () => {
     const { container } = renderSettings();
 
@@ -508,6 +530,43 @@ describe('SettingsPanel plain export and import errors', () => {
 });
 
 describe('SettingsPanel import interaction states', () => {
+  it('imports a supported JSON backup through drag and drop', async () => {
+    const { container, props } = renderSettings();
+    const file = new File(
+      [
+        JSON.stringify([
+          {
+            title: 'Dropped Import',
+            username: 'drop@example.com',
+            password: 'dropped-secret',
+          },
+        ]),
+      ],
+      'dropped.json',
+      { type: 'application/json' },
+    );
+    const target = dropZone(container);
+
+    fireEvent.dragOver(target);
+    fireEvent.drop(target, {
+      dataTransfer: {
+        files: [file],
+      },
+    });
+
+    await waitFor(() => {
+      expect(saveVaultItem).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Dropped Import',
+          username: 'drop@example.com',
+          password: 'dropped-secret',
+        }),
+      );
+    });
+    expect(props.onDatabaseChanged).toHaveBeenCalledTimes(1);
+    expect(target.className).toContain('border-outline-variant');
+  });
+
   it('shows a native file-picker error when desktop import selection fails', async () => {
     vi.mocked(openDesktopImportFile).mockRejectedValueOnce(new Error('picker failed'));
     const { container } = renderSettings();
@@ -517,6 +576,20 @@ describe('SettingsPanel import interaction states', () => {
     await waitFor(() => {
       expect(container.textContent).toContain('picker failed');
     });
+  });
+
+  it('does not open the browser file picker when desktop import is cancelled in desktop runtime', async () => {
+    window.__TAURI_INTERNALS__ = {};
+    const { container } = renderSettings();
+    const input = fileInput(container);
+    const clickSpy = vi.spyOn(input, 'click');
+
+    fireEvent.click(dropZone(container));
+
+    await waitFor(() => {
+      expect(openDesktopImportFile).toHaveBeenCalledTimes(1);
+    });
+    expect(clickSpy).not.toHaveBeenCalled();
   });
 
   it('highlights and clears the import drop zone during drag events', () => {
@@ -560,5 +633,71 @@ describe('SettingsPanel import interaction states', () => {
     await waitFor(() => {
       expect(container.querySelector('#universal-import-card form')).toBeNull();
     });
+  });
+
+  it('shows a decrypt password error when submitting an encrypted import without a password', async () => {
+    const { container } = renderSettings();
+    const file = new File(
+      [
+        JSON.stringify({
+          version: '1.2',
+          kdf: 'Argon2id',
+          salt: 'salt',
+          payload: 'ciphertext',
+          iv: 'iv',
+          tag: 'tag',
+        }),
+      ],
+      'secure.aegis',
+      { type: 'application/json' },
+    );
+
+    fireEvent.change(fileInput(container), { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(container.querySelector('#universal-import-card form')).toBeTruthy();
+    });
+
+    fireEvent.submit(container.querySelector('#universal-import-card form') as HTMLFormElement);
+
+    await waitFor(() => {
+      expect(container.textContent).toContain('Parola');
+    });
+    expect(decryptDataWithPasswordSecure).not.toHaveBeenCalled();
+  });
+
+  it('shows a decrypt error when an encrypted import does not contain a list', async () => {
+    vi.mocked(decryptDataWithPasswordSecure).mockResolvedValueOnce(JSON.stringify({ title: 'not a list' }));
+    const { container } = renderSettings();
+    const file = new File(
+      [
+        JSON.stringify({
+          version: '1.2',
+          kdf: 'Argon2id',
+          salt: 'salt',
+          payload: 'ciphertext',
+          iv: 'iv',
+          tag: 'tag',
+        }),
+      ],
+      'secure.aegis',
+      { type: 'application/json' },
+    );
+
+    fireEvent.change(fileInput(container), { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(container.querySelector('#universal-import-card form')).toBeTruthy();
+    });
+
+    fireEvent.change(container.querySelector('input[placeholder*="Kilidi"]') as HTMLInputElement, {
+      target: { value: 'backup-pass' },
+    });
+    fireEvent.submit(container.querySelector('#universal-import-card form') as HTMLFormElement);
+
+    await waitFor(() => {
+      expect(container.textContent).toContain('liste');
+    });
+    expect(saveVaultItem).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'not a list' }));
   });
 });

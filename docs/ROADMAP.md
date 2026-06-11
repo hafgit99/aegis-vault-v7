@@ -129,6 +129,7 @@
   - [x] Expand vault form drag-and-drop attachment coverage.
   - [x] Expand security audit missing-password classification coverage.
   - [x] Expand profile modal file-reader and fallback-avatar coverage.
+  - [x] Expand settings panel reset, drag-drop import, decrypt-error, and export-failure coverage.
 
 ## Phase 4: Desktop Productization
 
