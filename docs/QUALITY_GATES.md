@@ -101,6 +101,7 @@ Recently improved:
 - Vault form card section: covered selected-language rendering for cardholder, number, expiry, CVV, and PIN fields.
 - Vault form passkey section: covered selected-language rendering for service, public key, private exponent, and generator controls.
 - Vault form identity section: covered selected-language rendering for document, full-name, date, and gender fields.
+- Vault form secure note section: covered selected-language rendering for secure note copy, shared note labels, and placeholders.
 - `src/components/VaultFormModal.tsx`: covered edit-save identity preservation, title validation, password visibility/autogeneration, selected file removal, attachment upload failures, existing attachment removal before save, and download error notifications.
 - `src/components/CardDetail.tsx`: covered copied states, PIN copy action, missing-field fallbacks, and empty-string copy behavior.
 - `src/components/LoginDetail.tsx`: covered copied states, empty-password fallback, and safe empty-password copy behavior.

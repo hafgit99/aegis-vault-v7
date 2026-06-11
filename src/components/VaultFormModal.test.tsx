@@ -153,6 +153,12 @@ describe('VaultFormModal', () => {
     expect(screen.getByText('Unspecified / Male (M)')).toBeTruthy();
     expect(screen.getByText('Female (F)')).toBeTruthy();
     expect(screen.getByText('Other / Company Document')).toBeTruthy();
+    fireEvent.click(screen.getByText('Note'));
+    expect(screen.getByText('Secure Note Content')).toBeTruthy();
+    expect(screen.getByText('A plain-text encrypted notes area only you can access.')).toBeTruthy();
+    expect(screen.getByText('You can write notes of any length; they are stored fully AES-encrypted on disk.')).toBeTruthy();
+    expect(screen.getByText('DOCUMENT / NOTE CONTENT')).toBeTruthy();
+    expect(screen.getByPlaceholderText('Write private recovery keys, system passwords, API logs, or sensitive notes here...')).toBeTruthy();
     expect(screen.getByText('Cancel')).toBeTruthy();
     expect(screen.getByText('Save Securely')).toBeTruthy();
     expect(screen.getByTitle('Close')).toBeTruthy();

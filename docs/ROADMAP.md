@@ -96,6 +96,7 @@
   - [x] Translate vault form card details, placeholders, and payment credential labels.
   - [x] Translate vault form passkey/API credential fields and private exponent generator controls.
   - [x] Translate vault form identity document fields, date labels, and gender options.
+  - [x] Translate vault form secure note copy, shared notes labels, and note placeholders.
 - [x] Add component tests for lock screen, vault form, settings import/export, and trash.
   - [x] Lock screen setup and unlock behavior covered by component tests.
   - [x] Settings encrypted export and JSON import behavior covered by component tests.

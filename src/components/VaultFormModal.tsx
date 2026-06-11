@@ -864,17 +864,17 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
           {category === 'secure_note' && (
             <div className="space-y-4 animate-fade-in text-left">
               <div className="border-l-2 border-brand-primary pl-3.5 py-0.5">
-                <h4 className="text-xs font-bold text-on-surface">Güvenli Not İçeriği</h4>
-                <p className="text-[10px] text-on-surface-variant">Sadece sizin erişebileceğiniz düz metin şifreli notlar alanı.</p>
+                <h4 className="text-xs font-bold text-on-surface">{t('vaultForm.secureNote.title')}</h4>
+                <p className="text-[10px] text-on-surface-variant">{t('vaultForm.secureNote.description')}</p>
               </div>
-              <p className="text-[11px] text-amber-400">Notlarınızı istediğiniz uzunlukta yazabilirsiniz, disk üzerinde tamamen AES şifreli saklanır.</p>
+              <p className="text-[11px] text-amber-400">{t('vaultForm.secureNote.warning')}</p>
             </div>
           )}
 
           {/* SECURE NOTES FIELD (AVAILABLE FOR ALL, RENDERED LARGER FOR SECURE NOTE CATEGORY) */}
           <div className="text-left">
             <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-              {category === 'secure_note' ? 'DOKÜMAN / NOT İÇERİĞİ' : 'DOKÜMAN NOTLARI / EKSTRA BİLGİLER'}
+              {category === 'secure_note' ? t('vaultForm.notes.secureLabel') : t('vaultForm.notes.extraLabel')}
             </label>
             <div className="relative">
               <StickyNote className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
@@ -884,7 +884,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                 onChange={(e) => setNotes(e.target.value)}
                 rows={category === 'secure_note' ? 8 : 3}
                 className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface resize-none font-sans leading-relaxed"
-                placeholder={category === 'secure_note' ? 'Gizli kurtarma anahtarlarınızı, özel sistem şifrelerinizi, API loglarınızı ya da hassas notlarınızı buraya yazın...' : 'Kurtarma ipuçları, ek bilgiler vb.'}
+                placeholder={category === 'secure_note' ? t('vaultForm.notes.securePlaceholder') : t('vaultForm.notes.extraPlaceholder')}
               />
             </div>
           </div>
