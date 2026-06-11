@@ -5,6 +5,8 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 import { VaultItem } from '../types';
 import TrashWorkspace from './TrashWorkspace';
 
@@ -23,6 +25,7 @@ const trashItem: VaultItem = {
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
 });
 
 describe('TrashWorkspace', () => {
@@ -65,5 +68,25 @@ describe('TrashWorkspace', () => {
     expect(onEmptyTrash).toHaveBeenCalledTimes(1);
     expect(onRestore).toHaveBeenCalledWith(trashItem);
     expect(onDeletePermanently).toHaveBeenCalledWith(trashItem);
+  });
+
+  it('renders trash workspace labels in the selected language', () => {
+    window.localStorage.setItem(languageStorageKey, 'en');
+
+    render(
+      <LanguageProvider>
+        <TrashWorkspace
+          items={[trashItem]}
+          onEmptyTrash={vi.fn()}
+          onRestore={vi.fn()}
+          onDeletePermanently={vi.fn()}
+        />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByText('Trash Bin')).toBeTruthy();
+    expect(screen.getByText(/Deleted password cards are stored here/i)).toBeTruthy();
+    expect(screen.getByText('Empty Trash Completely')).toBeTruthy();
+    expect(screen.getByText('Security and Data Protection Notice')).toBeTruthy();
   });
 });

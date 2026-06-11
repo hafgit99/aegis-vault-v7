@@ -1,6 +1,7 @@
 import { Trash2 } from 'lucide-react';
 import { Fragment } from 'react';
 
+import { useLanguage } from '../i18n/LanguageContext';
 import { VaultItem } from '../types';
 import TrashEmptyState from './TrashEmptyState';
 import TrashInfoBanner from './TrashInfoBanner';
@@ -19,6 +20,8 @@ export default function TrashWorkspace({
   onRestore,
   onDeletePermanently,
 }: TrashWorkspaceProps) {
+  const { t } = useLanguage();
+
   return (
     <div
       data-testid="trash-workspace"
@@ -28,10 +31,10 @@ export default function TrashWorkspace({
         <div>
           <h1 className="font-display text-2xl font-bold text-on-surface flex items-center gap-3">
             <Trash2 className="w-7 h-7 text-red-500" />
-            <span>Çöp Kutusu (Trash Bin)</span>
+            <span>{t('trash.workspace.title')}</span>
           </h1>
           <p className="text-on-surface-variant text-xs mt-1">
-            Silinen şifre kartlarınız burada depolanır ve 15 gün sonra tamamen temizlenir.
+            {t('trash.workspace.description')}
           </p>
         </div>
 
@@ -41,7 +44,7 @@ export default function TrashWorkspace({
             className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-xl font-bold text-xs transition-colors cursor-pointer"
           >
             <Trash2 className="w-4 h-4" />
-            <span>Çöp Kutusunu Tamamen Boşalt</span>
+            <span>{t('trash.workspace.emptyTrash')}</span>
           </button>
         )}
       </div>

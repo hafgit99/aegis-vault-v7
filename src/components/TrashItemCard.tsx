@@ -1,6 +1,8 @@
 import { Clock, KeyRound, RefreshCw, Trash2 } from 'lucide-react';
-import { VaultItem } from '../types';
+
+import { useLanguage } from '../i18n/LanguageContext';
 import { getTrashRemainingDays } from '../lib/display';
+import { VaultItem } from '../types';
 
 interface TrashItemCardProps {
   item: VaultItem;
@@ -9,7 +11,9 @@ interface TrashItemCardProps {
 }
 
 export default function TrashItemCard({ item, onRestore, onDeletePermanently }: TrashItemCardProps) {
+  const { language, t } = useLanguage();
   const remainingDays = getTrashRemainingDays(item.deletedAt);
+  const dateLocale = language === 'zh' ? 'zh-CN' : language === 'en' ? 'en-US' : 'tr-TR';
 
   return (
     <div
@@ -28,29 +32,29 @@ export default function TrashItemCard({ item, onRestore, onDeletePermanently }: 
         </div>
         <span className="shrink-0 flex items-center gap-1 bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-bold px-2 py-1 rounded-full">
           <Clock className="w-3 h-3" />
-          <span>{remainingDays} Gün Kaldı</span>
+          <span>{remainingDays} {t('trash.item.daysLeft')}</span>
         </span>
       </div>
 
       <div className="flex items-center justify-between pt-3 border-t border-outline-variant/10 text-xs">
         <span className="text-[10px] text-on-surface-variant">
-          Silindi: {item.deletedAt ? new Date(item.deletedAt).toLocaleDateString('tr-TR') : 'Bilinmiyor'}
+          {t('trash.item.deleted')}: {item.deletedAt ? new Date(item.deletedAt).toLocaleDateString(dateLocale) : t('trash.item.unknown')}
         </span>
         <div className="flex items-center gap-2">
           <button
             data-testid="restore-trash-item-button"
             onClick={() => onRestore(item)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary rounded-lg font-bold transition-all cursor-pointer"
-            title="Kasaya Geri Yükle"
+            title={t('trash.item.restoreTitle')}
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>Geri Yükle</span>
+            <span>{t('trash.item.restore')}</span>
           </button>
           <button
             data-testid="permanent-delete-trash-item-button"
             onClick={() => onDeletePermanently(item)}
             className="p-1.5 bg-surface-high hover:bg-red-500/15 text-on-surface-variant hover:text-red-500 border border-outline-variant/15 rounded-lg transition-all cursor-pointer"
-            title="Kalıcı Olarak Sil"
+            title={t('trash.item.deleteTitle')}
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
