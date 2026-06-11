@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 87.39% |
-| Statements | 87.39% |
-| Functions | 84.53% |
-| Branches | 77.43% |
+| Lines | 90.12% |
+| Statements | 90.12% |
+| Functions | 84.88% |
+| Branches | 77.94% |
 
 Initial thresholds are intentionally below the current baseline:
 
@@ -32,7 +32,8 @@ These thresholds prevent large regressions while leaving room to add tests aroun
 
 ## Priority Coverage Targets
 
-1. `src/components/SecurityAudit.tsx`: add audit rendering and action coverage.
+1. `src/components/SettingsPanel.tsx`: add remaining import/export, biometric, and destructive-action coverage.
+2. `src/components/LockScreen.tsx`: add setup/unlock edge cases and error-state coverage.
 
 Recently improved:
 
@@ -45,6 +46,7 @@ Recently improved:
 - `src/components/VaultFormModal.tsx`: covered card, passkey, identity, secure note, attachment upload, oversized-file rejection, existing attachment download/removal, and non-login username normalization.
 - `src/components/ProfileModal.tsx`: covered gradient detection, profile name validation, preset selection, image file validation, local image loading, save, and cancel flows.
 - `src/components/ConfirmModal.tsx`: covered closed state, confirm/cancel behavior, header close, and alert-only mode.
+- `src/components/SecurityAudit.tsx`: covered empty secure state, critical weak/reused groups, medium-score feedback, excellent-score feedback, metric rendering, and audit item selection.
 
 ## Next Gates
 

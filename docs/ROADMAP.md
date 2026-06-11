@@ -110,6 +110,7 @@
   - [x] Expand password generator and Diceware workflow coverage.
   - [x] Expand vault form category and attachment workflow coverage.
   - [x] Expand profile and confirm modal interaction coverage.
+  - [x] Expand security audit rendering and action coverage.
 
 ## Phase 4: Desktop Productization
 
