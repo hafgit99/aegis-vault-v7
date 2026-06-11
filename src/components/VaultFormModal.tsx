@@ -608,13 +608,13 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
           {category === 'card' && (
             <div className="space-y-4 animate-fade-in text-left">
               <div className="border-l-2 border-brand-primary pl-3.5 py-0.5">
-                <h4 className="text-xs font-bold text-on-surface">Kredi / Banka Kart Bilgileri</h4>
-                <p className="text-[10px] text-on-surface-variant">Ödeme kartlarınızın tüm gizli detayları yerel anahtarınızla kilitlenir.</p>
+                <h4 className="text-xs font-bold text-on-surface">{t('vaultForm.card.title')}</h4>
+                <p className="text-[10px] text-on-surface-variant">{t('vaultForm.card.description')}</p>
               </div>
 
               <div>
                 <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                  KART ÜZERİNDEKİ İSİM (SAHİBİ)
+                  {t('vaultForm.card.cardholder')}
                 </label>
                 <div className="relative">
                   <User className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
@@ -623,7 +623,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                     value={cardholderName}
                     onChange={(e) => setCardholderName(e.target.value)}
                     className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface"
-                    placeholder="Örn. AHMET YILMAZ"
+                    placeholder={t('vaultForm.card.cardholderPlaceholder')}
                   />
                 </div>
               </div>
@@ -631,7 +631,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="sm:col-span-2">
                   <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                    KART NUMARASI
+                    {t('vaultForm.card.number')}
                   </label>
                   <div className="relative">
                     <CreditCard className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
@@ -640,14 +640,14 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                       value={cardNumber}
                       onChange={(e) => setCardNumber(e.target.value)}
                       className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
-                      placeholder="**** **** **** ****"
+                      placeholder={t('vaultForm.card.numberPlaceholder')}
                     />
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                    SON KULLANMA (AA/YY)
+                    {t('vaultForm.card.expiry')}
                   </label>
                   <div className="relative">
                     <Calendar className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
@@ -656,7 +656,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                       value={cardExpiry}
                       onChange={(e) => setCardExpiry(e.target.value)}
                       className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
-                      placeholder="09/29"
+                      placeholder={t('vaultForm.card.expiryPlaceholder')}
                     />
                   </div>
                 </div>
@@ -665,7 +665,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                    GÜVENLİK KODU (CVV)
+                    {t('vaultForm.card.cvv')}
                   </label>
                   <div className="relative">
                     <Lock className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
@@ -675,14 +675,14 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                       value={cardCvv}
                       onChange={(e) => setCardCvv(e.target.value)}
                       className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
-                      placeholder="***"
+                      placeholder={t('vaultForm.card.cvvPlaceholder')}
                     />
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                    ATM / KART ŞİFRESİ (PİN - OPSİYONEL)
+                    {t('vaultForm.card.pin')}
                   </label>
                   <div className="relative">
                     <KeyRound className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
@@ -692,7 +692,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                       value={cardPin}
                       onChange={(e) => setCardPin(e.target.value)}
                       className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
-                      placeholder="****"
+                      placeholder={t('vaultForm.card.pinPlaceholder')}
                     />
                   </div>
                 </div>

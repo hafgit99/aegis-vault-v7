@@ -120,6 +120,15 @@ describe('VaultFormModal', () => {
     expect(screen.getByTitle('Generate Password Automatically')).toBeTruthy();
     expect(screen.getByText('TWO-FACTOR (2FA / TOTP) AUTH KEY (STEP-BASED RAPID CODES - OPTIONAL)')).toBeTruthy();
     expect(screen.getByPlaceholderText('E.g. JBSWY3DPEHPK3PXP')).toBeTruthy();
+    fireEvent.click(screen.getByText('Card'));
+    expect(screen.getByText('Credit / Debit Card Details')).toBeTruthy();
+    expect(screen.getByText('All private payment card details are locked with your local key.')).toBeTruthy();
+    expect(screen.getByText('NAME ON CARD (CARDHOLDER)')).toBeTruthy();
+    expect(screen.getByPlaceholderText('E.g. AHMET YILMAZ')).toBeTruthy();
+    expect(screen.getByText('CARD NUMBER')).toBeTruthy();
+    expect(screen.getByText('EXPIRY (MM/YY)')).toBeTruthy();
+    expect(screen.getByText('SECURITY CODE (CVV)')).toBeTruthy();
+    expect(screen.getByText('ATM / CARD PIN (OPTIONAL)')).toBeTruthy();
     expect(screen.getByText('Cancel')).toBeTruthy();
     expect(screen.getByText('Save Securely')).toBeTruthy();
     expect(screen.getByTitle('Close')).toBeTruthy();
