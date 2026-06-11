@@ -137,6 +137,7 @@
   - [x] Expand random helper fallback, UUID formatting, unbiased-index retry, and empty-token coverage.
   - [x] Expand importer sparse JSON, Bitwarden type, CSV category, and fallback-default coverage.
   - [x] Expand SQLite desktop payload, legacy migration, SQL projection, update/default, and missing-key guard coverage.
+  - [x] Expand legacy crypto hash, KDF, authenticated decrypt, tamper, stream fallback, and malformed-envelope coverage.
 
 ## Phase 4: Desktop Productization
 

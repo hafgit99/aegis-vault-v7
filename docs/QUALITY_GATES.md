@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 95.82% |
-| Statements | 95.82% |
-| Functions | 93.36% |
-| Branches | 92.12% |
+| Lines | 97.95% |
+| Statements | 97.95% |
+| Functions | 94.47% |
+| Branches | 92.44% |
 
 Initial thresholds are intentionally below the current baseline:
 
@@ -33,7 +33,7 @@ These thresholds prevent large regressions while leaving room to add tests aroun
 ## Priority Coverage Targets
 
 1. `src/components/SettingsPanel.tsx`: reduce remaining fallback-message and desktop-runtime branch gaps.
-2. `src/lib/legacyCrypto.ts`: cover remaining read-only compatibility failure paths before tightening global line thresholds.
+2. `src/lib/biometric.ts`: cover remaining platform-support helper paths and stored-bundle cleanup behavior.
 
 Recently improved:
 
@@ -71,6 +71,7 @@ Recently improved:
 - `src/lib/biometric.ts`: covered WebAuthn support detection, disable flow, unsupported registration, cancelled registration, missing stored bundle, cancelled authentication, and mismatched authenticator rejection.
 - `src/lib/random.ts`: covered WebCrypto and Math.random fallback paths, non-positive ranges, unbiased-index retries, randomUUID usage, UUID v4 fallback formatting, and empty token generation so entropy helpers now report full coverage.
 - `src/lib/importer.ts`: covered sparse Aegis JSON defaults, sparse and unknown Bitwarden JSON types, numeric Bitwarden CSV categories/favorites, LastPass optional-column fallbacks, and universal CSV fallback defaults.
+- `src/lib/legacyCrypto.ts`: covered malformed legacy hashes, compact KDF parameters, SHA-256/HMAC/HKDF vectors, authenticated legacy AES-GCM-compatible decrypt paths, tamper rejection, old stream-cipher fallback envelopes, malformed secure envelopes, checksum failures, and unsupported envelope versions.
 
 ## Next Gates
 
