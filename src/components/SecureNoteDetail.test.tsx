@@ -5,6 +5,8 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 import { VaultItem } from '../types';
 import SecureNoteDetail from './SecureNoteDetail';
 
@@ -21,6 +23,7 @@ const baseItem: VaultItem = {
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
 });
 
 describe('SecureNoteDetail', () => {
@@ -54,5 +57,23 @@ describe('SecureNoteDetail', () => {
     fireEvent.click(screen.getByText('Tümü Kopyalandı!'));
 
     expect(onCopyText).toHaveBeenCalledWith('', 'secure_notes_copy');
+  });
+
+  it('renders secure note labels and states in the selected language', () => {
+    window.localStorage.setItem(languageStorageKey, 'en');
+
+    render(
+      <LanguageProvider>
+        <SecureNoteDetail
+          item={{ ...baseItem, notes: '' }}
+          copiedField="secure_notes_copy"
+          onCopyText={vi.fn()}
+        />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByText('SECURE NOTE ENCRYPTED DETAIL')).toBeTruthy();
+    expect(screen.getByText('Copied All!')).toBeTruthy();
+    expect(screen.getByText('No content has been written.')).toBeTruthy();
   });
 });

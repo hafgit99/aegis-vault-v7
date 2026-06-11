@@ -88,6 +88,7 @@ Recently improved:
 - Card detail panel: covered selected-language rendering for card labels, fallback values, and copy/reveal controls.
 - Passkey detail panel: covered selected-language rendering for labels, fallback values, and copy/reveal controls.
 - Identity detail panel: covered selected-language rendering for labels, fallback values, gender labels, and copy controls.
+- Secure note detail panel: covered selected-language rendering for title, copied state, and empty-note fallback.
 - `src/components/VaultFormModal.tsx`: covered edit-save identity preservation, title validation, password visibility/autogeneration, selected file removal, attachment upload failures, existing attachment removal before save, and download error notifications.
 - `src/components/CardDetail.tsx`: covered copied states, PIN copy action, missing-field fallbacks, and empty-string copy behavior.
 - `src/components/LoginDetail.tsx`: covered copied states, empty-password fallback, and safe empty-password copy behavior.
