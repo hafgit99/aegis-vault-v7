@@ -42,7 +42,8 @@ describe('secure encrypted backup envelope', () => {
   it('rejects tampered secure exports through WebCrypto authentication', async () => {
     const envelope = await encryptDataWithPasswordSecure('secret export', 'backup-password');
     const parsed = JSON.parse(envelope);
-    parsed.tag = `00${parsed.tag.slice(2)}`;
+    const tamperedTagPrefix = parsed.tag.startsWith('00') ? 'ff' : '00';
+    parsed.tag = `${tamperedTagPrefix}${parsed.tag.slice(2)}`;
 
     await expect(decryptDataWithPasswordSecure(JSON.stringify(parsed), 'backup-password')).rejects.toThrow();
   });

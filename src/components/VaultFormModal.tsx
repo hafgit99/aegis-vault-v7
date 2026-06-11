@@ -773,14 +773,14 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
           {category === 'identity' && (
             <div className="space-y-4 animate-fade-in text-left">
               <div className="border-l-2 border-brand-primary pl-3.5 py-0.5">
-                <h4 className="text-xs font-bold text-on-surface">Kişisel Kimlik / Belge Bilgileri</h4>
-                <p className="text-[10px] text-on-surface-variant">T.C. Kimlik, Pasaport, Sürücü Ehliyeti veya Sosyal Güvenlik kayıtları.</p>
+                <h4 className="text-xs font-bold text-on-surface">{t('vaultForm.identity.title')}</h4>
+                <p className="text-[10px] text-on-surface-variant">{t('vaultForm.identity.description')}</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                    BELGE / KİMLİK / PASAPORT NUMARASI
+                    {t('vaultForm.identity.documentNumber')}
                   </label>
                   <div className="relative">
                     <Lock className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
@@ -789,14 +789,14 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                       value={idNumber}
                       onChange={(e) => setIdNumber(e.target.value)}
                       className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-semibold font-mono"
-                      placeholder="Örn: 10000000000 veya U1234567"
+                      placeholder={t('vaultForm.identity.documentNumberPlaceholder')}
                     />
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                    KİMLİK SAHİBİ TAM ADI SOYADI
+                    {t('vaultForm.identity.fullName')}
                   </label>
                   <div className="relative">
                     <User className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
@@ -805,7 +805,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                       value={idFullName}
                       onChange={(e) => setIdFullName(e.target.value)}
                       className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-semibold"
-                      placeholder="Belgede geçen tam ad soyad"
+                      placeholder={t('vaultForm.identity.fullNamePlaceholder')}
                     />
                   </div>
                 </div>
@@ -814,7 +814,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                    DOĞUM TARİHİ
+                    {t('vaultForm.identity.birthDate')}
                   </label>
                   <div className="relative">
                     <Calendar className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
@@ -829,7 +829,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
 
                 <div>
                   <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                    SON GEÇERLİLİK
+                    {t('vaultForm.identity.expiryDate')}
                   </label>
                   <div className="relative">
                     <Calendar className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
@@ -844,16 +844,16 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
 
                 <div>
                   <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                    CİNSİYET
+                    {t('vaultForm.identity.gender')}
                   </label>
                   <select
                     value={idGender}
                     onChange={(e) => setIdGender(e.target.value)}
                     className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl px-3 py-2 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface"
                   >
-                    <option value="Male">Belirtilmemiş / Erkek (M)</option>
-                    <option value="Female">Kadın / Dişi (F)</option>
-                    <option value="Other">Diğer / Şirket Belgesi</option>
+                    <option value="Male">{t('vaultForm.identity.genderMale')}</option>
+                    <option value="Female">{t('vaultForm.identity.genderFemale')}</option>
+                    <option value="Other">{t('vaultForm.identity.genderOther')}</option>
                   </select>
                 </div>
               </div>
