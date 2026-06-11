@@ -479,8 +479,10 @@ export default function SettingsPanel({
   const triggerResetAll = () => {
     const confirmation = window.confirm(t('settings.danger.confirm'));
     if (confirmation) {
-      resetSystem();
-      window.location.reload();
+      void (async () => {
+        await resetSystem();
+        window.location.reload();
+      })();
     }
   };
 

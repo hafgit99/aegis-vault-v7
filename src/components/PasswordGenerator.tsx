@@ -20,7 +20,7 @@ import {
 import { useLanguage } from '../i18n/LanguageContext';
 import { GeneratorOptions } from '../types';
 import { generatePassword, calculatePasswordScore, getStrengthLabel } from '../lib/security';
-import { generateDiceware, DicewareOptions } from '../lib/diceware';
+import { calculateDicewareEntropyBits, generateDiceware, DicewareOptions } from '../lib/diceware';
 import {
   clearClipboardIfUnchanged,
   DEFAULT_CLIPBOARD_CLEAR_DELAY_MS,
@@ -42,7 +42,7 @@ export default function PasswordGenerator() {
 
   // Diceware word-based states
   const [dicewareOptions, setDicewareOptions] = useState<DicewareOptions>({
-    wordCount: 4,
+    wordCount: 6,
     separator: 'hyphen',
     language: 'tr',
     capitalize: true,
@@ -128,9 +128,15 @@ export default function PasswordGenerator() {
 
   // Custom descriptions for word list counts in Diceware
   const getDicewareStrengthDescription = (count: number) => {
-    if (count <= 3) return { text: t('passwordGenerator.diceStrength.medium'), color: 'text-amber-400' };
-    if (count === 4) return { text: t('passwordGenerator.diceStrength.high'), color: 'text-[#10b981]' };
-    if (count === 5) return { text: t('passwordGenerator.diceStrength.veryHigh'), color: 'text-[#10b981]' };
+    const entropyBits = calculateDicewareEntropyBits({
+      language: dicewareOptions.language,
+      wordCount: count,
+      addNumber: dicewareOptions.addNumber,
+      addSymbol: dicewareOptions.addSymbol,
+    });
+    if (entropyBits < 60) return { text: t('passwordGenerator.diceStrength.medium'), color: 'text-amber-400' };
+    if (entropyBits < 75) return { text: t('passwordGenerator.diceStrength.high'), color: 'text-[#10b981]' };
+    if (entropyBits < 90) return { text: t('passwordGenerator.diceStrength.veryHigh'), color: 'text-[#10b981]' };
     return { text: t('passwordGenerator.diceStrength.military'), color: 'text-brand-tertiary animate-pulse' };
   };
 
@@ -370,7 +376,7 @@ export default function PasswordGenerator() {
             </div>
             <input
               type="range"
-              min="3"
+              min="4"
               max="10"
               value={dicewareOptions.wordCount}
               onChange={(e) => setDicewareOptions({ ...dicewareOptions, wordCount: parseInt(e.target.value) })}

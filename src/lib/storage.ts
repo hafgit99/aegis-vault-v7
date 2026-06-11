@@ -11,6 +11,7 @@ import {
   normalizeAccountSecretKey,
 } from './secretKey';
 import { sqliteOPFSInstance } from './sqlite_opfs';
+import { logSecurityEvent, securityEventCodes } from './securityEvents';
 import { closeVaultSession, getActiveMasterPassword, openVaultSession } from './vaultSession';
 
 const STORAGE_KEYS = {
@@ -27,12 +28,11 @@ interface AccountSecretProfile {
 const INITIAL_DEMO_ITEMS: VaultItem[] = [
   {
     id: '1',
-    title: 'GitHub',
-    username: 'username_aegis',
-    password: 'G8x#kL9@pQ2!mZ7',
-    url: 'github.com',
-    totpSecret: 'JBSWY3DPEHPK3PXP',
-    notes: 'Backup recovery codes are stored in an offline safe.',
+    title: 'Demo Developer Portal',
+    username: 'demo.dev@example.test',
+    password: 'R7!mQ4#vL9$zP2@k',
+    url: 'dev-portal.example.test',
+    notes: 'Synthetic sample record. Replace it with your own credential.',
     createdAt: '2023-11-12',
     updatedAt: '2024-01-24',
     category: 'login',
@@ -40,34 +40,33 @@ const INITIAL_DEMO_ITEMS: VaultItem[] = [
   },
   {
     id: '2',
-    title: 'Google Workspace',
-    username: 'admin@aegisvault.local',
-    password: 'S@f3P@$$w0rd2024!',
-    url: 'workspace.google.com',
-    totpSecret: 'KVKVE43VNVSTCTKP',
-    notes: 'Primary admin console account.',
+    title: 'Demo Team Admin',
+    username: 'demo.admin@example.test',
+    password: 'N8$cT2!wY6#rH5@p',
+    url: 'team-admin.example.test',
+    notes: 'Synthetic admin sample for layout and audit testing.',
     createdAt: '2023-10-05',
     updatedAt: '2024-02-18',
     category: 'login',
   },
   {
     id: '3',
-    title: 'Chase Bank',
-    username: 'main_account_01',
-    password: 'password123',
-    url: 'chase.com',
-    notes: 'Used only for bill payments.',
+    title: 'Demo Billing Vault',
+    username: 'demo.billing@example.test',
+    password: 'B6@tK9#sV3!qL8%w',
+    url: 'billing.example.test',
+    notes: 'Synthetic billing sample. No real financial service is represented.',
     createdAt: '2022-04-12',
     updatedAt: '2023-12-01',
     category: 'login',
   },
   {
     id: '4',
-    title: 'Spotify Family',
-    username: 'music_fanatic',
-    password: 'S0ng$OfTh3Decade#',
-    url: 'spotify.com',
-    notes: 'Shared subscription account for family members.',
+    title: 'Demo Media Account',
+    username: 'demo.media@example.test',
+    password: 'M4#nR8!vC2$sX7@d',
+    url: 'media.example.test',
+    notes: 'Synthetic shared-account sample.',
     createdAt: '2023-01-15',
     updatedAt: '2024-03-10',
     category: 'login',
@@ -144,7 +143,12 @@ export async function verifyMasterPassword(password: string, secretKey?: string 
     try {
       await migrateLegacyAttachmentsToAesGcm();
     } catch (err) {
-      console.warn('Legacy attachment migration failed after unlock:', err);
+      logSecurityEvent(
+        securityEventCodes.attachmentLegacyMigrationFailed,
+        'Legacy attachment migration failed after unlock.',
+        'warning',
+        { error: err instanceof Error ? err.message : String(err) },
+      );
     }
   }
   return isCorrect;
@@ -161,7 +165,12 @@ export async function setupMasterPassword(password: string): Promise<void> {
   try {
     await migrateLegacyAttachmentsToAesGcm();
   } catch (err) {
-    console.warn('Legacy attachment migration failed after setup:', err);
+    logSecurityEvent(
+      securityEventCodes.attachmentLegacyMigrationFailed,
+      'Legacy attachment migration failed after setup.',
+      'warning',
+      { error: err instanceof Error ? err.message : String(err) },
+    );
   }
   localStorage.setItem(STORAGE_KEYS.IS_SET_UP, 'true');
 
@@ -183,7 +192,12 @@ export async function setupMasterPasswordWithSecretKey(
   try {
     await migrateLegacyAttachmentsToAesGcm();
   } catch (err) {
-    console.warn('Legacy attachment migration failed after setup:', err);
+    logSecurityEvent(
+      securityEventCodes.attachmentLegacyMigrationFailed,
+      'Legacy attachment migration failed after setup.',
+      'warning',
+      { error: err instanceof Error ? err.message : String(err) },
+    );
   }
   localStorage.setItem(STORAGE_KEYS.IS_SET_UP, 'true');
   localStorage.setItem(STORAGE_KEYS.SECRET_PROFILE, JSON.stringify({
@@ -203,8 +217,8 @@ export async function setupMasterPasswordWithSecretKey(
 /**
  * Resets the master password and wipes all database contents.
  */
-export function resetSystem(): void {
-  sqliteOPFSInstance.resetAll();
+export async function resetSystem(): Promise<void> {
+  await sqliteOPFSInstance.resetAll();
   closeVaultSession();
   localStorage.removeItem(STORAGE_KEYS.IS_SET_UP);
   localStorage.removeItem('aegis_sqlite_fallback');

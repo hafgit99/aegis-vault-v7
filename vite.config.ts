@@ -37,6 +37,7 @@ export default defineConfig(() => {
       target: process.env.TAURI_ENV_PLATFORM === 'windows' ? 'chrome105' : 'safari13',
       minify: process.env.TAURI_ENV_DEBUG ? false : ('esbuild' as const),
       sourcemap: !!process.env.TAURI_ENV_DEBUG,
+      chunkSizeWarningLimit: 900,
       rollupOptions: {
         output: {
           manualChunks(id) {
@@ -44,6 +45,22 @@ export default defineConfig(() => {
 
             if (id.includes('argon2-browser')) {
               return 'argon2-vendor';
+            }
+
+            if (id.includes('zxcvbn')) {
+              return 'zxcvbn-vendor';
+            }
+
+            if (id.includes('react') || id.includes('scheduler')) {
+              return 'react-vendor';
+            }
+
+            if (id.includes('lucide-react') || id.includes('lucide')) {
+              return 'icons-vendor';
+            }
+
+            if (id.includes('@tauri-apps')) {
+              return 'tauri-vendor';
             }
 
             return 'vendor';

@@ -6,13 +6,24 @@ vi.mock('./random', () => ({
   secureRandomIndex,
 }));
 
-import { generateDiceware } from './diceware';
+import { calculateDicewareEntropyBits, generateDiceware, getDicewareWordPool } from './diceware';
 
 beforeEach(() => {
   secureRandomIndex.mockReset();
 });
 
 describe('diceware passphrase generator', () => {
+  it('uses an EFF-sized word pool for each supported language', () => {
+    expect(getDicewareWordPool('tr')).toHaveLength(7776);
+    expect(getDicewareWordPool('en')).toHaveLength(7776);
+    expect(calculateDicewareEntropyBits({
+      language: 'en',
+      wordCount: 4,
+      addNumber: false,
+      addSymbol: false,
+    })).toBeGreaterThan(51);
+  });
+
   it('generates capitalized Turkish words with hyphen separators and appended numbers', () => {
     secureRandomIndex
       .mockReturnValueOnce(0)

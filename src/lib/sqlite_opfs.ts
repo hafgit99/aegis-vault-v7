@@ -24,8 +24,10 @@ import { deriveArgon2idKey as deriveVettedArgon2idKey } from './argon2id';
 import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, type WebCryptoAesGcmPayload } from './webcrypto';
 import {
   readDesktopVaultDatabase,
+  resetDesktopVaultDatabase,
   writeDesktopVaultDatabase,
 } from './desktopStorage';
+import { logSecurityEvent, securityEventCodes } from './securityEvents';
 
 /**
  * SQLite simulated schema and data manager storing DB blocks in private OPFS.
@@ -41,6 +43,7 @@ export interface SQLCommandLog {
 }
 
 const DB_FILENAME = 'aegis_sqlite.db';
+const LOCAL_FALLBACK_KEY = 'aegis_sqlite_fallback';
 const VAULT_ITEM_KDF = 'argon2-browser' as const;
 const LEGACY_VAULT_ITEM_KDF = 'legacy-simulated-argon2id' as const;
 const LEGACY_VAULT_ITEM_KDF_SALT = 'aegis_vault_v7_db_encryption_salt';
@@ -86,7 +89,7 @@ class SQLiteOPFS {
     this.logs.push({
       id: secureRandomToken(7),
       timestamp: new Date().toLocaleTimeString(),
-      query,
+      query: this.sanitizeQueryForLog(query),
       status,
       rowsAffected,
     });
@@ -110,6 +113,33 @@ class SQLiteOPFS {
     return this.state.encryption_salt || LEGACY_VAULT_ITEM_KDF_SALT;
   }
 
+  private createDesktopManagedSetupMarker(): string {
+    return JSON.stringify({
+      schemaVersion: this.state.schemaVersion,
+      appId: this.state.appId,
+      desktopManaged: true,
+      user_secrets: this.state.user_secrets.length > 0
+        ? [{ username: 'owner', argon_hash: '[stored-in-desktop-app-data]' }]
+        : [],
+      vault_items: [],
+    }, null, 2);
+  }
+
+  private writeLocalFallbackMirror(payloadStr: string, savedToDesktop: boolean): void {
+    localStorage.setItem(
+      LOCAL_FALLBACK_KEY,
+      savedToDesktop ? this.createDesktopManagedSetupMarker() : payloadStr,
+    );
+  }
+
+  private sanitizeLogValue(value: string): string {
+    return value.replace(/[\r\n\t]/g, ' ').replace(/["\\<>]/g, '_').slice(0, 120);
+  }
+
+  private sanitizeQueryForLog(query: string): string {
+    return query.replace(/[\r\n\t]/g, ' ').replace(/<script/gi, '&lt;script').slice(0, 1000);
+  }
+
   /**
    * Loads SQLite file from OPFS (Origin Private File System) sandboxed directory.
    */
@@ -118,7 +148,7 @@ class SQLiteOPFS {
       const desktopPayload = await readDesktopVaultDatabase();
       if (desktopPayload) {
         this.state = parseVaultDatabaseState(desktopPayload);
-        localStorage.setItem('aegis_sqlite_fallback', JSON.stringify(this.state, null, 2));
+        localStorage.setItem(LOCAL_FALLBACK_KEY, this.createDesktopManagedSetupMarker());
         this.logQuery(`sqlite3_open("appdata:///${DB_FILENAME}")`, 'SUCCESS', 1);
         return;
       }
@@ -147,7 +177,12 @@ class SQLiteOPFS {
         await this.migrateLegacyLocalStorage();
       }
     } catch (err) {
-      console.warn("OPFS Loading failed, running in-memory fallback:", err);
+      logSecurityEvent(
+        securityEventCodes.storageDesktopReadFailed,
+        'Persistent desktop storage could not be loaded; trying local fallback.',
+        'warning',
+        { error: err instanceof Error ? err.message : String(err) },
+      );
       await this.migrateLegacyLocalStorage();
     }
   }
@@ -158,10 +193,8 @@ class SQLiteOPFS {
   private async saveToPersistentStorage() {
     try {
       const payloadStr = JSON.stringify(this.state, null, 2);
-      
-      // Save locally to localStorage as immediate mirror fallback
-      localStorage.setItem('aegis_sqlite_fallback', payloadStr);
-      await writeDesktopVaultDatabase(payloadStr);
+      const savedToDesktop = await writeDesktopVaultDatabase(payloadStr);
+      this.writeLocalFallbackMirror(payloadStr, savedToDesktop);
 
       if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.getDirectory) {
         const root = await navigator.storage.getDirectory();
@@ -182,7 +215,12 @@ class SQLiteOPFS {
         }
       }
     } catch (err) {
-      console.error("Failed writing SQLite persistence block:", err);
+      logSecurityEvent(
+        securityEventCodes.storageDesktopWriteFailed,
+        'Failed writing SQLite persistence block.',
+        'critical',
+        { error: err instanceof Error ? err.message : String(err) },
+      );
     }
   }
 
@@ -190,11 +228,15 @@ class SQLiteOPFS {
    * Migrate legacy plaintext vault items into relational SQLite rows with GCM encryption.
    */
   private async migrateLegacyLocalStorage() {
-    const fallback = localStorage.getItem('aegis_sqlite_fallback');
+    const fallback = localStorage.getItem(LOCAL_FALLBACK_KEY);
     if (fallback) {
       try {
-        this.state = parseVaultDatabaseState(fallback);
-        return;
+        const parsed = JSON.parse(fallback);
+        if (!parsed.desktopManaged) {
+          this.state = parseVaultDatabaseState(fallback);
+          logSecurityEvent(securityEventCodes.storageLocalFallbackUsed, 'Loaded vault state from local fallback mirror.', 'warning');
+          return;
+        }
       } catch (e) {}
     }
 
@@ -241,7 +283,12 @@ class SQLiteOPFS {
 
         this.logQuery('CREATE TABLE vault_items (id TEXT PRIMARY KEY, title TEXT, category TEXT, favorite INTEGER, deleted INTEGER, username_db TEXT, password_db TEXT, enc_metadata TEXT);', 'SUCCESS', this.state.vault_items.length);
       } catch (e) {
-        console.error("Migration error:", e);
+        logSecurityEvent(
+          securityEventCodes.storageLegacyMigrationFailed,
+          'Legacy localStorage vault migration failed.',
+          'critical',
+          { error: e instanceof Error ? e.message : String(e) },
+        );
       }
     }
 
@@ -369,7 +416,7 @@ class SQLiteOPFS {
         if (shouldMigrateStaticSalt) {
           this.state.encryption_salt = migratedSalt;
         }
-        this.saveToPersistentStorage();
+        await this.saveToPersistentStorage();
       }
 
       this.logQuery(queryStr, 'SUCCESS', list.length);
@@ -419,16 +466,19 @@ class SQLiteOPFS {
     };
 
     let query = '';
+    const safeId = this.sanitizeLogValue(row.id);
+    const safeTitle = this.sanitizeLogValue(row.title);
+    const safeCategory = this.sanitizeLogValue(row.category);
     if (index > -1) {
       this.state.vault_items[index] = row;
-      query = `UPDATE vault_items SET title = "${row.title}", category = "${row.category}", enc_metadata = "[encrypted metadata payload]" WHERE id = "${row.id}";`;
+      query = `UPDATE vault_items SET title = "${safeTitle}", category = "${safeCategory}", enc_metadata = "[encrypted metadata payload]" WHERE id = "${safeId}";`;
     } else {
       this.state.vault_items.push(row);
-      query = `INSERT INTO vault_items (id, title, category, favorite, username_db, password_db, enc_metadata) VALUES ("${row.id}", "${row.title}", "${row.category}", ${row.favorite}, "${row.username_db}", "${row.password_db}", "[encrypted metadata]");`;
+      query = `INSERT INTO vault_items (id, title, category, favorite, username_db, password_db, enc_metadata) VALUES ("${safeId}", "${safeTitle}", "${safeCategory}", ${row.favorite}, "${row.username_db}", "${row.password_db}", "[encrypted metadata]");`;
     }
 
     this.logQuery(query, 'SUCCESS', 1);
-    this.saveToPersistentStorage();
+    await this.saveToPersistentStorage();
     return this.getVaultItems(masterPasswordPlain);
   }
 
@@ -525,10 +575,12 @@ class SQLiteOPFS {
   /**
    * Resets entire SQLite database schemas.
    */
-  public resetAll() {
+  public async resetAll(): Promise<void> {
     this.state = createEmptyVaultDatabaseState();
     this.logQuery('DROP TABLE user_secrets; DROP TABLE vault_items;', 'SUCCESS', 1);
-    this.saveToPersistentStorage();
+    await resetDesktopVaultDatabase();
+    localStorage.removeItem(LOCAL_FALLBACK_KEY);
+    await this.saveToPersistentStorage();
   }
 
   /**
@@ -536,8 +588,8 @@ class SQLiteOPFS {
    */
   public async deletePermanently(id: string, passwordPlain: string): Promise<VaultItem[]> {
     this.state.vault_items = this.state.vault_items.filter(row => row.id !== id);
-    this.logQuery(`DELETE FROM vault_items WHERE id = "${id}";`, 'SUCCESS', 1);
-    this.saveToPersistentStorage();
+    this.logQuery(`DELETE FROM vault_items WHERE id = "${this.sanitizeLogValue(id)}";`, 'SUCCESS', 1);
+    await this.saveToPersistentStorage();
     return this.getVaultItems(passwordPlain);
   }
 
@@ -571,7 +623,7 @@ class SQLiteOPFS {
     }));
 
     this.logQuery(`RESEED: INSERT ${demoItems.length} rows into 'vault_items'`, 'SUCCESS', demoItems.length);
-    this.saveToPersistentStorage();
+    await this.saveToPersistentStorage();
     return this.getVaultItems(passwordPlain);
   }
 }

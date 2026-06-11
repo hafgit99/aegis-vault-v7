@@ -5,27 +5,18 @@
 
 import { VaultItem, GeneratorOptions, AuditReport } from '../types';
 import { secureRandomIndex } from './random';
+import zxcvbn from 'zxcvbn';
 
 /**
  * Calculates security score for a single password from 0 to 100.
  */
 export function calculatePasswordScore(password: string): number {
   if (!password) return 0;
-  let score = 0;
-
-  // Length constraints
-  if (password.length >= 16) score += 35;
-  else if (password.length >= 12) score += 25;
-  else if (password.length >= 8) score += 15;
-  else score += 5;
-
-  // Diversity checks
-  if (/[A-Z]/.test(password)) score += 15;
-  if (/[a-z]/.test(password)) score += 15;
-  if (/[0-9]/.test(password)) score += 15;
-  if (/[^A-Za-z0-9]/.test(password)) score += 20;
-
-  return Math.min(100, score);
+  const result = zxcvbn(password);
+  const baseScore = (result.score / 4) * 100;
+  const lengthBonus = password.length >= 20 ? 8 : password.length >= 16 ? 4 : 0;
+  const shortPenalty = password.length < 12 ? 20 : 0;
+  return Math.max(0, Math.min(100, Math.round(baseScore + lengthBonus - shortPenalty)));
 }
 
 /**

@@ -106,7 +106,7 @@ describe('VaultFormModal', () => {
     expect(screen.getByText('Note')).toBeTruthy();
     expect(screen.getByText('GENERAL DETAILS')).toBeTruthy();
     expect(screen.getByText('ITEM TITLE / PLATFORM')).toBeTruthy();
-    expect(screen.getByPlaceholderText('e.g. GitHub, Chase Bank, National ID')).toBeTruthy();
+    expect(screen.getByPlaceholderText('e.g. Developer Portal, Billing Vault, National ID')).toBeTruthy();
     expect(screen.getByText('SECURE URL')).toBeTruthy();
     expect(screen.getByPlaceholderText('e.g. github.com')).toBeTruthy();
     expect(screen.getByText('User Login Credentials')).toBeTruthy();
@@ -181,7 +181,7 @@ describe('VaultFormModal', () => {
       />,
     );
 
-    fireEvent.change(screen.getByPlaceholderText('örn. GitHub, Chase Bank, Nüfus Cüzdanı'), {
+    fireEvent.change(screen.getByPlaceholderText('örn. Geliştirici Portalı, Fatura Kasası, Nüfus Cüzdanı'), {
       target: { value: '  GitHub  ' },
     });
     fireEvent.change(screen.getByPlaceholderText('örn. github.com'), {

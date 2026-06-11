@@ -134,10 +134,10 @@ describe('vault session storage', () => {
       await expect(verifyMasterPassword('master-pass')).resolves.toBe(true);
 
       expect(getActiveMasterPassword()).toBe('master-pass');
-      expect(warnSpy).toHaveBeenCalledWith(
-        'Legacy attachment migration failed after unlock:',
-        expect.any(Error),
-      );
+      expect(warnSpy).toHaveBeenCalledWith(expect.objectContaining({
+        code: 'attachment.legacyMigration.failed',
+        source: 'AegisSecurity',
+      }));
     } finally {
       warnSpy.mockRestore();
     }
@@ -151,10 +151,10 @@ describe('vault session storage', () => {
     expect(sqliteOPFSInstance.getVaultItems).toHaveBeenCalledWith('master-pass');
   });
 
-  it('clears the in-memory session when the system is reset', () => {
+  it('clears the in-memory session when the system is reset', async () => {
     openVaultSession('master-pass');
 
-    resetSystem();
+    await resetSystem();
 
     expect(getActiveMasterPassword()).toBeNull();
   });
@@ -203,7 +203,7 @@ describe('vault session storage', () => {
     expect(sqliteOPFSInstance.deletePermanently).toHaveBeenNthCalledWith(1, 'item-1', 'master-pass');
     expect(sqliteOPFSInstance.deletePermanently).toHaveBeenNthCalledWith(2, 'item-1', 'master-pass');
     expect(sqliteOPFSInstance.reseedDemo).toHaveBeenCalledWith('master-pass', expect.arrayContaining([
-      expect.objectContaining({ id: '1', title: 'GitHub' }),
+      expect.objectContaining({ id: '1', title: 'Demo Developer Portal' }),
     ]));
   });
 

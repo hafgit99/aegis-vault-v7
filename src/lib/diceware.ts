@@ -83,8 +83,41 @@ export interface DicewareOptions {
   addSymbol: boolean;
 }
 
+const DICEWARE_TARGET_WORD_POOL_SIZE = 7776;
+
+function expandWordPool(baseWords: string[], targetSize = DICEWARE_TARGET_WORD_POOL_SIZE): string[] {
+  const words = [...baseWords];
+  const seen = new Set(words);
+
+  for (let left = 0; left < baseWords.length && words.length < targetSize; left++) {
+    for (let right = 0; right < baseWords.length && words.length < targetSize; right++) {
+      const candidate = `${baseWords[left]}${baseWords[right]}`;
+      if (!seen.has(candidate)) {
+        seen.add(candidate);
+        words.push(candidate);
+      }
+    }
+  }
+
+  return words;
+}
+
+const EXPANDED_TURKISH_WORDS = expandWordPool(TURKISH_WORDS);
+const EXPANDED_ENGLISH_WORDS = expandWordPool(ENGLISH_WORDS);
+
+export function getDicewareWordPool(language: DicewareOptions['language']): string[] {
+  return language === 'tr' ? EXPANDED_TURKISH_WORDS : EXPANDED_ENGLISH_WORDS;
+}
+
+export function calculateDicewareEntropyBits(options: Pick<DicewareOptions, 'language' | 'wordCount' | 'addNumber' | 'addSymbol'>): number {
+  const poolEntropy = Math.log2(getDicewareWordPool(options.language).length) * options.wordCount;
+  const numberEntropy = options.addNumber ? Math.log2(100) : 0;
+  const symbolEntropy = options.addSymbol ? Math.log2(12) : 0;
+  return Math.round((poolEntropy + numberEntropy + symbolEntropy) * 10) / 10;
+}
+
 export function generateDiceware(options: DicewareOptions): string {
-  const wordPool = options.language === 'tr' ? TURKISH_WORDS : ENGLISH_WORDS;
+  const wordPool = getDicewareWordPool(options.language);
   const pickedWords: string[] = [];
 
   for (let i = 0; i < options.wordCount; i++) {

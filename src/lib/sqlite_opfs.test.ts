@@ -142,7 +142,7 @@ describe('SQLite OPFS persistence engine', () => {
     const afterDelete = await sqlite.deletePermanently('trash-item', 'master-pass');
     expect(afterDelete.map((item) => item.id)).toEqual(['active-item']);
 
-    sqlite.resetAll();
+    await sqlite.resetAll();
 
     await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual([]);
     await expect(sqlite.verifyPassword('master-pass')).resolves.toBe(false);
@@ -177,7 +177,9 @@ describe('SQLite OPFS persistence engine', () => {
 
     await expect(sqlite.verifyPassword('master-pass')).resolves.toBe(true);
     expect(JSON.parse(localStorage.getItem('aegis_sqlite_fallback') ?? '{}')).toMatchObject({
-      user_secrets: [{ username: 'owner', argon_hash: '$argon2id$salt$master-pass' }],
+      desktopManaged: true,
+      user_secrets: [{ username: 'owner', argon_hash: '[stored-in-desktop-app-data]' }],
+      vault_items: [],
     });
     expect(sqlite.getQueryLogs()).toEqual(
       expect.arrayContaining([
@@ -279,10 +281,10 @@ describe('SQLite OPFS persistence engine', () => {
     const sqlite = await freshSqliteInstance();
 
     await expect(sqlite.verifyPassword('master-pass')).resolves.toBe(true);
-    expect(warn).toHaveBeenCalledWith(
-      'OPFS Loading failed, running in-memory fallback:',
-      expect.any(Error),
-    );
+    expect(warn).toHaveBeenCalledWith(expect.objectContaining({
+      code: 'storage.desktop.readFailed',
+      source: 'AegisSecurity',
+    }));
   });
 
   it('logs persistence write failures without breaking vault setup', async () => {
@@ -306,10 +308,10 @@ describe('SQLite OPFS persistence engine', () => {
     await sqlite.setupMaster('master-pass');
 
     await expect(sqlite.verifyPassword('master-pass')).resolves.toBe(true);
-    expect(error).toHaveBeenCalledWith(
-      'Failed writing SQLite persistence block:',
-      expect.any(Error),
-    );
+    expect(error).toHaveBeenCalledWith(expect.objectContaining({
+      code: 'storage.desktop.writeFailed',
+      source: 'AegisSecurity',
+    }));
   });
 
   it('migrates legacy localStorage vault data into encrypted SQLite rows', async () => {
@@ -522,5 +524,41 @@ describe('SQLite OPFS persistence engine', () => {
       query: 'SELECT id, title, category, favorite, deleted, username_db, enc_metadata FROM vault_items;',
       status: 'SUCCESS',
     });
+  });
+
+  it('stores only a desktop-managed setup marker in localStorage after desktop persistence succeeds', async () => {
+    writeDesktopVaultDatabase.mockResolvedValue(true);
+    const sqlite = await freshSqliteInstance();
+
+    await sqlite.setupMaster('master-pass');
+    await sqlite.saveVaultItem(sampleItem(), 'master-pass');
+
+    const mirror = JSON.parse(localStorage.getItem('aegis_sqlite_fallback') ?? '{}');
+    expect(mirror).toMatchObject({
+      desktopManaged: true,
+      user_secrets: [{ username: 'owner', argon_hash: '[stored-in-desktop-app-data]' }],
+      vault_items: [],
+    });
+    expect(JSON.stringify(mirror)).not.toContain('secret-password');
+    expect(JSON.stringify(mirror)).not.toContain('enc_metadata');
+  });
+
+  it('sanitizes user-controlled values before writing SQL activity logs', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+
+    await sqlite.saveVaultItem(sampleItem({
+      id: 'evil"\nrow',
+      title: 'Bad <script>alert(1)</script> " Title',
+    }), 'master-pass');
+
+    expect(sqlite.getQueryLogs()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          query: expect.not.stringContaining('<script>'),
+          status: 'SUCCESS',
+        }),
+      ]),
+    );
   });
 });

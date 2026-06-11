@@ -81,7 +81,7 @@ describe('SecurityAudit', () => {
           makeItem({
             id: 'medium',
             title: 'Medium Password',
-            password: 'Medium123',
+            password: 'CorrectHorse12',
           }),
         ]}
         onSelectItem={vi.fn()}

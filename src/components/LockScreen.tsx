@@ -137,7 +137,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
   const getRateLimitMessage = (remainingSeconds: number) =>
     `${t('lock.error.rateLimitedPrefix')} ${remainingSeconds} ${t('lock.error.rateLimitedSuffix')}`;
 
-  const handleBiometricUnlock = async () => {
+  const handleBiometricUnlock = React.useCallback(async () => {
     setBiometricError(null);
     setError(null);
     setBiometricLoading(true);
@@ -157,7 +157,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
     } finally {
       setBiometricLoading(false);
     }
-  };
+  }, [onUnlock, rememberedSecretKey, t]);
 
   // Auto trigger biometric prompt on lock screen if enabled
   React.useEffect(() => {
@@ -167,7 +167,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
       }, 800);
       return () => clearTimeout(timer);
     }
-  }, [isSetup]);
+  }, [handleBiometricUnlock, isBioEnabled, isSetup]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

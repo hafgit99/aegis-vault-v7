@@ -25,6 +25,7 @@ vi.mock('../lib/security', () => ({
 }));
 
 vi.mock('../lib/diceware', () => ({
+  calculateDicewareEntropyBits: vi.fn(({ wordCount }: { wordCount: number }) => wordCount * 13),
   generateDiceware,
 }));
 
@@ -149,7 +150,7 @@ describe('PasswordGenerator', () => {
     expect(container.querySelector('#diceware-spec-panel')).not.toBeNull();
     expect(container.textContent).toContain('Dice-Ware-123');
     expect(generateDiceware).toHaveBeenLastCalledWith({
-      wordCount: 4,
+      wordCount: 6,
       separator: 'hyphen',
       language: 'tr',
       capitalize: true,
@@ -181,10 +182,10 @@ describe('PasswordGenerator', () => {
     fireEvent.click(dicewareTab!);
     const wordSlider = container.querySelector<HTMLInputElement>('#diceware-spec-panel input[type="range"]');
 
-    fireEvent.change(wordSlider!, { target: { value: '3' } });
+    fireEvent.change(wordSlider!, { target: { value: '4' } });
     expect(container.textContent).toContain('Orta');
 
-    fireEvent.change(wordSlider!, { target: { value: '5' } });
+    fireEvent.change(wordSlider!, { target: { value: '6' } });
     expect(container.textContent).toContain('Çok Yüksek');
 
     fireEvent.change(wordSlider!, { target: { value: '10' } });
