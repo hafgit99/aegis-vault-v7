@@ -1,5 +1,6 @@
 import { AppConfirmConfig, VaultItem } from '../types';
 import { deletePermanently, emptyTrashComplete, moveToTrash, restoreFromTrash } from '../lib/storage';
+import { useLanguage } from '../i18n/LanguageContext';
 
 type OpenConfirm = (config: Omit<AppConfirmConfig, 'isOpen'>) => void;
 
@@ -18,14 +19,15 @@ export function useTrashActions({
   resetReveals,
   clearCopiedField,
 }: UseTrashActionsOptions) {
+  const { t } = useLanguage();
+
   const deleteItem = (id: string) => {
     openConfirm({
-      title: 'Çöp Kutusuna Taşı',
-      message:
-        'Bu şifre kaydını çöp kutusuna taşımak istediğinize emin misiniz? Çöp kutusundaki veriler 15 gün sonra otomatik olarak temizlenecektir.',
+      title: t('trash.action.moveTitle'),
+      message: t('trash.action.moveMessage'),
       type: 'warning',
-      confirmText: 'Çöpe Taşı',
-      cancelText: 'Vazgeç',
+      confirmText: t('trash.action.moveConfirm'),
+      cancelText: t('confirm.defaultCancel'),
       onConfirm: () => {
         void (async () => {
           const updated = await moveToTrash(id);
@@ -42,19 +44,18 @@ export function useTrashActions({
 
   const emptyTrash = () => {
     openConfirm({
-      title: 'Çöp Kutusunu Boşalt',
-      message:
-        'Çöp kutusundaki TÜM şifreleri tamamen kalıcı olarak silmek istediğinize emin misiniz? Bu işlem asla geri alınamaz!',
+      title: t('trash.action.emptyTitle'),
+      message: t('trash.action.emptyMessage'),
       type: 'danger',
-      confirmText: 'Sıfırla ve Kalıcı Sil',
-      cancelText: 'Vazgeç',
+      confirmText: t('trash.action.emptyConfirm'),
+      cancelText: t('confirm.defaultCancel'),
       onConfirm: () => {
         void (async () => {
           const updated = await emptyTrashComplete();
           setItems(updated);
           openConfirm({
-            title: 'Çöp Kutusu Boşaltıldı',
-            message: 'Çöp kutusundaki tüm şifreler kalıcı olarak silindi.',
+            title: t('trash.action.emptySuccessTitle'),
+            message: t('trash.action.emptySuccessMessage'),
             type: 'success',
             isAlert: true,
             onConfirm: () => {},
@@ -69,8 +70,8 @@ export function useTrashActions({
       const updated = await restoreFromTrash(trashItem.id);
       setItems(updated);
       openConfirm({
-        title: 'Geri Yüklendi',
-        message: `"${trashItem.title}" şifre kaydı başarıyla kasaya geri yüklendi!`,
+        title: t('trash.action.restoreSuccessTitle'),
+        message: `${t('trash.action.restoreSuccessPrefix')}${trashItem.title}${t('trash.action.restoreSuccessSuffix')}`,
         type: 'success',
         isAlert: true,
         onConfirm: () => {},
@@ -80,11 +81,11 @@ export function useTrashActions({
 
   const deleteTrashItemPermanently = (trashItem: VaultItem) => {
     openConfirm({
-      title: 'Kalıcı Olarak Sil',
-      message: `"${trashItem.title}" kaydını tamamen kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri ALINAMAZ.`,
+      title: t('trash.action.permanentTitle'),
+      message: `${t('trash.action.permanentMessagePrefix')}${trashItem.title}${t('trash.action.permanentMessageSuffix')}`,
       type: 'danger',
-      confirmText: 'Kalıcı Olarak Sil',
-      cancelText: 'Vazgeç',
+      confirmText: t('trash.action.permanentConfirm'),
+      cancelText: t('confirm.defaultCancel'),
       onConfirm: () => {
         void (async () => {
           const updated = await deletePermanently(trashItem.id);

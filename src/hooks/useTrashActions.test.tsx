@@ -5,6 +5,8 @@
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 import { VaultItem } from '../types';
 import { deletePermanently, emptyTrashComplete, moveToTrash, restoreFromTrash } from '../lib/storage';
 import { useTrashActions } from './useTrashActions';
@@ -28,7 +30,11 @@ const item = (id: string, overrides: Partial<VaultItem> = {}): VaultItem => ({
   ...overrides,
 });
 
-function renderTrashActions() {
+function renderTrashActions(language?: 'en' | 'zh') {
+  if (language) {
+    localStorage.setItem(languageStorageKey, language);
+  }
+
   const options = {
     openConfirm: vi.fn(),
     setItems: vi.fn(),
@@ -37,7 +43,9 @@ function renderTrashActions() {
     clearCopiedField: vi.fn(),
   };
 
-  const hook = renderHook(() => useTrashActions(options));
+  const hook = renderHook(() => useTrashActions(options), {
+    wrapper: ({ children }) => <LanguageProvider>{children}</LanguageProvider>,
+  });
 
   return {
     ...hook,
@@ -48,6 +56,7 @@ function renderTrashActions() {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  localStorage.clear();
 });
 
 describe('useTrashActions', () => {
@@ -148,5 +157,54 @@ describe('useTrashActions', () => {
     });
     expect(deletePermanently).toHaveBeenCalledWith('gone');
     expect(options.setItems).toHaveBeenCalledWith([]);
+  });
+
+  it('renders trash confirmations and alerts in the selected language', async () => {
+    vi.mocked(emptyTrashComplete).mockResolvedValue([]);
+    vi.mocked(restoreFromTrash).mockResolvedValue([item('restored')]);
+    const { result, options } = renderTrashActions('en');
+
+    act(() => result.current.deleteItem('active'));
+    expect(options.openConfirm.mock.calls[0][0]).toMatchObject({
+      title: 'Move to Trash',
+      message: 'Are you sure you want to move this password record to the trash? Items in the trash are cleaned automatically after 15 days.',
+      confirmText: 'Move to Trash',
+      cancelText: 'Cancel',
+    });
+
+    act(() => result.current.emptyTrash());
+    const emptyConfirm = options.openConfirm.mock.calls[1][0];
+    await act(async () => {
+      emptyConfirm.onConfirm();
+    });
+
+    expect(emptyConfirm).toMatchObject({
+      title: 'Empty Trash',
+      message: 'Are you sure you want to permanently delete ALL passwords in the trash? This action cannot be undone.',
+      confirmText: 'Reset and Delete Permanently',
+      cancelText: 'Cancel',
+    });
+    expect(options.openConfirm.mock.calls[2][0]).toMatchObject({
+      title: 'Trash Emptied',
+      message: 'All passwords in the trash were permanently deleted.',
+      type: 'success',
+      isAlert: true,
+    });
+
+    await act(async () => {
+      result.current.restoreTrashItem(item('restored'));
+    });
+    expect(options.openConfirm.mock.calls[3][0]).toMatchObject({
+      title: 'Restored',
+      message: '"restored" password record was restored to the vault successfully!',
+    });
+
+    act(() => result.current.deleteTrashItemPermanently(item('gone')));
+    expect(options.openConfirm.mock.calls[4][0]).toMatchObject({
+      title: 'Delete Permanently',
+      message: '"gone" will be permanently deleted. This action CANNOT be undone.',
+      confirmText: 'Delete Permanently',
+      cancelText: 'Cancel',
+    });
   });
 });
