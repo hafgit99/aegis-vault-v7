@@ -19,9 +19,10 @@ describe('CryptoShieldPanel', () => {
     render(<CryptoShieldPanel />);
 
     expect(screen.getByText('Kriptoloji Kalkanı Bilgileri')).toBeTruthy();
-    expect(screen.getByText('AES-256-GCM (Yerel)')).toBeTruthy();
-    expect(screen.getByText('Zero-Knowledge (Tümleşik)')).toBeTruthy();
-    expect(screen.getByText('100.000 İterasyon')).toBeTruthy();
+    expect(screen.getByText('Durum: Aktif')).toBeTruthy();
+    expect(screen.getByText('WebCrypto AES-256-GCM')).toBeTruthy();
+    expect(screen.getByText('Yerel Zero-Knowledge')).toBeTruthy();
+    expect(screen.getByText('Argon2id: 64 MiB, 3 geçiş')).toBeTruthy();
     expect(screen.getByText('Aegis Kalkanı Koruyor')).toBeTruthy();
   });
 
@@ -36,7 +37,8 @@ describe('CryptoShieldPanel', () => {
 
     expect(screen.getByText('密码学防护详情')).toBeTruthy();
     expect(screen.getByText('状态：已启用')).toBeTruthy();
-    expect(screen.getByText('AES-256-GCM（本地）')).toBeTruthy();
+    expect(screen.getByText('WebCrypto AES-256-GCM')).toBeTruthy();
+    expect(screen.getByText('Argon2id：64 MiB，3 次传递')).toBeTruthy();
     expect(screen.getByText('Aegis 防护正在保护')).toBeTruthy();
   });
 });
