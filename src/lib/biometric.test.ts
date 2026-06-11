@@ -6,6 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   authenticateBiometric,
+  BiometricError,
+  biometricErrorCodes,
   disableBiometric,
   isBiometricEnabled,
   isBiometricSupported,
@@ -78,7 +80,10 @@ describe('biometric master password wrapper', () => {
     });
 
     expect(isBiometricSupported()).toBe(false);
-    await expect(registerBiometric('master-pass')).rejects.toThrow('WebAuthn');
+    await expect(registerBiometric('master-pass')).rejects.toMatchObject({
+      code: biometricErrorCodes.unsupported,
+      name: 'BiometricError',
+    });
   });
 
   it('stores new biometric bundles with WebCrypto metadata', async () => {
@@ -125,7 +130,10 @@ describe('biometric master password wrapper', () => {
   it('rejects registration when the authenticator create flow is cancelled', async () => {
     mockWebAuthn({ createCredential: null });
 
-    await expect(registerBiometric('master-pass')).rejects.toThrow('iptal');
+    await expect(registerBiometric('master-pass')).rejects.toMatchObject({
+      code: biometricErrorCodes.registrationCancelled,
+      name: 'BiometricError',
+    });
     expect(isBiometricEnabled()).toBe(false);
   });
 
@@ -149,14 +157,28 @@ describe('biometric master password wrapper', () => {
   });
 
   it('rejects authentication when no biometric bundle is stored', async () => {
-    await expect(authenticateBiometric()).rejects.toThrow('bulunamad');
+    await expect(authenticateBiometric()).rejects.toMatchObject({
+      code: biometricErrorCodes.missingBundle,
+      name: 'BiometricError',
+    });
   });
 
   it('rejects authentication when the authenticator get flow is cancelled', async () => {
     await registerBiometric('master-pass');
     mockWebAuthn({ getCredential: null });
 
-    await expect(authenticateBiometric()).rejects.toThrow('reddedildi');
+    await expect(authenticateBiometric()).rejects.toMatchObject({
+      code: biometricErrorCodes.authenticationCancelled,
+      name: 'BiometricError',
+    });
+  });
+
+  it('exposes stable biometric error codes for localization boundaries', () => {
+    const error = new BiometricError(biometricErrorCodes.integrityMismatch);
+
+    expect(error).toBeInstanceOf(Error);
+    expect(error.message).toBe(biometricErrorCodes.integrityMismatch);
+    expect(error.code).toBe(biometricErrorCodes.integrityMismatch);
   });
 
   it('rejects biometric unwrap when the authenticator raw id changes', async () => {

@@ -7,6 +7,8 @@ import {
   generateLegacyArgon2idKey,
   hkdfSha256,
   hmacSha256,
+  LegacyCryptoError,
+  legacyCryptoErrorCodes,
   sha256,
   verifyLegacyArgon2idHash,
 } from './legacyCrypto';
@@ -116,7 +118,7 @@ describe('legacy crypto compatibility helpers', () => {
       iv: hex(iv),
       tag: hex(new Uint8Array(16).fill(1)),
       ciphertext: base64(ciphertext),
-    }, key)).toThrow();
+    }, key)).toThrow(LegacyCryptoError);
   });
 
   it('decrypts old stream-cipher fallback envelopes', () => {
@@ -126,8 +128,13 @@ describe('legacy crypto compatibility helpers', () => {
   });
 
   it('rejects malformed, incomplete, tampered, and unsupported backup envelopes', () => {
-    expect(() => decryptLegacyDataWithPassword('{broken-json', 'backup-pass')).toThrow();
-    expect(() => decryptLegacyDataWithPassword(JSON.stringify({ version: '1.1' }), 'backup-pass')).toThrow();
+    expect(() => decryptLegacyDataWithPassword('{broken-json', 'backup-pass')).toThrow(LegacyCryptoError);
+    expect(() => decryptLegacyDataWithPassword('{broken-json', 'backup-pass')).toThrow(
+      legacyCryptoErrorCodes.invalidJson,
+    );
+    expect(() => decryptLegacyDataWithPassword(JSON.stringify({ version: '1.1' }), 'backup-pass')).toThrow(
+      legacyCryptoErrorCodes.missingFields,
+    );
 
     const payload = base64(encoder.encode('cipher'));
     const checksum = hex(sha256(encoder.encode(payload)));
@@ -138,11 +145,11 @@ describe('legacy crypto compatibility helpers', () => {
       tag: '00000000000000000000000000000000',
       payload,
       checksum: checksum.replace(/^./, checksum[0] === '0' ? '1' : '0'),
-    }), 'backup-pass')).toThrow();
+    }), 'backup-pass')).toThrow(legacyCryptoErrorCodes.checksumMismatch);
 
     expect(() => decryptLegacyDataWithPassword(JSON.stringify({
       version: '0.8',
       payload: base64(encoder.encode('plain')),
-    }), 'backup-pass')).toThrow();
+    }), 'backup-pass')).toThrow(legacyCryptoErrorCodes.unsupportedEnvelope);
   });
 });

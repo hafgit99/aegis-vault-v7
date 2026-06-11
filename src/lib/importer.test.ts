@@ -354,7 +354,7 @@ describe('universal importer', () => {
 
     expect(result.type).toBe('success');
     if (result.type !== 'success') return;
-    expect(result.formatName).toContain('Evrensel');
+    expect(result.formatName).toContain('Universal');
     expect(result.items[0]).toMatchObject({
       title: 'Internal',
       username: 'owner@example.com',
@@ -372,7 +372,7 @@ describe('universal importer', () => {
     expect(result.type).toBe('success');
     if (result.type !== 'success') return;
     expect(result.items[0]).toMatchObject({
-      title: expect.stringContaining('simsiz'),
+      title: expect.stringContaining('Untitled'),
       username: 'owner@example.com',
       password: 'secret',
       url: '',

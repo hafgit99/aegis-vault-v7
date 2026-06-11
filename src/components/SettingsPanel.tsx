@@ -42,6 +42,44 @@ interface SettingsPanelProps {
   onNotify?: (notification: AppNotification) => void;
 }
 
+function getBiometricSettingsErrorMessage(err: any, t: ReturnType<typeof useLanguage>['t']): string {
+  if (err?.name === "SecurityError" || err?.name === "NotAllowedError") {
+    return t('settings.biometric.permissionError');
+  }
+
+  switch (err?.code) {
+    case 'biometric.unsupported':
+      return t('settings.biometric.unsupportedError');
+    case 'biometric.registrationCancelled':
+      return t('settings.biometric.registerFailed');
+    case 'biometric.missingBundle':
+    case 'biometric.authenticationCancelled':
+    case 'biometric.integrityMismatch':
+      return t('settings.biometric.genericError');
+    default:
+      return err?.message || t('settings.biometric.registerFailed');
+  }
+}
+
+function getBackupDecryptErrorMessage(err: any, t: ReturnType<typeof useLanguage>['t']): string {
+  switch (err?.code) {
+    case 'secureBackup.invalidJson':
+    case 'legacyCrypto.invalidJson':
+      return t('settings.import.decryptErrorInvalidJson');
+    case 'secureBackup.missingFields':
+    case 'legacyCrypto.missingFields':
+      return t('settings.import.decryptErrorMissingFields');
+    case 'secureBackup.checksumMismatch':
+    case 'legacyCrypto.checksumMismatch':
+    case 'legacyCrypto.integrityMismatch':
+      return t('settings.import.decryptErrorIntegrity');
+    case 'legacyCrypto.unsupportedEnvelope':
+      return t('settings.import.decryptErrorUnsupported');
+    default:
+      return err?.message || t('settings.import.decryptErrorFallback');
+  }
+}
+
 export default function SettingsPanel({ 
   onDatabaseChanged, 
   autoLockDuration, 
@@ -159,11 +197,7 @@ export default function SettingsPanel({
         setBiometricEnabled(true);
         setBiometricSuccess(t('settings.biometric.enabledSuccess'));
       } catch (err: any) {
-        let errMsg = err?.message || t('settings.biometric.registerFailed');
-        if (err?.name === "SecurityError" || err?.name === "NotAllowedError") {
-          errMsg = t('settings.biometric.permissionError');
-        }
-        setBiometricError(errMsg);
+        setBiometricError(getBiometricSettingsErrorMessage(err, t));
       } finally {
         setBiometricLoading(false);
       }
@@ -331,7 +365,7 @@ export default function SettingsPanel({
       setPendingEnvelope(null);
       setDecryptPasswordInput('');
     } catch (err: any) {
-      setDecryptError(err?.message || t('settings.import.decryptErrorFallback'));
+      setDecryptError(getBackupDecryptErrorMessage(err, t));
     }
   };
 

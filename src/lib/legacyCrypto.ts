@@ -13,6 +13,23 @@ export interface EncryptedPayload {
   ciphertext: string;
 }
 
+export const legacyCryptoErrorCodes = {
+  integrityMismatch: 'legacyCrypto.integrityMismatch',
+  invalidJson: 'legacyCrypto.invalidJson',
+  missingFields: 'legacyCrypto.missingFields',
+  checksumMismatch: 'legacyCrypto.checksumMismatch',
+  unsupportedEnvelope: 'legacyCrypto.unsupportedEnvelope',
+} as const;
+
+export type LegacyCryptoErrorCode = (typeof legacyCryptoErrorCodes)[keyof typeof legacyCryptoErrorCodes];
+
+export class LegacyCryptoError extends Error {
+  constructor(public readonly code: LegacyCryptoErrorCode) {
+    super(code);
+    this.name = 'LegacyCryptoError';
+  }
+}
+
 // ==========================================
 // 1. SHA-256 & HMAC-SHA256 IMPLEMENTATION
 // ==========================================
@@ -360,7 +377,7 @@ export function decryptLegacyAes256Gcm(payload: EncryptedPayload, key: Uint8Arra
     if (tag[i] !== expectedTag[i]) isMatches = false;
   }
   if (!isMatches) {
-    throw new Error("Kriptografik bütünlük doğrulaması başarısız! Anahtar yanlış veya veri manipüle edilmiş.");
+    throw new LegacyCryptoError(legacyCryptoErrorCodes.integrityMismatch);
   }
 
   const roundKeys = aesExpandKey(key);
@@ -393,13 +410,13 @@ export function decryptLegacyDataWithPassword(envelopeJsonStr: string, password:
   try {
     parsed = JSON.parse(envelopeJsonStr);
   } catch (e) {
-    throw new Error("Yedekleme dosyası geçerli JSON formatında değil.");
+    throw new LegacyCryptoError(legacyCryptoErrorCodes.invalidJson);
   }
 
   // Support Version 1.1 with Argon2id + AES-256-GCM + SHA-256 manifest checks
   if (parsed.version === "1.1" || parsed.kdf === "Argon2id") {
     if (!parsed.salt || !parsed.iv || !parsed.tag || !parsed.payload || !parsed.checksum) {
-      throw new Error("Geçersiz yedekleme zarfı: Kritik güvenlik alanları eksik.");
+      throw new LegacyCryptoError(legacyCryptoErrorCodes.missingFields);
     }
 
     // Verify SHA-256 manifest checksum for secure share v1.1 compliance
@@ -409,7 +426,7 @@ export function decryptLegacyDataWithPassword(envelopeJsonStr: string, password:
     const calculatedChecksumHex = Array.from(calculatedChecksumBytes).map(b => b.toString(16).padStart(2, '0')).join('');
 
     if (calculatedChecksumHex !== parsed.checksum) {
-      throw new Error("SHA-256 Manifest bütünlük kontrolü başarısız oldu! Veri bozulmuş veya tahrif edilmiş olabilir.");
+      throw new LegacyCryptoError(legacyCryptoErrorCodes.checksumMismatch);
     }
 
     // Stretch key using Argon2id
@@ -462,5 +479,5 @@ export function decryptLegacyDataWithPassword(envelopeJsonStr: string, password:
     return decoder.decode(decryptedBytes);
   }
 
-  throw new Error("Desteklenmeyen güvenli yedek zarf sürümü.");
+  throw new LegacyCryptoError(legacyCryptoErrorCodes.unsupportedEnvelope);
 }

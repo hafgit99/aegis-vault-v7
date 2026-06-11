@@ -19,9 +19,27 @@ import {
   Trash2
 } from 'lucide-react';
 import { isMasterPasswordSet, setupMasterPassword, verifyMasterPassword } from '../lib/storage';
-import { isBiometricEnabled, isBiometricSupported, authenticateBiometric } from '../lib/biometric';
-import { APP_FOOTER_NAME, APP_NAME, APP_SHORT_NAME } from '../lib/branding';
+import { authenticateBiometric, isBiometricEnabled, isBiometricSupported } from '../lib/biometric';
+import { APP_NAME, APP_SHORT_NAME } from '../lib/branding';
 import { useLanguage } from '../i18n/LanguageContext';
+
+function getBiometricUnlockErrorMessage(err: any, t: ReturnType<typeof useLanguage>['t']): string {
+  if (err?.name === "SecurityError" || err?.name === "NotAllowedError") {
+    return t('lock.error.biometricPermission');
+  }
+
+  switch (err?.code) {
+    case 'biometric.unsupported':
+      return t('lock.error.biometricUnsupported');
+    case 'biometric.integrityMismatch':
+      return t('lock.error.biometricIntegrity');
+    case 'biometric.missingBundle':
+    case 'biometric.authenticationCancelled':
+      return t('lock.error.biometricFailed');
+    default:
+      return err?.message || t('lock.error.biometricFailed');
+  }
+}
 
 interface LockScreenProps {
   onUnlock: () => void;
@@ -57,11 +75,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
         throw new Error(t('lock.error.biometricIntegrity'));
       }
     } catch (err: any) {
-      let errMsg = err?.message || t('lock.error.biometricFailed');
-      if (err?.name === "SecurityError" || err?.name === "NotAllowedError") {
-        errMsg = t('lock.error.biometricPermission');
-      }
-      setBiometricError(errMsg);
+      setBiometricError(getBiometricUnlockErrorMessage(err, t));
     } finally {
       setBiometricLoading(false);
     }
@@ -338,7 +352,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
 
       {/* Futuristic clean footer */}
       <footer className="w-full border-t border-outline-variant/5 py-4 bg-[#0a0b0a]/40 text-center text-[10px] text-on-surface-variant/30 font-mono flex flex-col sm:flex-row items-center justify-between px-6 gap-2">
-        <span>© 2026 {APP_FOOTER_NAME}</span>
+        <span>© 2026 {t('lock.footer.name')}</span>
         <span>{t('lock.footer.crypto')}</span>
       </footer>
     </div>

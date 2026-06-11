@@ -112,7 +112,7 @@ describe('SQLite OPFS persistence engine', () => {
     });
 
     const blockedWrite = sqlite.executeCustomSQL('DELETE FROM vault_items;', 'master-pass');
-    expect(blockedWrite.error).toContain('devre');
+    expect(blockedWrite.error).toContain('disabled');
 
     expect(sqlite.getQueryLogs()[0]).toMatchObject({
       query: 'DELETE FROM vault_items;',
@@ -395,7 +395,7 @@ describe('SQLite OPFS persistence engine', () => {
     const generatedId = created[0].id;
     expect(generatedId).toHaveLength(9);
     expect(created[0]).toMatchObject({
-      title: 'İçeri Aktarılan Kayıt',
+      title: 'Imported Record',
       category: 'login',
     });
 

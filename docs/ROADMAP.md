@@ -106,6 +106,7 @@
   - [x] Translate profile-save and vault-status notifications.
   - [x] Translate the default profile identity fallback.
   - [x] Replace attachment library Turkish errors with stable localization-ready error codes.
+  - [x] Replace biometric, backup, legacy crypto, importer fallback, SQLite terminal, footer, and demo seed Turkish literals with localization-ready messages or neutral defaults.
   - [x] Translate trash action confirmations, destructive prompts, and success alerts.
   - [x] Translate attachment download failure notifications.
   - [x] Translate universal importer format names and parser error messages in Settings.

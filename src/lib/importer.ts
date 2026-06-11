@@ -74,19 +74,19 @@ export interface ImportLabels {
 }
 
 const defaultImportLabels: ImportLabels = {
-  errorEmpty: 'Dosya içeriği boş.',
-  formatAegisJson: 'Aegis Güvenli JSON Yedek',
-  formatBitwardenJson: 'Bitwarden Şifre Yöneticisi (JSON)',
-  errorUnsupportedJson: 'Desteklenmeyen veya tanımlanamayan JSON yapısı.',
-  errorJsonPrefix: 'JSON format hatası',
-  errorCsvHeader: 'Boş veya başlık satırı eksik CSV dosyası.',
-  formatBitwardenCsv: 'Bitwarden Aktarımı (CSV)',
-  formatLastPassCsv: 'LastPass Şifre Aktarımı (CSV)',
-  formatChromeCsv: 'Google Chrome / Şifre Yöneticisi (CSV)',
-  formatOnePasswordCsv: '1Password Şifre Aktarımı (CSV)',
-  untitledUniversal: 'İsimsiz Aktarım',
-  formatUniversalCsv: 'Evrensel Kolon Uyumlu CSV',
-  errorCsvColumns: 'CSV yapısı çözülemedi. Dosyada şifre veya kullanıcı adı kolonları bulunamadı.',
+  errorEmpty: 'File content is empty.',
+  formatAegisJson: 'Aegis Secure JSON Backup',
+  formatBitwardenJson: 'Bitwarden Password Manager (JSON)',
+  errorUnsupportedJson: 'Unsupported or unrecognized JSON structure.',
+  errorJsonPrefix: 'JSON format error',
+  errorCsvHeader: 'Empty CSV file or missing header row.',
+  formatBitwardenCsv: 'Bitwarden Import (CSV)',
+  formatLastPassCsv: 'LastPass Password Import (CSV)',
+  formatChromeCsv: 'Google Chrome / Password Manager (CSV)',
+  formatOnePasswordCsv: '1Password Password Import (CSV)',
+  untitledUniversal: 'Untitled Import',
+  formatUniversalCsv: 'Universal Column-Compatible CSV',
+  errorCsvColumns: 'CSV structure could not be resolved. No password or username columns were found.',
 };
 
 /**
@@ -310,7 +310,7 @@ export function parseUniversalImport(fileContent: string, labels: Partial<Import
   // 5. Universal CSV Fallback mapper (Detect columns based on synonyms)
   const titleIdx = findColumnIndex(['title', 'name', 'label', 'app', 'site', 'service']);
   const userIdx = findColumnIndex(['username', 'user', 'login', 'email', 'e-posta', 'e_posta']);
-  const passIdx = findColumnIndex(['password', 'pass', 'pwd', 'şifre', 'sifre', 'parola']);
+  const passIdx = findColumnIndex(['password', 'pass', 'pwd', '\u015fifre', 'sifre', 'parola']);
   const urlIdx = findColumnIndex(['url', 'website', 'link', 'uri']);
   const notesIdx = findColumnIndex(['notes', 'note', 'desc', 'description', 'not', 'notlar', 'extra']);
   const totpIdx = findColumnIndex(['totp', 'secret', 'key', 'otp', '2fa', 'authenticator']);

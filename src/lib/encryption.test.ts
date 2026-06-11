@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from './encryption';
+import {
+  decryptDataWithPasswordSecure,
+  encryptDataWithPasswordSecure,
+  SecureBackupError,
+  secureBackupErrorCodes,
+} from './encryption';
 import { decryptLegacyDataWithPassword } from './legacyCrypto';
 
 vi.mock('./argon2id', () => ({
@@ -45,9 +50,10 @@ describe('encrypted backup envelope', () => {
   });
 
   it('rejects malformed JSON backup envelopes before decryption', async () => {
-    await expect(decryptDataWithPasswordSecure('{not-json', 'backup-password')).rejects.toThrow(
-      'JSON',
-    );
+    await expect(decryptDataWithPasswordSecure('{not-json', 'backup-password')).rejects.toMatchObject({
+      code: secureBackupErrorCodes.invalidJson,
+      name: 'SecureBackupError',
+    });
   });
 
   it('routes non-argon2-browser envelopes through the legacy decryptor', async () => {
@@ -72,9 +78,10 @@ describe('encrypted backup envelope', () => {
       payload: 'ciphertext',
     });
 
-    await expect(decryptDataWithPasswordSecure(incompleteEnvelope, 'backup-password')).rejects.toThrow(
-      'Kritik',
-    );
+    await expect(decryptDataWithPasswordSecure(incompleteEnvelope, 'backup-password')).rejects.toMatchObject({
+      code: secureBackupErrorCodes.missingFields,
+      name: 'SecureBackupError',
+    });
   });
 
   it('rejects secure envelopes when the payload checksum has been tampered', async () => {
@@ -82,8 +89,17 @@ describe('encrypted backup envelope', () => {
     const parsed = JSON.parse(envelope);
     parsed.payload = `${parsed.payload}tampered`;
 
-    await expect(decryptDataWithPasswordSecure(JSON.stringify(parsed), 'backup-password')).rejects.toThrow(
-      'SHA-256',
-    );
+    await expect(decryptDataWithPasswordSecure(JSON.stringify(parsed), 'backup-password')).rejects.toMatchObject({
+      code: secureBackupErrorCodes.checksumMismatch,
+      name: 'SecureBackupError',
+    });
+  });
+
+  it('exposes stable secure backup error codes for localization boundaries', () => {
+    const error = new SecureBackupError(secureBackupErrorCodes.missingFields);
+
+    expect(error).toBeInstanceOf(Error);
+    expect(error.message).toBe(secureBackupErrorCodes.missingFields);
+    expect(error.code).toBe(secureBackupErrorCodes.missingFields);
   });
 });

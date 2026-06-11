@@ -515,7 +515,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
             </div>
           </div>
 
-          {/* DYNAMIC VIEW CATEGORY 1: GİRİŞ BİLGİLERİ (LOGIN) */}
+          {/* Dynamic view category 1: login credentials */}
           {category === 'login' && (
             <div className="space-y-4 animate-fade-in text-left">
               <div className="border-l-2 border-brand-primary pl-3.5 py-0.5">
@@ -604,7 +604,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
             </div>
           )}
 
-          {/* DYNAMIC VIEW CATEGORY 2: KREDİ KARTI (CREDIT CARD) */}
+          {/* Dynamic view category 2: credit card */}
           {category === 'card' && (
             <div className="space-y-4 animate-fade-in text-left">
               <div className="border-l-2 border-brand-primary pl-3.5 py-0.5">
@@ -769,7 +769,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
             </div>
           )}
 
-          {/* DYNAMIC VIEW CATEGORY 4: KİMLİK (IDENTITY) */}
+          {/* Dynamic view category 4: identity */}
           {category === 'identity' && (
             <div className="space-y-4 animate-fade-in text-left">
               <div className="border-l-2 border-brand-primary pl-3.5 py-0.5">
@@ -860,7 +860,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
             </div>
           )}
 
-          {/* DYNAMIC VIEW CATEGORY 5: GÜVENLİ NOT (SECURE NOTE) */}
+          {/* Dynamic view category 5: secure note */}
           {category === 'secure_note' && (
             <div className="space-y-4 animate-fade-in text-left">
               <div className="border-l-2 border-brand-primary pl-3.5 py-0.5">

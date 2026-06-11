@@ -8,6 +8,23 @@ import { secureRandomBytes } from './random';
 import { APP_NAME, APP_SHORT_NAME } from './branding';
 import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, type WebCryptoAesGcmPayload } from './webcrypto';
 
+export const biometricErrorCodes = {
+  unsupported: 'biometric.unsupported',
+  registrationCancelled: 'biometric.registrationCancelled',
+  missingBundle: 'biometric.missingBundle',
+  authenticationCancelled: 'biometric.authenticationCancelled',
+  integrityMismatch: 'biometric.integrityMismatch',
+} as const;
+
+export type BiometricErrorCode = (typeof biometricErrorCodes)[keyof typeof biometricErrorCodes];
+
+export class BiometricError extends Error {
+  constructor(public readonly code: BiometricErrorCode) {
+    super(code);
+    this.name = 'BiometricError';
+  }
+}
+
 /**
  * PBKDF2-SHA256 Implementation using pure TS hmacSha256
  */
@@ -97,7 +114,7 @@ export function disableBiometric(): void {
 
 export async function registerBiometric(masterPassword: string): Promise<void> {
   if (!isBiometricSupported()) {
-    throw new Error("Tarayıcınız veya sisteminiz biyometrik doğrulama standartlarını (WebAuthn) desteklemiyor.");
+    throw new BiometricError(biometricErrorCodes.unsupported);
   }
 
   // Create a randomized challenge
@@ -131,7 +148,7 @@ export async function registerBiometric(masterPassword: string): Promise<void> {
 
   const credential = await navigator.credentials.create(creationOptions) as PublicKeyCredential;
   if (!credential) {
-    throw new Error("Biyometrik kilit kaydı iptal edildi veya başarısız oldu.");
+    throw new BiometricError(biometricErrorCodes.registrationCancelled);
   }
 
   // Use rawId to derive the secure AES-256 wrapping key
@@ -159,7 +176,7 @@ export async function registerBiometric(masterPassword: string): Promise<void> {
 export async function authenticateBiometric(): Promise<string> {
   const storedStr = localStorage.getItem('aegis_biometric_info');
   if (!storedStr) {
-    throw new Error("Kayıtlı biyometrik kilit bulunamadı.");
+    throw new BiometricError(biometricErrorCodes.missingBundle);
   }
 
   const biometricInfo = JSON.parse(storedStr);
@@ -184,7 +201,7 @@ export async function authenticateBiometric(): Promise<string> {
 
   const assertion = await navigator.credentials.get(requestOptions) as PublicKeyCredential;
   if (!assertion) {
-    throw new Error("Biyometrik doğrulama iptal edildi veya reddedildi.");
+    throw new BiometricError(biometricErrorCodes.authenticationCancelled);
   }
 
   const rawIdBytes = new Uint8Array(assertion.rawId);
@@ -198,6 +215,6 @@ export async function authenticateBiometric(): Promise<string> {
     const legacyWrappingKey = pbkdf2Sha256(rawIdBytes, saltBytes, 10000, 32);
     return decryptLegacyAes256Gcm(biometricInfo.bundle, legacyWrappingKey);
   } catch (e) {
-    throw new Error("Şifre çözme doğrulaması başarısız! Biyometrik veriler veya anahtar bütünlüğü eşleşmiyor.");
+    throw new BiometricError(biometricErrorCodes.integrityMismatch);
   }
 }

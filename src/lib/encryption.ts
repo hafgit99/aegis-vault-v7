@@ -8,6 +8,21 @@ import { deriveArgon2idKey } from './argon2id';
 import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt } from './webcrypto';
 import { decryptLegacyDataWithPassword } from './legacyCrypto';
 
+export const secureBackupErrorCodes = {
+  invalidJson: 'secureBackup.invalidJson',
+  missingFields: 'secureBackup.missingFields',
+  checksumMismatch: 'secureBackup.checksumMismatch',
+} as const;
+
+export type SecureBackupErrorCode = (typeof secureBackupErrorCodes)[keyof typeof secureBackupErrorCodes];
+
+export class SecureBackupError extends Error {
+  constructor(public readonly code: SecureBackupErrorCode) {
+    super(code);
+    this.name = 'SecureBackupError';
+  }
+}
+
 async function sha256Hex(input: Uint8Array): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', input);
   return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
@@ -54,7 +69,7 @@ export async function decryptDataWithPasswordSecure(envelopeJsonStr: string, pas
   try {
     parsed = JSON.parse(envelopeJsonStr);
   } catch (e) {
-    throw new Error("Yedekleme dosyası geçerli JSON formatında değil.");
+    throw new SecureBackupError(secureBackupErrorCodes.invalidJson);
   }
 
   if (parsed.kdfImplementation !== 'argon2-browser') {
@@ -62,7 +77,7 @@ export async function decryptDataWithPasswordSecure(envelopeJsonStr: string, pas
   }
 
   if (!parsed.salt || !parsed.iv || !parsed.tag || !parsed.payload || !parsed.checksum) {
-    throw new Error("Geçersiz yedekleme zarfı: Kritik güvenlik alanları eksik.");
+    throw new SecureBackupError(secureBackupErrorCodes.missingFields);
   }
 
   const encoder = new TextEncoder();
@@ -70,7 +85,7 @@ export async function decryptDataWithPasswordSecure(envelopeJsonStr: string, pas
   const calculatedChecksumHex = await sha256Hex(cipherBytes);
 
   if (calculatedChecksumHex !== parsed.checksum) {
-    throw new Error("SHA-256 Manifest bütünlük kontrolü başarısız oldu! Veri bozulmuş veya tahrif edilmiş olabilir.");
+    throw new SecureBackupError(secureBackupErrorCodes.checksumMismatch);
   }
 
   const aesKey = await deriveArgon2idKey(password, parsed.salt, parsed.kdfParams);

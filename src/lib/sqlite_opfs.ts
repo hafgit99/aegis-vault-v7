@@ -384,7 +384,7 @@ class SQLiteOPFS {
 
     const row: SQLiteRow = {
       id: item.id || secureRandomToken(9),
-      title: item.title || 'İçeri Aktarılan Kayıt',
+      title: item.title || 'Imported Record',
       category: category,
       favorite: item.favorite ? 1 : 0,
       deleted: item.deleted ? 1 : 0,
@@ -496,16 +496,16 @@ class SQLiteOPFS {
         }
       }
 
-      return { columns: [], rows: [], error: "Sadece 'user_secrets' ve 'vault_items' tabloları desteklenmektedir." };
+      return { columns: [], rows: [], error: "Only the 'user_secrets' and 'vault_items' tables are supported." };
     }
 
     if (command === 'UPDATE' || command === 'DELETE' || command === 'INSERT') {
       this.logQuery(sql, 'ERROR', 0);
-      return { columns: [], rows: [], error: "Güvenlik kısıtlamaları dolayısıyla SQLite Terminali üzerinden doğrudan yazma (INSERT/UPDATE/DELETE) işlemleri devre dışı bırakılmıştır. Lütfen ana arayüzü kullanın." };
+      return { columns: [], rows: [], error: "Direct writes (INSERT/UPDATE/DELETE) are disabled in the SQLite terminal for security. Please use the main interface." };
     }
 
     this.logQuery(sql, 'ERROR', 0);
-    return { columns: [], rows: [], error: `Tanımlanamayan SQL komutu: "${command}". Sadece SELECT sorguları desteklenmektedir.` };
+    return { columns: [], rows: [], error: `Unrecognized SQL command: "${command}". Only SELECT queries are supported.` };
   }
 
   /**
