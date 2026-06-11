@@ -115,6 +115,7 @@
   - [x] Expand lock screen setup, unlock, visibility, and biometric edge-case coverage.
   - [x] Expand password generator strength, diceware, toggle, and clipboard cleanup coverage.
   - [x] Expand vault form edit, validation, attachment failure, and cleanup coverage.
+  - [x] Expand card detail copy, reveal, and fallback coverage.
 
 ## Phase 4: Desktop Productization
 

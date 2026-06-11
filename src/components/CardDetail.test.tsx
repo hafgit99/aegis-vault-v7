@@ -106,6 +106,7 @@ describe('CardDetail', () => {
     fireEvent.click(buttons[4]);
     fireEvent.click(buttons[5]);
     fireEvent.click(buttons[6]);
+    fireEvent.click(buttons[7]);
 
     expect(onCopyText).toHaveBeenCalledWith('Ada Lovelace', 'cardholderName');
     expect(onToggleReveal).toHaveBeenCalledWith('cardNumber');
@@ -114,5 +115,79 @@ describe('CardDetail', () => {
     expect(onToggleReveal).toHaveBeenCalledWith('cardCvv');
     expect(onCopyText).toHaveBeenCalledWith('123', 'cardCvv');
     expect(onToggleReveal).toHaveBeenCalledWith('cardPin');
+    expect(onCopyText).toHaveBeenCalledWith('9876', 'cardPin');
+  });
+
+  it('renders copied states for each copyable card field', () => {
+    const copiedFields = [
+      'cardholderName',
+      'cardNumber',
+      'cardExpiry',
+      'cardCvv',
+      'cardPin',
+    ];
+
+    copiedFields.forEach((copiedField) => {
+      const { container, unmount } = render(
+        <CardDetail
+          item={cardItem}
+          copiedField={copiedField}
+          isCardNumberRevealed={false}
+          isCvvRevealed={false}
+          isPinRevealed={false}
+          onToggleReveal={vi.fn()}
+          onCopyText={vi.fn()}
+        />,
+      );
+
+      if (copiedField === 'cardholderName' || copiedField === 'cardNumber') {
+        expect(container.querySelector('.text-brand-tertiary')).toBeTruthy();
+      } else {
+        expect(container.textContent).toContain('✓');
+      }
+      unmount();
+    });
+  });
+
+  it('uses fallback values and copies empty strings when card fields are missing', () => {
+    const onCopyText = vi.fn();
+    const fallbackItem: VaultItem = {
+      ...cardItem,
+      cardholderName: undefined,
+      cardNumber: undefined,
+      cardExpiry: undefined,
+      cardCvv: undefined,
+      cardPin: undefined,
+    };
+
+    render(
+      <CardDetail
+        item={fallbackItem}
+        copiedField={null}
+        isCardNumberRevealed={true}
+        isCvvRevealed={true}
+        isPinRevealed={true}
+        onToggleReveal={vi.fn()}
+        onCopyText={onCopyText}
+      />,
+    );
+
+    expect(screen.getByText('Belirtilmemiş')).toBeTruthy();
+    expect(screen.getByText('AA/YY')).toBeTruthy();
+    expect(screen.getByText('***')).toBeTruthy();
+    expect(screen.getByText('****')).toBeTruthy();
+
+    const buttons = screen.getAllByRole('button');
+    fireEvent.click(buttons[0]);
+    fireEvent.click(buttons[2]);
+    fireEvent.click(buttons[3]);
+    fireEvent.click(buttons[5]);
+    fireEvent.click(buttons[7]);
+
+    expect(onCopyText).toHaveBeenCalledWith('', 'cardholderName');
+    expect(onCopyText).toHaveBeenCalledWith('', 'cardNumber');
+    expect(onCopyText).toHaveBeenCalledWith('', 'cardExpiry');
+    expect(onCopyText).toHaveBeenCalledWith('', 'cardCvv');
+    expect(onCopyText).toHaveBeenCalledWith('', 'cardPin');
   });
 });
