@@ -128,6 +128,7 @@
   - [x] Expand settings panel biometric, export guard, and import interaction coverage.
   - [x] Expand vault form drag-and-drop attachment coverage.
   - [x] Expand security audit missing-password classification coverage.
+  - [x] Expand profile modal file-reader and fallback-avatar coverage.
 
 ## Phase 4: Desktop Productization
 

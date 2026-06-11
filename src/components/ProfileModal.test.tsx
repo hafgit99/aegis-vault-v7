@@ -18,6 +18,16 @@ class MockFileReader {
   }
 }
 
+class FailingFileReader {
+  public result: string | ArrayBuffer | null = null;
+  public onload: (() => void) | null = null;
+  public onerror: (() => void) | null = null;
+
+  readAsDataURL() {
+    this.onerror?.();
+  }
+}
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -97,6 +107,34 @@ describe('ProfileModal', () => {
     expect(screen.getByText(/geçerli bir görsel/)).toBeTruthy();
   });
 
+  it('keeps the fallback avatar initial and ignores empty file selections', () => {
+    render(
+      <ProfileModal
+        isOpen={true}
+        currentAvatar="linear-gradient(135deg, #10b981 0%, #059669 100%)"
+        currentName=""
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    const fileInput = document.querySelector<HTMLInputElement>('input[type="file"]')!;
+    const clickSpy = vi.spyOn(fileInput, 'click');
+
+    expect(screen.getByText('A')).toBeTruthy();
+
+    fireEvent.change(fileInput, { target: { files: [] } });
+
+    expect(screen.queryByText(/hata/)).toBeNull();
+
+    const uploadIconButton = Array.from(document.querySelectorAll<HTMLButtonElement>('button'))
+      .find((button) => button.title.includes('Resim'))!;
+    fireEvent.click(uploadIconButton);
+    fireEvent.click(screen.getByText(/Cihazdan/));
+
+    expect(clickSpy).toHaveBeenCalledTimes(2);
+  });
+
   it('rejects oversized profile images', () => {
     render(
       <ProfileModal
@@ -144,6 +182,28 @@ describe('ProfileModal', () => {
     fireEvent.click(screen.getByText('Değişiklikleri Kaydet'));
 
     expect(onSave).toHaveBeenCalledWith('Hafiz', 'data:image/png;base64,avatar');
+  });
+
+  it('shows an error when a valid profile image cannot be read', () => {
+    vi.stubGlobal('FileReader', FailingFileReader);
+
+    render(
+      <ProfileModal
+        isOpen={true}
+        currentAvatar="linear-gradient(135deg, #10b981 0%, #059669 100%)"
+        currentName="Hafiz"
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    const imageFile = new File(['avatar'], 'avatar.png', { type: 'image/png' });
+    fireEvent.change(document.querySelector<HTMLInputElement>('input[type="file"]')!, {
+      target: { files: [imageFile] },
+    });
+
+    expect(screen.getByText(/okunurken hata/)).toBeTruthy();
+    expect(screen.queryByAltText('Profil')).toBeNull();
   });
 
   it('forwards cancel actions to onClose', () => {
