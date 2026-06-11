@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 94.52% |
-| Statements | 94.52% |
+| Lines | 94.80% |
+| Statements | 94.80% |
 | Functions | 93.36% |
-| Branches | 88.35% |
+| Branches | 88.71% |
 
 Initial thresholds are intentionally below the current baseline:
 
@@ -33,7 +33,7 @@ These thresholds prevent large regressions while leaving room to add tests aroun
 ## Priority Coverage Targets
 
 1. `src/components/SettingsPanel.tsx`: reduce remaining fallback-message and desktop-runtime branch gaps.
-2. `src/lib/importer.ts`, `src/lib/random.ts`, and `src/lib/sqlite_opfs.ts`: raise low branch coverage around parsing, entropy, and persistence fallbacks.
+2. `src/lib/importer.ts` and `src/lib/sqlite_opfs.ts`: raise low branch coverage around parsing and persistence fallbacks.
 
 Recently improved:
 
@@ -69,6 +69,7 @@ Recently improved:
 - `src/lib/clipboard.ts`: covered unavailable clipboard APIs, rejected writes, empty expected text, missing clear methods, read failures, and clear-write failures so clipboard helpers now report full coverage.
 - `src/lib/encryption.ts`: covered malformed backup JSON, legacy envelope routing, missing secure envelope fields, and checksum tampering so the secure backup envelope module now reports full coverage.
 - `src/lib/biometric.ts`: covered WebAuthn support detection, disable flow, unsupported registration, cancelled registration, missing stored bundle, cancelled authentication, and mismatched authenticator rejection.
+- `src/lib/random.ts`: covered WebCrypto and Math.random fallback paths, non-positive ranges, unbiased-index retries, randomUUID usage, UUID v4 fallback formatting, and empty token generation so entropy helpers now report full coverage.
 
 ## Next Gates
 
