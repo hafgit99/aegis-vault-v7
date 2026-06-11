@@ -72,6 +72,7 @@
   - [x] Vault form attachment size labels use shared display helpers.
 - [x] Replace `alert()` calls with the existing modal/toast pattern.
 - [x] Normalize naming: `AegisVault`, `Aegis Vault`, and `Aegis Vault 7`.
+- [x] Add the first internationalization layer with Turkish, English, and Chinese language selection.
 - [x] Add component tests for lock screen, vault form, settings import/export, and trash.
   - [x] Lock screen setup and unlock behavior covered by component tests.
   - [x] Settings encrypted export and JSON import behavior covered by component tests.
@@ -151,6 +152,7 @@
   - [x] Add Playwright smoke E2E coverage for encrypted import cancellation.
   - [x] Add Playwright smoke E2E coverage for vault empty-state behavior.
   - [x] Add Playwright smoke E2E coverage for primary workspace navigation.
+  - [x] Add Playwright smoke E2E coverage for English and Chinese language switching.
 
 ## Phase 4: Desktop Productization
 

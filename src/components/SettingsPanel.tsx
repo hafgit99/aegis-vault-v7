@@ -32,6 +32,8 @@ import { registerBiometric, isBiometricEnabled, disableBiometric, isBiometricSup
 import { getActiveMasterPassword } from '../lib/vaultSession';
 import { openDesktopImportFile, saveDesktopExportFile } from '../lib/desktopFiles';
 import { isDesktopRuntime } from '../lib/desktopStorage';
+import { useLanguage } from '../i18n/LanguageContext';
+import { languageLabels, supportedLanguages, type LanguageCode } from '../i18n/translations';
 
 interface SettingsPanelProps {
   onDatabaseChanged: () => void | Promise<void>;
@@ -46,6 +48,7 @@ export default function SettingsPanel({
   onAutoLockDurationChange,
   onNotify,
 }: SettingsPanelProps) {
+  const { language, setLanguage, t } = useLanguage();
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -439,6 +442,39 @@ export default function SettingsPanel({
           <p className="text-xs text-on-surface-variant">Kilit sürelerinizi, askeri şifreli yedeklerinizi ve çoklu aktarımları bu panelden yönetin.</p>
         </div>
       </div>
+
+      <section
+        data-testid="language-settings-card"
+        className="glass-panel p-6 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-6 items-center border border-outline-variant/10"
+      >
+        <div className="md:col-span-2 space-y-1.5">
+          <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2">
+            <Settings className="w-4 h-4 text-brand-primary" />
+            <span>{t('settings.language.title')}</span>
+          </h3>
+          <p className="text-xs text-on-surface-variant leading-relaxed">
+            {t('settings.language.description')}
+          </p>
+        </div>
+
+        <label className="space-y-1.5">
+          <span className="block text-[10px] font-bold text-on-surface-variant/85 uppercase">
+            {t('settings.language.label')}
+          </span>
+          <select
+            data-testid="language-select"
+            value={language}
+            onChange={(event) => setLanguage(event.target.value as LanguageCode)}
+            className="w-full bg-[#141614] border border-outline-variant/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 text-on-surface"
+          >
+            {supportedLanguages.map((code) => (
+              <option key={code} value={code}>
+                {languageLabels[code]}
+              </option>
+            ))}
+          </select>
+        </label>
+      </section>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6" id="settings-top-row">
         {/* Statistics & Info */}

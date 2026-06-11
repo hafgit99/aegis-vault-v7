@@ -25,11 +25,11 @@ describe('SidebarNavigation', () => {
     );
 
     expect(screen.getByText(APP_NAME)).toBeTruthy();
-    expect(screen.getByText('Kasa (Vault)')).toBeTruthy();
-    expect(screen.getByText('Güvenlik Analizi')).toBeTruthy();
-    expect(screen.getByText('Şifre Üretici')).toBeTruthy();
-    expect(screen.getByText('Ayarlar')).toBeTruthy();
-    expect(screen.getByText('Çöp Kutusu')).toBeTruthy();
+    expect(screen.getByTestId('nav-vault-button')).toBeTruthy();
+    expect(screen.getByTestId('nav-audit-button')).toBeTruthy();
+    expect(screen.getByTestId('nav-generator-button')).toBeTruthy();
+    expect(screen.getByTestId('nav-settings-button')).toBeTruthy();
+    expect(screen.getByTestId('nav-trash-button')).toBeTruthy();
     expect(screen.getByText('3')).toBeTruthy();
   });
 
@@ -47,12 +47,12 @@ describe('SidebarNavigation', () => {
       />,
     );
 
-    fireEvent.click(screen.getByText('Kasa (Vault)'));
-    fireEvent.click(screen.getByText('Güvenlik Analizi'));
-    fireEvent.click(screen.getByText('Şifre Üretici'));
-    fireEvent.click(screen.getByText('Ayarlar'));
-    fireEvent.click(screen.getByText('Çöp Kutusu'));
-    fireEvent.click(screen.getByText('Kilitli (Lock Vault)'));
+    fireEvent.click(screen.getByTestId('nav-vault-button'));
+    fireEvent.click(screen.getByTestId('nav-audit-button'));
+    fireEvent.click(screen.getByTestId('nav-generator-button'));
+    fireEvent.click(screen.getByTestId('nav-settings-button'));
+    fireEvent.click(screen.getByTestId('nav-trash-button'));
+    fireEvent.click(screen.getByTestId('lock-vault-button'));
 
     expect(onTabChange).toHaveBeenCalledWith('vault');
     expect(onTabChange).toHaveBeenCalledWith('audit');

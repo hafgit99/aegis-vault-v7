@@ -151,6 +151,21 @@ test('navigates across primary workspaces and returns to the vault', async ({ pa
   await expect(page.getByTestId('new-vault-item-button')).toBeVisible();
 });
 
+test('switches the interface language between English and Chinese', async ({ page }) => {
+  await setupVault(page);
+  await openSettings(page);
+
+  await page.getByTestId('language-select').selectOption('en');
+  await expect(page.getByTestId('language-settings-card')).toContainText('Language and Region');
+  await expect(page.getByTestId('nav-vault-button')).toContainText('Vault');
+  await expect(page.getByTestId('nav-settings-button')).toContainText('Settings');
+
+  await page.getByTestId('language-select').selectOption('zh');
+  await expect(page.getByTestId('language-settings-card')).toContainText('语言和地区');
+  await expect(page.getByTestId('nav-vault-button')).toContainText('保险库');
+  await expect(page.getByTestId('nav-settings-button')).toContainText('设置');
+});
+
 test('exports an encrypted backup download', async ({ page }) => {
   await setupVault(page);
   await createLoginItem(page, 'E2E Export Backup');

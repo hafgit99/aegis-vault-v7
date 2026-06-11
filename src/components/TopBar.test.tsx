@@ -24,7 +24,7 @@ describe('TopBar', () => {
       <TopBar
         activeTab="vault"
         searchQuery="mail"
-        profileName="Hafız"
+        profileName="Hafiz"
         profileAvatar="linear-gradient(135deg, #10b981 0%, #059669 100%)"
         onSearchChange={onSearchChange}
         onOpenSidebar={onOpenSidebar}
@@ -34,11 +34,11 @@ describe('TopBar', () => {
       />,
     );
 
-    fireEvent.click(screen.getByTitle('Menüyü Aç'));
-    fireEvent.change(screen.getByPlaceholderText('Vault içinde ara...'), { target: { value: 'github' } });
-    fireEvent.click(screen.getByTitle('Yenile'));
-    fireEvent.click(screen.getByTitle('Bildirimler'));
-    fireEvent.click(screen.getByTitle('Hafız - Profili Düzenle'));
+    fireEvent.click(screen.getByTestId('topbar-menu-button'));
+    fireEvent.change(screen.getByTestId('vault-search-input'), { target: { value: 'github' } });
+    fireEvent.click(screen.getByTestId('topbar-refresh-button'));
+    fireEvent.click(screen.getByTestId('topbar-status-button'));
+    fireEvent.click(screen.getByTestId('topbar-profile-button'));
 
     expect(onOpenSidebar).toHaveBeenCalledTimes(1);
     expect(onSearchChange).toHaveBeenCalledWith('github');
@@ -62,7 +62,7 @@ describe('TopBar', () => {
       />,
     );
 
-    expect(screen.queryByPlaceholderText('Vault içinde ara...')).toBeNull();
+    expect(screen.queryByTestId('vault-search-input')).toBeNull();
     expect(screen.getByAltText(APP_PROFILE_ALT)).toBeTruthy();
   });
 });

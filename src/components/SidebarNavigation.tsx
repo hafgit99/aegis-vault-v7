@@ -1,5 +1,6 @@
 import { Clock, KeyRound, Lock, Settings, Shield, ShieldCheck, Trash2 } from 'lucide-react';
 
+import { useLanguage } from '../i18n/LanguageContext';
 import { APP_NAME } from '../lib/branding';
 import { ActiveTab } from '../types';
 
@@ -26,6 +27,8 @@ export default function SidebarNavigation({
   onTabChange,
   onLock,
 }: SidebarNavigationProps) {
+  const { t } = useLanguage();
+
   return (
     <aside
       className={`fixed left-0 top-0 h-full w-[280px] bg-surface-lowest border-r border-outline-variant/10 flex flex-col p-4 z-50 transition-transform duration-300 ${
@@ -38,7 +41,7 @@ export default function SidebarNavigation({
         </div>
         <div>
           <h1 className="font-display text-[21px] font-bold text-brand-primary leading-tight">{APP_NAME}</h1>
-          <p className="text-[10px] text-on-surface-variant uppercase tracking-widest font-semibold">Local-First Secure</p>
+          <p className="text-[10px] text-on-surface-variant uppercase tracking-widest font-semibold">{t('nav.localFirst')}</p>
         </div>
       </div>
 
@@ -49,7 +52,7 @@ export default function SidebarNavigation({
           className={getNavButtonClass(activeTab, 'vault')}
         >
           <Lock className="w-4 h-4" />
-          <span>Kasa (Vault)</span>
+          <span>{t('nav.vault')}</span>
         </button>
 
         <button
@@ -58,7 +61,7 @@ export default function SidebarNavigation({
           className={getNavButtonClass(activeTab, 'audit')}
         >
           <ShieldCheck className="w-4 h-4" />
-          <span>Güvenlik Analizi</span>
+          <span>{t('nav.audit')}</span>
         </button>
 
         <button
@@ -67,7 +70,7 @@ export default function SidebarNavigation({
           className={getNavButtonClass(activeTab, 'generator')}
         >
           <KeyRound className="w-4 h-4" />
-          <span>Şifre Üretici</span>
+          <span>{t('nav.generator')}</span>
         </button>
 
         <button
@@ -76,7 +79,7 @@ export default function SidebarNavigation({
           className={getNavButtonClass(activeTab, 'settings')}
         >
           <Settings className="w-4 h-4" />
-          <span>Ayarlar</span>
+          <span>{t('nav.settings')}</span>
         </button>
 
         <button
@@ -90,7 +93,7 @@ export default function SidebarNavigation({
         >
           <div className="flex items-center gap-3">
             <Trash2 className="w-4 h-4" />
-            <span>Çöp Kutusu</span>
+            <span>{t('nav.trash')}</span>
           </div>
           {trashCount > 0 && (
             <span className="px-2 py-0.5 text-[10px] rounded-full bg-red-500/20 text-red-400 font-mono font-bold">
@@ -105,7 +108,7 @@ export default function SidebarNavigation({
           <div className="flex items-center justify-between px-3 py-2 text-on-surface-variant text-xs">
             <div className="flex items-center gap-2.5">
               <Clock className="w-4 h-4" />
-              <span>System Health</span>
+              <span>{t('nav.systemHealth')}</span>
             </div>
             <div className="w-2.5 h-2.5 rounded-full bg-brand-tertiary security-pulse"></div>
           </div>
@@ -116,7 +119,7 @@ export default function SidebarNavigation({
           className="w-full flex items-center justify-center gap-2 bg-[#1a1c1a] border border-outline-variant/20 text-on-surface py-3 rounded-lg font-bold text-xs hover:bg-[#252825] transition-all cursor-pointer"
         >
           <Lock className="w-4 h-4" />
-          <span>Kilitli (Lock Vault)</span>
+          <span>{t('nav.lockVault')}</span>
         </button>
       </div>
     </aside>
