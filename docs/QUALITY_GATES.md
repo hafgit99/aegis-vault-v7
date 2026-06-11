@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 93.31% |
-| Statements | 93.31% |
+| Lines | 93.33% |
+| Statements | 93.33% |
 | Functions | 90.45% |
-| Branches | 84.15% |
+| Branches | 84.39% |
 
 Initial thresholds are intentionally below the current baseline:
 
@@ -33,7 +33,7 @@ These thresholds prevent large regressions while leaving room to add tests aroun
 ## Priority Coverage Targets
 
 1. `src/components/SettingsPanel.tsx`: continue reducing import/export and biometric branch gaps.
-2. `src/components/RecentVaultItem.tsx`: add remaining logo and category branch coverage.
+2. `src/components/VaultWorkspace.tsx`: add remaining mobile/detail action branch coverage.
 
 Recently improved:
 
@@ -58,6 +58,7 @@ Recently improved:
 - `src/components/VaultItemAttachmentCard.tsx`: covered missing-size fallback for encrypted attachment metadata.
 - `src/components/VaultItemDetailHeader.tsx`: covered known-platform logo rendering and copied export state.
 - `src/components/VaultListItem.tsx`: covered known-platform logo rendering and missing-password strength fallback.
+- `src/components/RecentVaultItem.tsx`: covered known-platform logo rendering, username copied state, and missing-password copy fallback.
 
 ## Next Gates
 

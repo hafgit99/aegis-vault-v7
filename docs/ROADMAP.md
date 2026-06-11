@@ -123,6 +123,7 @@
   - [x] Expand attachment card missing-size coverage.
   - [x] Expand vault item detail header logo and copied-state coverage.
   - [x] Expand vault list item logo and password fallback coverage.
+  - [x] Expand recent vault item logo, copied-state, and password fallback coverage.
 
 ## Phase 4: Desktop Productization
 

@@ -64,4 +64,48 @@ describe('RecentVaultItem', () => {
 
     expect(screen.getByText('✓')).toBeTruthy();
   });
+
+  it('renders a known platform logo when available', () => {
+    render(
+      <RecentVaultItem
+        item={{ ...recentItem, title: 'GitHub', url: 'https://github.com' }}
+        copiedField={null}
+        onSelect={vi.fn()}
+        onCopyText={vi.fn()}
+      />,
+    );
+
+    const logo = screen.getByAltText('GitHub') as HTMLImageElement;
+    expect(logo.src).toContain('googleusercontent.com');
+  });
+
+  it('shows copied state for the username field', () => {
+    render(
+      <RecentVaultItem
+        item={recentItem}
+        copiedField="recent-user-recent-1"
+        onSelect={vi.fn()}
+        onCopyText={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('✓')).toBeTruthy();
+  });
+
+  it('copies an empty string when the password is missing', () => {
+    const onCopyText = vi.fn();
+
+    render(
+      <RecentVaultItem
+        item={{ ...recentItem, password: undefined }}
+        copiedField={null}
+        onSelect={vi.fn()}
+        onCopyText={onCopyText}
+      />,
+    );
+
+    fireEvent.click(screen.getByTitle('Şifreyi Kopyala'));
+
+    expect(onCopyText).toHaveBeenCalledWith('', 'recent-pass-recent-1');
+  });
 });
