@@ -117,6 +117,20 @@ test('filters vault items by search query', async ({ page }) => {
   await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Search Beta' })).toBeVisible();
 });
 
+test('shows an empty state when search has no matches', async ({ page }) => {
+  await setupVault(page);
+
+  await createLoginItem(page, 'E2E Empty State Anchor');
+
+  await page.getByTestId('vault-search-input').fill('no-such-e2e-entry');
+  await expect(page.getByTestId('vault-empty-state')).toBeVisible();
+  await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Empty State Anchor' })).toBeHidden();
+
+  await page.getByTestId('vault-search-input').fill('');
+  await expect(page.getByTestId('vault-empty-state')).toBeHidden();
+  await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Empty State Anchor' })).toBeVisible();
+});
+
 test('exports an encrypted backup download', async ({ page }) => {
   await setupVault(page);
   await createLoginItem(page, 'E2E Export Backup');

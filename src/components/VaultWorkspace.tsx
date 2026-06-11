@@ -156,7 +156,10 @@ export default function VaultWorkspace({
           </div>
 
           {filteredItems.length === 0 ? (
-            <div className="text-center py-10 px-4 text-xs text-on-surface-variant/40 italic">
+            <div
+              data-testid="vault-empty-state"
+              className="text-center py-10 px-4 text-xs text-on-surface-variant/40 italic"
+            >
               Arama sonucu veya kayıtlı favori veri bulunamadı. Ekle butonuna tıklayarak yeni veri oluşturabilirsiniz.
             </div>
           ) : (

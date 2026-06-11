@@ -149,6 +149,7 @@
   - [x] Add Playwright smoke E2E coverage for favorite filtering.
   - [x] Add Playwright smoke E2E coverage for search filtering.
   - [x] Add Playwright smoke E2E coverage for encrypted import cancellation.
+  - [x] Add Playwright smoke E2E coverage for vault empty-state behavior.
 
 ## Phase 4: Desktop Productization
 
