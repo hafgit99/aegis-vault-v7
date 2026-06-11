@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 94.21% |
-| Statements | 94.21% |
+| Lines | 94.26% |
+| Statements | 94.26% |
 | Functions | 93.10% |
-| Branches | 87.35% |
+| Branches | 87.69% |
 
 Initial thresholds are intentionally below the current baseline:
 
@@ -33,7 +33,7 @@ These thresholds prevent large regressions while leaving room to add tests aroun
 ## Priority Coverage Targets
 
 1. `src/components/SettingsPanel.tsx`: reduce remaining fallback-message and desktop-runtime branch gaps.
-2. `src/lib/biometric.ts`, `src/lib/clipboard.ts`, and `src/lib/encryption.ts`: raise low branch coverage around security-sensitive fallbacks.
+2. `src/lib/biometric.ts` and `src/lib/encryption.ts`: raise low branch coverage around security-sensitive fallbacks.
 
 Recently improved:
 
@@ -66,6 +66,7 @@ Recently improved:
 - `src/components/ProfileModal.tsx`: covered file-reader failures, empty file selections, fallback avatar initials, and upload button forwarding so the modal now reports full component coverage.
 - `src/components/SettingsPanel.tsx`: covered destructive reset confirmation, drag-and-drop JSON import, desktop import cancellation, decrypt-password validation, malformed decrypted backups, and encrypted export failures.
 - `src/components/VaultFormModal.tsx`: covered legacy edit payloads with missing fields and missing attachment metadata. The remaining selected-file input reset branch is intentionally defensive because the file input is unmounted when a selected file is displayed.
+- `src/lib/clipboard.ts`: covered unavailable clipboard APIs, rejected writes, empty expected text, missing clear methods, read failures, and clear-write failures so clipboard helpers now report full coverage.
 
 ## Next Gates
 

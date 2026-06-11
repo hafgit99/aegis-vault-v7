@@ -30,6 +30,20 @@ describe('clipboard helpers', () => {
     expect(clipboardText).toBe('secret');
   });
 
+  it('returns false when clipboard writes are unavailable or rejected', async () => {
+    Object.assign(navigator, { clipboard: {} });
+
+    await expect(writeClipboardText('secret')).resolves.toBe(false);
+
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockRejectedValue(new Error('denied')),
+      },
+    });
+
+    await expect(writeClipboardText('secret')).resolves.toBe(false);
+  });
+
   it('clears only when clipboard content is unchanged', async () => {
     clipboardText = 'secret';
 
@@ -48,5 +62,29 @@ describe('clipboard helpers', () => {
     expect(readText).toHaveBeenCalled();
     expect(writeText).not.toHaveBeenCalled();
     expect(clipboardText).toBe('new value');
+  });
+
+  it('does not clear when expected text or required clipboard methods are missing', async () => {
+    await expect(clearClipboardIfUnchanged('')).resolves.toBe(false);
+    expect(readText).not.toHaveBeenCalled();
+
+    Object.assign(navigator, {
+      clipboard: {
+        readText,
+      },
+    });
+
+    await expect(clearClipboardIfUnchanged('secret')).resolves.toBe(false);
+  });
+
+  it('returns false when reading or clearing the clipboard fails', async () => {
+    readText.mockRejectedValueOnce(new Error('read denied'));
+
+    await expect(clearClipboardIfUnchanged('secret')).resolves.toBe(false);
+
+    readText.mockResolvedValueOnce('secret');
+    writeText.mockRejectedValueOnce(new Error('write denied'));
+
+    await expect(clearClipboardIfUnchanged('secret')).resolves.toBe(false);
   });
 });

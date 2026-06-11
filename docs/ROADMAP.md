@@ -131,6 +131,7 @@
   - [x] Expand profile modal file-reader and fallback-avatar coverage.
   - [x] Expand settings panel reset, drag-drop import, decrypt-error, and export-failure coverage.
   - [x] Expand vault form legacy edit fallback and attachment metadata coverage.
+  - [x] Expand clipboard helper failure and unavailable-API coverage.
 
 ## Phase 4: Desktop Productization
 
