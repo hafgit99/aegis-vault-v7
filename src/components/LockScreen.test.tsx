@@ -2,10 +2,15 @@
  * @vitest-environment jsdom
  */
 
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { APP_NAME } from '../lib/branding';
+import {
+  authenticateBiometric,
+  isBiometricEnabled,
+  isBiometricSupported,
+} from '../lib/biometric';
 import {
   isMasterPasswordSet,
   setupMasterPassword,
@@ -35,6 +40,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   cleanup();
   vi.clearAllMocks();
 });
@@ -67,6 +73,40 @@ describe('LockScreen', () => {
     });
   });
 
+  it('rejects setup when confirmation does not match', () => {
+    render(<LockScreen onUnlock={vi.fn()} />);
+
+    const [password, confirmation] = passwordInputs();
+    fireEvent.change(password, { target: { value: 'strong-pass' } });
+    fireEvent.change(confirmation, { target: { value: 'different-pass' } });
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement);
+
+    expect(screen.getByText(/birbiriyle/)).toBeTruthy();
+    expect(setupMasterPassword).not.toHaveBeenCalled();
+  });
+
+  it('toggles password visibility in setup mode', () => {
+    render(<LockScreen onUnlock={vi.fn()} />);
+
+    const [password, confirmation] = passwordInputs();
+    const toggleButtons = Array.from(document.querySelectorAll('form button[type="button"]')) as HTMLButtonElement[];
+
+    expect(password.type).toBe('password');
+    expect(confirmation.type).toBe('password');
+
+    fireEvent.click(toggleButtons[0]);
+    fireEvent.click(toggleButtons[1]);
+
+    expect(password.type).toBe('text');
+    expect(confirmation.type).toBe('text');
+
+    fireEvent.click(toggleButtons[0]);
+    fireEvent.click(toggleButtons[1]);
+
+    expect(password.type).toBe('password');
+    expect(confirmation.type).toBe('password');
+  });
+
   it('unlocks an existing vault only when the password verifies', async () => {
     const onUnlock = vi.fn();
     vi.mocked(isMasterPasswordSet).mockReturnValue(true);
@@ -94,5 +134,93 @@ describe('LockScreen', () => {
       expect(verifyMasterPassword).toHaveBeenCalledWith('correct-pass');
       expect(onUnlock).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('shows a biometric unsupported error without calling authentication', async () => {
+    vi.mocked(isMasterPasswordSet).mockReturnValue(true);
+    vi.mocked(isBiometricEnabled).mockReturnValue(true);
+    vi.mocked(isBiometricSupported).mockReturnValue(false);
+    const onUnlock = vi.fn();
+
+    render(<LockScreen onUnlock={onUnlock} />);
+
+    fireEvent.click(screen.getByText(/Biyometrik/));
+
+    await waitFor(() => {
+      expect(screen.getByText(/desteklenmiyor/)).toBeTruthy();
+    });
+    expect(authenticateBiometric).not.toHaveBeenCalled();
+    expect(onUnlock).not.toHaveBeenCalled();
+  });
+
+  it('unlocks with a verified biometric master password', async () => {
+    vi.mocked(isMasterPasswordSet).mockReturnValue(true);
+    vi.mocked(isBiometricEnabled).mockReturnValue(true);
+    vi.mocked(isBiometricSupported).mockReturnValue(true);
+    vi.mocked(authenticateBiometric).mockResolvedValueOnce('bio-master');
+    vi.mocked(verifyMasterPassword).mockResolvedValueOnce(true);
+    const onUnlock = vi.fn();
+
+    render(<LockScreen onUnlock={onUnlock} />);
+
+    fireEvent.click(screen.getByText(/Biyometrik/));
+
+    await waitFor(() => {
+      expect(authenticateBiometric).toHaveBeenCalledTimes(1);
+      expect(verifyMasterPassword).toHaveBeenCalledWith('bio-master');
+      expect(onUnlock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('shows biometric integrity failure when the decrypted master password is rejected', async () => {
+    vi.mocked(isMasterPasswordSet).mockReturnValue(true);
+    vi.mocked(isBiometricEnabled).mockReturnValue(true);
+    vi.mocked(isBiometricSupported).mockReturnValue(true);
+    vi.mocked(authenticateBiometric).mockResolvedValueOnce('stale-master');
+    vi.mocked(verifyMasterPassword).mockResolvedValueOnce(false);
+
+    render(<LockScreen onUnlock={vi.fn()} />);
+
+    fireEvent.click(screen.getByText(/Biyometrik/));
+
+    await waitFor(() => {
+      expect(screen.getByText(/manuel olarak/)).toBeTruthy();
+    });
+  });
+
+  it('maps biometric permission errors to a user-facing message', async () => {
+    vi.mocked(isMasterPasswordSet).mockReturnValue(true);
+    vi.mocked(isBiometricEnabled).mockReturnValue(true);
+    vi.mocked(isBiometricSupported).mockReturnValue(true);
+    const permissionError = new Error('cancelled');
+    permissionError.name = 'NotAllowedError';
+    vi.mocked(authenticateBiometric).mockRejectedValueOnce(permissionError);
+
+    render(<LockScreen onUnlock={vi.fn()} />);
+
+    fireEvent.click(screen.getByText(/Biyometrik/));
+
+    await waitFor(() => {
+      expect(screen.getByText(/iptal edildi/)).toBeTruthy();
+    });
+  });
+
+  it('auto-triggers biometric unlock when an existing vault has biometrics enabled', async () => {
+    vi.useFakeTimers();
+    vi.mocked(isMasterPasswordSet).mockReturnValue(true);
+    vi.mocked(isBiometricEnabled).mockReturnValue(true);
+    vi.mocked(isBiometricSupported).mockReturnValue(true);
+    vi.mocked(authenticateBiometric).mockResolvedValueOnce('auto-master');
+    vi.mocked(verifyMasterPassword).mockResolvedValueOnce(true);
+    const onUnlock = vi.fn();
+
+    render(<LockScreen onUnlock={onUnlock} />);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(800);
+    });
+
+    expect(authenticateBiometric).toHaveBeenCalledTimes(1);
+    expect(onUnlock).toHaveBeenCalledTimes(1);
   });
 });

@@ -112,6 +112,7 @@
   - [x] Expand profile and confirm modal interaction coverage.
   - [x] Expand security audit rendering and action coverage.
   - [x] Expand settings panel password, biometric, export, import, and safety-control coverage.
+  - [x] Expand lock screen setup, unlock, visibility, and biometric edge-case coverage.
 
 ## Phase 4: Desktop Productization
 

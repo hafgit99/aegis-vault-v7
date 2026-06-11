@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 91.81% |
-| Statements | 91.81% |
-| Functions | 87.26% |
-| Branches | 78.92% |
+| Lines | 92.43% |
+| Statements | 92.43% |
+| Functions | 88.06% |
+| Branches | 79.97% |
 
 Initial thresholds are intentionally below the current baseline:
 
@@ -32,8 +32,8 @@ These thresholds prevent large regressions while leaving room to add tests aroun
 
 ## Priority Coverage Targets
 
-1. `src/components/LockScreen.tsx`: add setup/unlock edge cases and error-state coverage.
-2. `src/components/PasswordGenerator.tsx`: add uncovered diceware/password mode edge cases.
+1. `src/components/PasswordGenerator.tsx`: add uncovered diceware/password mode edge cases.
+2. `src/components/VaultFormModal.tsx`: add remaining edit/reset and conditional-field branch coverage.
 
 Recently improved:
 
@@ -48,6 +48,7 @@ Recently improved:
 - `src/components/ConfirmModal.tsx`: covered closed state, confirm/cancel behavior, header close, and alert-only mode.
 - `src/components/SecurityAudit.tsx`: covered empty secure state, critical weak/reused groups, medium-score feedback, excellent-score feedback, metric rendering, and audit item selection.
 - `src/components/SettingsPanel.tsx`: covered master password validation/update, auto-lock selection, demo reseed notification, safe destructive confirmation, biometric enable/disable/error paths, plain export fallback/error paths, and import error feedback.
+- `src/components/LockScreen.tsx`: covered setup mismatch, password visibility toggles, manual unlock, biometric unsupported/success/integrity/permission-error paths, and auto-triggered biometric unlock.
 
 ## Next Gates
 
