@@ -52,4 +52,20 @@ describe('VaultItemAttachmentCard', () => {
     fireEvent.click(screen.getByTitle('İndir ve Güvenle Çöz'));
     expect(onDownload).toHaveBeenCalledWith('attachment-1', 'recovery.pdf');
   });
+
+  it('renders a zero-byte fallback when attachment size is missing', () => {
+    render(
+      <VaultItemAttachmentCard
+        item={{
+          ...baseItem,
+          attachmentId: 'attachment-2',
+          attachmentName: 'empty.txt',
+        }}
+        onDownload={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('empty.txt')).toBeTruthy();
+    expect(screen.getByText('0 B')).toBeTruthy();
+  });
 });

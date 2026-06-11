@@ -120,6 +120,7 @@
   - [x] Expand passkey detail copied-state and fallback coverage.
   - [x] Expand identity detail copied-state and fallback coverage.
   - [x] Expand secure note copied-state and empty-note coverage.
+  - [x] Expand attachment card missing-size coverage.
 
 ## Phase 4: Desktop Productization
 
