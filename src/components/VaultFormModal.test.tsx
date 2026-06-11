@@ -146,6 +146,60 @@ describe('VaultFormModal', () => {
     expect(screen.getByDisplayValue('Recovery codes are stored offline.')).toBeTruthy();
   });
 
+  it('falls back safely when editing a legacy item with missing fields and attachment metadata', async () => {
+    const onSave = vi.fn();
+    const legacyItem = {
+      id: 'legacy-item',
+      title: undefined,
+      username: undefined,
+      password: undefined,
+      url: undefined,
+      notes: undefined,
+      createdAt: '2026-06-01',
+      updatedAt: '2026-06-01',
+      category: undefined,
+      favorite: undefined,
+      attachmentId: 'legacy-attachment',
+      attachmentName: undefined,
+      attachmentSize: undefined,
+      attachmentType: undefined,
+    } as unknown as VaultItem;
+
+    render(
+      <VaultFormModal
+        isOpen={true}
+        editingItem={legacyItem}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />,
+    );
+
+    expect(screen.getByText('Ekli Dosya')).toBeTruthy();
+    expect(screen.getByText(/0 B/)).toBeTruthy();
+
+    fireEvent.change(formInputs()[0], {
+      target: { value: 'Restored Legacy Login' },
+    });
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement);
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+        id: 'legacy-item',
+        title: 'Restored Legacy Login',
+        username: '',
+        password: '',
+        url: '',
+        notes: '',
+        category: 'login',
+        favorite: false,
+        attachmentId: 'legacy-attachment',
+        attachmentName: 'Ekli Dosya',
+        attachmentSize: undefined,
+        attachmentType: 'application/octet-stream',
+      }));
+    });
+  });
+
   it('saves edits with the original identity, favorite flag, and created date', async () => {
     const onSave = vi.fn();
     const onClose = vi.fn();
