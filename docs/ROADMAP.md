@@ -197,6 +197,7 @@
 - [x] Add controlled native file dialogs for import/export.
 - [x] Add safe clipboard clearing behavior.
 - [x] Add CI build workflow for Windows desktop artifacts.
+- [x] Split production vendor chunks so Vite builds stay under the 500 kB warning threshold.
 - [x] Add release checklist and signed build plan.
 
 ## Phase 5: Android Preparation

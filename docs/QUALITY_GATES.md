@@ -66,6 +66,7 @@ Current smoke scope:
 
 Recently improved:
 
+- Production build: covered Vite manual vendor chunking so the app, vendor, and Argon2 bundles stay below the 500 kB warning threshold.
 - `src/lib/importer.ts`: covered supported JSON/CSV formats, encrypted envelope detection, malformed inputs, and quote-aware CSV parsing.
 - `src/lib/attachments.ts`: covered IndexedDB save/read/delete paths, bulk legacy migration, missing records, and connection cleanup behavior.
 - `src/lib/sqlite_opfs.ts`: covered master setup/verification, encrypted row persistence, desktop payload hydration, OPFS file hydration, missing OPFS file initialization, OPFS write failures, desktop read fallback, legacy localStorage migration, read-only SQL console behavior, row update/defaults, reseed/delete/reset flows, query log subscriptions, localStorage fallback hydration, and missing-key decryption guards.

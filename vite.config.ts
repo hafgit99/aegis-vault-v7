@@ -37,6 +37,19 @@ export default defineConfig(() => {
       target: process.env.TAURI_ENV_PLATFORM === 'windows' ? 'chrome105' : 'safari13',
       minify: process.env.TAURI_ENV_DEBUG ? false : ('esbuild' as const),
       sourcemap: !!process.env.TAURI_ENV_DEBUG,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return;
+
+            if (id.includes('argon2-browser')) {
+              return 'argon2-vendor';
+            }
+
+            return 'vendor';
+          },
+        },
+      },
     },
   };
 });
