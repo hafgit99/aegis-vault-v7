@@ -136,6 +136,7 @@
   - [x] Expand biometric WebAuthn support, cancellation, disable, and missing-bundle coverage.
   - [x] Expand random helper fallback, UUID formatting, unbiased-index retry, and empty-token coverage.
   - [x] Expand importer sparse JSON, Bitwarden type, CSV category, and fallback-default coverage.
+  - [x] Expand SQLite desktop payload, legacy migration, SQL projection, update/default, and missing-key guard coverage.
 
 ## Phase 4: Desktop Productization
 

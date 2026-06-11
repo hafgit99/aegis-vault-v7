@@ -157,4 +157,214 @@ describe('SQLite OPFS persistence engine', () => {
       rows: [['owner', '$argon2id$salt$master-pass']],
     });
   });
+
+  it('hydrates a desktop database payload before local fallback storage', async () => {
+    const state: VersionedVaultDatabaseState = {
+      ...createEmptyVaultDatabaseState(),
+      user_secrets: [{ username: 'owner', argon_hash: '$argon2id$salt$master-pass' }],
+    };
+
+    readDesktopVaultDatabase.mockResolvedValueOnce(JSON.stringify(state));
+
+    const sqlite = await freshSqliteInstance();
+
+    await expect(sqlite.verifyPassword('master-pass')).resolves.toBe(true);
+    expect(JSON.parse(localStorage.getItem('aegis_sqlite_fallback') ?? '{}')).toMatchObject({
+      user_secrets: [{ username: 'owner', argon_hash: '$argon2id$salt$master-pass' }],
+    });
+    expect(sqlite.getQueryLogs()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          query: 'sqlite3_open("appdata:///aegis_sqlite.db")',
+          status: 'SUCCESS',
+        }),
+      ]),
+    );
+  });
+
+  it('migrates legacy localStorage vault data into encrypted SQLite rows', async () => {
+    localStorage.setItem('aegis_is_setup', 'true');
+    localStorage.setItem('aegis_master_password', btoa('master-pass'));
+    localStorage.setItem(
+      'aegis_vault_items',
+      JSON.stringify([
+        sampleItem({
+          id: 'legacy-login',
+          title: 'Legacy Login',
+          notes: '',
+          favorite: false,
+        }),
+      ]),
+    );
+
+    const sqlite = await freshSqliteInstance();
+
+    await expect(sqlite.verifyPassword('master-pass')).resolves.toBe(true);
+    await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual([
+      expect.objectContaining({
+        id: 'legacy-login',
+        title: 'Legacy Login',
+        username: 'ada',
+        password: 'secret-password',
+        favorite: false,
+      }),
+    ]);
+
+    const persisted = JSON.parse(localStorage.getItem('aegis_sqlite_fallback') ?? '{}');
+    expect(persisted.vault_items[0]).toMatchObject({
+      id: 'legacy-login',
+      notes_db: '',
+      enc_kdf: 'argon2-browser',
+    });
+    expect(sqlite.getQueryLogs()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          query: expect.stringContaining('CREATE TABLE vault_items'),
+          rowsAffected: 1,
+        }),
+      ]),
+    );
+  });
+
+  it('returns an error result for unsupported SQL read targets and unknown commands', async () => {
+    const sqlite = await freshSqliteInstance();
+
+    const unsupportedTable = sqlite.executeCustomSQL('SELECT * FROM audit_logs', 'master-pass');
+    const unknownCommand = sqlite.executeCustomSQL('VACUUM', 'master-pass');
+
+    expect(unsupportedTable).toMatchObject({
+      columns: [],
+      rows: [],
+      error: expect.stringContaining('user_secrets'),
+    });
+    expect(unknownCommand).toMatchObject({
+      columns: [],
+      rows: [],
+      error: expect.stringContaining('VACUUM'),
+    });
+    expect(sqlite.getQueryLogs()[0]).toMatchObject({
+      query: 'VACUUM',
+      status: 'ERROR',
+    });
+  });
+
+  it('updates existing rows and masks broad SQL vault item projections', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+
+    const created = await sqlite.saveVaultItem(
+      sampleItem({
+        id: '',
+        title: '',
+        category: undefined as VaultItem['category'],
+        notes: '',
+        createdAt: '',
+      }),
+      'master-pass',
+    );
+
+    const generatedId = created[0].id;
+    expect(generatedId).toHaveLength(9);
+    expect(created[0]).toMatchObject({
+      title: 'İçeri Aktarılan Kayıt',
+      category: 'login',
+    });
+
+    const updated = await sqlite.saveVaultItem(
+      sampleItem({
+        id: generatedId,
+        title: 'Updated Login',
+        favorite: false,
+      }),
+      'master-pass',
+    );
+
+    expect(updated).toEqual([
+      expect.objectContaining({
+        id: generatedId,
+        title: 'Updated Login',
+        favorite: false,
+      }),
+    ]);
+
+    const allColumns = sqlite.executeCustomSQL('SELECT * FROM vault_items', 'master-pass');
+    expect(allColumns.columns).toEqual([
+      'id',
+      'title',
+      'category',
+      'favorite',
+      'deleted',
+      'username_db',
+      'password_db',
+      'notes_db',
+      'enc_metadata',
+    ]);
+    expect(allColumns.rows[0]).toEqual([
+      generatedId,
+      'Updated Login',
+      'login',
+      0,
+      0,
+      '[encrypted: aes-256-gcm]',
+      '[encrypted: aes-256-gcm]',
+      '[encrypted: aes-256-gcm]',
+      expect.stringMatching(/^[\s\S]{35}$/),
+    ]);
+
+    const projected = sqlite.executeCustomSQL(
+      'SELECT password, enc_metadata, unknown_column FROM vault_items',
+      'master-pass',
+    );
+    expect(projected).toEqual({
+      columns: ['password', 'enc_metadata', 'unknown_column'],
+      rows: [[
+        '[encrypted: aes-256-gcm]',
+        expect.stringMatching(/^[\s\S]{35}$/),
+        'NULL',
+      ]],
+    });
+    expect(sqlite.getQueryLogs()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          query: expect.stringContaining('UPDATE vault_items SET title = "Updated Login"'),
+          status: 'SUCCESS',
+        }),
+      ]),
+    );
+  });
+
+  it('guards vault item decryption until an encryption key is prepared', async () => {
+    const state: VersionedVaultDatabaseState = {
+      ...createEmptyVaultDatabaseState(),
+      user_secrets: [{ username: 'owner', argon_hash: '$argon2id$salt$master-pass' }],
+      vault_items: [
+        {
+          id: 'encrypted-row',
+          title: 'Encrypted Row',
+          category: 'login',
+          favorite: 0,
+          deleted: 0,
+          deleted_at: null,
+          created_at: '2026-01-01',
+          updated_at: '2026-01-01',
+          username: 'ada',
+          username_db: '[encrypted: aes-256-gcm]',
+          password_db: '[encrypted: aes-256-gcm]',
+          notes_db: '',
+          enc_metadata: '{}',
+          enc_kdf: 'argon2-browser',
+        },
+      ],
+    };
+
+    localStorage.setItem('aegis_sqlite_fallback', JSON.stringify(state));
+    const sqlite = await freshSqliteInstance();
+
+    expect(() => sqlite.deriveEncryptionKey('master-pass')).toThrow('not prepared');
+    await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual([]);
+    expect(sqlite.getQueryLogs()[0]).toMatchObject({
+      query: 'SELECT id, title, category, favorite, deleted, username_db, enc_metadata FROM vault_items;',
+      status: 'ERROR',
+    });
+  });
 });
