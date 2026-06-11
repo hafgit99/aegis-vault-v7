@@ -81,6 +81,7 @@
   - [x] Translate vault detail header actions, security assessment, side metadata, and mobile detail controls.
   - [x] Translate login detail fields, password fallback, TOTP status, and copy/reveal controls.
   - [x] Translate card detail fields, fallback values, and copy/reveal controls.
+  - [x] Translate passkey detail fields, fallback values, and copy/reveal controls.
 - [x] Add component tests for lock screen, vault form, settings import/export, and trash.
   - [x] Lock screen setup and unlock behavior covered by component tests.
   - [x] Settings encrypted export and JSON import behavior covered by component tests.

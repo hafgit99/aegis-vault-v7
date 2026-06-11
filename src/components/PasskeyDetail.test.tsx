@@ -5,6 +5,8 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 import { VaultItem } from '../types';
 import PasskeyDetail from './PasskeyDetail';
 
@@ -22,6 +24,7 @@ const passkeyItem: VaultItem = {
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
 });
 
 describe('PasskeyDetail', () => {
@@ -73,7 +76,7 @@ describe('PasskeyDetail', () => {
     expect(screen.getByText('private-secret-value')).toBeTruthy();
     fireEvent.click(screen.getAllByRole('button')[0]);
     fireEvent.click(screen.getAllByRole('button')[1]);
-    fireEvent.click(screen.getByTitle('Kopyala'));
+    fireEvent.click(screen.getAllByTitle('Kopyala')[1]);
 
     expect(onCopyText).toHaveBeenCalledWith('public-key-id', 'passkeyPublicId');
     expect(onToggleReveal).toHaveBeenCalledTimes(1);
@@ -121,9 +124,39 @@ describe('PasskeyDetail', () => {
     expect(screen.getByText('(Değer Girilmedi)')).toBeTruthy();
 
     fireEvent.click(screen.getAllByRole('button')[0]);
-    fireEvent.click(screen.getByTitle('Kopyala'));
+    fireEvent.click(screen.getAllByTitle('Kopyala')[1]);
 
     expect(onCopyText).toHaveBeenCalledWith('', 'passkeyPublicId');
     expect(onCopyText).toHaveBeenCalledWith('', 'passkeyPrivateExponent');
+  });
+
+  it('renders passkey labels and controls in the selected language', () => {
+    window.localStorage.setItem(languageStorageKey, 'en');
+
+    render(
+      <LanguageProvider>
+        <PasskeyDetail
+          item={{
+            ...passkeyItem,
+            username: '',
+            passkeyService: undefined,
+            passkeyPrivateExponent: undefined,
+          }}
+          copiedField={null}
+          isPrivateExponentRevealed={true}
+          onToggleReveal={vi.fn()}
+          onCopyText={vi.fn()}
+        />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByText('SERVICE NAME')).toBeTruthy();
+    expect(screen.getByText('PUBLIC KEY ID')).toBeTruthy();
+    expect(screen.getByText('PRIVATE KEY / SECURE SHIELDS EXPONENT')).toBeTruthy();
+    expect(screen.getByText('Google Login')).toBeTruthy();
+    expect(screen.getByText('empty')).toBeTruthy();
+    expect(screen.getByText('(No Value Entered)')).toBeTruthy();
+    expect(screen.getAllByTitle('Copy').length).toBeGreaterThan(0);
+    expect(screen.getByTitle('Hide')).toBeTruthy();
   });
 });
