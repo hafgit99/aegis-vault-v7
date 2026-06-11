@@ -131,6 +131,26 @@ test('shows an empty state when search has no matches', async ({ page }) => {
   await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Empty State Anchor' })).toBeVisible();
 });
 
+test('navigates across primary workspaces and returns to the vault', async ({ page }) => {
+  await setupVault(page);
+
+  await page.getByTestId('nav-audit-button').click();
+  await expect(page.getByTestId('audit-workspace')).toBeVisible();
+
+  await page.getByTestId('nav-generator-button').click();
+  await expect(page.getByTestId('generator-workspace')).toBeVisible();
+
+  await page.getByTestId('nav-settings-button').click();
+  await expect(page.getByTestId('settings-workspace')).toBeVisible();
+  await expect(page.getByTestId('plain-export-button')).toBeVisible();
+
+  await page.getByTestId('nav-trash-button').click();
+  await expect(page.getByTestId('trash-workspace')).toBeVisible();
+
+  await page.getByTestId('nav-vault-button').click();
+  await expect(page.getByTestId('new-vault-item-button')).toBeVisible();
+});
+
 test('exports an encrypted backup download', async ({ page }) => {
   await setupVault(page);
   await createLoginItem(page, 'E2E Export Backup');

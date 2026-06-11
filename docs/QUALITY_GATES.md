@@ -56,6 +56,7 @@ Current smoke scope:
 - Mark a saved item as favorite and verify the favorites filter.
 - Filter vault items by search query and clear the search.
 - Show and clear the vault empty state when search has no matches.
+- Navigate across vault, audit, generator, settings, and trash workspaces.
 - Export an encrypted `.aegis` backup download.
 - Import a plain JSON backup file and verify the imported item appears in the vault.
 - Import an encrypted `.aegis` backup file with the master password and verify the imported item appears in the vault.
@@ -103,6 +104,6 @@ Recently improved:
 
 ## Next Gates
 
-- Expand smoke E2E coverage for navigation stability, detail actions, and desktop persistence.
+- Expand smoke E2E coverage for detail actions, desktop persistence, and mobile smoke viewports.
 - Add mutation tests only for critical `src/lib` modules first.
 - Raise global coverage thresholds after the low-coverage critical modules improve.

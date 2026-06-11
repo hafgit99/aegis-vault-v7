@@ -137,19 +137,19 @@ export default function MainContent({
       )}
 
       {activeTab === 'audit' && (
-        <div className="flex-1 p-8 overflow-y-auto scrollbar-hide">
+        <div data-testid="audit-workspace" className="flex-1 p-8 overflow-y-auto scrollbar-hide">
           <SecurityAudit items={activeItems} onSelectItem={onSelectAuditItem} />
         </div>
       )}
 
       {activeTab === 'generator' && (
-        <div className="flex-1 p-8 overflow-y-auto scrollbar-hide">
+        <div data-testid="generator-workspace" className="flex-1 p-8 overflow-y-auto scrollbar-hide">
           <PasswordGenerator />
         </div>
       )}
 
       {activeTab === 'settings' && (
-        <div className="flex-1 p-8 overflow-y-auto scrollbar-hide">
+        <div data-testid="settings-workspace" className="flex-1 p-8 overflow-y-auto scrollbar-hide">
           <SettingsPanel
             onDatabaseChanged={onDatabaseChanged}
             autoLockDuration={autoLockDuration}

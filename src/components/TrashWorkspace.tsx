@@ -20,7 +20,10 @@ export default function TrashWorkspace({
   onDeletePermanently,
 }: TrashWorkspaceProps) {
   return (
-    <div className="flex-1 p-6 lg:p-10 overflow-y-auto scrollbar-hide max-w-5xl mx-auto w-full space-y-8 animate-fade-in">
+    <div
+      data-testid="trash-workspace"
+      className="flex-1 p-6 lg:p-10 overflow-y-auto scrollbar-hide max-w-5xl mx-auto w-full space-y-8 animate-fade-in"
+    >
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-outline-variant/10 pb-6">
         <div>
           <h1 className="font-display text-2xl font-bold text-on-surface flex items-center gap-3">

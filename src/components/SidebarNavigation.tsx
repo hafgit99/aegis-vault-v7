@@ -52,12 +52,20 @@ export default function SidebarNavigation({
           <span>Kasa (Vault)</span>
         </button>
 
-        <button onClick={() => onTabChange('audit')} className={getNavButtonClass(activeTab, 'audit')}>
+        <button
+          data-testid="nav-audit-button"
+          onClick={() => onTabChange('audit')}
+          className={getNavButtonClass(activeTab, 'audit')}
+        >
           <ShieldCheck className="w-4 h-4" />
           <span>Güvenlik Analizi</span>
         </button>
 
-        <button onClick={() => onTabChange('generator')} className={getNavButtonClass(activeTab, 'generator')}>
+        <button
+          data-testid="nav-generator-button"
+          onClick={() => onTabChange('generator')}
+          className={getNavButtonClass(activeTab, 'generator')}
+        >
           <KeyRound className="w-4 h-4" />
           <span>Şifre Üretici</span>
         </button>
