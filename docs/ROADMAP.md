@@ -147,6 +147,7 @@
   - [x] Add Playwright smoke E2E coverage for encrypted `.aegis` import.
   - [x] Add Playwright smoke E2E coverage for wrong-password encrypted import rejection.
   - [x] Add Playwright smoke E2E coverage for favorite filtering.
+  - [x] Add Playwright smoke E2E coverage for search filtering.
 
 ## Phase 4: Desktop Productization
 

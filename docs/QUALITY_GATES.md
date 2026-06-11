@@ -54,6 +54,7 @@ Current smoke scope:
 - Move a saved item to trash.
 - Restore the trash item back to the vault.
 - Mark a saved item as favorite and verify the favorites filter.
+- Filter vault items by search query and clear the search.
 - Export an encrypted `.aegis` backup download.
 - Import a plain JSON backup file and verify the imported item appears in the vault.
 - Import an encrypted `.aegis` backup file with the master password and verify the imported item appears in the vault.
@@ -100,6 +101,6 @@ Recently improved:
 
 ## Next Gates
 
-- Expand smoke E2E coverage for import cancellation, search filtering, and desktop persistence.
+- Expand smoke E2E coverage for import cancellation, empty-state behavior, and desktop persistence.
 - Add mutation tests only for critical `src/lib` modules first.
 - Raise global coverage thresholds after the low-coverage critical modules improve.

@@ -102,6 +102,21 @@ test('filters favorite vault items', async ({ page }) => {
   await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Regular Item' })).toBeVisible();
 });
 
+test('filters vault items by search query', async ({ page }) => {
+  await setupVault(page);
+
+  await createLoginItem(page, 'E2E Search Alpha');
+  await createLoginItem(page, 'E2E Search Beta');
+
+  await page.getByTestId('vault-search-input').fill('Alpha');
+  await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Search Alpha' })).toBeVisible();
+  await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Search Beta' })).toBeHidden();
+
+  await page.getByTestId('vault-search-input').fill('');
+  await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Search Alpha' })).toBeVisible();
+  await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Search Beta' })).toBeVisible();
+});
+
 test('exports an encrypted backup download', async ({ page }) => {
   await setupVault(page);
   await createLoginItem(page, 'E2E Export Backup');

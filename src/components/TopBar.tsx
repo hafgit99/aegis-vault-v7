@@ -42,6 +42,7 @@ export default function TopBar({
           <div className="relative w-full max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px] w-4 h-4" />
             <input
+              data-testid="vault-search-input"
               type="text"
               value={searchQuery}
               onChange={(event) => onSearchChange(event.target.value)}
