@@ -12,6 +12,21 @@ const STORE_NAME = 'attachments';
 const DB_VERSION = 1;
 const ATTACHMENT_KEY_CONTEXT = 'aegis-vault-v7:attachment-key';
 
+export const attachmentErrorCodes = {
+  missingVaultSession: 'attachment.missingVaultSession',
+  missingEncryptionMetadata: 'attachment.missingEncryptionMetadata',
+  unreadableFileData: 'attachment.unreadableFileData',
+} as const;
+
+export type AttachmentErrorCode = (typeof attachmentErrorCodes)[keyof typeof attachmentErrorCodes];
+
+export class AttachmentError extends Error {
+  constructor(public readonly code: AttachmentErrorCode) {
+    super(code);
+    this.name = 'AttachmentError';
+  }
+}
+
 /**
  * Initializes IndexedDB for attachments.
  */
@@ -65,7 +80,7 @@ async function deriveAttachmentKey(masterPassword: string, attachmentId: string)
 function getRequiredMasterPassword(): string {
   const masterPassword = getActiveMasterPassword();
   if (!masterPassword) {
-    throw new Error('Aktif kasa oturumu bulunamadı. Lütfen kasayı tekrar açın.');
+    throw new AttachmentError(attachmentErrorCodes.missingVaultSession);
   }
   return masterPassword;
 }
@@ -90,7 +105,7 @@ export async function encryptAttachmentData(
 export async function decryptAttachmentData(record: AttachmentRecord): Promise<ArrayBuffer> {
   if (record.algorithm === 'AES-256-GCM') {
     if (!record.iv || !record.tag) {
-      throw new Error('Ek dosya şifreleme bilgisi eksik.');
+      throw new AttachmentError(attachmentErrorCodes.missingEncryptionMetadata);
     }
 
     const masterPassword = getRequiredMasterPassword();
@@ -182,7 +197,7 @@ export async function saveAttachment(
     reader.onload = async (e) => {
       try {
         if (!e.target?.result || typeof e.target.result === 'string') {
-          throw new Error('Dosya verisi okunamadı.');
+          throw new AttachmentError(attachmentErrorCodes.unreadableFileData);
         }
 
         progressCallback?.(50);

@@ -7,6 +7,8 @@ import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  AttachmentError,
+  attachmentErrorCodes,
   deleteAttachment,
   decryptAttachmentData,
   encryptAttachmentData,
@@ -173,7 +175,10 @@ describe('attachment encryption', () => {
       encrypted: true,
       algorithm: 'AES-256-GCM',
       iv: '000000000000000000000000',
-    })).rejects.toThrow('bilgisi eksik');
+    })).rejects.toMatchObject({
+      code: attachmentErrorCodes.missingEncryptionMetadata,
+      name: 'AttachmentError',
+    });
   });
 
   it('decrypts legacy attachment records without an explicit algorithm', async () => {
@@ -188,9 +193,18 @@ describe('attachment encryption', () => {
   });
 
   it('requires an active vault session for new attachment encryption', async () => {
-    await expect(encryptAttachmentData('attachment-1', bytes('private file'))).rejects.toThrow(
-      'Aktif kasa oturumu bulunamadı.',
-    );
+    await expect(encryptAttachmentData('attachment-1', bytes('private file'))).rejects.toMatchObject({
+      code: attachmentErrorCodes.missingVaultSession,
+      name: 'AttachmentError',
+    });
+  });
+
+  it('exposes stable error codes for localization boundaries', () => {
+    const error = new AttachmentError(attachmentErrorCodes.unreadableFileData);
+
+    expect(error).toBeInstanceOf(Error);
+    expect(error.message).toBe(attachmentErrorCodes.unreadableFileData);
+    expect(error.code).toBe(attachmentErrorCodes.unreadableFileData);
   });
 
   it('migrates legacy XOR attachment records to AES-GCM', async () => {
@@ -282,9 +296,10 @@ describe('attachment encryption', () => {
     vi.stubGlobal('FileReader', StringResultFileReader);
 
     try {
-      await expect(saveAttachment('attachment-1', new File([bytes('private file')], 'secret.txt'))).rejects.toThrow(
-        'Dosya verisi okunamad',
-      );
+      await expect(saveAttachment('attachment-1', new File([bytes('private file')], 'secret.txt'))).rejects.toMatchObject({
+        code: attachmentErrorCodes.unreadableFileData,
+        name: 'AttachmentError',
+      });
     } finally {
       vi.stubGlobal('FileReader', originalFileReader);
     }
@@ -329,7 +344,10 @@ describe('attachment encryption', () => {
       iv: '000000000000000000000000',
     });
 
-    await expect(getAttachmentBlob('broken-attachment')).rejects.toThrow('bilgisi eksik');
+    await expect(getAttachmentBlob('broken-attachment')).rejects.toMatchObject({
+      code: attachmentErrorCodes.missingEncryptionMetadata,
+      name: 'AttachmentError',
+    });
   });
 
   it('returns null when an attachment id is not found', async () => {
