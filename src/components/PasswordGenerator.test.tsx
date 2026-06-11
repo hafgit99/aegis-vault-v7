@@ -1,7 +1,10 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, fireEvent, render } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 import PasswordGenerator from './PasswordGenerator';
 
 const generatePassword = vi.hoisted(() => vi.fn(() => 'CharPassword-123!'));
@@ -51,6 +54,7 @@ describe('PasswordGenerator', () => {
   afterEach(() => {
     vi.useRealTimers();
     cleanup();
+    window.localStorage.clear();
     vi.restoreAllMocks();
   });
 
@@ -239,5 +243,33 @@ describe('PasswordGenerator', () => {
     expect(writeText).toHaveBeenLastCalledWith('');
     expect(clipboardText).toBe('');
     expect(copiedPassword).toBeTruthy();
+  });
+
+  it('renders generator controls in the selected language', () => {
+    window.localStorage.setItem(languageStorageKey, 'en');
+
+    render(
+      <LanguageProvider>
+        <PasswordGenerator />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByText('Password Generation Panel')).toBeTruthy();
+    expect(screen.getByText('Character Based')).toBeTruthy();
+    expect(screen.getByText('Diceware (Word Based)')).toBeTruthy();
+    expect(screen.getByText('STRENGTH LEVEL')).toBeTruthy();
+    expect(screen.getByText('CHARACTER CUSTOMIZATION')).toBeTruthy();
+    expect(screen.getByText('Character Length')).toBeTruthy();
+    expect(screen.getByText('Uppercase Letters')).toBeTruthy();
+    expect(screen.getByText('Copy')).toBeTruthy();
+    expect(screen.getByTitle('Refresh')).toBeTruthy();
+
+    fireEvent.click(screen.getByText('Diceware (Word Based)'));
+
+    expect(screen.getByText('DICEWARE SYSTEM CUSTOMIZATION')).toBeTruthy();
+    expect(screen.getByText('Word Count')).toBeTruthy();
+    expect(screen.getByText('Word Separator Type')).toBeTruthy();
+    expect(screen.getByText('Word Dictionary')).toBeTruthy();
+    expect(screen.getByText('Why Use Diceware Word Passwords?')).toBeTruthy();
   });
 });

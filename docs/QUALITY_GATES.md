@@ -95,6 +95,7 @@ Recently improved:
 - Profile modal: covered selected-language rendering for modal copy, upload controls, form labels, actions, and validation feedback.
 - Local storage badge: covered selected-language rendering for the device-only storage status label.
 - Security audit: covered selected-language rendering for score feedback, metric cards, action groups, and empty-state copy.
+- Password generator: covered selected-language rendering for mode tabs, copy/refresh controls, character settings, Diceware settings, and guidance copy.
 - `src/components/VaultFormModal.tsx`: covered edit-save identity preservation, title validation, password visibility/autogeneration, selected file removal, attachment upload failures, existing attachment removal before save, and download error notifications.
 - `src/components/CardDetail.tsx`: covered copied states, PIN copy action, missing-field fallbacks, and empty-string copy behavior.
 - `src/components/LoginDetail.tsx`: covered copied states, empty-password fallback, and safe empty-password copy behavior.

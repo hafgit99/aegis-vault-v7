@@ -17,6 +17,7 @@ import {
   Minimize2,
   Lock
 } from 'lucide-react';
+import { useLanguage } from '../i18n/LanguageContext';
 import { GeneratorOptions } from '../types';
 import { generatePassword, calculatePasswordScore, getStrengthLabel } from '../lib/security';
 import { generateDiceware, DicewareOptions } from '../lib/diceware';
@@ -27,6 +28,7 @@ import {
 } from '../lib/clipboard';
 
 export default function PasswordGenerator() {
+  const { t } = useLanguage();
   const [mode, setMode] = useState<'character' | 'diceware'>('character');
 
   // Character-based states
@@ -126,13 +128,21 @@ export default function PasswordGenerator() {
 
   // Custom descriptions for word list counts in Diceware
   const getDicewareStrengthDescription = (count: number) => {
-    if (count <= 3) return { text: 'Orta Güvenlik (Çok Kolay Ezberlenir)', color: 'text-amber-400' };
-    if (count === 4) return { text: 'Yüksek Güvenlik (Güvenli & Akılda Kalıcı)', color: 'text-[#10b981]' };
-    if (count === 5) return { text: 'Çok Yüksek Güvenlik (Askeri Seviyeye Yakın)', color: 'text-[#10b981]' };
-    return { text: 'Askeri Seviye Aşırı Güvenlik (Süper Güçlü Ana Şifre)', color: 'text-brand-tertiary animate-pulse' };
+    if (count <= 3) return { text: t('passwordGenerator.diceStrength.medium'), color: 'text-amber-400' };
+    if (count === 4) return { text: t('passwordGenerator.diceStrength.high'), color: 'text-[#10b981]' };
+    if (count === 5) return { text: t('passwordGenerator.diceStrength.veryHigh'), color: 'text-[#10b981]' };
+    return { text: t('passwordGenerator.diceStrength.military'), color: 'text-brand-tertiary animate-pulse' };
   };
 
   const dicewareStatus = getDicewareStrengthDescription(dicewareOptions.wordCount);
+  const separatorOptions = [
+    { value: 'hyphen', label: t('passwordGenerator.separator.hyphen') },
+    { value: 'dot', label: t('passwordGenerator.separator.dot') },
+    { value: 'underscore', label: t('passwordGenerator.separator.underscore') },
+    { value: 'space', label: t('passwordGenerator.separator.space') },
+    { value: 'camel', label: t('passwordGenerator.separator.camel') },
+    { value: 'none', label: t('passwordGenerator.separator.none') },
+  ] as const;
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto pb-10" id="password-generator-root">
@@ -142,8 +152,8 @@ export default function PasswordGenerator() {
           <KeyRound className="w-5 h-5 text-brand-primary" />
         </div>
         <div>
-          <h2 className="text-xl font-bold font-display text-on-surface">Şifre Üretim Paneli</h2>
-          <p className="text-xs text-on-surface-variant">Askeri düzeyde kriptografik karakterler veya akılda kalıcı Diceware kelime kombinasyonları oluşturun.</p>
+          <h2 className="text-xl font-bold font-display text-on-surface">{t('passwordGenerator.title')}</h2>
+          <p className="text-xs text-on-surface-variant">{t('passwordGenerator.subtitle')}</p>
         </div>
       </div>
 
@@ -159,7 +169,7 @@ export default function PasswordGenerator() {
           id="mode-char-tab"
         >
           <Sliders className="w-4 h-4" />
-          <span>Karakter Tabanlı</span>
+          <span>{t('passwordGenerator.characterMode')}</span>
         </button>
 
         <button
@@ -172,7 +182,7 @@ export default function PasswordGenerator() {
           id="mode-diceware-tab"
         >
           <BookOpen className="w-4 h-4" />
-          <span>Diceware (Kelime Tabanlı)</span>
+          <span>{t('passwordGenerator.dicewareMode')}</span>
         </button>
       </div>
 
@@ -181,13 +191,13 @@ export default function PasswordGenerator() {
         <div className="absolute top-0 left-0 w-1 h-full bg-brand-primary"></div>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="font-mono text-sm md:text-lg break-all tracking-wide text-brand-primary select-all bg-[#0d0f0d]/40 p-4 rounded-xl border border-outline-variant/10 flex-1 min-h-[56px] flex items-center">
-            {password || 'Lütfen seçenekleri düzenleyin'}
+            {password || t('passwordGenerator.empty')}
           </div>
           <div className="flex gap-2">
             <button
               onClick={handleGenerate}
               className="p-3.5 rounded-xl bg-[#1e201e] hover:bg-[#292a28] text-on-surface transition-colors border border-outline-variant/10 flex items-center justify-center cursor-pointer"
-              title="Yenile"
+              title={t('passwordGenerator.refresh')}
               id="refresh-password-btn"
             >
               <RefreshCw className="w-5 h-5" />
@@ -204,12 +214,12 @@ export default function PasswordGenerator() {
               {copied ? (
                 <>
                   <Check className="w-5 h-5" />
-                  <span>Kopyalandı!</span>
+                  <span>{t('passwordGenerator.copied')}</span>
                 </>
               ) : (
                 <>
                   <Copy className="w-5 h-5" />
-                  <span>Kopyala</span>
+                  <span>{t('passwordGenerator.copy')}</span>
                 </>
               )}
             </button>
@@ -220,7 +230,7 @@ export default function PasswordGenerator() {
         <div className="mt-5 pt-5 border-t border-outline-variant/15 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-              KUVVET SEVİYESİ
+              {t('passwordGenerator.strengthLevel')}
             </div>
             <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${strength.colorClass}`}>
               {strength.label}
@@ -252,13 +262,13 @@ export default function PasswordGenerator() {
         <div className="glass-panel p-6 rounded-2xl space-y-6" id="chars-spec-panel">
           <div className="flex items-center gap-2 mb-2 pb-4 border-b border-outline-variant/10">
             <Sliders className="w-5 h-5 text-on-surface-variant" />
-            <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider">KARAKTER ÖZELLEŞTİRMELERİ</h3>
+            <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider">{t('passwordGenerator.characterSettings')}</h3>
           </div>
 
           {/* Slider for Password Length */}
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-sm font-semibold text-on-surface">Karakter Uzunluğu</span>
+              <span className="text-sm font-semibold text-on-surface">{t('passwordGenerator.length')}</span>
               <span className="font-mono text-base font-bold text-brand-primary bg-[#0d0f0d] px-3 py-1 rounded-lg border border-outline-variant/10">
                 {options.length}
               </span>
@@ -272,8 +282,8 @@ export default function PasswordGenerator() {
               className="w-full h-1.5 bg-surface-low rounded-lg appearance-none cursor-pointer accent-brand-primary"
             />
             <div className="flex justify-between text-[11px] text-on-surface-variant/40 font-mono">
-              <span>6 Karakter</span>
-              <span>64 Karakter</span>
+              <span>6 {t('passwordGenerator.characters')}</span>
+              <span>64 {t('passwordGenerator.characters')}</span>
             </div>
           </div>
 
@@ -282,7 +292,7 @@ export default function PasswordGenerator() {
             {/* Upper letters */}
             <label className="flex items-center justify-between p-4 bg-[#141614] hover:bg-[#181a18] rounded-xl border border-outline-variant/10 cursor-pointer transition-colors">
               <div className="flex flex-col">
-                <span className="text-sm font-semibold">Büyük Harfler</span>
+                <span className="text-sm font-semibold">{t('passwordGenerator.uppercase')}</span>
                 <span className="text-xs text-on-surface-variant font-mono">A-Z</span>
               </div>
               <input
@@ -296,7 +306,7 @@ export default function PasswordGenerator() {
             {/* Lower letters */}
             <label className="flex items-center justify-between p-4 bg-[#141614] hover:bg-[#181a18] rounded-xl border border-outline-variant/10 cursor-pointer transition-colors">
               <div className="flex flex-col">
-                <span className="text-sm font-semibold">Küçük Harfler</span>
+                <span className="text-sm font-semibold">{t('passwordGenerator.lowercase')}</span>
                 <span className="text-xs text-on-surface-variant font-mono">a-z</span>
               </div>
               <input
@@ -310,7 +320,7 @@ export default function PasswordGenerator() {
             {/* Digits */}
             <label className="flex items-center justify-between p-4 bg-[#141614] hover:bg-[#181a18] rounded-xl border border-outline-variant/10 cursor-pointer transition-colors">
               <div className="flex flex-col">
-                <span className="text-sm font-semibold">Sayılar / Rakamlar</span>
+                <span className="text-sm font-semibold">{t('passwordGenerator.numbers')}</span>
                 <span className="text-xs text-on-surface-variant font-mono">0-9</span>
               </div>
               <input
@@ -324,7 +334,7 @@ export default function PasswordGenerator() {
             {/* Symbols */}
             <label className="flex items-center justify-between p-4 bg-[#141614] hover:bg-[#181a18] rounded-xl border border-outline-variant/10 cursor-pointer transition-colors">
               <div className="flex flex-col">
-                <span className="text-sm font-semibold">Özel Semboller</span>
+                <span className="text-sm font-semibold">{t('passwordGenerator.symbols')}</span>
                 <span className="text-xs text-on-surface-variant font-mono">@#$%!*</span>
               </div>
               <input
@@ -343,7 +353,7 @@ export default function PasswordGenerator() {
           <div className="flex items-center justify-between mb-2 pb-4 border-b border-outline-variant/10">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-brand-tertiary" />
-              <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider">DICEWARE SİSTEM ÖZELLEŞTİRMELERİ</h3>
+              <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider">{t('passwordGenerator.dicewareSettings')}</h3>
             </div>
             <div className={`text-xs font-bold ${dicewareStatus.color}`}>
               {dicewareStatus.text}
@@ -353,9 +363,9 @@ export default function PasswordGenerator() {
           {/* Word list count slider */}
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-sm font-semibold text-on-surface">Kelime Sayısı</span>
+              <span className="text-sm font-semibold text-on-surface">{t('passwordGenerator.wordCount')}</span>
               <span className="font-mono text-base font-bold text-brand-tertiary bg-[#0d0f0d] px-3 py-1 rounded-lg border border-outline-variant/10">
-                {dicewareOptions.wordCount} Kelime
+                {dicewareOptions.wordCount} {t('passwordGenerator.word')}
               </span>
             </div>
             <input
@@ -367,25 +377,16 @@ export default function PasswordGenerator() {
               className="w-full h-1.5 bg-surface-low rounded-lg appearance-none cursor-pointer accent-brand-tertiary"
             />
             <div className="flex justify-between text-[11px] text-on-surface-variant/40 font-mono">
-              <span>3 Kelime (Kolay)</span>
-              <span>10 Kelime (Aşırı Güçlü)</span>
+              <span>{t('passwordGenerator.wordsEasy')}</span>
+              <span>{t('passwordGenerator.wordsStrong')}</span>
             </div>
           </div>
 
           {/* Separator Selection */}
           <div className="space-y-2">
-            <span className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Kelimeleri Ayrıştırma Türü</span>
+            <span className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">{t('passwordGenerator.separatorType')}</span>
             <div className="grid grid-cols-2 sm:grid-cols-6 gap-2" id="separator-selection-grid">
-              {(
-                [
-                  { value: 'hyphen', label: 'Tire (-)' },
-                  { value: 'dot', label: 'Nokta (.)' },
-                  { value: 'underscore', label: 'Alt Çizgi (_)' },
-                  { value: 'space', label: 'Boşluk ( )' },
-                  { value: 'camel', label: 'CamelCase' },
-                  { value: 'none', label: 'Bitişik' },
-                ] as const
-              ).map((sep) => {
+              {separatorOptions.map((sep) => {
                 const isSelected = dicewareOptions.separator === sep.value;
                 return (
                   <button
@@ -412,9 +413,9 @@ export default function PasswordGenerator() {
               <div className="flex flex-col">
                 <span className="text-sm font-semibold flex items-center gap-1.5">
                   <Globe className="w-4 h-4 text-brand-primary" />
-                  <span>Kelimeler Sözlüğü</span>
+                  <span>{t('passwordGenerator.wordDictionary')}</span>
                 </span>
-                <span className="text-xs text-on-surface-variant">Hangi dildeki kelimeler kullanılsın?</span>
+                <span className="text-xs text-on-surface-variant">{t('passwordGenerator.wordDictionaryHelp')}</span>
               </div>
               <div className="flex border border-outline-variant/10 rounded-lg overflow-hidden p-0.5 bg-[#0d0f0d]">
                 <button
@@ -445,8 +446,8 @@ export default function PasswordGenerator() {
             {/* Capitalize First letters check */}
             <label className="flex items-center justify-between p-4 bg-[#141614] hover:bg-[#181a18] rounded-xl border border-outline-variant/10 cursor-pointer transition-colors">
               <div className="flex flex-col">
-                <span className="text-sm font-semibold">Baş Harfleri Büyüt</span>
-                <span className="text-xs text-on-surface-variant">Her kelimenin ilk harfini büyük yap (Okunurluk)</span>
+                <span className="text-sm font-semibold">{t('passwordGenerator.capitalize')}</span>
+                <span className="text-xs text-on-surface-variant">{t('passwordGenerator.capitalizeHelp')}</span>
               </div>
               <input
                 type="checkbox"
@@ -461,9 +462,9 @@ export default function PasswordGenerator() {
               <div className="flex flex-col">
                 <span className="text-sm font-semibold flex items-center gap-1.5">
                   <Hash className="w-4 h-4 text-brand-secondary" />
-                  <span>Rakam Ekle</span>
+                  <span>{t('passwordGenerator.addNumber')}</span>
                 </span>
-                <span className="text-xs text-on-surface-variant">Parolanın sonuna/başına rastgele sayı ekler</span>
+                <span className="text-xs text-on-surface-variant">{t('passwordGenerator.addNumberHelp')}</span>
               </div>
               <input
                 type="checkbox"
@@ -478,9 +479,9 @@ export default function PasswordGenerator() {
               <div className="flex flex-col font-sans">
                 <span className="text-sm font-semibold flex items-center gap-1.5">
                   <Minimize2 className="w-4 h-4 text-brand-tertiary" />
-                  <span>Sembol Ekle</span>
+                  <span>{t('passwordGenerator.addSymbol')}</span>
                 </span>
-                <span className="text-xs text-on-surface-variant">Parolanın sonuna/başına sembol ekler</span>
+                <span className="text-xs text-on-surface-variant">{t('passwordGenerator.addSymbolHelp')}</span>
               </div>
               <input
                 type="checkbox"
@@ -495,8 +496,8 @@ export default function PasswordGenerator() {
           <div className="flex gap-3 bg-brand-primary/5 border border-brand-primary/10 p-4 rounded-xl items-start">
             <Lock className="w-5 h-5 text-brand-primary shrink-0 mt-0.5" />
             <div className="text-xs text-on-surface-variant leading-relaxed">
-              <b className="text-on-surface block mb-0.5">Neden Diceware Kelime Şifreleri Kullanmalıyım?</b>
-              Diceware şifreleri, karmaşık rastgele karakterlere kıyasla <b>insan beyni tarafından katlarca daha kolay ezberlenir</b> ancak <b>kriptografik entropisi inanılmaz derecede yüksektir</b>. Özellikle kasanızın kilit açma şifresi (Ana Şifre) için minimum 4-5 kelimelik bir Türkçe Diceware şifresi kullanmanız şiddetle tavsiye edilir.
+              <b className="text-on-surface block mb-0.5">{t('passwordGenerator.dicewareInfoTitle')}</b>
+              {t('passwordGenerator.dicewareInfoPrefix')} <b>{t('passwordGenerator.dicewareInfoEasy')}</b> {t('passwordGenerator.dicewareInfoMiddle')} <b>{t('passwordGenerator.dicewareInfoEntropy')}</b>. {t('passwordGenerator.dicewareInfoSuffix')}
             </div>
           </div>
         </div>
