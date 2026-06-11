@@ -5,6 +5,8 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 import { VaultItem } from '../types';
 import LoginDetail from './LoginDetail';
 
@@ -22,6 +24,7 @@ const loginItem: VaultItem = {
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
 });
 
 describe('LoginDetail', () => {
@@ -154,5 +157,29 @@ describe('LoginDetail', () => {
       expect(container.querySelector('.text-brand-tertiary')).toBeTruthy();
       unmount();
     });
+  });
+
+  it('renders login detail copy in the selected language', () => {
+    window.localStorage.setItem(languageStorageKey, 'en');
+
+    render(
+      <LanguageProvider>
+        <LoginDetail
+          item={{ ...loginItem, password: undefined, totpSecret: '' }}
+          copiedField={null}
+          isPasswordRevealed={true}
+          totpCountdown={17}
+          onTogglePasswordReveal={vi.fn()}
+          onCopyText={vi.fn()}
+        />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByText('USERNAME OR EMAIL')).toBeTruthy();
+    expect(screen.getByText('PASSWORD')).toBeTruthy();
+    expect(screen.getByText('(Empty Password)')).toBeTruthy();
+    expect(screen.getByTitle('Hide')).toBeTruthy();
+    expect(screen.getAllByTitle('Copy').length).toBeGreaterThan(0);
+    expect(screen.getByText(/OTP is not active/)).toBeTruthy();
   });
 });

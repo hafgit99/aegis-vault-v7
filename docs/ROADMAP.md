@@ -79,6 +79,7 @@
   - [x] Translate dashboard recent-items, cryptology shield, and Aegis Guard report panels.
   - [x] Translate vault row strength labels and recent-item copy controls.
   - [x] Translate vault detail header actions, security assessment, side metadata, and mobile detail controls.
+  - [x] Translate login detail fields, password fallback, TOTP status, and copy/reveal controls.
 - [x] Add component tests for lock screen, vault form, settings import/export, and trash.
   - [x] Lock screen setup and unlock behavior covered by component tests.
   - [x] Settings encrypted export and JSON import behavior covered by component tests.

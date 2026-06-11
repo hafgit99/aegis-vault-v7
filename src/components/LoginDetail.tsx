@@ -1,5 +1,6 @@
 import { Check, Copy, Eye, EyeOff } from 'lucide-react';
 
+import { useLanguage } from '../i18n/LanguageContext';
 import { generateTOTP } from '../lib/otp';
 import { VaultItem } from '../types';
 
@@ -20,6 +21,8 @@ export default function LoginDetail({
   onTogglePasswordReveal,
   onCopyText,
 }: LoginDetailProps) {
+  const { t } = useLanguage();
+
   if (item.category !== 'login') return null;
 
   const totpCode = item.totpSecret ? generateTOTP(item.totpSecret) : '';
@@ -28,14 +31,14 @@ export default function LoginDetail({
     <div className="space-y-4">
       <div className="glass-panel p-5 rounded-xl">
         <label className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase mb-2">
-          KULLANICI ADI VEYA E-POSTA
+          {t('loginDetail.username')}
         </label>
         <div className="flex items-center justify-between">
           <span className="font-bold text-base text-on-surface break-all">{item.username}</span>
           <button
             onClick={() => onCopyText(item.username, 'username')}
             className="text-on-surface-variant hover:text-brand-primary transition-colors focus:outline-none p-1.5 hover:bg-[#1a1c1a]/50 rounded-lg cursor-pointer shrink-0 ml-2"
-            title="Kopyala"
+            title={t('loginDetail.copy')}
           >
             {copiedField === 'username' ? (
               <Check className="w-4 h-4 text-brand-tertiary" />
@@ -48,24 +51,24 @@ export default function LoginDetail({
 
       <div className="glass-panel p-5 rounded-xl">
         <label className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase mb-2">
-          PAROLA (PASSWORD)
+          {t('loginDetail.password')}
         </label>
         <div className="flex items-center justify-between">
           <span className="font-mono text-base tracking-wider break-all text-on-surface select-all">
-            {isPasswordRevealed ? item.password || '(Boş Şifre)' : '••••••••••••••••'}
+            {isPasswordRevealed ? item.password || t('loginDetail.emptyPassword') : '••••••••••••••••'}
           </span>
           <div className="flex items-center gap-2 shrink-0 ml-2">
             <button
               onClick={onTogglePasswordReveal}
               className="text-on-surface-variant hover:text-brand-primary transition-colors focus:outline-none p-1.5 hover:bg-[#1a1c1a]/50 rounded-lg cursor-pointer"
-              title={isPasswordRevealed ? 'Gizle' : 'Göster'}
+              title={isPasswordRevealed ? t('loginDetail.hide') : t('loginDetail.show')}
             >
               {isPasswordRevealed ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
             <button
               onClick={() => onCopyText(item.password || '', 'password')}
               className="text-on-surface-variant hover:text-brand-primary transition-colors focus:outline-none p-1.5 hover:bg-[#1a1c1a]/50 rounded-lg cursor-pointer"
-              title="Kopyala"
+              title={t('loginDetail.copy')}
             >
               {copiedField === 'password' ? (
                 <Check className="w-4 h-4 text-brand-tertiary" />
@@ -79,8 +82,8 @@ export default function LoginDetail({
 
       <div className="glass-panel p-5 rounded-xl">
         <label className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase mb-2 flex justify-between">
-          <span>İKİ FAKTÖRLÜ DOĞRULAMA (2FA TOTP CODES)</span>
-          {item.totpSecret && <span className="text-brand-primary font-mono lowercase">mfa yetkin</span>}
+          <span>{t('loginDetail.totp')}</span>
+          {item.totpSecret && <span className="text-brand-primary font-mono lowercase">{t('loginDetail.mfaActive')}</span>}
         </label>
         <div className="flex items-center justify-between">
           {item.totpSecret ? (
@@ -91,12 +94,12 @@ export default function LoginDetail({
               <div className="flex items-center gap-2.5">
                 <span className="text-[11px] text-on-surface-variant font-mono bg-[#141614] px-2.5 py-1 rounded-md border border-outline-variant/15 flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-ping"></span>
-                  <span>{totpCountdown} sn kaldı</span>
+                  <span>{totpCountdown} {t('loginDetail.secondsLeft')}</span>
                 </span>
                 <button
                   onClick={() => onCopyText(totpCode.replace(' ', ''), 'totp')}
                   className="text-on-surface-variant hover:text-brand-primary transition-colors focus:outline-none p-1.5 hover:bg-[#1a1c1a]/50 rounded-lg cursor-pointer"
-                  title="Doğrulama Kodunu Kopyala"
+                  title={t('loginDetail.copyTotp')}
                 >
                   {copiedField === 'totp' ? (
                     <Check className="w-4 h-4 text-brand-tertiary" />
@@ -108,7 +111,7 @@ export default function LoginDetail({
             </>
           ) : (
             <div className="text-xs text-on-surface-variant/40 italic py-1 text-left">
-              Bu hesapta OTP kurulumu aktif değil. Düzenleyip Gizli Anahtar girerek başlatabilirsiniz.
+              {t('loginDetail.noTotp')}
             </div>
           )}
         </div>
