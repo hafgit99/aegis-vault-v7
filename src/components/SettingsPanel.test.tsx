@@ -159,6 +159,15 @@ describe('SettingsPanel import/export', () => {
     expect(screen.getByText('New Master Password')).toBeTruthy();
     expect(screen.getByText('Confirm New Password')).toBeTruthy();
     expect(screen.getByText('Update Password')).toBeTruthy();
+    expect(screen.getByText('Auto-Lock Duration')).toBeTruthy();
+    expect(screen.getByText('The app locks itself securely when it stays idle in the background or the selected duration expires.')).toBeTruthy();
+    expect(screen.getByText('5 Minutes')).toBeTruthy();
+    expect(screen.getByText('Never Lock')).toBeTruthy();
+    expect(screen.getByText('Biometric Unlock')).toBeTruthy();
+    expect(screen.getByText(/Integrate OS biometrics/)).toBeTruthy();
+    expect(screen.getByText('Status: PASSIVE 🔴')).toBeTruthy();
+    expect(screen.getByText('Biometric unlock is disabled. You can sign in only with your master password.')).toBeTruthy();
+    expect(screen.getByText('Enable Biometrics')).toBeTruthy();
   });
 
   it('exports an encrypted .aegis backup with the active master session without sessionStorage', async () => {

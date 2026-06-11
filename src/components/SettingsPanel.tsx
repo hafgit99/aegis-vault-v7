@@ -63,14 +63,14 @@ export default function SettingsPanel({
 
   // Auto-Lock Option Selectors
   const lockOptions = [
-    { value: 15, label: '15 Saniye (Test)' },
-    { value: 30, label: '30 Saniye' },
-    { value: 60, label: '1 Dakika' },
-    { value: 300, label: '5 Dakika' },
-    { value: 900, label: '15 Dakika' },
-    { value: 1800, label: '30 Dakika' },
-    { value: 3600, label: '1 Saat' },
-    { value: 0, label: 'Asla Kilitleme' }
+    { value: 15, label: t('settings.autoLock.15s') },
+    { value: 30, label: t('settings.autoLock.30s') },
+    { value: 60, label: t('settings.autoLock.1m') },
+    { value: 300, label: t('settings.autoLock.5m') },
+    { value: 900, label: t('settings.autoLock.15m') },
+    { value: 1800, label: t('settings.autoLock.30m') },
+    { value: 3600, label: t('settings.autoLock.1h') },
+    { value: 0, label: t('settings.autoLock.never') }
   ];
 
   // Encrypted Export States
@@ -138,7 +138,7 @@ export default function SettingsPanel({
       try {
         disableBiometric();
         setBiometricEnabled(false);
-        setBiometricSuccess("Biyometrik kilit açma (Touch ID / Face ID / Windows Hello) devre dışı bırakıldı.");
+        setBiometricSuccess(t('settings.biometric.disabledSuccess'));
       } catch (err: any) {
         setBiometricError(err?.message || "İşlem sırasında bir hata oluştu.");
       } finally {
@@ -147,21 +147,21 @@ export default function SettingsPanel({
     } else {
       try {
         if (!isBiometricSupported()) {
-          throw new Error("Cihazınızda veya tarayıcınızda biyometrik kilit açma özelliği (WebAuthn / PublicKeyCredential) desteklenmiyor veya devre dışı.");
+          throw new Error(t('settings.biometric.unsupportedError'));
         }
         
         const masterPassword = getActiveMasterPassword();
         if (!masterPassword) {
-          throw new Error("Oturum doğrulaması eksik. Lütfen sayfayı yenileyip tekrar giriş yapın.");
+          throw new Error(t('settings.biometric.missingSessionError'));
         }
         
         await registerBiometric(masterPassword);
         setBiometricEnabled(true);
-        setBiometricSuccess("✓ Biyometrik kilit başarıyla aktifleştirildi! Bir sonraki girişte ana şifrenizi girmek yerine OS biyometrisini (Windows Hello, Touch ID, Face ID) kullanabilirsiniz.");
+        setBiometricSuccess(t('settings.biometric.enabledSuccess'));
       } catch (err: any) {
-        let errMsg = err?.message || "Biyometrik kilit kaydı başarısız oldu.";
+        let errMsg = err?.message || t('settings.biometric.registerFailed');
         if (err?.name === "SecurityError" || err?.name === "NotAllowedError") {
-          errMsg = "WebAuthn kısıtlaması veya kullanıcı iptali: Tarayıcınız güvenlik sebebiyle iframe içinde biyometrik kayda izin vermiyor olabilir veya doğrulama iptal edildi. Bu özelliği sorunsuz kullanmak için lütfen sayfayı yeni sekmede/tam ekranda açarak kaydolun.";
+          errMsg = t('settings.biometric.permissionError');
         }
         setBiometricError(errMsg);
       } finally {
@@ -591,10 +591,10 @@ export default function SettingsPanel({
         <div className="md:col-span-1 space-y-1.5">
           <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2">
             <Clock className="w-4 h-4 text-amber-400" />
-            <span>Otomatik Kilit Süresi</span>
+            <span>{t('settings.autoLock.title')}</span>
           </h3>
           <p className="text-xs text-on-surface-variant">
-            Uygulama arka planda boşta kaldığında veya belirtilen süre dolduğunda kendini güvenle otomatik kilitler.
+            {t('settings.autoLock.description')}
           </p>
         </div>
         
@@ -624,21 +624,21 @@ export default function SettingsPanel({
         <div className="md:col-span-1 space-y-1.5">
           <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2">
             <Fingerprint className="w-5 h-5 text-brand-primary animate-pulse" />
-            <span>Biyometrik Kilit Açma</span>
+            <span>{t('settings.biometric.title')}</span>
           </h3>
           <p className="text-xs text-on-surface-variant leading-relaxed">
-            Windows Hello, Touch ID veya Face ID gibi işletim sistemi biyometrisini koruma amaçlı bir kolaylık olarak entegre edin. Ana şifreyi sarmalayan paketi (bundle) <b>PBKDF2-SHA256</b> + <b>AES-GCM</b> ile sararak yerelde saklar.
+            {t('settings.biometric.descriptionPrefix')} <b>PBKDF2-SHA256</b> + <b>AES-GCM</b> {t('settings.biometric.descriptionSuffix')}
           </p>
         </div>
         
         <div className="md:col-span-2 space-y-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between bg-[#141614] p-4 rounded-xl border border-outline-variant/10">
             <div>
-              <span className="text-xs font-bold text-on-surface block uppercase">Durum: {biometricEnabled ? 'AKTİF 🟢' : 'PASİF 🔴'}</span>
+              <span className="text-xs font-bold text-on-surface block uppercase">{t('settings.biometric.statusLabel')}: {biometricEnabled ? t('settings.biometric.statusActive') : t('settings.biometric.statusPassive')}</span>
               <p className="text-[11px] text-on-surface-variant mt-1 leading-relaxed">
                 {biometricEnabled 
-                  ? 'OS Biyometrik koruması devrede. Giriş ekranında biyometrik kilit açma butonunu kullanabilirsiniz.' 
-                  : 'Biyometrik kilit kapalı. Sadece ana şifrenizle giriş yapabilirsiniz.'}
+                  ? t('settings.biometric.activeDescription')
+                  : t('settings.biometric.passiveDescription')}
               </p>
             </div>
             <button
@@ -652,13 +652,13 @@ export default function SettingsPanel({
               }`}
             >
               {biometricLoading ? (
-                <span>Bekleyin...</span>
+                <span>{t('settings.biometric.loading')}</span>
               ) : biometricEnabled ? (
-                <span>Biyometriyi Kaldır</span>
+                <span>{t('settings.biometric.disable')}</span>
               ) : (
                 <>
                   <Fingerprint className="w-4 h-4" />
-                  <span>Biyometriyi Aktifleştir</span>
+                  <span>{t('settings.biometric.enable')}</span>
                 </>
               )}
             </button>

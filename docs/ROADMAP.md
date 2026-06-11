@@ -99,6 +99,7 @@
   - [x] Translate vault form secure note copy, shared notes labels, and note placeholders.
   - [x] Translate vault form attachment errors, upload status, encrypted-file labels, and drop zone copy.
   - [x] Translate settings overview, vault statistics, and master-password change controls.
+  - [x] Translate settings auto-lock and biometric unlock controls, status, and feedback.
 - [x] Add component tests for lock screen, vault form, settings import/export, and trash.
   - [x] Lock screen setup and unlock behavior covered by component tests.
   - [x] Settings encrypted export and JSON import behavior covered by component tests.
