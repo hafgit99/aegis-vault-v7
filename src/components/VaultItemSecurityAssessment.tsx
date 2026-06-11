@@ -1,3 +1,6 @@
+import { useLanguage } from '../i18n/LanguageContext';
+import { TranslationKey } from '../i18n/translations';
+
 interface VaultItemSecurityAssessmentProps {
   score: number;
   onOpenAudit: () => void;
@@ -21,17 +24,18 @@ function getButtonClass(score: number): string {
   return 'bg-brand-error/15 text-brand-error hover:bg-brand-error/20 animate-pulse';
 }
 
-function getDescription(score: number): string {
+function getDescriptionKey(score: number): TranslationKey {
   if (score >= 85) {
-    return 'Muazzam güç. Bu parolanın siber saldırılarla ele geçirilmesi neredeyse imkansızdır.';
+    return 'detail.security.secureDescription';
   }
   if (score >= 50) {
-    return 'Güçlü yapıda, fakat semboller veya uzunluk artırılarak askeri aşamaya taşınabilir.';
+    return 'detail.security.mediumDescription';
   }
-  return 'Kritik derecede zayıf veya kısa parola! En kısa sürede Şifre Üretici ile değiştirin.';
+  return 'detail.security.criticalDescription';
 }
 
 export default function VaultItemSecurityAssessment({ score, onOpenAudit }: VaultItemSecurityAssessmentProps) {
+  const { t } = useLanguage();
   const toneClass = getToneClass(score);
 
   return (
@@ -61,12 +65,12 @@ export default function VaultItemSecurityAssessment({ score, onOpenAudit }: Vaul
           </div>
         </div>
         <div>
-          <h4 className="font-bold text-sm text-on-surface">Güvenlik Değerlendirmesi</h4>
-          <p className="text-on-surface-variant text-[11px] mt-0.5">{getDescription(score)}</p>
+          <h4 className="font-bold text-sm text-on-surface">{t('detail.security.title')}</h4>
+          <p className="text-on-surface-variant text-[11px] mt-0.5">{t(getDescriptionKey(score))}</p>
         </div>
       </div>
       <button onClick={onOpenAudit} className={`text-xs font-bold px-3 py-2 rounded-lg shrink-0 ${getButtonClass(score)}`}>
-        Tümünü Denetle
+        {t('detail.security.auditAll')}
       </button>
     </div>
   );

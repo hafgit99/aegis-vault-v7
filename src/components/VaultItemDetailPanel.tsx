@@ -1,5 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
 
+import { useLanguage } from '../i18n/LanguageContext';
 import { VaultItem } from '../types';
 import CardDetail from './CardDetail';
 import IdentityDetail from './IdentityDetail';
@@ -50,6 +51,8 @@ export default function VaultItemDetailPanel({
   onCopyText,
   onDownloadAttachment,
 }: VaultItemDetailPanelProps) {
+  const { t } = useLanguage();
+
   return (
     <div className="max-w-3xl mx-auto space-y-6 lg:space-y-8">
       <div className="lg:hidden flex items-center justify-between pb-2 border-b border-outline-variant/10 mb-4">
@@ -58,9 +61,9 @@ export default function VaultItemDetailPanel({
           className="flex items-center gap-2 text-xs font-bold bg-[#1a1c1a] border border-outline-variant/15 px-3 py-2 rounded-lg text-on-surface hover:text-brand-primary active:scale-95 transition-all cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4 text-brand-primary" strokeWidth={2.5} />
-          <span>Geri Dön</span>
+          <span>{t('detail.mobile.back')}</span>
         </button>
-        <span className="text-[10px] text-on-surface-variant uppercase tracking-widest font-bold">KART DETAYLARI</span>
+        <span className="text-[10px] text-on-surface-variant uppercase tracking-widest font-bold">{t('detail.mobile.title')}</span>
       </div>
 
       <VaultItemDetailHeader

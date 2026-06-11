@@ -5,6 +5,8 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 import { VaultItem } from '../types';
 import VaultItemDetailHeader from './VaultItemDetailHeader';
 
@@ -23,6 +25,7 @@ const item: VaultItem = {
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
 });
 
 describe('VaultItemDetailHeader', () => {
@@ -85,6 +88,28 @@ describe('VaultItemDetailHeader', () => {
 
     const logo = screen.getByAltText('GitHub Logo') as HTMLImageElement;
     expect(logo.src).toContain('googleusercontent.com');
+  });
+
+  it('renders action titles in the selected language', () => {
+    window.localStorage.setItem(languageStorageKey, 'en');
+
+    render(
+      <LanguageProvider>
+        <VaultItemDetailHeader
+          item={{ ...item, favorite: false }}
+          copiedField={null}
+          onToggleFavorite={vi.fn()}
+          onEdit={vi.fn()}
+          onCopyText={vi.fn()}
+          onDelete={vi.fn()}
+        />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByTitle('Add to Favorites')).toBeTruthy();
+    expect(screen.getByTitle('Edit')).toBeTruthy();
+    expect(screen.getByTitle('Share / Copy JSON')).toBeTruthy();
+    expect(screen.getByTitle('Delete')).toBeTruthy();
   });
 
   it('renders the copied export state', () => {

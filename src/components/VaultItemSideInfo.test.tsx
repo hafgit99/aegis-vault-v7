@@ -5,6 +5,8 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 import { VaultItem } from '../types';
 import VaultItemSideInfo from './VaultItemSideInfo';
 
@@ -22,6 +24,7 @@ const baseItem: VaultItem = {
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
 });
 
 describe('VaultItemSideInfo', () => {
@@ -51,5 +54,23 @@ describe('VaultItemSideInfo', () => {
 
     expect(screen.getByText('Güvenli Not')).toBeTruthy();
     expect(screen.queryByText('Özel Notlar')).toBeNull();
+  });
+
+  it('renders metadata labels and empty notes in the selected language', () => {
+    window.localStorage.setItem(languageStorageKey, 'en');
+
+    render(
+      <LanguageProvider>
+        <VaultItemSideInfo item={{ ...baseItem, notes: '' }} />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByText('INFO AND HISTORY')).toBeTruthy();
+    expect(screen.getByText('Created')).toBeTruthy();
+    expect(screen.getByText('Last Changed')).toBeTruthy();
+    expect(screen.getByText('Vault Category')).toBeTruthy();
+    expect(screen.getByText('Login')).toBeTruthy();
+    expect(screen.getByText('Private Notes')).toBeTruthy();
+    expect(screen.getByText('No private recovery or backup-code note has been added.')).toBeTruthy();
   });
 });

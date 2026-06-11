@@ -5,10 +5,13 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 import VaultItemSecurityAssessment from './VaultItemSecurityAssessment';
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
 });
 
 describe('VaultItemSecurityAssessment', () => {
@@ -41,5 +44,19 @@ describe('VaultItemSecurityAssessment', () => {
     fireEvent.click(screen.getByText('Tümünü Denetle'));
 
     expect(onOpenAudit).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders assessment copy in the selected language', () => {
+    window.localStorage.setItem(languageStorageKey, 'zh');
+
+    render(
+      <LanguageProvider>
+        <VaultItemSecurityAssessment score={91} onOpenAudit={vi.fn()} />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByText('安全评估')).toBeTruthy();
+    expect(screen.getByText(/强度极佳/)).toBeTruthy();
+    expect(screen.getByText('全部审计')).toBeTruthy();
   });
 });

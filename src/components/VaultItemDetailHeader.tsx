@@ -1,5 +1,6 @@
 import { Check, Edit, ExternalLink, Heart, Share2, Trash2 } from 'lucide-react';
 
+import { useLanguage } from '../i18n/LanguageContext';
 import { getLogoForPlatform } from '../lib/display';
 import { VaultItem } from '../types';
 
@@ -20,6 +21,7 @@ export default function VaultItemDetailHeader({
   onCopyText,
   onDelete,
 }: VaultItemDetailHeaderProps) {
+  const { t } = useLanguage();
   const logoUrl = getLogoForPlatform(item.title, item.url);
 
   return (
@@ -67,21 +69,21 @@ export default function VaultItemDetailHeader({
           className={`p-2.5 rounded-lg transition-all cursor-pointer border border-outline-variant/10 bg-surface-high hover:bg-[#202220] ${
             item.favorite ? 'text-red-500' : 'text-on-surface-variant hover:text-red-400'
           }`}
-          title={item.favorite ? 'Favorilerden Çıkar' : 'Favorilere Ekle'}
+          title={item.favorite ? t('detail.header.removeFavorite') : t('detail.header.addFavorite')}
         >
           <Heart className={`w-4.5 h-4.5 ${item.favorite ? 'fill-red-500' : ''}`} />
         </button>
         <button
           onClick={onEdit}
           className="p-2.5 rounded-lg bg-surface-high text-on-surface-variant hover:text-brand-primary hover:bg-[#202220] transition-all cursor-pointer border border-outline-variant/10"
-          title="Düzenle"
+          title={t('detail.header.edit')}
         >
           <Edit className="w-4.5 h-4.5" />
         </button>
         <button
           onClick={() => onCopyText(JSON.stringify(item, null, 2), 'item_export')}
           className="p-2.5 rounded-lg bg-surface-high text-on-surface-variant hover:text-brand-primary hover:bg-[#202220] transition-all cursor-pointer border border-outline-variant/10"
-          title="Paylaş / JSON Kopyala"
+          title={t('detail.header.copyJson')}
         >
           {copiedField === 'item_export' ? (
             <Check className="w-4.5 h-4.5 text-brand-tertiary" />
@@ -93,7 +95,7 @@ export default function VaultItemDetailHeader({
           data-testid="delete-vault-item-button"
           onClick={() => onDelete(item.id)}
           className="p-2.5 rounded-lg bg-surface-high text-brand-error hover:bg-brand-error/15 hover:text-brand-error transition-all cursor-pointer border border-outline-variant/10"
-          title="Sil"
+          title={t('detail.header.delete')}
         >
           <Trash2 className="w-4.5 h-4.5" />
         </button>
