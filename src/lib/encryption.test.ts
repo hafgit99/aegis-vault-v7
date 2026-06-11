@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from './encryption';
+import { decryptLegacyDataWithPassword } from './legacyCrypto';
 
 vi.mock('./argon2id', () => ({
   deriveArgon2idKey: vi.fn(async (password: string) => {
@@ -9,6 +10,10 @@ vi.mock('./argon2id', () => ({
     }
     return key;
   }),
+}));
+
+vi.mock('./legacyCrypto', () => ({
+  decryptLegacyDataWithPassword: vi.fn(async () => 'legacy decrypted export'),
 }));
 
 describe('encrypted backup envelope', () => {
@@ -37,5 +42,48 @@ describe('encrypted backup envelope', () => {
     const envelope = await encryptDataWithPasswordSecure('sensitive vault export', 'right-password');
 
     await expect(decryptDataWithPasswordSecure(envelope, 'wrong-password')).rejects.toThrow();
+  });
+
+  it('rejects malformed JSON backup envelopes before decryption', async () => {
+    await expect(decryptDataWithPasswordSecure('{not-json', 'backup-password')).rejects.toThrow(
+      'JSON',
+    );
+  });
+
+  it('routes non-argon2-browser envelopes through the legacy decryptor', async () => {
+    const legacyEnvelope = JSON.stringify({
+      version: '1.0',
+      kdf: 'Legacy PBKDF',
+      payload: 'legacy-ciphertext',
+    });
+
+    await expect(decryptDataWithPasswordSecure(legacyEnvelope, 'legacy-password')).resolves.toBe(
+      'legacy decrypted export',
+    );
+    expect(decryptLegacyDataWithPassword).toHaveBeenCalledWith(legacyEnvelope, 'legacy-password');
+  });
+
+  it('rejects secure envelopes that are missing required security fields', async () => {
+    const incompleteEnvelope = JSON.stringify({
+      kdfImplementation: 'argon2-browser',
+      salt: '00',
+      iv: '11',
+      tag: '22',
+      payload: 'ciphertext',
+    });
+
+    await expect(decryptDataWithPasswordSecure(incompleteEnvelope, 'backup-password')).rejects.toThrow(
+      'Kritik',
+    );
+  });
+
+  it('rejects secure envelopes when the payload checksum has been tampered', async () => {
+    const envelope = await encryptDataWithPasswordSecure('sensitive vault export', 'backup-password');
+    const parsed = JSON.parse(envelope);
+    parsed.payload = `${parsed.payload}tampered`;
+
+    await expect(decryptDataWithPasswordSecure(JSON.stringify(parsed), 'backup-password')).rejects.toThrow(
+      'SHA-256',
+    );
   });
 });

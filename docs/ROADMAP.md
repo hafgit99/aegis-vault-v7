@@ -132,6 +132,7 @@
   - [x] Expand settings panel reset, drag-drop import, decrypt-error, and export-failure coverage.
   - [x] Expand vault form legacy edit fallback and attachment metadata coverage.
   - [x] Expand clipboard helper failure and unavailable-API coverage.
+  - [x] Expand secure backup envelope malformed JSON, legacy routing, and checksum tamper coverage.
 
 ## Phase 4: Desktop Productization
 
