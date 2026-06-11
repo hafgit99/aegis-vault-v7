@@ -214,10 +214,10 @@ export default function SettingsPanel({
         downloadTextFile(filename, contents);
       }
     } catch (err: any) {
-      setBackupError(`DÄ±ÅŸa aktarÄ±m hatasÄ±: ${err?.message || 'Dosya kaydedilemedi.'}`);
+      setBackupError(`${t('settings.export.plainErrorPrefix')}: ${err?.message || t('settings.export.defaultSaveError')}`);
       return;
     }
-    setBackupSuccess('Açık metin parola yedeği başarıyla indirildi.');
+    setBackupSuccess(t('settings.export.plainSuccess'));
     setTimeout(() => setBackupSuccess(null), 4000);
   };
 
@@ -231,13 +231,13 @@ export default function SettingsPanel({
     if (useMasterForBackup) {
       const masterPassword = getActiveMasterPassword();
       if (!masterPassword) {
-        setBackupError('Lütfen önce bir ana şifre oluşturun.');
+        setBackupError(t('settings.export.missingMaster'));
         return;
       }
       passwordToUse = masterPassword;
     } else {
       if (!customBackupPassword) {
-        setBackupError('Lütfen şifre alanını doldurun.');
+        setBackupError(t('settings.export.missingPassword'));
         return;
       }
       passwordToUse = customBackupPassword;
@@ -254,11 +254,11 @@ export default function SettingsPanel({
         downloadTextFile(filename, encryptedJsonString);
       }
 
-      setBackupSuccess('Askeri düzeyde şifreli yedeğiniz (.aegis) güvenle oluşturuldu ve indirildi.');
+      setBackupSuccess(t('settings.export.encryptedSuccess'));
       setCustomBackupPassword('');
       setTimeout(() => setBackupSuccess(null), 5000);
     } catch (err: any) {
-      setBackupError(`Şifreleme hatası: ${err?.message}`);
+      setBackupError(`${t('settings.export.encryptErrorPrefix')}: ${err?.message}`);
     }
   };
 
@@ -269,7 +269,7 @@ export default function SettingsPanel({
       if (x.title || x.username) {
         await saveVaultItem({
           id: x.id || secureRandomToken(9),
-          title: x.title || 'İçeri Aktarılan Kayıt',
+          title: x.title || t('settings.import.defaultTitle'),
           username: x.username || '',
           password: x.password || '',
           url: x.url || '',
@@ -314,7 +314,7 @@ export default function SettingsPanel({
     setDecryptError(null);
 
     if (!decryptPasswordInput) {
-      setDecryptError('Parola girmediniz.');
+      setDecryptError(t('settings.import.emptyPassword'));
       return;
     }
 
@@ -323,15 +323,15 @@ export default function SettingsPanel({
       const parsedItemsList = JSON.parse(decryptedDataStr);
 
       if (!Array.isArray(parsedItemsList)) {
-        throw new Error('Yedek dosyasının içi liste yapısında değil.');
+        throw new Error(t('settings.import.invalidList'));
       }
 
       const importedNum = await handleImportedItems(parsedItemsList);
-      setImportSuccess(`✓ Şifreli .aegis yedeği başarıyla çözüldü! ${importedNum} adet parola kasaya eklendi.`);
+      setImportSuccess(`${t('settings.import.decryptSuccessPrefix')} ${importedNum} ${t('settings.import.importedPasswordSuffix')}`);
       setPendingEnvelope(null);
       setDecryptPasswordInput('');
     } catch (err: any) {
-      setDecryptError(err?.message || 'Şifre çözme başarısız. Lütfen şifrenizi kontrol edip tekrar deneyin.');
+      setDecryptError(err?.message || t('settings.import.decryptErrorFallback'));
     }
   };
 
@@ -353,15 +353,15 @@ export default function SettingsPanel({
 
           if (scanResult.type === 'encrypted_aegis') {
             // Encrypted flow: display decryption dialog
-            setDetectedFormat('Şifreli Aegis Kasa Yedeği (.aegis)');
+            setDetectedFormat(t('settings.import.encryptedDetected'));
             setPendingEnvelope(scanResult.envelope);
           } else {
             // Success plaintext flow
             const count = await handleImportedItems(scanResult.items);
-            setImportSuccess(`✓ ${scanResult.formatName} başarıyla tespit edildi! ${count} adet kayıt kasaya yüklendi.`);
+            setImportSuccess(`✓ ${scanResult.formatName} ${t('settings.import.detectedSuccessMiddle')} ${count} ${t('settings.import.recordsLoadedSuffix')}`);
           }
         } catch (err: any) {
-          setImportError(err?.message || 'İçe aktarım başarısız oldu. Dosya formatını kontrol edin.');
+          setImportError(err?.message || t('settings.import.errorFallback'));
         } finally {
           setImporting(false);
         }
@@ -382,7 +382,7 @@ export default function SettingsPanel({
       fileInputRef.current?.click();
     } catch (err: any) {
       resetImportFlowState();
-      setImportError(err?.message || 'Dosya seÃ§imi baÅŸarÄ±sÄ±z oldu.');
+      setImportError(err?.message || t('settings.import.fileSelectError'));
     }
   };
 
@@ -687,10 +687,10 @@ export default function SettingsPanel({
           <div className="space-y-3.5">
             <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2 border-b border-outline-variant/10 pb-2">
               <Download className="w-4 h-4 text-brand-tertiary" />
-              <span>Verileri Şifreli Yedekle (Export)</span>
+              <span>{t('settings.export.title')}</span>
             </h3>
             <p className="text-xs text-on-surface-variant leading-relaxed">
-              Tüm kasa kayıtlarınızı ve şifrelerinizi askeri düzeyde şifreli bir <b className="text-brand-tertiary">.aegis</b> yedek dosyasına dönüştürün. Bu sayede yedeğiniz başkalarının eline geçse dahi şifresi olmadan asla açılamaz.
+              {t('settings.export.descriptionPrefix')} <b className="text-brand-tertiary">.aegis</b> {t('settings.export.descriptionSuffix')}
             </p>
 
             <form onSubmit={handleExportEncrypted} className="space-y-3 pt-1">
@@ -703,21 +703,21 @@ export default function SettingsPanel({
                   className="w-4 h-4 accent-brand-secondary rounded border-outline-variant bg-[#141614] cursor-pointer"
                 />
                 <label htmlFor="useMasterCheck" className="text-xs text-on-surface font-semibold cursor-pointer select-none">
-                  Kasa ana şifremi yedekleme parolası yap
+                  {t('settings.export.useMaster')}
                 </label>
               </div>
 
               {!useMasterForBackup && (
                 <div className="space-y-1.5 animate-fade-in">
                   <label className="block text-[10px] font-bold text-brand-secondary uppercase">
-                    Yedekleme Güvenlik Şifresi
+                    {t('settings.export.passwordLabel')}
                   </label>
                   <input
                     type="password"
                     value={customBackupPassword}
                     onChange={(e) => setCustomBackupPassword(e.target.value)}
                     className="w-full bg-[#141614] border border-outline-variant/30 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-tertiary text-on-surface"
-                    placeholder="En az 6 haneli özel yedek şifresi girin"
+                    placeholder={t('settings.export.passwordPlaceholder')}
                     minLength={6}
                     required={!useMasterForBackup}
                   />
@@ -744,7 +744,7 @@ export default function SettingsPanel({
                   className="w-full flex items-center justify-center gap-2 bg-brand-tertiary text-black font-extrabold py-3 rounded-lg text-xs hover:brightness-110 active:scale-95 transition-all cursor-pointer shadow-lg shadow-brand-tertiary/5"
                 >
                   <Lock className="w-4 h-4" />
-                  <span>Şifreli .aegis Yedeği</span>
+                  <span>{t('settings.export.encryptedButton')}</span>
                 </button>
                 <button
                   data-testid="plain-export-button"
@@ -753,7 +753,7 @@ export default function SettingsPanel({
                   className="w-full flex items-center justify-center gap-2 border border-outline-variant/30 text-on-surface-variant hover:text-on-surface py-3 rounded-lg text-xs hover:bg-[#1a1c1a]/50 active:scale-95 transition-all cursor-pointer"
                 >
                   <Unlock className="w-4 h-4" />
-                  <span>Açık Metin .json Yedeği</span>
+                  <span>{t('settings.export.plainButton')}</span>
                 </button>
               </div>
             </form>
@@ -765,10 +765,10 @@ export default function SettingsPanel({
           <div className="space-y-4">
             <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2 border-b border-outline-variant/10 pb-2">
               <Upload className="w-4 h-4 text-[#2096f3]" />
-              <span>Evrensel İçe Aktarma Sistemi</span>
+              <span>{t('settings.import.title')}</span>
             </h3>
             <p className="text-xs text-on-surface-variant leading-relaxed">
-              Kendi şifreli <u className="text-brand-primary">.aegis</u> yedeklerinizin yanı sıra <b>Bitwarden (JSON/CSV)</b>, <b>LastPass (CSV)</b>, <b>Chrome (CSV)</b> ve <b>1Password (CSV)</b> gibi diğer kasa yöneticilerinin yedeklerini de buraya yükleyerek anında içeri aktarabilirsiniz.
+              {t('settings.import.descriptionPrefix')} <u className="text-brand-primary">.aegis</u> {t('settings.import.descriptionMiddle')} <b>Bitwarden (JSON/CSV)</b>, <b>LastPass (CSV)</b>, <b>Chrome (CSV)</b> {t('settings.import.providerJoin')} <b>1Password (CSV)</b> {t('settings.import.descriptionSuffix')}
             </p>
 
             {/* Display loading state or pending Decryption details */}
@@ -776,10 +776,10 @@ export default function SettingsPanel({
               <form onSubmit={handleDecryptAndImport} className="p-4 bg-[#141614] border border-brand-primary/20 rounded-xl space-y-3 animate-fade-in text-left">
                 <div className="flex items-center gap-2 text-brand-primary">
                   <Lock className="w-4 h-4 animate-bounce" />
-                  <span className="text-xs font-bold uppercase tracking-wider">🔒 KİLİTLİ YEDEK TESPİT EDİLDİ</span>
+                  <span className="text-xs font-bold uppercase tracking-wider">{t('settings.import.lockedTitle')}</span>
                 </div>
                 <p className="text-[11px] text-on-surface-variant">
-                  Görünüşe göre bu yedek askeri düzeyde bir şifreli dosya. İçeriğini çözüp içe aktarmak için belirlediğiniz şifreyi giriniz:
+                  {t('settings.import.lockedDescription')}
                 </p>
 
                 <div>
@@ -789,7 +789,7 @@ export default function SettingsPanel({
                     value={decryptPasswordInput}
                     onChange={(e) => setDecryptPasswordInput(e.target.value)}
                     className="w-full bg-[#181c18] border border-outline-variant/30 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-brand-primary text-on-surface font-mono"
-                    placeholder="Kilidi açacak şifreyi girin"
+                    placeholder={t('settings.import.decryptPlaceholder')}
                     required
                   />
                 </div>
@@ -810,7 +810,7 @@ export default function SettingsPanel({
                     type="submit"
                     className="flex-1 py-2 bg-brand-primary text-brand-on-primary font-bold text-xs rounded-lg hover:brightness-110 active:scale-95 transition-all"
                   >
-                    Şifreyi Çöz ve Aktar
+                    {t('settings.import.decryptSubmit')}
                   </button>
                   <button
                     data-testid="decrypt-import-cancel-button"
@@ -822,7 +822,7 @@ export default function SettingsPanel({
                     }}
                     className="py-2 px-3 border border-outline-variant/30 text-on-surface-variant hover:text-on-surface text-xs rounded-lg"
                   >
-                    Vazgeç
+                    {t('settings.import.cancel')}
                   </button>
                 </div>
               </form>
@@ -850,9 +850,9 @@ export default function SettingsPanel({
                   className="hidden"
                 />
                 <Upload className="w-8 h-8 mx-auto text-on-surface-variant/50 mb-2" />
-                <p className="text-xs text-on-surface font-semibold">Tıklayarak Seçin ya da Dosyayı Sürükleyin</p>
+                <p className="text-xs text-on-surface font-semibold">{t('settings.import.dropTitle')}</p>
                 <p className="text-[10px] text-on-surface-variant/40 mt-1 uppercase font-mono tracking-widest">
-                  DESTEKLENEN: .JSON / .CSV / .AEGIS
+                  {t('settings.import.supported')}
                 </p>
               </div>
             )}

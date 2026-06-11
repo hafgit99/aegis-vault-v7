@@ -105,6 +105,7 @@ Recently improved:
 - Vault form attachment section: covered selected-language rendering for encrypted-file heading, protection badge, and drop zone copy.
 - Settings overview: covered selected-language rendering for vault statistics and master-password change controls.
 - Settings lock controls: covered selected-language rendering for auto-lock options and biometric unlock status/actions.
+- Settings backup/import controls: covered selected-language rendering for export buttons, import drop zone, and locked-backup prompts.
 - `src/components/VaultFormModal.tsx`: covered edit-save identity preservation, title validation, password visibility/autogeneration, selected file removal, attachment upload failures, existing attachment removal before save, and download error notifications.
 - `src/components/CardDetail.tsx`: covered copied states, PIN copy action, missing-field fallbacks, and empty-string copy behavior.
 - `src/components/LoginDetail.tsx`: covered copied states, empty-password fallback, and safe empty-password copy behavior.

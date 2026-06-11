@@ -168,6 +168,20 @@ describe('SettingsPanel import/export', () => {
     expect(screen.getByText('Status: PASSIVE 🔴')).toBeTruthy();
     expect(screen.getByText('Biometric unlock is disabled. You can sign in only with your master password.')).toBeTruthy();
     expect(screen.getByText('Enable Biometrics')).toBeTruthy();
+    expect(screen.getByText('Encrypted Backup Export')).toBeTruthy();
+    expect(screen.getByText(/Convert all vault records/)).toBeTruthy();
+    expect(screen.getByText('Use my vault master password as the backup password')).toBeTruthy();
+    expect(screen.getByText('Encrypted .aegis Backup')).toBeTruthy();
+    expect(screen.getByText('Plain Text .json Backup')).toBeTruthy();
+    expect(screen.getByText('Universal Import System')).toBeTruthy();
+    expect(screen.getByText(/Alongside your own encrypted/)).toBeTruthy();
+    expect(screen.getByText('Click to Select or Drag a File')).toBeTruthy();
+    expect(screen.getByText('SUPPORTED: .JSON / .CSV / .AEGIS')).toBeTruthy();
+
+    fireEvent.click(screen.getByText('Use my vault master password as the backup password'));
+
+    expect(screen.getByText('Backup Security Password')).toBeTruthy();
+    expect(screen.getByPlaceholderText('Enter a custom backup password with at least 6 characters')).toBeTruthy();
   });
 
   it('exports an encrypted .aegis backup with the active master session without sessionStorage', async () => {
