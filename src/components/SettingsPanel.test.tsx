@@ -11,6 +11,8 @@ import { disableBiometric, isBiometricEnabled, isBiometricSupported, registerBio
 import { getVaultItems, resetSystem, reseedDemoData, saveVaultItem, setupMasterPassword, verifyMasterPassword } from '../lib/storage';
 import { closeVaultSession, openVaultSession } from '../lib/vaultSession';
 import { VaultItem } from '../types';
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 import SettingsPanel from './SettingsPanel';
 
 const vaultItems: VaultItem[] = [
@@ -76,6 +78,25 @@ function renderSettings() {
   return { ...view, props };
 }
 
+function renderSettingsWithLanguage(language: 'en' | 'zh') {
+  window.localStorage.setItem(languageStorageKey, language);
+
+  const props = {
+    autoLockDuration: 60,
+    onAutoLockDurationChange: vi.fn(),
+    onDatabaseChanged: vi.fn(),
+    onNotify: vi.fn(),
+  };
+
+  const view = render(
+    <LanguageProvider>
+      <SettingsPanel {...props} />
+    </LanguageProvider>,
+  );
+
+  return { ...view, props };
+}
+
 function encryptedExportForm(container: HTMLElement): HTMLFormElement {
   return container.querySelector('#encrypted-export-card form') as HTMLFormElement;
 }
@@ -117,10 +138,29 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.clearAllMocks();
   sessionStorage.clear();
+  localStorage.clear();
   delete window.__TAURI_INTERNALS__;
 });
 
 describe('SettingsPanel import/export', () => {
+  it('renders settings overview and password controls in the selected language', () => {
+    renderSettingsWithLanguage('en');
+
+    expect(screen.getByText('Vault Settings')).toBeTruthy();
+    expect(screen.getByText('Manage lock timing, encrypted backups, and multi-format imports from this panel.')).toBeTruthy();
+    expect(screen.getByText('Vault Statistics')).toBeTruthy();
+    expect(screen.getByText('Total Items')).toBeTruthy();
+    expect(screen.getByText('Secure Structure')).toBeTruthy();
+    expect(screen.getByText('Data Location')).toBeTruthy();
+    expect(screen.getByText('Browser Memory')).toBeTruthy();
+    expect(screen.getByText('Load Demo Data')).toBeTruthy();
+    expect(screen.getByText('Change Master Password')).toBeTruthy();
+    expect(screen.getByText('Current Master Password')).toBeTruthy();
+    expect(screen.getByText('New Master Password')).toBeTruthy();
+    expect(screen.getByText('Confirm New Password')).toBeTruthy();
+    expect(screen.getByText('Update Password')).toBeTruthy();
+  });
+
   it('exports an encrypted .aegis backup with the active master session without sessionStorage', async () => {
     openVaultSession('master-pass');
     const { container } = renderSettings();

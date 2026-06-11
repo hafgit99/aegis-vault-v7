@@ -178,15 +178,15 @@ export default function SettingsPanel({
 
     const isCorrectOld = await verifyMasterPassword(oldPassword);
     if (!isCorrectOld) {
-      setPasswordError('Mevcut Ana Şifrenizi hatalı girdiniz.');
+      setPasswordError(t('settings.password.error.current'));
       return;
     }
     if (newPassword.length < 6) {
-      setPasswordError('Yeni şifre en az 6 karakter olmalıdır.');
+      setPasswordError(t('settings.password.error.length'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordError('Şifreler uyuşmuyor.');
+      setPasswordError(t('settings.password.error.mismatch'));
       return;
     }
 
@@ -438,8 +438,8 @@ export default function SettingsPanel({
           <Settings className="w-5 h-5 text-amber-400" />
         </div>
         <div>
-          <h2 className="text-xl font-bold font-display text-on-surface">Kasa Ayarları</h2>
-          <p className="text-xs text-on-surface-variant">Kilit sürelerinizi, askeri şifreli yedeklerinizi ve çoklu aktarımları bu panelden yönetin.</p>
+          <h2 className="text-xl font-bold font-display text-on-surface">{t('settings.title')}</h2>
+          <p className="text-xs text-on-surface-variant">{t('settings.subtitle')}</p>
         </div>
       </div>
 
@@ -481,22 +481,22 @@ export default function SettingsPanel({
         <div className="glass-panel p-6 rounded-2xl md:col-span-1 space-y-4" id="stats-card">
           <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2 border-b border-outline-variant/10 pb-2">
             <Database className="w-4 h-4 text-brand-primary" />
-            <span>Kasa İstatistikleri</span>
+            <span>{t('settings.stats.title')}</span>
           </h3>
           <div className="space-y-3 pt-1">
             <div className="flex justify-between items-center text-sm border-b border-outline-variant/10 pb-2">
-              <span className="text-on-surface-variant">Toplam Ürün</span>
+              <span className="text-on-surface-variant">{t('settings.stats.totalItems')}</span>
               <span className="font-mono font-bold text-brand-primary">{items.length}</span>
             </div>
             <div className="flex justify-between items-center text-sm border-b border-outline-variant/10 pb-2">
-              <span className="text-on-surface-variant">Güvenli Yapı</span>
+              <span className="text-on-surface-variant">{t('settings.stats.secureStructure')}</span>
               <span className="text-[#10b981] font-bold text-xs flex items-center gap-1">
                 <ShieldCheck className="w-3.5 h-3.5" /> AES-GCM
               </span>
             </div>
             <div className="flex justify-between items-center text-sm border-b border-outline-variant/10 pb-2">
-              <span className="text-on-surface-variant">Veri Konumu</span>
-              <span className="text-xs text-brand-tertiary">Tarayıcı Belleği</span>
+              <span className="text-on-surface-variant">{t('settings.stats.dataLocation')}</span>
+              <span className="text-xs text-brand-tertiary">{t('settings.stats.browserMemory')}</span>
             </div>
           </div>
 
@@ -507,7 +507,7 @@ export default function SettingsPanel({
               id="demo-reseed-btn"
             >
               <RefreshCw className="w-4 h-4" />
-              <span>Demo Verilerini Getir</span>
+              <span>{t('settings.stats.reseedDemo')}</span>
             </button>
           </div>
         </div>
@@ -516,7 +516,7 @@ export default function SettingsPanel({
         <div className="glass-panel p-6 rounded-2xl md:col-span-2 space-y-4" id="change-pass-card">
           <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2 border-b border-outline-variant/10 pb-2">
             <Key className="w-4 h-4 text-brand-secondary" />
-            <span>Ana Şifreyi Değiştir</span>
+            <span>{t('settings.password.title')}</span>
           </h3>
 
           <form onSubmit={handlePasswordChange} className="space-y-3 pt-1" id="pass-change-form">
@@ -529,14 +529,14 @@ export default function SettingsPanel({
             {passwordSuccess && (
               <div className="p-3 bg-brand-tertiary/10 border border-brand-tertiary/20 rounded-lg text-brand-tertiary text-xs flex gap-2 items-center animate-pulse">
                 <CheckCircle className="w-4 h-4 shrink-0" />
-                <span>Kasa ana şifreniz başarıyla değiştirildi!</span>
+                <span>{t('settings.password.success')}</span>
               </div>
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[10px] font-bold text-on-surface-variant/85 uppercase mb-1.5">
-                  Mevcut Ana Şifre
+                  {t('settings.password.current')}
                 </label>
                 <input
                   type="password"
@@ -549,7 +549,7 @@ export default function SettingsPanel({
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-on-surface-variant/85 uppercase mb-1.5">
-                  Yeni Ana Şifre
+                  {t('settings.password.new')}
                 </label>
                 <input
                   type="password"
@@ -564,7 +564,7 @@ export default function SettingsPanel({
 
             <div>
               <label className="block text-[10px] font-bold text-on-surface-variant/85 uppercase mb-1.5">
-                Yeni Şifre Tekrarı
+                {t('settings.password.confirm')}
               </label>
               <input
                 type="password"
@@ -580,7 +580,7 @@ export default function SettingsPanel({
               type="submit"
               className="px-5 py-2.5 bg-brand-primary text-brand-on-primary rounded-lg font-bold text-xs hover:brightness-110 active:scale-95 transition-all mt-1 cursor-pointer"
             >
-              Şifreyi Güncelle
+              {t('settings.password.update')}
             </button>
           </form>
         </div>
