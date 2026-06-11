@@ -5,6 +5,8 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 import { VaultItem } from '../types';
 import IdentityDetail from './IdentityDetail';
 
@@ -24,6 +26,7 @@ const identityItem: VaultItem = {
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
 });
 
 describe('IdentityDetail', () => {
@@ -110,5 +113,35 @@ describe('IdentityDetail', () => {
     fireEvent.click(screen.getAllByRole('button')[0]);
 
     expect(onCopyText).toHaveBeenCalledWith('', 'idFullName');
+  });
+
+  it('renders identity labels and fallbacks in the selected language', () => {
+    window.localStorage.setItem(languageStorageKey, 'en');
+
+    render(
+      <LanguageProvider>
+        <IdentityDetail
+          item={{
+            ...identityItem,
+            idFullName: '',
+            idBirthDate: '',
+            idExpiryDate: '',
+            idGender: '',
+          }}
+          copiedField={null}
+          onCopyText={vi.fn()}
+        />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByText('FULL LEGAL NAME')).toBeTruthy();
+    expect(screen.getByText('DOCUMENT / ID / PASSPORT NUMBER')).toBeTruthy();
+    expect(screen.getByText('DATE OF BIRTH')).toBeTruthy();
+    expect(screen.getByText('EXPIRY DATE')).toBeTruthy();
+    expect(screen.getByText('GENDER')).toBeTruthy();
+    expect(screen.getByText('Not entered')).toBeTruthy();
+    expect(screen.getAllByText('Not specified')).toHaveLength(2);
+    expect(screen.getByText('No expiry / None')).toBeTruthy();
+    expect(screen.getAllByTitle('Copy')).toHaveLength(2);
   });
 });
