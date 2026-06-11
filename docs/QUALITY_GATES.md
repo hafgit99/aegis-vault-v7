@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 76.00% |
-| Statements | 76.00% |
-| Functions | 76.71% |
-| Branches | 74.58% |
+| Lines | 78.79% |
+| Statements | 78.79% |
+| Functions | 78.68% |
+| Branches | 75.14% |
 
 Initial thresholds are intentionally below the current baseline:
 
@@ -32,7 +32,7 @@ These thresholds prevent large regressions while leaving room to add tests aroun
 
 ## Priority Coverage Targets
 
-1. `src/components/VaultFormModal.tsx` and `src/components/PasswordGenerator.tsx`: add workflow-focused component tests.
+1. `src/components/VaultFormModal.tsx`: add workflow-focused component tests for remaining item categories and attachment controls.
 
 Recently improved:
 
@@ -40,6 +40,8 @@ Recently improved:
 - `src/lib/attachments.ts`: covered IndexedDB save/read/delete paths, bulk legacy migration, missing records, and connection cleanup behavior.
 - `src/lib/sqlite_opfs.ts`: covered master setup/verification, encrypted row persistence, read-only SQL console behavior, reseed/delete/reset flows, query log subscriptions, and localStorage fallback hydration.
 - `src/lib/storage.ts`: covered setup detection, no-session guards, save/delete/reseed wrappers, trash move/restore, expired trash cleanup, and full trash emptying.
+- `src/components/PasswordGenerator.tsx`: covered character option changes, diceware mode settings, copy feedback, and safe clipboard clearing behavior.
+- `src/lib/diceware.ts`: covered Turkish/English word selection, separator formats, capitalization, random number placement, and symbol placement.
 
 ## Next Gates
 

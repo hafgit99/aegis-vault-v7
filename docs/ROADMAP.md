@@ -107,6 +107,7 @@
   - [x] Expand attachment IndexedDB persistence and migration coverage.
   - [x] Expand SQLite OPFS persistence engine coverage.
   - [x] Expand storage lifecycle wrapper coverage.
+  - [x] Expand password generator and Diceware workflow coverage.
 
 ## Phase 4: Desktop Productization
 
