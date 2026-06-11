@@ -119,6 +119,7 @@
   - [x] Expand login detail copied-state and empty-password coverage.
   - [x] Expand passkey detail copied-state and fallback coverage.
   - [x] Expand identity detail copied-state and fallback coverage.
+  - [x] Expand secure note copied-state and empty-note coverage.
 
 ## Phase 4: Desktop Productization
 

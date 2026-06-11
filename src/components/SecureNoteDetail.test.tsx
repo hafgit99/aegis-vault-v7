@@ -45,9 +45,14 @@ describe('SecureNoteDetail', () => {
   });
 
   it('renders copied state and empty note fallback', () => {
-    render(<SecureNoteDetail item={{ ...baseItem, notes: '' }} copiedField="secure_notes_copy" onCopyText={vi.fn()} />);
+    const onCopyText = vi.fn();
+    render(<SecureNoteDetail item={{ ...baseItem, notes: '' }} copiedField="secure_notes_copy" onCopyText={onCopyText} />);
 
     expect(screen.getByText('Tümü Kopyalandı!')).toBeTruthy();
     expect(screen.getByText('Herhangi bir içerik yazılmamış.')).toBeTruthy();
+
+    fireEvent.click(screen.getByText('Tümü Kopyalandı!'));
+
+    expect(onCopyText).toHaveBeenCalledWith('', 'secure_notes_copy');
   });
 });
