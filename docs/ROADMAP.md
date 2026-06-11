@@ -133,6 +133,7 @@
   - [x] Expand vault form legacy edit fallback and attachment metadata coverage.
   - [x] Expand clipboard helper failure and unavailable-API coverage.
   - [x] Expand secure backup envelope malformed JSON, legacy routing, and checksum tamper coverage.
+  - [x] Expand biometric WebAuthn support, cancellation, disable, and missing-bundle coverage.
 
 ## Phase 4: Desktop Productization
 

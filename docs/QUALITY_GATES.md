@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 94.38% |
-| Statements | 94.38% |
-| Functions | 93.10% |
-| Branches | 88.03% |
+| Lines | 94.52% |
+| Statements | 94.52% |
+| Functions | 93.36% |
+| Branches | 88.35% |
 
 Initial thresholds are intentionally below the current baseline:
 
@@ -33,7 +33,7 @@ These thresholds prevent large regressions while leaving room to add tests aroun
 ## Priority Coverage Targets
 
 1. `src/components/SettingsPanel.tsx`: reduce remaining fallback-message and desktop-runtime branch gaps.
-2. `src/lib/biometric.ts`: raise low branch coverage around security-sensitive fallbacks.
+2. `src/lib/importer.ts`, `src/lib/random.ts`, and `src/lib/sqlite_opfs.ts`: raise low branch coverage around parsing, entropy, and persistence fallbacks.
 
 Recently improved:
 
@@ -68,6 +68,7 @@ Recently improved:
 - `src/components/VaultFormModal.tsx`: covered legacy edit payloads with missing fields and missing attachment metadata. The remaining selected-file input reset branch is intentionally defensive because the file input is unmounted when a selected file is displayed.
 - `src/lib/clipboard.ts`: covered unavailable clipboard APIs, rejected writes, empty expected text, missing clear methods, read failures, and clear-write failures so clipboard helpers now report full coverage.
 - `src/lib/encryption.ts`: covered malformed backup JSON, legacy envelope routing, missing secure envelope fields, and checksum tampering so the secure backup envelope module now reports full coverage.
+- `src/lib/biometric.ts`: covered WebAuthn support detection, disable flow, unsupported registration, cancelled registration, missing stored bundle, cancelled authentication, and mismatched authenticator rejection.
 
 ## Next Gates
 
