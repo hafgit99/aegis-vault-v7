@@ -112,7 +112,7 @@ describe('VaultFormModal', () => {
     expect(screen.getByText('User Login Credentials')).toBeTruthy();
     expect(screen.getByText('Authenticator data used for websites and cloud services.')).toBeTruthy();
     expect(screen.getByText('USERNAME OR EMAIL')).toBeTruthy();
-    expect(screen.getByPlaceholderText('e.g. blt1.koc@gmail.com')).toBeTruthy();
+    expect(screen.getByPlaceholderText('e.g. user@example.com')).toBeTruthy();
     expect(screen.getByText('SECURE PASSWORD')).toBeTruthy();
     expect(screen.getByText('Generate Strong')).toBeTruthy();
     expect(screen.getByPlaceholderText('Enter your password')).toBeTruthy();
@@ -187,7 +187,7 @@ describe('VaultFormModal', () => {
     fireEvent.change(screen.getByPlaceholderText('örn. github.com'), {
       target: { value: '  https://github.com  ' },
     });
-    fireEvent.change(screen.getByPlaceholderText('örn. blt1.koc@gmail.com'), {
+    fireEvent.change(screen.getByPlaceholderText('örn. user@example.com'), {
       target: { value: '  hafgit99  ' },
     });
     fireEvent.change(screen.getByPlaceholderText('Şifrenizi belirleyin'), {
