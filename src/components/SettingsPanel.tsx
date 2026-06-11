@@ -759,7 +759,10 @@ export default function SettingsPanel({
                 </div>
 
                 {decryptError && (
-                  <div className="p-2.5 bg-brand-error/15 border border-brand-error/30 text-brand-error text-[10px] rounded flex gap-1.5 items-center">
+                  <div
+                    data-testid="decrypt-import-error-message"
+                    className="p-2.5 bg-brand-error/15 border border-brand-error/30 text-brand-error text-[10px] rounded flex gap-1.5 items-center"
+                  >
                     <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                     <span>{decryptError}</span>
                   </div>

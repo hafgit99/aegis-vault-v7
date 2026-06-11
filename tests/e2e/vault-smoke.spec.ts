@@ -36,6 +36,18 @@ async function openSettings(page: Page) {
   await expect(page.getByTestId('plain-export-button')).toBeVisible();
 }
 
+async function exportEncryptedBackup(page: Page) {
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByTestId('encrypted-export-button').click();
+  const download = await downloadPromise;
+  const downloadPath = await download.path();
+
+  expect(download.suggestedFilename()).toMatch(/^aegis_guvenli_yedek_\d{4}-\d{2}-\d{2}\.aegis$/);
+  expect(downloadPath).toBeTruthy();
+
+  return downloadPath!;
+}
+
 test('sets up, stores, locks, and unlocks a vault item', async ({ page }) => {
   await setupVault(page);
 
@@ -77,11 +89,7 @@ test('exports an encrypted backup download', async ({ page }) => {
   await createLoginItem(page, 'E2E Export Backup');
   await openSettings(page);
 
-  const downloadPromise = page.waitForEvent('download');
-  await page.getByTestId('encrypted-export-button').click();
-  const download = await downloadPromise;
-
-  expect(download.suggestedFilename()).toMatch(/^aegis_guvenli_yedek_\d{4}-\d{2}-\d{2}\.aegis$/);
+  await exportEncryptedBackup(page);
 });
 
 test('imports a plain JSON backup file', async ({ page }) => {
@@ -116,14 +124,9 @@ test('imports an encrypted aegis backup file', async ({ page }) => {
   await createLoginItem(page, 'E2E Encrypted Import');
   await openSettings(page);
 
-  const downloadPromise = page.waitForEvent('download');
-  await page.getByTestId('encrypted-export-button').click();
-  const download = await downloadPromise;
-  const downloadPath = await download.path();
+  const downloadPath = await exportEncryptedBackup(page);
 
-  expect(downloadPath).toBeTruthy();
-
-  await page.getByTestId('import-file-input').setInputFiles(downloadPath!);
+  await page.getByTestId('import-file-input').setInputFiles(downloadPath);
   await page.getByTestId('decrypt-import-password-input').fill(masterPassword);
   await page.getByTestId('decrypt-import-submit-button').click();
 
@@ -132,4 +135,20 @@ test('imports an encrypted aegis backup file', async ({ page }) => {
 
   await page.getByTestId('nav-vault-button').click();
   await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Encrypted Import' })).toBeVisible();
+});
+
+test('rejects encrypted aegis import with a wrong password', async ({ page }) => {
+  await setupVault(page);
+  await createLoginItem(page, 'E2E Wrong Password Import');
+  await openSettings(page);
+
+  const downloadPath = await exportEncryptedBackup(page);
+
+  await page.getByTestId('import-file-input').setInputFiles(downloadPath);
+  await page.getByTestId('decrypt-import-password-input').fill('wrong-master-pass');
+  await page.getByTestId('decrypt-import-submit-button').click();
+
+  await expect(page.getByTestId('decrypt-import-error-message')).toBeVisible();
+  await expect(page.getByTestId('decrypt-import-password-input')).toBeVisible();
+  await expect(page.getByTestId('import-success-message')).toBeHidden();
 });
