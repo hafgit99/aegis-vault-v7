@@ -275,11 +275,7 @@ export default function App() {
         />
       </main>
 
-      <FloatingVaultAction
-        activeTab={activeTab}
-        isDetailOpenOnMobile={Boolean(selectedItem && mobileActiveView === 'detail')}
-        onNewItem={handleTriggerNew}
-      />
+      <FloatingVaultAction onNewItem={handleTriggerNew} />
 
       <AppModals
         isVaultFormOpen={isVaultFormOpen}

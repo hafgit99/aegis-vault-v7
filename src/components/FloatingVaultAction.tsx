@@ -1,22 +1,15 @@
 import { Plus } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
-import { ActiveTab } from '../types';
 
 interface FloatingVaultActionProps {
-  activeTab: ActiveTab;
-  isDetailOpenOnMobile: boolean;
   onNewItem: () => void;
 }
 
 export default function FloatingVaultAction({
-  activeTab,
-  isDetailOpenOnMobile,
   onNewItem,
 }: FloatingVaultActionProps) {
   const { t } = useLanguage();
-
-  if (activeTab !== 'vault' || isDetailOpenOnMobile) return null;
 
   return (
     <button

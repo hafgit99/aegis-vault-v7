@@ -15,44 +15,20 @@ afterEach(() => {
 });
 
 describe('FloatingVaultAction', () => {
-  it('renders and forwards new item action in the vault tab', () => {
+  it('renders and forwards new item action', () => {
     const onNewItem = vi.fn();
 
-    render(
-      <FloatingVaultAction
-        activeTab="vault"
-        isDetailOpenOnMobile={false}
-        onNewItem={onNewItem}
-      />,
-    );
+    render(<FloatingVaultAction onNewItem={onNewItem} />);
 
     fireEvent.click(screen.getByTestId('floating-new-vault-item-button'));
 
     expect(onNewItem).toHaveBeenCalledTimes(1);
   });
 
-  it('hides outside the vault tab', () => {
-    render(
-      <FloatingVaultAction
-        activeTab="settings"
-        isDetailOpenOnMobile={false}
-        onNewItem={vi.fn()}
-      />,
-    );
+  it('keeps the action available without navigation context', () => {
+    render(<FloatingVaultAction onNewItem={vi.fn()} />);
 
-    expect(screen.queryByTestId('floating-new-vault-item-button')).toBeNull();
-  });
-
-  it('hides when the mobile detail view is open', () => {
-    render(
-      <FloatingVaultAction
-        activeTab="vault"
-        isDetailOpenOnMobile={true}
-        onNewItem={vi.fn()}
-      />,
-    );
-
-    expect(screen.queryByTestId('floating-new-vault-item-button')).toBeNull();
+    expect(screen.getByTestId('floating-new-vault-item-button')).toBeTruthy();
   });
 
   it('uses the selected language for the accessible title', () => {
@@ -60,11 +36,7 @@ describe('FloatingVaultAction', () => {
 
     render(
       <LanguageProvider>
-        <FloatingVaultAction
-          activeTab="vault"
-          isDetailOpenOnMobile={false}
-          onNewItem={vi.fn()}
-        />
+        <FloatingVaultAction onNewItem={vi.fn()} />
       </LanguageProvider>,
     );
 
