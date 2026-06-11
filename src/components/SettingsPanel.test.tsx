@@ -92,6 +92,14 @@ function passwordChangeInputs(container: HTMLElement): HTMLInputElement[] {
   return Array.from(container.querySelectorAll('#pass-change-form input[type="password"]')) as HTMLInputElement[];
 }
 
+function encryptedExportButtons(container: HTMLElement): HTMLButtonElement[] {
+  return Array.from(container.querySelectorAll('#encrypted-export-card button')) as HTMLButtonElement[];
+}
+
+function dropZone(container: HTMLElement): HTMLElement {
+  return container.querySelector('#drop-zone-select') as HTMLElement;
+}
+
 beforeEach(() => {
   vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
   vi.spyOn(window, 'confirm').mockReturnValue(false);
@@ -389,6 +397,31 @@ describe('SettingsPanel biometric controls', () => {
     });
   });
 
+  it('shows a missing-session error when biometric registration has no active master password', async () => {
+    vi.mocked(isBiometricSupported).mockReturnValue(true);
+    const { container } = renderSettings();
+
+    fireEvent.click(screen.getByText(/Biyometriyi/));
+
+    await waitFor(() => {
+      expect(container.textContent).toContain('Oturum');
+    });
+    expect(registerBiometric).not.toHaveBeenCalled();
+  });
+
+  it('maps WebAuthn permission errors to user-facing biometric guidance', async () => {
+    openVaultSession('master-pass');
+    vi.mocked(isBiometricSupported).mockReturnValue(true);
+    vi.mocked(registerBiometric).mockRejectedValueOnce(Object.assign(new Error('blocked'), { name: 'NotAllowedError' }));
+    const { container } = renderSettings();
+
+    fireEvent.click(screen.getByText(/Biyometriyi/));
+
+    await waitFor(() => {
+      expect(container.textContent).toContain('WebAuthn');
+    });
+  });
+
   it('disables biometrics when currently enabled', async () => {
     vi.mocked(isBiometricEnabled).mockReturnValueOnce(true);
     const { container } = renderSettings();
@@ -400,14 +433,50 @@ describe('SettingsPanel biometric controls', () => {
       expect(container.textContent).toContain('devre');
     });
   });
+
+  it('shows a disable error when biometric removal fails', async () => {
+    vi.mocked(isBiometricEnabled).mockReturnValueOnce(true);
+    vi.mocked(disableBiometric).mockImplementationOnce(() => {
+      throw new Error('remove failed');
+    });
+    const { container } = renderSettings();
+
+    fireEvent.click(screen.getByText(/Biyometriyi/));
+
+    await waitFor(() => {
+      expect(container.textContent).toContain('remove failed');
+    });
+  });
 });
 
 describe('SettingsPanel plain export and import errors', () => {
+  it('shows an encrypted export error when no active master session exists', async () => {
+    const { container } = renderSettings();
+
+    fireEvent.submit(encryptedExportForm(container));
+
+    await waitFor(() => {
+      expect(container.textContent).toContain('ana');
+    });
+    expect(encryptDataWithPasswordSecure).not.toHaveBeenCalled();
+  });
+
+  it('requires a custom encrypted-export password when master password reuse is disabled', async () => {
+    const { container } = renderSettings();
+
+    fireEvent.click(container.querySelector('#useMasterCheck') as HTMLInputElement);
+    fireEvent.submit(encryptedExportForm(container));
+
+    await waitFor(() => {
+      expect(container.textContent).toContain('alan');
+    });
+    expect(encryptDataWithPasswordSecure).not.toHaveBeenCalled();
+  });
+
   it('exports a plain JSON backup through the browser fallback', async () => {
     const { container } = renderSettings();
-    const buttons = Array.from(container.querySelectorAll('#encrypted-export-card button')) as HTMLButtonElement[];
 
-    fireEvent.click(buttons[1]);
+    fireEvent.click(encryptedExportButtons(container)[1]);
 
     await waitFor(() => {
       expect(saveDesktopExportFile).toHaveBeenCalledWith(expect.stringMatching(/\.json$/), JSON.stringify(vaultItems, null, 2));
@@ -418,9 +487,8 @@ describe('SettingsPanel plain export and import errors', () => {
   it('shows an export error when the save dialog fails', async () => {
     vi.mocked(saveDesktopExportFile).mockRejectedValueOnce(new Error('disk full'));
     const { container } = renderSettings();
-    const buttons = Array.from(container.querySelectorAll('#encrypted-export-card button')) as HTMLButtonElement[];
 
-    fireEvent.click(buttons[1]);
+    fireEvent.click(encryptedExportButtons(container)[1]);
 
     await waitFor(() => {
       expect(container.textContent).toContain('disk full');
@@ -435,6 +503,62 @@ describe('SettingsPanel plain export and import errors', () => {
 
     await waitFor(() => {
       expect(container.textContent).toContain('başlık satırı eksik');
+    });
+  });
+});
+
+describe('SettingsPanel import interaction states', () => {
+  it('shows a native file-picker error when desktop import selection fails', async () => {
+    vi.mocked(openDesktopImportFile).mockRejectedValueOnce(new Error('picker failed'));
+    const { container } = renderSettings();
+
+    fireEvent.click(dropZone(container));
+
+    await waitFor(() => {
+      expect(container.textContent).toContain('picker failed');
+    });
+  });
+
+  it('highlights and clears the import drop zone during drag events', () => {
+    const { container } = renderSettings();
+    const target = dropZone(container);
+
+    fireEvent.dragOver(target);
+
+    expect(target.className).toContain('border-brand-primary');
+
+    fireEvent.dragLeave(target);
+
+    expect(target.className).toContain('border-outline-variant');
+  });
+
+  it('can cancel a pending encrypted import prompt', async () => {
+    const { container } = renderSettings();
+    const file = new File(
+      [
+        JSON.stringify({
+          version: '1.2',
+          kdf: 'Argon2id',
+          salt: 'salt',
+          payload: 'ciphertext',
+          iv: 'iv',
+          tag: 'tag',
+        }),
+      ],
+      'secure.aegis',
+      { type: 'application/json' },
+    );
+
+    fireEvent.change(fileInput(container), { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(container.querySelector('#universal-import-card form')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Vazgeç'));
+
+    await waitFor(() => {
+      expect(container.querySelector('#universal-import-card form')).toBeNull();
     });
   });
 });

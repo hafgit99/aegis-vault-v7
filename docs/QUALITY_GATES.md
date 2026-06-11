@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 93.38% |
-| Statements | 93.38% |
-| Functions | 90.71% |
-| Branches | 84.65% |
+| Lines | 93.73% |
+| Statements | 93.73% |
+| Functions | 91.51% |
+| Branches | 85.14% |
 
 Initial thresholds are intentionally below the current baseline:
 
@@ -32,8 +32,8 @@ These thresholds prevent large regressions while leaving room to add tests aroun
 
 ## Priority Coverage Targets
 
-1. `src/components/SettingsPanel.tsx`: continue reducing import/export and biometric branch gaps.
-2. `src/components/VaultFormModal.tsx`: continue reducing category-specific attachment and validation branch gaps.
+1. `src/components/VaultFormModal.tsx`: continue reducing category-specific attachment and validation branch gaps.
+2. `src/components/SecurityAudit.tsx`: cover remaining severity threshold branch labels.
 
 Recently improved:
 
@@ -60,6 +60,7 @@ Recently improved:
 - `src/components/VaultListItem.tsx`: covered known-platform logo rendering and missing-password strength fallback.
 - `src/components/RecentVaultItem.tsx`: covered known-platform logo rendering, username copied state, and missing-password copy fallback.
 - `src/components/VaultWorkspace.tsx`: covered favorite filter active state, empty filtered-list fallback, dashboard quick actions, and profile action forwarding.
+- `src/components/SettingsPanel.tsx`: covered biometric missing-session, WebAuthn permission, and disable-error paths plus encrypted export guards, file-picker error handling, drag-state styling, and encrypted import cancellation.
 
 ## Next Gates
 
