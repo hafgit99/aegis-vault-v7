@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { X, Upload, User, Image as ImageIcon, Check } from 'lucide-react';
 
+import { useLanguage } from '../i18n/LanguageContext';
+
 interface ProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -31,6 +33,7 @@ export default function ProfileModal({
   currentName,
   onSave,
 }: ProfileModalProps) {
+  const { t } = useLanguage();
   const [name, setName] = useState(currentName);
   const [avatar, setAvatar] = useState(currentAvatar);
   const [error, setError] = useState<string | null>(null);
@@ -44,12 +47,12 @@ export default function ProfileModal({
     if (!file) return;
 
     if (file.size > 2 * 1024 * 1024) {
-      setError('Lütfen 2MB\'tan küçük bir profil resmi seçiniz.');
+      setError(t('profile.error.largeImage'));
       return;
     }
 
     if (!file.type.startsWith('image/')) {
-      setError('Lütfen geçerli bir görsel dosyası seçiniz (PNG, JPG, WebP).');
+      setError(t('profile.error.invalidImage'));
       return;
     }
 
@@ -61,7 +64,7 @@ export default function ProfileModal({
       }
     };
     reader.onerror = () => {
-      setError('Görsel dosyası okunurken hata oluştu.');
+      setError(t('profile.error.readImage'));
     };
     reader.readAsDataURL(file);
   };
@@ -69,7 +72,7 @@ export default function ProfileModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      setError('Lütfen geçerli bir isim giriniz.');
+      setError(t('profile.error.invalidName'));
       return;
     }
     onSave(name.trim(), avatar);
@@ -85,16 +88,16 @@ export default function ProfileModal({
         <button
           onClick={onClose}
           className="absolute right-4 top-4 text-on-surface-variant hover:text-on-surface p-1.5 hover:bg-surface-high rounded-lg transition-all cursor-pointer z-10"
-          title="Kapat"
+          title={t('profile.close')}
         >
           <X className="w-5 h-5" />
         </button>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="space-y-1">
-            <h3 className="font-display text-lg font-bold text-on-surface">Profili Özelleştir</h3>
+            <h3 className="font-display text-lg font-bold text-on-surface">{t('profile.title')}</h3>
             <p className="text-on-surface-variant text-[11px]">
-              Kişisel kasanızdaki görünümünüzü ve isminizi dilediğiniz gibi güncelleyin.
+              {t('profile.description')}
             </p>
           </div>
 
@@ -117,7 +120,7 @@ export default function ProfileModal({
               ) : (
                 <img
                   src={avatar}
-                  alt="Profil"
+                  alt={t('profile.avatarAlt')}
                   referrerPolicy="no-referrer"
                   className="w-24 h-24 rounded-full border-2 border-brand-primary object-cover shadow-lg"
                 />
@@ -127,7 +130,7 @@ export default function ProfileModal({
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="absolute bottom-0 right-0 p-1.5 bg-brand-primary text-brand-on-primary rounded-full hover:scale-110 active:scale-95 transition-all shadow-md cursor-pointer border border-surface-lowest"
-                title="Yeni Resim Yükle"
+                title={t('profile.uploadTitle')}
               >
                 <Upload className="w-4 h-4" />
               </button>
@@ -147,14 +150,14 @@ export default function ProfileModal({
               className="text-xs font-bold text-brand-primary hover:underline flex items-center gap-1 cursor-pointer"
             >
               <ImageIcon className="w-3.5 h-3.5" />
-              <span>Cihazdan Resim Yükle (.png, .jpg)</span>
+              <span>{t('profile.uploadDevice')}</span>
             </button>
           </div>
 
           {/* Preset Gradients */}
           <div className="space-y-2">
             <label className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase">
-              RENGİNİ SEÇ (GRADIENT PRESETS)
+              {t('profile.colorLabel')}
             </label>
             <div className="flex items-center gap-2 flex-wrap justify-center">
               {PRESET_AVATARS.map((gradient, idx) => {
@@ -182,7 +185,7 @@ export default function ProfileModal({
           {/* Display Name Input */}
           <div className="space-y-2">
             <label htmlFor="profile-name-input" className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase">
-              KULLANICI ADI VEYA LAKAP
+              {t('profile.nameLabel')}
             </label>
             <div className="relative">
               <User className="absolute left-3 top-3.5 w-4 h-4 text-on-surface-variant/50" />
@@ -192,7 +195,7 @@ export default function ProfileModal({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 maxLength={30}
-                placeholder="Yedek parolanızın adı"
+                placeholder={t('profile.namePlaceholder')}
                 className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/25 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 text-on-surface font-semibold"
               />
             </div>
@@ -205,13 +208,13 @@ export default function ProfileModal({
               onClick={onClose}
               className="flex-1 py-2.5 rounded-xl border border-outline-variant/15 bg-surface-high hover:bg-[#202220] font-bold text-xs text-on-surface hover:text-brand-primary active:scale-95 transition-all cursor-pointer"
             >
-              Vazgeç
+              {t('profile.cancel')}
             </button>
             <button
               type="submit"
               className="flex-1 py-2.5 bg-brand-primary hover:bg-brand-primary/90 text-brand-on-primary font-bold text-xs rounded-xl active:scale-95 transition-all cursor-pointer shadow-md"
             >
-              Değişiklikleri Kaydet
+              {t('profile.save')}
             </button>
           </div>
         </form>

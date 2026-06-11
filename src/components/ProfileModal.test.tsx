@@ -5,6 +5,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 import ProfileModal, { isGradient } from './ProfileModal';
 
 class MockFileReader {
@@ -30,6 +32,7 @@ class FailingFileReader {
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
   vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
@@ -223,5 +226,60 @@ describe('ProfileModal', () => {
     fireEvent.click(screen.getByTitle('Kapat'));
 
     expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
+  it('renders profile controls in the selected language', () => {
+    window.localStorage.setItem(languageStorageKey, 'en');
+
+    render(
+      <LanguageProvider>
+        <ProfileModal
+          isOpen={true}
+          currentAvatar="linear-gradient(135deg, #10b981 0%, #059669 100%)"
+          currentName="Hafiz"
+          onClose={vi.fn()}
+          onSave={vi.fn()}
+        />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByText('Customize Profile')).toBeTruthy();
+    expect(screen.getByText(/Update your appearance and name/i)).toBeTruthy();
+    expect(screen.getByText('Upload Image from Device (.png, .jpg)')).toBeTruthy();
+    expect(screen.getByText('CHOOSE COLOR (GRADIENT PRESETS)')).toBeTruthy();
+    expect(screen.getByLabelText('USERNAME OR NICKNAME')).toBeTruthy();
+    expect(screen.getByPlaceholderText('Name of your backup password')).toBeTruthy();
+    expect(screen.getByText('Cancel')).toBeTruthy();
+    expect(screen.getByText('Save Changes')).toBeTruthy();
+    expect(screen.getByTitle('Upload New Image')).toBeTruthy();
+    expect(screen.getByTitle('Close')).toBeTruthy();
+  });
+
+  it('renders validation feedback in the selected language', () => {
+    window.localStorage.setItem(languageStorageKey, 'en');
+
+    render(
+      <LanguageProvider>
+        <ProfileModal
+          isOpen={true}
+          currentAvatar="linear-gradient(135deg, #10b981 0%, #059669 100%)"
+          currentName="Hafiz"
+          onClose={vi.fn()}
+          onSave={vi.fn()}
+        />
+      </LanguageProvider>,
+    );
+
+    fireEvent.change(screen.getByLabelText('USERNAME OR NICKNAME'), { target: { value: '   ' } });
+    fireEvent.click(screen.getByText('Save Changes'));
+
+    expect(screen.getByText('Please enter a valid name.')).toBeTruthy();
+
+    const textFile = new File(['not image'], 'note.txt', { type: 'text/plain' });
+    fireEvent.change(document.querySelector<HTMLInputElement>('input[type="file"]')!, {
+      target: { files: [textFile] },
+    });
+
+    expect(screen.getByText('Please choose a valid image file (PNG, JPG, WebP).')).toBeTruthy();
   });
 });

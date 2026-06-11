@@ -92,6 +92,7 @@ Recently improved:
 - Vault attachment card: covered selected-language rendering for attachment title, decrypt-on-download label, and download tooltip.
 - Trash workspace components: covered selected-language rendering for empty state, protection notice, workspace copy, item metadata, and restore/delete controls.
 - Shared controls: covered selected-language rendering for top bar tooltips and confirmation modal default/alert controls.
+- Profile modal: covered selected-language rendering for modal copy, upload controls, form labels, actions, and validation feedback.
 - `src/components/VaultFormModal.tsx`: covered edit-save identity preservation, title validation, password visibility/autogeneration, selected file removal, attachment upload failures, existing attachment removal before save, and download error notifications.
 - `src/components/CardDetail.tsx`: covered copied states, PIN copy action, missing-field fallbacks, and empty-string copy behavior.
 - `src/components/LoginDetail.tsx`: covered copied states, empty-password fallback, and safe empty-password copy behavior.
