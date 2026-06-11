@@ -179,6 +179,24 @@ export default function App() {
 
   const score = useSelectedItemScore(selectedItem);
 
+  const handleManualRefresh = async () => {
+    try {
+      await refreshDatabase();
+      showNotification({
+        title: t('top.refreshSuccessTitle'),
+        message: t('top.refreshSuccessMessage'),
+        type: 'success',
+      });
+    } catch (err) {
+      console.error(err);
+      showNotification({
+        title: t('top.refreshErrorTitle'),
+        message: t('top.refreshErrorMessage'),
+        type: 'danger',
+      });
+    }
+  };
+
   // If locked, return the beautiful LockScreen UI
   if (!unlocked) {
     return <LockScreen onUnlock={handleUnlock} />;
@@ -205,7 +223,7 @@ export default function App() {
           profileAvatar={profileAvatar}
           onSearchChange={setSearchQuery}
           onOpenSidebar={handleOpenSidebar}
-          onRefresh={refreshDatabase}
+          onRefresh={handleManualRefresh}
           onOpenVaultStatus={handleOpenVaultStatus}
           onOpenProfile={handleOpenProfile}
         />

@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import { Bell, Menu, RefreshCw, Search } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
@@ -30,6 +32,17 @@ export default function TopBar({
   onOpenProfile,
 }: TopBarProps) {
   const { t } = useLanguage();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefreshClick = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   return (
     <header className="h-[64px] border-b border-outline-variant/10 bg-surface-lowest/60 backdrop-blur-xl flex justify-between items-center px-4 lg:px-8 z-30">
@@ -63,11 +76,12 @@ export default function TopBar({
         <div className="flex items-center gap-4 text-on-surface-variant">
           <button
             data-testid="topbar-refresh-button"
-            onClick={onRefresh}
-            className="hover:text-brand-primary transition-colors focus:outline-none p-1.5 rounded-md hover:bg-surface-high cursor-pointer"
+            onClick={handleRefreshClick}
+            disabled={isRefreshing}
+            className="hover:text-brand-primary transition-colors focus:outline-none p-1.5 rounded-md hover:bg-surface-high cursor-pointer disabled:cursor-wait disabled:opacity-70"
             title={t('top.refresh')}
           >
-            <RefreshCw className="w-4.5 h-4.5" />
+            <RefreshCw className={`w-4.5 h-4.5 ${isRefreshing ? 'animate-spin' : ''}`} />
           </button>
           <button
             data-testid="topbar-status-button"

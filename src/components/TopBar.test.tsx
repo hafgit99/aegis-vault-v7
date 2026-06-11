@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { LanguageProvider } from '../i18n/LanguageContext';
@@ -93,5 +93,43 @@ describe('TopBar', () => {
     expect(screen.getByTitle('Notifications')).toBeTruthy();
     expect(screen.getByTitle('Ada - Edit Profile')).toBeTruthy();
     expect(screen.getByPlaceholderText('Search inside vault...')).toBeTruthy();
+  });
+
+  it('disables the refresh button while refresh is running', async () => {
+    let resolveRefresh: () => void = () => {};
+    const onRefresh = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveRefresh = resolve;
+        }),
+    );
+
+    render(
+      <TopBar
+        activeTab="vault"
+        searchQuery=""
+        profileName="Ada"
+        profileAvatar="linear-gradient(135deg, #10b981 0%, #059669 100%)"
+        onSearchChange={vi.fn()}
+        onOpenSidebar={vi.fn()}
+        onRefresh={onRefresh}
+        onOpenVaultStatus={vi.fn()}
+        onOpenProfile={vi.fn()}
+      />,
+    );
+
+    const refreshButton = screen.getByTestId('topbar-refresh-button') as HTMLButtonElement;
+    fireEvent.click(refreshButton);
+    fireEvent.click(refreshButton);
+
+    expect(refreshButton.disabled).toBe(true);
+    expect(refreshButton.querySelector('.animate-spin')).toBeTruthy();
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+
+    resolveRefresh();
+
+    await waitFor(() => {
+      expect(refreshButton.disabled).toBe(false);
+    });
   });
 });
