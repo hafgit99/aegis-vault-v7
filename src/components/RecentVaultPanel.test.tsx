@@ -5,6 +5,8 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 import { VaultItem } from '../types';
 import RecentVaultPanel from './RecentVaultPanel';
 
@@ -21,6 +23,7 @@ const item = (id: string, title: string): VaultItem => ({
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
 });
 
 describe('RecentVaultPanel', () => {
@@ -29,6 +32,20 @@ describe('RecentVaultPanel', () => {
 
     expect(screen.getByText('Son Eklenen Parolalar')).toBeTruthy();
     expect(screen.getByText('Henüz kayıtlı parola bulunmuyor.')).toBeTruthy();
+  });
+
+  it('renders recent panel copy in the selected language', () => {
+    window.localStorage.setItem(languageStorageKey, 'en');
+
+    render(
+      <LanguageProvider>
+        <RecentVaultPanel items={[]} copiedField={null} onSelect={vi.fn()} onCopyText={vi.fn()} />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByText('Recently Added Passwords')).toBeTruthy();
+    expect(screen.getByText('Quick Access')).toBeTruthy();
+    expect(screen.getByText('No saved passwords yet.')).toBeTruthy();
   });
 
   it('renders the latest three items in newest-first order', () => {

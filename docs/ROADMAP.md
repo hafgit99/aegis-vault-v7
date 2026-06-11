@@ -76,6 +76,7 @@
   - [x] Translate the primary shell, settings language control, lock screen, and dashboard header.
   - [x] Translate the vault list filters, empty state, dashboard entry, and new-item actions.
   - [x] Translate dashboard quick actions, security score card, and category summary cards.
+  - [x] Translate dashboard recent-items, cryptology shield, and Aegis Guard report panels.
 - [x] Add component tests for lock screen, vault form, settings import/export, and trash.
   - [x] Lock screen setup and unlock behavior covered by component tests.
   - [x] Settings encrypted export and JSON import behavior covered by component tests.

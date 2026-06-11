@@ -1,5 +1,6 @@
 import { AlertTriangle, ShieldCheck } from 'lucide-react';
 
+import { useLanguage } from '../i18n/LanguageContext';
 import { APP_SECURITY_BRAND } from '../lib/branding';
 import { AuditReport } from '../types';
 
@@ -8,6 +9,7 @@ interface AegisGuardReportProps {
 }
 
 export default function AegisGuardReport({ auditReport }: AegisGuardReportProps) {
+  const { t } = useLanguage();
   const isSecure = auditReport.score >= 85;
 
   return (
@@ -20,11 +22,11 @@ export default function AegisGuardReport({ auditReport }: AegisGuardReportProps)
         )}
       </div>
       <div className="space-y-1">
-        <h4 className="font-bold text-on-surface">{APP_SECURITY_BRAND} Güvenlik Raporu</h4>
+        <h4 className="font-bold text-on-surface">{APP_SECURITY_BRAND} {t('dashboard.guard.titleSuffix')}</h4>
         <p className="text-on-surface-variant text-[11px] leading-relaxed opacity-90">
           {isSecure
-            ? 'Parola koruma mekanizmalarınız tam performans çalışmaktadır. Hiçbir riskli nokta tespit edilemedi. Yerel kasanız güvenli tutulmaktadır.'
-            : `Hassas senedinizde ${auditReport.weakCount} adet zayıf ve ${auditReport.reusedCount} adet çift kullanılmış parola tespit edilmiştir. Kritik sızıntıları önlemek için Şifre Denetleyicisi sayfamızı ziyaret etmenizi tavsiye ederiz.`}
+            ? t('dashboard.guard.secureDescription')
+            : `${t('dashboard.guard.riskyPrefix')} ${auditReport.weakCount} ${t('dashboard.guard.weakSuffix')} ${t('dashboard.guard.connector')} ${auditReport.reusedCount} ${t('dashboard.guard.reusedSuffix')}`}
         </p>
       </div>
     </div>

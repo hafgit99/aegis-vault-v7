@@ -1,6 +1,7 @@
 import { Clock } from 'lucide-react';
 import React from 'react';
 
+import { useLanguage } from '../i18n/LanguageContext';
 import { VaultItem } from '../types';
 import RecentVaultItem from './RecentVaultItem';
 
@@ -12,6 +13,7 @@ interface RecentVaultPanelProps {
 }
 
 export default function RecentVaultPanel({ items, copiedField, onSelect, onCopyText }: RecentVaultPanelProps) {
+  const { t } = useLanguage();
   const recentItems = items.slice(-3).slice().reverse();
 
   return (
@@ -20,13 +22,13 @@ export default function RecentVaultPanel({ items, copiedField, onSelect, onCopyT
         <div className="flex items-center justify-between border-b border-outline-variant/10 pb-3 mb-3">
           <h3 className="font-display text-xs font-bold uppercase tracking-widest text-[#059669] flex items-center gap-2">
             <Clock className="w-4 h-4 text-brand-primary" />
-            <span>Son Eklenen Parolalar</span>
+            <span>{t('dashboard.recent.title')}</span>
           </h3>
-          <span className="text-[10px] text-on-surface-variant font-mono">Hızlı Erişim</span>
+          <span className="text-[10px] text-on-surface-variant font-mono">{t('dashboard.recent.badge')}</span>
         </div>
         <div className="space-y-2.5">
           {items.length === 0 ? (
-            <p className="text-xs text-on-surface-variant/40 italic py-4 text-center">Henüz kayıtlı parola bulunmuyor.</p>
+            <p className="text-xs text-on-surface-variant/40 italic py-4 text-center">{t('dashboard.recent.empty')}</p>
           ) : (
             recentItems.map((item) => (
               <React.Fragment key={item.id}>

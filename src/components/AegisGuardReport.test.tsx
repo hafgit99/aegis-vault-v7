@@ -5,11 +5,14 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 import { APP_SECURITY_BRAND } from '../lib/branding';
 import AegisGuardReport from './AegisGuardReport';
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
 });
 
 describe('AegisGuardReport', () => {
@@ -45,5 +48,27 @@ describe('AegisGuardReport', () => {
 
     expect(screen.getByText(/3 adet zayıf/)).toBeTruthy();
     expect(screen.getByText(/2 adet çift kullanılmış/)).toBeTruthy();
+  });
+
+  it('renders the report in the selected language', () => {
+    window.localStorage.setItem(languageStorageKey, 'en');
+
+    render(
+      <LanguageProvider>
+        <AegisGuardReport
+          auditReport={{
+            score: 42,
+            weakCount: 3,
+            reusedCount: 2,
+            secureCount: 1,
+            totalCount: 6,
+          }}
+        />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByText(`${APP_SECURITY_BRAND} Security Report`)).toBeTruthy();
+    expect(screen.getByText(/3 weak/)).toBeTruthy();
+    expect(screen.getByText(/2 reused passwords/)).toBeTruthy();
   });
 });
