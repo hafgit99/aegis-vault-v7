@@ -31,6 +31,11 @@ async function createLoginItem(
   return savedItem;
 }
 
+async function openSettings(page: Page) {
+  await page.getByTestId('nav-settings-button').click();
+  await expect(page.getByTestId('plain-export-button')).toBeVisible();
+}
+
 test('sets up, stores, locks, and unlocks a vault item', async ({ page }) => {
   await setupVault(page);
 
@@ -65,4 +70,43 @@ test('moves a vault item to trash and restores it', async ({ page }) => {
 
   await page.getByTestId('nav-vault-button').click();
   await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Trash Restore' })).toBeVisible();
+});
+
+test('exports an encrypted backup download', async ({ page }) => {
+  await setupVault(page);
+  await createLoginItem(page, 'E2E Export Backup');
+  await openSettings(page);
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByTestId('encrypted-export-button').click();
+  const download = await downloadPromise;
+
+  expect(download.suggestedFilename()).toMatch(/^aegis_guvenli_yedek_\d{4}-\d{2}-\d{2}\.aegis$/);
+});
+
+test('imports a plain JSON backup file', async ({ page }) => {
+  await setupVault(page);
+  await openSettings(page);
+
+  await page.getByTestId('import-file-input').setInputFiles({
+    name: 'aegis-e2e-import.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify([
+      {
+        title: 'E2E Imported Login',
+        username: 'imported-user',
+        password: 'ImportedPass!42',
+        url: 'https://import.example',
+        notes: 'Imported through Playwright.',
+        category: 'login',
+      },
+    ])),
+  });
+
+  await expect(page.getByTestId('import-success-message')).toBeVisible();
+
+  await page.getByTestId('nav-vault-button').click();
+  const importedItem = page.getByTestId('vault-list-item').filter({ hasText: 'E2E Imported Login' });
+  await expect(importedItem).toBeVisible();
+  await expect(importedItem).toContainText('imported-user');
 });

@@ -703,6 +703,7 @@ export default function SettingsPanel({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                 <button
+                  data-testid="encrypted-export-button"
                   type="submit"
                   className="w-full flex items-center justify-center gap-2 bg-brand-tertiary text-black font-extrabold py-3 rounded-lg text-xs hover:brightness-110 active:scale-95 transition-all cursor-pointer shadow-lg shadow-brand-tertiary/5"
                 >
@@ -710,6 +711,7 @@ export default function SettingsPanel({
                   <span>Şifreli .aegis Yedeği</span>
                 </button>
                 <button
+                  data-testid="plain-export-button"
                   type="button"
                   onClick={handleExportPlain}
                   className="w-full flex items-center justify-center gap-2 border border-outline-variant/30 text-on-surface-variant hover:text-on-surface py-3 rounded-lg text-xs hover:bg-[#1a1c1a]/50 active:scale-95 transition-all cursor-pointer"
@@ -746,6 +748,7 @@ export default function SettingsPanel({
 
                 <div>
                   <input
+                    data-testid="decrypt-import-password-input"
                     type="password"
                     value={decryptPasswordInput}
                     onChange={(e) => setDecryptPasswordInput(e.target.value)}
@@ -764,6 +767,7 @@ export default function SettingsPanel({
 
                 <div className="flex items-center gap-2.5">
                   <button
+                    data-testid="decrypt-import-submit-button"
                     type="submit"
                     className="flex-1 py-2 bg-brand-primary text-brand-on-primary font-bold text-xs rounded-lg hover:brightness-110 active:scale-95 transition-all"
                   >
@@ -798,6 +802,7 @@ export default function SettingsPanel({
                 id="drop-zone-select"
               >
                 <input
+                  data-testid="import-file-input"
                   type="file"
                   ref={fileInputRef}
                   onChange={handleFileSelect}
@@ -813,13 +818,19 @@ export default function SettingsPanel({
             )}
 
             {importError && (
-              <div className="p-3 bg-brand-error/10 border border-brand-error/20 rounded-lg text-brand-error text-xs">
+              <div
+                data-testid="import-error-message"
+                className="p-3 bg-brand-error/10 border border-brand-error/20 rounded-lg text-brand-error text-xs"
+              >
                 {importError}
               </div>
             )}
             
             {importSuccess && (
-              <div className="p-3 bg-brand-tertiary/10 border border-brand-tertiary/20 rounded-lg text-brand-tertiary text-xs font-semibold">
+              <div
+                data-testid="import-success-message"
+                className="p-3 bg-brand-tertiary/10 border border-brand-tertiary/20 rounded-lg text-brand-tertiary text-xs font-semibold"
+              >
                 {importSuccess}
               </div>
             )}

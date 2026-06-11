@@ -143,6 +143,7 @@
   - [x] Expand SQLite OPFS file hydration, missing-file initialization, write-failure, and desktop-read fallback coverage.
   - [x] Add Playwright smoke E2E coverage for setup, create item, lock, unlock, and persistence.
   - [x] Add Playwright smoke E2E coverage for trash move and restore.
+  - [x] Add Playwright smoke E2E coverage for encrypted export and plain JSON import.
 
 ## Phase 4: Desktop Productization
 

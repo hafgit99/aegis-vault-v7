@@ -62,7 +62,11 @@ export default function SidebarNavigation({
           <span>Şifre Üretici</span>
         </button>
 
-        <button onClick={() => onTabChange('settings')} className={getNavButtonClass(activeTab, 'settings')}>
+        <button
+          data-testid="nav-settings-button"
+          onClick={() => onTabChange('settings')}
+          className={getNavButtonClass(activeTab, 'settings')}
+        >
           <Settings className="w-4 h-4" />
           <span>Ayarlar</span>
         </button>
