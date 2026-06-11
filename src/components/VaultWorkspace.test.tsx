@@ -6,6 +6,8 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 import { APP_NAME } from '../lib/branding';
 import { AuditReport, VaultItem } from '../types';
 import VaultWorkspace from './VaultWorkspace';
@@ -40,7 +42,18 @@ function buttonByText(text: string) {
   return button;
 }
 
-function renderWorkspace(overrides: Partial<ComponentProps<typeof VaultWorkspace>> = {}) {
+interface RenderWorkspaceOptions {
+  language?: string;
+}
+
+function renderWorkspace(
+  overrides: Partial<ComponentProps<typeof VaultWorkspace>> = {},
+  options: RenderWorkspaceOptions = {},
+) {
+  if (options.language) {
+    window.localStorage.setItem(languageStorageKey, options.language);
+  }
+
   const props: ComponentProps<typeof VaultWorkspace> = {
     selectedItem: null,
     mobileActiveView: 'list',
@@ -78,13 +91,18 @@ function renderWorkspace(overrides: Partial<ComponentProps<typeof VaultWorkspace
     ...overrides,
   };
 
-  render(<VaultWorkspace {...props} />);
+  render(
+    <LanguageProvider>
+      <VaultWorkspace {...props} />
+    </LanguageProvider>,
+  );
 
   return props;
 }
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
 });
 
 describe('VaultWorkspace', () => {
@@ -102,7 +120,7 @@ describe('VaultWorkspace', () => {
   it('forwards list, filter and dashboard actions', () => {
     const props = renderWorkspace();
 
-    fireEvent.click(screen.getByTitle('Yeni Şifre Ekle'));
+    fireEvent.click(screen.getByTestId('new-vault-item-button'));
     fireEvent.click(screen.getByText('Favoriler (1)'));
     fireEvent.click(screen.getByText('Aegis Kontrol Paneli'));
     fireEvent.click(screen.getAllByText('Aegis Mail')[0]);
@@ -143,6 +161,17 @@ describe('VaultWorkspace', () => {
         .some((element) => element.className.includes('italic')),
     ).toBe(true);
     expect(screen.getByText((_, element) => element?.textContent === '0 öğe listeleniyor')).toBeTruthy();
+  });
+
+  it('renders vault list controls in the selected language', () => {
+    renderWorkspace({}, { language: 'zh' });
+
+    expect(screen.getByText('个人保险库')).toBeTruthy();
+    expect(screen.getByText('Aegis 控制面板')).toBeTruthy();
+    expect(screen.getByText('全部 (2)')).toBeTruthy();
+    expect(screen.getByText('收藏 (1)')).toBeTruthy();
+    expect(screen.getByText((_, element) => element?.textContent === '2 项已列出')).toBeTruthy();
+    expect(screen.getByTitle('添加新密码')).toBeTruthy();
   });
 
   it('forwards dashboard header and quick action callbacks', () => {

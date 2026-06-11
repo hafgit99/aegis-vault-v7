@@ -1,6 +1,7 @@
 import { Fragment } from 'react';
 import { Heart, LayoutDashboard, Plus } from 'lucide-react';
 
+import { useLanguage } from '../i18n/LanguageContext';
 import { AuditReport, VaultItem } from '../types';
 import AegisGuardReport from './AegisGuardReport';
 import CryptoShieldPanel from './CryptoShieldPanel';
@@ -83,6 +84,8 @@ export default function VaultWorkspace({
   onCopyText,
   onDownloadAttachment,
 }: VaultWorkspaceProps) {
+  const { t } = useLanguage();
+
   return (
     <>
       <section
@@ -92,12 +95,12 @@ export default function VaultWorkspace({
       >
         <div className="p-6 pb-2 space-y-3">
           <h2 className="font-display text-lg font-bold text-on-surface flex items-center justify-between">
-            <span>Kişisel Kasa</span>
+            <span>{t('vaultList.title')}</span>
             <button
               data-testid="new-vault-item-button"
               onClick={onNewItem}
               className="text-on-surface-variant hover:text-brand-primary transition-all cursor-pointer"
-              title="Yeni Şifre Ekle"
+              title={t('vaultList.newItem')}
             >
               <Plus className="w-5 h-5" />
             </button>
@@ -113,7 +116,7 @@ export default function VaultWorkspace({
                   : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >
-              Tümü ({activeItems.length})
+              {t('vaultList.all')} ({activeItems.length})
             </button>
             <button
               data-testid="vault-filter-favorites"
@@ -125,12 +128,12 @@ export default function VaultWorkspace({
               }`}
             >
               <Heart className="w-3.5 h-3.5 fill-red-500 text-red-500" />
-              <span>Favoriler ({favoriteCount})</span>
+              <span>{t('vaultList.favorites')} ({favoriteCount})</span>
             </button>
           </div>
 
           <p className="text-on-surface-variant text-xs mt-1">
-            {filteredItems.length} öğe listeleniyor
+            {filteredItems.length} {t('vaultList.itemsListed')}
           </p>
         </div>
 
@@ -148,10 +151,10 @@ export default function VaultWorkspace({
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-display font-bold text-xs text-brand-primary tracking-wider uppercase flex items-center gap-1.5">
-                <span>Aegis Kontrol Paneli</span>
+                <span>{t('vaultList.dashboardTitle')}</span>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
               </h3>
-              <p className="text-[10px] text-on-surface-variant font-mono truncate">Detaylı istatistikleri ve analizleri gör</p>
+              <p className="text-[10px] text-on-surface-variant font-mono truncate">{t('vaultList.dashboardDescription')}</p>
             </div>
           </div>
 
@@ -160,7 +163,7 @@ export default function VaultWorkspace({
               data-testid="vault-empty-state"
               className="text-center py-10 px-4 text-xs text-on-surface-variant/40 italic"
             >
-              Arama sonucu veya kayıtlı favori veri bulunamadı. Ekle butonuna tıklayarak yeni veri oluşturabilirsiniz.
+              {t('vaultList.empty')}
             </div>
           ) : (
             filteredItems.map((item) => (
