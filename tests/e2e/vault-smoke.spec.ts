@@ -185,3 +185,20 @@ test('rejects encrypted aegis import with a wrong password', async ({ page }) =>
   await expect(page.getByTestId('decrypt-import-password-input')).toBeVisible();
   await expect(page.getByTestId('import-success-message')).toBeHidden();
 });
+
+test('cancels encrypted aegis import before decrypting', async ({ page }) => {
+  await setupVault(page);
+  await createLoginItem(page, 'E2E Cancel Import');
+  await openSettings(page);
+
+  const downloadPath = await exportEncryptedBackup(page);
+
+  await page.getByTestId('import-file-input').setInputFiles(downloadPath);
+  await expect(page.getByTestId('decrypt-import-password-input')).toBeVisible();
+
+  await page.getByTestId('decrypt-import-cancel-button').click();
+
+  await expect(page.getByTestId('decrypt-import-password-input')).toBeHidden();
+  await expect(page.getByTestId('import-file-input')).toBeAttached();
+  await expect(page.getByTestId('import-success-message')).toBeHidden();
+});

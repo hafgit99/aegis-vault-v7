@@ -777,6 +777,7 @@ export default function SettingsPanel({
                     Şifreyi Çöz ve Aktar
                   </button>
                   <button
+                    data-testid="decrypt-import-cancel-button"
                     type="button"
                     onClick={() => {
                       setPendingEnvelope(null);

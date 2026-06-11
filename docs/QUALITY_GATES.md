@@ -59,6 +59,7 @@ Current smoke scope:
 - Import a plain JSON backup file and verify the imported item appears in the vault.
 - Import an encrypted `.aegis` backup file with the master password and verify the imported item appears in the vault.
 - Reject encrypted `.aegis` import when the backup password is wrong.
+- Cancel encrypted `.aegis` import before decrypting.
 
 Recently improved:
 
@@ -101,6 +102,6 @@ Recently improved:
 
 ## Next Gates
 
-- Expand smoke E2E coverage for import cancellation, empty-state behavior, and desktop persistence.
+- Expand smoke E2E coverage for empty-state behavior, navigation stability, and desktop persistence.
 - Add mutation tests only for critical `src/lib` modules first.
 - Raise global coverage thresholds after the low-coverage critical modules improve.
