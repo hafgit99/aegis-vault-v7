@@ -57,7 +57,38 @@ describe('IdentityDetail', () => {
     expect(onCopyText).toHaveBeenCalledWith('A1234567', 'idNumber');
   });
 
+  it('renders copied states for name and document number', () => {
+    ['idFullName', 'idNumber'].forEach((copiedField) => {
+      const { container, unmount } = render(
+        <IdentityDetail
+          item={identityItem}
+          copiedField={copiedField}
+          onCopyText={vi.fn()}
+        />,
+      );
+
+      expect(container.querySelector('.text-brand-tertiary')).toBeTruthy();
+      unmount();
+    });
+  });
+
+  it('renders the male gender label', () => {
+    render(
+      <IdentityDetail
+        item={{
+          ...identityItem,
+          idGender: 'Male',
+        }}
+        copiedField={null}
+        onCopyText={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Erkek / M')).toBeTruthy();
+  });
+
   it('renders fallback values for missing optional identity fields', () => {
+    const onCopyText = vi.fn();
     render(
       <IdentityDetail
         item={{
@@ -68,12 +99,16 @@ describe('IdentityDetail', () => {
           idGender: '',
         }}
         copiedField={null}
-        onCopyText={vi.fn()}
+        onCopyText={onCopyText}
       />,
     );
 
     expect(screen.getByText('Girilmedi')).toBeTruthy();
     expect(screen.getAllByText('Belirtilmedi')).toHaveLength(2);
     expect(screen.getByText('Sınırsız / Yok')).toBeTruthy();
+
+    fireEvent.click(screen.getAllByRole('button')[0]);
+
+    expect(onCopyText).toHaveBeenCalledWith('', 'idFullName');
   });
 });

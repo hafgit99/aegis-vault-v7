@@ -118,6 +118,7 @@
   - [x] Expand card detail copy, reveal, and fallback coverage.
   - [x] Expand login detail copied-state and empty-password coverage.
   - [x] Expand passkey detail copied-state and fallback coverage.
+  - [x] Expand identity detail copied-state and fallback coverage.
 
 ## Phase 4: Desktop Productization
 
