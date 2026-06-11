@@ -5,11 +5,14 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 import { VaultItem } from '../types';
 import SecurityAudit from './SecurityAudit';
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
 });
 
 const makeItem = (overrides: Partial<VaultItem>): VaultItem => ({
@@ -61,7 +64,7 @@ describe('SecurityAudit', () => {
     expect(screen.getByText('Legacy Admin')).toBeTruthy();
     expect(screen.getByText('Billing')).toBeTruthy();
     expect(screen.getByText('Invoices')).toBeTruthy();
-    expect(screen.getByText(/ZAYIF VE RISKLI HESAPLAR \(1\)/)).toBeTruthy();
+    expect(screen.getByText(/ZAYIF VE RİSKLİ HESAPLAR \(1\)/)).toBeTruthy();
     expect(screen.getByText(/TEKRAR EDEN/)).toBeTruthy();
 
     fireEvent.click(screen.getByText('Legacy Admin'));
@@ -86,7 +89,7 @@ describe('SecurityAudit', () => {
     );
 
     expect(screen.getByText(/yile/)).toBeTruthy();
-    expect(screen.getByText(/ZAYIF VE RISKLI HESAPLAR \(0\)/)).toBeTruthy();
+    expect(screen.getByText(/ZAYIF VE RİSKLİ HESAPLAR \(0\)/)).toBeTruthy();
     expect(screen.getByText(/TEKRAR EDEN/)).toBeTruthy();
   });
 
@@ -102,8 +105,8 @@ describe('SecurityAudit', () => {
     render(<SecurityAudit items={[missingPasswordItem]} onSelectItem={onSelectItem} />);
 
     expect(screen.getByText(/Kritik Risk/)).toBeTruthy();
-    expect(screen.getByText(/ZAYIF VE RISKLI HESAPLAR \(1\)/)).toBeTruthy();
-    expect(screen.getByText(/ORANGE TEKRAR EDEN/)).toBeTruthy();
+    expect(screen.getByText(/ZAYIF VE RİSKLİ HESAPLAR \(1\)/)).toBeTruthy();
+    expect(screen.getByText(/TEKRAR EDEN ŞİFRELER/)).toBeTruthy();
     expect(screen.getByText('SSH Profile')).toBeTruthy();
     expect(screen.getAllByText('0')).toHaveLength(2);
 
@@ -135,5 +138,36 @@ describe('SecurityAudit', () => {
     expect(screen.getByText('2')).toBeTruthy();
     expect(screen.queryByText('Email')).toBeNull();
     expect(screen.queryByText('Bank')).toBeNull();
+  });
+
+  it('renders security audit labels in the selected language', () => {
+    window.localStorage.setItem(languageStorageKey, 'en');
+
+    render(
+      <LanguageProvider>
+        <SecurityAudit
+          items={[
+            makeItem({
+              id: 'weak',
+              title: 'Legacy Admin',
+              username: 'admin',
+              password: '123',
+            }),
+          ]}
+          onSelectItem={vi.fn()}
+        />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByText('Security Audit')).toBeTruthy();
+    expect(screen.getByText(/Continuously analyze your vault/i)).toBeTruthy();
+    expect(screen.getByText('Critical Risk Status')).toBeTruthy();
+    expect(screen.getByText('Weak Passwords')).toBeTruthy();
+    expect(screen.getByText('Reused Passwords')).toBeTruthy();
+    expect(screen.getByText('Strong / Secure')).toBeTruthy();
+    expect(screen.getByText(/WEAK AND RISKY ACCOUNTS \(1\)/)).toBeTruthy();
+    expect(screen.getByText(/REUSED PASSWORDS \(0\)/)).toBeTruthy();
+    expect(screen.getByText('Open and Fix')).toBeTruthy();
+    expect(screen.getByText('There are no conflicting reused passwords in your vault.')).toBeTruthy();
   });
 });

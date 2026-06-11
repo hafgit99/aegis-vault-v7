@@ -5,6 +5,8 @@
 
 import React from 'react';
 import { ShieldCheck, AlertTriangle, AlertCircle, Sparkles, ArrowRight, User } from 'lucide-react';
+
+import { useLanguage } from '../i18n/LanguageContext';
 import { VaultItem } from '../types';
 import { runVaultAudit, calculatePasswordScore } from '../lib/security';
 
@@ -14,6 +16,7 @@ interface SecurityAuditProps {
 }
 
 export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProps) {
+  const { t } = useLanguage();
   const audit = runVaultAudit(items);
 
   // Group items by security status
@@ -42,23 +45,23 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
 
   // Custom feedback text based on vault score
   let scoreFeedback = {
-    title: 'Mükemmel Güvenlik',
-    desc: 'Tüm parolalarınız endüstri lideri standartlara uygun şekilde şifrelenmiş durumda.',
+    title: t('securityAudit.excellentTitle'),
+    desc: t('securityAudit.excellentDescription'),
     colorBorder: 'border-l-brand-tertiary',
     textColor: 'text-brand-tertiary',
   };
 
   if (audit.score < 50) {
     scoreFeedback = {
-      title: 'Kritik Risk Durumu',
-      desc: 'Kasanızda zayıf veya tekrar eden şifreler bulunmaktadır. Güvenliğinizi artırmak için bunları derhal güncelleyin.',
+      title: t('securityAudit.criticalTitle'),
+      desc: t('securityAudit.criticalDescription'),
       colorBorder: 'border-l-brand-error',
       textColor: 'text-brand-error',
     };
   } else if (audit.score < 80) {
     scoreFeedback = {
-      title: 'İyileştirme Gerekli',
-      desc: 'Genel parola sağlığınız makul ancak bazı zayıf veya ortak parolaları ortadan kaldırarak tam koruma sağlayabilirsiniz.',
+      title: t('securityAudit.improvementTitle'),
+      desc: t('securityAudit.improvementDescription'),
       colorBorder: 'border-l-brand-secondary',
       textColor: 'text-brand-secondary',
     };
@@ -71,8 +74,8 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
           <ShieldCheck className="w-5 h-5 text-brand-tertiary" />
         </div>
         <div>
-          <h2 className="text-xl font-bold font-display text-on-surface">Güvenlik Denetimi</h2>
-          <p className="text-xs text-on-surface-variant">Parola sızıntılarını önlemek için kasanızı sürekli analiz edin.</p>
+          <h2 className="text-xl font-bold font-display text-on-surface">{t('securityAudit.title')}</h2>
+          <p className="text-xs text-on-surface-variant">{t('securityAudit.subtitle')}</p>
         </div>
       </div>
 
@@ -108,7 +111,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
         </div>
         <div className="flex gap-4 items-center shrink-0">
           <div className="text-right text-xs text-on-surface-variant/40 font-mono hidden md:block">
-            Denetlenen: {items.length} Öğe
+            {t('securityAudit.audited')}: {items.length} {t('securityAudit.item')}
           </div>
         </div>
       </div>
@@ -117,34 +120,34 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="glass-panel p-5 rounded-xl bg-brand-error/5 border border-brand-error/10">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold tracking-wider text-on-surface-variant uppercase">Zayıf Parolalar</span>
+            <span className="text-xs font-bold tracking-wider text-on-surface-variant uppercase">{t('securityAudit.weakPasswords')}</span>
             <AlertCircle className="w-5 h-5 text-brand-error" />
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-3xl font-bold font-sans text-brand-error">{weakItems.length}</span>
-            <span className="text-xs text-on-surface-variant">Yetersiz Karakter</span>
+            <span className="text-xs text-on-surface-variant">{t('securityAudit.insufficientCharacters')}</span>
           </div>
         </div>
 
         <div className="glass-panel p-5 rounded-xl bg-amber-500/5 border border-amber-500/10">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold tracking-wider text-on-surface-variant uppercase">Aynı Parolalar</span>
+            <span className="text-xs font-bold tracking-wider text-on-surface-variant uppercase">{t('securityAudit.reusedPasswords')}</span>
             <AlertTriangle className="w-5 h-5 text-amber-400" />
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-3xl font-bold font-sans text-amber-400">{reusedItems.length}</span>
-            <span className="text-xs text-on-surface-variant">Güvenliği Azaltır</span>
+            <span className="text-xs text-on-surface-variant">{t('securityAudit.reducesSecurity')}</span>
           </div>
         </div>
 
         <div className="glass-panel p-5 rounded-xl bg-brand-tertiary/5 border border-brand-tertiary/10">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold tracking-wider text-on-surface-variant uppercase">Güçlü / Güvenli</span>
+            <span className="text-xs font-bold tracking-wider text-on-surface-variant uppercase">{t('securityAudit.securePasswords')}</span>
             <Sparkles className="w-5 h-5 text-brand-tertiary" />
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-3xl font-bold font-sans text-brand-tertiary">{secureItems.length}</span>
-            <span className="text-xs text-on-surface-variant">Askeri Koruma</span>
+            <span className="text-xs text-on-surface-variant">{t('securityAudit.militaryProtection')}</span>
           </div>
         </div>
       </div>
@@ -155,13 +158,13 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
         <div className="space-y-4">
           <h3 className="text-sm font-bold text-brand-error uppercase tracking-wider flex items-center gap-2">
             <AlertCircle className="w-4 h-4" />
-            <span>ZAYIF VE RISKLI HESAPLAR ({weakItems.length})</span>
+            <span>{t('securityAudit.weakGroup')} ({weakItems.length})</span>
           </h3>
 
           <div className="space-y-2.5">
             {weakItems.length === 0 ? (
               <div className="p-4 bg-[#141614] rounded-xl text-xs text-on-surface-variant/40 italic text-center border border-outline-variant/5">
-                Kritik derecede zayıf parola bulunmadı. Tebrikler!
+                {t('securityAudit.noWeakPasswords')}
               </div>
             ) : (
               weakItems.map((item) => (
@@ -180,7 +183,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
                     </div>
                   </div>
                   <div className="flex items-center gap-1 text-xs font-semibold text-brand-error bg-brand-error/10 px-2.5 py-1 rounded-full shrink-0">
-                    <span>Eriş ve Düzelt</span>
+                    <span>{t('securityAudit.fixAction')}</span>
                     <ArrowRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" />
                   </div>
                 </div>
@@ -193,13 +196,13 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
         <div className="space-y-4">
           <h3 className="text-sm font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
             <AlertTriangle className="w-4 h-4" />
-            <span>ORANGE TEKRAR EDEN ŞİFRELER ({reusedItems.length})</span>
+            <span>{t('securityAudit.reusedGroup')} ({reusedItems.length})</span>
           </h3>
 
           <div className="space-y-2.5">
             {reusedItems.length === 0 ? (
               <div className="p-4 bg-[#141614] rounded-xl text-xs text-on-surface-variant/40 italic text-center border border-outline-variant/5">
-                Kasanızda çakışan tekrar eden parola yoktur.
+                {t('securityAudit.noReusedPasswords')}
               </div>
             ) : (
               reusedItems.map((item) => (
@@ -218,7 +221,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
                     </div>
                   </div>
                   <div className="flex items-center gap-1 text-xs font-semibold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full shrink-0">
-                    <span>Değiştir</span>
+                    <span>{t('securityAudit.changeAction')}</span>
                     <ArrowRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" />
                   </div>
                 </div>

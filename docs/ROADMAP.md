@@ -89,6 +89,7 @@
   - [x] Translate top bar tooltips and confirmation modal default controls.
   - [x] Translate profile modal copy, validation errors, upload controls, and form actions.
   - [x] Translate local-storage-only status badge.
+  - [x] Translate security audit score feedback, metric cards, action groups, and empty states.
 - [x] Add component tests for lock screen, vault form, settings import/export, and trash.
   - [x] Lock screen setup and unlock behavior covered by component tests.
   - [x] Settings encrypted export and JSON import behavior covered by component tests.
