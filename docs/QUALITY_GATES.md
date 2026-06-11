@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 93.73% |
-| Statements | 93.73% |
-| Functions | 91.51% |
-| Branches | 85.14% |
+| Lines | 93.85% |
+| Statements | 93.85% |
+| Functions | 92.04% |
+| Branches | 85.16% |
 
 Initial thresholds are intentionally below the current baseline:
 
@@ -32,8 +32,8 @@ These thresholds prevent large regressions while leaving room to add tests aroun
 
 ## Priority Coverage Targets
 
-1. `src/components/VaultFormModal.tsx`: continue reducing category-specific attachment and validation branch gaps.
-2. `src/components/SecurityAudit.tsx`: cover remaining severity threshold branch labels.
+1. `src/components/SecurityAudit.tsx`: cover remaining severity threshold branch labels.
+2. `src/components/ProfileModal.tsx`: cover remaining file-reader and save-callback branches.
 
 Recently improved:
 
@@ -61,6 +61,7 @@ Recently improved:
 - `src/components/RecentVaultItem.tsx`: covered known-platform logo rendering, username copied state, and missing-password copy fallback.
 - `src/components/VaultWorkspace.tsx`: covered favorite filter active state, empty filtered-list fallback, dashboard quick actions, and profile action forwarding.
 - `src/components/SettingsPanel.tsx`: covered biometric missing-session, WebAuthn permission, and disable-error paths plus encrypted export guards, file-picker error handling, drag-state styling, and encrypted import cancellation.
+- `src/components/VaultFormModal.tsx`: covered drag-and-drop attachment selection and selected-file removal behavior when the hidden input has already unmounted.
 
 ## Next Gates
 

@@ -56,6 +56,10 @@ function submitForm() {
   fireEvent.click(document.querySelector<HTMLButtonElement>('button[type="submit"]')!);
 }
 
+function attachmentDropZone(): HTMLElement {
+  return document.querySelector<HTMLInputElement>('input[type="file"]')!.parentElement as HTMLElement;
+}
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -385,6 +389,29 @@ describe('VaultFormModal', () => {
     });
   });
 
+  it('selects an attachment through drag and drop', () => {
+    render(
+      <VaultFormModal
+        isOpen={true}
+        editingItem={null}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    const file = new File(['dropped attachment'], 'dropped.txt', { type: 'text/plain' });
+    const target = attachmentDropZone();
+
+    fireEvent.dragOver(target);
+    fireEvent.drop(target, {
+      dataTransfer: {
+        files: [file],
+      },
+    });
+
+    expect(screen.getByText('dropped.txt')).toBeTruthy();
+  });
+
   it('shows an upload error when attachment encryption fails', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.mocked(saveAttachment).mockRejectedValueOnce(new Error('encrypt failed'));
@@ -422,6 +449,15 @@ describe('VaultFormModal', () => {
     );
 
     const file = new File(['temporary'], 'temporary.txt', { type: 'text/plain' });
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]')!;
+    let inputValue = 'C:\\fakepath\\temporary.txt';
+    Object.defineProperty(input, 'value', {
+      configurable: true,
+      get: () => inputValue,
+      set: (value) => {
+        inputValue = value;
+      },
+    });
     fireEvent.change(document.querySelector<HTMLInputElement>('input[type="file"]')!, {
       target: { files: [file] },
     });
@@ -432,6 +468,7 @@ describe('VaultFormModal', () => {
     fireEvent.click(removeButton);
 
     expect(screen.queryByText('temporary.txt')).toBeNull();
+    expect(inputValue).toBe('C:\\fakepath\\temporary.txt');
   });
 
   it('rejects files above the attachment size limit before upload', () => {

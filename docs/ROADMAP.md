@@ -126,6 +126,7 @@
   - [x] Expand recent vault item logo, copied-state, and password fallback coverage.
   - [x] Expand vault workspace filter, empty-state, and dashboard action coverage.
   - [x] Expand settings panel biometric, export guard, and import interaction coverage.
+  - [x] Expand vault form drag-and-drop attachment coverage.
 
 ## Phase 4: Desktop Productization
 
