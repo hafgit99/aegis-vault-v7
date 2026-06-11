@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 78.79% |
-| Statements | 78.79% |
-| Functions | 78.68% |
-| Branches | 75.14% |
+| Lines | 84.05% |
+| Statements | 84.05% |
+| Functions | 84.42% |
+| Branches | 77.04% |
 
 Initial thresholds are intentionally below the current baseline:
 
@@ -32,7 +32,8 @@ These thresholds prevent large regressions while leaving room to add tests aroun
 
 ## Priority Coverage Targets
 
-1. `src/components/VaultFormModal.tsx`: add workflow-focused component tests for remaining item categories and attachment controls.
+1. `src/components/ProfileModal.tsx` and `src/components/ConfirmModal.tsx`: add modal interaction coverage.
+2. `src/components/SecurityAudit.tsx`: add audit rendering and action coverage.
 
 Recently improved:
 
@@ -42,6 +43,7 @@ Recently improved:
 - `src/lib/storage.ts`: covered setup detection, no-session guards, save/delete/reseed wrappers, trash move/restore, expired trash cleanup, and full trash emptying.
 - `src/components/PasswordGenerator.tsx`: covered character option changes, diceware mode settings, copy feedback, and safe clipboard clearing behavior.
 - `src/lib/diceware.ts`: covered Turkish/English word selection, separator formats, capitalization, random number placement, and symbol placement.
+- `src/components/VaultFormModal.tsx`: covered card, passkey, identity, secure note, attachment upload, oversized-file rejection, existing attachment download/removal, and non-login username normalization.
 
 ## Next Gates
 

@@ -303,11 +303,21 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
       attachmentTypeToSave = undefined;
     }
 
+    const normalizedCardNumber = cardNumber.replace(/\s+/g, '');
+    const normalizedPasskeyPublicId = passkeyPublicId.trim();
+    const normalizedIdNumber = idNumber.trim();
+
     // Prepare unified safe schema payload
     const itemData: VaultItem = {
       id: editingItem?.id || '',
       title: title.trim(),
-      username: category === 'login' ? username.trim() : (category === 'card' ? cardNumber : (category === 'passkey' ? passkeyPublicId : idNumber)),
+      username: category === 'login'
+        ? username.trim()
+        : category === 'card'
+          ? normalizedCardNumber
+          : category === 'passkey'
+            ? normalizedPasskeyPublicId
+            : normalizedIdNumber,
       password,
       url: url.trim(),
       totpSecret: totpSecret.trim(),
@@ -319,13 +329,13 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
 
       // Card Fields
       cardholderName: cardholderName.trim(),
-      cardNumber: cardNumber.replace(/\s+/g, ''),
+      cardNumber: normalizedCardNumber,
       cardExpiry: cardExpiry.trim(),
       cardCvv: cardCvv.trim(),
       cardPin: cardPin.trim(),
 
       // Identity Fields
-      idNumber: idNumber.trim(),
+      idNumber: normalizedIdNumber,
       idFullName: idFullName.trim(),
       idBirthDate: idBirthDate.trim(),
       idExpiryDate: idExpiryDate.trim(),
@@ -334,7 +344,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
       // Passkey Fields
       passkeyService: passkeyService.trim(),
       passkeyPrivateExponent: passkeyPrivateExponent.trim(),
-      passkeyPublicId: passkeyPublicId.trim(),
+      passkeyPublicId: normalizedPasskeyPublicId,
 
       // Attachments linking
       attachmentId: attachmentIdToSave,
