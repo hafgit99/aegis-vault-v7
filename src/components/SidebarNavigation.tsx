@@ -94,6 +94,7 @@ export default function SidebarNavigation({
           </div>
         </div>
         <button
+          data-testid="lock-vault-button"
           onClick={onLock}
           className="w-full flex items-center justify-center gap-2 bg-[#1a1c1a] border border-outline-variant/20 text-on-surface py-3 rounded-lg font-bold text-xs hover:bg-[#252825] transition-all cursor-pointer"
         >

@@ -94,6 +94,7 @@ export default function VaultWorkspace({
           <h2 className="font-display text-lg font-bold text-on-surface flex items-center justify-between">
             <span>Kişisel Kasa</span>
             <button
+              data-testid="new-vault-item-button"
               onClick={onNewItem}
               className="text-on-surface-variant hover:text-brand-primary transition-all cursor-pointer"
               title="Yeni Şifre Ekle"
@@ -104,6 +105,7 @@ export default function VaultWorkspace({
 
           <div className="flex bg-[#161816]/70 p-1 rounded-lg border border-outline-variant/15 text-xs">
             <button
+              data-testid="vault-filter-all"
               onClick={() => onSetFavoritesOnly(false)}
               className={`flex-1 py-1.5 rounded-md font-bold transition-all text-center cursor-pointer ${
                 !filterFavoritesOnly

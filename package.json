@@ -12,6 +12,8 @@
     "lint": "tsc --noEmit",
     "test:unit": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:chromium": "playwright test --project=chromium",
     "tauri": "tauri",
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build"
@@ -27,6 +29,7 @@
     "vite": "^6.2.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tauri-apps/cli": "^2.11.2",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",

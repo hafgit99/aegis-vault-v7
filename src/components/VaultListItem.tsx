@@ -16,6 +16,7 @@ export default function VaultListItem({ item, isSelected, onSelect }: VaultListI
 
   return (
     <div
+      data-testid="vault-list-item"
       onClick={() => onSelect(item)}
       className={`group p-4 rounded-xl flex items-center gap-4 cursor-pointer transition-all ${
         isSelected

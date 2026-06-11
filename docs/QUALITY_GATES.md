@@ -35,6 +35,23 @@ These thresholds prevent large regressions while leaving room to add tests aroun
 1. `src/components/SettingsPanel.tsx`: reduce remaining fallback-message and desktop-runtime branch gaps.
 2. `src/lib/diceware.ts`: cover remaining locale word-list fallback and option-combination branches.
 
+## Current E2E Smoke Gate
+
+The first Playwright smoke gate runs with:
+
+```bash
+npm run test:e2e:chromium
+```
+
+Current smoke scope:
+
+- Initial vault setup.
+- Create and save a login item.
+- Verify the saved item appears in the vault list.
+- Lock the vault.
+- Unlock with the same master password.
+- Verify the saved item is still available after unlock.
+
 Recently improved:
 
 - `src/lib/importer.ts`: covered supported JSON/CSV formats, encrypted envelope detection, malformed inputs, and quote-aware CSV parsing.
@@ -76,6 +93,6 @@ Recently improved:
 
 ## Next Gates
 
-- Add smoke E2E tests for unlock, create item, lock, export, and import.
+- Expand smoke E2E coverage for export/import, trash/restore, favorite filters, and desktop persistence.
 - Add mutation tests only for critical `src/lib` modules first.
 - Raise global coverage thresholds after the low-coverage critical modules improve.

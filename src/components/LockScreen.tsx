@@ -238,6 +238,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                   </div>
                   <div className="relative">
                     <input
+                      data-testid="lock-password-input"
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -265,6 +266,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                     </label>
                     <div className="relative">
                       <input
+                        data-testid="lock-confirm-password-input"
                         type={showConfirmPassword ? 'text' : 'password'}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
@@ -286,6 +288,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
 
                 {/* CTA Action button */}
                 <button
+                  data-testid="lock-submit-button"
                   type="submit"
                   className="w-full flex items-center justify-center gap-2.5 bg-brand-primary text-brand-on-primary py-4 rounded-xl font-bold transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-lg shadow-brand-primary/10 hover:brightness-110"
                 >

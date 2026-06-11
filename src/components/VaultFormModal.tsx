@@ -481,6 +481,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                 <div className="relative">
                   <Shield className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
                   <input
+                    data-testid="vault-item-title-input"
                     type="text"
                     required
                     value={title}
@@ -498,6 +499,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                 <div className="relative">
                   <Globe className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
                   <input
+                    data-testid="vault-item-url-input"
                     type="text"
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
@@ -525,6 +527,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                   <div className="relative">
                     <User className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
                     <input
+                      data-testid="vault-item-username-input"
                       type="text"
                       required={category === 'login'}
                       value={username}
@@ -550,6 +553,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                   <div className="relative">
                     <KeyRound className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
                     <input
+                      data-testid="vault-item-password-input"
                       type={isPasswordVisible ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -871,6 +875,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
             <div className="relative">
               <StickyNote className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
               <textarea
+                data-testid="vault-item-notes-input"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={category === 'secure_note' ? 8 : 3}
@@ -1013,6 +1018,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
               İptal
             </button>
             <button
+              data-testid="vault-item-save-button"
               type="submit"
               disabled={isUploading}
               className="px-6 py-2.5 bg-brand-primary text-brand-on-primary rounded-xl font-bold text-xs hover:brightness-110 active:scale-95 transition-all cursor-pointer shadow-lg shadow-brand-primary/10 flex items-center gap-1.5 focus:outline-none disabled:opacity-50"

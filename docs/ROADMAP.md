@@ -141,6 +141,7 @@
   - [x] Expand biometric PBKDF2, WebAuthn option, request option, metadata, and legacy unwrap failure coverage.
   - [x] Expand attachment AES-GCM metadata, MIME fallback, FileReader failure, and stored decrypt failure coverage.
   - [x] Expand SQLite OPFS file hydration, missing-file initialization, write-failure, and desktop-read fallback coverage.
+  - [x] Add Playwright smoke E2E coverage for setup, create item, lock, unlock, and persistence.
 
 ## Phase 4: Desktop Productization
 
