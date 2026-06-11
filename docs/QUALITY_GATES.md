@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 84.05% |
-| Statements | 84.05% |
-| Functions | 84.42% |
-| Branches | 77.04% |
+| Lines | 87.39% |
+| Statements | 87.39% |
+| Functions | 84.53% |
+| Branches | 77.43% |
 
 Initial thresholds are intentionally below the current baseline:
 
@@ -32,8 +32,7 @@ These thresholds prevent large regressions while leaving room to add tests aroun
 
 ## Priority Coverage Targets
 
-1. `src/components/ProfileModal.tsx` and `src/components/ConfirmModal.tsx`: add modal interaction coverage.
-2. `src/components/SecurityAudit.tsx`: add audit rendering and action coverage.
+1. `src/components/SecurityAudit.tsx`: add audit rendering and action coverage.
 
 Recently improved:
 
@@ -44,6 +43,8 @@ Recently improved:
 - `src/components/PasswordGenerator.tsx`: covered character option changes, diceware mode settings, copy feedback, and safe clipboard clearing behavior.
 - `src/lib/diceware.ts`: covered Turkish/English word selection, separator formats, capitalization, random number placement, and symbol placement.
 - `src/components/VaultFormModal.tsx`: covered card, passkey, identity, secure note, attachment upload, oversized-file rejection, existing attachment download/removal, and non-login username normalization.
+- `src/components/ProfileModal.tsx`: covered gradient detection, profile name validation, preset selection, image file validation, local image loading, save, and cancel flows.
+- `src/components/ConfirmModal.tsx`: covered closed state, confirm/cancel behavior, header close, and alert-only mode.
 
 ## Next Gates
 
