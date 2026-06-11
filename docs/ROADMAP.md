@@ -117,6 +117,7 @@
   - [x] Expand vault form edit, validation, attachment failure, and cleanup coverage.
   - [x] Expand card detail copy, reveal, and fallback coverage.
   - [x] Expand login detail copied-state and empty-password coverage.
+  - [x] Expand passkey detail copied-state and fallback coverage.
 
 ## Phase 4: Desktop Productization
 

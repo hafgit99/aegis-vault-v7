@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 93.07% |
-| Statements | 93.07% |
+| Lines | 93.10% |
+| Statements | 93.10% |
 | Functions | 90.45% |
-| Branches | 82.82% |
+| Branches | 83.33% |
 
 Initial thresholds are intentionally below the current baseline:
 
@@ -33,7 +33,7 @@ These thresholds prevent large regressions while leaving room to add tests aroun
 ## Priority Coverage Targets
 
 1. `src/components/SettingsPanel.tsx`: continue reducing import/export and biometric branch gaps.
-2. `src/components/PasskeyDetail.tsx`: add remaining fallback and copy branch coverage.
+2. `src/components/IdentityDetail.tsx`: add remaining fallback and copy branch coverage.
 
 Recently improved:
 
@@ -52,6 +52,7 @@ Recently improved:
 - `src/components/VaultFormModal.tsx`: covered edit-save identity preservation, title validation, password visibility/autogeneration, selected file removal, attachment upload failures, existing attachment removal before save, and download error notifications.
 - `src/components/CardDetail.tsx`: covered copied states, PIN copy action, missing-field fallbacks, and empty-string copy behavior.
 - `src/components/LoginDetail.tsx`: covered copied states, empty-password fallback, and safe empty-password copy behavior.
+- `src/components/PasskeyDetail.tsx`: covered copied states, missing-field fallbacks, and safe empty-string copy behavior.
 
 ## Next Gates
 

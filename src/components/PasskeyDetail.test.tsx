@@ -79,4 +79,51 @@ describe('PasskeyDetail', () => {
     expect(onToggleReveal).toHaveBeenCalledTimes(1);
     expect(onCopyText).toHaveBeenCalledWith('private-secret-value', 'passkeyPrivateExponent');
   });
+
+  it('renders copied states for public id and private exponent', () => {
+    ['passkeyPublicId', 'passkeyPrivateExponent'].forEach((copiedField) => {
+      const { container, unmount } = render(
+        <PasskeyDetail
+          item={passkeyItem}
+          copiedField={copiedField}
+          isPrivateExponentRevealed={copiedField === 'passkeyPrivateExponent'}
+          onToggleReveal={vi.fn()}
+          onCopyText={vi.fn()}
+        />,
+      );
+
+      expect(container.querySelector('.text-brand-tertiary')).toBeTruthy();
+      unmount();
+    });
+  });
+
+  it('uses fallback labels and copies empty strings when passkey fields are missing', () => {
+    const onCopyText = vi.fn();
+    const fallbackItem: VaultItem = {
+      ...passkeyItem,
+      username: '',
+      passkeyService: undefined,
+      passkeyPrivateExponent: undefined,
+    };
+
+    render(
+      <PasskeyDetail
+        item={fallbackItem}
+        copiedField={null}
+        isPrivateExponentRevealed={true}
+        onToggleReveal={vi.fn()}
+        onCopyText={onCopyText}
+      />,
+    );
+
+    expect(screen.getByText('Google Login')).toBeTruthy();
+    expect(screen.getByText('boş')).toBeTruthy();
+    expect(screen.getByText('(Değer Girilmedi)')).toBeTruthy();
+
+    fireEvent.click(screen.getAllByRole('button')[0]);
+    fireEvent.click(screen.getByTitle('Kopyala'));
+
+    expect(onCopyText).toHaveBeenCalledWith('', 'passkeyPublicId');
+    expect(onCopyText).toHaveBeenCalledWith('', 'passkeyPrivateExponent');
+  });
 });
