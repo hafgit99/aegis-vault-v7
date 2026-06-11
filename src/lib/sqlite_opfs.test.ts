@@ -9,6 +9,7 @@ import { createEmptyVaultDatabaseState, type VersionedVaultDatabaseState } from 
 
 const writeDesktopVaultDatabase = vi.hoisted(() => vi.fn(async () => false));
 const readDesktopVaultDatabase = vi.hoisted(() => vi.fn(async () => null));
+const originalNavigatorStorage = navigator.storage;
 
 vi.mock('./desktopStorage', () => ({
   readDesktopVaultDatabase,
@@ -57,6 +58,11 @@ beforeEach(() => {
 afterEach(() => {
   localStorage.clear();
   sessionStorage.clear();
+  Object.defineProperty(navigator, 'storage', {
+    configurable: true,
+    value: originalNavigatorStorage,
+  });
+  vi.restoreAllMocks();
 });
 
 describe('SQLite OPFS persistence engine', () => {
@@ -179,6 +185,129 @@ describe('SQLite OPFS persistence engine', () => {
           status: 'SUCCESS',
         }),
       ]),
+    );
+  });
+
+  it('hydrates an existing OPFS database file and mirrors it back to persistence', async () => {
+    const state: VersionedVaultDatabaseState = {
+      ...createEmptyVaultDatabaseState(),
+      user_secrets: [{ username: 'owner', argon_hash: '$argon2id$salt$master-pass' }],
+    };
+    const writable = {
+      write: vi.fn(async () => undefined),
+      close: vi.fn(async () => undefined),
+    };
+    const getFileHandle = vi.fn(async (_name: string, options?: { create?: boolean }) => {
+      if (options?.create) {
+        return { createWritable: vi.fn(async () => writable) };
+      }
+
+      return {
+        getFile: vi.fn(async () => ({
+          text: vi.fn(async () => JSON.stringify(state)),
+        })),
+      };
+    });
+
+    Object.defineProperty(navigator, 'storage', {
+      configurable: true,
+      value: {
+        getDirectory: vi.fn(async () => ({ getFileHandle })),
+      },
+    });
+
+    const sqlite = await freshSqliteInstance();
+
+    await expect(sqlite.verifyPassword('master-pass')).resolves.toBe(true);
+    expect(getFileHandle).toHaveBeenCalledWith('aegis_sqlite.db');
+    expect(getFileHandle).toHaveBeenCalledWith('aegis_sqlite.db', { create: true });
+    expect(writable.write).toHaveBeenCalledWith(expect.stringContaining('"user_secrets"'));
+    expect(writable.close).toHaveBeenCalled();
+    expect(sqlite.getQueryLogs()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          query: 'sqlite3_open("opfs:///aegis_sqlite.db")',
+          status: 'SUCCESS',
+        }),
+      ]),
+    );
+  });
+
+  it('initializes a missing OPFS database file from the local fallback mirror', async () => {
+    const state: VersionedVaultDatabaseState = {
+      ...createEmptyVaultDatabaseState(),
+      user_secrets: [{ username: 'owner', argon_hash: '$argon2id$salt$master-pass' }],
+    };
+    const writable = {
+      write: vi.fn(async () => undefined),
+      close: vi.fn(async () => undefined),
+    };
+    const getFileHandle = vi.fn(async (_name: string, options?: { create?: boolean }) => {
+      if (!options?.create) {
+        throw new Error('missing opfs file');
+      }
+
+      return { createWritable: vi.fn(async () => writable) };
+    });
+
+    localStorage.setItem('aegis_sqlite_fallback', JSON.stringify(state));
+    Object.defineProperty(navigator, 'storage', {
+      configurable: true,
+      value: {
+        getDirectory: vi.fn(async () => ({ getFileHandle })),
+      },
+    });
+
+    const sqlite = await freshSqliteInstance();
+
+    await expect(sqlite.verifyPassword('master-pass')).resolves.toBe(true);
+    expect(writable.write).toHaveBeenCalledWith(expect.stringContaining('"user_secrets"'));
+    expect(writeDesktopVaultDatabase).toHaveBeenCalledWith(expect.stringContaining('"user_secrets"'));
+  });
+
+  it('falls back to local mirror when desktop payload loading fails', async () => {
+    const state: VersionedVaultDatabaseState = {
+      ...createEmptyVaultDatabaseState(),
+      user_secrets: [{ username: 'owner', argon_hash: '$argon2id$salt$master-pass' }],
+    };
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    readDesktopVaultDatabase.mockRejectedValueOnce(new Error('desktop read failed'));
+    localStorage.setItem('aegis_sqlite_fallback', JSON.stringify(state));
+
+    const sqlite = await freshSqliteInstance();
+
+    await expect(sqlite.verifyPassword('master-pass')).resolves.toBe(true);
+    expect(warn).toHaveBeenCalledWith(
+      'OPFS Loading failed, running in-memory fallback:',
+      expect.any(Error),
+    );
+  });
+
+  it('logs persistence write failures without breaking vault setup', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const getFileHandle = vi.fn(async (_name: string, options?: { create?: boolean }) => {
+      if (!options?.create) {
+        throw new Error('missing opfs file');
+      }
+
+      throw new Error('opfs write failed');
+    });
+
+    Object.defineProperty(navigator, 'storage', {
+      configurable: true,
+      value: {
+        getDirectory: vi.fn(async () => ({ getFileHandle })),
+      },
+    });
+
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+
+    await expect(sqlite.verifyPassword('master-pass')).resolves.toBe(true);
+    expect(error).toHaveBeenCalledWith(
+      'Failed writing SQLite persistence block:',
+      expect.any(Error),
     );
   });
 

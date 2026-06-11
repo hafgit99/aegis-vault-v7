@@ -140,6 +140,7 @@
   - [x] Expand legacy crypto hash, KDF, authenticated decrypt, tamper, stream fallback, and malformed-envelope coverage.
   - [x] Expand biometric PBKDF2, WebAuthn option, request option, metadata, and legacy unwrap failure coverage.
   - [x] Expand attachment AES-GCM metadata, MIME fallback, FileReader failure, and stored decrypt failure coverage.
+  - [x] Expand SQLite OPFS file hydration, missing-file initialization, write-failure, and desktop-read fallback coverage.
 
 ## Phase 4: Desktop Productization
 
