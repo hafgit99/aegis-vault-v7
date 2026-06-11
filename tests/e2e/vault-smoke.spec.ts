@@ -7,6 +7,9 @@ async function setupVault(page: Page) {
 
   await page.getByTestId('lock-password-input').fill(masterPassword);
   await page.getByTestId('lock-confirm-password-input').fill(masterPassword);
+  await expect(page.getByTestId('lock-secret-key-input')).toHaveValue(/^A3-/);
+  await expect(page.getByTestId('lock-emergency-kit-button')).toBeVisible();
+  await page.getByTestId('lock-remember-secret-key-checkbox').check();
   await page.getByTestId('lock-submit-button').click();
 
   await expect(page.getByTestId('new-vault-item-button')).toBeVisible();

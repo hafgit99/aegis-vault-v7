@@ -30,6 +30,8 @@ import {
   deleteVaultItem,
   emptyTrashComplete,
   getVaultItems,
+  getRememberedAccountSecretKey,
+  isAccountSecretKeyRequired,
   isMasterPasswordSet,
   moveToTrash,
   reseedDemoData,
@@ -37,9 +39,10 @@ import {
   restoreFromTrash,
   saveVaultItem,
   setupMasterPassword,
+  setupMasterPasswordWithSecretKey,
   verifyMasterPassword,
 } from './storage';
-import { closeVaultSession, getActiveMasterPassword, openVaultSession } from './vaultSession';
+import { closeVaultSession, getActiveBackupPassword, getActiveMasterPassword, openVaultSession } from './vaultSession';
 import type { VaultItem } from '../types';
 
 function sampleItem(overrides: Partial<VaultItem> = {}): VaultItem {
@@ -73,6 +76,24 @@ describe('vault session storage', () => {
     expect(sessionStorage.getItem('aegis_session_master_pass')).toBeNull();
   });
 
+  it('sets up a secret-key protected vault and can remember the second key locally', async () => {
+    await setupMasterPasswordWithSecretKey(
+      'master-pass',
+      'A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
+      true,
+    );
+
+    expect(sqliteOPFSInstance.setupMaster).toHaveBeenCalledWith(
+      'aegis-vault-v7:master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
+    );
+    expect(isAccountSecretKeyRequired()).toBe(true);
+    expect(getRememberedAccountSecretKey()).toBe('A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567');
+    expect(getActiveMasterPassword()).toBe(
+      'aegis-vault-v7:master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
+    );
+    expect(getActiveBackupPassword()).toBe('master-pass');
+  });
+
   it('opens an in-memory session after a successful password verification', async () => {
     sqliteOPFSInstance.verifyPassword.mockResolvedValue(true);
 
@@ -81,6 +102,27 @@ describe('vault session storage', () => {
     expect(getActiveMasterPassword()).toBe('master-pass');
     expect(migrateLegacyAttachmentsToAesGcm).toHaveBeenCalledTimes(1);
     expect(sessionStorage.getItem('aegis_session_master_pass')).toBeNull();
+  });
+
+  it('verifies secret-key protected vaults with the combined credential', async () => {
+    localStorage.setItem('aegis_account_secret_profile', JSON.stringify({
+      enabled: true,
+      fingerprint: '3456-7',
+    }));
+    sqliteOPFSInstance.verifyPassword.mockResolvedValue(true);
+
+    await expect(verifyMasterPassword(
+      'master-pass',
+      'A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
+    )).resolves.toBe(true);
+
+    expect(sqliteOPFSInstance.verifyPassword).toHaveBeenCalledWith(
+      'aegis-vault-v7:master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
+    );
+    expect(getActiveMasterPassword()).toBe(
+      'aegis-vault-v7:master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
+    );
+    expect(getActiveBackupPassword()).toBe('master-pass');
   });
 
   it('keeps a successful unlock when legacy attachment migration fails', async () => {

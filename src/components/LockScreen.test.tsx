@@ -14,15 +14,19 @@ import {
   isBiometricSupported,
 } from '../lib/biometric';
 import {
+  getRememberedAccountSecretKey,
+  isAccountSecretKeyRequired,
   isMasterPasswordSet,
-  setupMasterPassword,
+  setupMasterPasswordWithSecretKey,
   verifyMasterPassword,
 } from '../lib/storage';
 import LockScreen from './LockScreen';
 
 vi.mock('../lib/storage', () => ({
+  getRememberedAccountSecretKey: vi.fn(() => null),
+  isAccountSecretKeyRequired: vi.fn(() => false),
   isMasterPasswordSet: vi.fn(),
-  setupMasterPassword: vi.fn(async () => undefined),
+  setupMasterPasswordWithSecretKey: vi.fn(async () => undefined),
   verifyMasterPassword: vi.fn(),
 }));
 
@@ -32,12 +36,22 @@ vi.mock('../lib/biometric', () => ({
   isBiometricSupported: vi.fn(() => false),
 }));
 
-function passwordInputs(): HTMLInputElement[] {
-  return Array.from(document.querySelectorAll('input[type="password"], input[type="text"]'));
+function passwordInput(): HTMLInputElement {
+  return screen.getByTestId('lock-password-input') as HTMLInputElement;
+}
+
+function confirmationInput(): HTMLInputElement {
+  return screen.getByTestId('lock-confirm-password-input') as HTMLInputElement;
+}
+
+function secretKeyInput(): HTMLInputElement {
+  return screen.getByTestId('lock-secret-key-input') as HTMLInputElement;
 }
 
 beforeEach(() => {
   vi.mocked(isMasterPasswordSet).mockReturnValue(false);
+  vi.mocked(isAccountSecretKeyRequired).mockReturnValue(false);
+  vi.mocked(getRememberedAccountSecretKey).mockReturnValue(null);
   vi.mocked(verifyMasterPassword).mockResolvedValue(false);
 });
 
@@ -52,13 +66,14 @@ describe('LockScreen', () => {
   it('validates minimum master password length during setup', () => {
     render(<LockScreen onUnlock={vi.fn()} />);
 
-    const [password, confirmation] = passwordInputs();
+    const password = passwordInput();
+    const confirmation = confirmationInput();
     fireEvent.change(password, { target: { value: '12345' } });
     fireEvent.change(confirmation, { target: { value: '12345' } });
     fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 
     expect(screen.getByText('Ana şifre en az 6 karakterden oluşmalıdır.')).toBeTruthy();
-    expect(setupMasterPassword).not.toHaveBeenCalled();
+    expect(setupMasterPasswordWithSecretKey).not.toHaveBeenCalled();
   });
 
   it('renders setup copy and validation feedback in the selected language', () => {
@@ -74,26 +89,51 @@ describe('LockScreen', () => {
     expect(screen.getByText('Set Up Your Secure Vault')).toBeTruthy();
     expect(screen.getByText('Start Secure Vault')).toBeTruthy();
 
-    const [password, confirmation] = passwordInputs();
+    const password = passwordInput();
+    const confirmation = confirmationInput();
     fireEvent.change(password, { target: { value: '12345' } });
     fireEvent.change(confirmation, { target: { value: '12345' } });
     fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 
     expect(screen.getByText('The master password must be at least 6 characters.')).toBeTruthy();
-    expect(setupMasterPassword).not.toHaveBeenCalled();
+    expect(setupMasterPasswordWithSecretKey).not.toHaveBeenCalled();
   });
 
   it('sets up the master password and unlocks when confirmation matches', async () => {
     const onUnlock = vi.fn();
     render(<LockScreen onUnlock={onUnlock} />);
 
-    const [password, confirmation] = passwordInputs();
+    const password = passwordInput();
+    const confirmation = confirmationInput();
     fireEvent.change(password, { target: { value: 'strong-pass' } });
     fireEvent.change(confirmation, { target: { value: 'strong-pass' } });
     fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 
     await waitFor(() => {
-      expect(setupMasterPassword).toHaveBeenCalledWith('strong-pass');
+      expect(setupMasterPasswordWithSecretKey).toHaveBeenCalledWith(
+        'strong-pass',
+        expect.stringMatching(/^A3-/),
+        false,
+      );
+      expect(onUnlock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('can remember the generated secret key during setup', async () => {
+    const onUnlock = vi.fn();
+    render(<LockScreen onUnlock={onUnlock} />);
+
+    fireEvent.change(passwordInput(), { target: { value: 'strong-pass' } });
+    fireEvent.change(confirmationInput(), { target: { value: 'strong-pass' } });
+    fireEvent.click(screen.getByTestId('lock-remember-secret-key-checkbox'));
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement);
+
+    await waitFor(() => {
+      expect(setupMasterPasswordWithSecretKey).toHaveBeenCalledWith(
+        'strong-pass',
+        expect.stringMatching(/^A3-/),
+        true,
+      );
       expect(onUnlock).toHaveBeenCalledTimes(1);
     });
   });
@@ -101,20 +141,22 @@ describe('LockScreen', () => {
   it('rejects setup when confirmation does not match', () => {
     render(<LockScreen onUnlock={vi.fn()} />);
 
-    const [password, confirmation] = passwordInputs();
+    const password = passwordInput();
+    const confirmation = confirmationInput();
     fireEvent.change(password, { target: { value: 'strong-pass' } });
     fireEvent.change(confirmation, { target: { value: 'different-pass' } });
     fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 
     expect(screen.getByText(/birbiriyle/)).toBeTruthy();
-    expect(setupMasterPassword).not.toHaveBeenCalled();
+    expect(setupMasterPasswordWithSecretKey).not.toHaveBeenCalled();
   });
 
   it('toggles password visibility in setup mode', () => {
     render(<LockScreen onUnlock={vi.fn()} />);
 
-    const [password, confirmation] = passwordInputs();
-    const toggleButtons = Array.from(document.querySelectorAll('form button[type="button"]')) as HTMLButtonElement[];
+    const password = passwordInput();
+    const confirmation = confirmationInput();
+    const toggleButtons = Array.from(document.querySelectorAll('form button[title]')) as HTMLButtonElement[];
 
     expect(password.type).toBe('password');
     expect(confirmation.type).toBe('password');
@@ -142,7 +184,7 @@ describe('LockScreen', () => {
     expect(screen.getByText('Kasa Kilitleri Aktif')).toBeTruthy();
     expect(screen.getAllByText(new RegExp(APP_NAME)).length).toBeGreaterThan(0);
 
-    const [password] = passwordInputs();
+    const password = passwordInput();
     fireEvent.change(password, { target: { value: 'wrong-pass' } });
     fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 
@@ -155,8 +197,29 @@ describe('LockScreen', () => {
     fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 
     await waitFor(() => {
-      expect(verifyMasterPassword).toHaveBeenCalledWith('wrong-pass');
-      expect(verifyMasterPassword).toHaveBeenCalledWith('correct-pass');
+      expect(verifyMasterPassword).toHaveBeenCalledWith('wrong-pass', null);
+      expect(verifyMasterPassword).toHaveBeenCalledWith('correct-pass', null);
+      expect(onUnlock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('requires the account secret key when the vault profile uses one', async () => {
+    const onUnlock = vi.fn();
+    vi.mocked(isMasterPasswordSet).mockReturnValue(true);
+    vi.mocked(isAccountSecretKeyRequired).mockReturnValue(true);
+    vi.mocked(verifyMasterPassword).mockResolvedValueOnce(true);
+
+    render(<LockScreen onUnlock={onUnlock} />);
+
+    fireEvent.change(passwordInput(), { target: { value: 'correct-pass' } });
+    fireEvent.change(secretKeyInput(), { target: { value: 'A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567' } });
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement);
+
+    await waitFor(() => {
+      expect(verifyMasterPassword).toHaveBeenCalledWith(
+        'correct-pass',
+        'A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
+      );
       expect(onUnlock).toHaveBeenCalledTimes(1);
     });
   });
@@ -191,9 +254,9 @@ describe('LockScreen', () => {
     fireEvent.click(screen.getByText(/Biyometrik/));
 
     await waitFor(() => {
-      expect(authenticateBiometric).toHaveBeenCalledTimes(1);
-      expect(verifyMasterPassword).toHaveBeenCalledWith('bio-master');
-      expect(onUnlock).toHaveBeenCalledTimes(1);
+      expect(authenticateBiometric).toHaveBeenCalled();
+      expect(verifyMasterPassword).toHaveBeenCalledWith('bio-master', null);
+      expect(onUnlock).toHaveBeenCalled();
     });
   });
 

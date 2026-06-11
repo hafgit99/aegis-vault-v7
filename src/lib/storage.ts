@@ -5,12 +5,24 @@
 
 import { VaultItem } from '../types';
 import { migrateLegacyAttachmentsToAesGcm } from './attachments';
+import {
+  combineMasterPasswordAndSecretKey,
+  getSecretKeyFingerprint,
+  normalizeAccountSecretKey,
+} from './secretKey';
 import { sqliteOPFSInstance } from './sqlite_opfs';
 import { closeVaultSession, getActiveMasterPassword, openVaultSession } from './vaultSession';
 
 const STORAGE_KEYS = {
   IS_SET_UP: 'aegis_is_setup',
+  SECRET_PROFILE: 'aegis_account_secret_profile',
+  REMEMBERED_SECRET_KEY: 'aegis_account_secret_key_remembered',
 };
+
+interface AccountSecretProfile {
+  enabled: true;
+  fingerprint: string;
+}
 
 const INITIAL_DEMO_ITEMS: VaultItem[] = [
   {
@@ -82,14 +94,53 @@ export function isMasterPasswordSet(): boolean {
   return localStorage.getItem(STORAGE_KEYS.IS_SET_UP) === 'true';
 }
 
+function readSecretProfile(): AccountSecretProfile | null {
+  const raw = localStorage.getItem(STORAGE_KEYS.SECRET_PROFILE);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as AccountSecretProfile;
+    return parsed.enabled ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function isAccountSecretKeyRequired(): boolean {
+  return readSecretProfile() !== null;
+}
+
+export function getRememberedAccountSecretKey(): string | null {
+  return localStorage.getItem(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
+}
+
+export function rememberAccountSecretKey(secretKey: string): void {
+  localStorage.setItem(STORAGE_KEYS.REMEMBERED_SECRET_KEY, normalizeAccountSecretKey(secretKey));
+}
+
+export function forgetRememberedAccountSecretKey(): void {
+  localStorage.removeItem(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
+}
+
+function resolveVaultCredential(password: string, secretKey?: string | null): string {
+  const profile = readSecretProfile();
+  if (!profile) return password;
+
+  const usableSecretKey = secretKey || getRememberedAccountSecretKey();
+  if (!usableSecretKey) return password;
+
+  return combineMasterPasswordAndSecretKey(password, usableSecretKey);
+}
+
 /**
  * Validates the master password against the SQLite Argon2id signature.
  */
-export async function verifyMasterPassword(password: string): Promise<boolean> {
+export async function verifyMasterPassword(password: string, secretKey?: string | null): Promise<boolean> {
   await initializeStorage();
-  const isCorrect = await sqliteOPFSInstance.verifyPassword(password);
+  const credential = resolveVaultCredential(password, secretKey);
+  const isCorrect = await sqliteOPFSInstance.verifyPassword(credential);
   if (isCorrect) {
-    openVaultSession(password);
+    openVaultSession(credential, password);
     try {
       await migrateLegacyAttachmentsToAesGcm();
     } catch (err) {
@@ -104,8 +155,9 @@ export async function verifyMasterPassword(password: string): Promise<boolean> {
  */
 export async function setupMasterPassword(password: string): Promise<void> {
   await initializeStorage();
-  await sqliteOPFSInstance.setupMaster(password);
-  openVaultSession(password);
+  const credential = resolveVaultCredential(password);
+  await sqliteOPFSInstance.setupMaster(credential);
+  openVaultSession(credential, password);
   try {
     await migrateLegacyAttachmentsToAesGcm();
   } catch (err) {
@@ -114,7 +166,38 @@ export async function setupMasterPassword(password: string): Promise<void> {
   localStorage.setItem(STORAGE_KEYS.IS_SET_UP, 'true');
 
   // Seed default items in SQLite
-  await sqliteOPFSInstance.reseedDemo(password, INITIAL_DEMO_ITEMS);
+  await sqliteOPFSInstance.reseedDemo(credential, INITIAL_DEMO_ITEMS);
+}
+
+export async function setupMasterPasswordWithSecretKey(
+  password: string,
+  secretKey: string,
+  rememberSecretKeyOnThisDevice: boolean,
+): Promise<void> {
+  const normalizedSecretKey = normalizeAccountSecretKey(secretKey);
+  const credential = combineMasterPasswordAndSecretKey(password, normalizedSecretKey);
+
+  await initializeStorage();
+  await sqliteOPFSInstance.setupMaster(credential);
+  openVaultSession(credential, password);
+  try {
+    await migrateLegacyAttachmentsToAesGcm();
+  } catch (err) {
+    console.warn('Legacy attachment migration failed after setup:', err);
+  }
+  localStorage.setItem(STORAGE_KEYS.IS_SET_UP, 'true');
+  localStorage.setItem(STORAGE_KEYS.SECRET_PROFILE, JSON.stringify({
+    enabled: true,
+    fingerprint: getSecretKeyFingerprint(normalizedSecretKey),
+  }));
+
+  if (rememberSecretKeyOnThisDevice) {
+    rememberAccountSecretKey(normalizedSecretKey);
+  } else {
+    forgetRememberedAccountSecretKey();
+  }
+
+  await sqliteOPFSInstance.reseedDemo(credential, INITIAL_DEMO_ITEMS);
 }
 
 /**
@@ -125,6 +208,8 @@ export function resetSystem(): void {
   closeVaultSession();
   localStorage.removeItem(STORAGE_KEYS.IS_SET_UP);
   localStorage.removeItem('aegis_sqlite_fallback');
+  localStorage.removeItem(STORAGE_KEYS.SECRET_PROFILE);
+  localStorage.removeItem(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
 }
 
 function getSessionMasterPassword(): string | null {

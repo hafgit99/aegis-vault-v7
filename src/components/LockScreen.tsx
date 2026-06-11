@@ -16,12 +16,25 @@ import {
   EyeOff, 
   CheckCircle2, 
   Sparkles,
-  Trash2
+  Trash2,
+  KeyRound,
+  Download
 } from 'lucide-react';
-import { isMasterPasswordSet, setupMasterPassword, verifyMasterPassword } from '../lib/storage';
+import {
+  getRememberedAccountSecretKey,
+  isAccountSecretKeyRequired,
+  isMasterPasswordSet,
+  setupMasterPasswordWithSecretKey,
+  verifyMasterPassword,
+} from '../lib/storage';
 import { authenticateBiometric, isBiometricEnabled, isBiometricSupported } from '../lib/biometric';
 import { APP_NAME, APP_SHORT_NAME } from '../lib/branding';
 import { useLanguage } from '../i18n/LanguageContext';
+import {
+  generateAccountSecretKey,
+  isAccountSecretKeyFormatValid,
+  normalizeAccountSecretKey,
+} from '../lib/secretKey';
 
 function getBiometricUnlockErrorMessage(err: any, t: ReturnType<typeof useLanguage>['t']): string {
   if (err?.name === "SecurityError" || err?.name === "NotAllowedError") {
@@ -48,8 +61,12 @@ interface LockScreenProps {
 export default function LockScreen({ onUnlock }: LockScreenProps) {
   const { t } = useLanguage();
   const isSetup = isMasterPasswordSet();
+  const requiresSecretKey = isAccountSecretKeyRequired();
+  const rememberedSecretKey = getRememberedAccountSecretKey();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [secretKey, setSecretKey] = useState(() => rememberedSecretKey || generateAccountSecretKey());
+  const [rememberSecretKey, setRememberSecretKey] = useState(Boolean(rememberedSecretKey));
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +86,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
         throw new Error(t('lock.error.biometricUnsupported'));
       }
       const decryptedMaster = await authenticateBiometric();
-      if (await verifyMasterPassword(decryptedMaster)) {
+      if (await verifyMasterPassword(decryptedMaster, rememberedSecretKey)) {
         onUnlock();
       } else {
         throw new Error(t('lock.error.biometricIntegrity'));
@@ -105,15 +122,43 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
         setError(t('lock.error.confirmationMismatch'));
         return;
       }
-      await setupMasterPassword(password);
+      if (!isAccountSecretKeyFormatValid(secretKey)) {
+        setError(t('lock.error.secretKeyInvalid'));
+        return;
+      }
+      await setupMasterPasswordWithSecretKey(password, secretKey, rememberSecretKey);
       onUnlock();
     } else {
-      if (await verifyMasterPassword(password)) {
+      const submittedSecretKey = requiresSecretKey ? secretKey : null;
+      if (requiresSecretKey && !rememberedSecretKey && !isAccountSecretKeyFormatValid(submittedSecretKey || '')) {
+        setError(t('lock.error.secretKeyRequired'));
+        return;
+      }
+      if (await verifyMasterPassword(password, submittedSecretKey)) {
         onUnlock();
       } else {
         setError(t('lock.error.invalidPassword'));
       }
     }
+  };
+
+  const handleDownloadEmergencyKit = () => {
+    const normalizedSecretKey = normalizeAccountSecretKey(secretKey);
+    const kit = [
+      `${APP_NAME} Emergency Kit`,
+      '',
+      `Account Secret Key: ${normalizedSecretKey}`,
+      '',
+      'Keep this file offline. You need this secret key together with your master password to unlock this vault on a new device.',
+      'Aegis Vault cannot recover the secret key or master password for you.',
+    ].join('\n');
+    const blob = new Blob([kit], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'aegis-vault-emergency-kit.txt';
+    anchor.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -297,6 +342,61 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                         {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
+                  </div>
+                )}
+
+                {(!isSetup || requiresSecretKey) && (
+                  <div className="rounded-2xl border border-brand-primary/15 bg-brand-primary/5 p-4 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center text-brand-primary shrink-0">
+                        <KeyRound className="w-4.5 h-4.5" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-xs font-bold text-on-surface">{t('lock.secret.title')}</p>
+                        <p className="text-[11px] leading-relaxed text-on-surface-variant mt-1">
+                          {isSetup ? t('lock.secret.unlockDescription') : t('lock.secret.setupDescription')}
+                        </p>
+                      </div>
+                    </div>
+
+                    <label className="block">
+                      <span className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase mb-2">
+                        {t('lock.secret.label')}
+                      </span>
+                      <input
+                        data-testid="lock-secret-key-input"
+                        type="text"
+                        value={secretKey}
+                        onChange={(e) => setSecretKey(e.target.value)}
+                        readOnly={!isSetup}
+                        className="w-full bg-[#141614] border border-outline-variant/30 rounded-xl px-3 py-3 text-on-surface focus:ring-2 focus:ring-brand-primary/20 focus:outline-none transition-all text-center tracking-wider text-xs font-mono"
+                        placeholder="A3-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
+                        required={requiresSecretKey}
+                      />
+                    </label>
+
+                    <label className="flex items-start gap-2 text-left text-[11px] text-on-surface-variant cursor-pointer">
+                      <input
+                        data-testid="lock-remember-secret-key-checkbox"
+                        type="checkbox"
+                        checked={rememberSecretKey}
+                        onChange={(e) => setRememberSecretKey(e.target.checked)}
+                        className="mt-0.5 accent-brand-primary"
+                      />
+                      <span>{t('lock.secret.rememberThisDevice')}</span>
+                    </label>
+
+                    {!isSetup && (
+                      <button
+                        data-testid="lock-emergency-kit-button"
+                        type="button"
+                        onClick={handleDownloadEmergencyKit}
+                        className="w-full flex items-center justify-center gap-2 text-xs font-bold border border-brand-primary/25 bg-brand-primary/10 hover:bg-brand-primary/15 text-brand-primary py-3 rounded-xl transition-all cursor-pointer"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>{t('lock.secret.downloadEmergencyKit')}</span>
+                      </button>
+                    )}
                   </div>
                 )}
 

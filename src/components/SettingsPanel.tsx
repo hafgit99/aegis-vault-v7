@@ -29,7 +29,7 @@ import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from '..
 import { parseUniversalImport } from '../lib/importer';
 import { secureRandomToken } from '../lib/random';
 import { registerBiometric, isBiometricEnabled, disableBiometric, isBiometricSupported } from '../lib/biometric';
-import { getActiveMasterPassword } from '../lib/vaultSession';
+import { getActiveBackupPassword, getActiveMasterPassword } from '../lib/vaultSession';
 import { openDesktopImportFile, saveDesktopExportFile } from '../lib/desktopFiles';
 import { isDesktopRuntime } from '../lib/desktopStorage';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -263,7 +263,7 @@ export default function SettingsPanel({
 
     let passwordToUse = '';
     if (useMasterForBackup) {
-      const masterPassword = getActiveMasterPassword();
+      const masterPassword = getActiveBackupPassword();
       if (!masterPassword) {
         setBackupError(t('settings.export.missingMaster'));
         return;
