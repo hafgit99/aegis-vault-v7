@@ -70,4 +70,35 @@ describe('VaultItemDetailHeader', () => {
     expect(onCopyText).toHaveBeenCalledWith(JSON.stringify(item, null, 2), 'item_export');
     expect(onDelete).toHaveBeenCalledWith('item-1');
   });
+
+  it('renders a platform logo when the item matches a known provider', () => {
+    render(
+      <VaultItemDetailHeader
+        item={{ ...item, title: 'GitHub', url: 'github.com' }}
+        copiedField={null}
+        onToggleFavorite={vi.fn()}
+        onEdit={vi.fn()}
+        onCopyText={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    const logo = screen.getByAltText('GitHub Logo') as HTMLImageElement;
+    expect(logo.src).toContain('googleusercontent.com');
+  });
+
+  it('renders the copied export state', () => {
+    const { container } = render(
+      <VaultItemDetailHeader
+        item={item}
+        copiedField="item_export"
+        onToggleFavorite={vi.fn()}
+        onEdit={vi.fn()}
+        onCopyText={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    expect(container.querySelector('.text-brand-tertiary')).toBeTruthy();
+  });
 });

@@ -121,6 +121,7 @@
   - [x] Expand identity detail copied-state and fallback coverage.
   - [x] Expand secure note copied-state and empty-note coverage.
   - [x] Expand attachment card missing-size coverage.
+  - [x] Expand vault item detail header logo and copied-state coverage.
 
 ## Phase 4: Desktop Productization
 
