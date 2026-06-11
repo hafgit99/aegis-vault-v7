@@ -32,6 +32,14 @@ const item = (id: string, title: string, favorite = false): VaultItem => ({
 
 const activeItems = [item('mail', 'Aegis Mail', true), item('bank', 'Aegis Bank')];
 
+function buttonByText(text: string) {
+  const button = screen.getAllByRole('button').find((element) => element.textContent?.includes(text));
+  if (!button) {
+    throw new Error(`Button not found: ${text}`);
+  }
+  return button;
+}
+
 function renderWorkspace(overrides: Partial<ComponentProps<typeof VaultWorkspace>> = {}) {
   const props: ComponentProps<typeof VaultWorkspace> = {
     selectedItem: null,
@@ -103,6 +111,52 @@ describe('VaultWorkspace', () => {
     expect(props.onSetFavoritesOnly).toHaveBeenCalledWith(true);
     expect(props.onSelectDashboard).toHaveBeenCalledTimes(1);
     expect(props.onSelectItem).toHaveBeenCalledWith(expect.objectContaining({ id: 'mail' }));
+  });
+
+  it('renders active favorite filter state and can switch back to all items', () => {
+    const props = renderWorkspace({
+      filterFavoritesOnly: true,
+      filteredItems: [activeItems[0]],
+    });
+
+    const allButton = buttonByText('Tümü (2)');
+    const favoritesButton = buttonByText('Favoriler (1)');
+
+    expect(allButton.className).toContain('text-on-surface-variant');
+    expect(favoritesButton.className).toContain('bg-brand-primary/15');
+    expect(screen.getByText((_, element) => element?.textContent === '1 öğe listeleniyor')).toBeTruthy();
+
+    fireEvent.click(allButton);
+
+    expect(props.onSetFavoritesOnly).toHaveBeenCalledWith(false);
+  });
+
+  it('renders the empty filtered-list fallback', () => {
+    renderWorkspace({
+      filteredItems: [],
+      filterFavoritesOnly: true,
+    });
+
+    expect(
+      screen
+        .getAllByText((_, element) => element?.textContent?.includes('Arama sonucu') ?? false)
+        .some((element) => element.className.includes('italic')),
+    ).toBe(true);
+    expect(screen.getByText((_, element) => element?.textContent === '0 öğe listeleniyor')).toBeTruthy();
+  });
+
+  it('forwards dashboard header and quick action callbacks', () => {
+    const props = renderWorkspace();
+
+    fireEvent.click(screen.getByText('H'));
+    fireEvent.click(buttonByText('Yeni Şifre Ekle'));
+    fireEvent.click(buttonByText('Güvenlik Denetle'));
+    fireEvent.click(buttonByText('Güçlü Şifre Üret'));
+
+    expect(props.onOpenProfile).toHaveBeenCalledTimes(1);
+    expect(props.onNewItem).toHaveBeenCalledTimes(1);
+    expect(props.onOpenAudit).toHaveBeenCalledTimes(1);
+    expect(props.onOpenGenerator).toHaveBeenCalledTimes(1);
   });
 
   it('renders selected item details and forwards mobile back action', () => {
