@@ -19,6 +19,30 @@ describe('universal importer', () => {
     expect(result.message).toBeTruthy();
   });
 
+  it('uses localized importer labels when provided', () => {
+    const emptyResult = parseUniversalImport('   ', {
+      errorEmpty: 'The file is empty.',
+    });
+
+    expect(emptyResult.type).toBe('error');
+    if (emptyResult.type !== 'error') return;
+    expect(emptyResult.message).toBe('The file is empty.');
+
+    const csvResult = parseUniversalImport('email,pwd\nowner@example.com,secret', {
+      untitledUniversal: 'Untitled Import',
+      formatUniversalCsv: 'Universal Column-Compatible CSV',
+    });
+
+    expect(csvResult.type).toBe('success');
+    if (csvResult.type !== 'success') return;
+    expect(csvResult.formatName).toBe('Universal Column-Compatible CSV');
+    expect(csvResult.items[0]).toMatchObject({
+      title: 'Untitled Import',
+      username: 'owner@example.com',
+      password: 'secret',
+    });
+  });
+
   it('returns a readable error for malformed JSON', () => {
     const result = parseUniversalImport('{"items": [');
 

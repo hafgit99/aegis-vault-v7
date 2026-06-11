@@ -110,6 +110,7 @@ Recently improved:
 - Notification hooks: covered selected-language rendering for the vault status alert and profile-save notification keys.
 - Trash action hooks: covered selected-language rendering for move, empty, restore, and permanent-delete confirmation flows.
 - Attachment download hook: covered selected-language rendering for missing-file and decrypt-failure notifications.
+- Universal importer: covered localized parser labels and selected-language Settings import error rendering.
 - `src/components/VaultFormModal.tsx`: covered edit-save identity preservation, title validation, password visibility/autogeneration, selected file removal, attachment upload failures, existing attachment removal before save, and download error notifications.
 - `src/components/CardDetail.tsx`: covered copied states, PIN copy action, missing-field fallbacks, and empty-string copy behavior.
 - `src/components/LoginDetail.tsx`: covered copied states, empty-password fallback, and safe empty-password copy behavior.

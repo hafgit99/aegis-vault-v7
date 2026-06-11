@@ -105,6 +105,7 @@
   - [x] Translate profile-save and vault-status notifications.
   - [x] Translate trash action confirmations, destructive prompts, and success alerts.
   - [x] Translate attachment download failure notifications.
+  - [x] Translate universal importer format names and parser error messages in Settings.
 - [x] Add component tests for lock screen, vault form, settings import/export, and trash.
   - [x] Lock screen setup and unlock behavior covered by component tests.
   - [x] Settings encrypted export and JSON import behavior covered by component tests.

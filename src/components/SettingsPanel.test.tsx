@@ -593,6 +593,17 @@ describe('SettingsPanel plain export and import errors', () => {
       expect(container.textContent).toContain('başlık satırı eksik');
     });
   });
+
+  it('shows localized importer errors in the selected language', async () => {
+    const { container } = renderSettingsWithLanguage('en');
+    const file = new File(['not,a,supported,backup'], 'broken.csv', { type: 'text/csv' });
+
+    fireEvent.change(fileInput(container), { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(container.textContent).toContain('CSV file is empty or missing a header row.');
+    });
+  });
 });
 
 describe('SettingsPanel import interaction states', () => {

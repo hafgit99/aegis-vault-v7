@@ -335,6 +335,22 @@ export default function SettingsPanel({
     }
   };
 
+  const importLabels = {
+    errorEmpty: t('settings.import.parser.errorEmpty'),
+    formatAegisJson: t('settings.import.parser.formatAegisJson'),
+    formatBitwardenJson: t('settings.import.parser.formatBitwardenJson'),
+    errorUnsupportedJson: t('settings.import.parser.errorUnsupportedJson'),
+    errorJsonPrefix: t('settings.import.parser.errorJsonPrefix'),
+    errorCsvHeader: t('settings.import.parser.errorCsvHeader'),
+    formatBitwardenCsv: t('settings.import.parser.formatBitwardenCsv'),
+    formatLastPassCsv: t('settings.import.parser.formatLastPassCsv'),
+    formatChromeCsv: t('settings.import.parser.formatChromeCsv'),
+    formatOnePasswordCsv: t('settings.import.parser.formatOnePasswordCsv'),
+    untitledUniversal: t('settings.import.parser.untitledUniversal'),
+    formatUniversalCsv: t('settings.import.parser.formatUniversalCsv'),
+    errorCsvColumns: t('settings.import.parser.errorCsvColumns'),
+  };
+
   // Parses raw file data through the Universal Importer
   const processImportFile = (file: File) => {
     resetImportFlowState();
@@ -345,7 +361,7 @@ export default function SettingsPanel({
       void (async () => {
         try {
           const result = e.target?.result as string;
-          const scanResult = parseUniversalImport(result);
+          const scanResult = parseUniversalImport(result, importLabels);
 
           if (scanResult.type === 'error') {
             throw new Error(scanResult.message);

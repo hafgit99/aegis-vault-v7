@@ -57,13 +57,46 @@ export type ImportResult =
   | { type: 'encrypted_aegis'; envelope: any }
   | { type: 'error'; message: string };
 
+export interface ImportLabels {
+  errorEmpty: string;
+  formatAegisJson: string;
+  formatBitwardenJson: string;
+  errorUnsupportedJson: string;
+  errorJsonPrefix: string;
+  errorCsvHeader: string;
+  formatBitwardenCsv: string;
+  formatLastPassCsv: string;
+  formatChromeCsv: string;
+  formatOnePasswordCsv: string;
+  untitledUniversal: string;
+  formatUniversalCsv: string;
+  errorCsvColumns: string;
+}
+
+const defaultImportLabels: ImportLabels = {
+  errorEmpty: 'Dosya içeriği boş.',
+  formatAegisJson: 'Aegis Güvenli JSON Yedek',
+  formatBitwardenJson: 'Bitwarden Şifre Yöneticisi (JSON)',
+  errorUnsupportedJson: 'Desteklenmeyen veya tanımlanamayan JSON yapısı.',
+  errorJsonPrefix: 'JSON format hatası',
+  errorCsvHeader: 'Boş veya başlık satırı eksik CSV dosyası.',
+  formatBitwardenCsv: 'Bitwarden Aktarımı (CSV)',
+  formatLastPassCsv: 'LastPass Şifre Aktarımı (CSV)',
+  formatChromeCsv: 'Google Chrome / Şifre Yöneticisi (CSV)',
+  formatOnePasswordCsv: '1Password Şifre Aktarımı (CSV)',
+  untitledUniversal: 'İsimsiz Aktarım',
+  formatUniversalCsv: 'Evrensel Kolon Uyumlu CSV',
+  errorCsvColumns: 'CSV yapısı çözülemedi. Dosyada şifre veya kullanıcı adı kolonları bulunamadı.',
+};
+
 /**
  * Parses any password manager export/backup and returns a normalized unified list.
  */
-export function parseUniversalImport(fileContent: string): ImportResult {
+export function parseUniversalImport(fileContent: string, labels: Partial<ImportLabels> = {}): ImportResult {
+  const copy = { ...defaultImportLabels, ...labels };
   const trimmed = fileContent.trim();
   if (!trimmed) {
-    return { type: 'error', message: 'Dosya içeriği boş.' };
+    return { type: 'error', message: copy.errorEmpty };
   }
 
   // Scenario A: JSON Format
@@ -102,7 +135,7 @@ export function parseUniversalImport(fileContent: string): ImportResult {
           passkeyPrivateExponent: x.passkeyPrivateExponent,
           passkeyPublicId: x.passkeyPublicId,
         }));
-        return { type: 'success', items, formatName: 'Aegis Güvenli JSON Yedek' };
+        return { type: 'success', items, formatName: copy.formatAegisJson };
       }
 
       // 3. Bitwarden JSON structure
@@ -151,20 +184,20 @@ export function parseUniversalImport(fileContent: string): ImportResult {
           items.push(item);
         });
 
-        return { type: 'success', items, formatName: 'Bitwarden Şifre Yöneticisi (JSON)' };
+        return { type: 'success', items, formatName: copy.formatBitwardenJson };
       }
 
       // Fallback fallback general JSON structure
-      return { type: 'error', message: 'Desteklenmeyen veya tanımlanamayan JSON yapısı.' };
+      return { type: 'error', message: copy.errorUnsupportedJson };
     } catch (err: any) {
-      return { type: 'error', message: `JSON format hatası: ${err?.message}` };
+      return { type: 'error', message: `${copy.errorJsonPrefix}: ${err?.message}` };
     }
   }
 
   // Scenario B: CSV Format
   const rows = parseCSV(trimmed);
   if (rows.length < 2) {
-    return { type: 'error', message: 'Boş veya başlık satırı eksik CSV dosyası.' };
+    return { type: 'error', message: copy.errorCsvHeader };
   }
 
   const headers = rows[0].map(h => h.toLowerCase().trim().replace(/^["']|["']$/g, ''));
@@ -209,7 +242,7 @@ export function parseUniversalImport(fileContent: string): ImportResult {
       };
     });
 
-    return { type: 'success', items, formatName: 'Bitwarden Aktarımı (CSV)' };
+    return { type: 'success', items, formatName: copy.formatBitwardenCsv };
   }
 
   // 2. LastPass CSV detection: "url,username,password,extra,name,grouping,fav"
@@ -231,7 +264,7 @@ export function parseUniversalImport(fileContent: string): ImportResult {
       category: 'login',
     }));
 
-    return { type: 'success', items, formatName: 'LastPass Şifre Aktarımı (CSV)' };
+    return { type: 'success', items, formatName: copy.formatLastPassCsv };
   }
 
   // 3. Google Password Manager CSV detection: "name,url,username,password,note"
@@ -251,7 +284,7 @@ export function parseUniversalImport(fileContent: string): ImportResult {
       category: 'login',
     }));
 
-    return { type: 'success', items, formatName: 'Google Chrome / Şifre Yöneticisi (CSV)' };
+    return { type: 'success', items, formatName: copy.formatChromeCsv };
   }
 
   // 4. 1Password CSV detection: "title,website,username,password,notes,etc" or "title,url,username,password"
@@ -271,7 +304,7 @@ export function parseUniversalImport(fileContent: string): ImportResult {
       category: 'login',
     }));
 
-    return { type: 'success', items, formatName: '1Password Şifre Aktarımı (CSV)' };
+    return { type: 'success', items, formatName: copy.formatOnePasswordCsv };
   }
 
   // 5. Universal CSV Fallback mapper (Detect columns based on synonyms)
@@ -284,7 +317,7 @@ export function parseUniversalImport(fileContent: string): ImportResult {
 
   if (titleIdx !== -1 || userIdx !== -1 || passIdx !== -1) {
     const items: Partial<VaultItem>[] = dataRows.map(row => ({
-      title: titleIdx !== -1 ? row[titleIdx] : 'İsimsiz Aktarım',
+      title: titleIdx !== -1 ? row[titleIdx] : copy.untitledUniversal,
       username: userIdx !== -1 ? row[userIdx] : '',
       password: passIdx !== -1 ? row[passIdx] : '',
       url: urlIdx !== -1 ? row[urlIdx] : '',
@@ -293,8 +326,8 @@ export function parseUniversalImport(fileContent: string): ImportResult {
       category: 'login',
     }));
 
-    return { type: 'success', items, formatName: 'Evrensel Kolon Uyumlu CSV' };
+    return { type: 'success', items, formatName: copy.formatUniversalCsv };
   }
 
-  return { type: 'error', message: 'CSV yapısı çözülemedi. Dosyada şifre veya kullanıcı adı kolonları bulunamadı.' };
+  return { type: 'error', message: copy.errorCsvColumns };
 }
