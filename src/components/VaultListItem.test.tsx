@@ -42,4 +42,30 @@ describe('VaultListItem', () => {
 
     expect(onSelect).toHaveBeenCalledWith(vaultItem);
   });
+
+  it('renders a known platform logo when one is available', () => {
+    render(
+      <VaultListItem
+        item={{ ...vaultItem, title: 'GitHub', url: 'https://github.com', password: 'StrongPassphrase123!' }}
+        isSelected={false}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    const logo = screen.getByAltText('GitHub logo') as HTMLImageElement;
+    expect(logo.src).toContain('googleusercontent.com');
+    expect(screen.getByText('SECURE')).toBeTruthy();
+  });
+
+  it('uses an empty password fallback for strength labeling', () => {
+    render(
+      <VaultListItem
+        item={{ ...vaultItem, password: undefined }}
+        isSelected={false}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('WEAK')).toBeTruthy();
+  });
 });
