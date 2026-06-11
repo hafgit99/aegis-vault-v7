@@ -73,6 +73,7 @@
 - [x] Replace `alert()` calls with the existing modal/toast pattern.
 - [x] Normalize naming: `AegisVault`, `Aegis Vault`, and `Aegis Vault 7`.
 - [x] Add the first internationalization layer with Turkish, English, and Chinese language selection.
+  - [x] Translate the primary shell, settings language control, lock screen, and dashboard header.
 - [x] Add component tests for lock screen, vault form, settings import/export, and trash.
   - [x] Lock screen setup and unlock behavior covered by component tests.
   - [x] Settings encrypted export and JSON import behavior covered by component tests.

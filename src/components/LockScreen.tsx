@@ -15,20 +15,20 @@ import {
   Eye, 
   EyeOff, 
   CheckCircle2, 
-  Info,
   Sparkles,
-  RefreshCw,
   Trash2
 } from 'lucide-react';
 import { isMasterPasswordSet, setupMasterPassword, verifyMasterPassword } from '../lib/storage';
 import { isBiometricEnabled, isBiometricSupported, authenticateBiometric } from '../lib/biometric';
 import { APP_FOOTER_NAME, APP_NAME, APP_SHORT_NAME } from '../lib/branding';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface LockScreenProps {
   onUnlock: () => void;
 }
 
 export default function LockScreen({ onUnlock }: LockScreenProps) {
+  const { t } = useLanguage();
   const isSetup = isMasterPasswordSet();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -48,18 +48,18 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
 
     try {
       if (!isBiometricSupported()) {
-        throw new Error("Cihazınızda veya tarayıcınızda biyometrik kilit açma (WebAuthn) desteklenmiyor.");
+        throw new Error(t('lock.error.biometricUnsupported'));
       }
       const decryptedMaster = await authenticateBiometric();
       if (await verifyMasterPassword(decryptedMaster)) {
         onUnlock();
       } else {
-        throw new Error("Ana şifre bütünlük doğrulaması başarısız! Lütfen manuel olarak giriş yapın.");
+        throw new Error(t('lock.error.biometricIntegrity'));
       }
     } catch (err: any) {
-      let errMsg = err?.message || "Biyometrik kilit açma başarısız oldu.";
+      let errMsg = err?.message || t('lock.error.biometricFailed');
       if (err?.name === "SecurityError" || err?.name === "NotAllowedError") {
-        errMsg = "Biyometrik doğrulama izni kısıtlandı veya iptal edildi. Tarayıcınız güvenli iframe kısıtlaması uyguluyor olabilir. Lütfen bu özelliği kullanmak için uygulamayı yeni sekmede/tam ekranda açın.";
+        errMsg = t('lock.error.biometricPermission');
       }
       setBiometricError(errMsg);
     } finally {
@@ -84,11 +84,11 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
 
     if (!isSetup) {
       if (password.length < 6) {
-        setError('Ana şifre en az 6 karakterden oluşmalıdır.');
+        setError(t('lock.error.minimumLength'));
         return;
       }
       if (password !== confirmPassword) {
-        setError('Belirlediğiniz şifreler birbiriyle eşleşmiyor. Lütfen kontrol edin.');
+        setError(t('lock.error.confirmationMismatch'));
         return;
       }
       await setupMasterPassword(password);
@@ -97,7 +97,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
       if (await verifyMasterPassword(password)) {
         onUnlock();
       } else {
-        setError('Hatalı Ana Şifre! Lütfen girilen şifreyi kontrol ederek tekrar deneyiniz.');
+        setError(t('lock.error.invalidPassword'));
       }
     }
   };
@@ -120,14 +120,14 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
             <div className="space-y-4">
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-primary/10 border border-brand-primary/20 text-brand-primary text-[10px] font-bold tracking-widest uppercase rounded-full">
                 <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-                <span>AKILLI SİBER GÜVENLİK KASASI</span>
+                <span>{t('lock.hero.badge')}</span>
               </div>
               <h1 className="font-display text-3xl md:text-5xl font-bold tracking-tight text-on-surface leading-tight">
-                Dijital Varlıklarınızı <br />
-                <span className="text-brand-primary bg-gradient-to-r from-brand-primary to-emerald-400 bg-clip-text text-transparent">Askeri Standartta</span> Koruyun
+                {t('lock.hero.titlePrefix')} <br />
+                <span className="text-brand-primary bg-gradient-to-r from-brand-primary to-emerald-400 bg-clip-text text-transparent">{t('lock.hero.titleHighlight')}</span> {t('lock.hero.titleSuffix')}
               </h1>
               <p className="text-on-surface-variant text-sm md:text-base max-w-xl leading-relaxed">
-                {APP_NAME}; kişisel parolalarınızı, kredi kartlarınızı ve güvenli notlarınızı en zorlu dijital tehlikelere karşı korumak için tasarlanmış yenilikçi, yerel öncelikli (local-first) bir koruma kalkanıdır.
+                {APP_NAME}; {t('lock.hero.descriptionSuffix')}
               </p>
             </div>
 
@@ -138,9 +138,9 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                 <div className="w-9 h-9 rounded-xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center text-brand-primary">
                   <ShieldCheck className="w-5 h-5" />
                 </div>
-                <h3 className="font-display font-semibold text-sm text-on-surface">Sıfır-Bilgi Teknolojisi</h3>
+                <h3 className="font-display font-semibold text-sm text-on-surface">{t('lock.feature.zeroKnowledge.title')}</h3>
                 <p className="text-on-surface-variant text-[11.5px] leading-relaxed">
-                  Şifreniz ve verileriniz asla uzak sunuculara gönderilmez. Şifre çözme işlemleri tamamen kendi tarayıcınızda ve işlemcinizde gerçekleşir.
+                  {t('lock.feature.zeroKnowledge.description')}
                 </p>
               </div>
 
@@ -148,9 +148,9 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                 <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
                   <Cpu className="w-5 h-5" />
                 </div>
-                <h3 className="font-display font-semibold text-sm text-on-surface font-display">Askeri Düzey Çözümleme</h3>
+                <h3 className="font-display font-semibold text-sm text-on-surface font-display">{t('lock.feature.crypto.title')}</h3>
                 <p className="text-on-surface-variant text-[11.5px] leading-relaxed">
-                  Güçlü hash mekanizmaları ve AES standartlarında yerel şifreleme motoru sayesinde, cihazınız çalınsa dahi verileriniz ulaşılamaz kalır.
+                  {t('lock.feature.crypto.description')}
                 </p>
               </div>
 
@@ -158,9 +158,9 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                 <div className="w-9 h-9 rounded-xl bg-brand-tertiary/10 border border-brand-tertiary/20 flex items-center justify-center text-brand-tertiary">
                   <HardDrive className="w-5 h-5" />
                 </div>
-                <h3 className="font-display font-semibold text-sm text-on-surface font-display">Tam Yerel Kontrol</h3>
+                <h3 className="font-display font-semibold text-sm text-on-surface font-display">{t('lock.feature.localControl.title')}</h3>
                 <p className="text-on-surface-variant text-[11.5px] leading-relaxed">
-                  Veritabanınız tamamen sizin kontrolünüzdedir. İstediğiniz an verilerinizi yedekli dışa aktarabilir (JSON) veya geri yükleyebilirsiniz.
+                  {t('lock.feature.localControl.description')}
                 </p>
               </div>
 
@@ -168,9 +168,9 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                 <div className="w-9 h-9 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
                   <Trash2 className="w-5 h-5" />
                 </div>
-                <h3 className="font-display font-semibold text-sm text-on-surface font-display">Akıllı Çöp Kutusu</h3>
+                <h3 className="font-display font-semibold text-sm text-on-surface font-display">{t('lock.feature.trash.title')}</h3>
                 <p className="text-on-surface-variant text-[11.5px] leading-relaxed">
-                  Yanlışlıkla silinen parolalarınız kalıcı olarak yok olmaz, 15 gün boyunca yerel çöp kutusunda tutulur ve dilediğiniz an geri döndürülebilir.
+                  {t('lock.feature.trash.description')}
                 </p>
               </div>
 
@@ -180,15 +180,15 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
             <div className="flex flex-wrap items-center gap-4 text-xs text-on-surface-variant">
               <div className="flex items-center gap-1.5 bg-[#121412] px-3 py-1.5 rounded-full border border-outline-variant/5">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse" />
-                <span>Yerel Depolama: Aktif</span>
+                <span>{t('lock.indicator.localStorage')}</span>
               </div>
               <div className="flex items-center gap-1.5 bg-[#121412] px-3 py-1.5 rounded-full border border-outline-variant/5">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-tertiary" />
-                <span>Askeri Şifreleme Kilidi</span>
+                <span>{t('lock.indicator.encryption')}</span>
               </div>
               <div className="flex items-center gap-1.5 bg-[#121412] px-3 py-1.5 rounded-full border border-outline-variant/5">
                 <span className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
-                <span>Çöp Kutusu Koruması</span>
+                <span>{t('lock.indicator.trash')}</span>
               </div>
             </div>
           </div>
@@ -204,12 +204,12 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                   <Lock className="w-7 h-7 text-brand-primary group-hover:scale-110 transition-transform duration-300" />
                 </div>
                 <h1 className="font-display text-2xl font-bold text-on-surface leading-tight tracking-tight">
-                  {isSetup ? 'Kasa Kilitleri Aktif' : 'Güvenli Kasanızı Kurun'}
+                  {isSetup ? t('lock.panel.unlockTitle') : t('lock.panel.setupTitle')}
                 </h1>
                 <p className="text-on-surface-variant text-xs mt-2.5 max-w-xs leading-relaxed">
                   {isSetup
-                    ? 'Tarayıcınıza kaydedilmiş askeri düzey şifreli verilerinize erişmek için ana şifrenizi girmeniz gerekmektedir.'
-                    : `${APP_SHORT_NAME} yerel koruma sistemini aktifleştirmek için kendinize her zaman hatırlayacağınız güçlü bir Ana Şifre belirleyin.`}
+                    ? t('lock.panel.unlockDescription')
+                    : `${APP_SHORT_NAME} ${t('lock.panel.setupDescriptionSuffix')}`}
                 </p>
               </div>
 
@@ -232,9 +232,9 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase">
-                      {isSetup ? 'ANA ŞİFRE (MASTER PASSWORD)' : 'YENİ ANA ŞİFRE'}
+                      {isSetup ? t('lock.field.masterPassword') : t('lock.field.newMasterPassword')}
                     </label>
-                    <span className="text-[10px] text-zinc-500 font-medium">En az 6 karakter</span>
+                    <span className="text-[10px] text-zinc-500 font-medium">{t('lock.field.minimumLength')}</span>
                   </div>
                   <div className="relative">
                     <input
@@ -251,7 +251,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 text-on-surface-variant/60 hover:text-on-surface rounded-md focus:outline-none cursor-pointer"
-                      title={showPassword ? 'Gizle' : 'Göster'}
+                      title={showPassword ? t('lock.action.hide') : t('lock.action.show')}
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -262,7 +262,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                 {!isSetup && (
                   <div>
                     <label className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase mb-2">
-                      ŞİFREYİ TEKRAR ONAYLAYIN
+                      {t('lock.field.confirmPassword')}
                     </label>
                     <div className="relative">
                       <input
@@ -278,7 +278,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                         className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 text-on-surface-variant/60 hover:text-on-surface rounded-md focus:outline-none cursor-pointer"
-                        title={showConfirmPassword ? 'Gizle' : 'Göster'}
+                        title={showConfirmPassword ? t('lock.action.hide') : t('lock.action.show')}
                       >
                         {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
@@ -295,12 +295,12 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                   {isSetup ? (
                     <>
                       <Unlock className="w-4.5 h-4.5" />
-                      <span>Sistem Kilidini Aç</span>
+                      <span>{t('lock.action.unlock')}</span>
                     </>
                   ) : (
                     <>
                       <Fingerprint className="w-4.5 h-4.5" />
-                      <span>Güvenli Kasayı Başlat</span>
+                      <span>{t('lock.action.setup')}</span>
                     </>
                   )}
                 </button>
@@ -314,7 +314,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                     className="w-full flex items-center justify-center gap-2.5 bg-brand-primary/10 border border-brand-primary/30 hover:bg-brand-primary/20 text-brand-primary py-3.5 rounded-xl font-bold transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer animate-fade-in"
                   >
                     <Fingerprint className={`w-4.5 h-4.5 text-brand-primary ${biometricLoading ? 'animate-ping' : 'animate-pulse'}`} />
-                    <span>{biometricLoading ? 'Sistem Doğrulanıyor...' : 'Biyometrik Kilit Aç (OS)'}</span>
+                    <span>{biometricLoading ? t('lock.action.biometricLoading') : t('lock.action.biometric')}</span>
                   </button>
                 )}
               </form>
@@ -323,10 +323,10 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
               <div className="mt-8 pt-6 border-t border-outline-variant/10 flex flex-col items-center gap-1.5 text-xs text-on-surface-variant/40 text-center">
                 <div className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5 text-brand-tertiary" />
-                  <span className="font-bold text-on-surface">Gizlilik Esaslı Yerel Tasarım</span>
+                  <span className="font-bold text-on-surface">{t('lock.privacy.title')}</span>
                 </div>
                 <p className="leading-relaxed text-[11px] px-2">
-                  Biz verilerinize veya master şifrenize asla erişemeyiz. Şifrenizi kaybetmemek için lütfen güvenli bir yerde saklayın.
+                  {t('lock.privacy.description')}
                 </p>
               </div>
 
@@ -339,7 +339,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
       {/* Futuristic clean footer */}
       <footer className="w-full border-t border-outline-variant/5 py-4 bg-[#0a0b0a]/40 text-center text-[10px] text-on-surface-variant/30 font-mono flex flex-col sm:flex-row items-center justify-between px-6 gap-2">
         <span>© 2026 {APP_FOOTER_NAME}</span>
-        <span>AES-256-GCM End-To-End Client-Side Cryptography</span>
+        <span>{t('lock.footer.crypto')}</span>
       </footer>
     </div>
   );

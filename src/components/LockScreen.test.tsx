@@ -6,6 +6,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { APP_NAME } from '../lib/branding';
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 import {
   authenticateBiometric,
   isBiometricEnabled,
@@ -42,6 +44,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   cleanup();
+  window.localStorage.clear();
   vi.clearAllMocks();
 });
 
@@ -55,6 +58,28 @@ describe('LockScreen', () => {
     fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 
     expect(screen.getByText('Ana şifre en az 6 karakterden oluşmalıdır.')).toBeTruthy();
+    expect(setupMasterPassword).not.toHaveBeenCalled();
+  });
+
+  it('renders setup copy and validation feedback in the selected language', () => {
+    window.localStorage.setItem(languageStorageKey, 'en');
+
+    render(
+      <LanguageProvider>
+        <LockScreen onUnlock={vi.fn()} />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByText('SMART CYBER SECURITY VAULT')).toBeTruthy();
+    expect(screen.getByText('Set Up Your Secure Vault')).toBeTruthy();
+    expect(screen.getByText('Start Secure Vault')).toBeTruthy();
+
+    const [password, confirmation] = passwordInputs();
+    fireEvent.change(password, { target: { value: '12345' } });
+    fireEvent.change(confirmation, { target: { value: '12345' } });
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement);
+
+    expect(screen.getByText('The master password must be at least 6 characters.')).toBeTruthy();
     expect(setupMasterPassword).not.toHaveBeenCalled();
   });
 
