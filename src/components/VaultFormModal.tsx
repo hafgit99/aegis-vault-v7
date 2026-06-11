@@ -218,7 +218,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
     // Limit to 250MB
     const limit = 250 * 1024 * 1024;
     if (file.size > limit) {
-      setErrorMessage('Hata: Seçtiğiniz dosya boyutu 250MB sınırını aşmaktadır. Lütfen daha küçük bir dosya seçin.');
+      setErrorMessage(t('vaultForm.attachment.fileTooLarge'));
       return;
     }
     setSelectedFile(file);
@@ -250,16 +250,16 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
         URL.revokeObjectURL(url_dl);
       } else {
         onNotify?.({
-          title: 'Eklenti Bulunamadı',
-          message: 'Eklenti bulunamadı veya yerel veritabanında silinmiş.',
+          title: t('vaultForm.attachment.notFoundTitle'),
+          message: t('vaultForm.attachment.notFoundMessage'),
           type: 'warning',
         });
       }
     } catch (e) {
       console.error(e);
       onNotify?.({
-        title: 'Dosya Açılamadı',
-        message: 'Dosya şifresi çözülürken bir hata oluştu.',
+        title: t('vaultForm.attachment.openFailedTitle'),
+        message: t('vaultForm.attachment.openFailedMessage'),
         type: 'danger',
       });
     }
@@ -294,7 +294,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
         attachmentTypeToSave = selectedFile.type || 'application/octet-stream';
       } catch (err) {
         console.error(err);
-        setErrorMessage('Dosya askeri düzey kütüphane ile yerel şifrelenirken bir hata oluştu.');
+        setErrorMessage(t('vaultForm.attachment.encryptFailed'));
         setIsUploading(false);
         return;
       }
@@ -894,9 +894,9 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
             <div className="flex items-center justify-between border-b border-outline-variant/5 pb-2">
               <h4 className="text-[10px] font-bold text-brand-primary tracking-widest uppercase flex items-center gap-2">
                 <UploadCloud className="w-4.5 h-4.5 text-brand-primary" />
-                <span>Askeri Düzey Dosya Şifreleme (Maks: 250MB)</span>
+                <span>{t('vaultForm.attachment.title')}</span>
               </h4>
-              <span className="text-[9px] text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-0.5 rounded border border-emerald-500/15 font-mono">HTML5 IndexedDB Korumalı</span>
+              <span className="text-[9px] text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-0.5 rounded border border-emerald-500/15 font-mono">{t('vaultForm.attachment.protected')}</span>
             </div>
 
             {/* Display status or progress if uploading */}
@@ -904,8 +904,8 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
               <div className="flex flex-col items-center justify-center py-6 space-y-3 bg-[#0d0d0d] rounded-xl border border-outline-variant/5">
                 <Loader2 className="w-8 h-8 text-brand-primary animate-spin" />
                 <div className="text-center">
-                  <p className="text-xs font-bold text-on-surface">Dosya Şifreleniyor & Kilitleniyor...</p>
-                  <p className="text-[10px] text-on-surface-variant mt-1">İstemci tarafında AES entegrasyonu yapılıyor...</p>
+                  <p className="text-xs font-bold text-on-surface">{t('vaultForm.attachment.encrypting')}</p>
+                  <p className="text-[10px] text-on-surface-variant mt-1">{t('vaultForm.attachment.encryptingDescription')}</p>
                 </div>
                 <div className="w-48 bg-[#181a18] h-1.5 rounded-full overflow-hidden relative">
                   <div 
@@ -930,7 +930,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                         <p className="text-[9px] text-[#059669] font-bold font-mono uppercase flex items-center gap-1 mt-0.5">
                           <span>{formatFileSize(existingAttachment.size)}</span>
                           <span>•</span>
-                          <span>AES-GCM ŞİFRELENMİŞ</span>
+                          <span>{t('vaultForm.attachment.encrypted')}</span>
                         </p>
                       </div>
                     </div>
@@ -939,7 +939,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                         type="button"
                         onClick={handleDownloadExistingAttachment}
                         className="p-2 bg-[#121412] hover:bg-[#1c1e1c] border border-outline-variant/15 text-brand-primary rounded-lg transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center"
-                        title="İndir ve Şifresini Çöz"
+                        title={t('vaultForm.attachment.downloadTitle')}
                       >
                         <Download className="w-4 h-4" />
                       </button>
@@ -947,7 +947,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                         type="button"
                         onClick={handleRemoveExistingAttachment}
                         className="p-2 bg-[#121412] hover:bg-red-500/10 border border-outline-variant/15 text-red-400 hover:text-red-300 rounded-lg transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center"
-                        title="Eki Sil"
+                        title={t('vaultForm.attachment.deleteTitle')}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -966,7 +966,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                         <p className="font-bold text-xs text-on-surface truncate pr-2">{selectedFile.name}</p>
                         <p className="text-[10px] text-on-surface-variant font-mono mt-0.5 font-bold flex items-center gap-1">
                           <span>{formatFileSize(selectedFile.size)}</span>
-                          <span className="text-brand-primary bg-brand-primary/10 px-1 py-0.2 rounded text-[9px] uppercase">Giriş Hazır</span>
+                          <span className="text-brand-primary bg-brand-primary/10 px-1 py-0.2 rounded text-[9px] uppercase">{t('vaultForm.attachment.ready')}</span>
                         </p>
                       </div>
                     </div>
@@ -974,7 +974,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                       type="button"
                       onClick={handleRemoveSelectedFile}
                       className="p-2 bg-[#121412] hover:bg-red-500/10 border border-outline-variant/15 text-red-400 hover:text-red-300 rounded-lg transition-all hover:scale-105 active:scale-95 cursor-pointer"
-                      title="Seçimi İptal Et"
+                      title={t('vaultForm.attachment.cancelSelection')}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -998,9 +998,9 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                         <UploadCloud className="w-5.5 h-5.5" />
                       </div>
                       <div className="space-y-1">
-                        <p className="text-xs font-bold text-on-surface">Tıklayın veya Dosyayı Sürükleyin</p>
+                        <p className="text-xs font-bold text-on-surface">{t('vaultForm.attachment.dropTitle')}</p>
                         <p className="text-[10px] text-on-surface-variant leading-relaxed max-w-xs">
-                          PDF, Görsel, Video, Zip vb. tüm dosyalarınızı 250MB sınırına kadar tamamen lokal olarak şifreleyerek ekleyebilirsiniz.
+                          {t('vaultForm.attachment.dropDescription')}
                         </p>
                       </div>
                     </div>
