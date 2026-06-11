@@ -116,6 +116,7 @@ export default function VaultWorkspace({
               Tümü ({activeItems.length})
             </button>
             <button
+              data-testid="vault-filter-favorites"
               onClick={() => onSetFavoritesOnly(true)}
               className={`flex-1 py-1.5 rounded-md font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer ${
                 filterFavoritesOnly

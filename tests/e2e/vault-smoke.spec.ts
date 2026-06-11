@@ -84,6 +84,24 @@ test('moves a vault item to trash and restores it', async ({ page }) => {
   await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Trash Restore' })).toBeVisible();
 });
 
+test('filters favorite vault items', async ({ page }) => {
+  await setupVault(page);
+
+  const favoriteItem = await createLoginItem(page, 'E2E Favorite Item');
+  await createLoginItem(page, 'E2E Regular Item');
+
+  await favoriteItem.click();
+  await page.getByTestId('toggle-favorite-button').click();
+
+  await page.getByTestId('vault-filter-favorites').click();
+  await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Favorite Item' })).toBeVisible();
+  await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Regular Item' })).toBeHidden();
+
+  await page.getByTestId('vault-filter-all').click();
+  await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Favorite Item' })).toBeVisible();
+  await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Regular Item' })).toBeVisible();
+});
+
 test('exports an encrypted backup download', async ({ page }) => {
   await setupVault(page);
   await createLoginItem(page, 'E2E Export Backup');

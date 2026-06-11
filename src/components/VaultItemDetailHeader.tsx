@@ -60,6 +60,7 @@ export default function VaultItemDetailHeader({
 
       <div className="flex gap-2.5">
         <button
+          data-testid="toggle-favorite-button"
           onClick={() => {
             void onToggleFavorite(item);
           }}
