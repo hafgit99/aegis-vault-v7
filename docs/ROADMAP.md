@@ -94,6 +94,7 @@
   - [x] Translate vault form shell, category tabs, common fields, validation, and default actions.
   - [x] Translate vault form login credentials, password controls, and TOTP fields.
   - [x] Translate vault form card details, placeholders, and payment credential labels.
+  - [x] Translate vault form passkey/API credential fields and private exponent generator controls.
 - [x] Add component tests for lock screen, vault form, settings import/export, and trash.
   - [x] Lock screen setup and unlock behavior covered by component tests.
   - [x] Settings encrypted export and JSON import behavior covered by component tests.

@@ -129,6 +129,17 @@ describe('VaultFormModal', () => {
     expect(screen.getByText('EXPIRY (MM/YY)')).toBeTruthy();
     expect(screen.getByText('SECURITY CODE (CVV)')).toBeTruthy();
     expect(screen.getByText('ATM / CARD PIN (OPTIONAL)')).toBeTruthy();
+    fireEvent.click(screen.getByText('Passkey'));
+    expect(screen.getByText('Passkey & Crypto API Keys')).toBeTruthy();
+    expect(screen.getByText('Hardware sign-in credentials and blockchain/API private access codes.')).toBeTruthy();
+    expect(screen.getByText('SERVICE PROVIDER')).toBeTruthy();
+    expect(screen.getByPlaceholderText('e.g. Google Login (Passkey)')).toBeTruthy();
+    expect(screen.getByText('PUBLIC KEY ID')).toBeTruthy();
+    expect(screen.getByPlaceholderText('E.g. yubikey-fido-sha256-id...')).toBeTruthy();
+    expect(screen.getByText('PRIVATE ENCRYPTION PARAMETER (PRIVATE EXPONENT / SECRET KEY)')).toBeTruthy();
+    expect(screen.getByTitle('Generate Strong Random 256-Bit Exponent')).toBeTruthy();
+    expect(screen.getByText('Generate Random')).toBeTruthy();
+    expect(screen.getByPlaceholderText('Enter the maximum-security raw parameter or generate it automatically (hex string)')).toBeTruthy();
     expect(screen.getByText('Cancel')).toBeTruthy();
     expect(screen.getByText('Save Securely')).toBeTruthy();
     expect(screen.getByTitle('Close')).toBeTruthy();
