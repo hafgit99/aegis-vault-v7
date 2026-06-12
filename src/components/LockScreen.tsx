@@ -37,6 +37,7 @@ import {
   isAccountSecretKeyFormatValid,
   normalizeAccountSecretKey,
 } from '../lib/secretKey';
+import aegisLogo from '../../assets/aegis-app-icon.png';
 
 const MIN_MASTER_PASSWORD_LENGTH = 12;
 const LOCKOUT_STORAGE_KEY = 'aegis_lockout_state';
@@ -347,8 +348,8 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
           <div className="lg:col-span-5 flex justify-center lg:justify-end">
             <div className="w-full max-w-md surface-panel rounded-xl p-7 relative z-10 transition-all duration-300 hover:border-brand-primary/15 hover:shadow-brand-primary/5">
               <div className="flex flex-col items-center text-center mb-7">
-                <div className="w-14 h-14 rounded-xl bg-brand-primary/10 border border-brand-primary/25 flex items-center justify-center mb-5 shadow-inner group">
-                  <Lock className="w-7 h-7 text-brand-primary group-hover:scale-110 group-hover:rotate-6 transition-transform duration-300" />
+                <div className="w-14 h-14 rounded-xl bg-brand-primary/5 border border-brand-primary/20 flex items-center justify-center mb-5 shadow-[0_0_15px_rgba(220,225,255,0.05)] overflow-hidden group">
+                  <img src={aegisLogo} alt="Aegis Vault Logo" className="w-11 h-11 object-contain group-hover:scale-105 transition-transform duration-300" />
                 </div>
                 <h1 className="font-display text-2xl font-bold text-on-surface leading-tight tracking-tight">
                   {isSetup ? t('lock.panel.unlockTitle') : t('lock.panel.setupTitle')}

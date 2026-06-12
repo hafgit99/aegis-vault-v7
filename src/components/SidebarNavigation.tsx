@@ -3,6 +3,7 @@ import { Clock, KeyRound, Lock, Settings, Shield, ShieldCheck, Trash2 } from 'lu
 import { useLanguage } from '../i18n/LanguageContext';
 import { APP_NAME } from '../lib/branding';
 import { ActiveTab } from '../types';
+import aegisLogo from '../../assets/aegis-app-icon.png';
 
 interface SidebarNavigationProps {
   activeTab: ActiveTab;
@@ -36,8 +37,8 @@ export default function SidebarNavigation({
       }`}
     >
       <div className="mb-7 px-1.5 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-lg bg-brand-primary flex items-center justify-center shadow-md">
-          <Shield className="w-5 h-5 text-brand-on-primary fill-brand-on-primary" />
+        <div className="w-9 h-9 rounded-lg bg-brand-primary/5 border border-brand-primary/10 flex items-center justify-center shadow-inner overflow-hidden">
+          <img src={aegisLogo} alt="Aegis Logo" className="w-7 h-7 object-contain" />
         </div>
         <div>
           <h1 className="font-display text-[19px] font-bold text-brand-primary leading-tight">{APP_NAME}</h1>
