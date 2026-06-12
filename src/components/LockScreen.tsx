@@ -240,6 +240,8 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
   return (
     <div className="min-h-screen bg-[#070807] flex flex-col justify-between relative overflow-hidden select-none">
       <div className="absolute inset-0 bg-[linear-gradient(rgba(220,225,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(220,225,255,0.025)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
+      <div className="absolute -top-40 -left-40 w-96 h-96 bg-brand-primary/5 blur-[120px] rounded-full pointer-events-none animate-pulse" />
+      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-brand-tertiary/5 blur-[120px] rounded-full pointer-events-none" />
 
       {/* Top Bar with Language Selector */}
       <header className="w-full flex justify-end px-6 py-4 relative z-50 shrink-0">
@@ -282,7 +284,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
             {/* Premium Feature Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               
-              <div className="surface-card rounded-xl p-4 space-y-2">
+              <div className="surface-card surface-card-hover rounded-xl p-4 space-y-2 transition-all duration-300 hover:translate-y-[-2px]">
                 <div className="icon-tile bg-brand-primary/10 text-brand-primary">
                   <ShieldCheck className="w-5 h-5" />
                 </div>
@@ -292,7 +294,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                 </p>
               </div>
 
-              <div className="surface-card rounded-xl p-4 space-y-2">
+              <div className="surface-card surface-card-hover rounded-xl p-4 space-y-2 transition-all duration-300 hover:translate-y-[-2px]">
                 <div className="icon-tile bg-emerald-500/10 text-emerald-400">
                   <Cpu className="w-5 h-5" />
                 </div>
@@ -302,7 +304,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                 </p>
               </div>
 
-              <div className="surface-card rounded-xl p-4 space-y-2">
+              <div className="surface-card surface-card-hover rounded-xl p-4 space-y-2 transition-all duration-300 hover:translate-y-[-2px]">
                 <div className="icon-tile bg-brand-tertiary/10 text-brand-tertiary">
                   <HardDrive className="w-5 h-5" />
                 </div>
@@ -312,7 +314,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                 </p>
               </div>
 
-              <div className="surface-card rounded-xl p-4 space-y-2">
+              <div className="surface-card surface-card-hover rounded-xl p-4 space-y-2 transition-all duration-300 hover:translate-y-[-2px]">
                 <div className="icon-tile bg-red-500/10 text-red-400">
                   <Trash2 className="w-5 h-5" />
                 </div>
@@ -343,10 +345,10 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
 
           {/* RIGHT COLUMN: Interactive High-Precision Password Box */}
           <div className="lg:col-span-5 flex justify-center lg:justify-end">
-            <div className="w-full max-w-md surface-panel rounded-xl p-7 relative z-10 transition-all duration-300 hover:border-brand-primary/15">
+            <div className="w-full max-w-md surface-panel rounded-xl p-7 relative z-10 transition-all duration-300 hover:border-brand-primary/15 hover:shadow-brand-primary/5">
               <div className="flex flex-col items-center text-center mb-7">
                 <div className="w-14 h-14 rounded-xl bg-brand-primary/10 border border-brand-primary/25 flex items-center justify-center mb-5 shadow-inner group">
-                  <Lock className="w-7 h-7 text-brand-primary group-hover:scale-110 transition-transform duration-300" />
+                  <Lock className="w-7 h-7 text-brand-primary group-hover:scale-110 group-hover:rotate-6 transition-transform duration-300" />
                 </div>
                 <h1 className="font-display text-2xl font-bold text-on-surface leading-tight tracking-tight">
                   {isSetup ? t('lock.panel.unlockTitle') : t('lock.panel.setupTitle')}
@@ -387,7 +389,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full bg-[#141614] hover:bg-[#191b19] focus:bg-[#1b1d1b] border border-outline-variant/30 rounded-xl pl-4 pr-11 py-3.5 text-on-surface placeholder-on-surface-variant/20 focus:ring-2 focus:ring-brand-primary/20 focus:outline-none transition-all text-center tracking-widest text-lg font-mono"
+                      className="w-full bg-[#141614] hover:bg-[#181a18] focus:bg-[#1a1c1a] border border-outline-variant/20 focus:border-brand-primary/30 rounded-xl pl-4 pr-11 py-3.5 text-on-surface placeholder-on-surface-variant/20 focus:ring-2 focus:ring-brand-primary/10 focus:shadow-[0_0_15px_rgba(220,225,255,0.06)] focus:outline-none transition-all duration-300 text-center tracking-widest text-lg font-mono"
                       placeholder="••••••••"
                       required
                       autoFocus
@@ -415,7 +417,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                         type={showConfirmPassword ? 'text' : 'password'}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full bg-[#141614] hover:bg-[#191b19] focus:bg-[#1b1d1b] border border-outline-variant/30 rounded-xl pl-4 pr-11 py-3.5 text-on-surface placeholder-on-surface-variant/20 focus:ring-2 focus:ring-brand-primary/20 focus:outline-none transition-all text-center tracking-widest text-lg font-mono"
+                        className="w-full bg-[#141614] hover:bg-[#181a18] focus:bg-[#1a1c1a] border border-outline-variant/20 focus:border-brand-primary/30 rounded-xl pl-4 pr-11 py-3.5 text-on-surface placeholder-on-surface-variant/20 focus:ring-2 focus:ring-brand-primary/10 focus:shadow-[0_0_15px_rgba(220,225,255,0.06)] focus:outline-none transition-all duration-300 text-center tracking-widest text-lg font-mono"
                         placeholder="••••••••"
                         required
                       />
@@ -432,7 +434,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                 )}
 
                 {(!isSetup || requiresSecretKey) && (
-                  <div className="rounded-2xl border border-brand-primary/15 bg-brand-primary/5 p-4 space-y-3">
+                  <div className="rounded-2xl glass-panel p-4 space-y-3">
                     <div className="flex items-start gap-3">
                       <div className="w-9 h-9 rounded-xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center text-brand-primary shrink-0">
                         <KeyRound className="w-4.5 h-4.5" />
