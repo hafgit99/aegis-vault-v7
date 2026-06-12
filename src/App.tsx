@@ -9,6 +9,7 @@ import SidebarNavigation from './components/SidebarNavigation';
 import TopBar from './components/TopBar';
 import MainContent from './components/MainContent';
 import FloatingVaultAction from './components/FloatingVaultAction';
+import { Check } from 'lucide-react';
 import AppModals from './components/AppModals';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -291,6 +292,21 @@ export default function App() {
         onSaveProfile={handleSaveProfile}
         onCancelConfirm={handleCloseConfirm}
       />
+
+      {/* Floating Toast Notification for Copied Fields */}
+      {copiedField && (
+        <div 
+          data-testid="copy-toast-notification"
+          className="fixed bottom-6 right-6 z-[110] flex items-center gap-2.5 bg-[#1a1c1a] px-4 py-3 rounded-xl border border-brand-primary/10 shadow-2xl animate-fade-in"
+        >
+          <div className="w-5 h-5 rounded-full bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center text-brand-primary">
+            <Check className="w-3 h-3" />
+          </div>
+          <span className="text-xs font-semibold text-on-surface">
+            {t('top.copied')}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

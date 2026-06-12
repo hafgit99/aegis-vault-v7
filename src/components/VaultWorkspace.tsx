@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import { Heart, LayoutDashboard, Plus } from 'lucide-react';
+import { Heart, LayoutDashboard, Plus, Search } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { AuditReport, VaultItem } from '../types';
@@ -161,9 +161,14 @@ export default function VaultWorkspace({
           {filteredItems.length === 0 ? (
             <div
               data-testid="vault-empty-state"
-              className="text-center py-10 px-4 text-xs text-on-surface-variant/40 italic"
+              className="flex flex-col items-center justify-center py-12 px-6 text-center animate-fade-in"
             >
-              {t('vaultList.empty')}
+              <div className="w-12 h-12 rounded-xl bg-surface-low border border-outline-variant/15 flex items-center justify-center text-on-surface-variant/40 mb-4 shadow-inner">
+                <Search className="w-5 h-5" />
+              </div>
+              <p className="text-xs font-semibold text-on-surface-variant/60 max-w-[240px] leading-relaxed italic">
+                {t('vaultList.empty')}
+              </p>
             </div>
           ) : (
             filteredItems.map((item) => (
