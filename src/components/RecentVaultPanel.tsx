@@ -17,10 +17,10 @@ export default function RecentVaultPanel({ items, copiedField, onSelect, onCopyT
   const recentItems = items.slice(-3).slice().reverse();
 
   return (
-    <div className="bg-[#101210]/60 border border-outline-variant/15 rounded-2xl p-6 flex flex-col justify-between gap-4">
+    <div className="surface-panel rounded-xl p-5 flex flex-col justify-between gap-4">
       <div>
         <div className="flex items-center justify-between border-b border-outline-variant/10 pb-3 mb-3">
-          <h3 className="font-display text-xs font-bold uppercase tracking-widest text-[#059669] flex items-center gap-2">
+          <h3 className="font-display text-xs font-bold uppercase tracking-widest text-brand-tertiary flex items-center gap-2">
             <Clock className="w-4 h-4 text-brand-primary" />
             <span>{t('dashboard.recent.title')}</span>
           </h3>

@@ -28,28 +28,28 @@ export default function VaultListItem({ item, isSelected, onSelect }: VaultListI
     <div
       data-testid="vault-list-item"
       onClick={() => onSelect(item)}
-      className={`group p-4 rounded-xl flex items-center gap-4 cursor-pointer transition-all ${
+      className={`group p-3 rounded-lg border flex items-center gap-3 cursor-pointer transition-all ${
         isSelected
-          ? 'glass-panel border-brand-primary/20 bg-brand-primary/5 hover:translate-y-[-1px]'
-          : 'hover:bg-surface-high hover:translate-y-[-1px]'
+          ? 'border-brand-primary/25 bg-brand-primary/10'
+          : 'border-transparent hover:border-outline-variant/15 hover:bg-surface-high/80'
       }`}
     >
-      <div className="w-12 h-12 rounded-lg bg-[#1a1c1a] flex items-center justify-center border border-outline-variant/20 shrink-0 overflow-hidden">
+      <div className="w-10 h-10 rounded-lg bg-surface-low flex items-center justify-center border border-outline-variant/20 shrink-0 overflow-hidden">
         {logoUrl ? (
           <img
             alt={`${item.title} logo`}
-            className="w-8 h-8 object-contain"
+            className="w-7 h-7 object-contain"
             referrerPolicy="no-referrer"
             src={logoUrl}
           />
         ) : (
-          <span className="font-display font-bold text-lg text-brand-primary">
+          <span className="font-display font-bold text-base text-brand-primary">
             {item.title.charAt(0).toUpperCase()}
           </span>
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <h3 className="font-bold text-sm text-on-surface truncate">{item.title}</h3>
+        <h3 className="font-bold text-sm text-on-surface truncate leading-tight">{item.title}</h3>
         <p className="text-on-surface-variant text-xs truncate font-mono mt-0.5">{item.username}</p>
       </div>
       <div className="shrink-0 flex flex-col items-end gap-1.5">

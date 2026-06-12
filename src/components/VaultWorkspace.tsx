@@ -89,24 +89,24 @@ export default function VaultWorkspace({
   return (
     <>
       <section
-        className={`w-full lg:w-[400px] border-r border-outline-variant/10 flex flex-col bg-surface-lowest/40 overflow-y-auto scrollbar-hide ${
+        className={`w-full lg:w-[384px] border-r border-outline-variant/15 flex flex-col bg-surface-lowest/55 overflow-y-auto scrollbar-hide ${
           selectedItem && mobileActiveView === 'detail' ? 'hidden lg:flex' : 'flex'
         }`}
       >
-        <div className="p-6 pb-2 space-y-3">
+        <div className="p-5 pb-2 space-y-3">
           <h2 className="font-display text-lg font-bold text-on-surface flex items-center justify-between">
             <span>{t('vaultList.title')}</span>
             <button
               data-testid="new-vault-item-button"
               onClick={onNewItem}
-              className="text-on-surface-variant hover:text-brand-primary transition-all cursor-pointer"
+              className="toolbar-button cursor-pointer"
               title={t('vaultList.newItem')}
             >
               <Plus className="w-5 h-5" />
             </button>
           </h2>
 
-          <div className="flex bg-[#161816]/70 p-1 rounded-lg border border-outline-variant/15 text-xs">
+          <div className="flex bg-surface-low p-1 rounded-lg border border-outline-variant/15 text-xs">
             <button
               data-testid="vault-filter-all"
               onClick={() => onSetFavoritesOnly(false)}
@@ -140,13 +140,13 @@ export default function VaultWorkspace({
         <div className="flex flex-col p-3 space-y-1.5">
           <div
             onClick={onSelectDashboard}
-            className={`group p-3 mb-2 rounded-xl border flex items-center gap-3 cursor-pointer transition-all ${
+            className={`group p-3 mb-2 rounded-lg border flex items-center gap-3 cursor-pointer transition-all ${
               selectedItem === null
-                ? 'border-brand-primary/20 bg-brand-primary/10 shadow-[0_0_15px_rgba(220,225,255,0.03)]'
-                : 'border-outline-variant/10 hover:border-brand-primary/10 hover:bg-[#1a1c1a]/30'
+                ? 'border-brand-primary/20 bg-brand-primary/10'
+                : 'border-outline-variant/10 hover:border-brand-primary/10 hover:bg-surface-low/70'
             }`}
           >
-            <div className="w-9 h-9 rounded-lg bg-brand-primary/10 flex items-center justify-center border border-brand-primary/25 shrink-0 select-none">
+            <div className="icon-tile bg-brand-primary/10 text-brand-primary shrink-0 select-none">
               <LayoutDashboard className="w-4.5 h-4.5 text-brand-primary group-hover:rotate-6 transition-transform" />
             </div>
             <div className="flex-1 min-w-0">
@@ -180,7 +180,7 @@ export default function VaultWorkspace({
       </section>
 
       <section
-        className={`flex-1 p-4 lg:p-8 overflow-y-auto scrollbar-hide bg-[#0c0d0c]/30 ${
+        className={`flex-1 p-4 lg:p-6 overflow-y-auto scrollbar-hide bg-brand-bg ${
           !selectedItem || mobileActiveView === 'list' ? 'hidden lg:block' : 'block'
         }`}
       >
@@ -205,10 +205,10 @@ export default function VaultWorkspace({
             onDownloadAttachment={onDownloadAttachment}
           />
         ) : (
-          <div className="max-w-4xl mx-auto space-y-8 py-4 lg:py-6 animate-fade-in text-left">
+          <div className="max-w-5xl mx-auto space-y-6 py-4 lg:py-5 animate-fade-in text-left">
             <DashboardHeader profileName={profileName} onOpenProfile={onOpenProfile} />
 
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
               <DashboardSecurityScoreCard auditReport={auditReport} activeItemCount={activeItems.length} />
 
               <DashboardCategoryStats
@@ -224,7 +224,7 @@ export default function VaultWorkspace({
               onOpenGenerator={onOpenGenerator}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in text-left">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-fade-in text-left">
               <RecentVaultPanel
                 items={activeItems}
                 copiedField={copiedField}

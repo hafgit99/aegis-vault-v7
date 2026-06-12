@@ -13,8 +13,8 @@ export default function AegisGuardReport({ auditReport }: AegisGuardReportProps)
   const isSecure = auditReport.score >= 85;
 
   return (
-    <div className="bg-[#111211] border border-outline-variant/10 rounded-2xl p-4 flex gap-4 text-xs">
-      <div className="w-10 h-10 rounded-xl bg-[#141614] border border-outline-variant/15 flex items-center justify-center shrink-0">
+    <div className="surface-card rounded-xl p-4 flex gap-4 text-xs">
+      <div className="icon-tile bg-surface-low shrink-0">
         {isSecure ? (
           <ShieldCheck className="w-5 h-5 text-brand-tertiary" />
         ) : (

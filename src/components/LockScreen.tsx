@@ -237,19 +237,13 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
 
   return (
     <div className="min-h-screen bg-[#070807] flex flex-col justify-between relative overflow-hidden select-none">
-      {/* Absolute futuristic ambient glows */}
-      <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-brand-primary/10 rounded-full blur-[150px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-[150px] pointer-events-none" />
-      
-      {/* Grid Pattern Background */}
-      <div className="absolute inset-0 bg-grid-pattern opacity-[0.02] pointer-events-none" />
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(220,225,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(220,225,255,0.025)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
 
-      {/* Main Grid Panel */}
       <div className="flex-1 w-full max-w-7xl mx-auto px-4 py-8 lg:py-16 flex items-center justify-center relative z-10">
-        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center">
+        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
           
           {/* LEFT COLUMN: Educational & Cyber-Security Features Showcase */}
-          <div className="lg:col-span-7 space-y-8 animate-fade-in text-left">
+          <div className="lg:col-span-7 space-y-7 animate-fade-in text-left">
             <div className="space-y-4">
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-primary/10 border border-brand-primary/20 text-brand-primary text-[10px] font-bold tracking-widest uppercase rounded-full">
                 <Sparkles className="w-3.5 h-3.5 animate-pulse" />
@@ -257,7 +251,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
               </div>
               <h1 className="font-display text-3xl md:text-5xl font-bold tracking-tight text-on-surface leading-tight">
                 {t('lock.hero.titlePrefix')} <br />
-                <span className="text-brand-primary bg-gradient-to-r from-brand-primary to-emerald-400 bg-clip-text text-transparent">{t('lock.hero.titleHighlight')}</span> {t('lock.hero.titleSuffix')}
+                <span className="text-brand-primary">{t('lock.hero.titleHighlight')}</span> {t('lock.hero.titleSuffix')}
               </h1>
               <p className="text-on-surface-variant text-sm md:text-base max-w-xl leading-relaxed">
                 {APP_NAME}; {t('lock.hero.descriptionSuffix')}
@@ -265,10 +259,10 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
             </div>
 
             {/* Premium Feature Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               
-              <div className="bg-[#101210]/50 border border-outline-variant/10 rounded-2xl p-4 space-y-2 hover:border-brand-primary/20 transition-all duration-300">
-                <div className="w-9 h-9 rounded-xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center text-brand-primary">
+              <div className="surface-card rounded-xl p-4 space-y-2">
+                <div className="icon-tile bg-brand-primary/10 text-brand-primary">
                   <ShieldCheck className="w-5 h-5" />
                 </div>
                 <h3 className="font-display font-semibold text-sm text-on-surface">{t('lock.feature.zeroKnowledge.title')}</h3>
@@ -277,8 +271,8 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                 </p>
               </div>
 
-              <div className="bg-[#101210]/50 border border-outline-variant/10 rounded-2xl p-4 space-y-2 hover:border-brand-primary/20 transition-all duration-300">
-                <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+              <div className="surface-card rounded-xl p-4 space-y-2">
+                <div className="icon-tile bg-emerald-500/10 text-emerald-400">
                   <Cpu className="w-5 h-5" />
                 </div>
                 <h3 className="font-display font-semibold text-sm text-on-surface font-display">{t('lock.feature.crypto.title')}</h3>
@@ -287,8 +281,8 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                 </p>
               </div>
 
-              <div className="bg-[#101210]/50 border border-outline-variant/10 rounded-2xl p-4 space-y-2 hover:border-brand-primary/20 transition-all duration-300">
-                <div className="w-9 h-9 rounded-xl bg-brand-tertiary/10 border border-brand-tertiary/20 flex items-center justify-center text-brand-tertiary">
+              <div className="surface-card rounded-xl p-4 space-y-2">
+                <div className="icon-tile bg-brand-tertiary/10 text-brand-tertiary">
                   <HardDrive className="w-5 h-5" />
                 </div>
                 <h3 className="font-display font-semibold text-sm text-on-surface font-display">{t('lock.feature.localControl.title')}</h3>
@@ -297,8 +291,8 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                 </p>
               </div>
 
-              <div className="bg-[#101210]/50 border border-outline-variant/10 rounded-2xl p-4 space-y-2 hover:border-brand-primary/20 transition-all duration-300">
-                <div className="w-9 h-9 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
+              <div className="surface-card rounded-xl p-4 space-y-2">
+                <div className="icon-tile bg-red-500/10 text-red-400">
                   <Trash2 className="w-5 h-5" />
                 </div>
                 <h3 className="font-display font-semibold text-sm text-on-surface font-display">{t('lock.feature.trash.title')}</h3>
@@ -310,7 +304,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
             </div>
 
             {/* Real-time System Indicators */}
-            <div className="flex flex-wrap items-center gap-4 text-xs text-on-surface-variant">
+            <div className="flex flex-wrap items-center gap-3 text-xs text-on-surface-variant">
               <div className="flex items-center gap-1.5 bg-[#121412] px-3 py-1.5 rounded-full border border-outline-variant/5">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse" />
                 <span>{t('lock.indicator.localStorage')}</span>
@@ -328,12 +322,9 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
 
           {/* RIGHT COLUMN: Interactive High-Precision Password Box */}
           <div className="lg:col-span-5 flex justify-center lg:justify-end">
-            <div className="w-full max-w-md bg-surface-container/60 border border-outline-variant/20 rounded-2xl p-8 backdrop-blur-xl custom-shadow relative z-10 transition-all duration-300 hover:border-brand-primary/15">
-              
-              <div className="absolute top-0 left-0 w-32 h-32 bg-brand-primary/5 rounded-full blur-[50px] pointer-events-none" />
-
-              <div className="flex flex-col items-center text-center mb-8">
-                <div className="w-16 h-16 rounded-2xl bg-brand-primary/10 border border-brand-primary/25 flex items-center justify-center mb-5 shadow-inner group">
+            <div className="w-full max-w-md surface-panel rounded-xl p-7 relative z-10 transition-all duration-300 hover:border-brand-primary/15">
+              <div className="flex flex-col items-center text-center mb-7">
+                <div className="w-14 h-14 rounded-xl bg-brand-primary/10 border border-brand-primary/25 flex items-center justify-center mb-5 shadow-inner group">
                   <Lock className="w-7 h-7 text-brand-primary group-hover:scale-110 transition-transform duration-300" />
                 </div>
                 <h1 className="font-display text-2xl font-bold text-on-surface leading-tight tracking-tight">

@@ -62,12 +62,9 @@ export default function ConfirmModal({
   return (
     <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[100] flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
       <div 
-        className="w-full max-w-md bg-surface-lowest border border-outline-variant/15 rounded-2xl shadow-2xl p-6 relative overflow-hidden"
+        className="w-full max-w-md surface-panel rounded-xl p-6 relative overflow-hidden"
         id="confirm-modal-wrapper"
       >
-        {/* Decorative corner glow */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-brand-primary/5 rounded-full blur-3xl pointer-events-none" />
-
         <button
           data-testid="confirm-modal-close-button"
           onClick={onCancel}
@@ -79,7 +76,7 @@ export default function ConfirmModal({
 
         <div className="flex flex-col items-center text-center mt-2">
           {/* Main Type Icon */}
-          <div className={`w-14 h-14 rounded-2xl border flex items-center justify-center mb-4 ${iconColors[type]}`}>
+          <div className={`w-14 h-14 rounded-xl border flex items-center justify-center mb-4 ${iconColors[type]}`}>
             <Icon className="w-7 h-7" />
           </div>
 

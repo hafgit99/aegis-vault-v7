@@ -29,12 +29,10 @@ export default function DashboardSecurityScoreCard({ auditReport, activeItemCoun
   const { t } = useLanguage();
 
   return (
-    <div className="md:col-span-7 bg-[#101210]/60 border border-outline-variant/15 rounded-2xl p-6 flex flex-col justify-between gap-6 relative overflow-hidden group hover:border-brand-primary/15 transition-all">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-brand-primary/5 rounded-full blur-3xl pointer-events-none" />
-
+    <div className="md:col-span-7 surface-panel rounded-xl p-6 flex flex-col justify-between gap-6 relative overflow-hidden group hover:border-brand-primary/15 transition-all">
       <div className="flex items-center justify-between col-span-full">
         <div className="space-y-1">
-          <span className="text-[10px] font-bold tracking-widest text-[#059669] uppercase flex items-center gap-1.5 bg-[#059669]/10 px-2.5 py-1 rounded-full w-fit">
+          <span className="text-[10px] font-bold tracking-widest text-brand-tertiary uppercase flex items-center gap-1.5 bg-brand-tertiary/10 px-2.5 py-1 rounded-md w-fit">
             <ShieldCheck className="w-3.5 h-3.5" />
             <span>{t('dashboard.score.label')}</span>
           </span>

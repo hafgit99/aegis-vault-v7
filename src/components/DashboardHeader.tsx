@@ -10,9 +10,9 @@ export default function DashboardHeader({ profileName, onOpenProfile }: Dashboar
   const { t } = useLanguage();
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-outline-variant/10 pb-6">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-outline-variant/10 pb-5">
       <div className="space-y-1">
-        <h2 className="font-display text-2xl lg:text-3xl font-bold text-on-surface flex items-center gap-2.5">
+        <h2 className="font-display text-2xl font-bold text-on-surface flex items-center gap-2.5">
           <span>{t('dashboard.title')}</span>
           <span className="text-brand-primary">{APP_NAME}</span>
         </h2>
@@ -28,7 +28,7 @@ export default function DashboardHeader({ profileName, onOpenProfile }: Dashboar
         <button
           type="button"
           onClick={onOpenProfile}
-          className="w-10 h-10 rounded-xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center text-brand-primary text-sm font-bold font-display select-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-primary/40 hover:scale-[1.05] active:scale-95 transition-all"
+          className="w-10 h-10 rounded-lg bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center text-brand-primary text-sm font-bold font-display select-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-primary/40 active:scale-95 transition-all"
         >
           {profileName.charAt(0).toUpperCase()}
         </button>
