@@ -18,7 +18,8 @@ import {
   Sparkles,
   Trash2,
   KeyRound,
-  Download
+  Download,
+  Languages
 } from 'lucide-react';
 import {
   getRememberedAccountSecretKey,
@@ -30,6 +31,7 @@ import {
 import { authenticateBiometric, isBiometricEnabled, isBiometricSupported } from '../lib/biometric';
 import { APP_NAME, APP_SHORT_NAME } from '../lib/branding';
 import { useLanguage } from '../i18n/LanguageContext';
+import { supportedLanguages, languageLabels, type LanguageCode } from '../i18n/translations';
 import {
   generateAccountSecretKey,
   isAccountSecretKeyFormatValid,
@@ -104,7 +106,7 @@ interface LockScreenProps {
 }
 
 export default function LockScreen({ onUnlock }: LockScreenProps) {
-  const { t } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
   const isSetup = isMasterPasswordSet();
   const requiresSecretKey = isAccountSecretKeyRequired();
   const rememberedSecretKey = getRememberedAccountSecretKey();
@@ -239,7 +241,26 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
     <div className="min-h-screen bg-[#070807] flex flex-col justify-between relative overflow-hidden select-none">
       <div className="absolute inset-0 bg-[linear-gradient(rgba(220,225,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(220,225,255,0.025)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
 
-      <div className="flex-1 w-full max-w-7xl mx-auto px-4 py-8 lg:py-16 flex items-center justify-center relative z-10">
+      {/* Top Bar with Language Selector */}
+      <header className="w-full flex justify-end px-6 py-4 relative z-50 shrink-0">
+        <div className="flex items-center gap-2 bg-[#1a1c1a]/60 backdrop-blur-md rounded-lg px-3 py-1.5 border border-outline-variant/10">
+          <Languages className="w-4 h-4 text-brand-primary" />
+          <select
+            data-testid="lock-language-select"
+            value={language}
+            onChange={(e) => setLanguage(e.target.value as LanguageCode)}
+            className="bg-transparent text-xs font-bold text-on-surface focus:outline-none cursor-pointer pr-1"
+          >
+            {supportedLanguages.map((code) => (
+              <option key={code} value={code} className="bg-[#121412] text-on-surface">
+                {languageLabels[code]}
+              </option>
+            ))}
+          </select>
+        </div>
+      </header>
+
+      <div className="flex-1 w-full max-w-7xl mx-auto px-4 py-4 lg:py-8 flex items-center justify-center relative z-10">
         <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
           
           {/* LEFT COLUMN: Educational & Cyber-Security Features Showcase */}

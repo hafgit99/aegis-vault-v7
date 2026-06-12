@@ -331,4 +331,21 @@ describe('LockScreen', () => {
     expect(authenticateBiometric).toHaveBeenCalledTimes(1);
     expect(onUnlock).toHaveBeenCalledTimes(1);
   });
+
+  it('renders a language selector and updates the UI language', () => {
+    render(
+      <LanguageProvider>
+        <LockScreen onUnlock={vi.fn()} />
+      </LanguageProvider>,
+    );
+
+    const select = screen.getByTestId('lock-language-select') as HTMLSelectElement;
+    expect(select).toBeTruthy();
+    expect(select.value).toBe('tr'); // Default language is Turkish
+
+    // Switch to English
+    fireEvent.change(select, { target: { value: 'en' } });
+    expect(select.value).toBe('en');
+    expect(screen.getByText('SMART CYBER SECURITY VAULT')).toBeTruthy();
+  });
 });
