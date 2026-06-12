@@ -27,7 +27,12 @@ import {
   writeClipboardText,
 } from '../lib/clipboard';
 
-export default function PasswordGenerator() {
+interface PasswordGeneratorProps {
+  onCopyText?: (text: string, field: string) => void;
+  copiedField?: string | null;
+}
+
+export default function PasswordGenerator({ onCopyText, copiedField }: PasswordGeneratorProps = {}) {
   const { t } = useLanguage();
   const [mode, setMode] = useState<'character' | 'diceware'>('character');
 
@@ -92,6 +97,19 @@ export default function PasswordGenerator() {
     [],
   );
 
+  useEffect(() => {
+    if (copiedField === 'generator_password') {
+      setCopied(true);
+      clearCopiedResetTimer();
+      copiedResetTimerRef.current = setTimeout(() => {
+        setCopied(false);
+        copiedResetTimerRef.current = null;
+      }, 2000);
+    } else if (copiedField === null) {
+      setCopied(false);
+    }
+  }, [copiedField]);
+
   const handleGenerate = () => {
     clearCopiedResetTimer();
     clearClipboardTimer();
@@ -108,7 +126,11 @@ export default function PasswordGenerator() {
 
   const handleCopy = () => {
     if (!password) return;
-    void writeClipboardText(password);
+    if (onCopyText) {
+      onCopyText(password, 'generator_password');
+    } else {
+      void writeClipboardText(password);
+    }
     clearCopiedResetTimer();
     clearClipboardTimer();
     lastCopiedPasswordRef.current = password;
@@ -245,14 +267,14 @@ export default function PasswordGenerator() {
           <div className="flex-1 max-w-xs flex items-center gap-1">
             <div className="w-full h-2 bg-surface-low rounded-full overflow-hidden">
               <div
-                className={`h-full transition-all duration-500 rounded-full ${
+                className={`h-full transition-all duration-500 rounded-full bg-gradient-to-r ${
                   score >= 90
-                    ? 'bg-brand-tertiary'
+                    ? 'bg-brand-tertiary from-emerald-600 to-brand-tertiary shadow-[0_0_8px_rgba(209,233,204,0.3)]'
                     : score >= 70
-                    ? 'bg-brand-secondary'
+                    ? 'bg-brand-secondary from-blue-600 to-brand-secondary shadow-[0_0_8px_rgba(172,201,235,0.3)]'
                     : score >= 40
-                    ? 'bg-amber-400'
-                    : 'bg-brand-error'
+                    ? 'bg-amber-400 from-amber-500 to-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.3)]'
+                    : 'bg-brand-error from-red-600 to-brand-error shadow-[0_0_8px_rgba(255,180,171,0.3)]'
                 }`}
                 style={{ width: `${score}%` }}
               ></div>

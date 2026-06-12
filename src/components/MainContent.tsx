@@ -144,7 +144,7 @@ export default function MainContent({
 
       {activeTab === 'generator' && (
         <div data-testid="generator-workspace" className="flex-1 p-8 overflow-y-auto scrollbar-hide">
-          <PasswordGenerator />
+          <PasswordGenerator onCopyText={onCopyText} copiedField={copiedField} />
         </div>
       )}
 
