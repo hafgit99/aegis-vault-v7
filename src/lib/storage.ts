@@ -274,6 +274,12 @@ export async function saveVaultItem(item: VaultItem): Promise<VaultItem[]> {
   return sqliteOPFSInstance.saveVaultItem(item, password);
 }
 
+export async function saveVaultItems(items: VaultItem[]): Promise<VaultItem[]> {
+  const password = getSessionMasterPassword();
+  if (!password) return [];
+  return sqliteOPFSInstance.saveVaultItems(items, password);
+}
+
 /**
  * Deletes a vault item directly.
  */

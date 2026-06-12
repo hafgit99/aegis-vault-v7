@@ -11,6 +11,7 @@ const sqliteOPFSInstance = vi.hoisted(() => ({
   reseedDemo: vi.fn(),
   resetAll: vi.fn(),
   saveVaultItem: vi.fn(),
+  saveVaultItems: vi.fn(),
   setupMaster: vi.fn(async () => undefined),
   verifyPassword: vi.fn(),
 }));
@@ -38,6 +39,7 @@ import {
   resetSystem,
   restoreFromTrash,
   saveVaultItem,
+  saveVaultItems,
   setupMasterPassword,
   setupMasterPasswordWithSecretKey,
   verifyMasterPassword,
@@ -290,5 +292,15 @@ describe('vault session storage', () => {
     expect(sqliteOPFSInstance.deletePermanently).toHaveBeenCalledTimes(2);
     expect(sqliteOPFSInstance.deletePermanently).toHaveBeenNthCalledWith(1, 'trash-1', 'master-pass');
     expect(sqliteOPFSInstance.deletePermanently).toHaveBeenNthCalledWith(2, 'trash-2', 'master-pass');
+  });
+
+  it('passes the active session password to saveVaultItems bulk save wrapper', async () => {
+    const item = sampleItem();
+    sqliteOPFSInstance.saveVaultItems.mockResolvedValue([item]);
+    openVaultSession('master-pass');
+
+    await expect(saveVaultItems([item])).resolves.toEqual([item]);
+
+    expect(sqliteOPFSInstance.saveVaultItems).toHaveBeenCalledWith([item], 'master-pass');
   });
 });

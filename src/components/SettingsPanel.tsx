@@ -23,7 +23,7 @@ import {
   AlertCircle,
   Fingerprint
 } from 'lucide-react';
-import { getVaultItems, setupMasterPassword, resetSystem, reseedDemoData, saveVaultItem, verifyMasterPassword } from '../lib/storage';
+import { getVaultItems, setupMasterPassword, resetSystem, reseedDemoData, saveVaultItem, saveVaultItems, verifyMasterPassword } from '../lib/storage';
 import { AppNotification, VaultItem } from '../types';
 import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from '../lib/encryption';
 import { parseUniversalImport } from '../lib/importer';
@@ -302,10 +302,12 @@ export default function SettingsPanel({
 
   // Normalize dynamic fields and saves parsed list items
   const handleImportedItems = async (itemsList: any[]) => {
-    let successCount = 0;
+    const mappedItems: VaultItem[] = [];
+    const nowStr = new Date().toISOString().split('T')[0];
+
     for (const x of itemsList) {
       if (x.title || x.username) {
-        await saveVaultItem({
+        mappedItems.push({
           id: x.id || secureRandomToken(9),
           title: x.title || t('settings.import.defaultTitle'),
           username: x.username || '',
@@ -313,8 +315,8 @@ export default function SettingsPanel({
           url: x.url || '',
           notes: x.notes || '',
           totpSecret: x.totpSecret || '',
-          createdAt: x.createdAt || new Date().toISOString().split('T')[0],
-          updatedAt: new Date().toISOString().split('T')[0],
+          createdAt: x.createdAt || nowStr,
+          updatedAt: nowStr,
           category: x.category || 'login',
           favorite: !!x.favorite,
           
@@ -337,13 +339,16 @@ export default function SettingsPanel({
           passkeyPublicId: x.passkeyPublicId || '',
           passkeyPrivateExponent: x.passkeyPrivateExponent || '',
         });
-        successCount++;
       }
     }
 
+    if (mappedItems.length > 0) {
+      const updatedList = await saveVaultItems(mappedItems);
+      setItems(updatedList);
+    }
+
     onDatabaseChanged();
-    setItems(await getVaultItems());
-    return successCount;
+    return mappedItems.length;
   };
 
   // Decrypts and unpacks encrypted .aegis uploads

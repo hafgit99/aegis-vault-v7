@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from '../lib/encryption';
 import { openDesktopImportFile, saveDesktopExportFile } from '../lib/desktopFiles';
 import { disableBiometric, isBiometricEnabled, isBiometricSupported, registerBiometric } from '../lib/biometric';
-import { getVaultItems, resetSystem, reseedDemoData, saveVaultItem, setupMasterPassword, verifyMasterPassword } from '../lib/storage';
+import { getVaultItems, resetSystem, reseedDemoData, saveVaultItem, saveVaultItems, setupMasterPassword, verifyMasterPassword } from '../lib/storage';
 import { closeVaultSession, openVaultSession } from '../lib/vaultSession';
 import { VaultItem } from '../types';
 import { LanguageProvider } from '../i18n/LanguageContext';
@@ -35,6 +35,7 @@ vi.mock('../lib/storage', () => ({
   resetSystem: vi.fn(),
   reseedDemoData: vi.fn(async () => vaultItems),
   saveVaultItem: vi.fn(async () => vaultItems),
+  saveVaultItems: vi.fn(async () => vaultItems),
   setupMasterPassword: vi.fn(),
   verifyMasterPassword: vi.fn(),
 }));
@@ -246,15 +247,17 @@ describe('SettingsPanel import/export', () => {
 
     await waitFor(() => {
       expect(openDesktopImportFile).toHaveBeenCalledTimes(1);
-      expect(saveVaultItem).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 'imported-id',
-          title: 'Native Import',
-          username: 'native@example.com',
-          password: 'native-secret',
-          url: 'https://native.example.com',
-          category: 'login',
-        }),
+      expect(saveVaultItems).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: 'imported-id',
+            title: 'Native Import',
+            username: 'native@example.com',
+            password: 'native-secret',
+            url: 'https://native.example.com',
+            category: 'login',
+          }),
+        ])
       );
     });
     expect(props.onDatabaseChanged).toHaveBeenCalledTimes(1);
@@ -281,15 +284,17 @@ describe('SettingsPanel import/export', () => {
     fireEvent.change(fileInput(container), { target: { files: [file] } });
 
     await waitFor(() => {
-      expect(saveVaultItem).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 'imported-id',
-          title: 'Imported Mail',
-          username: 'mail@example.com',
-          password: 'imported-secret',
-          url: 'https://mail.example.com',
-          category: 'login',
-        }),
+      expect(saveVaultItems).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: 'imported-id',
+            title: 'Imported Mail',
+            username: 'mail@example.com',
+            password: 'imported-secret',
+            url: 'https://mail.example.com',
+            category: 'login',
+          }),
+        ])
       );
     });
     expect(props.onDatabaseChanged).toHaveBeenCalledTimes(1);
@@ -339,13 +344,15 @@ describe('SettingsPanel import/export', () => {
         expect.stringContaining('"payload":"ciphertext"'),
         'backup-pass',
       );
-      expect(saveVaultItem).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 'imported-id',
-          title: 'Encrypted Import',
-          username: 'secure@example.com',
-          password: 'decrypted-secret',
-        }),
+      expect(saveVaultItems).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: 'imported-id',
+            title: 'Encrypted Import',
+            username: 'secure@example.com',
+            password: 'decrypted-secret',
+          }),
+        ])
       );
     });
     expect(props.onDatabaseChanged).toHaveBeenCalledTimes(1);
@@ -661,12 +668,14 @@ describe('SettingsPanel import interaction states', () => {
     });
 
     await waitFor(() => {
-      expect(saveVaultItem).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: 'Dropped Import',
-          username: 'drop@example.com',
-          password: 'dropped-secret',
-        }),
+      expect(saveVaultItems).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            title: 'Dropped Import',
+            username: 'drop@example.com',
+            password: 'dropped-secret',
+          }),
+        ])
       );
     });
     expect(props.onDatabaseChanged).toHaveBeenCalledTimes(1);
@@ -804,6 +813,6 @@ describe('SettingsPanel import interaction states', () => {
     await waitFor(() => {
       expect(container.textContent).toContain('liste');
     });
-    expect(saveVaultItem).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'not a list' }));
+    expect(saveVaultItems).not.toHaveBeenCalled();
   });
 });

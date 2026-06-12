@@ -14,6 +14,12 @@ function zeroizeSecret(value: Uint8Array | null): void {
   value?.fill(0);
 }
 
+const onCloseCallbacks: (() => void)[] = [];
+
+export function registerOnCloseSession(cb: () => void): void {
+  onCloseCallbacks.push(cb);
+}
+
 export function openVaultSession(masterPassword: string, backupPassword = masterPassword): void {
   closeVaultSession();
   activeMasterPasswordBytes = encodeSecret(masterPassword);
@@ -25,6 +31,13 @@ export function closeVaultSession(): void {
   zeroizeSecret(activeBackupPasswordBytes);
   activeMasterPasswordBytes = null;
   activeBackupPasswordBytes = null;
+  onCloseCallbacks.forEach(cb => {
+    try {
+      cb();
+    } catch (e) {
+      console.error('Error during close session callback:', e);
+    }
+  });
 }
 
 export function getActiveMasterPassword(): string | null {

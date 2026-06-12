@@ -28,6 +28,7 @@ import {
   writeDesktopVaultDatabase,
 } from './desktopStorage';
 import { logSecurityEvent, securityEventCodes } from './securityEvents';
+import { registerOnCloseSession } from './vaultSession';
 
 /**
  * SQLite simulated schema and data manager storing DB blocks in private OPFS.
@@ -61,13 +62,31 @@ class SQLiteOPFS {
   private onLogsChangedCallbacks: (() => void)[] = [];
   private hydratePromise: Promise<void>;
 
+  // KDF derived key cache to avoid repeating heavy Argon2id calculations
+  private cachedPasswordPlain: string | null = null;
+  private cachedKeySalt: string | null = null;
+  private cachedKeyBytes: Uint8Array | null = null;
+
   constructor() {
     this.hydratePromise = this.loadFromPersistentStorage();
+    registerOnCloseSession(() => {
+      this.clearDerivedKeyCache();
+    });
   }
 
   public async hydrate(): Promise<void> {
     await this.hydratePromise;
   }
+
+  public clearDerivedKeyCache(): void {
+    if (this.cachedKeyBytes) {
+      this.cachedKeyBytes.fill(0);
+    }
+    this.cachedPasswordPlain = null;
+    this.cachedKeySalt = null;
+    this.cachedKeyBytes = null;
+  }
+
 
   // Registers callback for console query updates
   public subscribeLogs(callback: () => void): () => void {
@@ -339,7 +358,14 @@ class SQLiteOPFS {
    * Returns a derived encryption key from the active vault salt using Argon2id.
    */
   public async deriveEncryptionKey(password: string, salt = this.getCurrentVaultEncryptionSalt()): Promise<Uint8Array> {
-    return deriveVettedArgon2idKey(password, salt, VAULT_ITEM_KDF_PARAMS);
+    if (this.cachedPasswordPlain === password && this.cachedKeySalt === salt && this.cachedKeyBytes) {
+      return this.cachedKeyBytes;
+    }
+    const key = await deriveVettedArgon2idKey(password, salt, VAULT_ITEM_KDF_PARAMS);
+    this.cachedPasswordPlain = password;
+    this.cachedKeySalt = salt;
+    this.cachedKeyBytes = key;
+    return key;
   }
 
   private deriveLegacyEncryptionKey(password: string): Uint8Array {
@@ -478,6 +504,50 @@ class SQLiteOPFS {
     }
 
     this.logQuery(query, 'SUCCESS', 1);
+    await this.saveToPersistentStorage();
+    return this.getVaultItems(masterPasswordPlain);
+  }
+
+  /**
+   * Saves or updates multiple items in a single transaction (batch operation).
+   * Reduces KDF derivations, disk writes, and decryption sweeps to O(1) database cycles.
+   */
+  public async saveVaultItems(items: VaultItem[], masterPasswordPlain: string): Promise<VaultItem[]> {
+    this.ensureVaultEncryptionSalt();
+    const derivedKey = await this.deriveEncryptionKey(masterPasswordPlain);
+    const nowStr = new Date().toISOString().split('T')[0];
+
+    for (const item of items) {
+      const index = this.state.vault_items.findIndex(x => x.id === item.id);
+      const rawSensitive = JSON.stringify(item);
+      const encrypted = await webCryptoAesGcmEncrypt(rawSensitive, derivedKey, secureRandomBytes(12));
+      const category = item.category || 'login';
+
+      const row: SQLiteRow = {
+        id: item.id || secureRandomToken(9),
+        title: item.title || 'Imported Record',
+        category: category,
+        favorite: item.favorite ? 1 : 0,
+        deleted: item.deleted ? 1 : 0,
+        deleted_at: item.deletedAt || null,
+        created_at: item.createdAt || nowStr,
+        updated_at: nowStr,
+        username: item.username || '',
+        username_db: '[encrypted: aes-256-gcm]',
+        password_db: '[encrypted: aes-256-gcm]',
+        notes_db: item.notes ? '[encrypted: aes-256-gcm]' : '',
+        enc_metadata: JSON.stringify(encrypted),
+        enc_kdf: VAULT_ITEM_KDF,
+      };
+
+      if (index > -1) {
+        this.state.vault_items[index] = row;
+      } else {
+        this.state.vault_items.push(row);
+      }
+    }
+
+    this.logQuery(`INSERT OR REPLACE INTO vault_items (${items.length} records);`, 'SUCCESS', items.length);
     await this.saveToPersistentStorage();
     return this.getVaultItems(masterPasswordPlain);
   }

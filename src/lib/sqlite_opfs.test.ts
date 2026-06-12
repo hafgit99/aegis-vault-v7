@@ -561,4 +561,48 @@ describe('SQLite OPFS persistence engine', () => {
       ]),
     );
   });
+
+  it('performs bulk saves securely in a single sweep using saveVaultItems', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+
+    const bulkItems = [
+      sampleItem({ id: 'bulk-1', title: 'Bulk Item 1' }),
+      sampleItem({ id: 'bulk-2', title: 'Bulk Item 2' }),
+    ];
+
+    const saved = await sqlite.saveVaultItems(bulkItems, 'master-pass');
+    expect(saved).toHaveLength(2);
+    expect(saved.map(x => x.id)).toEqual(['bulk-1', 'bulk-2']);
+
+    expect(sqlite.getQueryLogs()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          query: expect.stringContaining('INSERT OR REPLACE INTO vault_items (2 records)'),
+          status: 'SUCCESS',
+        }),
+      ]),
+    );
+  });
+
+  it('uses the cached KDF derived key when password and salt match, avoiding Argon2id calls', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+
+    const { deriveArgon2idKey } = await import('./argon2id');
+    const mockedDerive = vi.mocked(deriveArgon2idKey);
+    mockedDerive.mockClear();
+
+    // Call saveVaultItem twice
+    await sqlite.saveVaultItem(sampleItem({ id: 'cache-1' }), 'master-pass');
+    await sqlite.saveVaultItem(sampleItem({ id: 'cache-2' }), 'master-pass');
+
+    // It should only run deriveArgon2idKey once because the second call hits the cache!
+    expect(mockedDerive).toHaveBeenCalledTimes(1);
+
+    // After wiping cache/session, it should run again
+    sqlite.clearDerivedKeyCache();
+    await sqlite.saveVaultItem(sampleItem({ id: 'cache-3' }), 'master-pass');
+    expect(mockedDerive).toHaveBeenCalledTimes(2);
+  });
 });
