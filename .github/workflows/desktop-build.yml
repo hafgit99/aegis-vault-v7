@@ -117,7 +117,7 @@ jobs:
           args: ${{ matrix.args }}
 
       - name: Generate SHA-256 Checksums
-        run: node scripts/generate-checksums.js
+        run: node scripts/generate-checksums.cjs
 
       - name: Upload installers as artifacts
         uses: actions/upload-artifact@v4
