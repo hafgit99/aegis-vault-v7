@@ -101,7 +101,14 @@ jobs:
       - name: Unit tests
         run: npm run test:unit
 
-      - name: Build Tauri app
+      - name: Build Tauri app (without release)
+        if: "!startsWith(github.ref, 'refs/tags/v')"
+        uses: tauri-apps/tauri-action@v0
+        with:
+          args: ${{ matrix.args }}
+
+      - name: Build Tauri app (with release)
+        if: "startsWith(github.ref, 'refs/tags/v')"
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
