@@ -124,6 +124,20 @@ To objectively evaluate the security profile of Aegis Vault 7, the table below c
 
 Aegis Vault 7 enforces clean code and verification through automated unit testing (Vitest) and typechecking.
 
+### Code Coverage
+
+![Statement Coverage](https://img.shields.io/badge/Statements-96.4%25-brightgreen)
+![Branch Coverage](https://img.shields.io/badge/Branches-88.78%25-brightgreen)
+![Function Coverage](https://img.shields.io/badge/Functions-92.64%25-brightgreen)
+![Line Coverage](https://img.shields.io/badge/Lines-96.4%25-brightgreen)
+
+| Metric | Coverage |
+| :--- | :---: |
+| **Statements** | `96.40%` |
+| **Branches** | `88.78%` |
+| **Functions** | `92.64%` |
+| **Lines** | `96.40%` |
+
 *   **Run all unit tests:**
     ```bash
     npm run test:unit
