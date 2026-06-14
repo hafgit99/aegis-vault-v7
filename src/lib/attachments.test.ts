@@ -19,6 +19,7 @@ import {
   type AttachmentRecord,
 } from './attachments';
 import { closeVaultSession, openVaultSession } from './vaultSession';
+import { webCryptoAesGcmEncryptBytes } from './webcrypto';
 
 const DB_NAME = 'aegis_attachments_db';
 const STORE_NAME = 'attachments';
@@ -409,5 +410,63 @@ describe('attachment encryption', () => {
         value: originalIndexedDB,
       });
     }
+  });
+
+  it('decrypts old AES-GCM attachments using legacy SHA-256 key derivation', async () => {
+    openVaultSession('master-pass');
+
+    // Manually construct an old record with SHA-256 KDF (no kdf property)
+    const keyMaterial = new TextEncoder().encode(`aegis-vault-v7:attachment-key:attachment-old:master-pass`);
+    const oldKey = new Uint8Array(await crypto.subtle.digest('SHA-256', keyMaterial));
+    const encrypted = await webCryptoAesGcmEncryptBytes(bytes('private file'), oldKey, new Uint8Array(12).fill(1));
+
+    const oldRecord: AttachmentRecord = {
+      id: 'attachment-old',
+      name: 'secret.txt',
+      type: 'text/plain',
+      size: 12,
+      data: encrypted.ciphertext,
+      encrypted: true,
+      algorithm: 'AES-256-GCM',
+      iv: encrypted.iv,
+      tag: encrypted.tag,
+      // no kdf field, representing old SHA-256 records
+    };
+
+    await expect(decryptAttachmentData(oldRecord).then(text)).resolves.toBe('private file');
+  });
+
+  it('migrates old SHA-256 AES-GCM attachment records to HKDF-SHA-256 format during bulk migration', async () => {
+    openVaultSession('master-pass');
+
+    // Manually construct an old record with SHA-256 KDF and save to IndexedDB
+    const keyMaterial = new TextEncoder().encode(`aegis-vault-v7:attachment-key:attachment-old-bulk:master-pass`);
+    const oldKey = new Uint8Array(await crypto.subtle.digest('SHA-256', keyMaterial));
+    const encrypted = await webCryptoAesGcmEncryptBytes(bytes('bulk migrate file'), oldKey, new Uint8Array(12).fill(2));
+
+    const oldRecord: AttachmentRecord = {
+      id: 'attachment-old-bulk',
+      name: 'secret-bulk.txt',
+      type: 'text/plain',
+      size: 17,
+      data: encrypted.ciphertext,
+      encrypted: true,
+      algorithm: 'AES-256-GCM',
+      iv: encrypted.iv,
+      tag: encrypted.tag,
+    };
+
+    await putAttachmentRecord(oldRecord);
+
+    await expect(migrateLegacyAttachmentsToAesGcm()).resolves.toBe(1);
+
+    const migrated = await getStoredAttachmentRecord('attachment-old-bulk');
+    expect(migrated?.algorithm).toBe('AES-256-GCM');
+    expect(migrated?.kdf).toBe('HKDF-SHA-256');
+    expect(migrated?.iv).toHaveLength(24);
+    expect(migrated?.tag).toHaveLength(32);
+
+    const result = await getAttachmentBlob('attachment-old-bulk');
+    await expect(blobText(result?.blob)).resolves.toBe('bulk migrate file');
   });
 });

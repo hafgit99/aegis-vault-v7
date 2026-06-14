@@ -6,6 +6,7 @@
 import { VaultItem, GeneratorOptions, AuditReport } from '../types';
 import { secureRandomIndex } from './random';
 import zxcvbn from 'zxcvbn';
+import { registerOnCloseSession } from './vaultSession';
 
 /**
  * In-memory score cache: avoids re-running zxcvbn for the same password string.
@@ -13,6 +14,10 @@ import zxcvbn from 'zxcvbn';
  */
 const MAX_SCORE_CACHE_SIZE = 2000;
 const passwordScoreCache = new Map<string, number>();
+
+registerOnCloseSession(() => {
+  passwordScoreCache.clear();
+});
 
 function getCachedOrComputeScore(password: string): number {
   if (!password) return 0;

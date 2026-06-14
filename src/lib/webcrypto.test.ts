@@ -5,6 +5,7 @@ import {
   webCryptoAesGcmDecryptBytes,
   webCryptoAesGcmEncrypt,
   webCryptoAesGcmEncryptBytes,
+  generateSafeIv,
 } from './webcrypto';
 
 describe('WebCrypto AES-GCM adapter', () => {
@@ -40,5 +41,17 @@ describe('WebCrypto AES-GCM adapter', () => {
     expect(payload.iv).toBe('040404040404040404040404');
     expect(payload.tag).toHaveLength(32);
     await expect(webCryptoAesGcmDecryptBytes(payload, key)).resolves.toEqual(input);
+  });
+
+  it('generates unique, 12-byte counter-based safe nonces', () => {
+    const iv1 = generateSafeIv();
+    const iv2 = generateSafeIv();
+
+    expect(iv1).toHaveLength(12);
+    expect(iv2).toHaveLength(12);
+    // Prefix (first 8 bytes) should be equal since they are generated in the same session
+    expect(iv1.slice(0, 8)).toEqual(iv2.slice(0, 8));
+    // Counters (last 4 bytes) should be different/incremented
+    expect(iv1[11] + 1).toBe(iv2[11]);
   });
 });

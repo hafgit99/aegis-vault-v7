@@ -42,8 +42,9 @@ function base64ToBytes(value: string): Uint8Array {
 const importedKeysCache = new Map<string, CryptoKey>();
 
 async function importAesGcmKey(rawKey: Uint8Array): Promise<CryptoKey> {
-  const hexKey = Array.from(rawKey).map(b => b.toString(16).padStart(2, '0')).join('');
-  let cachedKey = importedKeysCache.get(hexKey);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', rawKey);
+  const cacheKey = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+  let cachedKey = importedKeysCache.get(cacheKey);
   if (cachedKey) return cachedKey;
 
   const key = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
@@ -54,7 +55,7 @@ async function importAesGcmKey(rawKey: Uint8Array): Promise<CryptoKey> {
     if (firstKey !== undefined) importedKeysCache.delete(firstKey);
   }
   
-  importedKeysCache.set(hexKey, key);
+  importedKeysCache.set(cacheKey, key);
   return key;
 }
 
@@ -132,4 +133,23 @@ export async function webCryptoAesGcmDecryptBytes(
 
   const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv, tagLength: 128 }, key, encrypted);
   return plaintext;
+}
+
+const sessionRandom = new Uint8Array(8);
+if (typeof crypto !== 'undefined') {
+  crypto.getRandomValues(sessionRandom);
+}
+let globalCounter = 0;
+
+export function generateSafeIv(): Uint8Array {
+  const iv = new Uint8Array(12);
+  iv.set(sessionRandom, 0);
+  
+  const counterVal = globalCounter++;
+  iv[8] = (counterVal >>> 24) & 0xff;
+  iv[9] = (counterVal >>> 16) & 0xff;
+  iv[10] = (counterVal >>> 8) & 0xff;
+  iv[11] = counterVal & 0xff;
+  
+  return iv;
 }

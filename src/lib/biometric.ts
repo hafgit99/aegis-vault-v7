@@ -6,7 +6,7 @@
 import { decryptLegacyAes256Gcm, hmacSha256 } from './legacyCrypto';
 import { secureRandomBytes } from './random';
 import { APP_NAME, APP_SHORT_NAME } from './branding';
-import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, type WebCryptoAesGcmPayload } from './webcrypto';
+import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, generateSafeIv, type WebCryptoAesGcmPayload } from './webcrypto';
 
 export const biometricErrorCodes = {
   unsupported: 'biometric.unsupported',
@@ -100,16 +100,117 @@ function base64ToBytes(value: string): Uint8Array {
   return new Uint8Array(atob(value).split('').map((char) => char.charCodeAt(0)));
 }
 
+const BIOMETRIC_DB_NAME = 'aegis_biometric_db';
+const BIOMETRIC_STORE_NAME = 'biometric_info';
+const BIOMETRIC_DB_VERSION = 1;
+const BIOMETRIC_KEY = 'biometric_setup';
+
+function initBiometricDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(BIOMETRIC_DB_NAME, BIOMETRIC_DB_VERSION);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(BIOMETRIC_STORE_NAME)) {
+        db.createObjectStore(BIOMETRIC_STORE_NAME);
+      }
+    };
+  });
+}
+
+function loadBiometricFromIndexedDB(): Promise<BiometricInfoV2 | null> {
+  if (typeof indexedDB === 'undefined') {
+    return Promise.resolve(null);
+  }
+  return initBiometricDB().then((db) => {
+    return new Promise<BiometricInfoV2 | null>((resolve, reject) => {
+      const transaction = db.transaction(BIOMETRIC_STORE_NAME, 'readonly');
+      const store = transaction.objectStore(BIOMETRIC_STORE_NAME);
+      const request = store.get(BIOMETRIC_KEY);
+      request.onsuccess = () => {
+        resolve(request.result || null);
+        db.close();
+      };
+      request.onerror = () => {
+        reject(request.error);
+        db.close();
+      };
+    });
+  });
+}
+
+function saveBiometricToIndexedDB(info: BiometricInfoV2): Promise<void> {
+  if (typeof indexedDB === 'undefined') {
+    return Promise.resolve();
+  }
+  return initBiometricDB().then((db) => {
+    return new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(BIOMETRIC_STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(BIOMETRIC_STORE_NAME);
+      const request = store.put(info, BIOMETRIC_KEY);
+      transaction.oncomplete = () => {
+        resolve();
+        db.close();
+      };
+      transaction.onerror = () => {
+        reject(transaction.error);
+        db.close();
+      };
+    });
+  });
+}
+
+function deleteBiometricFromIndexedDB(): Promise<void> {
+  if (typeof indexedDB === 'undefined') {
+    return Promise.resolve();
+  }
+  return initBiometricDB().then((db) => {
+    return new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(BIOMETRIC_STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(BIOMETRIC_STORE_NAME);
+      const request = store.delete(BIOMETRIC_KEY);
+      transaction.oncomplete = () => {
+        resolve();
+        db.close();
+      };
+      transaction.onerror = () => {
+        reject(transaction.error);
+        db.close();
+      };
+    });
+  });
+}
+
+let cachedBiometricInfo: BiometricInfoV2 | null = null;
+let isHydrated = false;
+
+export async function hydrateBiometric(): Promise<void> {
+  if (isHydrated) return;
+  try {
+    cachedBiometricInfo = await loadBiometricFromIndexedDB();
+    isHydrated = true;
+  } catch (e) {
+    console.error('Failed to load biometric config from IndexedDB', e);
+  }
+}
+
+export function resetBiometricCacheForTesting(): void {
+  cachedBiometricInfo = null;
+  isHydrated = false;
+}
+
 export function isBiometricSupported(): boolean {
   return typeof window !== 'undefined' && !!window.PublicKeyCredential;
 }
 
 export function isBiometricEnabled(): boolean {
-  return localStorage.getItem('aegis_biometric_info') !== null;
+  return cachedBiometricInfo !== null;
 }
 
 export function disableBiometric(): void {
-  localStorage.removeItem('aegis_biometric_info');
+  cachedBiometricInfo = null;
+  void deleteBiometricFromIndexedDB();
 }
 
 export async function registerBiometric(masterPassword: string): Promise<void> {
@@ -159,7 +260,7 @@ export async function registerBiometric(masterPassword: string): Promise<void> {
 
   const wrappingKey = await deriveWebCryptoPbkdf2Key(rawIdBytes, salt, 10000, 32);
 
-  const bundle = await webCryptoAesGcmEncrypt(masterPassword, wrappingKey, secureRandomBytes(12));
+  const bundle = await webCryptoAesGcmEncrypt(masterPassword, wrappingKey, generateSafeIv());
 
   const biometricInfo: BiometricInfoV2 = {
     version: 2,
@@ -170,16 +271,16 @@ export async function registerBiometric(masterPassword: string): Promise<void> {
     bundle: bundle
   };
 
-  localStorage.setItem('aegis_biometric_info', JSON.stringify(biometricInfo));
+  cachedBiometricInfo = biometricInfo;
+  await saveBiometricToIndexedDB(biometricInfo);
 }
 
 export async function authenticateBiometric(): Promise<string> {
-  const storedStr = localStorage.getItem('aegis_biometric_info');
-  if (!storedStr) {
+  const biometricInfo = cachedBiometricInfo;
+  if (!biometricInfo) {
     throw new BiometricError(biometricErrorCodes.missingBundle);
   }
 
-  const biometricInfo = JSON.parse(storedStr);
   const credIdBytes = base64ToBytes(biometricInfo.credentialId);
   const saltBytes = base64ToBytes(biometricInfo.salt);
 

@@ -49,10 +49,9 @@ export function secureRandomId(): string {
 
 export function secureRandomToken(length = 12): string {
   const alphabet = '0123456789abcdefghijklmnopqrstuvwxyz';
-  const bytes = secureRandomBytes(length);
   let token = '';
   for (let i = 0; i < length; i++) {
-    token += alphabet[bytes[i] % alphabet.length];
+    token += alphabet[secureRandomIndex(alphabet.length)];
   }
   return token;
 }

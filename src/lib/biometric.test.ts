@@ -2,6 +2,7 @@
  * @vitest-environment jsdom
  */
 
+import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -13,6 +14,8 @@ import {
   isBiometricSupported,
   pbkdf2Sha256,
   registerBiometric,
+  hydrateBiometric,
+  resetBiometricCacheForTesting,
 } from './biometric';
 
 const rawId = new Uint8Array([1, 2, 3, 4]).buffer;
@@ -24,6 +27,49 @@ function bytesToHex(bytes: Uint8Array): string {
 
 function bytesToBase64(bytes: Uint8Array): string {
   return btoa(String.fromCharCode(...bytes));
+}
+
+async function getStoredBiometricFromDB(): Promise<any> {
+  const db = await new Promise<IDBDatabase>((resolve, reject) => {
+    const request = indexedDB.open('aegis_biometric_db', 1);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+  const info = await new Promise<any>((resolve, reject) => {
+    const transaction = db.transaction('biometric_info', 'readonly');
+    const request = transaction.objectStore('biometric_info').get('biometric_setup');
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(request.error);
+  });
+  db.close();
+  return info;
+}
+
+async function putStoredBiometricIntoDB(info: any): Promise<void> {
+  const db = await new Promise<IDBDatabase>((resolve, reject) => {
+    const request = indexedDB.open('aegis_biometric_db', 1);
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore('biometric_info');
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction('biometric_info', 'readwrite');
+    transaction.objectStore('biometric_info').put(info, 'biometric_setup');
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+  });
+  db.close();
+}
+
+function deleteBiometricDatabase(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.deleteDatabase('aegis_biometric_db');
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+    request.onblocked = () => resolve();
+  });
 }
 
 function mockWebAuthn({
@@ -47,12 +93,17 @@ function mockWebAuthn({
   });
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  await deleteBiometricDatabase();
+  resetBiometricCacheForTesting();
   mockWebAuthn();
+  await hydrateBiometric();
 });
 
-afterEach(() => {
+afterEach(async () => {
   localStorage.clear();
+  await deleteBiometricDatabase();
+  resetBiometricCacheForTesting();
   vi.restoreAllMocks();
 });
 
@@ -89,7 +140,7 @@ describe('biometric master password wrapper', () => {
   it('stores new biometric bundles with WebCrypto metadata', async () => {
     await registerBiometric('master-pass');
 
-    const stored = JSON.parse(localStorage.getItem('aegis_biometric_info') ?? '{}');
+    const stored = await getStoredBiometricFromDB();
     const create = vi.mocked(navigator.credentials.create);
     const creationOptions = create.mock.calls[0][0] as CredentialCreationOptions;
 
@@ -189,7 +240,7 @@ describe('biometric master password wrapper', () => {
   });
 
   it('rejects legacy biometric bundles that fail compatibility decrypt checks', async () => {
-    localStorage.setItem('aegis_biometric_info', JSON.stringify({
+    await putStoredBiometricIntoDB({
       version: 1,
       credentialId: bytesToBase64(new Uint8Array(rawId)),
       salt: bytesToBase64(new Uint8Array([5, 6, 7, 8])),
@@ -198,7 +249,8 @@ describe('biometric master password wrapper', () => {
         tag: '00000000000000000000000000000000',
         ciphertext: bytesToBase64(encoder.encode('legacy-master-pass')),
       },
-    }));
+    });
+    await hydrateBiometric();
 
     await expect(authenticateBiometric()).rejects.toThrow();
   });

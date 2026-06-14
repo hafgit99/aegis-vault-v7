@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { logSecurityEvent } from './securityEvents';
+
 /**
  * Read-only compatibility crypto for vaults and exports created by older Aegis Vault builds.
  * Do not use this module for new encryption writes.
@@ -442,6 +444,11 @@ export function decryptLegacyDataWithPassword(envelopeJsonStr: string, password:
 
   // Support legacy fallbacks from old iterations (soft translation)
   if (parsed.encrypted && parsed.salt && parsed.payload) {
+    logSecurityEvent(
+      'security.legacyCryptoWarning' as any,
+      'Decrypting weak legacy backup (2000 iterations, stream cipher). Please re-export your vault immediately to update to the modern format.',
+      'warning'
+    );
     // Generate stretched key from old simple algorithm parameters
     let current = password + parsed.salt;
     for (let i = 0; i < 2000; i++) {

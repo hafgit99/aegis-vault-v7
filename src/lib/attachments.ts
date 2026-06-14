@@ -5,7 +5,8 @@
 
 import { secureRandomBytes } from './random';
 import { getActiveMasterPassword } from './vaultSession';
-import { webCryptoAesGcmDecryptBytes, webCryptoAesGcmEncryptBytes } from './webcrypto';
+import { webCryptoAesGcmDecryptBytes, webCryptoAesGcmEncryptBytes, generateSafeIv } from './webcrypto';
+import { logSecurityEvent } from './securityEvents';
 
 const DB_NAME = 'aegis_attachments_db';
 const STORE_NAME = 'attachments';
@@ -57,6 +58,7 @@ export interface AttachmentRecord {
   algorithm?: 'AES-256-GCM' | 'XOR-LEGACY';
   iv?: string;
   tag?: string;
+  kdf?: 'SHA-256' | 'HKDF-SHA-256';
 }
 
 /**
@@ -78,6 +80,28 @@ async function deriveAttachmentKey(masterPassword: string, attachmentId: string)
   return new Uint8Array(await crypto.subtle.digest('SHA-256', keyMaterial));
 }
 
+async function deriveAttachmentKeyHkdf(masterPassword: string, attachmentId: string): Promise<Uint8Array> {
+  const encoder = new TextEncoder();
+  const baseKey = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(masterPassword),
+    { name: 'HKDF' },
+    false,
+    ['deriveBits']
+  );
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: 'HKDF',
+      hash: 'SHA-256',
+      salt: encoder.encode(ATTACHMENT_KEY_CONTEXT),
+      info: encoder.encode(attachmentId),
+    },
+    baseKey,
+    256
+  );
+  return new Uint8Array(derivedBits);
+}
+
 function getRequiredMasterPassword(): string {
   const masterPassword = getActiveMasterPassword();
   if (!masterPassword) {
@@ -89,13 +113,14 @@ function getRequiredMasterPassword(): string {
 export async function encryptAttachmentData(
   attachmentId: string,
   rawBuffer: ArrayBuffer,
-): Promise<Pick<AttachmentRecord, 'algorithm' | 'data' | 'encrypted' | 'iv' | 'tag'>> {
+): Promise<Pick<AttachmentRecord, 'algorithm' | 'data' | 'encrypted' | 'iv' | 'tag' | 'kdf'>> {
   const masterPassword = getRequiredMasterPassword();
-  const key = await deriveAttachmentKey(masterPassword, attachmentId);
-  const encrypted = await webCryptoAesGcmEncryptBytes(rawBuffer, key, secureRandomBytes(12));
+  const key = await deriveAttachmentKeyHkdf(masterPassword, attachmentId);
+  const encrypted = await webCryptoAesGcmEncryptBytes(rawBuffer, key, generateSafeIv());
 
   return {
     algorithm: 'AES-256-GCM',
+    kdf: 'HKDF-SHA-256',
     data: encrypted.ciphertext,
     encrypted: true,
     iv: encrypted.iv,
@@ -110,7 +135,9 @@ export async function decryptAttachmentData(record: AttachmentRecord): Promise<A
     }
 
     const masterPassword = getRequiredMasterPassword();
-    const key = await deriveAttachmentKey(masterPassword, record.id);
+    const key = await (record.kdf === 'HKDF-SHA-256'
+      ? deriveAttachmentKeyHkdf(masterPassword, record.id)
+      : deriveAttachmentKey(masterPassword, record.id));
     return webCryptoAesGcmDecryptBytes(
       {
         iv: record.iv,
@@ -125,11 +152,16 @@ export async function decryptAttachmentData(record: AttachmentRecord): Promise<A
 }
 
 export async function migrateAttachmentRecordToAesGcm(record: AttachmentRecord): Promise<AttachmentRecord> {
-  if (record.algorithm === 'AES-256-GCM') {
+  if (record.algorithm === 'AES-256-GCM' && record.kdf === 'HKDF-SHA-256') {
     return record;
   }
 
-  const rawBuffer = decryptLegacyXorBufferForMigration(record.data);
+  let rawBuffer: ArrayBuffer;
+  if (record.algorithm === 'AES-256-GCM') {
+    rawBuffer = await decryptAttachmentData(record);
+  } else {
+    rawBuffer = decryptLegacyXorBufferForMigration(record.data);
+  }
   const encryptedAttachment = await encryptAttachmentData(record.id, rawBuffer);
 
   return {
@@ -151,7 +183,9 @@ export async function migrateLegacyAttachmentsToAesGcm(): Promise<number> {
       const request = store.getAll();
 
       request.onsuccess = () => {
-        resolve((request.result as AttachmentRecord[]).filter((record) => record.algorithm !== 'AES-256-GCM'));
+        resolve((request.result as AttachmentRecord[]).filter((record) => 
+          record.algorithm !== 'AES-256-GCM' || record.kdf !== 'HKDF-SHA-256'
+        ));
       };
 
       request.onerror = () => reject(request.error);
@@ -161,6 +195,12 @@ export async function migrateLegacyAttachmentsToAesGcm(): Promise<number> {
     if (legacyRecords.length === 0) {
       return 0;
     }
+
+    logSecurityEvent(
+      'security.legacyCryptoWarning' as any,
+      `Legacy XOR-LEGACY or old SHA-256 KDF encrypted attachments detected. Forcing migration to secure AES-256-GCM HKDF-SHA-256.`,
+      'warning'
+    );
 
     const migratedRecords = await Promise.all(legacyRecords.map((record) => migrateAttachmentRecordToAesGcm(record)));
 

@@ -1,6 +1,19 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { calculatePasswordScore, generatePassword, getStrengthLabel, runVaultAudit } from './security';
 import { VaultItem } from '../types';
+import { closeVaultSession } from './vaultSession';
+import zxcvbn from 'zxcvbn';
+
+vi.mock('zxcvbn', async (importOriginal) => {
+  const actual = await importOriginal<any>();
+  const mockFunc = vi.fn((password: string) => {
+    const fn = actual.default || actual;
+    return fn(password);
+  });
+  return {
+    default: mockFunc,
+  };
+});
 
 const baseItem = (overrides: Partial<VaultItem>): VaultItem => ({
   id: crypto.randomUUID(),
@@ -51,5 +64,21 @@ describe('security helpers', () => {
     expect(password).toMatch(/[a-z]/);
     expect(password).toMatch(/[0-9]/);
     expect(password).toMatch(/[^A-Za-z0-9]/);
+  });
+
+  it('clears password score cache on close session', () => {
+    vi.mocked(zxcvbn).mockClear();
+
+    const pw = 'SomeHighlySpecificPasswordString123!';
+    calculatePasswordScore(pw);
+    expect(zxcvbn).toHaveBeenCalledTimes(1);
+
+    calculatePasswordScore(pw);
+    expect(zxcvbn).toHaveBeenCalledTimes(1);
+
+    closeVaultSession();
+
+    calculatePasswordScore(pw);
+    expect(zxcvbn).toHaveBeenCalledTimes(2);
   });
 });

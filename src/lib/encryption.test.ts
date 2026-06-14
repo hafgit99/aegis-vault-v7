@@ -102,4 +102,57 @@ describe('encrypted backup envelope', () => {
     expect(error.message).toBe(secureBackupErrorCodes.missingFields);
     expect(error.code).toBe(secureBackupErrorCodes.missingFields);
   });
+
+  it('rejects secure envelopes with missing or weak KDF parameters', async () => {
+    const baseEnvelope = {
+      version: '1.2',
+      generator: 'Aegis Secure Core',
+      kdf: 'Argon2id',
+      kdfImplementation: 'argon2-browser',
+      cipher: 'WebCrypto AES-256-GCM',
+      salt: '00'.repeat(16),
+      iv: '11'.repeat(12),
+      tag: '22'.repeat(16),
+      payload: 'ciphertext',
+      checksum: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', // sha256 of 'ciphertext'
+    };
+
+    // Missing kdfParams
+    await expect(
+      decryptDataWithPasswordSecure(JSON.stringify(baseEnvelope), 'password')
+    ).rejects.toMatchObject({
+      code: secureBackupErrorCodes.weakKdfParams,
+      name: 'SecureBackupError',
+    });
+
+    // Too low memoryKiB
+    const weakMemoryEnvelope = {
+      ...baseEnvelope,
+      kdfParams: {
+        memoryKiB: 32768, // 32 MiB (too low)
+        iterations: 4,
+      },
+    };
+    await expect(
+      decryptDataWithPasswordSecure(JSON.stringify(weakMemoryEnvelope), 'password')
+    ).rejects.toMatchObject({
+      code: secureBackupErrorCodes.weakKdfParams,
+      name: 'SecureBackupError',
+    });
+
+    // Too low iterations
+    const weakIterationsEnvelope = {
+      ...baseEnvelope,
+      kdfParams: {
+        memoryKiB: 65536,
+        iterations: 2, // too low
+      },
+    };
+    await expect(
+      decryptDataWithPasswordSecure(JSON.stringify(weakIterationsEnvelope), 'password')
+    ).rejects.toMatchObject({
+      code: secureBackupErrorCodes.weakKdfParams,
+      name: 'SecureBackupError',
+    });
+  });
 });

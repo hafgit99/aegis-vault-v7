@@ -5,13 +5,14 @@
 
 import { secureRandomBytes } from './random';
 import { deriveArgon2idKey } from './argon2id';
-import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt } from './webcrypto';
+import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, generateSafeIv } from './webcrypto';
 import { decryptLegacyDataWithPassword } from './legacyCrypto';
 
 export const secureBackupErrorCodes = {
   invalidJson: 'secureBackup.invalidJson',
   missingFields: 'secureBackup.missingFields',
   checksumMismatch: 'secureBackup.checksumMismatch',
+  weakKdfParams: 'secureBackup.weakKdfParams',
 } as const;
 
 export type SecureBackupErrorCode = (typeof secureBackupErrorCodes)[keyof typeof secureBackupErrorCodes];
@@ -39,7 +40,7 @@ export async function encryptDataWithPasswordSecure(rawData: string, password: s
   };
 
   const aesKey = await deriveArgon2idKey(password, saltHex, kdfParams);
-  const bundle = await webCryptoAesGcmEncrypt(rawData, aesKey, secureRandomBytes(12));
+  const bundle = await webCryptoAesGcmEncrypt(rawData, aesKey, generateSafeIv());
 
   const encoder = new TextEncoder();
   const cipherBytes = encoder.encode(bundle.ciphertext);
@@ -78,6 +79,15 @@ export async function decryptDataWithPasswordSecure(envelopeJsonStr: string, pas
 
   if (!parsed.salt || !parsed.iv || !parsed.tag || !parsed.payload || !parsed.checksum) {
     throw new SecureBackupError(secureBackupErrorCodes.missingFields);
+  }
+
+  // Validate KDF params to mitigate downgrade KDF attacks (Z-10)
+  if (!parsed.kdfParams || typeof parsed.kdfParams !== 'object') {
+    throw new SecureBackupError(secureBackupErrorCodes.weakKdfParams);
+  }
+  const { memoryKiB, iterations } = parsed.kdfParams;
+  if (typeof memoryKiB !== 'number' || typeof iterations !== 'number' || memoryKiB < 65536 || iterations < 3) {
+    throw new SecureBackupError(secureBackupErrorCodes.weakKdfParams);
   }
 
   const encoder = new TextEncoder();

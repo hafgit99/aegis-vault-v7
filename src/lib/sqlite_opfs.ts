@@ -21,7 +21,7 @@ import {
 } from './vaultDatabaseFormat';
 import { createArgon2idHash, verifyArgon2idHash } from './argon2id';
 import { deriveArgon2idKey as deriveVettedArgon2idKey } from './argon2id';
-import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, type WebCryptoAesGcmPayload } from './webcrypto';
+import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, generateSafeIv, type WebCryptoAesGcmPayload } from './webcrypto';
 import {
   readDesktopVaultDatabase,
   resetDesktopVaultDatabase,
@@ -78,7 +78,7 @@ class SQLiteOPFS {
   private hydratePromise: Promise<void>;
 
   // KDF derived key cache to avoid repeating heavy Argon2id calculations
-  private cachedPasswordPlain: string | null = null;
+  private cachedPasswordBytes: Uint8Array | null = null;
   private cachedKeySalt: string | null = null;
   private cachedKeyBytes: Uint8Array | null = null;
   private cachedLegacyKeyBytes: Uint8Array | null = null;
@@ -97,6 +97,17 @@ class SQLiteOPFS {
     await this.hydratePromise;
   }
 
+  private areByteArraysEqual(a: Uint8Array | null, b: Uint8Array | null): boolean {
+    if (a === b) return true;
+    if (!a || !b) return false;
+    if (a.length !== b.length) return false;
+    let result = 0;
+    for (let i = 0; i < a.length; i++) {
+      result |= a[i] ^ b[i];
+    }
+    return result === 0;
+  }
+
   public clearDerivedKeyCache(): void {
     if (this.cachedKeyBytes) {
       this.cachedKeyBytes.fill(0);
@@ -104,7 +115,10 @@ class SQLiteOPFS {
     if (this.cachedLegacyKeyBytes) {
       this.cachedLegacyKeyBytes.fill(0);
     }
-    this.cachedPasswordPlain = null;
+    if (this.cachedPasswordBytes) {
+      this.cachedPasswordBytes.fill(0);
+    }
+    this.cachedPasswordBytes = null;
     this.cachedKeySalt = null;
     this.cachedKeyBytes = null;
     this.cachedLegacyKeyBytes = null;
@@ -336,7 +350,7 @@ class SQLiteOPFS {
 
         this.state.vault_items = await Promise.all(items.map(async (item) => {
           const sensitivePayload = JSON.stringify(item);
-          const encrypted = await webCryptoAesGcmEncrypt(sensitivePayload, derivedKey, secureRandomBytes(12));
+          const encrypted = await webCryptoAesGcmEncrypt(sensitivePayload, derivedKey, generateSafeIv());
           
           return {
             id: item.id,
@@ -419,22 +433,32 @@ class SQLiteOPFS {
    * Returns a derived encryption key from the active vault salt using Argon2id.
    */
   public async deriveEncryptionKey(password: string, salt = this.getCurrentVaultEncryptionSalt()): Promise<Uint8Array> {
-    if (this.cachedPasswordPlain === password && this.cachedKeySalt === salt && this.cachedKeyBytes) {
+    const passwordBytes = new TextEncoder().encode(password);
+    if (this.areByteArraysEqual(this.cachedPasswordBytes, passwordBytes) && this.cachedKeySalt === salt && this.cachedKeyBytes) {
+      passwordBytes.fill(0);
       return this.cachedKeyBytes;
     }
     const key = await deriveVettedArgon2idKey(password, salt, this.getKdfParams());
-    this.cachedPasswordPlain = password;
+    if (this.cachedPasswordBytes) {
+      this.cachedPasswordBytes.fill(0);
+    }
+    this.cachedPasswordBytes = passwordBytes;
     this.cachedKeySalt = salt;
     this.cachedKeyBytes = key;
     return key;
   }
 
   private deriveLegacyEncryptionKey(password: string): Uint8Array {
-    if (this.cachedPasswordPlain === password && this.cachedLegacyKeyBytes) {
+    const passwordBytes = new TextEncoder().encode(password);
+    if (this.areByteArraysEqual(this.cachedPasswordBytes, passwordBytes) && this.cachedLegacyKeyBytes) {
+      passwordBytes.fill(0);
       return this.cachedLegacyKeyBytes;
     }
     const key = generateLegacyArgon2idKey(password, 'static_db_salt', 1024, 3, 2, 32);
-    this.cachedPasswordPlain = password;
+    if (this.cachedPasswordBytes) {
+      this.cachedPasswordBytes.fill(0);
+    }
+    this.cachedPasswordBytes = passwordBytes;
     this.cachedLegacyKeyBytes = key;
     return key;
   }
@@ -461,6 +485,14 @@ class SQLiteOPFS {
       const migrationKey = (shouldMigrateStaticSalt || shouldMigrateKdf)
         ? await deriveVettedArgon2idKey(masterPasswordPlain, migratedSalt, NEW_VAULT_ITEM_KDF_PARAMS)
         : derivedKey;
+
+      if (shouldMigrateStaticSalt || shouldMigrateKdf) {
+        logSecurityEvent(
+          'security.legacyCryptoWarning' as any,
+          'Legacy SQLite database encryption parameters detected. Migrating to secure Argon2id (128 MiB, 4 iterations).',
+          'warning'
+        );
+      }
 
       let migratedLegacyRows = false;
       const decryptedResults: Array<{ row: SQLiteRow; item: VaultItem }> = [];
@@ -494,7 +526,14 @@ class SQLiteOPFS {
             const originalItem: VaultItem = JSON.parse(decryptedJson);
 
             if (isLegacyRow || shouldMigrateStaticSalt || shouldMigrateKdf) {
-              const encrypted = await webCryptoAesGcmEncrypt(decryptedJson, migrationKey, secureRandomBytes(12));
+              if (isLegacyRow && !migratedLegacyRows) {
+                logSecurityEvent(
+                  'security.legacyCryptoWarning' as any,
+                  'Legacy SQLite database rows with old KDF detected. Migrating rows to modern Argon2id AES-256-GCM format.',
+                  'warning'
+                );
+              }
+              const encrypted = await webCryptoAesGcmEncrypt(decryptedJson, migrationKey, generateSafeIv());
               row.enc_metadata = JSON.stringify(encrypted);
               row.enc_kdf = VAULT_ITEM_KDF;
               migratedLegacyRows = true;
@@ -551,7 +590,10 @@ class SQLiteOPFS {
         if (shouldMigrateKdf) {
           this.state.kdfParams = NEW_VAULT_ITEM_KDF_PARAMS;
         }
-        this.cachedPasswordPlain = masterPasswordPlain;
+        if (this.cachedPasswordBytes) {
+          this.cachedPasswordBytes.fill(0);
+        }
+        this.cachedPasswordBytes = new TextEncoder().encode(masterPasswordPlain);
         this.cachedKeySalt = migratedSalt;
         this.cachedKeyBytes = migrationKey;
         await this.saveToPersistentStorage();
@@ -576,7 +618,7 @@ class SQLiteOPFS {
     // Build fresh serialized payload
     const rawSensitive = JSON.stringify(item);
     // Uses separate secure 12-byte IV for this encryption action automatically inside aes256GcmEncrypt!
-    const encrypted = await webCryptoAesGcmEncrypt(rawSensitive, derivedKey, secureRandomBytes(12));
+    const encrypted = await webCryptoAesGcmEncrypt(rawSensitive, derivedKey, generateSafeIv());
 
     const nowStr = new Date().toISOString().split('T')[0];
     const category = item.category || 'login';
@@ -654,7 +696,7 @@ class SQLiteOPFS {
         chunk.map(async (item) => {
           try {
             const rawSensitive = JSON.stringify(item);
-            const encrypted = await webCryptoAesGcmEncrypt(rawSensitive, derivedKey, secureRandomBytes(12));
+            const encrypted = await webCryptoAesGcmEncrypt(rawSensitive, derivedKey, generateSafeIv());
             const category = item.category || 'login';
 
             const row: SQLiteRow = {
@@ -854,7 +896,7 @@ class SQLiteOPFS {
     
     this.state.vault_items = await Promise.all(demoItems.map(async (item) => {
       const sensitivePayload = JSON.stringify(item);
-      const encrypted = await webCryptoAesGcmEncrypt(sensitivePayload, derivedKey, secureRandomBytes(12));
+      const encrypted = await webCryptoAesGcmEncrypt(sensitivePayload, derivedKey, generateSafeIv());
       
       return {
         id: item.id,

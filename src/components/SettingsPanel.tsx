@@ -75,6 +75,8 @@ function getBackupDecryptErrorMessage(err: any, t: ReturnType<typeof useLanguage
       return t('settings.import.decryptErrorIntegrity');
     case 'legacyCrypto.unsupportedEnvelope':
       return t('settings.import.decryptErrorUnsupported');
+    case 'secureBackup.weakKdfParams':
+      return t('settings.import.decryptErrorWeakParams');
     default:
       return err?.message || t('settings.import.decryptErrorFallback');
   }

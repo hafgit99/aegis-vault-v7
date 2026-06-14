@@ -13,6 +13,7 @@ import {
 import { sqliteOPFSInstance } from './sqlite_opfs';
 import { logSecurityEvent, securityEventCodes } from './securityEvents';
 import { closeVaultSession, getActiveMasterPassword, openVaultSession } from './vaultSession';
+import { hydrateBiometric } from './biometric';
 
 const STORAGE_KEYS = {
   IS_SET_UP: 'aegis_is_setup',
@@ -75,6 +76,7 @@ const INITIAL_DEMO_ITEMS: VaultItem[] = [
 
 export async function initializeStorage(): Promise<void> {
   await sqliteOPFSInstance.hydrate();
+  await hydrateBiometric();
 }
 
 /**
