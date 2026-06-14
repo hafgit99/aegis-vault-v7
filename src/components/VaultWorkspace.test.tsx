@@ -142,7 +142,7 @@ describe('VaultWorkspace', () => {
 
     expect(allButton.className).toContain('text-on-surface-variant');
     expect(favoritesButton.className).toContain('bg-brand-primary/15');
-    expect(screen.getByText((_, element) => element?.textContent === '1 öğe listeleniyor')).toBeTruthy();
+    expect(screen.getByText((_, element) => element?.tagName === 'P' && element?.textContent?.trim().replace(/\s+/g, ' ') === '1 öğe listeleniyor')).toBeTruthy();
 
     fireEvent.click(allButton);
 
@@ -160,7 +160,7 @@ describe('VaultWorkspace', () => {
         .getAllByText((_, element) => element?.textContent?.includes('Arama sonucu') ?? false)
         .some((element) => element.className.includes('italic')),
     ).toBe(true);
-    expect(screen.getByText((_, element) => element?.textContent === '0 öğe listeleniyor')).toBeTruthy();
+    expect(screen.getByText((_, element) => element?.tagName === 'P' && element?.textContent?.trim().replace(/\s+/g, ' ') === '0 öğe listeleniyor')).toBeTruthy();
   });
 
   it('renders vault list controls in the selected language', () => {
@@ -170,7 +170,7 @@ describe('VaultWorkspace', () => {
     expect(screen.getByText('Aegis 控制面板')).toBeTruthy();
     expect(screen.getByText('全部 (2)')).toBeTruthy();
     expect(screen.getByText('收藏 (1)')).toBeTruthy();
-    expect(screen.getByText((_, element) => element?.textContent === '2 项已列出')).toBeTruthy();
+    expect(screen.getByText((_, element) => element?.tagName === 'P' && element?.textContent?.trim().replace(/\s+/g, ' ') === '2 项已列出')).toBeTruthy();
     expect(screen.getByTitle('添加新密码')).toBeTruthy();
   });
 

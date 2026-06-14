@@ -257,10 +257,7 @@ export async function getVaultItems(): Promise<VaultItem[]> {
   });
 
   if (hasChanges) {
-    for (const id of expiredIds) {
-      await sqliteOPFSInstance.deletePermanently(id, password);
-    }
-    return sqliteOPFSInstance.getVaultItems(password);
+    return sqliteOPFSInstance.deletePermanentlyBatch(expiredIds, password);
   }
   return cleanItems;
 }
@@ -274,9 +271,12 @@ export async function saveVaultItem(item: VaultItem): Promise<VaultItem[]> {
   return sqliteOPFSInstance.saveVaultItem(item, password);
 }
 
-export async function saveVaultItems(items: VaultItem[]): Promise<VaultItem[]> {
+export async function saveVaultItems(items: VaultItem[], onProgress?: (count: number) => void): Promise<VaultItem[]> {
   const password = getSessionMasterPassword();
   if (!password) return [];
+  if (onProgress) {
+    return sqliteOPFSInstance.saveVaultItems(items, password, onProgress);
+  }
   return sqliteOPFSInstance.saveVaultItems(items, password);
 }
 
@@ -340,12 +340,12 @@ export async function emptyTrashComplete(): Promise<VaultItem[]> {
   if (!password) return [];
 
   const items = await sqliteOPFSInstance.getVaultItems(password);
-  for (const item of items) {
-    if (item.deleted) {
-      await sqliteOPFSInstance.deletePermanently(item.id, password);
-    }
+  const deletedIds = items.filter(item => item.deleted).map(item => item.id);
+  
+  if (deletedIds.length > 0) {
+    return sqliteOPFSInstance.deletePermanentlyBatch(deletedIds, password);
   }
-  return sqliteOPFSInstance.getVaultItems(password);
+  return items;
 }
 
 /**

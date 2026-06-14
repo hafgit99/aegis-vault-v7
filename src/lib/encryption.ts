@@ -32,8 +32,8 @@ export async function encryptDataWithPasswordSecure(rawData: string, password: s
   const saltBytes = secureRandomBytes(16);
   const saltHex = Array.from(saltBytes).map(b => b.toString(16).padStart(2, '0')).join('');
   const kdfParams = {
-    memoryKiB: 64 * 1024,
-    iterations: 3,
+    memoryKiB: 128 * 1024,
+    iterations: 4,
     parallelism: 1,
     hashLength: 32,
   };

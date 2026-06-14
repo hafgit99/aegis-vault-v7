@@ -31,6 +31,7 @@ describe('useVaultQueries', () => {
         items,
         searchQuery: '',
         favoritesOnly: false,
+        selectedCategory: 'all',
       }),
     );
 
@@ -45,6 +46,7 @@ describe('useVaultQueries', () => {
         items,
         searchQuery: 'github',
         favoritesOnly: true,
+        selectedCategory: 'all',
       }),
     );
 
@@ -58,6 +60,7 @@ describe('useVaultQueries', () => {
         items,
         searchQuery: '',
         favoritesOnly: false,
+        selectedCategory: 'all',
       }),
     );
 

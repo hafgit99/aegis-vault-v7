@@ -1,3 +1,6 @@
+import { memo } from 'react';
+
+import type { VaultCategoryFilter } from '../hooks/useVaultFilters';
 import { ActiveTab, AppNotification, AuditReport, VaultItem } from '../types';
 import PasswordGenerator from './PasswordGenerator';
 import SecurityAudit from './SecurityAudit';
@@ -17,6 +20,9 @@ interface MainContentProps {
   loginCount: number;
   cardCount: number;
   secureNoteCount: number;
+  passkeyCount: number;
+  identityCount: number;
+  selectedCategory: VaultCategoryFilter;
   auditReport: AuditReport;
   profileName: string;
   copiedField: string | null;
@@ -33,6 +39,7 @@ interface MainContentProps {
   onOpenAudit: () => void;
   onOpenGenerator: () => void;
   onSetFavoritesOnly: (value: boolean) => void;
+  onSelectCategory: (category: VaultCategoryFilter) => void;
   onSelectDashboard: () => void;
   onBackToList: () => void;
   onSelectItem: (item: VaultItem) => void;
@@ -51,7 +58,7 @@ interface MainContentProps {
   onDeleteTrashItemPermanently: (item: VaultItem) => void;
 }
 
-export default function MainContent({
+export function MainContentComponent({
   activeTab,
   selectedItem,
   mobileActiveView,
@@ -63,6 +70,9 @@ export default function MainContent({
   loginCount,
   cardCount,
   secureNoteCount,
+  passkeyCount,
+  identityCount,
+  selectedCategory,
   auditReport,
   profileName,
   copiedField,
@@ -79,6 +89,7 @@ export default function MainContent({
   onOpenAudit,
   onOpenGenerator,
   onSetFavoritesOnly,
+  onSelectCategory,
   onSelectDashboard,
   onBackToList,
   onSelectItem,
@@ -109,6 +120,9 @@ export default function MainContent({
           loginCount={loginCount}
           cardCount={cardCount}
           secureNoteCount={secureNoteCount}
+          passkeyCount={passkeyCount}
+          identityCount={identityCount}
+          selectedCategory={selectedCategory}
           auditReport={auditReport}
           profileName={profileName}
           copiedField={copiedField}
@@ -124,6 +138,7 @@ export default function MainContent({
           onOpenAudit={onOpenAudit}
           onOpenGenerator={onOpenGenerator}
           onSetFavoritesOnly={onSetFavoritesOnly}
+          onSelectCategory={onSelectCategory}
           onSelectDashboard={onSelectDashboard}
           onBackToList={onBackToList}
           onSelectItem={onSelectItem}
@@ -170,3 +185,7 @@ export default function MainContent({
     </div>
   );
 }
+
+// Memoize MainContent to prevent unnecessary re-renders from parent (App) updates.
+// This prevents the entire content area from re-rendering when unrelated state changes.
+export default memo(MainContentComponent);

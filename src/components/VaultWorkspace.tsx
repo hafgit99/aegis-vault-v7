@@ -1,5 +1,7 @@
-import { Fragment } from 'react';
-import { Heart, LayoutDashboard, Plus, Search } from 'lucide-react';
+import React, { Fragment, useState, useEffect, memo } from 'react';
+import { CreditCard, FileText, Fingerprint, Heart, KeyRound, Layers, LayoutDashboard, Plus, Search, User } from 'lucide-react';
+
+import type { VaultCategoryFilter } from '../hooks/useVaultFilters';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { AuditReport, VaultItem } from '../types';
@@ -23,6 +25,9 @@ interface VaultWorkspaceProps {
   loginCount: number;
   cardCount: number;
   secureNoteCount: number;
+  passkeyCount: number;
+  identityCount: number;
+  selectedCategory: VaultCategoryFilter;
   auditReport: AuditReport;
   profileName: string;
   copiedField: string | null;
@@ -38,6 +43,7 @@ interface VaultWorkspaceProps {
   onOpenAudit: () => void;
   onOpenGenerator: () => void;
   onSetFavoritesOnly: (value: boolean) => void;
+  onSelectCategory: (category: VaultCategoryFilter) => void;
   onSelectDashboard: () => void;
   onBackToList: () => void;
   onSelectItem: (item: VaultItem) => void;
@@ -49,7 +55,7 @@ interface VaultWorkspaceProps {
   onDownloadAttachment: (id: string, name: string) => void;
 }
 
-export default function VaultWorkspace({
+export function VaultWorkspaceContent({
   selectedItem,
   mobileActiveView,
   filteredItems,
@@ -59,6 +65,9 @@ export default function VaultWorkspace({
   loginCount,
   cardCount,
   secureNoteCount,
+  passkeyCount,
+  identityCount,
+  selectedCategory,
   auditReport,
   profileName,
   copiedField,
@@ -74,6 +83,7 @@ export default function VaultWorkspace({
   onOpenAudit,
   onOpenGenerator,
   onSetFavoritesOnly,
+  onSelectCategory,
   onSelectDashboard,
   onBackToList,
   onSelectItem,
@@ -86,14 +96,34 @@ export default function VaultWorkspace({
 }: VaultWorkspaceProps) {
   const { t } = useLanguage();
 
+  const [visibleCount, setVisibleCount] = useState(30);
+
+  // Reset visibleCount if search query or filters change
+  useEffect(() => {
+    setVisibleCount(30);
+  }, [filteredItems]);
+
+  // We can automatically slice and load more on scroll
+  const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    // Check if we are near the bottom of the scroll container
+    if (target.scrollHeight - target.scrollTop <= target.clientHeight + 300) {
+      if (visibleCount < filteredItems.length) {
+        setVisibleCount((prev) => Math.min(prev + 30, filteredItems.length));
+      }
+    }
+  };
+
+  const displayedItems = filteredItems.slice(0, visibleCount);
+
   return (
     <>
       <section
-        className={`w-full lg:w-[384px] border-r border-outline-variant/15 flex flex-col bg-surface-lowest/55 overflow-y-auto scrollbar-hide ${
+        className={`w-full lg:w-[480px] xl:w-[540px] border-r border-outline-variant/15 flex flex-col bg-surface-lowest/55 h-full ${
           selectedItem && mobileActiveView === 'detail' ? 'hidden lg:flex' : 'flex'
         }`}
       >
-        <div className="p-5 pb-2 space-y-3">
+        <div className="p-5 pb-2 space-y-3 shrink-0">
           <h2 className="font-display text-lg font-bold text-on-surface flex items-center justify-between">
             <span>{t('vaultList.title')}</span>
             <button
@@ -109,7 +139,10 @@ export default function VaultWorkspace({
           <div className="flex bg-surface-low p-1 rounded-lg border border-outline-variant/15 text-xs">
             <button
               data-testid="vault-filter-all"
-              onClick={() => onSetFavoritesOnly(false)}
+              onClick={() => {
+                onSetFavoritesOnly(false);
+                setVisibleCount(30);
+              }}
               className={`flex-1 py-1.5 rounded-md font-bold transition-all text-center cursor-pointer ${
                 !filterFavoritesOnly
                   ? 'bg-brand-primary/15 text-brand-primary border border-brand-primary/20'
@@ -120,7 +153,10 @@ export default function VaultWorkspace({
             </button>
             <button
               data-testid="vault-filter-favorites"
-              onClick={() => onSetFavoritesOnly(true)}
+              onClick={() => {
+                onSetFavoritesOnly(true);
+                setVisibleCount(30);
+              }}
               className={`flex-1 py-1.5 rounded-md font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer ${
                 filterFavoritesOnly
                   ? 'bg-brand-primary/15 text-brand-primary border border-brand-primary/20'
@@ -132,15 +168,55 @@ export default function VaultWorkspace({
             </button>
           </div>
 
-          <p className="text-on-surface-variant text-xs mt-1">
-            {filteredItems.length} {t('vaultList.itemsListed')}
-          </p>
+          {/* Category Filter Chips */}
+          <div className="flex flex-wrap gap-1.5 pb-0.5 -mx-1 px-1">
+            {([
+              { key: 'all' as VaultCategoryFilter, icon: <Layers className="w-3 h-3" />, label: t('detail.category.all', 'Tümü'), count: activeItems.length },
+              { key: 'login' as VaultCategoryFilter, icon: <KeyRound className="w-3 h-3" />, label: t('detail.category.login'), count: loginCount },
+              { key: 'card' as VaultCategoryFilter, icon: <CreditCard className="w-3 h-3" />, label: t('detail.category.card'), count: cardCount },
+              { key: 'passkey' as VaultCategoryFilter, icon: <Fingerprint className="w-3 h-3" />, label: t('detail.category.passkey'), count: passkeyCount },
+              { key: 'identity' as VaultCategoryFilter, icon: <User className="w-3 h-3" />, label: t('detail.category.identity'), count: identityCount },
+              { key: 'secure_note' as VaultCategoryFilter, icon: <FileText className="w-3 h-3" />, label: t('detail.category.secureNote'), count: secureNoteCount },
+            ]).map((cat) => (
+              <button
+                key={cat.key}
+                type="button"
+                data-testid={`category-chip-${cat.key}`}
+                onClick={() => {
+                  onSelectCategory(cat.key);
+                  setVisibleCount(30);
+                }}
+                className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer whitespace-nowrap ${
+                  selectedCategory === cat.key
+                    ? 'bg-brand-primary/15 text-brand-primary border-brand-primary/25'
+                    : 'bg-transparent text-on-surface-variant/70 border-outline-variant/10 hover:text-on-surface hover:bg-surface-low/60'
+                }`}
+              >
+                {cat.icon}
+                <span>{cat.label}</span>
+                <span className={`ml-0.5 font-mono text-[9px] ${
+                  selectedCategory === cat.key ? 'text-brand-primary/70' : 'text-on-surface-variant/40'
+                }`}>{cat.count}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="flex justify-between items-center text-on-surface-variant text-xs mt-1">
+            <p>
+              {filteredItems.length} {t('vaultList.itemsListed')}
+            </p>
+            {filteredItems.length > visibleCount && (
+              <p className="text-[10px] opacity-75 font-mono">
+                {t('common.showing', 'Gösterilen') || 'Showing'} {visibleCount}/{filteredItems.length}
+              </p>
+            )}
+          </div>
         </div>
 
-        <div className="flex flex-col p-3 space-y-1.5">
+        <div className="px-3 pb-2 shrink-0">
           <div
             onClick={onSelectDashboard}
-            className={`group p-3 mb-2 rounded-lg border flex items-center gap-3 cursor-pointer transition-all ${
+            className={`group p-3 rounded-lg border flex items-center gap-3 cursor-pointer transition-all ${
               selectedItem === null
                 ? 'border-brand-primary/20 bg-brand-primary/10'
                 : 'border-outline-variant/10 hover:border-brand-primary/10 hover:bg-surface-low/70'
@@ -157,8 +233,13 @@ export default function VaultWorkspace({
               <p className="text-[10px] text-on-surface-variant font-mono truncate">{t('vaultList.dashboardDescription')}</p>
             </div>
           </div>
+        </div>
 
-          {filteredItems.length === 0 ? (
+        <div
+          onScroll={handleListScroll}
+          className="flex-1 overflow-y-auto p-3 pt-0 space-y-1.5 scrollbar-hide"
+        >
+          {displayedItems.length === 0 ? (
             <div
               data-testid="vault-empty-state"
               className="flex flex-col items-center justify-center py-12 px-6 text-center animate-fade-in"
@@ -171,7 +252,7 @@ export default function VaultWorkspace({
               </p>
             </div>
           ) : (
-            filteredItems.map((item) => (
+            displayedItems.map((item) => (
               <Fragment key={item.id}>
                 <VaultListItem
                   item={item}
@@ -247,3 +328,8 @@ export default function VaultWorkspace({
     </>
   );
 }
+
+// Memoize VaultWorkspace to prevent unnecessary re-renders when parent updates
+// but props haven't changed. This is critical for large vault imports (600+ items)
+// where massive state updates would otherwise cause the entire component tree to re-render.
+export default memo(VaultWorkspaceContent);

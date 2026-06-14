@@ -20,8 +20,8 @@ describe('secure encrypted backup envelope', () => {
       kdfImplementation: 'argon2-browser',
       cipher: 'WebCrypto AES-256-GCM',
       kdfParams: {
-        memoryKiB: 65536,
-        iterations: 3,
+        memoryKiB: 131072,
+        iterations: 4,
         parallelism: 1,
         hashLength: 32,
       },

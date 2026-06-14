@@ -90,6 +90,8 @@ export default function App() {
     setSearchQuery,
     filterFavoritesOnly,
     setFilterFavoritesOnly,
+    selectedCategory,
+    setSelectedCategory,
   } = useVaultFilters();
 
   const {
@@ -159,11 +161,14 @@ export default function App() {
     loginCount,
     cardCount,
     secureNoteCount,
+    passkeyCount,
+    identityCount,
     auditReport,
   } = useVaultQueries({
     items,
     searchQuery,
     favoritesOnly: filterFavoritesOnly,
+    selectedCategory,
   });
 
   const { selectItem: handleSelectItem, selectAuditItem: handleAuditSelectItem } = useVaultSelection({
@@ -241,6 +246,9 @@ export default function App() {
           loginCount={loginCount}
           cardCount={cardCount}
           secureNoteCount={secureNoteCount}
+          passkeyCount={passkeyCount}
+          identityCount={identityCount}
+          selectedCategory={selectedCategory}
           auditReport={auditReport}
           profileName={profileName}
           copiedField={copiedField}
@@ -257,6 +265,7 @@ export default function App() {
           onOpenAudit={handleOpenAuditTab}
           onOpenGenerator={handleOpenGeneratorTab}
           onSetFavoritesOnly={setFilterFavoritesOnly}
+          onSelectCategory={setSelectedCategory}
           onSelectDashboard={handleSelectDashboard}
           onBackToList={handleBackToList}
           onSelectItem={handleSelectItem}

@@ -28,6 +28,12 @@ export interface VersionedVaultDatabaseState {
   appId: string;
   migratedFrom?: number;
   encryption_salt?: string;
+  kdfParams?: {
+    memoryKiB: number;
+    iterations: number;
+    parallelism: number;
+    hashLength: number;
+  };
   user_secrets: VaultDatabaseUserSecret[];
   vault_items: VaultDatabaseRow[];
 }
@@ -58,11 +64,20 @@ export function normalizeVaultDatabaseState(raw: unknown): VersionedVaultDatabas
       ? input.version
       : 1;
 
+  const rawKdfParams = input.kdfParams;
+  const kdfParams = rawKdfParams && typeof rawKdfParams === 'object' ? {
+    memoryKiB: typeof (rawKdfParams as any).memoryKiB === 'number' ? (rawKdfParams as any).memoryKiB : 128 * 1024,
+    iterations: typeof (rawKdfParams as any).iterations === 'number' ? (rawKdfParams as any).iterations : 4,
+    parallelism: typeof (rawKdfParams as any).parallelism === 'number' ? (rawKdfParams as any).parallelism : 1,
+    hashLength: typeof (rawKdfParams as any).hashLength === 'number' ? (rawKdfParams as any).hashLength : 32,
+  } : undefined;
+
   return {
     schemaVersion: CURRENT_VAULT_DB_SCHEMA_VERSION,
     appId: input.appId || VAULT_DB_APP_ID,
     migratedFrom: sourceVersion < CURRENT_VAULT_DB_SCHEMA_VERSION ? sourceVersion : input.migratedFrom,
     encryption_salt: typeof input.encryption_salt === 'string' ? input.encryption_salt : undefined,
+    kdfParams,
     user_secrets: arrayOrEmpty<VaultDatabaseUserSecret>(input.user_secrets),
     vault_items: arrayOrEmpty<VaultDatabaseRow>(input.vault_items),
   };

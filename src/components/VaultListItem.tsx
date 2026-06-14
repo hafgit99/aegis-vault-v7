@@ -1,4 +1,5 @@
 import { Heart } from 'lucide-react';
+import { memo } from 'react';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { TranslationKey } from '../i18n/translations';
@@ -19,7 +20,7 @@ const strengthLabelKeys: Record<ReturnType<typeof getStrengthLabel>['label'], Tr
   SECURE: 'vaultItem.strength.secure',
 };
 
-export default function VaultListItem({ item, isSelected, onSelect }: VaultListItemProps) {
+function VaultListItemContent({ item, isSelected, onSelect }: VaultListItemProps) {
   const { t } = useLanguage();
   const logoUrl = getLogoForPlatform(item.title, item.url);
   const itemStrength = getStrengthLabel(item.password || '');
@@ -61,3 +62,17 @@ export default function VaultListItem({ item, isSelected, onSelect }: VaultListI
     </div>
   );
 }
+
+// Memoize VaultListItem to prevent unnecessary re-renders on large list imports (600+ items).
+// Only re-renders if item, isSelected, or onSelect actually change.
+export default memo(VaultListItemContent, (prevProps, nextProps) => {
+  return (
+    prevProps.item.id === nextProps.item.id &&
+    prevProps.item.title === nextProps.item.title &&
+    prevProps.item.username === nextProps.item.username &&
+    prevProps.item.favorite === nextProps.item.favorite &&
+    prevProps.item.password === nextProps.item.password &&
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.onSelect === nextProps.onSelect
+  );
+});

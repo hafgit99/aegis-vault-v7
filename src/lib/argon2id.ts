@@ -35,8 +35,8 @@ interface Argon2BrowserImport {
 }
 
 const DEFAULT_OPTIONS: Required<Argon2idOptions> = {
-  memoryKiB: 64 * 1024,
-  iterations: 3,
+  memoryKiB: 128 * 1024,
+  iterations: 4,
   parallelism: 1,
   hashLength: 32,
 };

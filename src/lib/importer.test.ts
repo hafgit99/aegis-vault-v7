@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseCSV, parseUniversalImport } from './importer';
+import { parseCSV, parseUniversalImport, decodeFileBuffer } from './importer';
 
 describe('universal importer', () => {
   it('parses quoted CSV values with commas, escaped quotes, and newlines', () => {
@@ -409,5 +409,48 @@ describe('universal importer', () => {
     expect(result.type).toBe('error');
     if (result.type !== 'error') return;
     expect(result.message).toBeTruthy();
+  });
+
+  describe('decodeFileBuffer', () => {
+    it('returns empty string for empty buffer', () => {
+      const buffer = new ArrayBuffer(0);
+      expect(decodeFileBuffer(buffer)).toBe('');
+    });
+
+    it('decodes standard UTF-8 text', () => {
+      const text = 'Hello world, hello Türkçe';
+      const encoder = new TextEncoder();
+      const buffer = encoder.encode(text).buffer;
+      expect(decodeFileBuffer(buffer)).toBe(text);
+    });
+
+    it('decodes UTF-8 with BOM', () => {
+      const text = 'BOM test';
+      const arr = new Uint8Array([0xEF, 0xBB, 0xBF, ...new TextEncoder().encode(text)]);
+      expect(decodeFileBuffer(arr.buffer)).toBe(text);
+    });
+
+    it('decodes UTF-16 LE with BOM', () => {
+      const text = 'UTF-16 LE BOM test';
+      const encoded = new Uint16Array([0xFEFF, ...Array.from(text).map(c => c.charCodeAt(0))]);
+      expect(decodeFileBuffer(encoded.buffer)).toBe(text);
+    });
+
+    it('decodes UTF-16 LE without BOM (heuristics)', () => {
+      const text = 'This is a heuristic test for UTF-16 LE without BOM';
+      const arr = new Uint8Array(text.length * 2);
+      for (let i = 0; i < text.length; i++) {
+        arr[i * 2] = text.charCodeAt(i);
+        arr[i * 2 + 1] = 0;
+      }
+      expect(decodeFileBuffer(arr.buffer)).toBe(text);
+    });
+
+    it('decodes Turkish Windows-1254 text when UTF-8 is invalid', () => {
+      const arr = new Uint8Array([115, 0xFE, 103, 0xF0]); // 's' + 'ş' + 'g' + 'ğ' in Windows-1254
+      const decoded = decodeFileBuffer(arr.buffer);
+      expect(decoded).toContain('ş');
+      expect(decoded).toContain('ğ');
+    });
   });
 });

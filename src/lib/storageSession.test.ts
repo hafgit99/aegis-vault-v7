@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const sqliteOPFSInstance = vi.hoisted(() => ({
   deletePermanently: vi.fn(),
+  deletePermanentlyBatch: vi.fn(),
   getVaultItems: vi.fn(() => []),
   hydrate: vi.fn(async () => undefined),
   reseedDemo: vi.fn(),
@@ -266,32 +267,28 @@ describe('vault session storage', () => {
       deleted: true,
       deletedAt: '2026-01-01T00:00:00.000Z',
     });
-    sqliteOPFSInstance.getVaultItems
-      .mockResolvedValueOnce([activeItem, recentTrash, expiredTrash])
-      .mockResolvedValueOnce([activeItem, recentTrash]);
+    sqliteOPFSInstance.getVaultItems.mockResolvedValueOnce([activeItem, recentTrash, expiredTrash]);
+    sqliteOPFSInstance.deletePermanentlyBatch.mockResolvedValueOnce([activeItem, recentTrash]);
     openVaultSession('master-pass');
 
     await expect(getVaultItems()).resolves.toEqual([activeItem, recentTrash]);
 
-    expect(sqliteOPFSInstance.deletePermanently).toHaveBeenCalledWith('expired-trash', 'master-pass');
-    expect(sqliteOPFSInstance.getVaultItems).toHaveBeenCalledTimes(2);
+    expect(sqliteOPFSInstance.deletePermanentlyBatch).toHaveBeenCalledWith(['expired-trash'], 'master-pass');
+    expect(sqliteOPFSInstance.getVaultItems).toHaveBeenCalledTimes(1);
   });
 
   it('empties only deleted items from trash', async () => {
-    sqliteOPFSInstance.getVaultItems
-      .mockResolvedValueOnce([
-        sampleItem({ id: 'active-item' }),
-        sampleItem({ id: 'trash-1', deleted: true }),
-        sampleItem({ id: 'trash-2', deleted: true }),
-      ])
-      .mockResolvedValueOnce([sampleItem({ id: 'active-item' })]);
+    sqliteOPFSInstance.getVaultItems.mockResolvedValueOnce([
+      sampleItem({ id: 'active-item' }),
+      sampleItem({ id: 'trash-1', deleted: true }),
+      sampleItem({ id: 'trash-2', deleted: true }),
+    ]);
+    sqliteOPFSInstance.deletePermanentlyBatch.mockResolvedValueOnce([sampleItem({ id: 'active-item' })]);
     openVaultSession('master-pass');
 
     await expect(emptyTrashComplete()).resolves.toEqual([sampleItem({ id: 'active-item' })]);
 
-    expect(sqliteOPFSInstance.deletePermanently).toHaveBeenCalledTimes(2);
-    expect(sqliteOPFSInstance.deletePermanently).toHaveBeenNthCalledWith(1, 'trash-1', 'master-pass');
-    expect(sqliteOPFSInstance.deletePermanently).toHaveBeenNthCalledWith(2, 'trash-2', 'master-pass');
+    expect(sqliteOPFSInstance.deletePermanentlyBatch).toHaveBeenCalledWith(['trash-1', 'trash-2'], 'master-pass');
   });
 
   it('passes the active session password to saveVaultItems bulk save wrapper', async () => {

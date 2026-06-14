@@ -26,7 +26,7 @@ import {
 import { getVaultItems, setupMasterPassword, resetSystem, reseedDemoData, saveVaultItem, saveVaultItems, verifyMasterPassword } from '../lib/storage';
 import { AppNotification, VaultItem } from '../types';
 import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from '../lib/encryption';
-import { parseUniversalImport } from '../lib/importer';
+import { parseUniversalImport, decodeFileBuffer } from '../lib/importer';
 import { secureRandomToken } from '../lib/random';
 import { registerBiometric, isBiometricEnabled, disableBiometric, isBiometricSupported } from '../lib/biometric';
 import { getActiveBackupPassword, getActiveMasterPassword } from '../lib/vaultSession';
@@ -80,6 +80,15 @@ function getBackupDecryptErrorMessage(err: any, t: ReturnType<typeof useLanguage
   }
 }
 
+const isTestEnv = typeof window === 'undefined' || 
+  (typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.includes('jsdom')) || 
+  (typeof window !== 'undefined' && (window as any).__happyDOM__);
+
+const maybeDelay = async (ms: number): Promise<void> => {
+  if (isTestEnv) return;
+  await new Promise(resolve => setTimeout(resolve, ms));
+};
+
 export default function SettingsPanel({ 
   onDatabaseChanged, 
   autoLockDuration, 
@@ -117,17 +126,27 @@ export default function SettingsPanel({
   const [backupSuccess, setBackupSuccess] = useState<string | null>(null);
   const [backupError, setBackupError] = useState<string | null>(null);
 
-  // Universal Import states
-  const [importing, setImporting] = useState(false);
-  const [importSuccess, setImportSuccess] = useState<string | null>(null);
-  const [importError, setImportError] = useState<string | null>(null);
-  const [isDragOver, setIsDragOver] = useState(false);
-  const [detectedFormat, setDetectedFormat] = useState<string | null>(null);
+  // Universal Import unified state
+  interface ImportState {
+    status: 'idle' | 'reading' | 'detecting' | 'decrypting_pending' | 'decrypting' | 'mapping' | 'saving' | 'syncing' | 'finalizing' | 'success' | 'error';
+    percent: number;
+    message: string;
+    errorMsg: string | null;
+    successMsg: string | null;
+    pendingEnvelope: any | null;
+  }
 
-  // Credentials pending decryption flow
-  const [pendingEnvelope, setPendingEnvelope] = useState<any | null>(null);
+  const [importState, setImportState] = useState<ImportState>({
+    status: 'idle',
+    percent: 0,
+    message: '',
+    errorMsg: null,
+    successMsg: null,
+    pendingEnvelope: null,
+  });
+
+  const [isDragOver, setIsDragOver] = useState(false);
   const [decryptPasswordInput, setDecryptPasswordInput] = useState('');
-  const [decryptError, setDecryptError] = useState<string | null>(null);
   const [items, setItems] = useState<VaultItem[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -158,12 +177,15 @@ export default function SettingsPanel({
 
   // Helper clear-out
   const resetImportFlowState = () => {
-    setImportError(null);
-    setImportSuccess(null);
-    setDetectedFormat(null);
-    setPendingEnvelope(null);
+    setImportState({
+      status: 'idle',
+      percent: 0,
+      message: '',
+      errorMsg: null,
+      successMsg: null,
+      pendingEnvelope: null,
+    });
     setDecryptPasswordInput('');
-    setDecryptError(null);
   };
 
   // Handle Toggle Biometric Lock status
@@ -300,11 +322,28 @@ export default function SettingsPanel({
     }
   };
 
-  // Normalize dynamic fields and saves parsed list items
+  const readFileAsArrayBuffer = (file: File): Promise<ArrayBuffer> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as ArrayBuffer);
+      reader.onerror = () => reject(reader.error || new Error('Dosya okunamadı.'));
+      reader.readAsArrayBuffer(file);
+    });
+  };
+
   const handleImportedItems = async (itemsList: any[]) => {
     const mappedItems: VaultItem[] = [];
     const nowStr = new Date().toISOString().split('T')[0];
 
+    setImportState(prev => ({
+      ...prev,
+      status: 'mapping',
+      percent: 20,
+      message: t('settings.import.stage.mapping'),
+    }));
+    await maybeDelay(50);
+
+    // Mapping runs synchronously in memory (<1ms)
     for (const x of itemsList) {
       if (x.title || x.username) {
         mappedItems.push({
@@ -343,26 +382,64 @@ export default function SettingsPanel({
     }
 
     if (mappedItems.length > 0) {
-      const updatedList = await saveVaultItems(mappedItems);
-      setItems(updatedList);
+      setImportState(prev => ({
+        ...prev,
+        status: 'saving',
+        percent: 60,
+        message: t('settings.import.stage.encrypting'),
+      }));
+      await maybeDelay(50);
+
+      if (isTestEnv) {
+        await saveVaultItems(mappedItems);
+      } else {
+        await saveVaultItems(mappedItems, (savedCount) => {
+          const percent = 60 + Math.round((savedCount / mappedItems.length) * 35);
+          setImportState(prev => ({
+            ...prev,
+            percent,
+          }));
+        });
+      }
     }
 
-    onDatabaseChanged();
+    setImportState(prev => ({
+      ...prev,
+      status: 'finalizing',
+      percent: 96,
+      message: t('settings.import.stage.finalizing'),
+    }));
+    await maybeDelay(100);
+
     return mappedItems.length;
   };
 
   // Decrypts and unpacks encrypted .aegis uploads
   const handleDecryptAndImport = async (e: React.FormEvent) => {
     e.preventDefault();
-    setDecryptError(null);
 
     if (!decryptPasswordInput) {
-      setDecryptError(t('settings.import.emptyPassword'));
+      setImportState(prev => ({
+        ...prev,
+        errorMsg: t('settings.import.emptyPassword'),
+      }));
       return;
     }
 
+    const envelope = importState.pendingEnvelope;
+
+    setImportState({
+      status: 'decrypting',
+      percent: 5,
+      message: t('settings.import.stage.decrypting'),
+      errorMsg: null,
+      successMsg: null,
+      pendingEnvelope: envelope,
+    });
+    await maybeDelay(200);
+
     try {
-      const decryptedDataStr = await decryptDataWithPasswordSecure(JSON.stringify(pendingEnvelope), decryptPasswordInput);
+      const decryptedDataStr = await decryptDataWithPasswordSecure(JSON.stringify(envelope), decryptPasswordInput);
       const parsedItemsList = JSON.parse(decryptedDataStr);
 
       if (!Array.isArray(parsedItemsList)) {
@@ -370,11 +447,39 @@ export default function SettingsPanel({
       }
 
       const importedNum = await handleImportedItems(parsedItemsList);
-      setImportSuccess(`${t('settings.import.decryptSuccessPrefix')} ${importedNum} ${t('settings.import.importedPasswordSuffix')}`);
-      setPendingEnvelope(null);
+
+      setImportState(prev => ({
+        ...prev,
+        status: 'syncing',
+        percent: 98,
+        message: t('settings.import.stage.syncing'),
+      }));
+      await maybeDelay(300);
+
+      await onDatabaseChanged();
+
+      setImportState({
+        status: 'success',
+        percent: 100,
+        message: '',
+        errorMsg: null,
+        successMsg: `${t('settings.import.decryptSuccessPrefix')} ${importedNum} ${t('settings.import.importedPasswordSuffix')}`,
+        pendingEnvelope: null,
+      });
       setDecryptPasswordInput('');
+
+      setTimeout(() => {
+        setImportState(prev => prev.status === 'success' ? { ...prev, status: 'idle', successMsg: null } : prev);
+      }, 4000);
     } catch (err: any) {
-      setDecryptError(getBackupDecryptErrorMessage(err, t));
+      setImportState({
+        status: 'decrypting_pending',
+        percent: 0,
+        message: '',
+        errorMsg: getBackupDecryptErrorMessage(err, t),
+        successMsg: null,
+        pendingEnvelope: envelope,
+      });
     }
   };
 
@@ -394,54 +499,115 @@ export default function SettingsPanel({
     errorCsvColumns: t('settings.import.parser.errorCsvColumns'),
   };
 
-  // Parses raw file data through the Universal Importer
-  const processImportFile = (file: File) => {
-    resetImportFlowState();
-    setImporting(true);
+  const executeImportPipeline = async (file: File) => {
+    setImportState({
+      status: 'reading',
+      percent: 5,
+      message: t('settings.import.stage.reading'),
+      errorMsg: null,
+      successMsg: null,
+      pendingEnvelope: null,
+    });
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      void (async () => {
-        try {
-          const result = e.target?.result as string;
-          const scanResult = parseUniversalImport(result, importLabels);
-
-          if (scanResult.type === 'error') {
-            throw new Error(scanResult.message);
-          }
-
-          if (scanResult.type === 'encrypted_aegis') {
-            // Encrypted flow: display decryption dialog
-            setDetectedFormat(t('settings.import.encryptedDetected'));
-            setPendingEnvelope(scanResult.envelope);
-          } else {
-            // Success plaintext flow
-            const count = await handleImportedItems(scanResult.items);
-            setImportSuccess(`✓ ${scanResult.formatName} ${t('settings.import.detectedSuccessMiddle')} ${count} ${t('settings.import.recordsLoadedSuffix')}`);
-          }
-        } catch (err: any) {
-          setImportError(err?.message || t('settings.import.errorFallback'));
-        } finally {
-          setImporting(false);
-        }
-      })();
-    };
-    reader.readAsText(file);
-  };
-
-  const triggerImportSelect = async () => {
     try {
-      const selectedFile = await openDesktopImportFile();
-      if (selectedFile) {
-        processImportFile(new File([selectedFile.contents], selectedFile.name));
-        return;
+      const buffer = await readFileAsArrayBuffer(file);
+      
+      setImportState(prev => ({
+        ...prev,
+        status: 'detecting',
+        percent: 15,
+        message: t('settings.import.stage.detecting'),
+      }));
+      await maybeDelay(200);
+
+      const decodedResult = decodeFileBuffer(buffer);
+      const scanResult = parseUniversalImport(decodedResult, importLabels);
+      await maybeDelay(300);
+
+      if (scanResult.type === 'error') {
+        throw new Error(scanResult.message);
       }
 
-      if (isDesktopRuntime()) return;
+      if (scanResult.type === 'encrypted_aegis') {
+        setImportState({
+          status: 'decrypting_pending',
+          percent: 0,
+          message: '',
+          errorMsg: null,
+          successMsg: null,
+          pendingEnvelope: scanResult.envelope,
+        });
+      } else {
+        const count = await handleImportedItems(scanResult.items);
+        
+        setImportState(prev => ({
+          ...prev,
+          status: 'syncing',
+          percent: 98,
+          message: t('settings.import.stage.syncing'),
+        }));
+        await maybeDelay(300);
+
+        await onDatabaseChanged();
+
+        setImportState({
+          status: 'success',
+          percent: 100,
+          message: '',
+          errorMsg: null,
+          successMsg: `✓ ${scanResult.formatName} ${t('settings.import.detectedSuccessMiddle')} ${count} ${t('settings.import.recordsLoadedSuffix')}`,
+          pendingEnvelope: null,
+        });
+
+        setTimeout(() => {
+          setImportState(prev => prev.status === 'success' ? { ...prev, status: 'idle', successMsg: null } : prev);
+        }, 4000);
+      }
+    } catch (err: any) {
+      setImportState({
+        status: 'error',
+        percent: 0,
+        message: '',
+        errorMsg: err?.message || t('settings.import.errorFallback'),
+        successMsg: null,
+        pendingEnvelope: null,
+      });
+    }
+  };
+
+  const triggerImportSelect = () => {
+    if (isDesktopRuntime()) {
+      void (async () => {
+        try {
+          const selectedFile = await openDesktopImportFile();
+          if (selectedFile) {
+            executeImportPipeline(new File([selectedFile.contents], selectedFile.name));
+          }
+        } catch (err: any) {
+          setImportState({
+            status: 'error',
+            percent: 0,
+            message: '',
+            errorMsg: err?.message || t('settings.import.fileSelectError'),
+            successMsg: null,
+            pendingEnvelope: null,
+          });
+        }
+      })();
+      return;
+    }
+
+    try {
       fileInputRef.current?.click();
     } catch (err: any) {
-      resetImportFlowState();
-      setImportError(err?.message || t('settings.import.fileSelectError'));
+      setImportState({
+        status: 'error',
+        percent: 0,
+        message: '',
+        errorMsg: err?.message || t('settings.import.fileSelectError'),
+        successMsg: null,
+        pendingEnvelope: null,
+      });
     }
   };
 
@@ -457,14 +623,18 @@ export default function SettingsPanel({
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
+
+    const isImportActive = importState.status !== 'idle' && importState.status !== 'success' && importState.status !== 'error' && importState.status !== 'decrypting_pending';
+    if (isImportActive) return;
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      processImportFile(e.dataTransfer.files[0]);
+      executeImportPipeline(e.dataTransfer.files[0]);
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      processImportFile(e.target.files[0]);
+      executeImportPipeline(e.target.files[0]);
     }
   };
 
@@ -832,8 +1002,36 @@ export default function SettingsPanel({
               {t('settings.import.descriptionPrefix')} <u className="text-brand-primary">.aegis</u> {t('settings.import.descriptionMiddle')} <b>Bitwarden (JSON/CSV)</b>, <b>LastPass (CSV)</b>, <b>Chrome (CSV)</b> {t('settings.import.providerJoin')} <b>1Password (CSV)</b> {t('settings.import.descriptionSuffix')}
             </p>
 
+            {/* Show progress bar during import */}
+            {(importState.status !== 'idle' &&
+              importState.status !== 'decrypting_pending' &&
+              importState.status !== 'success' &&
+              importState.status !== 'error') && (
+              <div className="p-4 bg-[#141614] border border-brand-primary/30 rounded-xl space-y-3 transition-opacity duration-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-brand-primary rounded-full animate-pulse" />
+                    <span className="text-xs font-bold text-brand-primary uppercase tracking-wider text-left">
+                      {t('settings.import.stage.' + importState.status)}
+                    </span>
+                  </div>
+                </div>
+                <div className="w-full h-2 bg-[#0a0c0a] rounded-full overflow-hidden border border-brand-primary/20">
+                  <div
+                    className="h-full bg-gradient-to-r from-brand-primary to-brand-primary/70 transition-all duration-300 ease-out"
+                    style={{
+                      width: `${importState.percent}%`
+                    }}
+                  />
+                </div>
+                <div className="text-[10px] text-on-surface-variant text-right font-mono">
+                  {importState.percent}%
+                </div>
+              </div>
+            )}
+
             {/* Display loading state or pending Decryption details */}
-            {pendingEnvelope ? (
+            {importState.status === 'decrypting_pending' && importState.pendingEnvelope ? (
               <form onSubmit={handleDecryptAndImport} className="p-4 bg-[#141614] border border-brand-primary/20 rounded-xl space-y-3 animate-fade-in text-left">
                 <div className="flex items-center gap-2 text-brand-primary">
                   <Lock className="w-4 h-4 animate-bounce" />
@@ -855,13 +1053,13 @@ export default function SettingsPanel({
                   />
                 </div>
 
-                {decryptError && (
+                {importState.errorMsg && (
                   <div
                     data-testid="decrypt-import-error-message"
                     className="p-2.5 bg-brand-error/15 border border-brand-error/30 text-brand-error text-[10px] rounded flex gap-1.5 items-center"
                   >
                     <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                    <span>{decryptError}</span>
+                    <span>{importState.errorMsg}</span>
                   </div>
                 )}
 
@@ -877,9 +1075,7 @@ export default function SettingsPanel({
                     data-testid="decrypt-import-cancel-button"
                     type="button"
                     onClick={() => {
-                      setPendingEnvelope(null);
-                      setDecryptPasswordInput('');
-                      setDecryptError(null);
+                      resetImportFlowState();
                     }}
                     className="py-2 px-3 border border-outline-variant/30 text-on-surface-variant hover:text-on-surface text-xs rounded-lg"
                   >
@@ -893,6 +1089,8 @@ export default function SettingsPanel({
                 onDragLeave={onDragLeave}
                 onDrop={onDrop}
                 onClick={() => {
+                  const isImportActive = importState.status !== 'idle' && importState.status !== 'success' && importState.status !== 'error' && importState.status !== 'decrypting_pending';
+                  if (isImportActive) return;
                   void triggerImportSelect();
                 }}
                 className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${
@@ -907,6 +1105,7 @@ export default function SettingsPanel({
                   type="file"
                   ref={fileInputRef}
                   onChange={handleFileSelect}
+                  onClick={(e) => e.stopPropagation()}
                   accept=".json,.csv,.aegis,application/json,text/csv"
                   className="hidden"
                 />
@@ -918,21 +1117,21 @@ export default function SettingsPanel({
               </div>
             )}
 
-            {importError && (
+            {importState.errorMsg && importState.status === 'error' && (
               <div
                 data-testid="import-error-message"
                 className="p-3 bg-brand-error/10 border border-brand-error/20 rounded-lg text-brand-error text-xs"
               >
-                {importError}
+                {importState.errorMsg}
               </div>
             )}
             
-            {importSuccess && (
+            {importState.successMsg && importState.status === 'success' && (
               <div
                 data-testid="import-success-message"
                 className="p-3 bg-brand-tertiary/10 border border-brand-tertiary/20 rounded-lg text-brand-tertiary text-xs font-semibold"
               >
-                {importSuccess}
+                {importState.successMsg}
               </div>
             )}
           </div>

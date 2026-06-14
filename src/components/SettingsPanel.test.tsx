@@ -229,6 +229,7 @@ describe('SettingsPanel import/export', () => {
   });
 
   it('imports a file selected through the native desktop dialog', async () => {
+    window.__TAURI_INTERNALS__ = {};
     vi.mocked(openDesktopImportFile).mockResolvedValueOnce({
       name: 'native-backup.json',
       contents: JSON.stringify([
@@ -683,6 +684,7 @@ describe('SettingsPanel import interaction states', () => {
   });
 
   it('shows a native file-picker error when desktop import selection fails', async () => {
+    window.__TAURI_INTERNALS__ = {};
     vi.mocked(openDesktopImportFile).mockRejectedValueOnce(new Error('picker failed'));
     const { container } = renderSettings();
 

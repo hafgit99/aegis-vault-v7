@@ -1,5 +1,5 @@
 import { Trash2 } from 'lucide-react';
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { VaultItem } from '../types';
@@ -21,6 +21,9 @@ export default function TrashWorkspace({
   onDeletePermanently,
 }: TrashWorkspaceProps) {
   const { t } = useLanguage();
+  const [visibleCount, setVisibleCount] = useState(80);
+
+  const displayedItems = items.slice(0, visibleCount);
 
   return (
     <div
@@ -54,16 +57,28 @@ export default function TrashWorkspace({
       {items.length === 0 ? (
         <TrashEmptyState />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {items.map((item) => (
-            <Fragment key={item.id}>
-              <TrashItemCard
-                item={item}
-                onRestore={onRestore}
-                onDeletePermanently={onDeletePermanently}
-              />
-            </Fragment>
-          ))}
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {displayedItems.map((item) => (
+              <Fragment key={item.id}>
+                <TrashItemCard
+                  item={item}
+                  onRestore={onRestore}
+                  onDeletePermanently={onDeletePermanently}
+                />
+              </Fragment>
+            ))}
+          </div>
+
+          {items.length > visibleCount && (
+            <button
+              onClick={() => setVisibleCount((prev) => Math.min(prev + 100, items.length))}
+              className="w-full py-2.5 mt-4 text-xs font-bold bg-surface-low hover:bg-surface-medium border border-outline-variant/10 hover:border-outline-variant/20 rounded-xl transition-all cursor-pointer text-brand-primary flex justify-center items-center gap-1 shadow-sm"
+            >
+              <span>{t('common.loadMore', 'Daha Fazla Göster') || 'Load More'}</span>
+              <span className="opacity-60">({items.length - visibleCount})</span>
+            </button>
+          )}
         </div>
       )}
     </div>

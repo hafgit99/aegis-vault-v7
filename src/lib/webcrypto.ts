@@ -38,8 +38,24 @@ function base64ToBytes(value: string): Uint8Array {
   return bytes;
 }
 
+// Cache for imported WebCrypto keys to avoid heavy importKey microtasks during bulk operations.
+const importedKeysCache = new Map<string, CryptoKey>();
+
 async function importAesGcmKey(rawKey: Uint8Array): Promise<CryptoKey> {
-  return crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+  const hexKey = Array.from(rawKey).map(b => b.toString(16).padStart(2, '0')).join('');
+  let cachedKey = importedKeysCache.get(hexKey);
+  if (cachedKey) return cachedKey;
+
+  const key = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+  
+  // Bound cache size
+  if (importedKeysCache.size > 20) {
+    const firstKey = importedKeysCache.keys().next().value;
+    if (firstKey !== undefined) importedKeysCache.delete(firstKey);
+  }
+  
+  importedKeysCache.set(hexKey, key);
+  return key;
 }
 
 export async function webCryptoAesGcmEncrypt(

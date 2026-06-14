@@ -50,7 +50,7 @@ export default function TopBar({
         <button
           data-testid="topbar-menu-button"
           onClick={onOpenSidebar}
-          className="lg:hidden toolbar-button cursor-pointer shrink-0"
+          className="lg:!hidden toolbar-button cursor-pointer shrink-0"
           title={t('top.openMenu')}
         >
           <Menu className="w-5 h-5" />
