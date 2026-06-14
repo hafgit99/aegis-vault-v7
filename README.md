@@ -102,6 +102,24 @@ Aegis Vault 7 maintains a modular and strict structure separating frontend compo
 
 ---
 
+## 📊 Security Comparison & Standards
+
+To objectively evaluate the security profile of Aegis Vault 7, the table below compares its core architectural choices against industry-standard password manager profiles:
+
+| Security Feature | Aegis Vault 7 | Typical Cloud-Based Manager | Traditional Offline Manager |
+|:---|:---:|:---:|:---:|
+| **Storage Architecture** | **Local-First (OPFS & Sandboxed DB)** | Centralized Cloud Database | Local Filesystem Binary |
+| **Key Derivation Function (KDF)** | **Argon2id (Hardened: 128MB / 4 passes)** | PBKDF2 / Light Argon2id | AES-KDF / Argon2d |
+| **Symmetric Encryption** | **AES-256-GCM (Authenticated AEAD)** | AES-CBC (Lack of Integrity Check) | AES-256 / ChaCha20 |
+| **Plaintext Password in RAM** | **Zeroized** (`Uint8Array.fill(0)` on Lock) | Variable (GC/Immutable Strings) | Variable |
+| **Symmetric Key Cache Protection** | **SHA-256 Hashed Cache Keys** | Raw Key Hex String Caching | Raw Key Caching |
+| **IV / Nonce Generation** | **NIST SP 800-38D Counter-Based** | Random (Birthday Collision Risks) | Random or Static |
+| **Network Attack Surface** | **Application-Level Air-Gap Policy** | Permanent Remote Sync Syncing | Native File (System Dependent) |
+| **Biometric Metadata Isolation** | **Sandboxed IndexedDB Storage** | Plain LocalStorage / Browser Cache | Plugin / System Dependent |
+| **Downgrade Attack Prevention** | **Enforced Minimum KDF Thresholds** | Client-Dependent | Client-Dependent |
+
+---
+
 ## 🧪 Quality and Testing
 
 Aegis Vault 7 enforces clean code and verification through automated unit testing (Vitest) and typechecking.
