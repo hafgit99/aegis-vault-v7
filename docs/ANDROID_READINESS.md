@@ -7,7 +7,8 @@ This document tracks the Android preparation path for Aegis Vault 7. Android is 
 - Tauri Android CLI is available through `@tauri-apps/cli`.
 - Android bundle metadata exists in `src-tauri/tauri.conf.json`.
 - Android launcher icons are present under `src-tauri/icons/android`.
-- The generated Android project has not been initialized in this checkout yet.
+- The generated Android project is initialized under `src-tauri/gen/android`.
+- The universal debug APK build has been validated locally.
 - Desktop storage uses Tauri app-data persistence plus a local fallback marker.
 - Browser/mobile web storage still relies on IndexedDB/localStorage/OPFS-style APIs.
 - Native file dialogs are implemented only for Windows desktop; Android import/export/download needs its own storage UX.
@@ -18,12 +19,24 @@ This document tracks the Android preparation path for Aegis Vault 7. Android is 
 npm run android:init
 npm run android:dev
 npm run android:run
+npm run android:clean:jni
 npm run android:build
 npm run android:build:apk
 npm run android:build:apk:debug
+npm run android:build:apk:debug:aarch64
+npm run android:build:apk:aarch64
 ```
 
 On this Windows workstation, Android builds also require the Android Studio JBR, SDK, and NDK environment variables to be available before invoking the build scripts.
+
+Use `android:build:apk:debug:aarch64` for normal phone smoke tests. The generic `android:build:apk:debug` command creates a universal debug APK that bundles `arm64-v8a`, `armeabi-v7a`, `x86`, and `x86_64` native libraries; it is useful for broad compatibility checks but is expected to be much larger.
+
+The target-specific APK commands run `android:clean:jni` first because Tauri/Gradle can leave native library symlinks from previous multi-architecture builds under `src-tauri/gen/android/app/src/main/jniLibs`. Cleaning those ignored intermediates prevents stale ABIs from being packed into a later single-target APK.
+
+Local size baseline from this workstation:
+
+- Universal debug APK: about 438 MiB after bundling four ABIs.
+- Clean `aarch64` debug APK: about 120 MiB with only `arm64-v8a`.
 
 ## Phase 1: Readiness Gate
 
@@ -33,7 +46,8 @@ Before treating Android as a product target, verify:
 - `npm run test:unit`
 - `npm run build`
 - `npm run android:init`
-- `npm run android:build:apk:debug`
+- `npm run android:build:apk:debug:aarch64`
+- Optional compatibility check: `npm run android:build:apk:debug`
 
 Manual smoke checklist for the first debug APK:
 
