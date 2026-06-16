@@ -304,40 +304,29 @@ fn write_message(msg: &serde_json::Value) -> io::Result<()> {
 }
 
 pub fn run_host() {
-  let Some(app_dir) = get_app_data_dir() else {
-    let err_json = serde_json::json!({ "error": "App data directory could not be resolved" });
-    let _ = write_message(&err_json);
-    std::process::exit(1);
-  };
+  let app_dir = get_app_data_dir();
+  let pairing_token = app_dir.and_then(|dir| {
+    let token_path = dir.join(TOKEN_FILENAME);
+    fs::read_to_string(&token_path).ok()
+  });
 
-  let token_path = app_dir.join(TOKEN_FILENAME);
-  let pairing_token = match fs::read_to_string(&token_path) {
-    Ok(t) => t,
-    Err(_) => {
-      let err_json = serde_json::json!({ "error": "Token file missing. Run Aegis Vault desktop app first." });
-      let _ = write_message(&err_json);
-      std::process::exit(1);
+  let mut stream = None;
+  if let Some(ref token) = pairing_token {
+    if let Ok(mut s) = TcpStream::connect(format!("127.0.0.1:{}", TCP_PORT)) {
+      let token_bytes = token.as_bytes();
+      let token_len = token_bytes.len() as u32;
+      let handshake_success = s.write_all(&token_len.to_be_bytes()).is_ok()
+        && s.write_all(token_bytes).is_ok()
+        && s.flush().is_ok()
+        && {
+          let mut handshake_res = [0u8; 2];
+          s.read_exact(&mut handshake_res).is_ok() && &handshake_res == b"OK"
+        };
+      
+      if handshake_success {
+        stream = Some(s);
+      }
     }
-  };
-
-  let mut stream = match TcpStream::connect(format!("127.0.0.1:{}", TCP_PORT)) {
-    Ok(s) => s,
-    Err(_) => {
-      let err_json = serde_json::json!({ "error": "Aegis Vault desktop app is not running." });
-      let _ = write_message(&err_json);
-      std::process::exit(1);
-    }
-  };
-
-  let token_bytes = pairing_token.as_bytes();
-  let token_len = token_bytes.len() as u32;
-  if stream.write_all(&token_len.to_be_bytes()).is_err() || stream.write_all(token_bytes).is_err() || stream.flush().is_err() {
-    std::process::exit(1);
-  }
-
-  let mut handshake_res = [0u8; 2];
-  if stream.read_exact(&mut handshake_res).is_err() || &handshake_res != b"OK" {
-    std::process::exit(1);
   }
 
   loop {
@@ -347,33 +336,59 @@ pub fn run_host() {
       Err(_) => break,
     };
 
-    let msg_bytes = match serde_json::to_vec(&msg) {
-      Ok(b) => b,
-      Err(_) => break,
-    };
-    let msg_len = msg_bytes.len() as u32;
+    if let Some(ref mut s) = stream {
+      // TCP forwarding mode
+      let msg_bytes = match serde_json::to_vec(&msg) {
+        Ok(b) => b,
+        Err(_) => break,
+      };
+      let msg_len = msg_bytes.len() as u32;
 
-    if stream.write_all(&msg_len.to_be_bytes()).is_err() || stream.write_all(&msg_bytes).is_err() || stream.flush().is_err() {
-      break;
-    }
+      if s.write_all(&msg_len.to_be_bytes()).is_err() || s.write_all(&msg_bytes).is_err() || s.flush().is_err() {
+        break;
+      }
 
-    let mut resp_len_buf = [0u8; 4];
-    if stream.read_exact(&mut resp_len_buf).is_err() {
-      break;
-    }
-    let resp_len = u32::from_be_bytes(resp_len_buf) as usize;
-    let mut resp_buf = vec![0u8; resp_len];
-    if stream.read_exact(&mut resp_buf).is_err() {
-      break;
-    }
+      let mut resp_len_buf = [0u8; 4];
+      if s.read_exact(&mut resp_len_buf).is_err() {
+        break;
+      }
+      let resp_len = u32::from_be_bytes(resp_len_buf) as usize;
+      let mut resp_buf = vec![0u8; resp_len];
+      if s.read_exact(&mut resp_buf).is_err() {
+        break;
+      }
 
-    let resp_json: serde_json::Value = match serde_json::from_slice(&resp_buf) {
-      Ok(j) => j,
-      Err(_) => break,
-    };
+      let resp_json: serde_json::Value = match serde_json::from_slice(&resp_buf) {
+        Ok(j) => j,
+        Err(_) => break,
+      };
 
-    if write_message(&resp_json).is_err() {
-      break;
+      if write_message(&resp_json).is_err() {
+        break;
+      }
+    } else {
+      // Offline fallback mode (desktop app is not running)
+      let action = msg["action"].as_str().unwrap_or("");
+      let response = match action {
+        "ping" => serde_json::json!({ "status": "ok" }),
+        "focus_window" => {
+          if let Ok(current_exe) = std::env::current_exe() {
+            let _ = std::process::Command::new(current_exe).spawn();
+            serde_json::json!({ "status": "launched" })
+          } else {
+            serde_json::json!({ "error": "failed_to_resolve_path" })
+          }
+        }
+        "is_locked" => serde_json::json!({ "locked": true, "error": "desktop_app_not_running" }),
+        "list_credentials" | "get_credentials" => {
+          serde_json::json!({ "locked": true, "credentials": [], "error": "desktop_app_not_running" })
+        }
+        _ => serde_json::json!({ "error": "desktop_app_not_running" }),
+      };
+
+      if write_message(&response).is_err() {
+        break;
+      }
     }
   }
 }

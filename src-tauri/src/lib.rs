@@ -203,7 +203,12 @@ fn open_import_file() -> Result<Option<ImportFilePayload>, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-  if std::env::args().any(|arg| arg == "--native-messaging-host") {
+  let args: Vec<String> = std::env::args().collect();
+  let is_native_host = args.iter().any(|arg| arg == "--native-messaging-host")
+    || (args.len() >= 2 && args[1].starts_with("chrome-extension://"))
+    || (args.len() >= 3 && args[1].ends_with(".json") && args[2].contains('@'));
+
+  if is_native_host {
     native_messaging::run_host();
     return;
   }

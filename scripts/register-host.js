@@ -6,10 +6,22 @@ const distDir = path.resolve('dist-extension');
 const batPath = path.join(distDir, 'aegis-host.bat');
 const manifestPath = path.join(distDir, 'com.hafgit99.aegisvault7.json');
 
-const debugExe = path.resolve('src-tauri/target/debug/aegis-vault-v7.exe');
-const releaseExe = path.resolve('src-tauri/target/release/aegis-vault-v7.exe');
+const isWin = process.platform === 'win32';
+const exeName = isWin ? 'aegis-vault-v7.exe' : 'aegis-vault-v7';
+const debugExe = path.resolve('src-tauri/target/debug', exeName);
+const releaseExe = path.resolve('src-tauri/target/release', exeName);
 
-// 1. Create aegis-host.bat with fallback logic
+let selectedExe = releaseExe;
+if (fs.existsSync(debugExe)) {
+  selectedExe = debugExe;
+  console.log(`Using debug binary: ${selectedExe}`);
+} else if (fs.existsSync(releaseExe)) {
+  console.log(`Using release binary: ${selectedExe}`);
+} else {
+  console.warn(`Warning: No compiled binary found at ${debugExe} or ${releaseExe}. Defaulting path to release binary.`);
+}
+
+// 1. Create aegis-host.bat with fallback logic (kept for back-compat)
 const batContent = `@echo off
 if exist "${debugExe}" (
   "${debugExe}" --native-messaging-host %*
@@ -17,6 +29,9 @@ if exist "${debugExe}" (
   "${releaseExe}" --native-messaging-host %*
 )
 `;
+if (!fs.existsSync(distDir)) {
+  fs.mkdirSync(distDir, { recursive: true });
+}
 fs.writeFileSync(batPath, batContent);
 console.log(`Created: ${batPath}`);
 
@@ -42,7 +57,7 @@ if (extensionId) {
 const manifestContent = {
   name: "com.hafgit99.aegisvault7",
   description: "Aegis Vault Native Messaging Host",
-  path: batPath,
+  path: selectedExe,
   type: "stdio",
   allowed_origins: allowedOrigins,
   allowed_extensions: [

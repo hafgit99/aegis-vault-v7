@@ -167,7 +167,7 @@
       chrome.runtime.sendMessage(
         { action: "list_credentials" },
         (response) => {
-          if (!response || response.locked) {
+          if (!response || response.locked || response.error) {
             lockedScreen.style.display = "flex";
             credentialList.style.display = "none";
             searchWrapper.style.display = "none";
