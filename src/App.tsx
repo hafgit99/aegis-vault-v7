@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { useEffect } from 'react';
 import LockScreen from './components/LockScreen';
 import MobileSidebarBackdrop from './components/MobileSidebarBackdrop';
 import SidebarNavigation from './components/SidebarNavigation';
@@ -31,6 +32,7 @@ import { useUnlockedVaultRefresh } from './hooks/useUnlockedVaultRefresh';
 import { useSelectedItemScore } from './hooks/useSelectedItemScore';
 import { useVaultStatusAction } from './hooks/useVaultStatusAction';
 import { useLanguage } from './i18n/LanguageContext';
+import { syncExtensionCredentials, clearExtensionCredentials } from './lib/desktopStorage';
 
 export default function App() {
   const { t } = useLanguage();
@@ -103,6 +105,14 @@ export default function App() {
     resetReveals,
     clearCopiedField,
   });
+
+  useEffect(() => {
+    if (unlocked && items.length > 0) {
+      syncExtensionCredentials(items);
+    } else if (!unlocked) {
+      clearExtensionCredentials();
+    }
+  }, [unlocked, items]);
 
   const {
     confirmConfig,

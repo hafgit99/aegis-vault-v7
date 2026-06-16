@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aegis Vault Companion</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header>
+      <div class="logo-section">
+        <div class="logo-icon">A</div>
+        <div class="logo-text">Aegis Vault</div>
+      </div>
+      <div class="header-controls">
+        <select id="langSelect" class="lang-select">
+          <option value="tr">TR</option>
+          <option value="en">EN</option>
+          <option value="zh">ZH</option>
+        </select>
+        <button id="themeToggle" class="btn-icon" title="Tema Değiştir">
+          🌙
+        </button>
+      </div>
+    </header>
+
+    <!-- Phishing Alert Banner -->
+    <div id="phishingBanner" class="phishing-banner">
+      <span class="warning-icon">⚠️</span>
+      <span id="phishingText">Warning: Suspected Phishing! Check the domain.</span>
+    </div>
+
+    <!-- Search Section -->
+    <div class="search-wrapper" id="searchWrapper" style="display: none;">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" class="search-input" placeholder="Search vault...">
+    </div>
+
+    <!-- Main Dynamic Content -->
+    <div class="main-content" id="mainContent">
+      <!-- Locked Screen (Default) -->
+      <div class="locked-overlay" id="lockedScreen">
+        <div class="locked-icon">🔒</div>
+        <h2 id="lockedTitle" class="locked-title">Aegis Vault Kilitli</h2>
+        <p id="lockedDesc" class="locked-desc">Kasanızın kilidini açmak için lütfen masaüstü uygulamasını kullanın.</p>
+      </div>
+
+      <!-- Credential List (Populated via JS) -->
+      <div class="credential-list" id="credentialList" style="display: none;">
+        <!-- Dynamic Items go here -->
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">Kopyalandı!</div>
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

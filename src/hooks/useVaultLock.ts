@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 
 import { useAutoLock } from './useAutoLock';
 import { closeVaultSession } from '../lib/vaultSession';
+import { clearExtensionCredentials } from '../lib/desktopStorage';
 
 interface UseVaultLockOptions {
   autoLockDuration: number;
@@ -18,6 +19,7 @@ export function useVaultLock({
 
   const lock = useCallback(() => {
     closeVaultSession();
+    clearExtensionCredentials();
     setUnlocked(false);
     resetReveals();
     clearCopiedField();

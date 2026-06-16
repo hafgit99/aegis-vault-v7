@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { VaultItem } from '../types';
 
 declare global {
   interface Window {
@@ -25,4 +26,32 @@ export async function resetDesktopVaultDatabase(): Promise<boolean> {
   if (!isDesktopRuntime()) return false;
   await invoke('reset_vault_database');
   return true;
+}
+
+export async function syncExtensionCredentials(items: VaultItem[]): Promise<void> {
+  if (!isDesktopRuntime()) return;
+  try {
+    const creds = items
+      .filter(item => !item.deleted)
+      .map(item => ({
+        id: item.id,
+        title: item.title,
+        username: item.username || item.cardholder || '',
+        password: item.password || item.cardNumber || '',
+        url: item.url || '',
+        category: item.category,
+      }));
+    await invoke('sync_extension_credentials', { credentials: creds });
+  } catch (error) {
+    console.error('Failed to sync credentials to extension:', error);
+  }
+}
+
+export async function clearExtensionCredentials(): Promise<void> {
+  if (!isDesktopRuntime()) return;
+  try {
+    await invoke('clear_extension_credentials');
+  } catch (error) {
+    console.error('Failed to clear extension credentials:', error);
+  }
 }

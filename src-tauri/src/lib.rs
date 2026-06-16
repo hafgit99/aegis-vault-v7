@@ -2,8 +2,14 @@ use std::fs;
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 
+mod native_messaging;
+
 const VAULT_DATABASE_FILENAME: &str = "aegis_sqlite.db";
 const FILE_DIALOG_BUFFER_LEN: usize = 32768;
+
+struct ExtensionState {
+  credentials: std::sync::Arc<std::sync::Mutex<Option<Vec<native_messaging::ExtensionCredential>>>>,
+}
 
 #[derive(serde::Serialize)]
 struct ImportFilePayload {
@@ -52,6 +58,25 @@ fn reset_vault_database(app: AppHandle) -> Result<(), String> {
       .map_err(|error| format!("failed to remove vault database: {error}"))?;
   }
 
+  Ok(())
+}
+
+#[tauri::command]
+fn sync_extension_credentials(
+  state: tauri::State<'_, ExtensionState>,
+  credentials: Vec<native_messaging::ExtensionCredential>,
+) -> Result<(), String> {
+  let mut creds = state.credentials.lock().map_err(|e| e.to_string())?;
+  *creds = Some(credentials);
+  Ok(())
+}
+
+#[tauri::command]
+fn clear_extension_credentials(
+  state: tauri::State<'_, ExtensionState>,
+) -> Result<(), String> {
+  let mut creds = state.credentials.lock().map_err(|e| e.to_string())?;
+  *creds = None;
   Ok(())
 }
 
@@ -178,8 +203,19 @@ fn open_import_file() -> Result<Option<ImportFilePayload>, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+  if std::env::args().any(|arg| arg == "--native-messaging-host") {
+    native_messaging::run_host();
+    return;
+  }
+
+  let credentials = std::sync::Arc::new(std::sync::Mutex::new(None));
+  let state = ExtensionState {
+    credentials: credentials.clone(),
+  };
+
   tauri::Builder::default()
-    .setup(|app| {
+    .manage(state)
+    .setup(move |app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(
           tauri_plugin_log::Builder::default()
@@ -187,6 +223,20 @@ pub fn run() {
             .build(),
         )?;
       }
+
+      // Generate pairing token
+      let token = native_messaging::generate_token();
+
+      // Save pairing token to app data directory
+      if let Some(app_data_dir) = native_messaging::get_app_data_dir() {
+        let _ = fs::create_dir_all(&app_data_dir);
+        let token_path = app_data_dir.join(native_messaging::TOKEN_FILENAME);
+        let _ = fs::write(&token_path, &token);
+      }
+
+      // Start TCP server
+      native_messaging::start_tcp_server(token, credentials.clone());
+
       Ok(())
     })
     .invoke_handler(tauri::generate_handler![
@@ -194,7 +244,9 @@ pub fn run() {
       write_vault_database,
       reset_vault_database,
       save_export_file,
-      open_import_file
+      open_import_file,
+      sync_extension_credentials,
+      clear_extension_credentials
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

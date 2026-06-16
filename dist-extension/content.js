@@ -1,0 +1,212 @@
+(() => {
+  // src-extension/content.ts
+  var inlineStyle = `
+  .aegis-input-container {
+    position: relative !important;
+  }
+  .aegis-icon-btn {
+    position: absolute !important;
+    right: 8px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: 20px !important;
+    height: 20px !important;
+    border-radius: 4px !important;
+    background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%) !important;
+    color: white !important;
+    border: none !important;
+    font-family: sans-serif !important;
+    font-weight: bold !important;
+    font-size: 11px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    z-index: 99999 !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+    opacity: 0.7 !important;
+    transition: opacity 0.2s, transform 0.2s !important;
+  }
+  .aegis-icon-btn:hover {
+    opacity: 1 !important;
+    transform: translateY(-50%) scale(1.1) !important;
+  }
+  .aegis-dropdown {
+    position: absolute !important;
+    background: rgba(15, 23, 42, 0.95) !important;
+    backdrop-filter: blur(8px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important;
+    z-index: 1000000 !important;
+    width: 240px !important;
+    max-height: 200px !important;
+    overflow-y: auto !important;
+    font-family: 'Inter', sans-serif !important;
+    padding: 6px !important;
+    margin-top: 4px !important;
+    animation: aegis-fade-in 0.2s ease-out !important;
+  }
+  .aegis-dropdown-item {
+    padding: 8px 10px !important;
+    border-radius: 6px !important;
+    color: #f8fafc !important;
+    font-size: 12px !important;
+    cursor: pointer !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    transition: background 0.15s !important;
+  }
+  .aegis-dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+  }
+  .aegis-dropdown-title {
+    font-weight: 600 !important;
+  }
+  .aegis-dropdown-user {
+    color: #94a3b8 !important;
+    font-size: 10px !important;
+  }
+  .aegis-dropdown-locked {
+    padding: 10px !important;
+    color: #94a3b8 !important;
+    font-size: 11px !important;
+    text-align: center !important;
+  }
+  @keyframes aegis-fade-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+`;
+  var styleEl = document.createElement("style");
+  styleEl.textContent = inlineStyle;
+  document.head?.appendChild(styleEl);
+  var activeDropdown = null;
+  document.addEventListener("click", (e) => {
+    if (activeDropdown && !activeDropdown.contains(e.target)) {
+      closeDropdown();
+    }
+  });
+  function closeDropdown() {
+    if (activeDropdown) {
+      activeDropdown.remove();
+      activeDropdown = null;
+    }
+  }
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message.action === "fill_inputs") {
+      fillPageCredentials(message.username, message.password);
+    }
+  });
+  function scanAndInject() {
+    const passwordInputs = document.querySelectorAll('input[type="password"]');
+    passwordInputs.forEach((passInput) => {
+      if (passInput.getAttribute("data-aegis-injected") === "true") return;
+      passInput.setAttribute("data-aegis-injected", "true");
+      const parent = passInput.parentElement;
+      if (!parent) return;
+      parent.classList.add("aegis-input-container");
+      const iconBtn = document.createElement("button");
+      iconBtn.className = "aegis-icon-btn";
+      iconBtn.textContent = "A";
+      iconBtn.type = "button";
+      iconBtn.title = "Aegis Vault Auto-fill";
+      iconBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (activeDropdown) {
+          closeDropdown();
+          return;
+        }
+        chrome.runtime.sendMessage(
+          { action: "query_credentials", url: window.location.href },
+          (response) => {
+            showDropdown(passInput, response);
+          }
+        );
+      });
+      parent.appendChild(iconBtn);
+    });
+  }
+  function showDropdown(targetInput, response) {
+    closeDropdown();
+    const rect = targetInput.getBoundingClientRect();
+    const dropdown = document.createElement("div");
+    dropdown.className = "aegis-dropdown";
+    dropdown.style.left = `${targetInput.offsetLeft}px`;
+    dropdown.style.top = `${targetInput.offsetTop + targetInput.offsetHeight}px`;
+    if (!response || response.locked) {
+      const lockedMsg = document.createElement("div");
+      lockedMsg.className = "aegis-dropdown-locked";
+      lockedMsg.textContent = "Aegis Vault is Locked";
+      dropdown.appendChild(lockedMsg);
+    } else {
+      const credentials = response.credentials || [];
+      if (credentials.length === 0) {
+        const emptyMsg = document.createElement("div");
+        emptyMsg.className = "aegis-dropdown-locked";
+        emptyMsg.textContent = "No credentials found";
+        dropdown.appendChild(emptyMsg);
+      } else {
+        credentials.forEach((item) => {
+          const option = document.createElement("div");
+          option.className = "aegis-dropdown-item";
+          const title = document.createElement("span");
+          title.className = "aegis-dropdown-title";
+          title.textContent = item.title;
+          option.appendChild(title);
+          const user = document.createElement("span");
+          user.className = "aegis-dropdown-user";
+          user.textContent = item.username || "---";
+          option.appendChild(user);
+          option.addEventListener("click", () => {
+            fillPageCredentials(item.username, item.password || "");
+            closeDropdown();
+          });
+          dropdown.appendChild(option);
+        });
+      }
+    }
+    targetInput.parentElement?.appendChild(dropdown);
+    activeDropdown = dropdown;
+  }
+  function fillPageCredentials(username, password) {
+    const passwordInputs = document.querySelectorAll('input[type="password"]');
+    if (passwordInputs.length === 0) return;
+    passwordInputs.forEach((passEl) => {
+      const passInput = passEl;
+      passInput.value = password;
+      passInput.dispatchEvent(new Event("input", { bubbles: true }));
+      passInput.dispatchEvent(new Event("change", { bubbles: true }));
+      const form = passInput.form;
+      let usernameInput = null;
+      if (form) {
+        usernameInput = form.querySelector('input[type="text"], input[type="email"], input[name="username"], input[name="login"]');
+      }
+      if (!usernameInput) {
+        const textInputs = document.querySelectorAll('input[type="text"], input[type="email"]');
+        let minDistance = Infinity;
+        textInputs.forEach((textEl) => {
+          const textInput = textEl;
+          if (textInput === passInput) return;
+          const compare = passInput.compareDocumentPosition(textInput);
+          if (compare & Node.DOCUMENT_POSITION_PRECEDING || compare & Node.DOCUMENT_POSITION_FOLLOWING) {
+            usernameInput = textInput;
+          }
+        });
+      }
+      if (usernameInput) {
+        usernameInput.value = username;
+        usernameInput.dispatchEvent(new Event("input", { bubbles: true }));
+        usernameInput.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    });
+  }
+  var observer = new MutationObserver(() => {
+    scanAndInject();
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+  scanAndInject();
+})();
+//# sourceMappingURL=content.js.map
