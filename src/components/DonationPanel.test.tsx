@@ -8,6 +8,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LanguageProvider } from '../i18n/LanguageContext';
 import DonationPanel from './DonationPanel';
 
+vi.mock('qrcode', () => ({
+  default: {
+    toDataURL: vi.fn(async (address: string) => `data:image/png;base64,${address}`),
+  },
+}));
+
 function renderDonationPanel(copiedField: string | null = null, onCopyText = vi.fn()) {
   render(
     <LanguageProvider>
@@ -31,6 +37,13 @@ describe('DonationPanel', () => {
     expect(screen.getByText('Ethereum / ERC-20')).toBeTruthy();
     expect(screen.getByText('bc1qqsuljwzs32ckkqdrsdus7wgqzuetty3g0x47l7')).toBeTruthy();
     expect(screen.getByText('TQBz3q8Ddjap3K8QdFQHtJKBxbvXMCi62E')).toBeTruthy();
+  });
+
+  it('renders wallet QR images', async () => {
+    renderDonationPanel();
+
+    expect(await screen.findByAltText('BTC bağış QR kodu')).toBeTruthy();
+    expect(await screen.findByAltText('ETH bağış QR kodu')).toBeTruthy();
   });
 
   it('copies the selected wallet address', () => {

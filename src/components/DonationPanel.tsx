@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import QRCode from 'qrcode';
 import { Check, Copy, HeartHandshake, ShieldCheck, Wallet } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
@@ -66,6 +68,42 @@ const donationWallets = [
 
 export default function DonationPanel({ copiedField, onCopyText }: DonationPanelProps) {
   const { t } = useLanguage();
+  const [qrCodes, setQrCodes] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function generateQrCodes() {
+      const entries = await Promise.all(
+        donationWallets.map(async (wallet) => {
+          const dataUrl = await QRCode.toDataURL(wallet.address, {
+            errorCorrectionLevel: 'M',
+            margin: 1,
+            scale: 5,
+            color: {
+              dark: '#121412',
+              light: '#f4f6ef',
+            },
+          });
+          return [wallet.id, dataUrl] as const;
+        }),
+      );
+
+      if (!cancelled) {
+        setQrCodes(Object.fromEntries(entries));
+      }
+    }
+
+    generateQrCodes().catch(() => {
+      if (!cancelled) {
+        setQrCodes({});
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <section className="mx-auto w-full max-w-6xl space-y-6">
@@ -125,13 +163,27 @@ export default function DonationPanel({ copiedField, onCopyText }: DonationPanel
                 <Wallet className="h-4 w-4 shrink-0 text-on-surface-variant" />
               </div>
 
-              <div className="mt-4 rounded-lg border border-outline-variant/15 bg-surface-lowest/70 p-3">
-                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-                  {t('donate.addressLabel')}
-                </p>
-                <p className="break-all font-mono text-xs leading-5 text-on-surface">
-                  {wallet.address}
-                </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-[112px_1fr]">
+                <div className="flex h-28 w-28 items-center justify-center rounded-lg border border-outline-variant/20 bg-[#f4f6ef] p-2">
+                  {qrCodes[wallet.id] ? (
+                    <img
+                      src={qrCodes[wallet.id]}
+                      alt={`${wallet.symbol} ${t('donate.qrAlt')}`}
+                      className="h-full w-full"
+                    />
+                  ) : (
+                    <div className="h-full w-full animate-pulse rounded-md bg-surface-high" />
+                  )}
+                </div>
+
+                <div className="min-w-0 rounded-lg border border-outline-variant/15 bg-surface-lowest/70 p-3">
+                  <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                    {t('donate.addressLabel')}
+                  </p>
+                  <p className="break-all font-mono text-xs leading-5 text-on-surface">
+                    {wallet.address}
+                  </p>
+                </div>
               </div>
 
               <button
