@@ -134,3 +134,12 @@ Before the first public release, decide:
 - Whether remaining legacy crypto compatibility paths are acceptable for beta only.
 - Whether unsigned builds are internal-only.
 - Whether the app should display a stronger backup/recovery warning during setup.
+
+## Android Internal Build Boundary
+
+Android builds are internal-only until the readiness checklist in `docs/ANDROID_READINESS.md` is complete. A public Android release additionally needs:
+
+- APK/AAB signing procedure.
+- Android storage and backup UX decision.
+- Android biometric decision.
+- Real-device smoke test evidence.

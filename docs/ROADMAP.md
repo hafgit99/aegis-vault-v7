@@ -203,6 +203,7 @@
 
 ## Phase 5: Android Preparation
 
+- [x] Add Android readiness checklist and npm command surface.
 - [ ] Separate shared core logic from web/desktop UI concerns.
 - [ ] Add platform storage adapter interfaces.
 - [ ] Add mobile biometric adapter plan.

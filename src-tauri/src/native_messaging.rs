@@ -137,6 +137,22 @@ fn get_hostname(url_str: &str) -> String {
     clean.trim().to_string()
 }
 
+fn focus_webview_window(window: &tauri::WebviewWindow) {
+    let _ = window.show();
+
+    #[cfg(not(mobile))]
+    {
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+        let _ = window.request_user_attention(Some(tauri::UserAttentionType::Critical));
+    }
+
+    #[cfg(mobile)]
+    {
+        let _ = window.set_focus();
+    }
+}
+
 fn handle_client(
     app_handle: tauri::AppHandle,
     stream: &mut TcpStream,
@@ -193,11 +209,7 @@ fn handle_client(
                 let windows = app_handle.webview_windows();
                 if !windows.is_empty() {
                     for window in windows.values() {
-                        let _ = window.show();
-                        let _ = window.unminimize();
-                        let _ = window.set_focus();
-                        let _ =
-                            window.request_user_attention(Some(tauri::UserAttentionType::Critical));
+                        focus_webview_window(window);
                     }
                     serde_json::json!({ "status": "ok" })
                 } else {
@@ -210,11 +222,7 @@ fn handle_client(
                 let windows = app_handle.webview_windows();
                 if !windows.is_empty() {
                     for window in windows.values() {
-                        let _ = window.show();
-                        let _ = window.unminimize();
-                        let _ = window.set_focus();
-                        let _ =
-                            window.request_user_attention(Some(tauri::UserAttentionType::Critical));
+                        focus_webview_window(window);
                     }
                 }
                 serde_json::json!({ "status": "ok" })

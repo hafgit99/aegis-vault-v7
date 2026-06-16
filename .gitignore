@@ -9,7 +9,9 @@ coverage/
 
 # Desktop / mobile build outputs
 src-tauri/target/
-src-tauri/gen/
+src-tauri/gen/*
+!src-tauri/gen/android/
+!src-tauri/gen/android/**
 target/
 release-local/
 .tmp/

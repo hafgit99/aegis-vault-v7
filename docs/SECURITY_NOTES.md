@@ -22,6 +22,7 @@ This project is a password vault, so security claims must stay conservative unti
 - Security regression tests now cover active-session export, encrypted import, attachment authentication, and lock session clearing.
 - Unit tests cover random helper boundaries and password audit behavior.
 - Desktop build is available through Tauri.
+- Android preparation has started with a dedicated readiness checklist in `docs/ANDROID_READINESS.md`.
 
 ## Known Security Debt
 
@@ -31,6 +32,7 @@ This project is a password vault, so security claims must stay conservative unti
 - `src/lib/sqlite_opfs.ts` is a simulated SQLite/OPFS layer backed by versioned serialized JSON state. The naming and implementation should be aligned with the actual persistence strategy.
 - `src/lib/otp.ts` is a deterministic demo OTP generator, not an RFC 6238-compatible TOTP implementation.
 - Some UI labels currently overstate security guarantees. Product copy should match the real implementation.
+- Android storage, biometric, file transfer, and backup flows are not production-approved yet.
 
 ## Near-Term Security Plan
 
@@ -38,3 +40,4 @@ This project is a password vault, so security claims must stay conservative unti
 2. Decide the final vault session handling and whether native secret handling is needed.
 3. Replace the demo OTP generator with standards-compatible HOTP/TOTP.
 4. Update UI copy after the implementation matches the claim.
+5. Implement platform adapters before publishing Android builds outside internal testing.
