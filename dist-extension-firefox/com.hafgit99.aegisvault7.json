@@ -1,14 +1,8 @@
 {
   "name": "com.hafgit99.aegisvault7",
   "description": "Aegis Vault Native Messaging Host",
-  "path": "C:\\Users\\hrn21\\OneDrive\\Desktop\\aegisvaultv7\\dist-extension\\aegis-host.bat",
+  "path": "C:\\Users\\hrn21\\OneDrive\\Desktop\\aegisvaultv7\\src-tauri\\target\\release\\aegis-vault-v7.exe",
   "type": "stdio",
-  "allowed_origins": [
-    "chrome-extension://bfjfdbphbmdfinjddbbegnlclanbpnch/",
-    "chrome-extension://cojgpfjcljepclmjldmdcfbghidmfgph/",
-    "chrome-extension://hhpldpjhbmdepocpffccmdofgebgkclg/",
-    "chrome-extension://bfjfdbphbmdfinjddbbegnlclanbpnch/"
-  ],
   "allowed_extensions": [
     "aegisvault7@hafgit99.com"
   ]

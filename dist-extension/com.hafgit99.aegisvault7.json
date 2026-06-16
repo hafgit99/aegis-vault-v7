@@ -6,10 +6,6 @@
   "allowed_origins": [
     "chrome-extension://bfjfdbphbmdfinjddbbegnlclanbpnch/",
     "chrome-extension://cojgpfjcljepclmjldmdcfbghidmfgph/",
-    "chrome-extension://hhpldpjhbmdepocpffccmdofgebgkclg/",
-    "chrome-extension://bfjfdbphbmdfinjddbbegnlclanbpnch/"
-  ],
-  "allowed_extensions": [
-    "aegisvault7@hafgit99.com"
+    "chrome-extension://hhpldpjhbmdepocpffccmdofgebgkclg/"
   ]
 }

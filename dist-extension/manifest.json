@@ -5,12 +5,14 @@
   "description": "Browser companion for Aegis Vault 7 offline-first password manager.",
   "browser_specific_settings": {
     "gecko": {
-      "id": "aegisvault7@hafgit99.com"
+      "id": "aegisvault7@hafgit99.com",
+      "strict_min_version": "109.0"
     }
   },
   "permissions": [
     "nativeMessaging",
-    "activeTab"
+    "activeTab",
+    "tabs"
   ],
   "background": {
     "service_worker": "background.js",

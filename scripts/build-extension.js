@@ -3,14 +3,19 @@ import fs from 'fs';
 import path from 'path';
 
 const outDir = path.resolve('dist-extension');
+const outDirFirefox = path.resolve('dist-extension-firefox');
 const srcDir = path.resolve('src-extension');
 
 const batPath = path.join(outDir, 'aegis-host.bat');
 const manifestPath = path.join(outDir, 'com.hafgit99.aegisvault7.json');
+const firefoxBatPath = path.join(outDirFirefox, 'aegis-host.bat');
+const firefoxHostManifestPath = path.join(outDirFirefox, 'com.hafgit99.aegisvault7.json');
 
 // Backup host registry files if they exist
 const batBackup = fs.existsSync(batPath) ? fs.readFileSync(batPath) : null;
 const jsonBackup = fs.existsSync(manifestPath) ? fs.readFileSync(manifestPath) : null;
+const firefoxBatBackup = fs.existsSync(firefoxBatPath) ? fs.readFileSync(firefoxBatPath) : null;
+const firefoxJsonBackup = fs.existsSync(firefoxHostManifestPath) ? fs.readFileSync(firefoxHostManifestPath) : null;
 
 // Ensure outDir exists
 if (fs.existsSync(outDir)) {
@@ -83,7 +88,6 @@ async function build() {
   console.log('Extension build completed successfully inside dist-extension/ !');
 
   // Generate Firefox-specific build
-  const outDirFirefox = path.resolve('dist-extension-firefox');
   if (fs.existsSync(outDirFirefox)) {
     fs.rmSync(outDirFirefox, { recursive: true, force: true });
   }
@@ -110,9 +114,14 @@ async function build() {
     const bgJs = manifest.background.service_worker;
     delete manifest.background.service_worker;
     manifest.background.scripts = [bgJs];
+    delete manifest.background.type;
   }
   
   fs.writeFileSync(firefoxManifestPath, JSON.stringify(manifest, null, 2));
+
+  if (firefoxBatBackup) fs.writeFileSync(firefoxBatPath, firefoxBatBackup);
+  if (firefoxJsonBackup) fs.writeFileSync(firefoxHostManifestPath, firefoxJsonBackup);
+
   console.log('Firefox-optimized extension build completed inside dist-extension-firefox/ !');
 }
 
