@@ -12,6 +12,9 @@ export const extensionTranslations = {
     'item.password': 'Şifre',
     'item.cardNumber': 'Kart Numarası',
     'phishing.warning': '⚠️ Dikkat: Oltalama (Phishing) Şüphesi! Alan adını kontrol edin.',
+    'section.suggested': 'Eşleşen Hesaplar',
+    'section.favorites': 'Sık Kullanılanlar (★)',
+    'search.invitation': 'Tüm kasanızda aramak için yukarıdaki kutuyu kullanın.',
   },
   en: {
     'locked.title': 'Aegis Vault Locked',
@@ -26,6 +29,9 @@ export const extensionTranslations = {
     'item.password': 'Password',
     'item.cardNumber': 'Card Number',
     'phishing.warning': '⚠️ Warning: Suspected Phishing! Check the domain name.',
+    'section.suggested': 'Suggested Accounts',
+    'section.favorites': 'Favorites (★)',
+    'search.invitation': 'Use the search box above to search your entire vault.',
   },
   zh: {
     'locked.title': 'Aegis Vault 已锁定',
@@ -40,6 +46,9 @@ export const extensionTranslations = {
     'item.password': '密码',
     'item.cardNumber': '卡号',
     'phishing.warning': '⚠️ 警告：疑似钓鱼网站！请核对域名。',
+    'section.suggested': '推荐账户',
+    'section.favorites': '常用收藏 (★)',
+    'search.invitation': '使用上方搜索框进行全库搜索。',
   }
 };
 

@@ -13,7 +13,10 @@
       "item.username": "Kullan\u0131c\u0131 Ad\u0131",
       "item.password": "\u015Eifre",
       "item.cardNumber": "Kart Numaras\u0131",
-      "phishing.warning": "\u26A0\uFE0F Dikkat: Oltalama (Phishing) \u015E\xFCphesi! Alan ad\u0131n\u0131 kontrol edin."
+      "phishing.warning": "\u26A0\uFE0F Dikkat: Oltalama (Phishing) \u015E\xFCphesi! Alan ad\u0131n\u0131 kontrol edin.",
+      "section.suggested": "E\u015Fle\u015Fen Hesaplar",
+      "section.favorites": "S\u0131k Kullan\u0131lanlar (\u2605)",
+      "search.invitation": "T\xFCm kasan\u0131zda aramak i\xE7in yukar\u0131daki kutuyu kullan\u0131n."
     },
     en: {
       "locked.title": "Aegis Vault Locked",
@@ -27,7 +30,10 @@
       "item.username": "Username",
       "item.password": "Password",
       "item.cardNumber": "Card Number",
-      "phishing.warning": "\u26A0\uFE0F Warning: Suspected Phishing! Check the domain name."
+      "phishing.warning": "\u26A0\uFE0F Warning: Suspected Phishing! Check the domain name.",
+      "section.suggested": "Suggested Accounts",
+      "section.favorites": "Favorites (\u2605)",
+      "search.invitation": "Use the search box above to search your entire vault."
     },
     zh: {
       "locked.title": "Aegis Vault \u5DF2\u9501\u5B9A",
@@ -41,7 +47,10 @@
       "item.username": "\u7528\u6237\u540D",
       "item.password": "\u5BC6\u7801",
       "item.cardNumber": "\u5361\u53F7",
-      "phishing.warning": "\u26A0\uFE0F \u8B66\u544A\uFF1A\u7591\u4F3C\u9493\u9C7C\u7F51\u7AD9\uFF01\u8BF7\u6838\u5BF9\u57DF\u540D\u3002"
+      "phishing.warning": "\u26A0\uFE0F \u8B66\u544A\uFF1A\u7591\u4F3C\u9493\u9C7C\u7F51\u7AD9\uFF01\u8BF7\u6838\u5BF9\u57DF\u540D\u3002",
+      "section.suggested": "\u63A8\u8350\u8D26\u6237",
+      "section.favorites": "\u5E38\u7528\u6536\u85CF (\u2605)",
+      "search.invitation": "\u4F7F\u7528\u4E0A\u65B9\u641C\u7D22\u6846\u8FDB\u884C\u5168\u5E93\u641C\u7D22\u3002"
     }
   };
   function getPreferredLanguage() {
@@ -129,6 +138,7 @@
   }
   var allCredentials = [];
   var suggestedCredentials = [];
+  var favoriteCredentials = [];
   async function refreshUI() {
     applyTranslations();
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -148,53 +158,95 @@
             searchWrapper.style.display = "none";
             allCredentials = [];
             suggestedCredentials = [];
+            favoriteCredentials = [];
             return;
           }
           lockedScreen.style.display = "none";
           credentialList.style.display = "flex";
           searchWrapper.style.display = "block";
           allCredentials = response.credentials || [];
-          if (activeUrl) {
+          if (activeUrl && (activeUrl.startsWith("http://") || activeUrl.startsWith("https://"))) {
             try {
               const parsedActive = new URL(activeUrl);
-              const activeDomain = parsedActive.hostname.replace("www.", "").toLowerCase();
-              suggestedCredentials = allCredentials.filter((item) => {
-                if (!item.url) return false;
-                const itemUrlLower = item.url.toLowerCase();
-                return activeDomain.includes(itemUrlLower) || itemUrlLower.includes(activeDomain);
-              });
+              const activeHost = parsedActive.hostname.toLowerCase().replace(/^www\./, "");
+              if (activeHost) {
+                suggestedCredentials = allCredentials.filter((item) => {
+                  if (!item.url) return false;
+                  let itemHost = "";
+                  try {
+                    let itemUrl = item.url.trim().toLowerCase();
+                    if (!/^https?:\/\//i.test(itemUrl)) {
+                      itemUrl = "https://" + itemUrl;
+                    }
+                    const parsedItem = new URL(itemUrl);
+                    itemHost = parsedItem.hostname.toLowerCase().replace(/^www\./, "");
+                  } catch {
+                    itemHost = item.url.toLowerCase().trim().replace(/^www\./, "");
+                  }
+                  if (!itemHost) return false;
+                  return activeHost === itemHost || activeHost.endsWith("." + itemHost) || itemHost.endsWith("." + activeHost);
+                });
+              } else {
+                suggestedCredentials = [];
+              }
             } catch {
               suggestedCredentials = [];
             }
           } else {
             suggestedCredentials = [];
           }
-          if (suggestedCredentials.length > 0) {
-            displayCredentials(suggestedCredentials);
-          } else {
-            displayCredentials(allCredentials);
-          }
+          favoriteCredentials = allCredentials.filter((item) => item.favorite === true);
+          displayInitialScreen();
         }
       );
     });
   }
+  function displayInitialScreen() {
+    credentialList.innerHTML = "";
+    if (suggestedCredentials.length > 0) {
+      const header = document.createElement("div");
+      header.style.fontSize = "11px";
+      header.style.fontWeight = "600";
+      header.style.textTransform = "uppercase";
+      header.style.color = "var(--text-secondary)";
+      header.style.letterSpacing = "0.5px";
+      header.style.margin = "4px 0 10px 0";
+      header.textContent = translate("section.suggested", activeLanguage);
+      credentialList.appendChild(header);
+      renderItemsToList(suggestedCredentials);
+    } else if (favoriteCredentials.length > 0) {
+      const header = document.createElement("div");
+      header.style.fontSize = "11px";
+      header.style.fontWeight = "600";
+      header.style.textTransform = "uppercase";
+      header.style.color = "var(--text-secondary)";
+      header.style.letterSpacing = "0.5px";
+      header.style.margin = "4px 0 10px 0";
+      header.textContent = translate("section.favorites", activeLanguage);
+      credentialList.appendChild(header);
+      renderItemsToList(favoriteCredentials.slice(0, 10));
+    } else {
+      const invite = document.createElement("div");
+      invite.className = "locked-desc";
+      invite.style.padding = "40px 16px";
+      invite.style.textAlign = "center";
+      invite.textContent = translate("search.invitation", activeLanguage);
+      credentialList.appendChild(invite);
+    }
+  }
   searchInput.oninput = (e) => {
     const q = e.target.value.toLowerCase().trim();
     if (q === "") {
-      if (suggestedCredentials.length > 0) {
-        displayCredentials(suggestedCredentials);
-      } else {
-        displayCredentials(allCredentials);
-      }
+      displayInitialScreen();
     } else {
       const filtered = allCredentials.filter(
         (item) => item.title.toLowerCase().includes(q) || item.username.toLowerCase().includes(q) || item.url.toLowerCase().includes(q)
       );
-      displayCredentials(filtered);
+      credentialList.innerHTML = "";
+      renderItemsToList(filtered);
     }
   };
-  function displayCredentials(items) {
-    credentialList.innerHTML = "";
+  function renderItemsToList(items) {
     if (items.length === 0) {
       const emptyMsg = document.createElement("div");
       emptyMsg.className = "locked-desc";

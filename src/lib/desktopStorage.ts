@@ -36,10 +36,11 @@ export async function syncExtensionCredentials(items: VaultItem[]): Promise<void
       .map(item => ({
         id: item.id,
         title: item.title,
-        username: item.username || item.cardholder || '',
+        username: item.username || item.cardholderName || '',
         password: item.password || item.cardNumber || '',
         url: item.url || '',
         category: item.category,
+        favorite: Boolean(item.favorite),
       }));
     await invoke('sync_extension_credentials', { credentials: creds });
   } catch (error) {

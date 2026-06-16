@@ -16,6 +16,8 @@ pub struct ExtensionCredential {
   pub password: String,
   pub url: String,
   pub category: String,
+  #[serde(default)]
+  pub favorite: bool,
 }
 
 pub struct ExtensionState {
@@ -112,6 +114,27 @@ pub fn start_tcp_server(
   });
 }
 
+fn get_hostname(url_str: &str) -> String {
+  let mut clean = url_str.to_lowercase();
+  // Remove protocol
+  if let Some(pos) = clean.find("://") {
+    clean = clean[pos + 3..].to_string();
+  }
+  // Remove path/query
+  if let Some(pos) = clean.find('/') {
+    clean = clean[..pos].to_string();
+  }
+  // Remove port
+  if let Some(pos) = clean.find(':') {
+    clean = clean[..pos].to_string();
+  }
+  // Remove www.
+  if clean.starts_with("www.") {
+    clean = clean[4..].to_string();
+  }
+  clean.trim().to_string()
+}
+
 fn handle_client(
   app_handle: tauri::AppHandle,
   stream: &mut TcpStream,
@@ -179,21 +202,33 @@ fn handle_client(
         }
       }
       "get_credentials" => {
-        let url = req["url"].as_str().unwrap_or("").to_lowercase();
+        let url = req["url"].as_str().unwrap_or("");
+        let active_host = get_hostname(url);
+        
         let creds_guard = credentials.lock().unwrap();
         if let Some(ref items) = *creds_guard {
-          let matching: Vec<ExtensionCredential> = items
-            .iter()
-            .filter(|item| {
-              if item.url.is_empty() || url.is_empty() {
-                false
-              } else {
-                let item_url_lower = item.url.to_lowercase();
-                url.contains(&item_url_lower) || item_url_lower.contains(&url)
-              }
-            })
-            .cloned()
-            .collect();
+          let matching: Vec<ExtensionCredential> = if active_host.is_empty() {
+            Vec::new()
+          } else {
+            items
+              .iter()
+              .filter(|item| {
+                let item_host = get_hostname(&item.url);
+                if item_host.is_empty() {
+                  false
+                } else {
+                  // Eşleşme kriteri:
+                  // 1. Hostnameler birebir aynıysa
+                  // 2. Aktif host, şifre hostunun subdomaini ise (ör. active: sub.domain.com, item: domain.com)
+                  // 3. Şifre hostu, aktif hostun subdomaini ise
+                  active_host == item_host || 
+                  active_host.ends_with(&format!(".{}", item_host)) || 
+                  item_host.ends_with(&format!(".{}", active_host))
+                }
+              })
+              .cloned()
+              .collect()
+          };
           serde_json::json!({ "locked": false, "credentials": matching })
         } else {
           serde_json::json!({ "locked": true, "credentials": [] })

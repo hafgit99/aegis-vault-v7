@@ -8,6 +8,7 @@ interface CredentialItem {
   password?: string;
   url: string;
   category: string;
+  favorite?: boolean;
 }
 
 let activeLanguage = getPreferredLanguage();
@@ -96,6 +97,7 @@ function checkPhishing(url: string): boolean {
 
 let allCredentials: CredentialItem[] = [];
 let suggestedCredentials: CredentialItem[] = [];
+let favoriteCredentials: CredentialItem[] = [];
 
 // Fetch and render credentials
 async function refreshUI() {
@@ -123,6 +125,7 @@ async function refreshUI() {
           searchWrapper.style.display = 'none';
           allCredentials = [];
           suggestedCredentials = [];
+          favoriteCredentials = [];
           return;
         }
 
@@ -132,17 +135,42 @@ async function refreshUI() {
 
         allCredentials = response.credentials || [];
 
-        // Filter suggested credentials based on active URL domain
-        if (activeUrl) {
+        // Filter suggested credentials based on active URL domain (only HTTP/HTTPS)
+        if (activeUrl && (activeUrl.startsWith('http://') || activeUrl.startsWith('https://'))) {
           try {
             const parsedActive = new URL(activeUrl);
-            const activeDomain = parsedActive.hostname.replace('www.', '').toLowerCase();
+            const activeHost = parsedActive.hostname.toLowerCase().replace(/^www\./, '');
 
-            suggestedCredentials = allCredentials.filter(item => {
-              if (!item.url) return false;
-              const itemUrlLower = item.url.toLowerCase();
-              return activeDomain.includes(itemUrlLower) || itemUrlLower.includes(activeDomain);
-            });
+            if (activeHost) {
+              suggestedCredentials = allCredentials.filter(item => {
+                if (!item.url) return false;
+                
+                let itemHost = '';
+                try {
+                  let itemUrl = item.url.trim().toLowerCase();
+                  if (!/^https?:\/\//i.test(itemUrl)) {
+                    itemUrl = 'https://' + itemUrl;
+                  }
+                  const parsedItem = new URL(itemUrl);
+                  itemHost = parsedItem.hostname.toLowerCase().replace(/^www\./, '');
+                } catch {
+                  // Fallback string extraction if parsing fails
+                  itemHost = item.url.toLowerCase().trim().replace(/^www\./, '');
+                }
+
+                if (!itemHost) return false;
+
+                // Match strictly:
+                // 1. Hostnames match exactly
+                // 2. Active host is a subdomain of item host (e.g. sub.domain.com and domain.com)
+                // 3. Item host is a subdomain of active host
+                return activeHost === itemHost || 
+                       activeHost.endsWith('.' + itemHost) || 
+                       itemHost.endsWith('.' + activeHost);
+              });
+            } else {
+              suggestedCredentials = [];
+            }
           } catch {
             suggestedCredentials = [];
           }
@@ -150,26 +178,62 @@ async function refreshUI() {
           suggestedCredentials = [];
         }
 
-        // Show suggested credentials first if they exist, otherwise show all
-        if (suggestedCredentials.length > 0) {
-          displayCredentials(suggestedCredentials);
-        } else {
-          displayCredentials(allCredentials);
-        }
+        // Filter favorite credentials
+        favoriteCredentials = allCredentials.filter(item => item.favorite === true);
+
+        // Show matching suggestions or favorites, preventing full exposure of 400+ items
+        displayInitialScreen();
       }
     );
   });
+}
+
+function displayInitialScreen() {
+  credentialList.innerHTML = '';
+
+  if (suggestedCredentials.length > 0) {
+    // Render suggested matches header
+    const header = document.createElement('div');
+    header.style.fontSize = '11px';
+    header.style.fontWeight = '600';
+    header.style.textTransform = 'uppercase';
+    header.style.color = 'var(--text-secondary)';
+    header.style.letterSpacing = '0.5px';
+    header.style.margin = '4px 0 10px 0';
+    header.textContent = translate('section.suggested', activeLanguage);
+    credentialList.appendChild(header);
+
+    renderItemsToList(suggestedCredentials);
+  } else if (favoriteCredentials.length > 0) {
+    // Render favorites header
+    const header = document.createElement('div');
+    header.style.fontSize = '11px';
+    header.style.fontWeight = '600';
+    header.style.textTransform = 'uppercase';
+    header.style.color = 'var(--text-secondary)';
+    header.style.letterSpacing = '0.5px';
+    header.style.margin = '4px 0 10px 0';
+    header.textContent = translate('section.favorites', activeLanguage);
+    credentialList.appendChild(header);
+
+    // Limit to 10 favorites to keep it clean and performant
+    renderItemsToList(favoriteCredentials.slice(0, 10));
+  } else {
+    // Search invitation placeholder
+    const invite = document.createElement('div');
+    invite.className = 'locked-desc';
+    invite.style.padding = '40px 16px';
+    invite.style.textAlign = 'center';
+    invite.textContent = translate('search.invitation', activeLanguage);
+    credentialList.appendChild(invite);
+  }
 }
 
 // Bind Search input globally
 searchInput.oninput = (e) => {
   const q = (e.target as HTMLInputElement).value.toLowerCase().trim();
   if (q === '') {
-    if (suggestedCredentials.length > 0) {
-      displayCredentials(suggestedCredentials);
-    } else {
-      displayCredentials(allCredentials);
-    }
+    displayInitialScreen();
   } else {
     // Search across ALL credentials in the vault
     const filtered = allCredentials.filter(item => 
@@ -177,13 +241,13 @@ searchInput.oninput = (e) => {
       item.username.toLowerCase().includes(q) ||
       item.url.toLowerCase().includes(q)
     );
-    displayCredentials(filtered);
+    
+    credentialList.innerHTML = '';
+    renderItemsToList(filtered);
   }
 };
 
-function displayCredentials(items: CredentialItem[]) {
-  credentialList.innerHTML = '';
-  
+function renderItemsToList(items: CredentialItem[]) {
   if (items.length === 0) {
     const emptyMsg = document.createElement('div');
     emptyMsg.className = 'locked-desc';
