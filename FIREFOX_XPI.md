@@ -40,6 +40,20 @@ npm run sign:firefox:xpi
 
 The default signing channel is `unlisted`, which is best for distributing an installable XPI yourself.
 
+If the command stays at `Waiting for approval...`, AMO accepted the upload and is waiting for automated or manual approval. You can either wait, or submit without waiting for approval:
+
+```powershell
+$env:AMO_APPROVAL_TIMEOUT="0"
+npm run sign:firefox:xpi
+```
+
+To wait for a fixed time, provide milliseconds. This example waits up to 30 minutes:
+
+```powershell
+$env:AMO_APPROVAL_TIMEOUT="1800000"
+npm run sign:firefox:xpi
+```
+
 To use the listed AMO channel:
 
 ```powershell

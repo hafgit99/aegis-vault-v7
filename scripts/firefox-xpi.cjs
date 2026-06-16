@@ -12,6 +12,7 @@ const args = new Set(process.argv.slice(2));
 const shouldSign = args.has('--sign');
 const skipBuild = args.has('--skip-build');
 const channel = process.env.AMO_CHANNEL || 'unlisted';
+const approvalTimeout = process.env.AMO_APPROVAL_TIMEOUT || process.env.WEB_EXT_APPROVAL_TIMEOUT;
 const xpiName = `aegis-vault-7-firefox-v${packageJson.version}.xpi`;
 
 const excludedNames = new Set([
@@ -89,7 +90,7 @@ if (shouldSign) {
     process.exit(1);
   }
 
-  run('npx', [
+  const signArgs = [
     'web-ext',
     'sign',
     '--source-dir',
@@ -103,7 +104,13 @@ if (shouldSign) {
     '--channel',
     channel,
     '--no-input',
-  ]);
+  ];
+
+  if (approvalTimeout) {
+    signArgs.push('--approval-timeout', approvalTimeout);
+  }
+
+  run('npx', signArgs);
 } else {
   run('npx', [
     'web-ext',
