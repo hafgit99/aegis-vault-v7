@@ -126,17 +126,17 @@ Aegis Vault 7 enforces clean code and verification through automated unit testin
 
 ### Code Coverage
 
-![Statement Coverage](https://img.shields.io/badge/Statements-96.4%25-brightgreen)
-![Branch Coverage](https://img.shields.io/badge/Branches-88.78%25-brightgreen)
-![Function Coverage](https://img.shields.io/badge/Functions-92.64%25-brightgreen)
-![Line Coverage](https://img.shields.io/badge/Lines-96.4%25-brightgreen)
+![Statement Coverage](https://img.shields.io/badge/Statements-95.73%25-brightgreen)
+![Branch Coverage](https://img.shields.io/badge/Branches-88.73%25-brightgreen)
+![Function Coverage](https://img.shields.io/badge/Functions-92.06%25-brightgreen)
+![Line Coverage](https://img.shields.io/badge/Lines-95.73%25-brightgreen)
 
 | Metric | Coverage |
 | :--- | :---: |
-| **Statements** | `96.40%` |
-| **Branches** | `88.78%` |
-| **Functions** | `92.64%` |
-| **Lines** | `96.40%` |
+| **Statements** | `95.73%` |
+| **Branches** | `88.73%` |
+| **Functions** | `92.06%` |
+| **Lines** | `95.73%` |
 
 *   **Run all unit tests:**
     ```bash
