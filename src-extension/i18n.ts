@@ -12,9 +12,14 @@ export const extensionTranslations = {
     'item.password': 'Şifre',
     'item.cardNumber': 'Kart Numarası',
     'phishing.warning': '⚠️ Dikkat: Oltalama (Phishing) Şüphesi! Alan adını kontrol edin.',
-    'section.suggested': 'Eşleşen Hesaplar',
+     'section.suggested': 'Eşleşen Hesaplar',
     'section.favorites': 'Sık Kullanılanlar (★)',
     'search.invitation': 'Tüm kasanızda aramak için yukarıdaki kutuyu kullanın.',
+    'section.generate': '🔒 Yeni Güvenli Şifre Üret',
+    'banner.saveTitle': 'Yeni Kayıt Algılandı',
+    'banner.saveDesc': 'Bu sitedeki giriş bilgilerini kasanıza kaydetmek ister misiniz?',
+    'banner.saveBtn': 'Kaydet',
+    'banner.dismissBtn': 'Yoksay',
   },
   en: {
     'locked.title': 'Aegis Vault Locked',
@@ -32,6 +37,11 @@ export const extensionTranslations = {
     'section.suggested': 'Suggested Accounts',
     'section.favorites': 'Favorites (★)',
     'search.invitation': 'Use the search box above to search your entire vault.',
+    'section.generate': '🔒 Generate New Secure Password',
+    'banner.saveTitle': 'New Credential Detected',
+    'banner.saveDesc': 'Would you like to save these credentials to your vault?',
+    'banner.saveBtn': 'Save',
+    'banner.dismissBtn': 'Dismiss',
   },
   zh: {
     'locked.title': 'Aegis Vault 已锁定',
@@ -49,6 +59,11 @@ export const extensionTranslations = {
     'section.suggested': '推荐账户',
     'section.favorites': '常用收藏 (★)',
     'search.invitation': '使用上方搜索框进行全库搜索。',
+    'section.generate': '🔒 生成新的安全密码',
+    'banner.saveTitle': '检测到新凭据',
+    'banner.saveDesc': '您想将此登录凭据保存到您的保险库中吗？',
+    'banner.saveBtn': '保存',
+    'banner.dismissBtn': '忽略',
   }
 };
 

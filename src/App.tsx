@@ -4,6 +4,7 @@
  */
 
 import { useEffect } from 'react';
+import { listen } from '@tauri-apps/api/event';
 import LockScreen from './components/LockScreen';
 import MobileSidebarBackdrop from './components/MobileSidebarBackdrop';
 import SidebarNavigation from './components/SidebarNavigation';
@@ -113,6 +114,33 @@ export default function App() {
       clearExtensionCredentials();
     }
   }, [unlocked, items]);
+
+  useEffect(() => {
+    let unlistenFn: (() => void) | null = null;
+
+    listen<any>('add-credential-from-extension', (event) => {
+      const payload = event.payload;
+      if (payload) {
+        handleTriggerNew({
+          title: payload.title || '',
+          username: payload.username || '',
+          password: payload.password || '',
+          url: payload.url || '',
+          category: 'login',
+        });
+      }
+    }).then((unlisten) => {
+      unlistenFn = unlisten;
+    }).catch(err => {
+      console.error('Failed to listen to tauri add-credential event:', err);
+    });
+
+    return () => {
+      if (unlistenFn) {
+        unlistenFn();
+      }
+    };
+  }, [handleTriggerNew]);
 
   const {
     confirmConfig,

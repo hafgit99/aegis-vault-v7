@@ -141,7 +141,7 @@ fn handle_client(
   pairing_token: &str,
   credentials: Arc<Mutex<Option<Vec<ExtensionCredential>>>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-  use tauri::Manager;
+  use tauri::{Manager, Emitter};
 
   // 1. Handshake okuma (4-byte uzunluk + token verisi)
   let mut len_buf = [0u8; 4];
@@ -200,6 +200,20 @@ fn handle_client(
         } else {
           serde_json::json!({ "error": "no windows found" })
         }
+      }
+      "add_credential" => {
+        let credential = req["credential"].clone();
+        let _ = app_handle.emit("add-credential-from-extension", credential);
+        let windows = app_handle.webview_windows();
+        if !windows.is_empty() {
+          for window in windows.values() {
+            let _ = window.show();
+            let _ = window.unminimize();
+            let _ = window.set_focus();
+            let _ = window.request_user_attention(Some(tauri::UserAttentionType::Critical));
+          }
+        }
+        serde_json::json!({ "status": "ok" })
       }
       "get_credentials" => {
         let url = req["url"].as_str().unwrap_or("");

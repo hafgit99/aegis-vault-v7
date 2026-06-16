@@ -1,4 +1,8 @@
-// CSS injected dynamically for the inline overlay and icon
+import { translate, getPreferredLanguage } from './i18n';
+
+const activeLanguage = getPreferredLanguage();
+
+// CSS injected dynamically for the inline overlay, icon, and premium banner
 const inlineStyle = `
   .aegis-input-container {
     position: relative !important;
@@ -39,7 +43,7 @@ const inlineStyle = `
     box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important;
     z-index: 1000000 !important;
     width: 240px !important;
-    max-height: 200px !important;
+    max-height: 250px !important;
     overflow-y: auto !important;
     font-family: 'Inter', sans-serif !important;
     padding: 6px !important;
@@ -72,6 +76,94 @@ const inlineStyle = `
     color: #94a3b8 !important;
     font-size: 11px !important;
     text-align: center !important;
+  }
+  .aegis-banner {
+    position: fixed !important;
+    top: -100px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 90% !important;
+    max-width: 520px !important;
+    background: rgba(15, 23, 42, 0.9) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(16, 185, 129, 0.25) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+    padding: 12px 18px !important;
+    z-index: 2147483647 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 16px !important;
+    font-family: 'Inter', system-ui, sans-serif !important;
+    transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+  }
+  .aegis-banner.show {
+    top: 16px !important;
+  }
+  .aegis-banner-info {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    flex: 1 !important;
+  }
+  .aegis-banner-logo {
+    width: 32px !important;
+    height: 32px !important;
+    background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%) !important;
+    border-radius: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: white !important;
+    font-weight: bold !important;
+    font-size: 16px !important;
+  }
+  .aegis-banner-text {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    text-align: left !important;
+  }
+  .aegis-banner-title {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    font-size: 13px !important;
+  }
+  .aegis-banner-desc {
+    color: #94a3b8 !important;
+    font-size: 11px !important;
+  }
+  .aegis-banner-actions {
+    display: flex !important;
+    gap: 8px !important;
+  }
+  .aegis-banner-btn {
+    padding: 6px 14px !important;
+    border-radius: 6px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    border: none !important;
+    transition: background 0.15s, transform 0.1s !important;
+  }
+  .aegis-banner-btn:active {
+    transform: scale(0.96) !important;
+  }
+  .aegis-banner-btn-save {
+    background: #10b981 !important;
+    color: white !important;
+  }
+  .aegis-banner-btn-save:hover {
+    background: #059669 !important;
+  }
+  .aegis-banner-btn-dismiss {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #cbd5e1 !important;
+  }
+  .aegis-banner-btn-dismiss:hover {
+    background: rgba(255, 255, 255, 0.15) !important;
   }
   @keyframes aegis-fade-in {
     from { opacity: 0; transform: translateY(-4px); }
@@ -167,16 +259,11 @@ function showDropdown(targetInput: HTMLInputElement, response: any) {
   if (!response || response.locked) {
     const lockedMsg = document.createElement('div');
     lockedMsg.className = 'aegis-dropdown-locked';
-    lockedMsg.textContent = 'Aegis Vault is Locked';
+    lockedMsg.textContent = translate('locked.title', activeLanguage);
     dropdown.appendChild(lockedMsg);
   } else {
     const credentials = response.credentials || [];
-    if (credentials.length === 0) {
-      const emptyMsg = document.createElement('div');
-      emptyMsg.className = 'aegis-dropdown-locked';
-      emptyMsg.textContent = 'No credentials found';
-      dropdown.appendChild(emptyMsg);
-    } else {
+    if (credentials.length > 0) {
       credentials.forEach((item: any) => {
         const option = document.createElement('div');
         option.className = 'aegis-dropdown-item';
@@ -198,8 +285,66 @@ function showDropdown(targetInput: HTMLInputElement, response: any) {
 
         dropdown.appendChild(option);
       });
+    } else {
+      const emptyMsg = document.createElement('div');
+      emptyMsg.className = 'aegis-dropdown-locked';
+      emptyMsg.textContent = translate('no.matching', activeLanguage);
+      dropdown.appendChild(emptyMsg);
     }
   }
+
+  // Enjekte edilen "Güvenli Şifre Üret" Butonu
+  const genDivider = document.createElement('div');
+  genDivider.style.borderTop = '1px solid rgba(255, 255, 255, 0.08)';
+  genDivider.style.margin = '4px 0';
+  dropdown.appendChild(genDivider);
+
+  const genOption = document.createElement('div');
+  genOption.className = 'aegis-dropdown-item';
+  genOption.style.background = 'rgba(16, 185, 129, 0.1)';
+  genOption.style.border = '1px dashed rgba(16, 185, 129, 0.3)';
+  genOption.style.marginTop = '4px';
+
+  const genTitle = document.createElement('span');
+  genTitle.className = 'aegis-dropdown-title';
+  genTitle.style.color = '#10b981';
+  genTitle.style.fontWeight = 'bold';
+  genTitle.style.display = 'flex';
+  genTitle.style.alignItems = 'center';
+  genTitle.style.gap = '4px';
+  genTitle.textContent = translate('section.generate', activeLanguage);
+  
+  genOption.appendChild(genTitle);
+
+  genOption.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const generated = generateSecurePassword(18);
+    
+    // Fill active field
+    targetInput.value = generated;
+    targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+    targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+    // Copy to clipboard for easy manual fallback
+    navigator.clipboard.writeText(generated);
+
+    // Try to find another password field in the same form (to fill "re-enter password")
+    const form = targetInput.form;
+    if (form) {
+      const otherPasswords = form.querySelectorAll('input[type="password"]');
+      otherPasswords.forEach((pwEl) => {
+        if (pwEl !== targetInput) {
+          (pwEl as HTMLInputElement).value = generated;
+          pwEl.dispatchEvent(new Event('input', { bubbles: true }));
+          pwEl.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      });
+    }
+
+    closeDropdown();
+  });
+
+  dropdown.appendChild(genOption);
 
   targetInput.parentElement?.appendChild(dropdown);
   activeDropdown = dropdown;
@@ -250,6 +395,181 @@ function fillPageCredentials(username: string, password: string) {
     }
   });
 }
+
+// Cryptographically secure password generator
+function generateSecurePassword(length = 16): string {
+  const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const numbers = '0123456789';
+  const symbols = '!@#$%^&*()-_=+[]{}|;:,.<>?';
+  const allChars = lowercase + uppercase + numbers + symbols;
+  
+  let password = '';
+  const randomBytes = new Uint32Array(length);
+  crypto.getRandomValues(randomBytes);
+  
+  password += lowercase[randomBytes[0] % lowercase.length];
+  password += uppercase[randomBytes[1] % uppercase.length];
+  password += numbers[randomBytes[2] % numbers.length];
+  password += symbols[randomBytes[3] % symbols.length];
+  
+  for (let i = 4; i < length; i++) {
+    password += allChars[randomBytes[i] % allChars.length];
+  }
+  
+  return password.split('').sort(() => 0.5 - Math.random()).join('');
+}
+
+// Show premium glassmorphic top prompt banner
+function showSavePromptBanner(cred: any) {
+  // Check if banner already exists
+  if (document.querySelector('.aegis-banner')) return;
+
+  const banner = document.createElement('div');
+  banner.className = 'aegis-banner';
+  
+  const info = document.createElement('div');
+  info.className = 'aegis-banner-info';
+  
+  const logo = document.createElement('div');
+  logo.className = 'aegis-banner-logo';
+  logo.textContent = 'A';
+  
+  const text = document.createElement('div');
+  text.className = 'aegis-banner-text';
+  
+  const title = document.createElement('span');
+  title.className = 'aegis-banner-title';
+  title.textContent = translate('banner.saveTitle', activeLanguage);
+  
+  const desc = document.createElement('span');
+  desc.className = 'aegis-banner-desc';
+  desc.textContent = translate('banner.saveDesc', activeLanguage) + (cred.username ? ` (${cred.username})` : '');
+  
+  text.appendChild(title);
+  text.appendChild(desc);
+  info.appendChild(logo);
+  info.appendChild(text);
+  
+  const actions = document.createElement('div');
+  actions.className = 'aegis-banner-actions';
+  
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'aegis-banner-btn aegis-banner-btn-save';
+  saveBtn.textContent = translate('banner.saveBtn', activeLanguage);
+  saveBtn.addEventListener('click', () => {
+    chrome.runtime.sendMessage({
+      action: 'save_new_credential',
+      credential: cred
+    }, () => {
+      banner.classList.remove('show');
+      setTimeout(() => banner.remove(), 400);
+    });
+  });
+  
+  const dismissBtn = document.createElement('button');
+  dismissBtn.className = 'aegis-banner-btn aegis-banner-btn-dismiss';
+  dismissBtn.textContent = translate('banner.dismissBtn', activeLanguage);
+  dismissBtn.addEventListener('click', () => {
+    chrome.runtime.sendMessage({ action: 'clear_pending_credential' }, () => {
+      banner.classList.remove('show');
+      setTimeout(() => banner.remove(), 400);
+    });
+  });
+  
+  actions.appendChild(saveBtn);
+  actions.appendChild(dismissBtn);
+  
+  banner.appendChild(info);
+  banner.appendChild(actions);
+  
+  document.body.appendChild(banner);
+  
+  // Animation delay
+  setTimeout(() => {
+    banner.classList.add('show');
+  }, 200);
+}
+
+// Intercept form submissions
+function handleFormSubmit(form: HTMLElement) {
+  const passwordInput = form.querySelector('input[type="password"]') as HTMLInputElement;
+  if (!passwordInput || !passwordInput.value) return;
+
+  const usernameInput = form.querySelector('input[type="text"], input[type="email"], input[name="username"], input[name="login"]') as HTMLInputElement;
+  const username = usernameInput ? usernameInput.value.trim() : '';
+  const password = passwordInput.value;
+
+  if (password.length < 4) return;
+
+  chrome.runtime.sendMessage({
+    action: 'set_pending_credential',
+    credential: {
+      title: document.title || window.location.hostname,
+      username: username,
+      password: password,
+      url: window.location.href
+    }
+  });
+}
+
+// Setup listeners for submission
+document.addEventListener('submit', (e) => {
+  handleFormSubmit(e.target as HTMLFormElement);
+}, true);
+
+document.addEventListener('click', (e) => {
+  const target = e.target as HTMLElement;
+  if (target && (target.tagName === 'BUTTON' || target.tagName === 'INPUT')) {
+    const type = target.getAttribute('type');
+    const isSubmit = type === 'submit' || 
+                     target.innerText?.toLowerCase().includes('giriş') ||
+                     target.innerText?.toLowerCase().includes('login') ||
+                     target.innerText?.toLowerCase().includes('kaydet') ||
+                     target.innerText?.toLowerCase().includes('save') ||
+                     target.innerText?.toLowerCase().includes('register') ||
+                     target.innerText?.toLowerCase().includes('sign');
+    if (isSubmit) {
+      const form = target.closest('form') || target.closest('div');
+      if (form) {
+        handleFormSubmit(form as HTMLElement);
+      }
+    }
+  }
+}, true);
+
+// Initial check for pending credentials on load
+setTimeout(() => {
+  chrome.runtime.sendMessage({ action: 'get_pending_credential' }, (response) => {
+    if (response && response.credential) {
+      const cred = response.credential;
+      try {
+        const credDomain = new URL(cred.url).hostname.replace('www.', '').toLowerCase();
+        const currentDomain = window.location.hostname.replace('www.', '').toLowerCase();
+        
+        if (credDomain === currentDomain) {
+          // Verify if it doesn't already exist in matches to prevent duplicate saves
+          chrome.runtime.sendMessage(
+            { action: 'query_credentials', url: window.location.href },
+            (dbResponse) => {
+              const exists = dbResponse && dbResponse.credentials && dbResponse.credentials.some((item: any) => {
+                return item.username === cred.username && item.password === cred.password;
+              });
+
+              if (!exists) {
+                showSavePromptBanner(cred);
+              } else {
+                chrome.runtime.sendMessage({ action: 'clear_pending_credential' });
+              }
+            }
+          );
+        }
+      } catch (e) {
+        console.warn('Pending credentials verification failed:', e);
+      }
+    }
+  });
+}, 800);
 
 // Setup mutation observer to scan for dynamically loaded SPA fields
 const observer = new MutationObserver(() => {

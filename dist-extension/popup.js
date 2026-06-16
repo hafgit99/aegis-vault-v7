@@ -16,7 +16,12 @@
       "phishing.warning": "\u26A0\uFE0F Dikkat: Oltalama (Phishing) \u015E\xFCphesi! Alan ad\u0131n\u0131 kontrol edin.",
       "section.suggested": "E\u015Fle\u015Fen Hesaplar",
       "section.favorites": "S\u0131k Kullan\u0131lanlar (\u2605)",
-      "search.invitation": "T\xFCm kasan\u0131zda aramak i\xE7in yukar\u0131daki kutuyu kullan\u0131n."
+      "search.invitation": "T\xFCm kasan\u0131zda aramak i\xE7in yukar\u0131daki kutuyu kullan\u0131n.",
+      "section.generate": "\u{1F512} Yeni G\xFCvenli \u015Eifre \xDCret",
+      "banner.saveTitle": "Yeni Kay\u0131t Alg\u0131land\u0131",
+      "banner.saveDesc": "Bu sitedeki giri\u015F bilgilerini kasan\u0131za kaydetmek ister misiniz?",
+      "banner.saveBtn": "Kaydet",
+      "banner.dismissBtn": "Yoksay"
     },
     en: {
       "locked.title": "Aegis Vault Locked",
@@ -33,7 +38,12 @@
       "phishing.warning": "\u26A0\uFE0F Warning: Suspected Phishing! Check the domain name.",
       "section.suggested": "Suggested Accounts",
       "section.favorites": "Favorites (\u2605)",
-      "search.invitation": "Use the search box above to search your entire vault."
+      "search.invitation": "Use the search box above to search your entire vault.",
+      "section.generate": "\u{1F512} Generate New Secure Password",
+      "banner.saveTitle": "New Credential Detected",
+      "banner.saveDesc": "Would you like to save these credentials to your vault?",
+      "banner.saveBtn": "Save",
+      "banner.dismissBtn": "Dismiss"
     },
     zh: {
       "locked.title": "Aegis Vault \u5DF2\u9501\u5B9A",
@@ -50,7 +60,12 @@
       "phishing.warning": "\u26A0\uFE0F \u8B66\u544A\uFF1A\u7591\u4F3C\u9493\u9C7C\u7F51\u7AD9\uFF01\u8BF7\u6838\u5BF9\u57DF\u540D\u3002",
       "section.suggested": "\u63A8\u8350\u8D26\u6237",
       "section.favorites": "\u5E38\u7528\u6536\u85CF (\u2605)",
-      "search.invitation": "\u4F7F\u7528\u4E0A\u65B9\u641C\u7D22\u6846\u8FDB\u884C\u5168\u5E93\u641C\u7D22\u3002"
+      "search.invitation": "\u4F7F\u7528\u4E0A\u65B9\u641C\u7D22\u6846\u8FDB\u884C\u5168\u5E93\u641C\u7D22\u3002",
+      "section.generate": "\u{1F512} \u751F\u6210\u65B0\u7684\u5B89\u5168\u5BC6\u7801",
+      "banner.saveTitle": "\u68C0\u6D4B\u5230\u65B0\u51ED\u636E",
+      "banner.saveDesc": "\u60A8\u60F3\u5C06\u6B64\u767B\u5F55\u51ED\u636E\u4FDD\u5B58\u5230\u60A8\u7684\u4FDD\u9669\u5E93\u4E2D\u5417\uFF1F",
+      "banner.saveBtn": "\u4FDD\u5B58",
+      "banner.dismissBtn": "\u5FFD\u7565"
     }
   };
   function getPreferredLanguage() {

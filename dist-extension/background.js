@@ -1,7 +1,37 @@
 (() => {
   // src-extension/background.ts
   var HOST_NAME = "com.hafgit99.aegisvault7";
+  var pendingCredential = null;
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === "set_pending_credential") {
+      pendingCredential = request.credential;
+      sendResponse({ status: "ok" });
+      return false;
+    }
+    if (request.action === "get_pending_credential") {
+      sendResponse({ credential: pendingCredential });
+      return false;
+    }
+    if (request.action === "clear_pending_credential") {
+      pendingCredential = null;
+      sendResponse({ status: "ok" });
+      return false;
+    }
+    if (request.action === "save_new_credential") {
+      chrome.runtime.sendNativeMessage(
+        HOST_NAME,
+        { action: "add_credential", credential: request.credential },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            sendResponse({ error: chrome.runtime.lastError.message });
+          } else {
+            sendResponse(response);
+          }
+        }
+      );
+      pendingCredential = null;
+      return true;
+    }
     if (request.action === "query_credentials") {
       const url = request.url || "";
       chrome.runtime.sendNativeMessage(
