@@ -3,6 +3,11 @@
   "name": "Aegis Vault Extension",
   "version": "0.1.0",
   "description": "Browser companion for Aegis Vault 7 offline-first password manager.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "aegisvault7@hafgit99.com"
+    }
+  },
   "permissions": [
     "nativeMessaging",
     "activeTab"
