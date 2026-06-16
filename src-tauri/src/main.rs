@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-  aegis_vault_v7_lib::run();
+    aegis_vault_v7_lib::run();
 }
