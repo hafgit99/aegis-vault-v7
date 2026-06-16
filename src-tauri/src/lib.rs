@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::PathBuf;
+use base64::Engine;
 use tauri::{AppHandle, Manager};
 
 mod native_messaging;
@@ -85,11 +86,48 @@ fn wide_null(value: &str) -> Vec<u16> {
   value.encode_utf16().chain(std::iter::once(0)).collect()
 }
 
+#[cfg(not(target_os = "windows"))]
+fn wide_null(_value: &str) -> Vec<u16> {
+  Vec::new()
+}
+
 #[cfg(target_os = "windows")]
 fn dialog_filter() -> Vec<u16> {
   "Supported vault files (*.aegis;*.json;*.csv)\0*.aegis;*.json;*.csv\0Aegis backups (*.aegis)\0*.aegis\0JSON backups (*.json)\0*.json\0CSV imports (*.csv)\0*.csv\0All files (*.*)\0*.*\0\0"
     .encode_utf16()
     .collect()
+}
+
+#[cfg(not(target_os = "windows"))]
+fn dialog_filter() -> Vec<u16> {
+  Vec::new()
+}
+
+#[cfg(target_os = "windows")]
+fn attachment_dialog_filter() -> Vec<u16> {
+  "All files (*.*)\0*.*\0\0".encode_utf16().collect()
+}
+
+#[cfg(not(target_os = "windows"))]
+fn attachment_dialog_filter() -> Vec<u16> {
+  Vec::new()
+}
+
+#[cfg(target_os = "windows")]
+fn default_extension(default_filename: &str, fallback: &str) -> Vec<u16> {
+  PathBuf::from(default_filename)
+    .extension()
+    .and_then(|value| value.to_str())
+    .filter(|value| !value.trim().is_empty())
+    .unwrap_or(fallback)
+    .encode_utf16()
+    .chain(std::iter::once(0))
+    .collect()
+}
+
+#[cfg(not(target_os = "windows"))]
+fn default_extension(_default_filename: &str, _fallback: &str) -> Vec<u16> {
+  Vec::new()
 }
 
 #[cfg(target_os = "windows")]
@@ -102,7 +140,11 @@ fn path_from_dialog_buffer(buffer: &[u16]) -> Option<PathBuf> {
 }
 
 #[cfg(target_os = "windows")]
-fn native_save_file_path(default_filename: &str) -> Result<Option<PathBuf>, String> {
+fn native_save_file_path(
+  default_filename: &str,
+  filter: Vec<u16>,
+  default_ext: Vec<u16>,
+) -> Result<Option<PathBuf>, String> {
   use windows_sys::Win32::UI::Controls::Dialogs::{
     GetSaveFileNameW, OPENFILENAMEW, OFN_EXPLORER, OFN_NOCHANGEDIR, OFN_OVERWRITEPROMPT,
     OFN_PATHMUSTEXIST,
@@ -112,13 +154,6 @@ fn native_save_file_path(default_filename: &str) -> Result<Option<PathBuf>, Stri
   for (index, unit) in default_filename.encode_utf16().take(FILE_DIALOG_BUFFER_LEN - 1).enumerate() {
     file_buffer[index] = unit;
   }
-
-  let filter = dialog_filter();
-  let default_ext = if default_filename.ends_with(".json") {
-    wide_null("json")
-  } else {
-    wide_null("aegis")
-  };
 
   let mut dialog = OPENFILENAMEW {
     lStructSize: std::mem::size_of::<OPENFILENAMEW>() as u32,
@@ -165,7 +200,11 @@ fn native_open_file_path() -> Result<Option<PathBuf>, String> {
 }
 
 #[cfg(not(target_os = "windows"))]
-fn native_save_file_path(_default_filename: &str) -> Result<Option<PathBuf>, String> {
+fn native_save_file_path(
+  _default_filename: &str,
+  _filter: Vec<u16>,
+  _default_ext: Vec<u16>,
+) -> Result<Option<PathBuf>, String> {
   Err("native file dialogs are only implemented for Windows desktop builds".to_string())
 }
 
@@ -176,11 +215,37 @@ fn native_open_file_path() -> Result<Option<PathBuf>, String> {
 
 #[tauri::command]
 fn save_export_file(default_filename: String, contents: String) -> Result<bool, String> {
-  let Some(path) = native_save_file_path(&default_filename)? else {
+  let Some(path) = native_save_file_path(
+    &default_filename,
+    dialog_filter(),
+    if default_filename.ends_with(".json") {
+      wide_null("json")
+    } else {
+      wide_null("aegis")
+    },
+  )? else {
     return Ok(false);
   };
 
   fs::write(path, contents).map_err(|error| format!("failed to save export file: {error}"))?;
+  Ok(true)
+}
+
+#[tauri::command]
+fn save_binary_file(default_filename: String, contents_base64: String) -> Result<bool, String> {
+  let Some(path) = native_save_file_path(
+    &default_filename,
+    attachment_dialog_filter(),
+    default_extension(&default_filename, "bin"),
+  )? else {
+    return Ok(false);
+  };
+
+  let bytes = base64::engine::general_purpose::STANDARD
+    .decode(contents_base64)
+    .map_err(|error| format!("failed to decode binary file payload: {error}"))?;
+
+  fs::write(path, bytes).map_err(|error| format!("failed to save binary file: {error}"))?;
   Ok(true)
 }
 
@@ -249,6 +314,7 @@ pub fn run() {
       write_vault_database,
       reset_vault_database,
       save_export_file,
+      save_binary_file,
       open_import_file,
       sync_extension_credentials,
       clear_extension_credentials

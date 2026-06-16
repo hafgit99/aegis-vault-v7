@@ -8,16 +8,22 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LanguageProvider } from '../i18n/LanguageContext';
 import { languageStorageKey } from '../i18n/translations';
 import { getAttachmentBlob } from '../lib/attachments';
+import { saveDesktopBinaryFile } from '../lib/desktopFiles';
 import { useAttachmentDownload } from './useAttachmentDownload';
 
 vi.mock('../lib/attachments', () => ({
   getAttachmentBlob: vi.fn(),
 }));
 
+vi.mock('../lib/desktopFiles', () => ({
+  saveDesktopBinaryFile: vi.fn(),
+}));
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
   localStorage.clear();
+  delete window.__TAURI_INTERNALS__;
 });
 
 function renderAttachmentDownload(onNotify: (notification: any) => void, language?: 'en' | 'zh') {
@@ -53,6 +59,61 @@ describe('useAttachmentDownload', () => {
     });
 
     expect(getAttachmentBlob).toHaveBeenCalledWith('attachment-1');
+    expect(createObjectURL).toHaveBeenCalledWith(blob);
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:attachment');
+    expect(onNotify).not.toHaveBeenCalled();
+  });
+
+  it('saves attachments through the native desktop file dialog inside Tauri', async () => {
+    window.__TAURI_INTERNALS__ = {};
+    const blob = new Blob(['secret'], { type: 'text/plain' });
+    vi.mocked(getAttachmentBlob).mockResolvedValue({ blob, name: 'secret.txt' });
+    vi.mocked(saveDesktopBinaryFile).mockResolvedValue(true);
+    const createObjectURL = vi.fn(() => 'blob:attachment');
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: createObjectURL,
+    });
+    const onNotify = vi.fn();
+    const { result } = renderAttachmentDownload(onNotify);
+
+    await act(async () => {
+      await result.current.downloadAttachment('attachment-1', 'download.txt');
+    });
+
+    const savedBytes = vi.mocked(saveDesktopBinaryFile).mock.calls[0][1];
+    expect(saveDesktopBinaryFile).toHaveBeenCalledWith('secret.txt', expect.any(Uint8Array));
+    expect(Array.from(savedBytes)).toEqual(Array.from(new TextEncoder().encode('secret')));
+    expect(createObjectURL).not.toHaveBeenCalled();
+    expect(onNotify).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the browser download path when native desktop saving is unavailable', async () => {
+    window.__TAURI_INTERNALS__ = {};
+    const blob = new Blob(['secret'], { type: 'text/plain' });
+    vi.mocked(getAttachmentBlob).mockResolvedValue({ blob, name: 'secret.txt' });
+    vi.mocked(saveDesktopBinaryFile).mockRejectedValue(new Error('unsupported'));
+    const createObjectURL = vi.fn(() => 'blob:attachment');
+    const revokeObjectURL = vi.fn();
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: createObjectURL,
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      value: revokeObjectURL,
+    });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const onNotify = vi.fn();
+    const { result } = renderAttachmentDownload(onNotify);
+
+    await act(async () => {
+      await result.current.downloadAttachment('attachment-1', 'download.txt');
+    });
+
+    expect(saveDesktopBinaryFile).toHaveBeenCalledWith('secret.txt', expect.any(Uint8Array));
     expect(createObjectURL).toHaveBeenCalledWith(blob);
     expect(click).toHaveBeenCalledTimes(1);
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:attachment');

@@ -24,3 +24,4 @@ log = "0.4"
 tauri = { version = "2.11.2", features = [] }
 tauri-plugin-log = "2"
 windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_UI_Controls_Dialogs"] }
+base64 = "0.22"
