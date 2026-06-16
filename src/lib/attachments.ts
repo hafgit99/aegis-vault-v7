@@ -102,19 +102,11 @@ async function deriveAttachmentKeyHkdf(masterPassword: string, attachmentId: str
   return new Uint8Array(derivedBits);
 }
 
-function getRequiredMasterPassword(): string {
-  const masterPassword = getActiveMasterPassword();
-  if (!masterPassword) {
-    throw new AttachmentError(attachmentErrorCodes.missingVaultSession);
-  }
-  return masterPassword;
-}
-
-export async function encryptAttachmentData(
+async function encryptAttachmentDataWithMasterPassword(
+  masterPassword: string,
   attachmentId: string,
   rawBuffer: ArrayBuffer,
 ): Promise<Pick<AttachmentRecord, 'algorithm' | 'data' | 'encrypted' | 'iv' | 'tag' | 'kdf'>> {
-  const masterPassword = getRequiredMasterPassword();
   const key = await deriveAttachmentKeyHkdf(masterPassword, attachmentId);
   const encrypted = await webCryptoAesGcmEncryptBytes(rawBuffer, key, generateSafeIv());
 
@@ -128,13 +120,15 @@ export async function encryptAttachmentData(
   };
 }
 
-export async function decryptAttachmentData(record: AttachmentRecord): Promise<ArrayBuffer> {
+async function decryptAttachmentDataWithMasterPassword(
+  record: AttachmentRecord,
+  masterPassword: string,
+): Promise<ArrayBuffer> {
   if (record.algorithm === 'AES-256-GCM') {
     if (!record.iv || !record.tag) {
       throw new AttachmentError(attachmentErrorCodes.missingEncryptionMetadata);
     }
 
-    const masterPassword = getRequiredMasterPassword();
     const key = await (record.kdf === 'HKDF-SHA-256'
       ? deriveAttachmentKeyHkdf(masterPassword, record.id)
       : deriveAttachmentKey(masterPassword, record.id));
@@ -149,6 +143,31 @@ export async function decryptAttachmentData(record: AttachmentRecord): Promise<A
   }
 
   throw new AttachmentError(attachmentErrorCodes.legacyEncryptionBlocked);
+}
+
+function getRequiredMasterPassword(): string {
+  const masterPassword = getActiveMasterPassword();
+  if (!masterPassword) {
+    throw new AttachmentError(attachmentErrorCodes.missingVaultSession);
+  }
+  return masterPassword;
+}
+
+export async function encryptAttachmentData(
+  attachmentId: string,
+  rawBuffer: ArrayBuffer,
+): Promise<Pick<AttachmentRecord, 'algorithm' | 'data' | 'encrypted' | 'iv' | 'tag' | 'kdf'>> {
+  const masterPassword = getRequiredMasterPassword();
+  return encryptAttachmentDataWithMasterPassword(masterPassword, attachmentId, rawBuffer);
+}
+
+export async function decryptAttachmentData(record: AttachmentRecord): Promise<ArrayBuffer> {
+  if (record.algorithm !== 'AES-256-GCM') {
+    throw new AttachmentError(attachmentErrorCodes.legacyEncryptionBlocked);
+  }
+
+  const masterPassword = getRequiredMasterPassword();
+  return decryptAttachmentDataWithMasterPassword(record, masterPassword);
 }
 
 export async function migrateAttachmentRecordToAesGcm(record: AttachmentRecord): Promise<AttachmentRecord> {
@@ -203,6 +222,64 @@ export async function migrateLegacyAttachmentsToAesGcm(): Promise<number> {
     );
 
     const migratedRecords = await Promise.all(legacyRecords.map((record) => migrateAttachmentRecordToAesGcm(record)));
+
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+
+      migratedRecords.forEach((record) => {
+        store.put(record);
+      });
+
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+
+    return migratedRecords.length;
+  } finally {
+    db.close();
+  }
+}
+
+export async function reencryptAttachmentsForMasterPasswordChange(
+  oldMasterPassword: string,
+  newMasterPassword: string,
+): Promise<number> {
+  if (typeof indexedDB === 'undefined') {
+    return 0;
+  }
+
+  const db = await initDB();
+  try {
+    const records = await new Promise<AttachmentRecord[]>((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.getAll();
+
+      request.onsuccess = () => resolve(request.result as AttachmentRecord[]);
+      request.onerror = () => reject(request.error);
+      transaction.onerror = () => reject(transaction.error);
+    });
+
+    if (records.length === 0) {
+      return 0;
+    }
+
+    const migratedRecords = await Promise.all(records.map(async (record) => {
+      const rawBuffer = record.algorithm === 'AES-256-GCM'
+        ? await decryptAttachmentDataWithMasterPassword(record, oldMasterPassword)
+        : decryptLegacyXorBufferForMigration(record.data);
+      const encryptedAttachment = await encryptAttachmentDataWithMasterPassword(
+        newMasterPassword,
+        record.id,
+        rawBuffer,
+      );
+
+      return {
+        ...record,
+        ...encryptedAttachment,
+      };
+    }));
 
     await new Promise<void>((resolve, reject) => {
       const transaction = db.transaction(STORE_NAME, 'readwrite');

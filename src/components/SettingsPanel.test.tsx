@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from '../lib/encryption';
 import { openDesktopImportFile, saveDesktopExportFile } from '../lib/desktopFiles';
 import { disableBiometric, isBiometricEnabled, isBiometricSupported, registerBiometric } from '../lib/biometric';
-import { getVaultItems, resetSystem, reseedDemoData, saveVaultItem, saveVaultItems, setupMasterPassword, verifyMasterPassword } from '../lib/storage';
+import { changeMasterPassword, getVaultItems, resetSystem, reseedDemoData, saveVaultItem, saveVaultItems, verifyMasterPassword } from '../lib/storage';
 import { closeVaultSession, openVaultSession } from '../lib/vaultSession';
 import { VaultItem } from '../types';
 import { LanguageProvider } from '../i18n/LanguageContext';
@@ -31,12 +31,12 @@ const vaultItems: VaultItem[] = [
 ];
 
 vi.mock('../lib/storage', () => ({
+  changeMasterPassword: vi.fn(),
   getVaultItems: vi.fn(async () => vaultItems),
   resetSystem: vi.fn(),
   reseedDemoData: vi.fn(async () => vaultItems),
   saveVaultItem: vi.fn(async () => vaultItems),
   saveVaultItems: vi.fn(async () => vaultItems),
-  setupMasterPassword: vi.fn(),
   verifyMasterPassword: vi.fn(),
 }));
 
@@ -362,6 +362,7 @@ describe('SettingsPanel import/export', () => {
 
 describe('SettingsPanel account and safety controls', () => {
   it('changes the master password after validating old password, length, and confirmation', async () => {
+    vi.mocked(window.confirm).mockReturnValue(true);
     vi.mocked(verifyMasterPassword)
       .mockResolvedValueOnce(false)
       .mockResolvedValueOnce(true)
@@ -378,7 +379,7 @@ describe('SettingsPanel account and safety controls', () => {
     await waitFor(() => {
       expect(container.textContent).toContain('hatal');
     });
-    expect(setupMasterPassword).not.toHaveBeenCalled();
+    expect(changeMasterPassword).not.toHaveBeenCalled();
 
     fireEvent.change(oldPassword, { target: { value: 'correct-old' } });
     fireEvent.change(newPassword, { target: { value: 'short' } });
@@ -388,7 +389,7 @@ describe('SettingsPanel account and safety controls', () => {
     await waitFor(() => {
       expect(container.textContent).toContain('en az 12');
     });
-    expect(setupMasterPassword).not.toHaveBeenCalled();
+    expect(changeMasterPassword).not.toHaveBeenCalled();
 
     fireEvent.change(newPassword, { target: { value: 'new-secret-12' } });
     fireEvent.change(confirmPassword, { target: { value: 'different-secret' } });
@@ -397,17 +398,52 @@ describe('SettingsPanel account and safety controls', () => {
     await waitFor(() => {
       expect(container.textContent).toContain('uyu');
     });
-    expect(setupMasterPassword).not.toHaveBeenCalled();
+    expect(changeMasterPassword).not.toHaveBeenCalled();
 
     fireEvent.change(confirmPassword, { target: { value: 'new-secret-12' } });
     fireEvent.submit(passwordChangeForm(container));
 
     await waitFor(() => {
-      expect(setupMasterPassword).toHaveBeenCalledWith('new-secret-12');
+      expect(changeMasterPassword).toHaveBeenCalledWith('correct-old', 'new-secret-12');
     });
+    expect(container.textContent).toContain('yeniden şifrelendi');
     expect(oldPassword.value).toBe('');
     expect(newPassword.value).toBe('');
     expect(confirmPassword.value).toBe('');
+  });
+
+  it('does not change the master password when the re-encryption warning is cancelled', async () => {
+    vi.mocked(window.confirm).mockReturnValueOnce(false);
+    vi.mocked(verifyMasterPassword).mockResolvedValueOnce(true);
+    const { container } = renderSettings();
+    const [oldPassword, newPassword, confirmPassword] = passwordChangeInputs(container);
+
+    fireEvent.change(oldPassword, { target: { value: 'correct-old' } });
+    fireEvent.change(newPassword, { target: { value: 'new-secret-12' } });
+    fireEvent.change(confirmPassword, { target: { value: 'new-secret-12' } });
+    fireEvent.submit(passwordChangeForm(container));
+
+    await waitFor(() => {
+      expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('yeniden şifrelenecek'));
+    });
+    expect(changeMasterPassword).not.toHaveBeenCalled();
+  });
+
+  it('shows an error when master password rotation fails after confirmation', async () => {
+    vi.mocked(window.confirm).mockReturnValueOnce(true);
+    vi.mocked(verifyMasterPassword).mockResolvedValueOnce(true);
+    vi.mocked(changeMasterPassword).mockRejectedValueOnce(new Error('rotation failed'));
+    const { container } = renderSettings();
+    const [oldPassword, newPassword, confirmPassword] = passwordChangeInputs(container);
+
+    fireEvent.change(oldPassword, { target: { value: 'correct-old' } });
+    fireEvent.change(newPassword, { target: { value: 'new-secret-12' } });
+    fireEvent.change(confirmPassword, { target: { value: 'new-secret-12' } });
+    fireEvent.submit(passwordChangeForm(container));
+
+    await waitFor(() => {
+      expect(container.textContent).toContain('rotation failed');
+    });
   });
 
   it('changes the auto-lock duration from the option grid', () => {

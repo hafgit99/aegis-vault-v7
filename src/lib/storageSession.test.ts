@@ -11,6 +11,7 @@ const sqliteOPFSInstance = vi.hoisted(() => ({
   hydrate: vi.fn(async () => undefined),
   reseedDemo: vi.fn(),
   resetAll: vi.fn(),
+  changeMasterPassword: vi.fn(async () => undefined),
   saveVaultItem: vi.fn(),
   saveVaultItems: vi.fn(),
   setupMaster: vi.fn(async () => undefined),
@@ -18,6 +19,7 @@ const sqliteOPFSInstance = vi.hoisted(() => ({
 }));
 
 const migrateLegacyAttachmentsToAesGcm = vi.hoisted(() => vi.fn(async () => 0));
+const reencryptAttachmentsForMasterPasswordChange = vi.hoisted(() => vi.fn(async () => 0));
 
 vi.mock('./sqlite_opfs', () => ({
   sqliteOPFSInstance,
@@ -25,6 +27,12 @@ vi.mock('./sqlite_opfs', () => ({
 
 vi.mock('./attachments', () => ({
   migrateLegacyAttachmentsToAesGcm,
+  reencryptAttachmentsForMasterPasswordChange,
+}));
+
+vi.mock('./biometric', () => ({
+  disableBiometric: vi.fn(),
+  hydrateBiometric: vi.fn(async () => undefined),
 }));
 
 import {
@@ -41,6 +49,7 @@ import {
   restoreFromTrash,
   saveVaultItem,
   saveVaultItems,
+  changeMasterPassword,
   setupMasterPassword,
   setupMasterPasswordWithSecretKey,
   verifyMasterPassword,
@@ -126,6 +135,65 @@ describe('vault session storage', () => {
       'aegis-vault-v7:master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
     );
     expect(getActiveBackupPassword()).toBe('master-pass');
+  });
+
+  it('rotates the master password without reseeding or wiping vault items', async () => {
+    sqliteOPFSInstance.verifyPassword.mockResolvedValueOnce(true);
+
+    await changeMasterPassword('old-master-pass', 'new-master-pass-12');
+
+    expect(reencryptAttachmentsForMasterPasswordChange).toHaveBeenCalledWith(
+      'old-master-pass',
+      'new-master-pass-12',
+    );
+    expect(sqliteOPFSInstance.changeMasterPassword).toHaveBeenCalledWith(
+      'old-master-pass',
+      'new-master-pass-12',
+    );
+    expect(sqliteOPFSInstance.reseedDemo).not.toHaveBeenCalled();
+    expect(getActiveMasterPassword()).toBe('new-master-pass-12');
+    expect(getActiveBackupPassword()).toBe('new-master-pass-12');
+  });
+
+  it('rotates only the master password portion for secret-key protected vaults', async () => {
+    localStorage.setItem('aegis_account_secret_profile', JSON.stringify({
+      enabled: true,
+      fingerprint: '3456-7',
+    }));
+    sqliteOPFSInstance.verifyPassword.mockResolvedValueOnce(true);
+    openVaultSession(
+      'aegis-vault-v7:old-master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
+      'old-master-pass',
+    );
+
+    await changeMasterPassword('old-master-pass', 'new-master-pass-12');
+
+    const newCredential = 'aegis-vault-v7:new-master-pass-12\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567';
+    expect(sqliteOPFSInstance.changeMasterPassword).toHaveBeenCalledWith(
+      'aegis-vault-v7:old-master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
+      newCredential,
+    );
+    expect(getActiveMasterPassword()).toBe(newCredential);
+    expect(getActiveBackupPassword()).toBe('new-master-pass-12');
+  });
+
+  it('rolls attachment encryption back when vault password rotation fails', async () => {
+    sqliteOPFSInstance.verifyPassword.mockResolvedValueOnce(true);
+    sqliteOPFSInstance.changeMasterPassword.mockRejectedValueOnce(new Error('db failed'));
+    reencryptAttachmentsForMasterPasswordChange.mockResolvedValueOnce(2).mockResolvedValueOnce(2);
+
+    await expect(changeMasterPassword('old-master-pass', 'new-master-pass-12')).rejects.toThrow('db failed');
+
+    expect(reencryptAttachmentsForMasterPasswordChange).toHaveBeenNthCalledWith(
+      1,
+      'old-master-pass',
+      'new-master-pass-12',
+    );
+    expect(reencryptAttachmentsForMasterPasswordChange).toHaveBeenNthCalledWith(
+      2,
+      'new-master-pass-12',
+      'old-master-pass',
+    );
   });
 
   it('keeps a successful unlock when legacy attachment migration fails', async () => {

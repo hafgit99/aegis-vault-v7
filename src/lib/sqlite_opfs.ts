@@ -425,6 +425,59 @@ class SQLiteOPFS {
     await this.saveToPersistentStorage();
   }
 
+  /**
+   * Rotates the vault master credential without wiping saved records.
+   */
+  public async changeMasterPassword(oldPassword: string, newPassword: string): Promise<void> {
+    await this.hydrate();
+    const items = await this.getVaultItems(oldPassword);
+    const argonHash = await createArgon2idHash(newPassword, secureRandomToken(16));
+    this.clearDerivedKeyCache();
+    this.state.encryption_salt = this.createVaultEncryptionSalt();
+    this.state.kdfParams = NEW_VAULT_ITEM_KDF_PARAMS;
+    this.state.user_secrets = [{
+      username: 'owner',
+      argon_hash: argonHash,
+    }];
+
+    const derivedKey = await this.deriveEncryptionKey(newPassword);
+    this.state.vault_items = await Promise.all(items.map(async (item) => {
+      const encrypted = await webCryptoAesGcmEncrypt(JSON.stringify(item), derivedKey, generateSafeIv());
+      const nowStr = new Date().toISOString().split('T')[0];
+
+      return {
+        id: item.id || secureRandomToken(9),
+        title: item.title || 'Imported Record',
+        category: item.category || 'login',
+        favorite: item.favorite ? 1 : 0,
+        deleted: item.deleted ? 1 : 0,
+        deleted_at: item.deletedAt || null,
+        created_at: item.createdAt || nowStr,
+        updated_at: item.updatedAt || nowStr,
+        username: item.username || '',
+        username_db: '[encrypted: aes-256-gcm]',
+        password_db: '[encrypted: aes-256-gcm]',
+        notes_db: item.notes ? '[encrypted: aes-256-gcm]' : '',
+        enc_metadata: JSON.stringify(encrypted),
+        enc_kdf: VAULT_ITEM_KDF,
+      };
+    }));
+
+    this.decryptedItemsCache.clear();
+    for (const item of items) {
+      const row = this.state.vault_items.find((candidate) => candidate.id === item.id);
+      if (row) {
+        this.decryptedItemsCache.set(row.id, {
+          enc_metadata: row.enc_metadata,
+          item,
+        });
+      }
+    }
+
+    this.logQuery('UPDATE user_secrets SET argon_hash = "[rotated argon2id verification hash]"; REKEY vault_items;', 'SUCCESS', items.length);
+    await this.saveToPersistentStorage();
+  }
+
   private getKdfParams() {
     return this.state.kdfParams || LEGACY_VAULT_ITEM_KDF_PARAMS;
   }

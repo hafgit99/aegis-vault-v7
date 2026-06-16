@@ -15,6 +15,7 @@ import {
   getAttachmentBlob,
   migrateLegacyAttachmentsToAesGcm,
   migrateAttachmentRecordToAesGcm,
+  reencryptAttachmentsForMasterPasswordChange,
   saveAttachment,
   type AttachmentRecord,
 } from './attachments';
@@ -468,5 +469,24 @@ describe('attachment encryption', () => {
 
     const result = await getAttachmentBlob('attachment-old-bulk');
     await expect(blobText(result?.blob)).resolves.toBe('bulk migrate file');
+  });
+
+  it('re-encrypts stored attachments when the vault master password changes', async () => {
+    openVaultSession('old-master-pass');
+    await saveAttachment('attachment-1', new File([bytes('private file')], 'secret.txt', { type: 'text/plain' }));
+    const before = await getStoredAttachmentRecord('attachment-1');
+
+    await expect(reencryptAttachmentsForMasterPasswordChange('old-master-pass', 'new-master-pass')).resolves.toBe(1);
+    const after = await getStoredAttachmentRecord('attachment-1');
+
+    expect(after?.iv).not.toBe(before?.iv);
+    closeVaultSession();
+    openVaultSession('old-master-pass');
+    await expect(getAttachmentBlob('attachment-1')).rejects.toBeTruthy();
+
+    closeVaultSession();
+    openVaultSession('new-master-pass');
+    const result = await getAttachmentBlob('attachment-1');
+    await expect(blobText(result?.blob)).resolves.toBe('private file');
   });
 });

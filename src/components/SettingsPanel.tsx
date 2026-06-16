@@ -23,7 +23,7 @@ import {
   AlertCircle,
   Fingerprint
 } from 'lucide-react';
-import { getVaultItems, setupMasterPassword, resetSystem, reseedDemoData, saveVaultItem, saveVaultItems, verifyMasterPassword } from '../lib/storage';
+import { changeMasterPassword, getVaultItems, resetSystem, reseedDemoData, saveVaultItem, saveVaultItems, verifyMasterPassword } from '../lib/storage';
 import { AppNotification, VaultItem } from '../types';
 import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from '../lib/encryption';
 import { parseUniversalImport, decodeFileBuffer } from '../lib/importer';
@@ -248,7 +248,21 @@ export default function SettingsPanel({
       return;
     }
 
-    await setupMasterPassword(newPassword);
+    const confirmed = window.confirm(t('settings.password.confirmRotation'));
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await changeMasterPassword(oldPassword, newPassword);
+      await onDatabaseChanged();
+    } catch (err: any) {
+      setPasswordError(err?.message === 'current-master-password-invalid'
+        ? t('settings.password.error.current')
+        : err?.message || t('settings.password.error.rotationFailed'));
+      return;
+    }
+
     setOldPassword('');
     setNewPassword('');
     setConfirmPassword('');
@@ -751,6 +765,11 @@ export default function SettingsPanel({
             <Key className="w-4 h-4 text-brand-secondary" />
             <span>{t('settings.password.title')}</span>
           </h3>
+
+          <div className="p-3 bg-brand-primary/10 border border-brand-primary/20 rounded-xl text-xs text-on-surface-variant leading-relaxed flex items-start gap-2">
+            <ShieldCheck className="w-4 h-4 text-brand-primary shrink-0 mt-0.5" />
+            <span>{t('settings.password.rotationNotice')}</span>
+          </div>
 
           <form onSubmit={handlePasswordChange} className="space-y-3 pt-1" id="pass-change-form">
             {passwordError && (

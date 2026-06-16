@@ -4,7 +4,7 @@
  */
 
 import { VaultItem } from '../types';
-import { migrateLegacyAttachmentsToAesGcm } from './attachments';
+import { migrateLegacyAttachmentsToAesGcm, reencryptAttachmentsForMasterPasswordChange } from './attachments';
 import {
   combineMasterPasswordAndSecretKey,
   getSecretKeyFingerprint,
@@ -12,8 +12,8 @@ import {
 } from './secretKey';
 import { sqliteOPFSInstance } from './sqlite_opfs';
 import { logSecurityEvent, securityEventCodes } from './securityEvents';
-import { closeVaultSession, getActiveMasterPassword, openVaultSession } from './vaultSession';
-import { hydrateBiometric } from './biometric';
+import { closeVaultSession, getActiveBackupPassword, getActiveMasterPassword, openVaultSession } from './vaultSession';
+import { disableBiometric, hydrateBiometric } from './biometric';
 
 const STORAGE_KEYS = {
   IS_SET_UP: 'aegis_is_setup',
@@ -136,6 +136,29 @@ function resolveVaultCredential(password: string, secretKey?: string | null): st
   return combineMasterPasswordAndSecretKey(password, usableSecretKey);
 }
 
+function resolveRotatedVaultCredential(newPassword: string): string {
+  const activeCredential = getActiveMasterPassword();
+  if (activeCredential?.startsWith('aegis-vault-v7:')) {
+    const newlineIndex = activeCredential.indexOf('\n');
+    if (newlineIndex !== -1) {
+      const secretKey = activeCredential.substring(newlineIndex + 1);
+      return combineMasterPasswordAndSecretKey(newPassword, secretKey);
+    }
+  }
+
+  return resolveVaultCredential(newPassword);
+}
+
+function resolveCurrentVaultCredential(password: string): string {
+  const activeCredential = getActiveMasterPassword();
+  const activeBackupPassword = getActiveBackupPassword();
+  if (activeCredential?.startsWith('aegis-vault-v7:') && activeBackupPassword === password) {
+    return activeCredential;
+  }
+
+  return resolveVaultCredential(password);
+}
+
 /**
  * Validates the master password against the SQLite Argon2id signature.
  */
@@ -224,6 +247,29 @@ export async function setupMasterPasswordWithSecretKey(
   }
 
   await sqliteOPFSInstance.reseedDemo(credential, INITIAL_DEMO_ITEMS);
+}
+
+export async function changeMasterPassword(oldPassword: string, newPassword: string): Promise<void> {
+  await initializeStorage();
+  const oldCredential = resolveCurrentVaultCredential(oldPassword);
+  const isCorrectOld = await sqliteOPFSInstance.verifyPassword(oldCredential);
+  if (!isCorrectOld) {
+    throw new Error('current-master-password-invalid');
+  }
+
+  const newCredential = resolveRotatedVaultCredential(newPassword);
+  const rotatedAttachmentCount = await reencryptAttachmentsForMasterPasswordChange(oldCredential, newCredential);
+  try {
+    await sqliteOPFSInstance.changeMasterPassword(oldCredential, newCredential);
+  } catch (err) {
+    if (rotatedAttachmentCount > 0) {
+      await reencryptAttachmentsForMasterPasswordChange(newCredential, oldCredential);
+    }
+    throw err;
+  }
+  openVaultSession(newCredential, newPassword);
+  disableBiometric();
+  localStorage.setItem(STORAGE_KEYS.IS_SET_UP, 'true');
 }
 
 /**
