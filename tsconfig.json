@@ -25,6 +25,8 @@
   },
   "exclude": [
     "dist",
+    "dist-extension",
+    "dist-extension-firefox",
     "coverage",
     "node_modules",
     "src-tauri/target",

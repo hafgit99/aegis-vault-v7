@@ -5,11 +5,22 @@ import path from 'path';
 const outDir = path.resolve('dist-extension');
 const srcDir = path.resolve('src-extension');
 
+const batPath = path.join(outDir, 'aegis-host.bat');
+const manifestPath = path.join(outDir, 'com.hafgit99.aegisvault7.json');
+
+// Backup host registry files if they exist
+const batBackup = fs.existsSync(batPath) ? fs.readFileSync(batPath) : null;
+const jsonBackup = fs.existsSync(manifestPath) ? fs.readFileSync(manifestPath) : null;
+
 // Ensure outDir exists
 if (fs.existsSync(outDir)) {
   fs.rmSync(outDir, { recursive: true, force: true });
 }
 fs.mkdirSync(outDir, { recursive: true });
+
+// Restore backup
+if (batBackup) fs.writeFileSync(batPath, batBackup);
+if (jsonBackup) fs.writeFileSync(manifestPath, jsonBackup);
 
 // Ensure source icons directory exists and copy icons from Tauri
 const srcIconsDir = path.join(srcDir, 'icons');
