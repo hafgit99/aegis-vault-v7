@@ -1,4 +1,4 @@
-import { Clock, KeyRound, Lock, Settings, Shield, ShieldCheck, Trash2 } from 'lucide-react';
+import { Clock, HeartHandshake, KeyRound, Lock, Settings, ShieldCheck, Trash2 } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { APP_NAME } from '../lib/branding';
@@ -81,6 +81,15 @@ export default function SidebarNavigation({
         >
           <Settings className="w-4 h-4" />
           <span>{t('nav.settings')}</span>
+        </button>
+
+        <button
+          data-testid="nav-donate-button"
+          onClick={() => onTabChange('donate')}
+          className={getNavButtonClass(activeTab, 'donate')}
+        >
+          <HeartHandshake className="w-4 h-4" />
+          <span>{t('nav.donate')}</span>
         </button>
 
         <button

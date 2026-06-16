@@ -29,6 +29,7 @@ describe('SidebarNavigation', () => {
     expect(screen.getByTestId('nav-audit-button')).toBeTruthy();
     expect(screen.getByTestId('nav-generator-button')).toBeTruthy();
     expect(screen.getByTestId('nav-settings-button')).toBeTruthy();
+    expect(screen.getByTestId('nav-donate-button')).toBeTruthy();
     expect(screen.getByTestId('nav-trash-button')).toBeTruthy();
     expect(screen.getByText('3')).toBeTruthy();
   });
@@ -51,6 +52,7 @@ describe('SidebarNavigation', () => {
     fireEvent.click(screen.getByTestId('nav-audit-button'));
     fireEvent.click(screen.getByTestId('nav-generator-button'));
     fireEvent.click(screen.getByTestId('nav-settings-button'));
+    fireEvent.click(screen.getByTestId('nav-donate-button'));
     fireEvent.click(screen.getByTestId('nav-trash-button'));
     fireEvent.click(screen.getByTestId('lock-vault-button'));
 
@@ -58,6 +60,7 @@ describe('SidebarNavigation', () => {
     expect(onTabChange).toHaveBeenCalledWith('audit');
     expect(onTabChange).toHaveBeenCalledWith('generator');
     expect(onTabChange).toHaveBeenCalledWith('settings');
+    expect(onTabChange).toHaveBeenCalledWith('donate');
     expect(onTabChange).toHaveBeenCalledWith('trash');
     expect(onLock).toHaveBeenCalledTimes(1);
   });

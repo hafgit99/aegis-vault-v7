@@ -52,7 +52,7 @@ export interface GeneratorOptions {
   symbols: boolean;
 }
 
-export type ActiveTab = 'vault' | 'audit' | 'generator' | 'settings' | 'trash';
+export type ActiveTab = 'vault' | 'audit' | 'generator' | 'settings' | 'donate' | 'trash';
 
 export interface AuditReport {
   score: number;

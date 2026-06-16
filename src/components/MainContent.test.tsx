@@ -25,6 +25,10 @@ vi.mock('./SettingsPanel', () => ({
   default: () => <div>Settings Panel Mock</div>,
 }));
 
+vi.mock('./DonationPanel', () => ({
+  default: () => <div>Donation Panel Mock</div>,
+}));
+
 vi.mock('./TrashWorkspace', () => ({
   default: () => <div>Trash Workspace Mock</div>,
 }));
@@ -61,6 +65,9 @@ function renderMainContent(overrides: Partial<ComponentProps<typeof MainContent>
     loginCount: 1,
     cardCount: 0,
     secureNoteCount: 0,
+    passkeyCount: 0,
+    identityCount: 0,
+    selectedCategory: 'all',
     auditReport,
     profileName: 'Hafız',
     copiedField: null,
@@ -122,6 +129,11 @@ describe('MainContent', () => {
   it('renders the settings tab', () => {
     renderMainContent({ activeTab: 'settings' });
     expect(screen.getByText('Settings Panel Mock')).toBeTruthy();
+  });
+
+  it('renders the donate tab', () => {
+    renderMainContent({ activeTab: 'donate' });
+    expect(screen.getByText('Donation Panel Mock')).toBeTruthy();
   });
 
   it('renders the trash tab', () => {

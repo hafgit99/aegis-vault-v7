@@ -7,6 +7,7 @@ import SecurityAudit from './SecurityAudit';
 import SettingsPanel from './SettingsPanel';
 import TrashWorkspace from './TrashWorkspace';
 import VaultWorkspace from './VaultWorkspace';
+import DonationPanel from './DonationPanel';
 
 interface MainContentProps {
   activeTab: ActiveTab;
@@ -171,6 +172,12 @@ export function MainContentComponent({
             onAutoLockDurationChange={onAutoLockDurationChange}
             onNotify={onNotify}
           />
+        </div>
+      )}
+
+      {activeTab === 'donate' && (
+        <div data-testid="donate-workspace" className="flex-1 p-8 overflow-y-auto scrollbar-hide">
+          <DonationPanel copiedField={copiedField} onCopyText={onCopyText} />
         </div>
       )}
 
