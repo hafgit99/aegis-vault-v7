@@ -26,6 +26,28 @@ function getFiles(dir, fileList = []) {
   return fileList;
 }
 
+function isFinalArtifact(filePath) {
+  const normalized = filePath.replaceAll('\\', '/');
+  const ext = path.extname(filePath).toLowerCase();
+
+  if (!normalized.includes('/release/')) return false;
+  if (normalized.includes('/release/deps/')) return false;
+  if (normalized.includes('/release/build/')) return false;
+  if (normalized.includes('/release/incremental/')) return false;
+
+  if (normalized.includes('/release/bundle/msi/')) return ext === '.msi';
+  if (normalized.includes('/release/bundle/nsis/')) return ext === '.exe';
+  if (normalized.includes('/release/bundle/dmg/')) return ext === '.dmg';
+  if (normalized.includes('/release/bundle/deb/')) return ext === '.deb';
+  if (normalized.includes('/release/bundle/appimage/')) return ext === '.appimage';
+
+  const releaseDir = path.join(targetDir, 'release');
+  const relativeToRelease = path.relative(releaseDir, filePath);
+  const isTopLevelReleaseFile = relativeToRelease && !relativeToRelease.includes(path.sep);
+
+  return isTopLevelReleaseFile && ext === (process.platform === 'win32' ? '.exe' : '');
+}
+
 const targetDir = path.resolve(__dirname, '../src-tauri/target');
 if (!fs.existsSync(targetDir)) {
   console.log('Target directory does not exist. Skipping checksum generation.');
@@ -33,7 +55,7 @@ if (!fs.existsSync(targetDir)) {
 }
 
 console.log('Scanning for built artifacts in:', targetDir);
-const filesToHash = getFiles(targetDir);
+const filesToHash = getFiles(targetDir).filter(isFinalArtifact);
 
 if (filesToHash.length === 0) {
   console.log('No final build artifacts found to hash.');
