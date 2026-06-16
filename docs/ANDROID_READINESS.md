@@ -25,6 +25,10 @@ npm run android:build:apk
 npm run android:build:apk:debug
 npm run android:build:apk:debug:aarch64
 npm run android:build:apk:aarch64
+npm run android:device:install
+npm run android:device:launch
+npm run android:device:status
+npm run android:device:smoke
 ```
 
 On this Windows workstation, Android builds also require the Android Studio JBR, SDK, and NDK environment variables to be available before invoking the build scripts.
@@ -38,6 +42,15 @@ Local size baseline from this workstation:
 - Universal debug APK: about 438 MiB after bundling four ABIs.
 - Clean `aarch64` debug APK: about 120 MiB with only `arm64-v8a`.
 
+Local device smoke baseline from this workstation:
+
+- Device model: `2311DRK48G`.
+- Device ABI: `arm64-v8a`.
+- Debug package: `com.hafgit99.aegisvault7.debug`.
+- APK install through `adb install -r` succeeded.
+- App launch through `am start` succeeded.
+- Process was running after launch and no immediate `FATAL EXCEPTION` appeared in the sampled logcat output.
+
 ## Phase 1: Readiness Gate
 
 Before treating Android as a product target, verify:
@@ -47,6 +60,7 @@ Before treating Android as a product target, verify:
 - `npm run build`
 - `npm run android:init`
 - `npm run android:build:apk:debug:aarch64`
+- `npm run android:device:smoke`
 - Optional compatibility check: `npm run android:build:apk:debug`
 
 Manual smoke checklist for the first debug APK:
