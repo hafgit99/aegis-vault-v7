@@ -128,6 +128,9 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
   // Biometric Unlock States
   const [biometricError, setBiometricError] = useState<string | null>(null);
   const [biometricLoading, setBiometricLoading] = useState(false);
+  const isBiometricPendingRef = React.useRef(false);
+  const hasAutoTriggeredRef = React.useRef(false);
+  
   const isBioEnabled = isBiometricEnabled();
   const lockoutRemainingSeconds = Math.ceil(lockoutRemainingMs / 1000);
   const isLockedOut = lockoutRemainingMs > 0;
@@ -146,6 +149,9 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
     `${t('lock.error.rateLimitedPrefix')} ${remainingSeconds} ${t('lock.error.rateLimitedSuffix')}`;
 
   const handleBiometricUnlock = React.useCallback(async () => {
+    if (isBiometricPendingRef.current) return;
+    isBiometricPendingRef.current = true;
+    
     setBiometricError(null);
     setError(null);
     setBiometricLoading(true);
@@ -164,12 +170,14 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
       setBiometricError(getBiometricUnlockErrorMessage(err, t));
     } finally {
       setBiometricLoading(false);
+      isBiometricPendingRef.current = false;
     }
   }, [onUnlock, rememberedSecretKey, t]);
 
   // Auto trigger biometric prompt on lock screen if enabled
   React.useEffect(() => {
-    if (isSetup && isBioEnabled) {
+    if (isSetup && isBioEnabled && !hasAutoTriggeredRef.current) {
+      hasAutoTriggeredRef.current = true;
       const timer = setTimeout(() => {
         handleBiometricUnlock();
       }, 800);

@@ -23,9 +23,9 @@ export function useVaultLock({
     clearCopiedField();
   }, [clearCopiedField, resetReveals]);
 
-  const unlock = () => {
+  const unlock = useCallback(() => {
     setUnlocked(true);
-  };
+  }, []);
 
   useAutoLock({
     unlocked,
