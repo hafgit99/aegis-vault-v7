@@ -22,7 +22,8 @@ export function isNetworkUrlAllowed(input: string | URL): boolean {
   const url = resolveUrl(input);
   if (!url) return false;
 
-  if (['data:', 'blob:', 'file:', 'tauri:'].includes(url.protocol)) return true;
+  if (['data:', 'blob:', 'file:', 'tauri:', 'ipc:'].includes(url.protocol)) return true;
+  if (url.hostname === 'ipc.localhost' || url.hostname === 'tauri.localhost') return true;
   if (typeof location !== 'undefined' && url.origin === location.origin) return true;
 
   return url.origin === HIBP_RANGE_ORIGIN && url.pathname.startsWith(HIBP_RANGE_PATH_PREFIX);
