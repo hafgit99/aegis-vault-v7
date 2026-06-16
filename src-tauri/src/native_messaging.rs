@@ -165,13 +165,17 @@ fn handle_client(
         serde_json::json!({ "locked": locked })
       }
       "focus_window" => {
-        if let Some(window) = app_handle.get_webview_window("main") {
-          let _ = window.show();
-          let _ = window.unminimize();
-          let _ = window.set_focus();
+        let windows = app_handle.webview_windows();
+        if !windows.is_empty() {
+          for window in windows.values() {
+            let _ = window.show();
+            let _ = window.unminimize();
+            let _ = window.set_focus();
+            let _ = window.request_user_attention(Some(tauri::UserAttentionType::Critical));
+          }
           serde_json::json!({ "status": "ok" })
         } else {
-          serde_json::json!({ "error": "window not found" })
+          serde_json::json!({ "error": "no windows found" })
         }
       }
       "get_credentials" => {

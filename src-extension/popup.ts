@@ -94,6 +94,9 @@ function checkPhishing(url: string): boolean {
   }
 }
 
+let allCredentials: CredentialItem[] = [];
+let suggestedCredentials: CredentialItem[] = [];
+
 // Fetch and render credentials
 async function refreshUI() {
   applyTranslations();
@@ -101,61 +104,82 @@ async function refreshUI() {
   // Query active tab URL
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     const activeTab = tabs[0];
-    if (activeTab && activeTab.url) {
-      activeUrl = activeTab.url;
-      
-      // Check homograph phishing
-      if (checkPhishing(activeUrl)) {
-        phishingBanner.style.display = 'flex';
-      } else {
-        phishingBanner.style.display = 'none';
-      }
-
-      // Query database
-      chrome.runtime.sendMessage(
-        { action: 'query_credentials', url: activeUrl },
-        (response) => {
-          renderList(response);
-        }
-      );
+    activeUrl = activeTab && activeTab.url ? activeTab.url : '';
+    
+    // Check homograph phishing
+    if (activeUrl && checkPhishing(activeUrl)) {
+      phishingBanner.style.display = 'flex';
     } else {
-      // Default fallback (no active tab URL)
-      chrome.runtime.sendMessage(
-        { action: 'list_credentials' },
-        (response) => {
-          renderList(response);
-        }
-      );
+      phishingBanner.style.display = 'none';
     }
+
+    // Query all credentials from the local desktop database
+    chrome.runtime.sendMessage(
+      { action: 'list_credentials' },
+      (response) => {
+        if (!response || response.locked) {
+          lockedScreen.style.display = 'flex';
+          credentialList.style.display = 'none';
+          searchWrapper.style.display = 'none';
+          allCredentials = [];
+          suggestedCredentials = [];
+          return;
+        }
+
+        lockedScreen.style.display = 'none';
+        credentialList.style.display = 'flex';
+        searchWrapper.style.display = 'block';
+
+        allCredentials = response.credentials || [];
+
+        // Filter suggested credentials based on active URL domain
+        if (activeUrl) {
+          try {
+            const parsedActive = new URL(activeUrl);
+            const activeDomain = parsedActive.hostname.replace('www.', '').toLowerCase();
+
+            suggestedCredentials = allCredentials.filter(item => {
+              if (!item.url) return false;
+              const itemUrlLower = item.url.toLowerCase();
+              return activeDomain.includes(itemUrlLower) || itemUrlLower.includes(activeDomain);
+            });
+          } catch {
+            suggestedCredentials = [];
+          }
+        } else {
+          suggestedCredentials = [];
+        }
+
+        // Show suggested credentials first if they exist, otherwise show all
+        if (suggestedCredentials.length > 0) {
+          displayCredentials(suggestedCredentials);
+        } else {
+          displayCredentials(allCredentials);
+        }
+      }
+    );
   });
 }
 
-function renderList(response: any) {
-  if (!response || response.locked) {
-    lockedScreen.style.display = 'flex';
-    credentialList.style.display = 'none';
-    searchWrapper.style.display = 'none';
-    return;
-  }
-
-  lockedScreen.style.display = 'none';
-  credentialList.style.display = 'flex';
-  searchWrapper.style.display = 'block';
-
-  const items: CredentialItem[] = response.credentials || [];
-  displayCredentials(items);
-
-  // Bind Search input
-  searchInput.oninput = (e) => {
-    const q = (e.target as HTMLInputElement).value.toLowerCase();
-    const filtered = items.filter(item => 
+// Bind Search input globally
+searchInput.oninput = (e) => {
+  const q = (e.target as HTMLInputElement).value.toLowerCase().trim();
+  if (q === '') {
+    if (suggestedCredentials.length > 0) {
+      displayCredentials(suggestedCredentials);
+    } else {
+      displayCredentials(allCredentials);
+    }
+  } else {
+    // Search across ALL credentials in the vault
+    const filtered = allCredentials.filter(item => 
       item.title.toLowerCase().includes(q) || 
       item.username.toLowerCase().includes(q) ||
       item.url.toLowerCase().includes(q)
     );
     displayCredentials(filtered);
-  };
-}
+  }
+};
 
 function displayCredentials(items: CredentialItem[]) {
   credentialList.innerHTML = '';

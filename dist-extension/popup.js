@@ -127,53 +127,72 @@
       return false;
     }
   }
+  var allCredentials = [];
+  var suggestedCredentials = [];
   async function refreshUI() {
     applyTranslations();
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const activeTab = tabs[0];
-      if (activeTab && activeTab.url) {
-        activeUrl = activeTab.url;
-        if (checkPhishing(activeUrl)) {
-          phishingBanner.style.display = "flex";
-        } else {
-          phishingBanner.style.display = "none";
-        }
-        chrome.runtime.sendMessage(
-          { action: "query_credentials", url: activeUrl },
-          (response) => {
-            renderList(response);
-          }
-        );
+      activeUrl = activeTab && activeTab.url ? activeTab.url : "";
+      if (activeUrl && checkPhishing(activeUrl)) {
+        phishingBanner.style.display = "flex";
       } else {
-        chrome.runtime.sendMessage(
-          { action: "list_credentials" },
-          (response) => {
-            renderList(response);
-          }
-        );
+        phishingBanner.style.display = "none";
       }
+      chrome.runtime.sendMessage(
+        { action: "list_credentials" },
+        (response) => {
+          if (!response || response.locked) {
+            lockedScreen.style.display = "flex";
+            credentialList.style.display = "none";
+            searchWrapper.style.display = "none";
+            allCredentials = [];
+            suggestedCredentials = [];
+            return;
+          }
+          lockedScreen.style.display = "none";
+          credentialList.style.display = "flex";
+          searchWrapper.style.display = "block";
+          allCredentials = response.credentials || [];
+          if (activeUrl) {
+            try {
+              const parsedActive = new URL(activeUrl);
+              const activeDomain = parsedActive.hostname.replace("www.", "").toLowerCase();
+              suggestedCredentials = allCredentials.filter((item) => {
+                if (!item.url) return false;
+                const itemUrlLower = item.url.toLowerCase();
+                return activeDomain.includes(itemUrlLower) || itemUrlLower.includes(activeDomain);
+              });
+            } catch {
+              suggestedCredentials = [];
+            }
+          } else {
+            suggestedCredentials = [];
+          }
+          if (suggestedCredentials.length > 0) {
+            displayCredentials(suggestedCredentials);
+          } else {
+            displayCredentials(allCredentials);
+          }
+        }
+      );
     });
   }
-  function renderList(response) {
-    if (!response || response.locked) {
-      lockedScreen.style.display = "flex";
-      credentialList.style.display = "none";
-      searchWrapper.style.display = "none";
-      return;
-    }
-    lockedScreen.style.display = "none";
-    credentialList.style.display = "flex";
-    searchWrapper.style.display = "block";
-    const items = response.credentials || [];
-    displayCredentials(items);
-    searchInput.oninput = (e) => {
-      const q = e.target.value.toLowerCase();
-      const filtered = items.filter(
+  searchInput.oninput = (e) => {
+    const q = e.target.value.toLowerCase().trim();
+    if (q === "") {
+      if (suggestedCredentials.length > 0) {
+        displayCredentials(suggestedCredentials);
+      } else {
+        displayCredentials(allCredentials);
+      }
+    } else {
+      const filtered = allCredentials.filter(
         (item) => item.title.toLowerCase().includes(q) || item.username.toLowerCase().includes(q) || item.url.toLowerCase().includes(q)
       );
       displayCredentials(filtered);
-    };
-  }
+    }
+  };
   function displayCredentials(items) {
     credentialList.innerHTML = "";
     if (items.length === 0) {

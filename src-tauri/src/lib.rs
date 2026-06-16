@@ -235,7 +235,7 @@ pub fn run() {
       }
 
       // Start TCP server
-      native_messaging::start_tcp_server(token, credentials.clone());
+      native_messaging::start_tcp_server(app.handle().clone(), token, credentials.clone());
 
       Ok(())
     })
