@@ -1,0 +1,129 @@
+(() => {
+  // src-extension/background.ts
+  var HOST_NAME = "com.hafgit99.aegisvault7";
+  var pendingCredential = null;
+  var draftCredentials = {};
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === "update_draft_credential") {
+      if (sender.tab && sender.tab.id) {
+        draftCredentials[sender.tab.id] = request.credential;
+      }
+      sendResponse({ status: "ok" });
+      return false;
+    }
+    if (request.action === "set_pending_credential") {
+      pendingCredential = request.credential;
+      sendResponse({ status: "ok" });
+      return false;
+    }
+    if (request.action === "get_pending_credential") {
+      sendResponse({ credential: pendingCredential });
+      return false;
+    }
+    if (request.action === "clear_pending_credential") {
+      pendingCredential = null;
+      sendResponse({ status: "ok" });
+      return false;
+    }
+    if (request.action === "save_new_credential") {
+      chrome.runtime.sendNativeMessage(
+        HOST_NAME,
+        { action: "add_credential", credential: request.credential },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            sendResponse({ error: chrome.runtime.lastError.message });
+          } else {
+            sendResponse(response);
+          }
+        }
+      );
+      pendingCredential = null;
+      return true;
+    }
+    if (request.action === "query_credentials") {
+      const url = request.url || "";
+      chrome.runtime.sendNativeMessage(
+        HOST_NAME,
+        { action: "get_credentials", url },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            console.warn("Native messaging error:", chrome.runtime.lastError.message);
+            sendResponse({ locked: true, credentials: [], error: chrome.runtime.lastError.message });
+          } else {
+            sendResponse(response);
+          }
+        }
+      );
+      return true;
+    }
+    if (request.action === "list_credentials") {
+      chrome.runtime.sendNativeMessage(
+        HOST_NAME,
+        { action: "list_credentials" },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            sendResponse({ locked: true, credentials: [], error: chrome.runtime.lastError.message });
+          } else {
+            sendResponse(response);
+          }
+        }
+      );
+      return true;
+    }
+    if (request.action === "is_locked") {
+      chrome.runtime.sendNativeMessage(
+        HOST_NAME,
+        { action: "is_locked" },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            sendResponse({ locked: true, error: chrome.runtime.lastError.message });
+          } else {
+            sendResponse(response);
+          }
+        }
+      );
+      return true;
+    }
+    if (request.action === "focus_window") {
+      chrome.runtime.sendNativeMessage(
+        HOST_NAME,
+        { action: "focus_window" },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            sendResponse({ error: chrome.runtime.lastError.message });
+          } else {
+            sendResponse(response);
+          }
+        }
+      );
+      return true;
+    }
+    if (request.action === "autofill_page") {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        const activeTab = tabs[0];
+        if (activeTab && activeTab.id) {
+          chrome.tabs.sendMessage(activeTab.id, {
+            action: "fill_inputs",
+            username: request.username,
+            password: request.password
+          });
+        }
+      });
+      sendResponse({ status: "ok" });
+      return false;
+    }
+  });
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo.status === "loading") {
+      const draft = draftCredentials[tabId];
+      if (draft) {
+        pendingCredential = draft;
+        delete draftCredentials[tabId];
+      }
+    }
+  });
+  chrome.tabs.onRemoved.addListener((tabId) => {
+    delete draftCredentials[tabId];
+  });
+})();
+//# sourceMappingURL=background.js.map

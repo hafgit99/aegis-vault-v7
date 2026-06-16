@@ -70,6 +70,39 @@ async function build() {
   }
 
   console.log('Extension build completed successfully inside dist-extension/ !');
+
+  // Generate Firefox-specific build
+  const outDirFirefox = path.resolve('dist-extension-firefox');
+  if (fs.existsSync(outDirFirefox)) {
+    fs.rmSync(outDirFirefox, { recursive: true, force: true });
+  }
+  fs.mkdirSync(outDirFirefox, { recursive: true });
+
+  const copyFolderRecursive = (src, dest) => {
+    fs.mkdirSync(dest, { recursive: true });
+    fs.readdirSync(src).forEach(file => {
+      const srcFile = path.join(src, file);
+      const destFile = path.join(dest, file);
+      if (fs.lstatSync(srcFile).isDirectory()) {
+        copyFolderRecursive(srcFile, destFile);
+      } else {
+        fs.copyFileSync(srcFile, destFile);
+      }
+    });
+  };
+  copyFolderRecursive(outDir, outDirFirefox);
+
+  const firefoxManifestPath = path.join(outDirFirefox, 'manifest.json');
+  const manifest = JSON.parse(fs.readFileSync(firefoxManifestPath, 'utf8'));
+  
+  if (manifest.background && manifest.background.service_worker) {
+    const bgJs = manifest.background.service_worker;
+    delete manifest.background.service_worker;
+    manifest.background.scripts = [bgJs];
+  }
+  
+  fs.writeFileSync(firefoxManifestPath, JSON.stringify(manifest, null, 2));
+  console.log('Firefox-optimized extension build completed inside dist-extension-firefox/ !');
 }
 
 build().catch((err) => {
