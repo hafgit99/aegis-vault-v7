@@ -35,6 +35,12 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "windows": {
+      "nsis": {
+        "installMode": "both",
+        "installerHooks": "./nsis/installer.nsh"
+      }
+    },
     "android": {
       "debugApplicationIdSuffix": ".debug"
     }
