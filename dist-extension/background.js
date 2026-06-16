@@ -2,7 +2,15 @@
   // src-extension/background.ts
   var HOST_NAME = "com.hafgit99.aegisvault7";
   var pendingCredential = null;
+  var draftCredentials = {};
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === "update_draft_credential") {
+      if (sender.tab && sender.tab.id) {
+        draftCredentials[sender.tab.id] = request.credential;
+      }
+      sendResponse({ status: "ok" });
+      return false;
+    }
     if (request.action === "set_pending_credential") {
       pendingCredential = request.credential;
       sendResponse({ status: "ok" });
@@ -104,6 +112,18 @@
       sendResponse({ status: "ok" });
       return false;
     }
+  });
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo.status === "loading") {
+      const draft = draftCredentials[tabId];
+      if (draft) {
+        pendingCredential = draft;
+        delete draftCredentials[tabId];
+      }
+    }
+  });
+  chrome.tabs.onRemoved.addListener((tabId) => {
+    delete draftCredentials[tabId];
   });
 })();
 //# sourceMappingURL=background.js.map

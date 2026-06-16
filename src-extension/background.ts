@@ -6,9 +6,18 @@ interface NativeRequest {
 }
 
 let pendingCredential: any = null;
+let draftCredentials: { [tabId: number]: any } = {};
 
 // Listen for messages from popup or content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'update_draft_credential') {
+    if (sender.tab && sender.tab.id) {
+      draftCredentials[sender.tab.id] = request.credential;
+    }
+    sendResponse({ status: 'ok' });
+    return false;
+  }
+
   if (request.action === 'set_pending_credential') {
     pendingCredential = request.credential;
     sendResponse({ status: 'ok' });
@@ -121,4 +130,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendResponse({ status: 'ok' });
     return false;
   }
+});
+
+// Listen for tab navigation to promote draft credentials to pending
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'loading') {
+    const draft = draftCredentials[tabId];
+    if (draft) {
+      pendingCredential = draft;
+      delete draftCredentials[tabId];
+    }
+  }
+});
+
+// Clean up draft credentials when tab is closed
+chrome.tabs.onRemoved.addListener((tabId) => {
+  delete draftCredentials[tabId];
 });

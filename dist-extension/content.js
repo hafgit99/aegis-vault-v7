@@ -486,6 +486,25 @@
       banner.classList.add("show");
     }, 200);
   }
+  function updateDraftCredential(inputEl) {
+    const form = inputEl.form || inputEl.closest("form") || inputEl.closest("div");
+    if (!form) return;
+    const passwordInput = form.querySelector('input[type="password"]');
+    if (!passwordInput || !passwordInput.value) return;
+    const usernameInput = form.querySelector('input[type="text"], input[type="email"], input[name="username"], input[name="login"]');
+    const username = usernameInput ? usernameInput.value.trim() : "";
+    const password = passwordInput.value;
+    if (password.length < 4) return;
+    chrome.runtime.sendMessage({
+      action: "update_draft_credential",
+      credential: {
+        title: document.title || window.location.hostname,
+        username,
+        password,
+        url: window.location.href
+      }
+    });
+  }
   function handleFormSubmit(form) {
     const passwordInput = form.querySelector('input[type="password"]');
     if (!passwordInput || !passwordInput.value) return;
@@ -503,6 +522,18 @@
       }
     });
   }
+  document.addEventListener("blur", (e) => {
+    const target = e.target;
+    if (target && target.tagName === "INPUT" && (target.type === "password" || target.type === "text" || target.type === "email")) {
+      updateDraftCredential(target);
+    }
+  }, true);
+  document.addEventListener("change", (e) => {
+    const target = e.target;
+    if (target && target.tagName === "INPUT" && (target.type === "password" || target.type === "text" || target.type === "email")) {
+      updateDraftCredential(target);
+    }
+  }, true);
   document.addEventListener("submit", (e) => {
     handleFormSubmit(e.target);
   }, true);

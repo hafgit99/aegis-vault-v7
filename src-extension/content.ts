@@ -491,6 +491,31 @@ function showSavePromptBanner(cred: any) {
   }, 200);
 }
 
+// Update draft credential in background script as user types/blurs
+function updateDraftCredential(inputEl: HTMLInputElement) {
+  const form = inputEl.form || inputEl.closest('form') || inputEl.closest('div');
+  if (!form) return;
+
+  const passwordInput = form.querySelector('input[type="password"]') as HTMLInputElement;
+  if (!passwordInput || !passwordInput.value) return;
+
+  const usernameInput = form.querySelector('input[type="text"], input[type="email"], input[name="username"], input[name="login"]') as HTMLInputElement;
+  const username = usernameInput ? usernameInput.value.trim() : '';
+  const password = passwordInput.value;
+
+  if (password.length < 4) return;
+
+  chrome.runtime.sendMessage({
+    action: 'update_draft_credential',
+    credential: {
+      title: document.title || window.location.hostname,
+      username: username,
+      password: password,
+      url: window.location.href
+    }
+  });
+}
+
 // Intercept form submissions
 function handleFormSubmit(form: HTMLElement) {
   const passwordInput = form.querySelector('input[type="password"]') as HTMLInputElement;
@@ -513,7 +538,21 @@ function handleFormSubmit(form: HTMLElement) {
   });
 }
 
-// Setup listeners for submission
+// Setup listeners for submission and real-time typing
+document.addEventListener('blur', (e) => {
+  const target = e.target as HTMLInputElement;
+  if (target && target.tagName === 'INPUT' && (target.type === 'password' || target.type === 'text' || target.type === 'email')) {
+    updateDraftCredential(target);
+  }
+}, true);
+
+document.addEventListener('change', (e) => {
+  const target = e.target as HTMLInputElement;
+  if (target && target.tagName === 'INPUT' && (target.type === 'password' || target.type === 'text' || target.type === 'email')) {
+    updateDraftCredential(target);
+  }
+}, true);
+
 document.addEventListener('submit', (e) => {
   handleFormSubmit(e.target as HTMLFormElement);
 }, true);
