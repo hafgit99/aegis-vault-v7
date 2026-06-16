@@ -24,6 +24,7 @@
     "release:macos": "node scripts/local-release.cjs",
     "release:macos:universal": "node scripts/local-release.cjs --mac-universal",
     "release:checksums": "node scripts/generate-checksums.cjs",
+    "release:collect": "node scripts/collect-release-artifacts.cjs",
     "build:extension": "node scripts/build-extension.js",
     "package:firefox:xpi": "node scripts/firefox-xpi.cjs",
     "sign:firefox:xpi": "node scripts/firefox-xpi.cjs --sign",

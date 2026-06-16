@@ -26,8 +26,9 @@ The command performs:
 2. Unit tests
 3. Browser extension build
 4. Tauri desktop build
-5. SHA-256 checksum generation
-6. Artifact collection into `release-local/<platform>/`
+5. Release artifact renaming
+6. SHA-256 checksum generation for final release filenames
+7. Artifact collection into `release-local/<platform>/`
 
 ## Platform Commands
 
@@ -73,6 +74,19 @@ release-local/linux/
 release-local/macos/
 ```
 
+Final desktop artifacts use this naming convention:
+
+```text
+AegisVault7-<version>-windows-x64-portable.exe
+AegisVault7-<version>-windows-x64.msi
+AegisVault7-<version>-windows-x64-setup.exe
+AegisVault7-<version>-linux-amd64.deb
+AegisVault7-<version>-linux-x64.AppImage
+AegisVault7-<version>-macos-universal.dmg
+AegisVault7-<version>-macos-universal.app
+SHA256SUMS.txt
+```
+
 The script also includes browser extension builds:
 
 ```text
@@ -80,13 +94,13 @@ release-local/<platform>/browser-extension/chromium/
 release-local/<platform>/browser-extension/firefox/
 ```
 
-Checksums are generated at:
+Checksums are generated for the final renamed desktop artifacts at:
 
 ```text
-src-tauri/target/SHA256SUMS.txt
+release-local/<platform>/SHA256SUMS.txt
 ```
 
-and copied into the local release folder.
+The legacy checksum script is still available as `npm run release:checksums` for direct inspection of Tauri target outputs.
 
 ## Before Publishing
 
