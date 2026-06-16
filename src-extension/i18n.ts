@@ -2,6 +2,7 @@ export const extensionTranslations = {
   tr: {
     'locked.title': 'Aegis Vault Kilitli',
     'locked.description': 'Kasanızın kilidini açmak için lütfen masaüstü uygulamasını kullanın.',
+    'btn.openApp': 'Masaüstü Uygulamasını Aç',
     'search.placeholder': 'Kasa içinde ara...',
     'copied.feedback': 'Kopyalandı!',
     'no.matching': 'Eşleşen kayıt bulunamadı.',
@@ -15,6 +16,7 @@ export const extensionTranslations = {
   en: {
     'locked.title': 'Aegis Vault Locked',
     'locked.description': 'Please use the desktop application to unlock your vault.',
+    'btn.openApp': 'Open Desktop App',
     'search.placeholder': 'Search vault...',
     'copied.feedback': 'Copied!',
     'no.matching': 'No matching records found.',
@@ -28,6 +30,7 @@ export const extensionTranslations = {
   zh: {
     'locked.title': 'Aegis Vault 已锁定',
     'locked.description': '请使用桌面应用解锁您的保险库。',
+    'btn.openApp': '打开桌面客户端',
     'search.placeholder': '在保管库中搜索...',
     'copied.feedback': '已复制！',
     'no.matching': '未找到匹配的记录。',

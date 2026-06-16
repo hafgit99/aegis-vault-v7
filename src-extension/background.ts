@@ -56,6 +56,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  if (request.action === 'focus_window') {
+    chrome.runtime.sendNativeMessage(
+      HOST_NAME,
+      { action: 'focus_window' } as NativeRequest,
+      (response) => {
+        if (chrome.runtime.lastError) {
+          sendResponse({ error: chrome.runtime.lastError.message });
+        } else {
+          sendResponse(response);
+        }
+      }
+    );
+    return true;
+  }
+
   if (request.action === 'autofill_page') {
     // Forward autofill request to the active tab's content script
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {

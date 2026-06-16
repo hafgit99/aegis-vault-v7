@@ -4,6 +4,7 @@
     tr: {
       "locked.title": "Aegis Vault Kilitli",
       "locked.description": "Kasan\u0131z\u0131n kilidini a\xE7mak i\xE7in l\xFCtfen masa\xFCst\xFC uygulamas\u0131n\u0131 kullan\u0131n.",
+      "btn.openApp": "Masa\xFCst\xFC Uygulamas\u0131n\u0131 A\xE7",
       "search.placeholder": "Kasa i\xE7inde ara...",
       "copied.feedback": "Kopyaland\u0131!",
       "no.matching": "E\u015Fle\u015Fen kay\u0131t bulunamad\u0131.",
@@ -17,6 +18,7 @@
     en: {
       "locked.title": "Aegis Vault Locked",
       "locked.description": "Please use the desktop application to unlock your vault.",
+      "btn.openApp": "Open Desktop App",
       "search.placeholder": "Search vault...",
       "copied.feedback": "Copied!",
       "no.matching": "No matching records found.",
@@ -30,6 +32,7 @@
     zh: {
       "locked.title": "Aegis Vault \u5DF2\u9501\u5B9A",
       "locked.description": "\u8BF7\u4F7F\u7528\u684C\u9762\u5E94\u7528\u89E3\u9501\u60A8\u7684\u4FDD\u9669\u5E93\u3002",
+      "btn.openApp": "\u6253\u5F00\u684C\u9762\u5BA2\u6237\u7AEF",
       "search.placeholder": "\u5728\u4FDD\u7BA1\u5E93\u4E2D\u641C\u7D22...",
       "copied.feedback": "\u5DF2\u590D\u5236\uFF01",
       "no.matching": "\u672A\u627E\u5230\u5339\u914D\u7684\u8BB0\u5F55\u3002",
@@ -71,6 +74,7 @@
   var langSelect = document.getElementById("langSelect");
   var themeToggle = document.getElementById("themeToggle");
   var toast = document.getElementById("toast");
+  var focusAppBtn = document.getElementById("focusAppBtn");
   var lockedTitle = document.getElementById("lockedTitle");
   var lockedDesc = document.getElementById("lockedDesc");
   langSelect.value = activeLanguage;
@@ -79,6 +83,9 @@
     savePreferredLanguage(activeLanguage);
     applyTranslations();
     refreshUI();
+  });
+  focusAppBtn.addEventListener("click", () => {
+    chrome.runtime.sendMessage({ action: "focus_window" });
   });
   var currentTheme = localStorage.getItem("aegis-extension-theme") || "dark";
   document.body.className = currentTheme;
@@ -99,6 +106,7 @@
   function applyTranslations() {
     lockedTitle.textContent = translate("locked.title", activeLanguage);
     lockedDesc.textContent = translate("locked.description", activeLanguage);
+    focusAppBtn.textContent = translate("btn.openApp", activeLanguage);
     searchInput.placeholder = translate("search.placeholder", activeLanguage);
     phishingText.textContent = translate("phishing.warning", activeLanguage);
   }

@@ -46,6 +46,20 @@
       );
       return true;
     }
+    if (request.action === "focus_window") {
+      chrome.runtime.sendNativeMessage(
+        HOST_NAME,
+        { action: "focus_window" },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            sendResponse({ error: chrome.runtime.lastError.message });
+          } else {
+            sendResponse(response);
+          }
+        }
+      );
+      return true;
+    }
     if (request.action === "autofill_page") {
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         const activeTab = tabs[0];

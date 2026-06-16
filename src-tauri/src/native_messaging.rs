@@ -77,6 +77,7 @@ pub fn generate_token() -> String {
 }
 
 pub fn start_tcp_server(
+  app_handle: tauri::AppHandle,
   pairing_token: String,
   credentials: Arc<Mutex<Option<Vec<ExtensionCredential>>>>,
 ) {
@@ -96,8 +97,9 @@ pub fn start_tcp_server(
         Ok(mut stream) => {
           let credentials_clone = credentials.clone();
           let token_clone = pairing_token.clone();
+          let app_clone = app_handle.clone();
           thread::spawn(move || {
-            if let Err(e) = handle_client(&mut stream, &token_clone, credentials_clone) {
+            if let Err(e) = handle_client(app_clone, &mut stream, &token_clone, credentials_clone) {
               log::debug!("TCP connection error: {}", e);
             }
           });
@@ -111,10 +113,13 @@ pub fn start_tcp_server(
 }
 
 fn handle_client(
+  app_handle: tauri::AppHandle,
   stream: &mut TcpStream,
   pairing_token: &str,
   credentials: Arc<Mutex<Option<Vec<ExtensionCredential>>>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+  use tauri::Manager;
+
   // 1. Handshake okuma (4-byte uzunluk + token verisi)
   let mut len_buf = [0u8; 4];
   stream.read_exact(&mut len_buf)?;
@@ -158,6 +163,16 @@ fn handle_client(
       "is_locked" => {
         let locked = credentials.lock().unwrap().is_none();
         serde_json::json!({ "locked": locked })
+      }
+      "focus_window" => {
+        if let Some(window) = app_handle.get_webview_window("main") {
+          let _ = window.show();
+          let _ = window.unminimize();
+          let _ = window.set_focus();
+          serde_json::json!({ "status": "ok" })
+        } else {
+          serde_json::json!({ "error": "window not found" })
+        }
       }
       "get_credentials" => {
         let url = req["url"].as_str().unwrap_or("").to_lowercase();

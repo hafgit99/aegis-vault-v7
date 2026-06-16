@@ -23,6 +23,7 @@ const phishingText = document.getElementById('phishingText') as HTMLSpanElement;
 const langSelect = document.getElementById('langSelect') as HTMLSelectElement;
 const themeToggle = document.getElementById('themeToggle') as HTMLButtonElement;
 const toast = document.getElementById('toast') as HTMLDivElement;
+const focusAppBtn = document.getElementById('focusAppBtn') as HTMLButtonElement;
 
 // Text Elements for translation
 const lockedTitle = document.getElementById('lockedTitle') as HTMLHeadingElement;
@@ -35,6 +36,11 @@ langSelect.addEventListener('change', (e) => {
   savePreferredLanguage(activeLanguage);
   applyTranslations();
   refreshUI();
+});
+
+// Bind click handler for focusAppBtn
+focusAppBtn.addEventListener('click', () => {
+  chrome.runtime.sendMessage({ action: 'focus_window' });
 });
 
 // Initialize theme
@@ -62,6 +68,7 @@ function showToast(messageKey: 'copied.feedback') {
 function applyTranslations() {
   lockedTitle.textContent = translate('locked.title', activeLanguage);
   lockedDesc.textContent = translate('locked.description', activeLanguage);
+  focusAppBtn.textContent = translate('btn.openApp', activeLanguage);
   searchInput.placeholder = translate('search.placeholder', activeLanguage);
   phishingText.textContent = translate('phishing.warning', activeLanguage);
 }
