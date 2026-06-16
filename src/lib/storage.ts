@@ -124,6 +124,9 @@ export function forgetRememberedAccountSecretKey(): void {
 }
 
 function resolveVaultCredential(password: string, secretKey?: string | null): string {
+  if (password.startsWith('aegis-vault-v7:')) {
+    return password;
+  }
   const profile = readSecretProfile();
   if (!profile) return password;
 
@@ -141,7 +144,14 @@ export async function verifyMasterPassword(password: string, secretKey?: string 
   const credential = resolveVaultCredential(password, secretKey);
   const isCorrect = await sqliteOPFSInstance.verifyPassword(credential);
   if (isCorrect) {
-    openVaultSession(credential, password);
+    let rawMasterPassword = password;
+    if (password.startsWith('aegis-vault-v7:')) {
+      const newlineIndex = password.indexOf('\n');
+      if (newlineIndex !== -1) {
+        rawMasterPassword = password.substring('aegis-vault-v7:'.length, newlineIndex);
+      }
+    }
+    openVaultSession(credential, rawMasterPassword);
     try {
       await migrateLegacyAttachmentsToAesGcm();
     } catch (err) {
