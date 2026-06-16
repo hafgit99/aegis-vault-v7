@@ -12,6 +12,7 @@ src-tauri/target/
 src-tauri/gen/
 target/
 release-local/
+.tmp/
 
 # Tooling caches
 .vite/
