@@ -177,45 +177,51 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
     setError(null);
     setBiometricError(null);
 
-    if (!isSetup) {
-      if (password.length < MIN_MASTER_PASSWORD_LENGTH) {
-        setError(t('lock.error.minimumLength'));
-        return;
-      }
-      if (password !== confirmPassword) {
-        setError(t('lock.error.confirmationMismatch'));
-        return;
-      }
-      if (!isAccountSecretKeyFormatValid(secretKey)) {
-        setError(t('lock.error.secretKeyInvalid'));
-        return;
-      }
-      await setupMasterPasswordWithSecretKey(password, secretKey, rememberSecretKey);
-      clearLockoutState();
-      onUnlock();
-    } else {
-      const remainingMs = getLockoutRemainingMs();
-      if (remainingMs > 0) {
-        setLockoutRemainingMs(remainingMs);
-        setError(getRateLimitMessage(Math.ceil(remainingMs / 1000)));
-        return;
-      }
-
-      const submittedSecretKey = requiresSecretKey ? secretKey : null;
-      if (requiresSecretKey && !rememberedSecretKey && !isAccountSecretKeyFormatValid(submittedSecretKey || '')) {
-        setError(t('lock.error.secretKeyRequired'));
-        return;
-      }
-      if (await verifyMasterPassword(password, submittedSecretKey)) {
+    try {
+      if (!isSetup) {
+        if (password.length < MIN_MASTER_PASSWORD_LENGTH) {
+          setError(t('lock.error.minimumLength'));
+          return;
+        }
+        if (password !== confirmPassword) {
+          setError(t('lock.error.confirmationMismatch'));
+          return;
+        }
+        if (!isAccountSecretKeyFormatValid(secretKey)) {
+          setError(t('lock.error.secretKeyInvalid'));
+          return;
+        }
+        await setupMasterPasswordWithSecretKey(password, secretKey, rememberSecretKey);
         clearLockoutState();
-        setLockoutRemainingMs(0);
         onUnlock();
       } else {
-        const lockout = recordFailedUnlockAttempt();
-        const remainingSeconds = Math.ceil((lockout.lockedUntil - Date.now()) / 1000);
-        setLockoutRemainingMs(Math.max(0, lockout.lockedUntil - Date.now()));
-        setError(`${t('lock.error.invalidPassword')} ${getRateLimitMessage(remainingSeconds)}`);
+        const remainingMs = getLockoutRemainingMs();
+        if (remainingMs > 0) {
+          setLockoutRemainingMs(remainingMs);
+          setError(getRateLimitMessage(Math.ceil(remainingMs / 1000)));
+          return;
+        }
+
+        const submittedSecretKey = requiresSecretKey ? secretKey : null;
+        if (requiresSecretKey && !rememberedSecretKey && !isAccountSecretKeyFormatValid(submittedSecretKey || '')) {
+          setError(t('lock.error.secretKeyRequired'));
+          return;
+        }
+        if (await verifyMasterPassword(password, submittedSecretKey)) {
+          clearLockoutState();
+          setLockoutRemainingMs(0);
+          onUnlock();
+        } else {
+          const lockout = recordFailedUnlockAttempt();
+          const remainingSeconds = Math.ceil((lockout.lockedUntil - Date.now()) / 1000);
+          setLockoutRemainingMs(Math.max(0, lockout.lockedUntil - Date.now()));
+          setError(`${t('lock.error.invalidPassword')} ${getRateLimitMessage(remainingSeconds)}`);
+        }
       }
+    } catch (err) {
+      console.error('[AegisVault] Unlock/setup error:', err);
+      const message = err instanceof Error ? err.message : String(err);
+      setError(`${t('lock.error.cryptoFailed') || 'Vault initialization failed.'} (${message})`);
     }
   };
 
