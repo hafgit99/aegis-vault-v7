@@ -362,14 +362,14 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md overflow-y-auto select-none">
-      <div className="w-full max-w-2xl bg-surface-container border border-outline-variant/30 rounded-2xl overflow-hidden custom-shadow my-8 relative">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center safe-modal bg-black/75 backdrop-blur-md overflow-hidden select-none">
+      <div className="w-full max-w-2xl max-h-[calc(100dvh-56px)] sm:max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-24px)] bg-surface-container border border-outline-variant/30 rounded-2xl overflow-hidden custom-shadow relative flex flex-col">
         
         {/* Header styling streak */}
         <div className="absolute top-0 left-0 w-full h-1 bg-brand-primary" />
 
         {/* Form Modal Header */}
-        <div className="flex justify-between items-center px-6 py-5 border-b border-outline-variant/10 bg-[#0c0d0c]/60">
+        <div className="flex justify-between items-center px-4 sm:px-6 py-3 sm:py-5 border-b border-outline-variant/10 bg-[#0c0d0c]/95 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center text-brand-primary">
               <Layers className="w-4.5 h-4.5" />
@@ -378,7 +378,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
               <h3 className="font-display font-bold text-base text-on-surface">
                 {editingItem ? t('vaultForm.title.edit') : t('vaultForm.title.create')}
               </h3>
-              <p className="text-[10px] text-on-surface-variant leading-relaxed">{t('vaultForm.subtitle')}</p>
+              <p className="hidden sm:block text-[10px] text-on-surface-variant leading-relaxed">{t('vaultForm.subtitle')}</p>
             </div>
           </div>
           <button
@@ -392,7 +392,8 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
         </div>
 
         {/* Tab Selection Row for 5 Distinct Categories */}
-        <div className="px-6 py-3 border-b border-outline-variant/5 bg-[#090a09]/30 grid grid-cols-5 gap-1.5 sm:gap-2">
+        <div className="px-3 sm:px-6 py-2 sm:py-3 border-b border-outline-variant/5 bg-[#090a09]/95 shrink-0 overflow-x-auto scrollbar-hide">
+          <div className="grid grid-cols-5 gap-1.5 sm:gap-2 min-w-[430px] sm:min-w-0">
           
           <button
             type="button"
@@ -460,19 +461,20 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
           </button>
 
         </div>
+        </div>
 
         {/* Global Error Banner */}
         {errorMessage && (
-          <div className="mx-6 mt-4 p-3.5 bg-brand-error/10 border border-brand-error/20 rounded-xl flex items-start gap-3 text-brand-error text-xs">
+          <div className="mx-4 sm:mx-6 mt-3 sm:mt-4 p-3.5 bg-brand-error/10 border border-brand-error/20 rounded-xl flex items-start gap-3 text-brand-error text-xs shrink-0">
             <AlertTriangle className="w-4.5 h-4.5 shrink-0 text-red-400 mt-0.5" />
             <span>{errorMessage}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto scrollbar-hide p-4 sm:p-6 space-y-4 sm:space-y-6">
 
           {/* COMMON GENERAL TITLE (REQUIRED FOR ALL TYPES) */}
-          <div className="bg-[#121412]/50 p-4 rounded-xl border border-outline-variant/10 space-y-4">
+          <div className="bg-[#121412]/50 p-3 sm:p-4 rounded-xl border border-outline-variant/10 space-y-4">
             <h4 className="text-[10px] font-bold text-brand-primary tracking-widest uppercase flex items-center gap-1.5">
               <Sparkle className="w-3.5 h-3.5 fill-current" />
               <span>{t('vaultForm.general.title')}</span>
@@ -890,7 +892,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
           </div>
 
           {/* 250MB EMBEDDED MILITARY-GRADE LOCAL FILE ENCRYPTION CONTAINER */}
-          <div className="bg-[#101210]/60 p-5 rounded-2xl border border-outline-variant/15 space-y-4 text-left">
+          <div className="bg-[#101210]/60 p-4 sm:p-5 rounded-2xl border border-outline-variant/15 space-y-4 text-left">
             <div className="flex items-center justify-between border-b border-outline-variant/5 pb-2">
               <h4 className="text-[10px] font-bold text-brand-primary tracking-widest uppercase flex items-center gap-2">
                 <UploadCloud className="w-4.5 h-4.5 text-brand-primary" />
@@ -986,7 +988,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                       onDragOver={handleDragOver}
                       onDrop={handleDrop}
                       onClick={() => fileInputRef.current?.click()}
-                      className="border-2 border-dashed border-outline-variant/20 hover:border-brand-primary/40 bg-[#0d0e0d] hover:bg-[#121412] rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 group"
+                    className="border-2 border-dashed border-outline-variant/20 hover:border-brand-primary/40 bg-[#0d0e0d] hover:bg-[#121412] rounded-2xl p-4 sm:p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 group"
                     >
                       <input 
                         type="file"
@@ -1012,7 +1014,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
           </div>
 
           {/* Footer Action buttons row */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-outline-variant/10 bg-[#0c0d0c]/30 p-6 -mx-6 -mb-6">
+          <div className="sticky bottom-0 z-10 flex justify-end gap-3 pt-3 sm:pt-4 border-t border-outline-variant/10 bg-[#0c0d0c]/95 p-4 sm:p-6 -mx-4 sm:-mx-6 -mb-4 sm:-mb-6 safe-bottom">
             <button
               type="button"
               onClick={onClose}

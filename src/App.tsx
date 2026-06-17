@@ -247,7 +247,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen w-full bg-[#121412] text-[#e2e3df] overflow-hidden font-sans">
+    <div className="safe-screen flex w-full bg-[#121412] text-[#e2e3df] overflow-hidden font-sans">
       <MobileSidebarBackdrop isOpen={isSidebarOpen} onClose={handleCloseSidebar} />
 
       <SidebarNavigation
@@ -259,7 +259,7 @@ export default function App() {
       />
 
       {/* Primary content dashboard area */}
-      <main className="lg:ml-[280px] ml-0 flex-1 flex flex-col h-full bg-brand-bg">
+      <main className="lg:ml-[280px] ml-0 flex-1 flex flex-col min-h-0 bg-brand-bg">
         <TopBar
           activeTab={activeTab}
           searchQuery={searchQuery}

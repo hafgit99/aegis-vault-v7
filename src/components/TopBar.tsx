@@ -45,8 +45,8 @@ export default function TopBar({
   };
 
   return (
-    <header className="h-[60px] border-b border-outline-variant/15 bg-surface-lowest/85 flex justify-between items-center px-4 lg:px-6 z-30">
-      <div className="flex items-center gap-3 w-1/2 lg:w-1/3">
+    <header className="min-h-[60px] shrink-0 border-b border-outline-variant/15 bg-surface-lowest/85 flex justify-between items-center px-3 sm:px-4 lg:px-6 py-2 z-30">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 lg:flex-none lg:w-1/3">
         <button
           data-testid="topbar-menu-button"
           onClick={onOpenSidebar}
@@ -56,7 +56,7 @@ export default function TopBar({
           <Menu className="w-5 h-5" />
         </button>
         {activeTab === 'vault' && (
-          <div className="relative w-full max-w-md">
+          <div className="relative w-full max-w-md min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px] w-4 h-4" />
             <input
               data-testid="vault-search-input"
@@ -70,8 +70,10 @@ export default function TopBar({
         )}
       </div>
 
-      <div className="flex items-center gap-3 lg:gap-4">
-        <LocalStorageBadge />
+      <div className="flex items-center gap-2 lg:gap-4 shrink-0 pl-2">
+        <div className="hidden sm:block">
+          <LocalStorageBadge />
+        </div>
 
         <div className="flex items-center gap-2 text-on-surface-variant">
           <button

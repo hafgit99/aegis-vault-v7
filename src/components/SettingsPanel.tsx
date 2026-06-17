@@ -678,28 +678,28 @@ export default function SettingsPanel({
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-10" id="settings-panel-container">
+    <div className="space-y-4 sm:space-y-6 max-w-4xl mx-auto pb-6 sm:pb-10" id="settings-panel-container">
       {/* Title block */}
-      <div className="flex items-center gap-3 mb-2" id="settings-title-section">
-        <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center border border-amber-500/20">
+      <div className="flex items-center gap-3 mb-1 sm:mb-2" id="settings-title-section">
+        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-orange-500/10 flex items-center justify-center border border-amber-500/20">
           <Settings className="w-5 h-5 text-amber-400" />
         </div>
         <div>
           <h2 className="text-xl font-bold font-display text-on-surface">{t('settings.title')}</h2>
-          <p className="text-xs text-on-surface-variant">{t('settings.subtitle')}</p>
+          <p className="hidden sm:block text-xs text-on-surface-variant">{t('settings.subtitle')}</p>
         </div>
       </div>
 
       <section
         data-testid="language-settings-card"
-        className="glass-panel p-6 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-6 items-center border border-outline-variant/10"
+        className="glass-panel p-4 sm:p-6 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 items-center border border-outline-variant/10"
       >
         <div className="md:col-span-2 space-y-1.5">
           <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2">
             <Settings className="w-4 h-4 text-brand-primary" />
             <span>{t('settings.language.title')}</span>
           </h3>
-          <p className="text-xs text-on-surface-variant leading-relaxed">
+          <p className="hidden sm:block text-xs text-on-surface-variant leading-relaxed">
             {t('settings.language.description')}
           </p>
         </div>
@@ -723,9 +723,9 @@ export default function SettingsPanel({
         </label>
       </section>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6" id="settings-top-row">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6" id="settings-top-row">
         {/* Statistics & Info */}
-        <div className="glass-panel p-6 rounded-2xl md:col-span-1 space-y-4" id="stats-card">
+        <div className="glass-panel p-4 sm:p-6 rounded-2xl md:col-span-1 space-y-4" id="stats-card">
           <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2 border-b border-outline-variant/10 pb-2">
             <Database className="w-4 h-4 text-brand-primary" />
             <span>{t('settings.stats.title')}</span>
@@ -760,13 +760,13 @@ export default function SettingsPanel({
         </div>
 
         {/* Change Master Password Card */}
-        <div className="glass-panel p-6 rounded-2xl md:col-span-2 space-y-4" id="change-pass-card">
+        <div className="glass-panel p-4 sm:p-6 rounded-2xl md:col-span-2 space-y-4" id="change-pass-card">
           <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2 border-b border-outline-variant/10 pb-2">
             <Key className="w-4 h-4 text-brand-secondary" />
             <span>{t('settings.password.title')}</span>
           </h3>
 
-          <div className="p-3 bg-brand-primary/10 border border-brand-primary/20 rounded-xl text-xs text-on-surface-variant leading-relaxed flex items-start gap-2">
+          <div className="hidden sm:flex p-3 bg-brand-primary/10 border border-brand-primary/20 rounded-xl text-xs text-on-surface-variant leading-relaxed items-start gap-2">
             <ShieldCheck className="w-4 h-4 text-brand-primary shrink-0 mt-0.5" />
             <span>{t('settings.password.rotationNotice')}</span>
           </div>
@@ -839,18 +839,18 @@ export default function SettingsPanel({
       </div>
 
       {/* Dynamic Auto-Lock Interval Card */}
-      <div className="glass-panel p-6 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-6 items-center" id="auto-lock-settings-card">
+      <div className="glass-panel p-4 sm:p-6 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 items-center" id="auto-lock-settings-card">
         <div className="md:col-span-1 space-y-1.5">
           <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2">
             <Clock className="w-4 h-4 text-amber-400" />
             <span>{t('settings.autoLock.title')}</span>
           </h3>
-          <p className="text-xs text-on-surface-variant">
+          <p className="hidden sm:block text-xs text-on-surface-variant">
             {t('settings.autoLock.description')}
           </p>
         </div>
         
-        <div className="md:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <div className="md:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
           {lockOptions.map((opt) => {
             const isSelected = autoLockDuration === opt.value;
             return (
@@ -872,19 +872,19 @@ export default function SettingsPanel({
       </div>
 
       {/* Biometric Lock Settings Card */}
-      <div className="glass-panel p-6 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-6 items-center border border-outline-variant/10" id="biometric-settings-card">
+      <div className="glass-panel p-4 sm:p-6 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 items-center border border-outline-variant/10" id="biometric-settings-card">
         <div className="md:col-span-1 space-y-1.5">
           <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2">
             <Fingerprint className="w-5 h-5 text-brand-primary animate-pulse" />
             <span>{t('settings.biometric.title')}</span>
           </h3>
-          <p className="text-xs text-on-surface-variant leading-relaxed">
+          <p className="hidden sm:block text-xs text-on-surface-variant leading-relaxed">
             {t('settings.biometric.descriptionPrefix')} <b>PBKDF2-SHA256</b> + <b>AES-GCM</b> {t('settings.biometric.descriptionSuffix')}
           </p>
         </div>
         
         <div className="md:col-span-2 space-y-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between bg-[#141614] p-4 rounded-xl border border-outline-variant/10">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 justify-between bg-[#141614] p-3 sm:p-4 rounded-xl border border-outline-variant/10">
             <div>
               <span className="text-xs font-bold text-on-surface block uppercase">{t('settings.biometric.statusLabel')}: {biometricEnabled ? t('settings.biometric.statusActive') : t('settings.biometric.statusPassive')}</span>
               <p className="text-[11px] text-on-surface-variant mt-1 leading-relaxed">
@@ -933,15 +933,15 @@ export default function SettingsPanel({
       </div>
 
       {/* Backup, Encryption, and Import Rows */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6" id="backup-restore-rows">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6" id="backup-restore-rows">
         {/* Encrypted Export Card */}
-        <div className="glass-panel p-6 rounded-2xl flex flex-col justify-between space-y-4" id="encrypted-export-card">
+        <div className="glass-panel p-4 sm:p-6 rounded-2xl flex flex-col justify-between space-y-4" id="encrypted-export-card">
           <div className="space-y-3.5">
             <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2 border-b border-outline-variant/10 pb-2">
               <Download className="w-4 h-4 text-brand-tertiary" />
               <span>{t('settings.export.title')}</span>
             </h3>
-            <p className="text-xs text-on-surface-variant leading-relaxed">
+            <p className="hidden sm:block text-xs text-on-surface-variant leading-relaxed">
               {t('settings.export.descriptionPrefix')} <b className="text-brand-tertiary">.aegis</b> {t('settings.export.descriptionSuffix')}
             </p>
 
@@ -1013,13 +1013,13 @@ export default function SettingsPanel({
         </div>
 
         {/* Universal Importer and Uploader Card */}
-        <div className="glass-panel p-6 rounded-2xl flex flex-col justify-between space-y-4" id="universal-import-card">
+        <div className="glass-panel p-4 sm:p-6 rounded-2xl flex flex-col justify-between space-y-4" id="universal-import-card">
           <div className="space-y-4">
             <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2 border-b border-outline-variant/10 pb-2">
               <Upload className="w-4 h-4 text-[#2096f3]" />
               <span>{t('settings.import.title')}</span>
             </h3>
-            <p className="text-xs text-on-surface-variant leading-relaxed">
+            <p className="hidden sm:block text-xs text-on-surface-variant leading-relaxed">
               {t('settings.import.descriptionPrefix')} <u className="text-brand-primary">.aegis</u> {t('settings.import.descriptionMiddle')} <b>Bitwarden (JSON/CSV)</b>, <b>LastPass (CSV)</b>, <b>Chrome (CSV)</b> {t('settings.import.providerJoin')} <b>1Password (CSV)</b> {t('settings.import.descriptionSuffix')}
             </p>
 
@@ -1114,7 +1114,7 @@ export default function SettingsPanel({
                   if (isImportActive) return;
                   void triggerImportSelect();
                 }}
-                className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${
+                className={`border-2 border-dashed rounded-xl p-4 sm:p-5 text-center cursor-pointer transition-all ${
                   isDragOver
                     ? 'border-brand-primary bg-brand-primary/10'
                     : 'border-outline-variant/30 bg-[#141614] hover:bg-[#181a18]'
@@ -1160,12 +1160,12 @@ export default function SettingsPanel({
       </div>
 
       {/* Extreme Danger Zone */}
-      <div className="p-6 bg-brand-error/5 border border-brand-error/20 rounded-2xl space-y-4" id="danger-zone-section">
+      <div className="p-4 sm:p-6 bg-brand-error/5 border border-brand-error/20 rounded-2xl space-y-4" id="danger-zone-section">
         <h3 className="font-bold text-sm text-brand-error uppercase tracking-wider flex items-center gap-2 border-b border-brand-error/10 pb-2">
           <Trash2 className="w-4 h-4" />
           <span>{t('settings.danger.title')}</span>
         </h3>
-        <p className="text-xs text-on-surface-variant leading-relaxed">
+        <p className="hidden sm:block text-xs text-on-surface-variant leading-relaxed">
           {t('settings.danger.description')}
         </p>
         <button

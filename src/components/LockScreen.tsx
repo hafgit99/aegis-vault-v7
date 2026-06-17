@@ -252,13 +252,13 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[#070807] flex flex-col justify-between relative overflow-hidden select-none">
+    <div className="safe-screen bg-[#070807] flex flex-col justify-between relative overflow-hidden select-none">
       <div className="absolute inset-0 bg-[linear-gradient(rgba(220,225,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(220,225,255,0.025)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
       <div className="absolute -top-40 -left-40 w-96 h-96 bg-brand-primary/5 blur-[120px] rounded-full pointer-events-none animate-pulse" />
       <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-brand-tertiary/5 blur-[120px] rounded-full pointer-events-none" />
 
       {/* Top Bar with Language Selector */}
-      <header className="absolute top-2 right-4 sm:right-6 z-50">
+      <header className="absolute top-[max(env(safe-area-inset-top),0.5rem)] right-[max(env(safe-area-inset-right),1rem)] sm:right-[max(env(safe-area-inset-right),1.5rem)] z-50">
         <div className="flex items-center gap-2 bg-[#1a1c1a]/60 backdrop-blur-md rounded-lg px-3 py-1.5 border border-outline-variant/10">
           <Languages className="w-4 h-4 text-brand-primary" />
           <select

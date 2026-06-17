@@ -153,19 +153,19 @@ export function MainContentComponent({
       )}
 
       {activeTab === 'audit' && (
-        <div data-testid="audit-workspace" className="flex-1 p-8 overflow-y-auto scrollbar-hide">
+        <div data-testid="audit-workspace" className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto scrollbar-hide safe-bottom">
           <SecurityAudit items={activeItems} onSelectItem={onSelectAuditItem} />
         </div>
       )}
 
       {activeTab === 'generator' && (
-        <div data-testid="generator-workspace" className="flex-1 p-8 overflow-y-auto scrollbar-hide">
+        <div data-testid="generator-workspace" className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto scrollbar-hide safe-bottom">
           <PasswordGenerator onCopyText={onCopyText} copiedField={copiedField} />
         </div>
       )}
 
       {activeTab === 'settings' && (
-        <div data-testid="settings-workspace" className="flex-1 p-8 overflow-y-auto scrollbar-hide">
+        <div data-testid="settings-workspace" className="flex-1 p-3 sm:p-6 lg:p-8 overflow-y-auto scrollbar-hide safe-bottom">
           <SettingsPanel
             onDatabaseChanged={onDatabaseChanged}
             autoLockDuration={autoLockDuration}
@@ -176,7 +176,7 @@ export function MainContentComponent({
       )}
 
       {activeTab === 'donate' && (
-        <div data-testid="donate-workspace" className="flex-1 p-8 overflow-y-auto scrollbar-hide">
+        <div data-testid="donate-workspace" className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto scrollbar-hide safe-bottom">
           <DonationPanel copiedField={copiedField} onCopyText={onCopyText} />
         </div>
       )}

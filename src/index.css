@@ -24,6 +24,30 @@
 }
 
 @layer utilities {
+  .safe-screen {
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding-top: env(safe-area-inset-top);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+  }
+
+  .safe-top {
+    padding-top: max(env(safe-area-inset-top), 0px);
+  }
+
+  .safe-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom), 0px);
+  }
+
+  .safe-modal {
+    padding-top: max(env(safe-area-inset-top), 12px);
+    padding-right: max(env(safe-area-inset-right), 12px);
+    padding-bottom: max(env(safe-area-inset-bottom), 12px);
+    padding-left: max(env(safe-area-inset-left), 12px);
+  }
+
   .glass-panel {
     background: rgba(24, 26, 24, 0.72);
     backdrop-filter: blur(16px);
@@ -110,6 +134,16 @@
   50% { opacity: 0.5; transform: scale(0.95); }
 }
 
-.security-pulse {
-  animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  .security-pulse {
+    animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+@media (max-width: 640px) {
+  .safe-screen {
+    padding-top: max(env(safe-area-inset-top), 24px);
+  }
+
+  .safe-modal {
+    padding-top: max(env(safe-area-inset-top), 24px);
+  }
 }
