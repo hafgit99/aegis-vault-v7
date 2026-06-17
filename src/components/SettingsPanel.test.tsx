@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from '../lib/encryption';
 import { isNativeFileDialogSupported, openDesktopImportFile, saveDesktopExportFile } from '../lib/desktopFiles';
+import { isAndroidAutofillSupported, openAndroidAutofillSettings } from '../lib/androidAutofill';
 import { disableBiometric, isBiometricEnabled, isBiometricSupported, registerBiometric } from '../lib/biometric';
 import { changeMasterPassword, getVaultItems, resetSystem, reseedDemoData, saveVaultItem, saveVaultItems, verifyMasterPassword } from '../lib/storage';
 import { closeVaultSession, openVaultSession } from '../lib/vaultSession';
@@ -58,6 +59,12 @@ vi.mock('../lib/desktopFiles', () => ({
   isNativeFileDialogSupported: vi.fn(() => false),
   openDesktopImportFile: vi.fn(async () => null),
   saveDesktopExportFile: vi.fn(async () => false),
+}));
+
+vi.mock('../lib/androidAutofill', () => ({
+  isAndroidAutofillEnabled: vi.fn(() => false),
+  isAndroidAutofillSupported: vi.fn(() => false),
+  openAndroidAutofillSettings: vi.fn(() => false),
 }));
 
 vi.mock('../lib/biometric', () => ({
@@ -179,6 +186,8 @@ describe('SettingsPanel import/export', () => {
     expect(screen.getByText('Status: PASSIVE 🔴')).toBeTruthy();
     expect(screen.getByText('Biometric unlock is disabled. You can sign in only with your master password.')).toBeTruthy();
     expect(screen.getByText('Enable Biometrics')).toBeTruthy();
+    expect(screen.getByText('Android Autofill')).toBeTruthy();
+    expect(screen.getByText('Open Android Autofill Settings')).toBeTruthy();
     expect(screen.getByText('Encrypted Backup Export')).toBeTruthy();
     expect(screen.getByText(/Convert all vault records/)).toBeTruthy();
     expect(screen.getByText('Use my vault master password as the backup password')).toBeTruthy();
@@ -499,6 +508,32 @@ describe('SettingsPanel account and safety controls', () => {
     fireEvent.click(container.querySelector('#danger-zone-section button') as HTMLButtonElement);
 
     expect(resetSystem).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('SettingsPanel Android Autofill controls', () => {
+  it('shows an unsupported message when Android Autofill bridge is unavailable', async () => {
+    const { container } = renderSettingsWithLanguage('en');
+
+    fireEvent.click(screen.getByText('Open Android Autofill Settings'));
+
+    await waitFor(() => {
+      expect(container.textContent).toContain('Android Autofill is supported only in the Android 8.0+ Tauri app.');
+    });
+    expect(openAndroidAutofillSettings).not.toHaveBeenCalled();
+  });
+
+  it('opens Android Autofill settings through the native bridge', async () => {
+    vi.mocked(isAndroidAutofillSupported).mockReturnValue(true);
+    vi.mocked(openAndroidAutofillSettings).mockReturnValue(true);
+    const { container } = renderSettingsWithLanguage('en');
+
+    fireEvent.click(screen.getByText('Open Android Autofill Settings'));
+
+    await waitFor(() => {
+      expect(openAndroidAutofillSettings).toHaveBeenCalledTimes(1);
+      expect(container.textContent).toContain('Android Autofill settings opened.');
+    });
   });
 });
 

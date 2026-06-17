@@ -4,7 +4,9 @@ import android.app.Activity
 import android.content.Intent
 import android.database.Cursor
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.provider.OpenableColumns
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
@@ -12,6 +14,7 @@ import android.util.Base64
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.view.WindowManager
+import android.view.autofill.AutofillManager
 import androidx.activity.enableEdgeToEdge
 import java.nio.charset.StandardCharsets
 import java.security.KeyStore
@@ -37,6 +40,7 @@ class MainActivity : TauriActivity() {
     webViewRef = webView
     webView.addJavascriptInterface(AndroidFileBridge(), "AegisAndroidFiles")
     webView.addJavascriptInterface(AndroidSecureStorageBridge(), "AegisAndroidSecureStorage")
+    webView.addJavascriptInterface(AndroidAutofillBridge(), "AegisAndroidAutofill")
   }
 
   override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -233,6 +237,37 @@ class MainActivity : TauriActivity() {
         true
       } catch (_: Exception) {
         false
+      }
+    }
+  }
+
+  inner class AndroidAutofillBridge {
+    @JavascriptInterface
+    fun isSupported(): Boolean {
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
+      return getSystemService(AutofillManager::class.java)?.isAutofillSupported == true
+    }
+
+    @JavascriptInterface
+    fun isEnabled(): Boolean {
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
+      return getSystemService(AutofillManager::class.java)?.hasEnabledAutofillServices() == true
+    }
+
+    @JavascriptInterface
+    fun openSettings(): Boolean {
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
+
+      return try {
+        startActivity(Intent(Settings.ACTION_REQUEST_SET_AUTOFILL_SERVICE))
+        true
+      } catch (_: Exception) {
+        try {
+          startActivity(Intent(Settings.ACTION_SETTINGS))
+          true
+        } catch (_: Exception) {
+          false
+        }
       }
     }
   }
