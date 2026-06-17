@@ -11,6 +11,7 @@ import {
   removeSecureStorageItem,
   secureStorageKeys,
   setSecureStorageItem,
+  isSecureStorageAvailable,
 } from './secureStorage';
 import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, generateSafeIv, type WebCryptoAesGcmPayload } from './webcrypto';
 
@@ -384,6 +385,10 @@ async function registerWebAuthnBiometric(masterPassword: string): Promise<void> 
 }
 
 async function registerNativeBiometric(masterPassword: string): Promise<void> {
+  if (!isSecureStorageAvailable()) {
+    throw new BiometricError(biometricErrorCodes.unsupported);
+  }
+
   await authenticateNativeBiometric();
 
   const wrappingSecret = secureRandomBytes(32);
@@ -401,12 +406,11 @@ async function registerNativeBiometric(masterPassword: string): Promise<void> {
     bundle,
   };
 
-  cachedBiometricInfo = biometricInfo;
   if (!saveBiometricToSecureStorage(biometricInfo)) {
-    await saveBiometricToIndexedDB(biometricInfo);
-  } else {
-    await deleteBiometricFromIndexedDB();
+    throw new BiometricError(biometricErrorCodes.unsupported);
   }
+  cachedBiometricInfo = biometricInfo;
+  await deleteBiometricFromIndexedDB();
 }
 
 export async function authenticateBiometric(): Promise<string> {

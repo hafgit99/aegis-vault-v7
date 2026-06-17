@@ -5,6 +5,14 @@
 import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const nativeAuthenticate = vi.hoisted(() => vi.fn(async () => undefined));
+const nativeCheckStatus = vi.hoisted(() => vi.fn(async () => ({ isAvailable: true })));
+
+vi.mock('@tauri-apps/plugin-biometric', () => ({
+  authenticate: nativeAuthenticate,
+  checkStatus: nativeCheckStatus,
+}));
+
 import {
   authenticateBiometric,
   BiometricError,
@@ -94,6 +102,7 @@ function mockWebAuthn({
 }
 
 beforeEach(async () => {
+  vi.clearAllMocks();
   await deleteBiometricDatabase();
   resetBiometricCacheForTesting();
   mockWebAuthn();
@@ -102,6 +111,8 @@ beforeEach(async () => {
 
 afterEach(async () => {
   localStorage.clear();
+  delete window.AegisAndroidSecureStorage;
+  delete window.__TAURI_INTERNALS__;
   await deleteBiometricDatabase();
   resetBiometricCacheForTesting();
   vi.restoreAllMocks();
@@ -253,5 +264,100 @@ describe('biometric master password wrapper', () => {
     await hydrateBiometric();
 
     await expect(authenticateBiometric()).rejects.toThrow();
+  });
+
+  it('requires secure storage for Android native biometric registration', async () => {
+    Object.defineProperty(window, 'PublicKeyCredential', {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(navigator, 'credentials', {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Linux; Android 14) AegisVault',
+    });
+    window.__TAURI_INTERNALS__ = {};
+
+    await expect(registerBiometric('master-pass')).rejects.toMatchObject({
+      code: biometricErrorCodes.unsupported,
+      name: 'BiometricError',
+    });
+
+    expect(nativeAuthenticate).not.toHaveBeenCalled();
+    expect(await getStoredBiometricFromDB()).toBeNull();
+    expect(isBiometricEnabled()).toBe(false);
+  });
+
+  it('stores Android native biometric bundles only through secure storage', async () => {
+    const secureValues = new Map<string, string>();
+    Object.defineProperty(window, 'PublicKeyCredential', {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(navigator, 'credentials', {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Linux; Android 14) AegisVault',
+    });
+    window.__TAURI_INTERNALS__ = {};
+    window.AegisAndroidSecureStorage = {
+      getItem: vi.fn((key) => secureValues.get(key) ?? null),
+      setItem: vi.fn((key, value) => {
+        secureValues.set(key, value);
+        return true;
+      }),
+      removeItem: vi.fn((key) => secureValues.delete(key)),
+    };
+
+    await registerBiometric('master-pass');
+
+    expect(nativeAuthenticate).toHaveBeenCalledTimes(1);
+    expect(window.AegisAndroidSecureStorage.setItem).toHaveBeenCalledWith(
+      'aegis_biometric_info',
+      expect.stringContaining('"version":3'),
+    );
+    expect(await getStoredBiometricFromDB()).toBeNull();
+    expect(JSON.parse(secureValues.get('aegis_biometric_info') ?? '{}')).toMatchObject({
+      version: 3,
+      provider: 'Tauri Native Biometric',
+      wrappingSecret: expect.any(String),
+    });
+    expect(isBiometricEnabled()).toBe(true);
+  });
+
+  it('does not fall back to IndexedDB when Android secure storage rejects native biometric metadata', async () => {
+    Object.defineProperty(window, 'PublicKeyCredential', {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(navigator, 'credentials', {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Linux; Android 14) AegisVault',
+    });
+    window.__TAURI_INTERNALS__ = {};
+    window.AegisAndroidSecureStorage = {
+      getItem: vi.fn(() => null),
+      setItem: vi.fn(() => false),
+      removeItem: vi.fn(() => false),
+    };
+
+    await expect(registerBiometric('master-pass')).rejects.toMatchObject({
+      code: biometricErrorCodes.unsupported,
+      name: 'BiometricError',
+    });
+
+    expect(nativeAuthenticate).toHaveBeenCalledTimes(1);
+    expect(await getStoredBiometricFromDB()).toBeNull();
+    expect(isBiometricEnabled()).toBe(false);
   });
 });

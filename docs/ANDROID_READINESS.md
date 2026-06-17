@@ -14,6 +14,7 @@ This document tracks the Android preparation path for Aegis Vault 7. Android is 
 - Android backup export, plaintext export, encrypted import, and attachment download flows use the system document picker bridge so users choose the destination or source file explicitly.
 - Android document picker requests now fail closed with a safety timeout if the native bridge never calls back, surface native picker errors, and treat user cancellation as an explicit `false`/`null` result.
 - Android remembered Secret Key state and biometric metadata now prefer an Android Keystore AES-GCM secure storage bridge, with browser storage kept as fallback and migration source.
+- Android native biometric registration requires the Android Keystore-backed secure storage bridge and will not fall back to IndexedDB for native wrapping metadata.
 - Android vault database persistence uses the Tauri app-data command path, which resolves to app-private storage on Android. When this native write succeeds, localStorage keeps only a desktop/mobile-managed setup marker instead of the encrypted row payload.
 - Desktop storage uses Tauri app-data persistence plus a local fallback marker.
 - Browser/mobile web storage still relies on IndexedDB/localStorage/OPFS-style APIs.
@@ -94,7 +95,7 @@ Android needs explicit decisions before release:
 
 - Vault database persistence uses the native Tauri app-data command path on Android and should be regression-tested on release candidate devices.
 - Remembered Secret Key is routed through the Android Keystore-backed secure storage bridge when running inside the Android WebView.
-- Biometric metadata is routed through the Android Keystore-backed secure storage bridge when available. The biometric prompt/wrapping design still needs final release review.
+- Biometric metadata is routed through the Android Keystore-backed secure storage bridge when available, and native biometric registration is blocked if that bridge is unavailable. The biometric prompt/wrapping design still needs final release review on target devices.
 - Attachment storage should remain app-private and must survive app restart.
 - Backup export/import now uses Android document picker/storage access APIs and needs broader regression testing.
 - Android document picker cancellation, native errors, and no-callback timeout behavior are covered by repeatable unit tests.
