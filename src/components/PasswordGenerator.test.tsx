@@ -189,7 +189,7 @@ describe('PasswordGenerator', () => {
     expect(container.textContent).toContain('Çok Yüksek');
 
     fireEvent.change(wordSlider!, { target: { value: '10' } });
-    expect(container.textContent).toContain('Askeri Seviye');
+    expect(container.textContent).toContain('Maksimum Güvenlik');
   });
 
   it('forwards diceware capitalization and number toggles', () => {
