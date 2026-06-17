@@ -6,6 +6,12 @@
 import { decryptLegacyAes256Gcm, hmacSha256 } from './legacyCrypto';
 import { secureRandomBytes } from './random';
 import { APP_NAME, APP_SHORT_NAME } from './branding';
+import {
+  getSecureStorageItem,
+  removeSecureStorageItem,
+  secureStorageKeys,
+  setSecureStorageItem,
+} from './secureStorage';
 import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, generateSafeIv, type WebCryptoAesGcmPayload } from './webcrypto';
 
 export const biometricErrorCodes = {
@@ -152,6 +158,18 @@ function loadBiometricFromIndexedDB(): Promise<BiometricInfo | null> {
   });
 }
 
+function loadBiometricFromSecureStorage(): BiometricInfo | null {
+  const raw = getSecureStorageItem(secureStorageKeys.biometricInfo);
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw) as BiometricInfo;
+  } catch {
+    removeSecureStorageItem(secureStorageKeys.biometricInfo);
+    return null;
+  }
+}
+
 function saveBiometricToIndexedDB(info: BiometricInfo): Promise<void> {
   if (typeof indexedDB === 'undefined') {
     return Promise.resolve();
@@ -171,6 +189,10 @@ function saveBiometricToIndexedDB(info: BiometricInfo): Promise<void> {
       };
     });
   });
+}
+
+function saveBiometricToSecureStorage(info: BiometricInfo): boolean {
+  return setSecureStorageItem(secureStorageKeys.biometricInfo, JSON.stringify(info));
 }
 
 function deleteBiometricFromIndexedDB(): Promise<void> {
@@ -200,7 +222,11 @@ let isHydrated = false;
 export async function hydrateBiometric(): Promise<void> {
   if (isHydrated) return;
   try {
-    cachedBiometricInfo = await loadBiometricFromIndexedDB();
+    const secureStorageInfo = loadBiometricFromSecureStorage();
+    cachedBiometricInfo = secureStorageInfo ?? await loadBiometricFromIndexedDB();
+    if (!secureStorageInfo && cachedBiometricInfo && saveBiometricToSecureStorage(cachedBiometricInfo)) {
+      await deleteBiometricFromIndexedDB();
+    }
     isHydrated = true;
   } catch (e) {
     console.error('Failed to load biometric config from IndexedDB', e);
@@ -273,6 +299,7 @@ export function isBiometricEnabled(): boolean {
 
 export function disableBiometric(): void {
   cachedBiometricInfo = null;
+  removeSecureStorageItem(secureStorageKeys.biometricInfo);
   void deleteBiometricFromIndexedDB();
 }
 
@@ -349,7 +376,11 @@ async function registerWebAuthnBiometric(masterPassword: string): Promise<void> 
   };
 
   cachedBiometricInfo = biometricInfo;
-  await saveBiometricToIndexedDB(biometricInfo);
+  if (!saveBiometricToSecureStorage(biometricInfo)) {
+    await saveBiometricToIndexedDB(biometricInfo);
+  } else {
+    await deleteBiometricFromIndexedDB();
+  }
 }
 
 async function registerNativeBiometric(masterPassword: string): Promise<void> {
@@ -371,7 +402,11 @@ async function registerNativeBiometric(masterPassword: string): Promise<void> {
   };
 
   cachedBiometricInfo = biometricInfo;
-  await saveBiometricToIndexedDB(biometricInfo);
+  if (!saveBiometricToSecureStorage(biometricInfo)) {
+    await saveBiometricToIndexedDB(biometricInfo);
+  } else {
+    await deleteBiometricFromIndexedDB();
+  }
 }
 
 export async function authenticateBiometric(): Promise<string> {

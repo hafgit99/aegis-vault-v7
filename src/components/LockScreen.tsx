@@ -276,17 +276,113 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
         </div>
       </header>
 
-      <div className="flex-1 w-full max-w-3xl mx-auto px-4 py-1 sm:py-2 flex items-center justify-center relative z-10">
+      <div className="flex-1 w-full max-w-6xl mx-auto px-4 py-1 sm:py-2 flex items-center justify-center relative z-10">
         <div className="w-full flex items-center justify-center">
-          <div className="w-full flex justify-center">
+          <div className="w-full flex flex-col lg:flex-row items-center lg:items-stretch gap-6 lg:gap-10">
+
+            {/* Left Panel — Branding, Description & Feature Cards (Desktop only) */}
+            <div className="hidden lg:flex flex-col justify-center flex-1 max-w-2xl space-y-8 pr-4">
+              {/* Title & Description */}
+              <div className="space-y-5">
+                <div className="flex items-center gap-4 mb-1">
+                  <div className="w-16 h-16 rounded-2xl bg-brand-primary/5 border border-brand-primary/20 flex items-center justify-center shadow-[0_0_25px_rgba(220,225,255,0.07)] overflow-hidden">
+                    <img src={aegisLogo} alt="Aegis Vault Logo" className="w-14 h-14 object-contain" />
+                  </div>
+                  <span className="font-display text-2xl font-bold text-on-surface tracking-tight">{APP_NAME}</span>
+                </div>
+                <h2 className="font-display text-4xl font-bold text-on-surface leading-snug tracking-tight">
+                  {isSetup ? t('lock.panel.unlockTitle') : t('lock.panel.setupTitle')}
+                </h2>
+                <p className="text-lg text-on-surface-variant/70 leading-relaxed">
+                  {isSetup
+                    ? t('lock.panel.unlockDescription')
+                    : `${APP_NAME} ${t('lock.panel.setupDescriptionSuffix')}`}
+                </p>
+              </div>
+
+              {/* Security Badges */}
+              <div className="flex flex-wrap gap-3">
+                {[
+                  { icon: '🛡️', label: 'AES-256-GCM' },
+                  { icon: '🔑', label: 'Argon2id KDF' },
+                  { icon: '✈️', label: isSetup ? 'Offline-First' : 'Zero-Knowledge' },
+                ].map((badge) => (
+                  <span
+                    key={badge.label}
+                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-brand-primary/5 border border-brand-primary/10 text-sm font-bold text-brand-primary/80 tracking-wide uppercase"
+                  >
+                    <span>{badge.icon}</span>
+                    {badge.label}
+                  </span>
+                ))}
+              </div>
+
+              {/* Feature Cards */}
+              <div className="grid grid-cols-2 gap-5">
+                {([
+                  {
+                    icon: <ShieldAlert className="w-6 h-6 text-brand-primary" />,
+                    titleKey: 'lock.feature.zeroKnowledge.title' as const,
+                    descKey: 'lock.feature.zeroKnowledge.description' as const,
+                  },
+                  {
+                    icon: <KeyRound className="w-6 h-6 text-brand-primary" />,
+                    titleKey: 'lock.feature.crypto.title' as const,
+                    descKey: 'lock.feature.crypto.description' as const,
+                  },
+                  {
+                    icon: <Download className="w-6 h-6 text-brand-primary" />,
+                    titleKey: 'lock.feature.localControl.title' as const,
+                    descKey: 'lock.feature.localControl.description' as const,
+                  },
+                  {
+                    icon: <Trash2 className="w-6 h-6 text-brand-primary" />,
+                    titleKey: 'lock.feature.trash.title' as const,
+                    descKey: 'lock.feature.trash.description' as const,
+                  },
+                ] as const).map((feat) => (
+                  <div
+                    key={feat.titleKey}
+                    className="group rounded-2xl glass-panel p-5 space-y-2.5 transition-all duration-300 hover:border-brand-primary/20 hover:shadow-brand-primary/5"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-xl bg-brand-primary/10 border border-brand-primary/15 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-300">
+                        {feat.icon}
+                      </div>
+                      <span className="text-base font-bold text-on-surface leading-tight">{t(feat.titleKey)}</span>
+                    </div>
+                    <p className="text-sm text-on-surface-variant/60 leading-relaxed line-clamp-3">
+                      {t(feat.descKey)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Footer badges */}
+              <div className="flex items-center gap-5 pt-1">
+                <span className="text-sm text-on-surface-variant/30 font-mono">© 2026 {t('lock.footer.name')}</span>
+                <span className="text-sm text-on-surface-variant/30 font-mono">{t('lock.footer.crypto')}</span>
+              </div>
+            </div>
+
+            {/* Right Panel — Login Form */}
             <div className="w-full max-w-md surface-panel rounded-xl p-5 relative z-10 transition-all duration-300 hover:border-brand-primary/15 hover:shadow-brand-primary/5">
               <div className="flex flex-col items-center text-center mb-4 sm:mb-6">
-                <div className="w-12 h-12 rounded-xl bg-brand-primary/5 border border-brand-primary/20 flex items-center justify-center mb-3 sm:mb-4 shadow-[0_0_15px_rgba(220,225,255,0.05)] overflow-hidden group">
+                <div className="w-12 h-12 rounded-xl bg-brand-primary/5 border border-brand-primary/20 flex items-center justify-center mb-3 sm:mb-4 shadow-[0_0_15px_rgba(220,225,255,0.05)] overflow-hidden group lg:hidden">
                   <img src={aegisLogo} alt="Aegis Vault Logo" className="w-10 h-10 object-contain group-hover:scale-105 transition-transform duration-300" />
                 </div>
-                <h1 className="font-display text-2xl font-bold text-on-surface leading-tight tracking-tight">
+                <h1 className="font-display text-2xl font-bold text-on-surface leading-tight tracking-tight lg:hidden">
                   {isSetup ? t('lock.panel.unlockTitle') : t('lock.panel.setupTitle')}
                 </h1>
+                {/* Desktop form header */}
+                <h1 className="hidden lg:block font-display text-xl font-bold text-on-surface leading-tight tracking-tight">
+                  {isSetup ? t('lock.action.unlock') : t('lock.action.setup')}
+                </h1>
+                <p className="hidden lg:block text-xs text-on-surface-variant/60 mt-1.5 leading-relaxed max-w-xs">
+                  {isSetup
+                    ? t('lock.panel.unlockDescription')
+                    : `${APP_NAME} ${t('lock.panel.setupDescriptionSuffix')}`}
+                </p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">

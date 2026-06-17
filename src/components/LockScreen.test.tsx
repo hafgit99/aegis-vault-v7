@@ -84,8 +84,8 @@ describe('LockScreen', () => {
       </LanguageProvider>,
     );
 
-    expect(screen.getByText('Set Up Your Secure Vault')).toBeTruthy();
-    expect(screen.getByText('Start Secure Vault')).toBeTruthy();
+    expect(screen.getAllByText('Set Up Your Secure Vault').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Start Secure Vault').length).toBeGreaterThanOrEqual(1);
 
     const password = passwordInput();
     const confirmation = confirmationInput();
@@ -179,8 +179,8 @@ describe('LockScreen', () => {
 
     render(<LockScreen onUnlock={onUnlock} />);
 
-    expect(screen.getByText('Kasa Kilitleri Aktif')).toBeTruthy();
-    expect(screen.getByText('Sistem Kilidini Aç')).toBeTruthy();
+    expect(screen.getAllByText('Kasa Kilitleri Aktif').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Sistem Kilidini Aç').length).toBeGreaterThanOrEqual(1);
 
     const password = passwordInput();
     fireEvent.change(password, { target: { value: 'wrong-pass' } });
@@ -344,6 +344,6 @@ describe('LockScreen', () => {
     // Switch to English
     fireEvent.change(select, { target: { value: 'en' } });
     expect(select.value).toBe('en');
-    expect(screen.getByText('Set Up Your Secure Vault')).toBeTruthy();
+    expect(screen.getAllByText('Set Up Your Secure Vault').length).toBeGreaterThanOrEqual(1);
   });
 });

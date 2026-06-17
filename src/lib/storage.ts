@@ -14,6 +14,12 @@ import { sqliteOPFSInstance } from './sqlite_opfs';
 import { logSecurityEvent, securityEventCodes } from './securityEvents';
 import { closeVaultSession, getActiveBackupPassword, getActiveMasterPassword, openVaultSession } from './vaultSession';
 import { disableBiometric, hydrateBiometric } from './biometric';
+import {
+  getSecureStorageItem,
+  removeSecureStorageItem,
+  secureStorageKeys,
+  setSecureStorageItem,
+} from './secureStorage';
 
 const STORAGE_KEYS = {
   IS_SET_UP: 'aegis_is_setup',
@@ -77,6 +83,7 @@ const INITIAL_DEMO_ITEMS: VaultItem[] = [
 export async function initializeStorage(): Promise<void> {
   await sqliteOPFSInstance.hydrate();
   await hydrateBiometric();
+  migrateRememberedSecretKeyToSecureStorage();
 }
 
 /**
@@ -112,15 +119,32 @@ export function isAccountSecretKeyRequired(): boolean {
 }
 
 export function getRememberedAccountSecretKey(): string | null {
-  return localStorage.getItem(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
+  return getSecureStorageItem(secureStorageKeys.rememberedSecretKey)
+    ?? localStorage.getItem(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
 }
 
 export function rememberAccountSecretKey(secretKey: string): void {
-  localStorage.setItem(STORAGE_KEYS.REMEMBERED_SECRET_KEY, normalizeAccountSecretKey(secretKey));
+  const normalizedSecretKey = normalizeAccountSecretKey(secretKey);
+  if (setSecureStorageItem(secureStorageKeys.rememberedSecretKey, normalizedSecretKey)) {
+    localStorage.removeItem(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
+    return;
+  }
+
+  localStorage.setItem(STORAGE_KEYS.REMEMBERED_SECRET_KEY, normalizedSecretKey);
 }
 
 export function forgetRememberedAccountSecretKey(): void {
+  removeSecureStorageItem(secureStorageKeys.rememberedSecretKey);
   localStorage.removeItem(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
+}
+
+function migrateRememberedSecretKeyToSecureStorage(): void {
+  const legacySecretKey = localStorage.getItem(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
+  if (!legacySecretKey) return;
+
+  if (setSecureStorageItem(secureStorageKeys.rememberedSecretKey, legacySecretKey)) {
+    localStorage.removeItem(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
+  }
 }
 
 function resolveVaultCredential(password: string, secretKey?: string | null): string {

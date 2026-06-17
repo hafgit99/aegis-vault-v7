@@ -6,11 +6,19 @@ import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
 import android.util.Base64
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.view.WindowManager
 import androidx.activity.enableEdgeToEdge
+import java.nio.charset.StandardCharsets
+import java.security.KeyStore
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
 import org.json.JSONObject
 
 class MainActivity : TauriActivity() {
@@ -28,6 +36,7 @@ class MainActivity : TauriActivity() {
     super.onWebViewCreate(webView)
     webViewRef = webView
     webView.addJavascriptInterface(AndroidFileBridge(), "AegisAndroidFiles")
+    webView.addJavascriptInterface(AndroidSecureStorageBridge(), "AegisAndroidSecureStorage")
   }
 
   override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -193,6 +202,90 @@ class MainActivity : TauriActivity() {
     }
   }
 
+  inner class AndroidSecureStorageBridge {
+    @JavascriptInterface
+    fun getItem(key: String): String? {
+      return try {
+        val encryptedPayload = securePreferences().getString(preferenceKey(key), null) ?: return null
+        decryptSecureValue(encryptedPayload)
+      } catch (_: Exception) {
+        null
+      }
+    }
+
+    @JavascriptInterface
+    fun setItem(key: String, value: String): Boolean {
+      return try {
+        securePreferences()
+          .edit()
+          .putString(preferenceKey(key), encryptSecureValue(value))
+          .apply()
+        true
+      } catch (_: Exception) {
+        false
+      }
+    }
+
+    @JavascriptInterface
+    fun removeItem(key: String): Boolean {
+      return try {
+        securePreferences().edit().remove(preferenceKey(key)).apply()
+        true
+      } catch (_: Exception) {
+        false
+      }
+    }
+  }
+
+  private fun securePreferences() =
+    getSharedPreferences(SECURE_PREFS_NAME, MODE_PRIVATE)
+
+  private fun preferenceKey(key: String): String =
+    "secure.$key"
+
+  private fun getOrCreateSecureStorageKey(): SecretKey {
+    val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
+    val existingKey = keyStore.getKey(SECURE_STORAGE_KEY_ALIAS, null)
+    if (existingKey is SecretKey) return existingKey
+
+    val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
+    val keySpec = KeyGenParameterSpec.Builder(
+      SECURE_STORAGE_KEY_ALIAS,
+      KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+    )
+      .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+      .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+      .setRandomizedEncryptionRequired(true)
+      .setUserAuthenticationRequired(false)
+      .build()
+
+    keyGenerator.init(keySpec)
+    return keyGenerator.generateKey()
+  }
+
+  private fun encryptSecureValue(value: String): String {
+    val cipher = Cipher.getInstance(SECURE_STORAGE_CIPHER)
+    cipher.init(Cipher.ENCRYPT_MODE, getOrCreateSecureStorageKey())
+    val ciphertext = cipher.doFinal(value.toByteArray(StandardCharsets.UTF_8))
+
+    return JSONObject()
+      .put("version", 1)
+      .put("cipher", "AndroidKeyStore AES-256-GCM")
+      .put("iv", Base64.encodeToString(cipher.iv, Base64.NO_WRAP))
+      .put("ciphertext", Base64.encodeToString(ciphertext, Base64.NO_WRAP))
+      .toString()
+  }
+
+  private fun decryptSecureValue(payload: String): String? {
+    val json = JSONObject(payload)
+    val iv = Base64.decode(json.getString("iv"), Base64.NO_WRAP)
+    val ciphertext = Base64.decode(json.getString("ciphertext"), Base64.NO_WRAP)
+    val cipher = Cipher.getInstance(SECURE_STORAGE_CIPHER)
+    cipher.init(Cipher.DECRYPT_MODE, getOrCreateSecureStorageKey(), GCMParameterSpec(128, iv))
+    val plaintext = cipher.doFinal(ciphertext)
+    return String(plaintext, StandardCharsets.UTF_8)
+  }
+
   private fun launchCreateDocument(requestId: String, defaultFilename: String, mimeType: String) {
     try {
       val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
@@ -213,5 +306,9 @@ class MainActivity : TauriActivity() {
   companion object {
     private const val REQUEST_SAVE_FILE = 7101
     private const val REQUEST_OPEN_FILE = 7102
+    private const val ANDROID_KEYSTORE = "AndroidKeyStore"
+    private const val SECURE_PREFS_NAME = "aegis_secure_storage"
+    private const val SECURE_STORAGE_KEY_ALIAS = "aegis_vault_v7_secure_storage"
+    private const val SECURE_STORAGE_CIPHER = "AES/GCM/NoPadding"
   }
 }

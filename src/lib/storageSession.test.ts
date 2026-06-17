@@ -74,6 +74,7 @@ function sampleItem(overrides: Partial<VaultItem> = {}): VaultItem {
 afterEach(() => {
   vi.useRealTimers();
   closeVaultSession();
+  delete window.AegisAndroidSecureStorage;
   localStorage.clear();
   sessionStorage.clear();
   vi.clearAllMocks();
@@ -104,6 +105,54 @@ describe('vault session storage', () => {
       'aegis-vault-v7:master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
     );
     expect(getActiveBackupPassword()).toBe('master-pass');
+  });
+
+  it('stores remembered secret keys in Android secure storage when the bridge is available', async () => {
+    const secureValues = new Map<string, string>();
+    window.AegisAndroidSecureStorage = {
+      getItem: vi.fn((key) => secureValues.get(key) ?? null),
+      setItem: vi.fn((key, value) => {
+        secureValues.set(key, value);
+        return true;
+      }),
+      removeItem: vi.fn((key) => secureValues.delete(key)),
+    };
+
+    await setupMasterPasswordWithSecretKey(
+      'master-pass',
+      'A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
+      true,
+    );
+
+    expect(window.AegisAndroidSecureStorage.setItem).toHaveBeenCalledWith(
+      'aegis_account_secret_key_remembered',
+      'A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
+    );
+    expect(localStorage.getItem('aegis_account_secret_key_remembered')).toBeNull();
+    expect(getRememberedAccountSecretKey()).toBe('A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567');
+  });
+
+  it('migrates legacy remembered secret keys into Android secure storage during initialization', async () => {
+    const secureValues = new Map<string, string>();
+    window.AegisAndroidSecureStorage = {
+      getItem: vi.fn((key) => secureValues.get(key) ?? null),
+      setItem: vi.fn((key, value) => {
+        secureValues.set(key, value);
+        return true;
+      }),
+      removeItem: vi.fn((key) => secureValues.delete(key)),
+    };
+    localStorage.setItem('aegis_account_secret_key_remembered', 'A3-LEGACY-SECRET');
+    sqliteOPFSInstance.verifyPassword.mockResolvedValue(false);
+
+    await verifyMasterPassword('wrong-pass');
+
+    expect(window.AegisAndroidSecureStorage.setItem).toHaveBeenCalledWith(
+      'aegis_account_secret_key_remembered',
+      'A3-LEGACY-SECRET',
+    );
+    expect(localStorage.getItem('aegis_account_secret_key_remembered')).toBeNull();
+    expect(getRememberedAccountSecretKey()).toBe('A3-LEGACY-SECRET');
   });
 
   it('opens an in-memory session after a successful password verification', async () => {
