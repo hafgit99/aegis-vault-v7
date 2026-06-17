@@ -208,7 +208,8 @@
 - [ ] Add platform storage adapter interfaces.
 - [x] Add mobile biometric adapter plan.
   - [x] Document Android BiometricPrompt/Keystore as the production target.
-  - [ ] Implement Keystore-backed remembered Secret Key and biometric wrapping.
+  - [x] Implement Keystore-backed remembered Secret Key and biometric metadata storage.
+  - [ ] Complete final biometric wrapping review for public Android release.
 - [x] Validate Tauri Android feasibility with a debug APK.
   - [x] Build a clean `aarch64` debug APK locally.
   - [x] Install and launch the debug APK on a physical Android device.
