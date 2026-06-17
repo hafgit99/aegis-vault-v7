@@ -1,0 +1,159 @@
+name: Manual Desktop Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_tests:
+        description: Run typecheck and unit tests before packaging
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      build_linux:
+        description: Build Linux packages
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      build_macos:
+        description: Build macOS packages
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: manual-desktop-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: Linux Release
+    if: ${{ github.event.inputs.build_linux == 'true' }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust builds
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            curl \
+            file \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            libwebkit2gtk-4.1-dev \
+            patchelf \
+            wget
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Typecheck
+        if: ${{ github.event.inputs.run_tests == 'true' }}
+        run: npm run typecheck
+
+      - name: Unit tests
+        if: ${{ github.event.inputs.run_tests == 'true' }}
+        run: npm run test:unit
+
+      - name: Build browser extensions
+        run: npm run build:extension
+
+      - name: Build Linux desktop packages
+        run: npx tauri build
+
+      - name: Collect Linux release artifacts
+        run: npm run release:collect -- --platform linux
+
+      - name: Upload Linux release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: aegis-vault-v7-linux
+          if-no-files-found: error
+          retention-days: 14
+          path: release-local/linux/**
+
+  macos:
+    name: macOS Release
+    if: ${{ github.event.inputs.build_macos == 'true' }}
+    runs-on: macos-14
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin,aarch64-apple-darwin
+
+      - name: Cache Rust builds
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Typecheck
+        if: ${{ github.event.inputs.run_tests == 'true' }}
+        run: npm run typecheck
+
+      - name: Unit tests
+        if: ${{ github.event.inputs.run_tests == 'true' }}
+        run: npm run test:unit
+
+      - name: Build browser extensions
+        run: npm run build:extension
+
+      - name: Build macOS universal desktop packages
+        run: npx tauri build --target universal-apple-darwin
+        env:
+          APPLE_SIGNING_IDENTITY: "-"
+
+      - name: Collect macOS release artifacts
+        run: npm run release:collect -- --platform macos
+
+      - name: Upload macOS release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: aegis-vault-v7-macos
+          if-no-files-found: error
+          retention-days: 14
+          path: release-local/macos/**
