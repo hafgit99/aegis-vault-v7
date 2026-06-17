@@ -20,6 +20,8 @@ const apk = path.join(
 );
 const packageName = 'com.hafgit99.aegisvault7.debug';
 const activityName = 'com.hafgit99.aegisvault7.MainActivity';
+const processWaitTimeoutMs = 15000;
+const processPollIntervalMs = 500;
 
 function run(args, options = {}) {
   const output = execFileSync(adb, args, {
@@ -29,6 +31,18 @@ function run(args, options = {}) {
   });
 
   return typeof output === 'string' ? output.trim() : '';
+}
+
+function sleep(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+function tryRun(args) {
+  try {
+    return run(args);
+  } catch {
+    return '';
+  }
 }
 
 function listReadyDevices() {
@@ -67,12 +81,57 @@ function status() {
     throw new Error(`${packageName} is not installed.`);
   }
 
-  const pid = run(['shell', 'pidof', packageName]);
+  const pid = waitForPid();
   if (!pid) {
-    throw new Error(`${packageName} is installed but not running.`);
+    printRecentCrashLog();
+    throw new Error(`${packageName} is installed but not running after ${processWaitTimeoutMs}ms.`);
   }
 
+  assertAppPrivateDataDir();
   console.log(`${packageName} is running with pid ${pid}.`);
+}
+
+function waitForPid() {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt <= processWaitTimeoutMs) {
+    const pid = tryRun(['shell', 'pidof', packageName]);
+    if (pid) return pid;
+    sleep(processPollIntervalMs);
+  }
+
+  return '';
+}
+
+function assertAppPrivateDataDir() {
+  const packageDump = run(['shell', 'dumpsys', 'package', packageName]);
+  const dataDirMatch = packageDump.match(/dataDir=(\S+)/);
+  const dataDir = dataDirMatch?.[1] || '';
+  const expectedPrefix = `/data/user/0/${packageName}`;
+
+  if (!dataDir.startsWith(expectedPrefix)) {
+    throw new Error(`${packageName} dataDir is not app-private: ${dataDir || 'unknown'}`);
+  }
+
+  console.log(`${packageName} app-private dataDir verified: ${dataDir}`);
+}
+
+function printRecentCrashLog() {
+  const logs = tryRun(['logcat', '-d', '-t', '250']);
+  const relevant = logs
+    .split(/\r?\n/)
+    .filter((line) => (
+      line.includes(packageName)
+      || line.includes('FATAL EXCEPTION')
+      || line.includes('AndroidRuntime')
+      || line.includes('Tauri')
+    ))
+    .slice(-80)
+    .join('\n');
+
+  if (relevant) {
+    console.error('Recent Android crash/runtime log excerpt:');
+    console.error(relevant);
+  }
 }
 
 const command = process.argv[2] || 'smoke';

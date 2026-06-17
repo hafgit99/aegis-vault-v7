@@ -22,6 +22,7 @@ This project is a password vault, so security claims must stay conservative unti
 - Android import, export, backup, and attachment download flows now use the Android document picker bridge instead of invisible browser downloads.
 - Android remembered Secret Key state and biometric metadata now prefer a JavaScript bridge backed by Android Keystore AES-GCM encrypted SharedPreferences, with browser storage retained only as a fallback or legacy migration source.
 - Android vault database persistence uses the Tauri native app-data command path, which maps to app-private storage on Android. The localStorage mirror is reduced to a setup marker when native persistence succeeds.
+- Android device smoke testing now verifies process startup with retries and confirms the debug package uses an app-private `/data/user/0/...` data directory.
 - The top-level Android debug APK and device smoke flow are documented and have been validated on a physical `arm64-v8a` device.
 - Desktop threat and recovery boundaries are documented in `docs/THREAT_MODEL.md`.
 - Release gates and the signed Windows build plan are documented in `docs/RELEASE_PLAN.md`.
