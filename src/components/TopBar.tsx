@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { Bell, Menu, RefreshCw, Search } from 'lucide-react';
+import { Bell, Lock, Menu, RefreshCw, Search } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { APP_PROFILE_ALT } from '../lib/branding';
@@ -18,6 +18,7 @@ interface TopBarProps {
   onRefresh: () => void | Promise<void>;
   onOpenVaultStatus: () => void;
   onOpenProfile: () => void;
+  onLock: () => void;
 }
 
 export default function TopBar({
@@ -30,6 +31,7 @@ export default function TopBar({
   onRefresh,
   onOpenVaultStatus,
   onOpenProfile,
+  onLock,
 }: TopBarProps) {
   const { t } = useLanguage();
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -93,6 +95,15 @@ export default function TopBar({
           >
             <Bell className="w-4.5 h-4.5" />
             <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-brand-error rounded-full"></span>
+          </button>
+          <button
+            data-testid="topbar-lock-button"
+            onClick={onLock}
+            className="toolbar-button focus:outline-none cursor-pointer text-red-300 hover:text-red-200 hover:bg-red-500/10"
+            title={t('nav.lockVault')}
+            aria-label={t('nav.lockVault')}
+          >
+            <Lock className="w-4.5 h-4.5" />
           </button>
 
           <button

@@ -22,6 +22,7 @@ describe('TopBar', () => {
     const onRefresh = vi.fn();
     const onOpenVaultStatus = vi.fn();
     const onOpenProfile = vi.fn();
+    const onLock = vi.fn();
 
     render(
       <TopBar
@@ -34,6 +35,7 @@ describe('TopBar', () => {
         onRefresh={onRefresh}
         onOpenVaultStatus={onOpenVaultStatus}
         onOpenProfile={onOpenProfile}
+        onLock={onLock}
       />,
     );
 
@@ -41,12 +43,14 @@ describe('TopBar', () => {
     fireEvent.change(screen.getByTestId('vault-search-input'), { target: { value: 'github' } });
     fireEvent.click(screen.getByTestId('topbar-refresh-button'));
     fireEvent.click(screen.getByTestId('topbar-status-button'));
+    fireEvent.click(screen.getByTestId('topbar-lock-button'));
     fireEvent.click(screen.getByTestId('topbar-profile-button'));
 
     expect(onOpenSidebar).toHaveBeenCalledTimes(1);
     expect(onSearchChange).toHaveBeenCalledWith('github');
     expect(onRefresh).toHaveBeenCalledTimes(1);
     expect(onOpenVaultStatus).toHaveBeenCalledTimes(1);
+    expect(onLock).toHaveBeenCalledTimes(1);
     expect(onOpenProfile).toHaveBeenCalledTimes(1);
   });
 
@@ -62,6 +66,7 @@ describe('TopBar', () => {
         onRefresh={vi.fn()}
         onOpenVaultStatus={vi.fn()}
         onOpenProfile={vi.fn()}
+        onLock={vi.fn()}
       />,
     );
 
@@ -84,6 +89,7 @@ describe('TopBar', () => {
           onRefresh={vi.fn()}
           onOpenVaultStatus={vi.fn()}
           onOpenProfile={vi.fn()}
+          onLock={vi.fn()}
         />
       </LanguageProvider>,
     );
@@ -91,6 +97,7 @@ describe('TopBar', () => {
     expect(screen.getByTitle('Open Menu')).toBeTruthy();
     expect(screen.getByTitle('Refresh')).toBeTruthy();
     expect(screen.getByTitle('Notifications')).toBeTruthy();
+    expect(screen.getByTitle('Lock Vault')).toBeTruthy();
     expect(screen.getByTitle('Ada - Edit Profile')).toBeTruthy();
     expect(screen.getByPlaceholderText('Search inside vault...')).toBeTruthy();
   });
@@ -115,6 +122,7 @@ describe('TopBar', () => {
         onRefresh={onRefresh}
         onOpenVaultStatus={vi.fn()}
         onOpenProfile={vi.fn()}
+        onLock={vi.fn()}
       />,
     );
 

@@ -288,6 +288,7 @@ export default function App() {
           onRefresh={handleManualRefresh}
           onOpenVaultStatus={handleOpenVaultStatus}
           onOpenProfile={handleOpenProfile}
+          onLock={handleLock}
         />
 
         <MainContent
