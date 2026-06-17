@@ -55,6 +55,7 @@ Local device smoke baseline from this workstation:
 - APK install through `adb install -r` succeeded.
 - App launch through `am start` succeeded.
 - Process was running after launch and no immediate `FATAL EXCEPTION` appeared in the sampled logcat output.
+- `android:device:smoke` now waits for delayed process startup and verifies the debug package data directory is app-private at `/data/user/0/com.hafgit99.aegisvault7.debug`.
 
 ## Phase 1: Readiness Gate
 
@@ -67,6 +68,8 @@ Before treating Android as a product target, verify:
 - `npm run android:build:apk:debug:aarch64`
 - `npm run android:device:smoke`
 - Optional compatibility check: `npm run android:build:apk:debug`
+
+The device smoke gate installs the current debug APK, launches `com.hafgit99.aegisvault7.debug`, waits for the process to become visible, and fails if Android reports a non-private app data directory.
 
 Manual smoke checklist for the first debug APK:
 
