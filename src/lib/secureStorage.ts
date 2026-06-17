@@ -17,7 +17,18 @@ declare global {
 
 export function getAndroidSecureStorageBridge(): AndroidSecureStorageBridge | null {
   if (typeof window === 'undefined') return null;
-  return window.AegisAndroidSecureStorage ?? null;
+  const bridge = window.AegisAndroidSecureStorage;
+  if (!bridge) return null;
+
+  if (
+    typeof bridge.getItem !== 'function' ||
+    typeof bridge.setItem !== 'function' ||
+    typeof bridge.removeItem !== 'function'
+  ) {
+    return null;
+  }
+
+  return bridge;
 }
 
 export function isSecureStorageAvailable(): boolean {
