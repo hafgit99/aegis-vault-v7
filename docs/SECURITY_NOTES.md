@@ -16,7 +16,7 @@ This project is a password vault, so security claims must stay conservative unti
 - Desktop vault persistence now mirrors database state through the Tauri app data directory.
 - Desktop import/export now uses controlled native Windows file dialogs.
 - Clipboard clearing now removes copied secrets after the safety delay when the clipboard remains unchanged.
-- TOTP generation now follows the RFC 6238 flow for Base32 secrets, HMAC-SHA1, 8-byte counters, and dynamic truncation.
+- TOTP generation now follows the RFC 6238 flow for Base32 secrets, HMAC-SHA1/SHA-256/SHA-512, 8-byte counters, dynamic truncation, and `otpauth://totp` URI parsing.
 - Desktop Windows builds enable native screen capture protection through `SetWindowDisplayAffinity`.
 - Android builds set `FLAG_SECURE` on the main activity to block screenshots and task-switcher previews for supported system surfaces.
 - Android import, export, backup, and attachment download flows now use the Android document picker bridge instead of invisible browser downloads.
@@ -40,7 +40,7 @@ This project is a password vault, so security claims must stay conservative unti
 - Legacy XOR attachment records are still readable as migration fallback and are rewritten to AES-GCM automatically after a successful unlock.
 - `src/lib/vaultSession.ts` stores the active master password as zeroized `Uint8Array` process-memory state during an unlocked session. This is safer than browser storage, but callers that need the value still temporarily materialize JavaScript strings.
 - `src/lib/sqlite_opfs.ts` is a simulated SQLite/OPFS layer backed by versioned serialized JSON state. The naming and implementation should be aligned with the actual persistence strategy.
-- `src/lib/otp.ts` currently supports the common RFC 6238 HMAC-SHA1 path. SHA-256/SHA-512 and configurable issuer/account URI parsing are not implemented yet.
+- `src/lib/otp.ts` supports the common RFC 6238 HMAC-SHA1 path plus SHA-256/SHA-512 algorithm variants and `otpauth://totp` URI parsing for issuer/account imports.
 - Some UI labels currently overstate security guarantees. Product copy should match the real implementation.
 - Android screenshots, document-picker file flows, Android Keystore-backed secure storage, and native app-private vault persistence are implemented. The remaining Android storage work is release-candidate regression coverage and final production review.
 - Android biometric registration can use the Tauri biometric plugin path only when the Android Keystore-backed secure storage bridge is available. A final manual device review is still needed before marketing it as production-grade biometric protection.
@@ -50,6 +50,6 @@ This project is a password vault, so security claims must stay conservative unti
 1. Add repeatable Android regression coverage for secure storage migration, app-private vault persistence, backup/import/download flows, and corrupted payload failures.
 2. Decide the final vault session handling and whether native secret handling should move master-secret operations into Rust/mobile platform code.
 3. Complete manual Android biometric wrapping release review on target devices.
-4. Extend TOTP support beyond the common HMAC-SHA1 path where needed: SHA-256/SHA-512, otpauth URI parsing, and stricter validation.
+4. Validate TOTP interoperability against more real-world authenticator exports and service QR payloads.
 5. Remove or quarantine remaining legacy custom crypto fallbacks before public release.
 6. Update UI copy after the implementation matches each security claim.
