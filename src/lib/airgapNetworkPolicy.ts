@@ -88,4 +88,31 @@ export function installAirgapNetworkPolicy(): void {
     Object.assign(GuardedWebSocket, NativeWebSocket);
     globalThis.WebSocket = GuardedWebSocket;
   }
+
+  const navigatorWithBeacon = globalThis.navigator as Navigator & {
+    sendBeacon?: (url: string | URL, data?: BodyInit | null) => boolean;
+  };
+  const nativeSendBeacon = navigatorWithBeacon?.sendBeacon?.bind(navigatorWithBeacon);
+  if (nativeSendBeacon) {
+    navigatorWithBeacon.sendBeacon = (url: string | URL, data?: BodyInit | null) => {
+      assertNetworkUrlAllowed(url);
+      return nativeSendBeacon(url, data);
+    };
+  }
+
+  if (typeof EventSource !== 'undefined') {
+    const NativeEventSource = EventSource;
+    const GuardedEventSource = function guardedEventSource(
+      this: EventSource,
+      url: string | URL,
+      eventSourceInitDict?: EventSourceInit,
+    ) {
+      assertNetworkUrlAllowed(url);
+      return new NativeEventSource(url, eventSourceInitDict);
+    } as unknown as typeof EventSource;
+
+    GuardedEventSource.prototype = NativeEventSource.prototype;
+    Object.assign(GuardedEventSource, NativeEventSource);
+    globalThis.EventSource = GuardedEventSource;
+  }
 }

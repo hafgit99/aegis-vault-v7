@@ -117,6 +117,12 @@ Import:
 - Encrypted Aegis imports require the correct decrypt password.
 - Android import/export/download flows use the system document picker bridge so the user explicitly chooses save and open locations.
 
+Network:
+
+- Production builds install an air-gap policy around browser network primitives.
+- App-local/Tauri IPC URLs and HIBP range checks are allowed.
+- Unexpected outbound `fetch`, XHR, WebSocket, `sendBeacon`, and EventSource destinations are blocked and logged as security events.
+
 ## Recovery Model
 
 Supported recovery paths:
