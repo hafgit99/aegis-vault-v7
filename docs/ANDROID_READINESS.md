@@ -12,6 +12,7 @@ This document tracks the Android preparation path for Aegis Vault 7. Android is 
 - The `aarch64` debug APK has been installed and smoke-tested on a physical Android device.
 - The main Android activity sets `FLAG_SECURE` to block normal screenshots, screen recordings, and task-switcher previews on supported system surfaces.
 - Android backup export, plaintext export, encrypted import, and attachment download flows use the system document picker bridge so users choose the destination or source file explicitly.
+- Android document picker requests now fail closed with a safety timeout if the native bridge never calls back, surface native picker errors, and treat user cancellation as an explicit `false`/`null` result.
 - Android remembered Secret Key state and biometric metadata now prefer an Android Keystore AES-GCM secure storage bridge, with browser storage kept as fallback and migration source.
 - Android vault database persistence uses the Tauri app-data command path, which resolves to app-private storage on Android. When this native write succeeds, localStorage keeps only a desktop/mobile-managed setup marker instead of the encrypted row payload.
 - Desktop storage uses Tauri app-data persistence plus a local fallback marker.
@@ -96,6 +97,7 @@ Android needs explicit decisions before release:
 - Biometric metadata is routed through the Android Keystore-backed secure storage bridge when available. The biometric prompt/wrapping design still needs final release review.
 - Attachment storage should remain app-private and must survive app restart.
 - Backup export/import now uses Android document picker/storage access APIs and needs broader regression testing.
+- Android document picker cancellation, native errors, and no-callback timeout behavior are covered by repeatable unit tests.
 - Plain JSON export should be reviewed again for Android before public release.
 - `FLAG_SECURE` is enabled, but screenshots/task-switcher previews should still be manually verified on release candidate devices.
 

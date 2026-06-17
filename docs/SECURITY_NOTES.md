@@ -20,6 +20,7 @@ This project is a password vault, so security claims must stay conservative unti
 - Desktop Windows builds enable native screen capture protection through `SetWindowDisplayAffinity`.
 - Android builds set `FLAG_SECURE` on the main activity to block screenshots and task-switcher previews for supported system surfaces.
 - Android import, export, backup, and attachment download flows now use the Android document picker bridge instead of invisible browser downloads.
+- Android document picker calls now include a safety timeout and regression coverage for native errors, user cancellation, and no-callback failures.
 - Android remembered Secret Key state and biometric metadata now prefer a JavaScript bridge backed by Android Keystore AES-GCM encrypted SharedPreferences, with browser storage retained only as a fallback or legacy migration source.
 - Android vault database persistence uses the Tauri native app-data command path, which maps to app-private storage on Android. The localStorage mirror is reduced to a setup marker when native persistence succeeds.
 - Android device smoke testing now verifies process startup with retries and confirms the debug package uses an app-private `/data/user/0/...` data directory.
