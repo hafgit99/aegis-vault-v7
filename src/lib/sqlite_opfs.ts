@@ -23,6 +23,7 @@ import { createArgon2idHash, verifyArgon2idHash } from './argon2id';
 import { deriveArgon2idKey as deriveVettedArgon2idKey } from './argon2id';
 import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, generateSafeIv, type WebCryptoAesGcmPayload } from './webcrypto';
 import {
+  getNativeVaultStorageScope,
   readDesktopVaultDatabase,
   resetDesktopVaultDatabase,
   writeDesktopVaultDatabase,
@@ -206,7 +207,7 @@ class SQLiteOPFS {
       if (desktopPayload) {
         this.state = parseVaultDatabaseState(desktopPayload);
         localStorage.setItem(LOCAL_FALLBACK_KEY, this.createDesktopManagedSetupMarker());
-        this.logQuery(`sqlite3_open("appdata:///${DB_FILENAME}")`, 'SUCCESS', 1);
+        this.logQuery(`sqlite3_open("${getNativeVaultStorageScope()}:///${DB_FILENAME}")`, 'SUCCESS', 1);
         return;
       }
 

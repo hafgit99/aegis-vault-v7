@@ -13,6 +13,7 @@ This document tracks the Android preparation path for Aegis Vault 7. Android is 
 - The main Android activity sets `FLAG_SECURE` to block normal screenshots, screen recordings, and task-switcher previews on supported system surfaces.
 - Android backup export, plaintext export, encrypted import, and attachment download flows use the system document picker bridge so users choose the destination or source file explicitly.
 - Android remembered Secret Key state and biometric metadata now prefer an Android Keystore AES-GCM secure storage bridge, with browser storage kept as fallback and migration source.
+- Android vault database persistence uses the Tauri app-data command path, which resolves to app-private storage on Android. When this native write succeeds, localStorage keeps only a desktop/mobile-managed setup marker instead of the encrypted row payload.
 - Desktop storage uses Tauri app-data persistence plus a local fallback marker.
 - Browser/mobile web storage still relies on IndexedDB/localStorage/OPFS-style APIs.
 - Native file dialogs are implemented for Windows desktop, while Android uses its generated project bridge and Android document intents.
@@ -87,7 +88,7 @@ Manual smoke checklist for the first debug APK:
 
 Android needs explicit decisions before release:
 
-- Vault database persistence should use an Android-safe app-private store, not a browser-only assumption.
+- Vault database persistence uses the native Tauri app-data command path on Android and should be regression-tested on release candidate devices.
 - Remembered Secret Key is routed through the Android Keystore-backed secure storage bridge when running inside the Android WebView.
 - Biometric metadata is routed through the Android Keystore-backed secure storage bridge when available. The biometric prompt/wrapping design still needs final release review.
 - Attachment storage should remain app-private and must survive app restart.
@@ -119,7 +120,7 @@ The app should move toward explicit platform adapters:
 
 Android should remain internal/debug-only until:
 
-- Storage adapter decisions are implemented, especially the larger Android vault database persistence adapter.
+- Storage adapter behavior is validated on release candidate devices, especially Android app-private vault persistence after restart.
 - Android backup/import/export flows are tested on a real device.
 - Android biometric behavior is Keystore-backed or explicitly disabled with clear copy.
 - A mobile smoke checklist is run on every release candidate.

@@ -205,7 +205,9 @@
 
 - [x] Add Android readiness checklist and npm command surface.
 - [ ] Separate shared core logic from web/desktop UI concerns.
-- [ ] Add platform storage adapter interfaces.
+- [x] Add platform storage adapter interfaces.
+  - [x] Label native vault persistence as desktop app-data, Android app-private, or browser fallback.
+  - [ ] Extract a broader cross-platform storage adapter if future cloud/mobile targets need a stricter boundary.
 - [x] Add mobile biometric adapter plan.
   - [x] Document Android BiometricPrompt/Keystore as the production target.
   - [x] Implement Keystore-backed remembered Secret Key and biometric metadata storage.

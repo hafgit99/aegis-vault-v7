@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   clearExtensionCredentials,
   EXTENSION_CREDENTIAL_LEASE_MS,
+  getNativeVaultStorageScope,
+  isAndroidRuntime,
   isDesktopRuntime,
   readDesktopVaultDatabase,
   resetDesktopVaultDatabase,
@@ -51,6 +53,8 @@ describe('desktopStorage', () => {
 
   it('skips native storage calls outside Tauri', async () => {
     expect(isDesktopRuntime()).toBe(false);
+    expect(isAndroidRuntime()).toBe(false);
+    expect(getNativeVaultStorageScope()).toBe('browser-fallback');
     await expect(readDesktopVaultDatabase()).resolves.toBeNull();
     await expect(writeDesktopVaultDatabase('payload')).resolves.toBe(false);
     await expect(resetDesktopVaultDatabase()).resolves.toBe(false);
@@ -65,6 +69,8 @@ describe('desktopStorage', () => {
     invoke.mockResolvedValueOnce('db-payload').mockResolvedValueOnce(undefined).mockResolvedValueOnce(undefined);
 
     expect(isDesktopRuntime()).toBe(true);
+    expect(isAndroidRuntime()).toBe(false);
+    expect(getNativeVaultStorageScope()).toBe('desktop-app-data');
     await expect(readDesktopVaultDatabase()).resolves.toBe('db-payload');
     await expect(writeDesktopVaultDatabase('payload')).resolves.toBe(true);
     await expect(resetDesktopVaultDatabase()).resolves.toBe(true);
@@ -72,6 +78,23 @@ describe('desktopStorage', () => {
     expect(invoke).toHaveBeenNthCalledWith(1, 'read_vault_database');
     expect(invoke).toHaveBeenNthCalledWith(2, 'write_vault_database', { contents: 'payload' });
     expect(invoke).toHaveBeenNthCalledWith(3, 'reset_vault_database');
+  });
+
+  it('treats Android Tauri WebView storage as app-private native persistence', async () => {
+    window.__TAURI_INTERNALS__ = {};
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(
+      'Mozilla/5.0 (Linux; Android 14; Aegis Vault) AppleWebKit/537.36',
+    );
+    invoke.mockResolvedValueOnce('android-db-payload').mockResolvedValueOnce(undefined);
+
+    expect(isDesktopRuntime()).toBe(true);
+    expect(isAndroidRuntime()).toBe(true);
+    expect(getNativeVaultStorageScope()).toBe('android-app-private');
+    await expect(readDesktopVaultDatabase()).resolves.toBe('android-db-payload');
+    await expect(writeDesktopVaultDatabase('android-payload')).resolves.toBe(true);
+
+    expect(invoke).toHaveBeenNthCalledWith(1, 'read_vault_database');
+    expect(invoke).toHaveBeenNthCalledWith(2, 'write_vault_database', { contents: 'android-payload' });
   });
 
   it('syncs extension credentials with a short native lease', async () => {

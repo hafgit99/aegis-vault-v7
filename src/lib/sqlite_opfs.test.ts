@@ -9,9 +9,11 @@ import { createEmptyVaultDatabaseState, type VersionedVaultDatabaseState } from 
 
 const writeDesktopVaultDatabase = vi.hoisted(() => vi.fn(async () => false));
 const readDesktopVaultDatabase = vi.hoisted(() => vi.fn(async () => null));
+const getNativeVaultStorageScope = vi.hoisted(() => vi.fn(() => 'desktop-app-data'));
 const originalNavigatorStorage = navigator.storage;
 
 vi.mock('./desktopStorage', () => ({
+  getNativeVaultStorageScope,
   readDesktopVaultDatabase,
   resetDesktopVaultDatabase: vi.fn(async () => false),
   writeDesktopVaultDatabase,
@@ -53,6 +55,7 @@ beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
   vi.clearAllMocks();
+  getNativeVaultStorageScope.mockReturnValue('desktop-app-data');
 });
 
 afterEach(() => {
@@ -184,7 +187,29 @@ describe('SQLite OPFS persistence engine', () => {
     expect(sqlite.getQueryLogs()).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          query: 'sqlite3_open("appdata:///aegis_sqlite.db")',
+          query: 'sqlite3_open("desktop-app-data:///aegis_sqlite.db")',
+          status: 'SUCCESS',
+        }),
+      ]),
+    );
+  });
+
+  it('labels Android Tauri database hydration as app-private native storage', async () => {
+    const state: VersionedVaultDatabaseState = {
+      ...createEmptyVaultDatabaseState(),
+      user_secrets: [{ username: 'owner', argon_hash: '$argon2id$salt$master-pass' }],
+    };
+
+    getNativeVaultStorageScope.mockReturnValueOnce('android-app-private');
+    readDesktopVaultDatabase.mockResolvedValueOnce(JSON.stringify(state));
+
+    const sqlite = await freshSqliteInstance();
+
+    await expect(sqlite.verifyPassword('master-pass')).resolves.toBe(true);
+    expect(sqlite.getQueryLogs()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          query: 'sqlite3_open("android-app-private:///aegis_sqlite.db")',
           status: 'SUCCESS',
         }),
       ]),

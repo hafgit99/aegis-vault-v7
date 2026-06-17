@@ -13,6 +13,15 @@ export function isDesktopRuntime(): boolean {
   return typeof window !== 'undefined' && Boolean(window.__TAURI_INTERNALS__);
 }
 
+export function isAndroidRuntime(): boolean {
+  return isDesktopRuntime() && /Android/i.test(navigator.userAgent || '');
+}
+
+export function getNativeVaultStorageScope(): 'android-app-private' | 'desktop-app-data' | 'browser-fallback' {
+  if (!isDesktopRuntime()) return 'browser-fallback';
+  return isAndroidRuntime() ? 'android-app-private' : 'desktop-app-data';
+}
+
 export async function readDesktopVaultDatabase(): Promise<string | null> {
   if (!isDesktopRuntime()) return null;
   return invoke<string | null>('read_vault_database');
