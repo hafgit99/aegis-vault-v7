@@ -126,6 +126,8 @@ export default function SettingsPanel({
   const [customBackupPassword, setCustomBackupPassword] = useState('');
   const [backupSuccess, setBackupSuccess] = useState<string | null>(null);
   const [backupError, setBackupError] = useState<string | null>(null);
+  const [plainExportArmed, setPlainExportArmed] = useState(false);
+  const [plainExportConfirmation, setPlainExportConfirmation] = useState('');
 
   // Universal Import unified state
   interface ImportState {
@@ -273,6 +275,15 @@ export default function SettingsPanel({
   const handleExportPlain = async () => {
     setBackupSuccess(null);
     setBackupError(null);
+    if (!plainExportArmed) {
+      setPlainExportArmed(true);
+      setPlainExportConfirmation('');
+      return;
+    }
+    if (plainExportConfirmation.trim().toUpperCase() !== 'EXPORT') {
+      setBackupError(t('settings.export.plainConfirmMismatch'));
+      return;
+    }
     const latestItems = await getVaultItems();
     setItems(latestItems);
     const filename = `aegis_acik_yedek_${currentDateSlug()}.json`;
@@ -288,6 +299,8 @@ export default function SettingsPanel({
       setBackupError(`${t('settings.export.plainErrorPrefix')}: ${err?.message || t('settings.export.defaultSaveError')}`);
       return;
     }
+    setPlainExportArmed(false);
+    setPlainExportConfirmation('');
     setBackupSuccess(t('settings.export.plainSuccess'));
     setTimeout(() => setBackupSuccess(null), 4000);
   };
@@ -1007,6 +1020,38 @@ export default function SettingsPanel({
                   <span>{t('settings.export.plainButton')}</span>
                 </button>
               </div>
+
+              {plainExportArmed && (
+                <div
+                  data-testid="plain-export-warning"
+                  className="p-3 bg-brand-error/10 border border-brand-error/25 rounded-xl space-y-3 animate-fade-in"
+                >
+                  <div className="flex items-start gap-2 text-xs text-brand-error leading-relaxed">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>{t('settings.export.plainWarning')}</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
+                    <input
+                      data-testid="plain-export-confirm-input"
+                      type="text"
+                      value={plainExportConfirmation}
+                      onChange={(event) => setPlainExportConfirmation(event.target.value)}
+                      className="w-full bg-[#141614] border border-brand-error/30 rounded-lg px-3 py-2 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-brand-error"
+                      placeholder={t('settings.export.plainConfirmPlaceholder')}
+                      autoComplete="off"
+                    />
+                    <button
+                      data-testid="plain-export-confirm-button"
+                      type="button"
+                      onClick={handleExportPlain}
+                      className="flex items-center justify-center gap-2 bg-brand-error text-white font-extrabold px-4 py-2 rounded-lg text-xs hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+                    >
+                      <Unlock className="w-4 h-4" />
+                      <span>{t('settings.export.plainConfirmButton')}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </form>
           </div>
         </div>

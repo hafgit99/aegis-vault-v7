@@ -650,6 +650,13 @@ describe('SettingsPanel plain export and import errors', () => {
     const { container } = renderSettings();
 
     fireEvent.click(encryptedExportButtons(container)[1]);
+    expect(screen.getByTestId('plain-export-warning')).toBeTruthy();
+    expect(saveDesktopExportFile).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByTestId('plain-export-confirm-input'), {
+      target: { value: 'EXPORT' },
+    });
+    fireEvent.click(screen.getByTestId('plain-export-confirm-button'));
 
     await waitFor(() => {
       expect(saveDesktopExportFile).toHaveBeenCalledWith(expect.stringMatching(/\.json$/), JSON.stringify(vaultItems, null, 2));
@@ -657,11 +664,31 @@ describe('SettingsPanel plain export and import errors', () => {
     });
   });
 
+  it('requires explicit confirmation before creating a plain JSON backup', async () => {
+    const { container } = renderSettings();
+
+    fireEvent.click(encryptedExportButtons(container)[1]);
+    fireEvent.change(screen.getByTestId('plain-export-confirm-input'), {
+      target: { value: 'NOPE' },
+    });
+    fireEvent.click(screen.getByTestId('plain-export-confirm-button'));
+
+    await waitFor(() => {
+      expect(container.textContent).toContain('EXPORT');
+    });
+    expect(saveDesktopExportFile).not.toHaveBeenCalled();
+    expect(HTMLAnchorElement.prototype.click).not.toHaveBeenCalled();
+  });
+
   it('shows an export error when the save dialog fails', async () => {
     vi.mocked(saveDesktopExportFile).mockRejectedValueOnce(new Error('disk full'));
     const { container } = renderSettings();
 
     fireEvent.click(encryptedExportButtons(container)[1]);
+    fireEvent.change(screen.getByTestId('plain-export-confirm-input'), {
+      target: { value: 'EXPORT' },
+    });
+    fireEvent.click(screen.getByTestId('plain-export-confirm-button'));
 
     await waitFor(() => {
       expect(container.textContent).toContain('disk full');
@@ -771,6 +798,10 @@ describe('SettingsPanel import interaction states', () => {
     const inputClickSpy = vi.spyOn(input, 'click');
 
     fireEvent.click(encryptedExportButtons(container)[1]);
+    fireEvent.change(screen.getByTestId('plain-export-confirm-input'), {
+      target: { value: 'EXPORT' },
+    });
+    fireEvent.click(screen.getByTestId('plain-export-confirm-button'));
 
     await waitFor(() => {
       expect(saveDesktopExportFile).toHaveBeenCalledWith(expect.stringMatching(/\.json$/), JSON.stringify(vaultItems, null, 2));

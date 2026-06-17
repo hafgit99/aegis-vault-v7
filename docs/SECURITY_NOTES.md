@@ -25,6 +25,7 @@ This project is a password vault, so security claims must stay conservative unti
 - Android native biometric registration now requires the Android Keystore-backed secure storage bridge and refuses to store native wrapping metadata in IndexedDB fallback storage.
 - Android vault database persistence uses the Tauri native app-data command path, which maps to app-private storage on Android. The localStorage mirror is reduced to a setup marker when native persistence succeeds.
 - Android device smoke testing now verifies process startup with retries and confirms the debug package uses an app-private `/data/user/0/...` data directory.
+- Plaintext JSON export now requires an explicit risk warning and typed `EXPORT` confirmation before a readable backup can be created.
 - The top-level Android debug APK and device smoke flow are documented and have been validated on a physical `arm64-v8a` device.
 - Desktop threat and recovery boundaries are documented in `docs/THREAT_MODEL.md`.
 - Release gates and the signed Windows build plan are documented in `docs/RELEASE_PLAN.md`.
@@ -42,6 +43,7 @@ This project is a password vault, so security claims must stay conservative unti
 - `src/lib/sqlite_opfs.ts` is a simulated SQLite/OPFS layer backed by versioned serialized JSON state. The naming and implementation should be aligned with the actual persistence strategy.
 - `src/lib/otp.ts` supports the common RFC 6238 HMAC-SHA1 path plus SHA-256/SHA-512 algorithm variants and `otpauth://totp` URI parsing for issuer/account imports.
 - Some UI labels currently overstate security guarantees. Product copy should match the real implementation.
+- Plaintext JSON export is still available for user-controlled migration/recovery, but it is gated by a warning and typed confirmation because the output is intentionally readable.
 - Android screenshots, document-picker file flows, Android Keystore-backed secure storage, and native app-private vault persistence are implemented. The remaining Android storage work is release-candidate regression coverage and final production review.
 - Android biometric registration can use the Tauri biometric plugin path only when the Android Keystore-backed secure storage bridge is available. A final manual device review is still needed before marketing it as production-grade biometric protection.
 
