@@ -9,9 +9,12 @@ This document tracks the Android preparation path for Aegis Vault 7. Android is 
 - Android launcher icons are present under `src-tauri/icons/android`.
 - The generated Android project is initialized under `src-tauri/gen/android`.
 - The universal debug APK build has been validated locally.
+- The `aarch64` debug APK has been installed and smoke-tested on a physical Android device.
+- The main Android activity sets `FLAG_SECURE` to block normal screenshots, screen recordings, and task-switcher previews on supported system surfaces.
+- Android backup export, plaintext export, encrypted import, and attachment download flows use the system document picker bridge so users choose the destination or source file explicitly.
 - Desktop storage uses Tauri app-data persistence plus a local fallback marker.
 - Browser/mobile web storage still relies on IndexedDB/localStorage/OPFS-style APIs.
-- Native file dialogs are implemented only for Windows desktop; Android import/export/download needs its own storage UX.
+- Native file dialogs are implemented for Windows desktop, while Android uses its generated project bridge and Android document intents.
 
 ## NPM Commands
 
@@ -85,11 +88,11 @@ Android needs explicit decisions before release:
 
 - Vault database persistence should use an Android-safe app-private store, not a browser-only assumption.
 - Remembered Secret Key should be protected through Android Keystore or an equivalent Tauri/mobile secure storage plugin.
-- Biometric unlock should use Android BiometricPrompt/Keystore-backed wrapping, not WebAuthn assumptions.
+- Biometric unlock should use Android BiometricPrompt/Keystore-backed wrapping for production. The current bridge/plugin path is useful for testing but must not be marketed as final mobile-grade protection until the wrapping material is Keystore-backed.
 - Attachment storage should remain app-private and must survive app restart.
-- Backup export/import should use Android document picker/storage access APIs.
+- Backup export/import now uses Android document picker/storage access APIs and needs broader regression testing.
 - Plain JSON export should be reviewed again for Android before public release.
-- Screenshots/task-switcher previews should be evaluated for sensitive UI leakage.
+- `FLAG_SECURE` is enabled, but screenshots/task-switcher previews should still be manually verified on release candidate devices.
 
 ## Adapter Work Required
 
@@ -115,8 +118,8 @@ The app should move toward explicit platform adapters:
 
 Android should remain internal/debug-only until:
 
-- Storage adapter decisions are implemented.
+- Storage adapter decisions are implemented, especially Android Keystore protection for remembered Secret Key state and biometric wrapping metadata.
 - Android backup/import/export flows are tested on a real device.
-- Android biometric behavior is either implemented or explicitly disabled with clear copy.
+- Android biometric behavior is Keystore-backed or explicitly disabled with clear copy.
 - A mobile smoke checklist is run on every release candidate.
 - APK/AAB signing plan is documented.

@@ -23,6 +23,7 @@ Out of scope for the current phase:
 - Enterprise policy enforcement.
 - Malware already running with the user's OS account privileges.
 - Kernel compromise, hardware attacks, memory scraping, or screen capture by privileged software.
+- Platform-specific mobile storage and biometric implementation details beyond the current Android debug build.
 
 ## Protected Assets
 
@@ -37,7 +38,7 @@ Out of scope for the current phase:
 
 - The app UI is trusted only while loaded from the packaged desktop application.
 - Browser-like storage APIs are treated as local persistence, not secure secret storage.
-- `src/lib/vaultSession.ts` is process-memory session state. It is safer than browser `sessionStorage`, but it is not an OS secret enclave.
+- `src/lib/vaultSession.ts` is zeroized `Uint8Array` process-memory session state. It is safer than browser `sessionStorage`, but it is not an OS secret enclave and some operations still temporarily decode it into JavaScript strings.
 - OPFS/localStorage fallback persistence is treated as attacker-readable at rest unless encrypted by the app.
 - User-selected backup files may be attacker-controlled input.
 - Imported JSON/CSV data is untrusted until parsed and normalized.
@@ -64,7 +65,7 @@ Not defended against:
 - Malware running as the same OS user while the vault is unlocked.
 - A compromised operating system, browser engine, WebView, or Tauri runtime.
 - Memory inspection while the app is unlocked.
-- Keylogging, screen capture, clipboard capture, or accessibility API abuse by hostile local software.
+- Keylogging, privileged screen capture, clipboard capture, or accessibility API abuse by hostile local software.
 - Loss of the master password without a valid encrypted backup and backup password.
 
 ## Current Controls
@@ -73,8 +74,14 @@ Master password and session:
 
 - Successful setup and unlock open an in-memory vault session.
 - The master password is no longer stored in `sessionStorage`.
-- Manual lock and auto-lock close the in-memory vault session.
+- Manual lock and auto-lock close the in-memory vault session and zeroize the stored byte buffers.
 - Reset clears the active session and persisted vault setup state.
+
+Screen capture:
+
+- Windows desktop builds request `WDA_EXCLUDEFROMCAPTURE` on app windows.
+- Android builds set `FLAG_SECURE` on the main activity.
+- These controls reduce ordinary screenshots, screen recording, and task-switcher preview exposure on supported OS surfaces, but do not defend against privileged capture software or compromised devices.
 
 Vault database:
 
@@ -107,6 +114,7 @@ Import:
 
 - Universal imports normalize supported CSV/JSON formats before saving.
 - Encrypted Aegis imports require the correct decrypt password.
+- Android import/export/download flows use the system document picker bridge so the user explicitly chooses save and open locations.
 
 ## Recovery Model
 
@@ -138,10 +146,11 @@ Required user-facing recovery rules:
 | Custom cryptographic primitives are isolated in read-only legacy backup and compatibility paths | Open | Replace or remove remaining custom AES/GCM simulation fallbacks |
 | Simulated SQLite/OPFS persistence naming overstates implementation | Open | Decide final desktop storage adapter and align naming |
 | Legacy XOR attachment fallback remains readable | Partially mitigated | Remove fallback after migrated installs have aged out |
-| Active master password lives in process memory while unlocked | Accepted for current desktop phase | Minimize lifetime, lock aggressively, evaluate native secret handling |
+| Active master password lives in process memory while unlocked | Partially mitigated | Byte buffers are zeroized on lock; move secret operations into native adapters where practical |
 | Clipboard can keep copied secrets after OS capture or user clipboard changes | Partially mitigated | Safe clearing removes unchanged copied secrets; hostile OS clipboard capture remains out of scope |
-| Demo OTP generator is not RFC 6238 compatible | Open | Replace with standards-compatible HOTP/TOTP |
+| TOTP supports the common RFC 6238 HMAC-SHA1 path but not every algorithm/URI variant | Partially mitigated | Add SHA-256/SHA-512 and otpauth URI parsing where needed |
 | Plaintext export option can create unsafe files | Open | Add stronger warning, require confirmation, or remove for release builds |
+| Android remembered Secret Key and biometric wrapping need Keystore-backed storage | Open | Implement Android Keystore adapter before public mobile release |
 
 ## Release Claim Rules
 
@@ -152,6 +161,7 @@ Allowed current claims:
 - "New attachments are protected with WebCrypto AES-GCM."
 - "New vault item metadata is protected with WebCrypto AES-GCM."
 - "The master password is not stored in browser sessionStorage."
+- "Windows and Android builds request platform screen-capture protection on supported OS surfaces."
 
 Claims to avoid until fixed:
 
@@ -164,6 +174,7 @@ Claims to avoid until fixed:
 ## Next Decisions
 
 1. Align the simulated SQLite naming with the finalized Tauri app data persistence strategy.
-2. Replace remaining legacy custom AES/GCM simulation fallbacks.
-3. Decide whether plaintext JSON export remains available in release builds.
-4. Review public release branding and installer identity before publishing signed artifacts.
+2. Implement Android Keystore-backed remembered Secret Key and biometric wrapping.
+3. Replace remaining legacy custom AES/GCM simulation fallbacks.
+4. Decide whether plaintext JSON export remains available in release builds.
+5. Review public release branding and installer identity before publishing signed artifacts.

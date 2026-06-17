@@ -16,6 +16,11 @@ This project is a password vault, so security claims must stay conservative unti
 - Desktop vault persistence now mirrors database state through the Tauri app data directory.
 - Desktop import/export now uses controlled native Windows file dialogs.
 - Clipboard clearing now removes copied secrets after the safety delay when the clipboard remains unchanged.
+- TOTP generation now follows the RFC 6238 flow for Base32 secrets, HMAC-SHA1, 8-byte counters, and dynamic truncation.
+- Desktop Windows builds enable native screen capture protection through `SetWindowDisplayAffinity`.
+- Android builds set `FLAG_SECURE` on the main activity to block screenshots and task-switcher previews for supported system surfaces.
+- Android import, export, backup, and attachment download flows now use the Android document picker bridge instead of invisible browser downloads.
+- The top-level Android debug APK and device smoke flow are documented and have been validated on a physical `arm64-v8a` device.
 - Desktop threat and recovery boundaries are documented in `docs/THREAT_MODEL.md`.
 - Release gates and the signed Windows build plan are documented in `docs/RELEASE_PLAN.md`.
 - Unit coverage gates and current baseline are documented in `docs/QUALITY_GATES.md`.
@@ -28,16 +33,18 @@ This project is a password vault, so security claims must stay conservative unti
 
 - `src/lib/legacyCrypto.ts` contains custom cryptographic primitives used only by remaining read-only legacy backup and compatibility fallbacks. These should be replaced or removed before production use.
 - Legacy XOR attachment records are still readable as migration fallback and are rewritten to AES-GCM automatically after a successful unlock.
-- `src/lib/vaultSession.ts` keeps the active master password in process memory during an unlocked session. This is safer than browser storage, but native desktop secret handling still needs a final threat-model decision.
+- `src/lib/vaultSession.ts` stores the active master password as zeroized `Uint8Array` process-memory state during an unlocked session. This is safer than browser storage, but callers that need the value still temporarily materialize JavaScript strings.
 - `src/lib/sqlite_opfs.ts` is a simulated SQLite/OPFS layer backed by versioned serialized JSON state. The naming and implementation should be aligned with the actual persistence strategy.
-- `src/lib/otp.ts` is a deterministic demo OTP generator, not an RFC 6238-compatible TOTP implementation.
+- `src/lib/otp.ts` currently supports the common RFC 6238 HMAC-SHA1 path. SHA-256/SHA-512 and configurable issuer/account URI parsing are not implemented yet.
 - Some UI labels currently overstate security guarantees. Product copy should match the real implementation.
-- Android storage, biometric, file transfer, and backup flows are not production-approved yet.
+- Android screenshots and document-picker file flows are implemented, but Android storage and remembered-secret protection still need Android Keystore-backed adapters before public release.
+- Android biometric registration can use the Tauri biometric plugin path, but the stored wrapping metadata still needs a Keystore-backed design review before it is treated as production-grade.
 
 ## Near-Term Security Plan
 
-1. Add regression tests around remaining encryption/decryption roundtrips and corrupted payload failures.
-2. Decide the final vault session handling and whether native secret handling is needed.
-3. Replace the demo OTP generator with standards-compatible HOTP/TOTP.
-4. Update UI copy after the implementation matches the claim.
-5. Implement platform adapters before publishing Android builds outside internal testing.
+1. Implement Android Keystore-backed protection for remembered Secret Key state and biometric wrapping metadata.
+2. Decide the final vault session handling and whether native secret handling should move master-secret operations into Rust/mobile platform code.
+3. Add regression tests around Android backup/import/download flows and corrupted payload failures.
+4. Extend TOTP support beyond the common HMAC-SHA1 path where needed: SHA-256/SHA-512, otpauth URI parsing, and stricter validation.
+5. Remove or quarantine remaining legacy custom crypto fallbacks before public release.
+6. Update UI copy after the implementation matches each security claim.

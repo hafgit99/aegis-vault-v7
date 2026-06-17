@@ -206,6 +206,12 @@
 - [x] Add Android readiness checklist and npm command surface.
 - [ ] Separate shared core logic from web/desktop UI concerns.
 - [ ] Add platform storage adapter interfaces.
-- [ ] Add mobile biometric adapter plan.
-- [ ] Validate Tauri Android feasibility with a debug APK.
-- [ ] Define Android backup and recovery UX.
+- [x] Add mobile biometric adapter plan.
+  - [x] Document Android BiometricPrompt/Keystore as the production target.
+  - [ ] Implement Keystore-backed remembered Secret Key and biometric wrapping.
+- [x] Validate Tauri Android feasibility with a debug APK.
+  - [x] Build a clean `aarch64` debug APK locally.
+  - [x] Install and launch the debug APK on a physical Android device.
+- [x] Define Android backup and recovery UX.
+  - [x] Route export, import, and attachment download through Android document picker flows.
+  - [ ] Add automated or repeatable Android backup/import regression coverage.
