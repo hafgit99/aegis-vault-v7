@@ -6,7 +6,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from '../lib/encryption';
-import { openDesktopImportFile, saveDesktopExportFile } from '../lib/desktopFiles';
+import { isNativeFileDialogSupported, openDesktopImportFile, saveDesktopExportFile } from '../lib/desktopFiles';
 import { disableBiometric, isBiometricEnabled, isBiometricSupported, registerBiometric } from '../lib/biometric';
 import { changeMasterPassword, getVaultItems, resetSystem, reseedDemoData, saveVaultItem, saveVaultItems, verifyMasterPassword } from '../lib/storage';
 import { closeVaultSession, openVaultSession } from '../lib/vaultSession';
@@ -55,6 +55,7 @@ vi.mock('../lib/random', () => ({
 }));
 
 vi.mock('../lib/desktopFiles', () => ({
+  isNativeFileDialogSupported: vi.fn(() => false),
   openDesktopImportFile: vi.fn(async () => null),
   saveDesktopExportFile: vi.fn(async () => false),
 }));
@@ -123,10 +124,15 @@ function dropZone(container: HTMLElement): HTMLElement {
 }
 
 beforeEach(() => {
+  Object.defineProperty(window.navigator, 'userAgent', {
+    configurable: true,
+    value: 'Mozilla/5.0 jsdom',
+  });
   vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
   vi.spyOn(window, 'confirm').mockReturnValue(false);
   delete window.__TAURI_INTERNALS__;
   vi.mocked(getVaultItems).mockResolvedValue(vaultItems);
+  vi.mocked(isNativeFileDialogSupported).mockReturnValue(false);
   vi.mocked(openDesktopImportFile).mockResolvedValue(null);
   vi.mocked(reseedDemoData).mockResolvedValue(vaultItems);
   vi.mocked(saveDesktopExportFile).mockResolvedValue(false);
@@ -141,6 +147,10 @@ afterEach(() => {
   sessionStorage.clear();
   localStorage.clear();
   delete window.__TAURI_INTERNALS__;
+  Object.defineProperty(window.navigator, 'userAgent', {
+    configurable: true,
+    value: 'Mozilla/5.0 jsdom',
+  });
 });
 
 describe('SettingsPanel import/export', () => {
@@ -217,6 +227,7 @@ describe('SettingsPanel import/export', () => {
 
   it('does not fall back to browser download when the desktop save dialog is cancelled', async () => {
     window.__TAURI_INTERNALS__ = {};
+    vi.mocked(isNativeFileDialogSupported).mockReturnValue(true);
     openVaultSession('master-pass');
     const { container } = renderSettings();
 
@@ -230,6 +241,7 @@ describe('SettingsPanel import/export', () => {
 
   it('imports a file selected through the native desktop dialog', async () => {
     window.__TAURI_INTERNALS__ = {};
+    vi.mocked(isNativeFileDialogSupported).mockReturnValue(true);
     vi.mocked(openDesktopImportFile).mockResolvedValueOnce({
       name: 'native-backup.json',
       contents: JSON.stringify([
@@ -721,6 +733,7 @@ describe('SettingsPanel import interaction states', () => {
 
   it('shows a native file-picker error when desktop import selection fails', async () => {
     window.__TAURI_INTERNALS__ = {};
+    vi.mocked(isNativeFileDialogSupported).mockReturnValue(true);
     vi.mocked(openDesktopImportFile).mockRejectedValueOnce(new Error('picker failed'));
     const { container } = renderSettings();
 
@@ -733,6 +746,7 @@ describe('SettingsPanel import interaction states', () => {
 
   it('does not open the browser file picker when desktop import is cancelled in desktop runtime', async () => {
     window.__TAURI_INTERNALS__ = {};
+    vi.mocked(isNativeFileDialogSupported).mockReturnValue(true);
     const { container } = renderSettings();
     const input = fileInput(container);
     const clickSpy = vi.spyOn(input, 'click');
@@ -743,6 +757,30 @@ describe('SettingsPanel import interaction states', () => {
       expect(openDesktopImportFile).toHaveBeenCalledTimes(1);
     });
     expect(clickSpy).not.toHaveBeenCalled();
+  });
+
+  it('uses browser import and export fallbacks inside Android Tauri', async () => {
+    window.__TAURI_INTERNALS__ = {};
+    vi.mocked(isNativeFileDialogSupported).mockReturnValue(false);
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Linux; Android 14) AegisVault',
+    });
+    const { container } = renderSettings();
+    const input = fileInput(container);
+    const inputClickSpy = vi.spyOn(input, 'click');
+
+    fireEvent.click(encryptedExportButtons(container)[1]);
+
+    await waitFor(() => {
+      expect(saveDesktopExportFile).toHaveBeenCalledWith(expect.stringMatching(/\.json$/), JSON.stringify(vaultItems, null, 2));
+      expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledTimes(1);
+    });
+
+    fireEvent.click(dropZone(container));
+
+    expect(openDesktopImportFile).not.toHaveBeenCalled();
+    expect(inputClickSpy).toHaveBeenCalledTimes(1);
   });
 
   it('highlights and clears the import drop zone during drag events', () => {

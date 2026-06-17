@@ -30,8 +30,7 @@ import { parseUniversalImport, decodeFileBuffer } from '../lib/importer';
 import { secureRandomToken } from '../lib/random';
 import { registerBiometric, isBiometricEnabled, disableBiometric, isBiometricSupported } from '../lib/biometric';
 import { getActiveBackupPassword, getActiveMasterPassword } from '../lib/vaultSession';
-import { openDesktopImportFile, saveDesktopExportFile } from '../lib/desktopFiles';
-import { isDesktopRuntime } from '../lib/desktopStorage';
+import { isNativeFileDialogSupported, openDesktopImportFile, saveDesktopExportFile } from '../lib/desktopFiles';
 import { useLanguage } from '../i18n/LanguageContext';
 import { languageLabels, supportedLanguages, type LanguageCode } from '../i18n/translations';
 
@@ -282,7 +281,7 @@ export default function SettingsPanel({
     try {
       const savedWithDialog = await saveDesktopExportFile(filename, contents);
       if (!savedWithDialog) {
-        if (isDesktopRuntime()) return;
+        if (isNativeFileDialogSupported()) return;
         downloadTextFile(filename, contents);
       }
     } catch (err: any) {
@@ -326,7 +325,7 @@ export default function SettingsPanel({
       const filename = `aegis_guvenli_yedek_${currentDateSlug()}.aegis`;
       const savedWithDialog = await saveDesktopExportFile(filename, encryptedJsonString);
       if (!savedWithDialog) {
-        if (isDesktopRuntime()) return;
+        if (isNativeFileDialogSupported()) return;
         downloadTextFile(filename, encryptedJsonString);
       }
 
@@ -334,7 +333,7 @@ export default function SettingsPanel({
       setCustomBackupPassword('');
       setTimeout(() => setBackupSuccess(null), 5000);
     } catch (err: any) {
-      setBackupError(`${t('settings.export.encryptErrorPrefix')}: ${err?.message}`);
+      setBackupError(`${t('settings.export.encryptErrorPrefix')}: ${err?.message || t('settings.export.defaultSaveError')}`);
     }
   };
 
@@ -592,7 +591,7 @@ export default function SettingsPanel({
   };
 
   const triggerImportSelect = () => {
-    if (isDesktopRuntime()) {
+    if (isNativeFileDialogSupported()) {
       void (async () => {
         try {
           const selectedFile = await openDesktopImportFile();

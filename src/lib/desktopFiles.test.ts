@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { openDesktopImportFile, saveDesktopBinaryFile, saveDesktopExportFile } from './desktopFiles';
+import {
+  isDesktopFileDialogSupported,
+  isNativeFileDialogSupported,
+  openDesktopImportFile,
+  saveDesktopBinaryFile,
+  saveDesktopExportFile,
+} from './desktopFiles';
 
 const invoke = vi.fn();
 
@@ -13,6 +19,12 @@ describe('desktopFiles', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     delete window.__TAURI_INTERNALS__;
+    delete window.AegisAndroidFiles;
+    delete window.__aegisAndroidFiles;
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 jsdom',
+    });
   });
 
   it('uses web fallback outside the desktop runtime', async () => {
@@ -45,5 +57,60 @@ describe('desktopFiles', () => {
       contentsBase64: 'AQID',
     });
     expect(invoke).toHaveBeenNthCalledWith(3, 'open_import_file');
+  });
+
+  it('fails loudly when Android Tauri runtime is missing the native file bridge', async () => {
+    window.__TAURI_INTERNALS__ = {};
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Linux; Android 14) AegisVault',
+    });
+
+    expect(isDesktopFileDialogSupported()).toBe(false);
+    expect(isNativeFileDialogSupported()).toBe(false);
+    await expect(saveDesktopExportFile('backup.aegis', 'payload')).rejects.toThrow('Android file picker is not available.');
+    await expect(saveDesktopBinaryFile('secret.bin', new Uint8Array([1, 2, 3]))).rejects.toThrow('Android file picker is not available.');
+    await expect(openDesktopImportFile()).rejects.toThrow('Android file picker is not available.');
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it('uses the Android native file bridge inside the Android Tauri runtime', async () => {
+    window.__TAURI_INTERNALS__ = {};
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Linux; Android 14) AegisVault',
+    });
+
+    window.AegisAndroidFiles = {
+      saveTextFile: vi.fn((requestId) => window.__aegisAndroidFiles?.resolveSave(requestId, true, null)),
+      saveBase64File: vi.fn((requestId) => window.__aegisAndroidFiles?.resolveSave(requestId, true, null)),
+      openTextFile: vi.fn((requestId) =>
+        window.__aegisAndroidFiles?.resolveOpen(requestId, { name: 'backup.json', contents: '[{"title":"GitHub"}]' }, null)
+      ),
+    };
+
+    expect(isDesktopFileDialogSupported()).toBe(false);
+    expect(isNativeFileDialogSupported()).toBe(true);
+    await expect(saveDesktopExportFile('backup.aegis', 'payload')).resolves.toBe(true);
+    await expect(saveDesktopBinaryFile('secret.bin', new Uint8Array([1, 2, 3]))).resolves.toBe(true);
+    await expect(openDesktopImportFile()).resolves.toEqual({
+      name: 'backup.json',
+      contents: '[{"title":"GitHub"}]',
+    });
+
+    expect(window.AegisAndroidFiles.saveTextFile).toHaveBeenCalledWith(
+      expect.stringMatching(/^aegis-file-/),
+      'backup.aegis',
+      'application/octet-stream',
+      'payload'
+    );
+    expect(window.AegisAndroidFiles.saveBase64File).toHaveBeenCalledWith(
+      expect.stringMatching(/^aegis-file-/),
+      'secret.bin',
+      'application/octet-stream',
+      'AQID'
+    );
+    expect(window.AegisAndroidFiles.openTextFile).toHaveBeenCalledWith(expect.stringMatching(/^aegis-file-/));
+    expect(invoke).not.toHaveBeenCalled();
   });
 });
