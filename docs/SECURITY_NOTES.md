@@ -26,7 +26,7 @@ This project is a password vault, so security claims must stay conservative unti
 - Android remembered Secret Key state and biometric metadata now prefer a JavaScript bridge backed by Android Keystore AES-GCM encrypted SharedPreferences, with browser storage retained only as a fallback or legacy migration source.
 - Android native biometric registration now requires the Android Keystore-backed secure storage bridge and refuses to store native wrapping metadata in IndexedDB fallback storage.
 - Android vault database persistence uses the Tauri native app-data command path, which maps to app-private storage on Android. The localStorage mirror is reduced to a setup marker when native persistence succeeds.
-- Android Autofill is registered only as a native service and settings entry in the first phase; it does not fill stored credentials until package/domain verification and user approval are implemented.
+- Android Autofill is registered as a native service and settings entry. It can detect login-like forms from field metadata and show an authenticated Aegis entry point, but it does not fill stored credentials until package/domain verification and user approval are implemented.
 - Android device smoke testing now verifies process startup with retries and confirms the debug package uses an app-private `/data/user/0/...` data directory.
 - Plaintext JSON export now requires an explicit risk warning and typed `EXPORT` confirmation before a readable backup can be created.
 - User-facing security copy no longer uses broad "military-grade" claims and now describes concrete local encryption controls more conservatively.
@@ -50,7 +50,7 @@ This project is a password vault, so security claims must stay conservative unti
 - Plaintext JSON export is still available for user-controlled migration/recovery, but it is gated by a warning and typed confirmation because the output is intentionally readable.
 - Android screenshots, document-picker file flows, Android Keystore-backed secure storage, and native app-private vault persistence are implemented. The remaining Android storage work is release-candidate regression coverage and final production review.
 - Android biometric registration can use the Tauri biometric plugin path only when the Android Keystore-backed secure storage bridge is present and exposes the expected API shape. A final manual device review is still needed before marketing it as production-grade biometric protection.
-- Android Autofill currently exposes provider registration and settings activation only. Credential fill responses remain blocked until the matching and approval model is implemented.
+- Android Autofill currently exposes provider registration, settings activation, login-field detection, and an authenticated launch entry point only. Credential fill responses remain blocked until the matching and approval model is implemented.
 
 ## Near-Term Security Plan
 
