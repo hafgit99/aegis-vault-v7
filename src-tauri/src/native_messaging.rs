@@ -4,6 +4,7 @@ use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 pub const TCP_PORT: u16 = 49155;
 pub const TOKEN_FILENAME: &str = "aegis_ipc_token.bin";
@@ -20,8 +21,16 @@ pub struct ExtensionCredential {
     pub favorite: bool,
 }
 
+pub const EXTENSION_CREDENTIAL_LEASE_MS: u64 = 5 * 60 * 1000;
+
+#[derive(Clone, Debug)]
+pub struct ExtensionCredentialCache {
+    pub credentials: Vec<ExtensionCredential>,
+    pub expires_at_epoch_ms: u64,
+}
+
 pub struct ExtensionState {
-    pub credentials: Arc<Mutex<Option<Vec<ExtensionCredential>>>>,
+    pub credentials: Arc<Mutex<Option<ExtensionCredentialCache>>>,
     pub pairing_token: String,
 }
 
@@ -61,27 +70,25 @@ pub fn get_app_data_dir() -> Option<PathBuf> {
 }
 
 pub fn generate_token() -> String {
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
+    use rand::{rngs::OsRng, RngCore};
 
-    let mut hasher = DefaultHasher::new();
-    std::time::SystemTime::now().hash(&mut hasher);
-    std::process::id().hash(&mut hasher);
-    let temp = 42;
-    (&temp as *const i32).hash(&mut hasher);
+    let mut token = [0u8; 32];
+    OsRng.fill_bytes(&mut token);
+    token.iter().map(|byte| format!("{:02x}", byte)).collect()
+}
 
-    format!("{:016x}{:016x}", hasher.finish(), {
-        let mut h2 = DefaultHasher::new();
-        "aegis-vault-secure-token-salt".hash(&mut h2);
-        std::time::Instant::now().hash(&mut h2);
-        h2.finish()
-    })
+pub fn credential_lease_expires_at(ttl_ms: u64) -> u64 {
+    let now_ms = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_millis() as u64)
+        .unwrap_or(0);
+    now_ms.saturating_add(ttl_ms.min(EXTENSION_CREDENTIAL_LEASE_MS))
 }
 
 pub fn start_tcp_server(
     app_handle: tauri::AppHandle,
     pairing_token: String,
-    credentials: Arc<Mutex<Option<Vec<ExtensionCredential>>>>,
+    credentials: Arc<Mutex<Option<ExtensionCredentialCache>>>,
 ) {
     thread::spawn(move || {
         let listener = match TcpListener::bind(format!("127.0.0.1:{}", TCP_PORT)) {
@@ -157,7 +164,7 @@ fn handle_client(
     app_handle: tauri::AppHandle,
     stream: &mut TcpStream,
     pairing_token: &str,
-    credentials: Arc<Mutex<Option<Vec<ExtensionCredential>>>>,
+    credentials: Arc<Mutex<Option<ExtensionCredentialCache>>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     use tauri::{Emitter, Manager};
 
@@ -202,7 +209,15 @@ fn handle_client(
         let response = match action {
             "ping" => serde_json::json!({ "status": "ok" }),
             "is_locked" => {
-                let locked = credentials.lock().unwrap().is_none();
+                let mut creds_guard = credentials.lock().unwrap();
+                let now_ms = credential_lease_expires_at(0);
+                if creds_guard
+                    .as_ref()
+                    .is_some_and(|cache| cache.expires_at_epoch_ms <= now_ms)
+                {
+                    *creds_guard = None;
+                }
+                let locked = creds_guard.is_none();
                 serde_json::json!({ "locked": locked })
             }
             "focus_window" => {
@@ -231,12 +246,21 @@ fn handle_client(
                 let url = req["url"].as_str().unwrap_or("");
                 let active_host = get_hostname(url);
 
-                let creds_guard = credentials.lock().unwrap();
-                if let Some(ref items) = *creds_guard {
+                let mut creds_guard = credentials.lock().unwrap();
+                let now_ms = credential_lease_expires_at(0);
+                if creds_guard
+                    .as_ref()
+                    .is_some_and(|cache| cache.expires_at_epoch_ms <= now_ms)
+                {
+                    *creds_guard = None;
+                }
+
+                if let Some(ref cache) = *creds_guard {
                     let matching: Vec<ExtensionCredential> = if active_host.is_empty() {
                         Vec::new()
                     } else {
-                        items
+                        cache
+                            .credentials
                             .iter()
                             .filter(|item| {
                                 let item_host = get_hostname(&item.url);
@@ -261,9 +285,17 @@ fn handle_client(
                 }
             }
             "list_credentials" => {
-                let creds_guard = credentials.lock().unwrap();
-                if let Some(ref items) = *creds_guard {
-                    serde_json::json!({ "locked": false, "credentials": items })
+                let mut creds_guard = credentials.lock().unwrap();
+                let now_ms = credential_lease_expires_at(0);
+                if creds_guard
+                    .as_ref()
+                    .is_some_and(|cache| cache.expires_at_epoch_ms <= now_ms)
+                {
+                    *creds_guard = None;
+                }
+
+                if let Some(ref cache) = *creds_guard {
+                    serde_json::json!({ "locked": false, "credentials": cache.credentials })
                 } else {
                     serde_json::json!({ "locked": true, "credentials": [] })
                 }
@@ -410,5 +442,29 @@ pub fn run_host() {
                 break;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn generated_pairing_tokens_are_256_bit_hex_values() {
+        let first = generate_token();
+        let second = generate_token();
+
+        assert_eq!(first.len(), 64);
+        assert!(first.chars().all(|character| character.is_ascii_hexdigit()));
+        assert_ne!(first, second);
+    }
+
+    #[test]
+    fn credential_lease_is_capped_to_the_default_window() {
+        let short = credential_lease_expires_at(1_000);
+        let long = credential_lease_expires_at(EXTENSION_CREDENTIAL_LEASE_MS * 10);
+
+        assert!(short > 0);
+        assert!(long.saturating_sub(short) <= EXTENSION_CREDENTIAL_LEASE_MS);
     }
 }

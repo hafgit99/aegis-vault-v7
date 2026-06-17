@@ -10,7 +10,7 @@ const FILE_DIALOG_BUFFER_LEN: usize = 32768;
 
 struct ExtensionState {
     credentials:
-        std::sync::Arc<std::sync::Mutex<Option<Vec<native_messaging::ExtensionCredential>>>>,
+        std::sync::Arc<std::sync::Mutex<Option<native_messaging::ExtensionCredentialCache>>>,
 }
 
 #[derive(serde::Serialize)]
@@ -108,9 +108,15 @@ fn reset_vault_database(app: AppHandle) -> Result<(), String> {
 fn sync_extension_credentials(
     state: tauri::State<'_, ExtensionState>,
     credentials: Vec<native_messaging::ExtensionCredential>,
+    ttl_ms: Option<u64>,
 ) -> Result<(), String> {
     let mut creds = state.credentials.lock().map_err(|e| e.to_string())?;
-    *creds = Some(credentials);
+    *creds = Some(native_messaging::ExtensionCredentialCache {
+        credentials,
+        expires_at_epoch_ms: native_messaging::credential_lease_expires_at(
+            ttl_ms.unwrap_or(native_messaging::EXTENSION_CREDENTIAL_LEASE_MS),
+        ),
+    });
     Ok(())
 }
 

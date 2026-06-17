@@ -118,11 +118,19 @@ export default function App() {
   });
 
   useEffect(() => {
-    if (unlocked && items.length > 0) {
-      syncExtensionCredentials(items);
-    } else if (!unlocked) {
+    if (!unlocked) {
       clearExtensionCredentials();
+      return;
     }
+
+    syncExtensionCredentials(items);
+    const interval = window.setInterval(() => {
+      syncExtensionCredentials(items);
+    }, 60_000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
   }, [unlocked, items]);
 
   useEffect(() => {

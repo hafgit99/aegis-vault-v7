@@ -1,6 +1,8 @@
 import { invoke } from '@tauri-apps/api/core';
 import { VaultItem } from '../types';
 
+export const EXTENSION_CREDENTIAL_LEASE_MS = 5 * 60 * 1000;
+
 declare global {
   interface Window {
     __TAURI_INTERNALS__?: unknown;
@@ -28,7 +30,7 @@ export async function resetDesktopVaultDatabase(): Promise<boolean> {
   return true;
 }
 
-export async function syncExtensionCredentials(items: VaultItem[]): Promise<void> {
+export async function syncExtensionCredentials(items: VaultItem[], ttlMs = EXTENSION_CREDENTIAL_LEASE_MS): Promise<void> {
   if (!isDesktopRuntime()) return;
   try {
     const creds = items
@@ -42,7 +44,7 @@ export async function syncExtensionCredentials(items: VaultItem[]): Promise<void
         category: item.category,
         favorite: Boolean(item.favorite),
       }));
-    await invoke('sync_extension_credentials', { credentials: creds });
+    await invoke('sync_extension_credentials', { credentials: creds, ttlMs });
   } catch (error) {
     console.error('Failed to sync credentials to extension:', error);
   }
