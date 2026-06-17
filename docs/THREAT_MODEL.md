@@ -96,6 +96,7 @@ Backups:
 - Secure `.aegis` exports use vetted Argon2id key derivation and WebCrypto AES-GCM.
 - AES-GCM tags protect encrypted backup payload integrity.
 - Wrong-password and tampered-tag regression tests cover the secure backup envelope.
+- Plaintext JSON exports require an explicit warning and typed `EXPORT` confirmation because the resulting file is readable by design.
 
 Attachments:
 
@@ -149,7 +150,7 @@ Required user-facing recovery rules:
 | Active master password lives in process memory while unlocked | Partially mitigated | Byte buffers are zeroized on lock; move secret operations into native adapters where practical |
 | Clipboard can keep copied secrets after OS capture or user clipboard changes | Partially mitigated | Safe clearing removes unchanged copied secrets; hostile OS clipboard capture remains out of scope |
 | TOTP follows RFC 6238 for HMAC-SHA1/SHA-256/SHA-512 and accepts `otpauth://totp` imports, but broad provider QR compatibility still needs manual verification | Mitigated with residual validation risk | Add fixture coverage from more authenticator exports before broad public release |
-| Plaintext export option can create unsafe files | Open | Add stronger warning, require confirmation, or remove for release builds |
+| Plaintext export option can create unsafe files | Partially mitigated | Warning and typed confirmation are required; decide whether to remove it from final release builds |
 | Android remembered Secret Key and biometric wrapping need Keystore-backed storage | Open | Implement Android Keystore adapter before public mobile release |
 
 ## Release Claim Rules
