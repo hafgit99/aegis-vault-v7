@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   isDesktopFileDialogSupported,
   isNativeFileDialogSupported,
@@ -17,6 +17,7 @@ vi.mock('@tauri-apps/api/core', () => ({
 
 describe('desktopFiles', () => {
   beforeEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
     delete window.__TAURI_INTERNALS__;
     delete window.AegisAndroidFiles;
@@ -25,6 +26,10 @@ describe('desktopFiles', () => {
       configurable: true,
       value: 'Mozilla/5.0 jsdom',
     });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('uses web fallback outside the desktop runtime', async () => {
@@ -112,5 +117,69 @@ describe('desktopFiles', () => {
     );
     expect(window.AegisAndroidFiles.openTextFile).toHaveBeenCalledWith(expect.stringMatching(/^aegis-file-/));
     expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it('propagates Android file picker save and open errors', async () => {
+    window.__TAURI_INTERNALS__ = {};
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Linux; Android 14) AegisVault',
+    });
+
+    window.AegisAndroidFiles = {
+      saveTextFile: vi.fn((requestId) => window.__aegisAndroidFiles?.resolveSave(requestId, false, 'Save failed')),
+      saveBase64File: vi.fn((requestId) => window.__aegisAndroidFiles?.resolveSave(requestId, false, 'Binary save failed')),
+      openTextFile: vi.fn((requestId) => window.__aegisAndroidFiles?.resolveOpen(requestId, null, 'Open failed')),
+    };
+
+    await expect(saveDesktopExportFile('backup.aegis', 'payload')).rejects.toThrow('Save failed');
+    await expect(saveDesktopBinaryFile('secret.bin', new Uint8Array([1, 2, 3]))).rejects.toThrow('Binary save failed');
+    await expect(openDesktopImportFile()).rejects.toThrow('Open failed');
+  });
+
+  it('resolves Android file picker cancellation without falling back to invisible browser writes', async () => {
+    window.__TAURI_INTERNALS__ = {};
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Linux; Android 14) AegisVault',
+    });
+
+    window.AegisAndroidFiles = {
+      saveTextFile: vi.fn((requestId) => window.__aegisAndroidFiles?.resolveSave(requestId, false, null)),
+      saveBase64File: vi.fn((requestId) => window.__aegisAndroidFiles?.resolveSave(requestId, false, null)),
+      openTextFile: vi.fn((requestId) => window.__aegisAndroidFiles?.resolveOpen(requestId, null, null)),
+    };
+
+    await expect(saveDesktopExportFile('backup.aegis', 'payload')).resolves.toBe(false);
+    await expect(saveDesktopBinaryFile('secret.bin', new Uint8Array([1, 2, 3]))).resolves.toBe(false);
+    await expect(openDesktopImportFile()).resolves.toBeNull();
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it('times out Android file picker requests that never call back', async () => {
+    vi.useFakeTimers();
+    window.__TAURI_INTERNALS__ = {};
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Linux; Android 14) AegisVault',
+    });
+
+    window.AegisAndroidFiles = {
+      saveTextFile: vi.fn(),
+      saveBase64File: vi.fn(),
+      openTextFile: vi.fn(),
+    };
+
+    const exportExpectation = expect(saveDesktopExportFile('backup.aegis', 'payload')).rejects.toThrow(
+      'Android file picker did not respond',
+    );
+    await vi.advanceTimersByTimeAsync(120000);
+    await exportExpectation;
+
+    const importExpectation = expect(openDesktopImportFile()).rejects.toThrow(
+      'Android file picker did not respond',
+    );
+    await vi.advanceTimersByTimeAsync(120000);
+    await importExpectation;
   });
 });

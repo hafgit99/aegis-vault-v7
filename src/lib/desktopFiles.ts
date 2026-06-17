@@ -21,8 +21,19 @@ declare global {
 }
 
 let androidFileRequestCounter = 0;
-const androidSaveRequests = new Map<string, { resolve: (saved: boolean) => void; reject: (error: Error) => void }>();
-const androidOpenRequests = new Map<string, { resolve: (file: DesktopImportFile | null) => void; reject: (error: Error) => void }>();
+const ANDROID_FILE_REQUEST_TIMEOUT_MS = 120000;
+
+type AndroidRequestTimeout = ReturnType<typeof setTimeout>;
+const androidSaveRequests = new Map<string, {
+  resolve: (saved: boolean) => void;
+  reject: (error: Error) => void;
+  timeout: AndroidRequestTimeout;
+}>();
+const androidOpenRequests = new Map<string, {
+  resolve: (file: DesktopImportFile | null) => void;
+  reject: (error: Error) => void;
+  timeout: AndroidRequestTimeout;
+}>();
 
 function isMobileUserAgent(): boolean {
   return typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
@@ -56,6 +67,7 @@ function ensureAndroidFileBridge(): NonNullable<Window['AegisAndroidFiles']> | n
       const pending = androidSaveRequests.get(requestId);
       if (!pending) return;
       androidSaveRequests.delete(requestId);
+      clearTimeout(pending.timeout);
       if (error) {
         pending.reject(new Error(error));
         return;
@@ -66,6 +78,7 @@ function ensureAndroidFileBridge(): NonNullable<Window['AegisAndroidFiles']> | n
       const pending = androidOpenRequests.get(requestId);
       if (!pending) return;
       androidOpenRequests.delete(requestId);
+      clearTimeout(pending.timeout);
       if (error) {
         pending.reject(new Error(error));
         return;
@@ -82,6 +95,18 @@ function nextAndroidFileRequestId(): string {
   return `aegis-file-${Date.now()}-${androidFileRequestCounter}`;
 }
 
+function createAndroidFileTimeout<T extends { reject: (error: Error) => void; timeout: AndroidRequestTimeout }>(
+  requestId: string,
+  pendingRequests: Map<string, T>,
+): AndroidRequestTimeout {
+  return setTimeout(() => {
+    const pending = pendingRequests.get(requestId);
+    if (!pending) return;
+    pendingRequests.delete(requestId);
+    pending.reject(new Error('Android file picker did not respond before the safety timeout.'));
+  }, ANDROID_FILE_REQUEST_TIMEOUT_MS);
+}
+
 function mimeTypeForExport(defaultFilename: string): string {
   if (defaultFilename.toLowerCase().endsWith('.json')) return 'application/json';
   if (defaultFilename.toLowerCase().endsWith('.aegis')) return 'application/octet-stream';
@@ -96,8 +121,15 @@ function saveAndroidTextFile(defaultFilename: string, contents: string): Promise
 
   const requestId = nextAndroidFileRequestId();
   return new Promise((resolve, reject) => {
-    androidSaveRequests.set(requestId, { resolve, reject });
-    bridge.saveTextFile(requestId, defaultFilename, mimeTypeForExport(defaultFilename), contents);
+    const timeout = createAndroidFileTimeout(requestId, androidSaveRequests);
+    androidSaveRequests.set(requestId, { resolve, reject, timeout });
+    try {
+      bridge.saveTextFile(requestId, defaultFilename, mimeTypeForExport(defaultFilename), contents);
+    } catch (error) {
+      androidSaveRequests.delete(requestId);
+      clearTimeout(timeout);
+      reject(error instanceof Error ? error : new Error(String(error)));
+    }
   });
 }
 
@@ -109,8 +141,15 @@ function saveAndroidBase64File(defaultFilename: string, contentsBase64: string):
 
   const requestId = nextAndroidFileRequestId();
   return new Promise((resolve, reject) => {
-    androidSaveRequests.set(requestId, { resolve, reject });
-    bridge.saveBase64File(requestId, defaultFilename, 'application/octet-stream', contentsBase64);
+    const timeout = createAndroidFileTimeout(requestId, androidSaveRequests);
+    androidSaveRequests.set(requestId, { resolve, reject, timeout });
+    try {
+      bridge.saveBase64File(requestId, defaultFilename, 'application/octet-stream', contentsBase64);
+    } catch (error) {
+      androidSaveRequests.delete(requestId);
+      clearTimeout(timeout);
+      reject(error instanceof Error ? error : new Error(String(error)));
+    }
   });
 }
 
@@ -122,8 +161,15 @@ function openAndroidTextFile(): Promise<DesktopImportFile | null> {
 
   const requestId = nextAndroidFileRequestId();
   return new Promise((resolve, reject) => {
-    androidOpenRequests.set(requestId, { resolve, reject });
-    bridge.openTextFile(requestId);
+    const timeout = createAndroidFileTimeout(requestId, androidOpenRequests);
+    androidOpenRequests.set(requestId, { resolve, reject, timeout });
+    try {
+      bridge.openTextFile(requestId);
+    } catch (error) {
+      androidOpenRequests.delete(requestId);
+      clearTimeout(timeout);
+      reject(error instanceof Error ? error : new Error(String(error)));
+    }
   });
 }
 
