@@ -122,6 +122,7 @@ Network:
 - Production builds install an air-gap policy around browser network primitives.
 - App-local/Tauri IPC URLs and HIBP range checks are allowed.
 - Unexpected outbound `fetch`, XHR, WebSocket, `sendBeacon`, and EventSource destinations are blocked and logged as security events.
+- HIBP password checks use the range API: the app computes SHA-1 locally and sends only the first five hash characters. Full password hashes and plaintext passwords are not sent.
 
 ## Recovery Model
 

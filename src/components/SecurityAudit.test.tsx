@@ -2,17 +2,24 @@
  * @vitest-environment jsdom
  */
 
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { LanguageProvider } from '../i18n/LanguageContext';
 import { languageStorageKey } from '../i18n/translations';
 import { VaultItem } from '../types';
 import SecurityAudit from './SecurityAudit';
+import { checkPasswordAgainstHibp } from '../lib/hibp';
+
+vi.mock('../lib/hibp', () => ({
+  checkPasswordAgainstHibp: vi.fn(async () => ({ status: 'clean', count: 0 })),
+}));
 
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
+  vi.mocked(checkPasswordAgainstHibp).mockReset();
+  vi.mocked(checkPasswordAgainstHibp).mockResolvedValue({ status: 'clean', count: 0 });
 });
 
 const makeItem = (overrides: Partial<VaultItem>): VaultItem => ({
@@ -32,7 +39,7 @@ describe('SecurityAudit', () => {
     render(<SecurityAudit items={[]} onSelectItem={vi.fn()} />);
 
     expect(screen.getByText('%100')).toBeTruthy();
-    expect(screen.getAllByText('0')).toHaveLength(3);
+    expect(screen.getAllByText('0')).toHaveLength(4);
     expect(screen.getByText(/Kritik derecede/)).toBeTruthy();
     expect(screen.getByText(/tekrar eden parola yoktur/)).toBeTruthy();
   });
@@ -108,7 +115,7 @@ describe('SecurityAudit', () => {
     expect(screen.getByText(/ZAYIF VE RİSKLİ HESAPLAR \(1\)/)).toBeTruthy();
     expect(screen.getByText(/TEKRAR EDEN ŞİFRELER/)).toBeTruthy();
     expect(screen.getByText('SSH Profile')).toBeTruthy();
-    expect(screen.getAllByText('0')).toHaveLength(2);
+    expect(screen.getAllByText('0')).toHaveLength(3);
 
     fireEvent.click(screen.getByText('SSH Profile'));
 
@@ -138,6 +145,33 @@ describe('SecurityAudit', () => {
     expect(screen.getByText('2')).toBeTruthy();
     expect(screen.queryByText('Email')).toBeNull();
     expect(screen.queryByText('Bank')).toBeNull();
+  });
+
+  it('renders HIBP pwned password findings without exposing the password', async () => {
+    vi.mocked(checkPasswordAgainstHibp).mockImplementation(async (password) => {
+      if (password === 'PwnedPass123!') return { status: 'pwned', count: 42 };
+      return { status: 'clean', count: 0 };
+    });
+    const pwnedItem = makeItem({
+      id: 'pwned',
+      title: 'Forum Account',
+      username: 'forum@example.com',
+      password: 'PwnedPass123!',
+    });
+    const onSelectItem = vi.fn();
+
+    render(<SecurityAudit items={[pwnedItem]} onSelectItem={onSelectItem} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/SIZINTI VERİTABANINDA BULUNAN PAROLALAR \(1\)/)).toBeTruthy();
+    });
+    expect(screen.getByText('Forum Account')).toBeTruthy();
+    expect(screen.getByText(/Görülme:/)).toBeTruthy();
+    expect(screen.queryByText('PwnedPass123!')).toBeNull();
+
+    fireEvent.click(screen.getByText('Forum Account'));
+
+    expect(onSelectItem).toHaveBeenCalledWith(pwnedItem);
   });
 
   it('renders security audit labels in the selected language', () => {
