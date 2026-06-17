@@ -32,6 +32,7 @@ import { useVaultFilters } from './hooks/useVaultFilters';
 import { useUnlockedVaultRefresh } from './hooks/useUnlockedVaultRefresh';
 import { useSelectedItemScore } from './hooks/useSelectedItemScore';
 import { useVaultStatusAction } from './hooks/useVaultStatusAction';
+import { useRuntimeSecurity } from './hooks/useRuntimeSecurity';
 import { useLanguage } from './i18n/LanguageContext';
 import { syncExtensionCredentials, clearExtensionCredentials } from './lib/desktopStorage';
 
@@ -105,6 +106,15 @@ export default function App() {
     autoLockDuration,
     resetReveals,
     clearCopiedField,
+  });
+
+  const { privacyShieldVisible } = useRuntimeSecurity({
+    unlocked,
+    onLock: handleLock,
+    onSensitiveStateClear: () => {
+      resetReveals();
+      clearCopiedField();
+    },
   });
 
   useEffect(() => {
@@ -324,6 +334,21 @@ export default function App() {
       </main>
 
       <FloatingVaultAction onNewItem={handleTriggerNew} />
+
+      {privacyShieldVisible && (
+        <div
+          aria-hidden="true"
+          className="fixed inset-0 z-[300] flex items-center justify-center bg-[#080a09] text-[#e2e3df]"
+        >
+          <div className="text-center px-8">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-md border border-[#84cc16]/40 bg-[#172012]">
+              <Check size={24} className="text-[#a3e635]" />
+            </div>
+            <p className="text-sm font-semibold tracking-[0.18em] uppercase">Aegis Vault</p>
+            <p className="mt-2 text-xs text-[#aeb5aa]">Secure display shield active</p>
+          </div>
+        </div>
+      )}
 
       <AppModals
         isVaultFormOpen={isVaultFormOpen}

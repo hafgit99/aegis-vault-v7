@@ -1,7 +1,7 @@
 use base64::Engine;
 use std::fs;
 use std::path::PathBuf;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, WebviewWindow};
 
 mod native_messaging;
 
@@ -17,6 +17,47 @@ struct ExtensionState {
 struct ImportFilePayload {
     name: String,
     contents: String,
+}
+
+#[cfg(target_os = "windows")]
+fn apply_screen_capture_protection_to_window(
+    window: &WebviewWindow,
+) -> Result<bool, String> {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        SetWindowDisplayAffinity, WDA_EXCLUDEFROMCAPTURE,
+    };
+
+    let hwnd = window
+        .hwnd()
+        .map_err(|error| format!("failed to resolve window handle: {error}"))?;
+    let applied = unsafe { SetWindowDisplayAffinity(hwnd.0 as _, WDA_EXCLUDEFROMCAPTURE) != 0 };
+    if !applied {
+        return Err("failed to enable Windows screen capture protection".to_string());
+    }
+
+    Ok(true)
+}
+
+#[cfg(not(target_os = "windows"))]
+fn apply_screen_capture_protection_to_window(
+    _window: &WebviewWindow,
+) -> Result<bool, String> {
+    Ok(false)
+}
+
+fn apply_screen_capture_protection(app: &AppHandle) -> Result<bool, String> {
+    let mut any_supported = false;
+
+    for window in app.webview_windows().values() {
+        any_supported |= apply_screen_capture_protection_to_window(window)?;
+    }
+
+    Ok(any_supported)
+}
+
+#[tauri::command]
+fn enable_screen_capture_protection(app: AppHandle) -> Result<bool, String> {
+    apply_screen_capture_protection(&app)
 }
 
 fn vault_database_path(app: &AppHandle) -> Result<PathBuf, String> {
@@ -295,6 +336,10 @@ pub fn run() {
 
     builder
         .setup(move |app| {
+            if let Err(error) = apply_screen_capture_protection(app.handle()) {
+                log::warn!("failed to enable screen capture protection: {error}");
+            }
+
             if cfg!(debug_assertions) {
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()
@@ -322,6 +367,7 @@ pub fn run() {
             read_vault_database,
             write_vault_database,
             reset_vault_database,
+            enable_screen_capture_protection,
             save_export_file,
             save_binary_file,
             open_import_file,

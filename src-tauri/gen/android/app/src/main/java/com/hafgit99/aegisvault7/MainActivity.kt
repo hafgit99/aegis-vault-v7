@@ -9,6 +9,7 @@ import android.provider.OpenableColumns
 import android.util.Base64
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
+import android.view.WindowManager
 import androidx.activity.enableEdgeToEdge
 import org.json.JSONObject
 
@@ -18,6 +19,7 @@ class MainActivity : TauriActivity() {
   private var pendingOpenRequestId: String? = null
 
   override fun onCreate(savedInstanceState: Bundle?) {
+    window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
   }
