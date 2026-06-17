@@ -45,7 +45,7 @@ This project is a password vault, so security claims must stay conservative unti
 - Some UI labels currently overstate security guarantees. Product copy should match the real implementation.
 - Plaintext JSON export is still available for user-controlled migration/recovery, but it is gated by a warning and typed confirmation because the output is intentionally readable.
 - Android screenshots, document-picker file flows, Android Keystore-backed secure storage, and native app-private vault persistence are implemented. The remaining Android storage work is release-candidate regression coverage and final production review.
-- Android biometric registration can use the Tauri biometric plugin path only when the Android Keystore-backed secure storage bridge is available. A final manual device review is still needed before marketing it as production-grade biometric protection.
+- Android biometric registration can use the Tauri biometric plugin path only when the Android Keystore-backed secure storage bridge is present and exposes the expected API shape. A final manual device review is still needed before marketing it as production-grade biometric protection.
 
 ## Near-Term Security Plan
 

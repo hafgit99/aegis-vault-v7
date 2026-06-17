@@ -151,7 +151,7 @@ Required user-facing recovery rules:
 | Clipboard can keep copied secrets after OS capture or user clipboard changes | Partially mitigated | Safe clearing removes unchanged copied secrets; hostile OS clipboard capture remains out of scope |
 | TOTP follows RFC 6238 for HMAC-SHA1/SHA-256/SHA-512 and accepts `otpauth://totp` imports, but broad provider QR compatibility still needs manual verification | Mitigated with residual validation risk | Add fixture coverage from more authenticator exports before broad public release |
 | Plaintext export option can create unsafe files | Partially mitigated | Warning and typed confirmation are required; decide whether to remove it from final release builds |
-| Android remembered Secret Key and biometric wrapping need Keystore-backed storage | Open | Implement Android Keystore adapter before public mobile release |
+| Android remembered Secret Key and biometric wrapping use the Keystore-backed secure-storage bridge, but final biometric device review is still required | Partially mitigated | Complete manual Android biometric wrapping review on target devices before public release |
 
 ## Release Claim Rules
 
@@ -175,7 +175,7 @@ Claims to avoid until fixed:
 ## Next Decisions
 
 1. Align the simulated SQLite naming with the finalized Tauri app data persistence strategy.
-2. Implement Android Keystore-backed remembered Secret Key and biometric wrapping.
+2. Complete final Android biometric wrapping review on target devices.
 3. Replace remaining legacy custom AES/GCM simulation fallbacks.
 4. Decide whether plaintext JSON export remains available in release builds.
 5. Review public release branding and installer identity before publishing signed artifacts.

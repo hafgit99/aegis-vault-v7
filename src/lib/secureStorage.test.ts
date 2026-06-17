@@ -25,6 +25,17 @@ describe('secure storage bridge', () => {
     expect(removeSecureStorageItem(secureStorageKeys.rememberedSecretKey)).toBe(false);
   });
 
+  it('reports unavailable when the Android bridge shape is incomplete', () => {
+    window.AegisAndroidSecureStorage = {
+      getItem: vi.fn(() => null),
+    } as unknown as typeof window.AegisAndroidSecureStorage;
+
+    expect(isSecureStorageAvailable()).toBe(false);
+    expect(getSecureStorageItem(secureStorageKeys.rememberedSecretKey)).toBeNull();
+    expect(setSecureStorageItem(secureStorageKeys.rememberedSecretKey, 'secret')).toBe(false);
+    expect(removeSecureStorageItem(secureStorageKeys.rememberedSecretKey)).toBe(false);
+  });
+
   it('routes get, set, and remove through the Android secure storage bridge', () => {
     const values = new Map<string, string>();
     window.AegisAndroidSecureStorage = {
