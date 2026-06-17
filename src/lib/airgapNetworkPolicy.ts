@@ -6,7 +6,7 @@
 import { AegisSecurityError, logSecurityEvent, securityEventCodes } from './securityEvents';
 
 const HIBP_RANGE_ORIGIN = 'https://api.pwnedpasswords.com';
-const HIBP_RANGE_PATH_PREFIX = '/range/';
+const HIBP_RANGE_PATH_PATTERN = /^\/range\/[0-9A-Fa-f]{5}$/;
 
 let installed = false;
 
@@ -26,7 +26,7 @@ export function isNetworkUrlAllowed(input: string | URL): boolean {
   if (url.hostname === 'ipc.localhost' || url.hostname === 'tauri.localhost') return true;
   if (typeof location !== 'undefined' && url.origin === location.origin) return true;
 
-  return url.origin === HIBP_RANGE_ORIGIN && url.pathname.startsWith(HIBP_RANGE_PATH_PREFIX);
+  return url.origin === HIBP_RANGE_ORIGIN && HIBP_RANGE_PATH_PATTERN.test(url.pathname) && url.search === '';
 }
 
 export function assertNetworkUrlAllowed(input: string | URL): void {
