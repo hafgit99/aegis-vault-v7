@@ -40,6 +40,7 @@ interface VaultWorkspaceProps {
   totpCountdown: number;
   onNewItem: () => void;
   onOpenProfile: () => void;
+  onLock: () => void;
   onOpenAudit: () => void;
   onOpenGenerator: () => void;
   onSetFavoritesOnly: (value: boolean) => void;
@@ -80,6 +81,7 @@ export function VaultWorkspaceContent({
   totpCountdown,
   onNewItem,
   onOpenProfile,
+  onLock,
   onOpenAudit,
   onOpenGenerator,
   onSetFavoritesOnly,
@@ -308,7 +310,7 @@ export function VaultWorkspaceContent({
               </span>
             </div>
 
-            <DashboardHeader profileName={profileName} onOpenProfile={onOpenProfile} />
+            <DashboardHeader profileName={profileName} onOpenProfile={onOpenProfile} onLock={onLock} />
 
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-5">
               <DashboardSecurityScoreCard auditReport={auditReport} activeItemCount={activeItems.length} />

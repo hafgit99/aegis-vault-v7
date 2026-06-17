@@ -37,6 +37,7 @@ interface MainContentProps {
   autoLockDuration: number;
   onNewItem: () => void;
   onOpenProfile: () => void;
+  onLock: () => void;
   onOpenAudit: () => void;
   onOpenGenerator: () => void;
   onSetFavoritesOnly: (value: boolean) => void;
@@ -87,6 +88,7 @@ export function MainContentComponent({
   autoLockDuration,
   onNewItem,
   onOpenProfile,
+  onLock,
   onOpenAudit,
   onOpenGenerator,
   onSetFavoritesOnly,
@@ -136,6 +138,7 @@ export function MainContentComponent({
           totpCountdown={totpCountdown}
           onNewItem={onNewItem}
           onOpenProfile={onOpenProfile}
+          onLock={onLock}
           onOpenAudit={onOpenAudit}
           onOpenGenerator={onOpenGenerator}
           onSetFavoritesOnly={onSetFavoritesOnly}

@@ -17,21 +17,31 @@ afterEach(() => {
 
 describe('DashboardHeader', () => {
   it('renders dashboard title and profile identity', () => {
-    render(<DashboardHeader profileName="Aegis Kullanıcısı" onOpenProfile={vi.fn()} />);
+    render(<DashboardHeader profileName="Aegis User" onOpenProfile={vi.fn()} onLock={vi.fn()} />);
 
     expect(screen.getByText('Kasa Paneli')).toBeTruthy();
     expect(screen.getByText(APP_NAME)).toBeTruthy();
-    expect(screen.getByText('Aegis Kullanıcısı')).toBeTruthy();
+    expect(screen.getByText('Aegis User')).toBeTruthy();
     expect(screen.getByText('A')).toBeTruthy();
+    expect(screen.getByTestId('dashboard-lock-button')).toBeTruthy();
   });
 
   it('opens the profile editor from the avatar button', () => {
     const onOpenProfile = vi.fn();
 
-    render(<DashboardHeader profileName="Hafız" onOpenProfile={onOpenProfile} />);
+    render(<DashboardHeader profileName="Hafiz" onOpenProfile={onOpenProfile} onLock={vi.fn()} />);
     fireEvent.click(screen.getByText('H'));
 
     expect(onOpenProfile).toHaveBeenCalledTimes(1);
+  });
+
+  it('locks the vault from the dashboard header action', () => {
+    const onLock = vi.fn();
+
+    render(<DashboardHeader profileName="Hafiz" onOpenProfile={vi.fn()} onLock={onLock} />);
+    fireEvent.click(screen.getByTestId('dashboard-lock-button'));
+
+    expect(onLock).toHaveBeenCalledTimes(1);
   });
 
   it('renders translated dashboard copy from the selected language', () => {
@@ -39,7 +49,7 @@ describe('DashboardHeader', () => {
 
     render(
       <LanguageProvider>
-        <DashboardHeader profileName="Aegis User" onOpenProfile={vi.fn()} />
+        <DashboardHeader profileName="Aegis User" onOpenProfile={vi.fn()} onLock={vi.fn()} />
       </LanguageProvider>,
     );
 

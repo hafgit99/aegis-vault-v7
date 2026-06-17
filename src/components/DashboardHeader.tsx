@@ -1,12 +1,15 @@
+import { Lock } from 'lucide-react';
+
 import { APP_NAME } from '../lib/branding';
 import { useLanguage } from '../i18n/LanguageContext';
 
 interface DashboardHeaderProps {
   profileName: string;
   onOpenProfile: () => void;
+  onLock: () => void;
 }
 
-export default function DashboardHeader({ profileName, onOpenProfile }: DashboardHeaderProps) {
+export default function DashboardHeader({ profileName, onOpenProfile, onLock }: DashboardHeaderProps) {
   const { t } = useLanguage();
 
   return (
@@ -25,6 +28,16 @@ export default function DashboardHeader({ profileName, onOpenProfile }: Dashboar
           <p className="text-xs text-on-surface font-semibold">{profileName}</p>
           <p className="text-[10px] text-on-surface-variant">{t('dashboard.autoLock')}</p>
         </div>
+        <button
+          type="button"
+          data-testid="dashboard-lock-button"
+          onClick={onLock}
+          className="w-10 h-10 rounded-lg bg-red-500/10 border border-red-400/20 flex items-center justify-center text-red-300 hover:text-red-200 hover:bg-red-500/15 focus:outline-none focus:ring-1 focus:ring-red-300/40 active:scale-95 transition-all cursor-pointer"
+          title={t('nav.lockVault')}
+          aria-label={t('nav.lockVault')}
+        >
+          <Lock className="w-4.5 h-4.5" />
+        </button>
         <button
           type="button"
           onClick={onOpenProfile}

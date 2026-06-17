@@ -318,6 +318,7 @@ export default function App() {
           autoLockDuration={autoLockDuration}
           onNewItem={handleTriggerNew}
           onOpenProfile={handleOpenProfile}
+          onLock={handleLock}
           onOpenAudit={handleOpenAuditTab}
           onOpenGenerator={handleOpenGeneratorTab}
           onSetFavoritesOnly={setFilterFavoritesOnly}
