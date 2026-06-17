@@ -132,7 +132,7 @@ class AegisAutofillService : AutofillService() {
   }
 
   companion object {
+    const val ACTION_AUTOFILL_AUTHENTICATE = "com.hafgit99.aegisvault7.action.AUTOFILL_AUTHENTICATE"
     private const val AUTOFILL_AUTH_REQUEST_CODE = 7201
-    private const val ACTION_AUTOFILL_AUTHENTICATE = "com.hafgit99.aegisvault7.action.AUTOFILL_AUTHENTICATE"
   }
 }

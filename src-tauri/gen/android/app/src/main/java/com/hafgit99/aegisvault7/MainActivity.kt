@@ -28,11 +28,21 @@ class MainActivity : TauriActivity() {
   private var webViewRef: WebView? = null
   private var pendingSave: PendingSave? = null
   private var pendingOpenRequestId: String? = null
+  private var pendingAutofillRequest: AutofillLaunchRequest? = null
 
   override fun onCreate(savedInstanceState: Bundle?) {
     window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
     enableEdgeToEdge()
+    captureAutofillIntent(intent)
     super.onCreate(savedInstanceState)
+  }
+
+  @Suppress("DEPRECATION")
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
+    captureAutofillIntent(intent)
+    notifyAutofillIntent()
   }
 
   override fun onWebViewCreate(webView: WebView) {
@@ -145,6 +155,21 @@ class MainActivity : TauriActivity() {
     webView.post {
       webView.evaluateJavascript(script, null)
     }
+  }
+
+  private fun captureAutofillIntent(intent: Intent?) {
+    if (intent?.action != AegisAutofillService.ACTION_AUTOFILL_AUTHENTICATE) return
+
+    pendingAutofillRequest = AutofillLaunchRequest(
+      requestId = "android-autofill-${System.currentTimeMillis()}",
+      createdAt = System.currentTimeMillis(),
+    )
+  }
+
+  private fun notifyAutofillIntent() {
+    val payload = pendingAutofillRequest?.toJson()?.toString() ?: "null"
+    val script = "window.__aegisAndroidAutofill && window.__aegisAndroidAutofill.onRequest($payload)"
+    evaluateOnWebView(script)
   }
 
   private fun jsonStringOrNull(value: String?): String {
@@ -270,6 +295,19 @@ class MainActivity : TauriActivity() {
         }
       }
     }
+
+    @JavascriptInterface
+    fun getPendingRequest(): String? {
+      return pendingAutofillRequest?.toJson()?.toString()
+    }
+
+    @JavascriptInterface
+    fun clearPendingRequest(requestId: String): Boolean {
+      val current = pendingAutofillRequest ?: return true
+      if (current.requestId != requestId) return false
+      pendingAutofillRequest = null
+      return true
+    }
   }
 
   private fun securePreferences() =
@@ -337,6 +375,13 @@ class MainActivity : TauriActivity() {
 
   private data class PendingSave(val requestId: String, val bytes: ByteArray)
   private data class AndroidImportFile(val name: String, val contents: String)
+  private data class AutofillLaunchRequest(val requestId: String, val createdAt: Long) {
+    fun toJson(): JSONObject =
+      JSONObject()
+        .put("requestId", requestId)
+        .put("createdAt", createdAt)
+        .put("source", "android-autofill")
+  }
 
   companion object {
     private const val REQUEST_SAVE_FILE = 7101
