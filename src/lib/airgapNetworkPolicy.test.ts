@@ -20,6 +20,16 @@ describe('air-gap network policy', () => {
     expect(isNetworkUrlAllowed('https://tauri.localhost/index.html')).toBe(true);
   });
 
+  it('only allows exact HIBP five-character SHA-1 range lookups', () => {
+    expect(isNetworkUrlAllowed('https://api.pwnedpasswords.com/range/5BAA6')).toBe(true);
+    expect(isNetworkUrlAllowed('https://api.pwnedpasswords.com/range/5baa6')).toBe(true);
+    expect(isNetworkUrlAllowed('https://api.pwnedpasswords.com/range/5BAA')).toBe(false);
+    expect(isNetworkUrlAllowed('https://api.pwnedpasswords.com/range/5BAA61')).toBe(false);
+    expect(isNetworkUrlAllowed('https://api.pwnedpasswords.com/range/5BAA6/extra')).toBe(false);
+    expect(isNetworkUrlAllowed('https://api.pwnedpasswords.com/range/5BAA6?mode=ntlm')).toBe(false);
+    expect(isNetworkUrlAllowed('https://api.pwnedpasswords.com/range/ZZZZZ')).toBe(false);
+  });
+
   it('blocks arbitrary outbound network requests without leaking full paths', () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 

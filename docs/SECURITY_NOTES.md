@@ -16,7 +16,7 @@ This project is a password vault, so security claims must stay conservative unti
 - Desktop vault persistence now mirrors database state through the Tauri app data directory.
 - Desktop import/export now uses controlled native Windows file dialogs.
 - Clipboard clearing now removes copied secrets after the safety delay when the clipboard remains unchanged.
-- Production builds install an air-gap network policy that blocks unexpected outbound `fetch`, XHR, WebSocket, `sendBeacon`, and EventSource connections while allowing app-local/Tauri IPC URLs and HIBP range checks.
+- Production builds install an air-gap network policy that blocks unexpected outbound `fetch`, XHR, WebSocket, `sendBeacon`, and EventSource connections while allowing app-local/Tauri IPC URLs and exact five-character HIBP SHA-1 range checks.
 - Security Audit can check passwords against Have I Been Pwned using the k-anonymity range API: only the first five SHA-1 hash characters are sent, full hashes and plaintext passwords stay local.
 - TOTP generation now follows the RFC 6238 flow for Base32 secrets, HMAC-SHA1/SHA-256/SHA-512, 8-byte counters, dynamic truncation, and `otpauth://totp` URI parsing.
 - Desktop Windows builds enable native screen capture protection through `SetWindowDisplayAffinity`.
