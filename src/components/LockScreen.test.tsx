@@ -5,7 +5,6 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { APP_NAME } from '../lib/branding';
 import { LanguageProvider } from '../i18n/LanguageContext';
 import { languageStorageKey } from '../i18n/translations';
 import {
@@ -85,7 +84,6 @@ describe('LockScreen', () => {
       </LanguageProvider>,
     );
 
-    expect(screen.getByText('SMART CYBER SECURITY VAULT')).toBeTruthy();
     expect(screen.getByText('Set Up Your Secure Vault')).toBeTruthy();
     expect(screen.getByText('Start Secure Vault')).toBeTruthy();
 
@@ -182,7 +180,7 @@ describe('LockScreen', () => {
     render(<LockScreen onUnlock={onUnlock} />);
 
     expect(screen.getByText('Kasa Kilitleri Aktif')).toBeTruthy();
-    expect(screen.getAllByText(new RegExp(APP_NAME)).length).toBeGreaterThan(0);
+    expect(screen.getByText('Sistem Kilidini Aç')).toBeTruthy();
 
     const password = passwordInput();
     fireEvent.change(password, { target: { value: 'wrong-pass' } });
@@ -346,6 +344,6 @@ describe('LockScreen', () => {
     // Switch to English
     fireEvent.change(select, { target: { value: 'en' } });
     expect(select.value).toBe('en');
-    expect(screen.getByText('SMART CYBER SECURITY VAULT')).toBeTruthy();
+    expect(screen.getByText('Set Up Your Secure Vault')).toBeTruthy();
   });
 });

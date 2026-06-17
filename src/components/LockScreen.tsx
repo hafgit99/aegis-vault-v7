@@ -5,17 +5,11 @@
 
 import React, { useState } from 'react';
 import { 
-  Lock, 
   Unlock, 
   ShieldAlert, 
   Fingerprint, 
-  ShieldCheck, 
-  Cpu, 
-  HardDrive, 
   Eye, 
   EyeOff, 
-  CheckCircle2, 
-  Sparkles,
   Trash2,
   KeyRound,
   Download,
@@ -32,7 +26,7 @@ import {
   verifyMasterPassword,
 } from '../lib/storage';
 import { authenticateBiometric, isBiometricEnabled, isBiometricSupported } from '../lib/biometric';
-import { APP_NAME, APP_SHORT_NAME } from '../lib/branding';
+import { APP_NAME } from '../lib/branding';
 import { useLanguage } from '../i18n/LanguageContext';
 import { supportedLanguages, languageLabels, type LanguageCode } from '../i18n/translations';
 import {
@@ -264,7 +258,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
       <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-brand-tertiary/5 blur-[120px] rounded-full pointer-events-none" />
 
       {/* Top Bar with Language Selector */}
-      <header className="w-full flex justify-end px-6 py-4 relative z-50 shrink-0">
+      <header className="absolute top-2 right-4 sm:right-6 z-50">
         <div className="flex items-center gap-2 bg-[#1a1c1a]/60 backdrop-blur-md rounded-lg px-3 py-1.5 border border-outline-variant/10">
           <Languages className="w-4 h-4 text-brand-primary" />
           <select
@@ -282,105 +276,20 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
         </div>
       </header>
 
-      <div className="flex-1 w-full max-w-7xl mx-auto px-4 py-4 lg:py-8 flex items-center justify-center relative z-10">
-        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
-          
-          {/* LEFT COLUMN: Educational & Cyber-Security Features Showcase */}
-          <div className="lg:col-span-7 space-y-7 animate-fade-in text-left">
-            <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-primary/10 border border-brand-primary/20 text-brand-primary text-[10px] font-bold tracking-widest uppercase rounded-full">
-                <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-                <span>{t('lock.hero.badge')}</span>
-              </div>
-              <h1 className="font-display text-3xl md:text-5xl font-bold tracking-tight text-on-surface leading-tight">
-                {t('lock.hero.titlePrefix')} <br />
-                <span className="text-brand-primary">{t('lock.hero.titleHighlight')}</span> {t('lock.hero.titleSuffix')}
-              </h1>
-              <p className="text-on-surface-variant text-sm md:text-base max-w-xl leading-relaxed">
-                {APP_NAME}; {t('lock.hero.descriptionSuffix')}
-              </p>
-            </div>
-
-            {/* Premium Feature Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              
-              <div className="surface-card surface-card-hover rounded-xl p-4 space-y-2 transition-all duration-300 hover:translate-y-[-2px]">
-                <div className="icon-tile bg-brand-primary/10 text-brand-primary">
-                  <ShieldCheck className="w-5 h-5" />
-                </div>
-                <h3 className="font-display font-semibold text-sm text-on-surface">{t('lock.feature.zeroKnowledge.title')}</h3>
-                <p className="text-on-surface-variant text-[11.5px] leading-relaxed">
-                  {t('lock.feature.zeroKnowledge.description')}
-                </p>
-              </div>
-
-              <div className="surface-card surface-card-hover rounded-xl p-4 space-y-2 transition-all duration-300 hover:translate-y-[-2px]">
-                <div className="icon-tile bg-emerald-500/10 text-emerald-400">
-                  <Cpu className="w-5 h-5" />
-                </div>
-                <h3 className="font-display font-semibold text-sm text-on-surface font-display">{t('lock.feature.crypto.title')}</h3>
-                <p className="text-on-surface-variant text-[11.5px] leading-relaxed">
-                  {t('lock.feature.crypto.description')}
-                </p>
-              </div>
-
-              <div className="surface-card surface-card-hover rounded-xl p-4 space-y-2 transition-all duration-300 hover:translate-y-[-2px]">
-                <div className="icon-tile bg-brand-tertiary/10 text-brand-tertiary">
-                  <HardDrive className="w-5 h-5" />
-                </div>
-                <h3 className="font-display font-semibold text-sm text-on-surface font-display">{t('lock.feature.localControl.title')}</h3>
-                <p className="text-on-surface-variant text-[11.5px] leading-relaxed">
-                  {t('lock.feature.localControl.description')}
-                </p>
-              </div>
-
-              <div className="surface-card surface-card-hover rounded-xl p-4 space-y-2 transition-all duration-300 hover:translate-y-[-2px]">
-                <div className="icon-tile bg-red-500/10 text-red-400">
-                  <Trash2 className="w-5 h-5" />
-                </div>
-                <h3 className="font-display font-semibold text-sm text-on-surface font-display">{t('lock.feature.trash.title')}</h3>
-                <p className="text-on-surface-variant text-[11.5px] leading-relaxed">
-                  {t('lock.feature.trash.description')}
-                </p>
-              </div>
-
-            </div>
-
-            {/* Real-time System Indicators */}
-            <div className="flex flex-wrap items-center gap-3 text-xs text-on-surface-variant">
-              <div className="flex items-center gap-1.5 bg-[#121412] px-3 py-1.5 rounded-full border border-outline-variant/5">
-                <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse" />
-                <span>{t('lock.indicator.localStorage')}</span>
-              </div>
-              <div className="flex items-center gap-1.5 bg-[#121412] px-3 py-1.5 rounded-full border border-outline-variant/5">
-                <span className="w-1.5 h-1.5 rounded-full bg-brand-tertiary" />
-                <span>{t('lock.indicator.encryption')}</span>
-              </div>
-              <div className="flex items-center gap-1.5 bg-[#121412] px-3 py-1.5 rounded-full border border-outline-variant/5">
-                <span className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
-                <span>{t('lock.indicator.trash')}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* RIGHT COLUMN: Interactive High-Precision Password Box */}
-          <div className="lg:col-span-5 flex justify-center lg:justify-end">
-            <div className="w-full max-w-md surface-panel rounded-xl p-7 relative z-10 transition-all duration-300 hover:border-brand-primary/15 hover:shadow-brand-primary/5">
-              <div className="flex flex-col items-center text-center mb-7">
-                <div className="w-14 h-14 rounded-xl bg-brand-primary/5 border border-brand-primary/20 flex items-center justify-center mb-5 shadow-[0_0_15px_rgba(220,225,255,0.05)] overflow-hidden group">
-                  <img src={aegisLogo} alt="Aegis Vault Logo" className="w-11 h-11 object-contain group-hover:scale-105 transition-transform duration-300" />
+      <div className="flex-1 w-full max-w-3xl mx-auto px-4 py-1 sm:py-2 flex items-center justify-center relative z-10">
+        <div className="w-full flex items-center justify-center">
+          <div className="w-full flex justify-center">
+            <div className="w-full max-w-md surface-panel rounded-xl p-5 relative z-10 transition-all duration-300 hover:border-brand-primary/15 hover:shadow-brand-primary/5">
+              <div className="flex flex-col items-center text-center mb-4 sm:mb-6">
+                <div className="w-12 h-12 rounded-xl bg-brand-primary/5 border border-brand-primary/20 flex items-center justify-center mb-3 sm:mb-4 shadow-[0_0_15px_rgba(220,225,255,0.05)] overflow-hidden group">
+                  <img src={aegisLogo} alt="Aegis Vault Logo" className="w-10 h-10 object-contain group-hover:scale-105 transition-transform duration-300" />
                 </div>
                 <h1 className="font-display text-2xl font-bold text-on-surface leading-tight tracking-tight">
                   {isSetup ? t('lock.panel.unlockTitle') : t('lock.panel.setupTitle')}
                 </h1>
-                <p className="text-on-surface-variant text-xs mt-2.5 max-w-xs leading-relaxed">
-                  {isSetup
-                    ? t('lock.panel.unlockDescription')
-                    : `${APP_SHORT_NAME} ${t('lock.panel.setupDescriptionSuffix')}`}
-                </p>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
                 {error && (
                   <div className="flex items-start gap-3 p-4 rounded-xl bg-brand-error/10 border border-brand-error/20 text-brand-error text-xs leading-relaxed animate-fade-in">
                     <ShieldAlert className="w-5 h-5 shrink-0 text-red-400 mt-0.5" />
@@ -409,7 +318,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full bg-[#141614] hover:bg-[#181a18] focus:bg-[#1a1c1a] border border-outline-variant/20 focus:border-brand-primary/30 rounded-xl pl-4 pr-11 py-3.5 text-on-surface placeholder-on-surface-variant/20 focus:ring-2 focus:ring-brand-primary/10 focus:shadow-[0_0_15px_rgba(220,225,255,0.06)] focus:outline-none transition-all duration-300 text-center tracking-widest text-lg font-mono"
+                      className="w-full bg-[#141614] hover:bg-[#181a18] focus:bg-[#1a1c1a] border border-outline-variant/20 focus:border-brand-primary/30 rounded-xl pl-4 pr-11 py-3 sm:py-3.5 text-on-surface placeholder-on-surface-variant/20 focus:ring-2 focus:ring-brand-primary/10 focus:shadow-[0_0_15px_rgba(220,225,255,0.06)] focus:outline-none transition-all duration-300 text-center tracking-widest text-lg font-mono"
                       placeholder="••••••••"
                       required
                       autoFocus
@@ -437,7 +346,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                         type={showConfirmPassword ? 'text' : 'password'}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full bg-[#141614] hover:bg-[#181a18] focus:bg-[#1a1c1a] border border-outline-variant/20 focus:border-brand-primary/30 rounded-xl pl-4 pr-11 py-3.5 text-on-surface placeholder-on-surface-variant/20 focus:ring-2 focus:ring-brand-primary/10 focus:shadow-[0_0_15px_rgba(220,225,255,0.06)] focus:outline-none transition-all duration-300 text-center tracking-widest text-lg font-mono"
+                        className="w-full bg-[#141614] hover:bg-[#181a18] focus:bg-[#1a1c1a] border border-outline-variant/20 focus:border-brand-primary/30 rounded-xl pl-4 pr-11 py-3 sm:py-3.5 text-on-surface placeholder-on-surface-variant/20 focus:ring-2 focus:ring-brand-primary/10 focus:shadow-[0_0_15px_rgba(220,225,255,0.06)] focus:outline-none transition-all duration-300 text-center tracking-widest text-lg font-mono"
                         placeholder="••••••••"
                         required
                       />
@@ -454,16 +363,13 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                 )}
 
                 {(!isSetup || requiresSecretKey) && (
-                  <div className="rounded-2xl glass-panel p-4 space-y-3">
-                    <div className="flex items-start gap-3">
+                  <div className="rounded-2xl glass-panel p-3 sm:p-4 space-y-3">
+                    <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center text-brand-primary shrink-0">
                         <KeyRound className="w-4.5 h-4.5" />
                       </div>
                       <div className="text-left">
                         <p className="text-xs font-bold text-on-surface">{t('lock.secret.title')}</p>
-                        <p className="text-[11px] leading-relaxed text-on-surface-variant mt-1">
-                          {isSetup ? t('lock.secret.unlockDescription') : t('lock.secret.setupDescription')}
-                        </p>
                       </div>
                     </div>
 
@@ -477,7 +383,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                         value={secretKey}
                         onChange={(e) => setSecretKey(e.target.value)}
                         readOnly={!isSetup}
-                        className="w-full bg-[#141614] border border-outline-variant/30 rounded-xl px-3 py-3 text-on-surface focus:ring-2 focus:ring-brand-primary/20 focus:outline-none transition-all text-center tracking-wider text-xs font-mono"
+                        className="w-full bg-[#141614] border border-outline-variant/30 rounded-xl px-3 py-2.5 sm:py-3 text-on-surface focus:ring-2 focus:ring-brand-primary/20 focus:outline-none transition-all text-center tracking-wider text-xs font-mono"
                         placeholder="A3-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
                         required={requiresSecretKey}
                       />
@@ -499,7 +405,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                         data-testid="lock-emergency-kit-button"
                         type="button"
                         onClick={handleDownloadEmergencyKit}
-                        className="w-full flex items-center justify-center gap-2 text-xs font-bold border border-brand-primary/25 bg-brand-primary/10 hover:bg-brand-primary/15 text-brand-primary py-3 rounded-xl transition-all cursor-pointer"
+                        className="w-full flex items-center justify-center gap-2 text-xs font-bold border border-brand-primary/25 bg-brand-primary/10 hover:bg-brand-primary/15 text-brand-primary py-2.5 sm:py-3 rounded-xl transition-all cursor-pointer"
                       >
                         <Download className="w-4 h-4" />
                         <span>{t('lock.secret.downloadEmergencyKit')}</span>
@@ -513,7 +419,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                   data-testid="lock-submit-button"
                   type="submit"
                   disabled={isSetup && isLockedOut}
-                  className="w-full flex items-center justify-center gap-2.5 bg-brand-primary text-brand-on-primary py-4 rounded-xl font-bold transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-lg shadow-brand-primary/10 hover:brightness-110"
+                  className="w-full flex items-center justify-center gap-2.5 bg-brand-primary text-brand-on-primary py-3.5 sm:py-4 rounded-xl font-bold transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-lg shadow-brand-primary/10 hover:brightness-110"
                 >
                   {isSetup ? (
                     <>
@@ -556,17 +462,6 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
                   </button>
                 </div>
               )}
-
-              {/* Zero-Server trust notice banner */}
-              <div className="mt-5 pt-5 border-t border-outline-variant/10 flex flex-col items-center gap-1.5 text-xs text-on-surface-variant/40 text-center">
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-brand-tertiary" />
-                  <span className="font-bold text-on-surface">{t('lock.privacy.title')}</span>
-                </div>
-                <p className="leading-relaxed text-[11px] px-2">
-                  {t('lock.privacy.description')}
-                </p>
-              </div>
 
             </div>
           </div>
@@ -641,7 +536,7 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
       )}
 
       {/* Futuristic clean footer */}
-      <footer className="w-full border-t border-outline-variant/5 py-4 bg-[#0a0b0a]/40 text-center text-[10px] text-on-surface-variant/30 font-mono flex flex-col sm:flex-row items-center justify-between px-6 gap-2">
+      <footer className="hidden w-full border-t border-outline-variant/5 py-4 bg-[#0a0b0a]/40 text-center text-[10px] text-on-surface-variant/30 font-mono flex-col sm:flex-row items-center justify-between px-6 gap-2">
         <span>© 2026 {t('lock.footer.name')}</span>
         <span>{t('lock.footer.crypto')}</span>
       </footer>
