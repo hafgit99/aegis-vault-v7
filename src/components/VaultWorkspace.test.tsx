@@ -117,6 +117,7 @@ describe('VaultWorkspace', () => {
     expect(screen.getByText('Kasa Paneli')).toBeTruthy();
     expect(screen.getByText(APP_NAME)).toBeTruthy();
     expect(screen.getByTestId('dashboard-lock-button')).toBeTruthy();
+    expect(screen.getByTestId('mobile-dashboard-lock-button')).toBeTruthy();
   });
 
   it('forwards list, filter and dashboard actions', () => {
@@ -179,13 +180,14 @@ describe('VaultWorkspace', () => {
   it('forwards dashboard header and quick action callbacks', () => {
     const props = renderWorkspace();
 
+    fireEvent.click(screen.getByTestId('mobile-dashboard-lock-button'));
     fireEvent.click(screen.getByTestId('dashboard-lock-button'));
     fireEvent.click(screen.getByText('H'));
     fireEvent.click(buttonByText('Yeni Şifre Ekle'));
     fireEvent.click(buttonByText('Güvenlik Denetle'));
     fireEvent.click(buttonByText('Güçlü Şifre Üret'));
 
-    expect(props.onLock).toHaveBeenCalledTimes(1);
+    expect(props.onLock).toHaveBeenCalledTimes(2);
     expect(props.onOpenProfile).toHaveBeenCalledTimes(1);
     expect(props.onNewItem).toHaveBeenCalledTimes(1);
     expect(props.onOpenAudit).toHaveBeenCalledTimes(1);

@@ -1,5 +1,5 @@
 import React, { Fragment, useState, useEffect, memo } from 'react';
-import { ArrowLeft, CreditCard, FileText, Fingerprint, Heart, KeyRound, Layers, LayoutDashboard, Plus, Search, User } from 'lucide-react';
+import { ArrowLeft, CreditCard, FileText, Fingerprint, Heart, KeyRound, Layers, LayoutDashboard, Lock, Plus, Search, User } from 'lucide-react';
 
 import type { VaultCategoryFilter } from '../hooks/useVaultFilters';
 
@@ -305,9 +305,21 @@ export function VaultWorkspaceContent({
                 <ArrowLeft className="w-4 h-4 text-brand-primary" strokeWidth={2.5} />
                 <span>{t('detail.mobile.back')}</span>
               </button>
-              <span className="w-9 h-9 rounded-lg bg-brand-primary/10 border border-brand-primary/15 flex items-center justify-center text-brand-primary">
-                <LayoutDashboard className="w-4 h-4" />
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="w-9 h-9 rounded-lg bg-brand-primary/10 border border-brand-primary/15 flex items-center justify-center text-brand-primary">
+                  <LayoutDashboard className="w-4 h-4" />
+                </span>
+                <button
+                  type="button"
+                  data-testid="mobile-dashboard-lock-button"
+                  onClick={onLock}
+                  className="w-9 h-9 rounded-lg bg-red-500/10 border border-red-400/20 flex items-center justify-center text-red-300 hover:text-red-200 hover:bg-red-500/15 focus:outline-none focus:ring-1 focus:ring-red-300/40 active:scale-95 transition-all cursor-pointer"
+                  title={t('nav.lockVault')}
+                  aria-label={t('nav.lockVault')}
+                >
+                  <Lock className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             <DashboardHeader profileName={profileName} onOpenProfile={onOpenProfile} onLock={onLock} />
