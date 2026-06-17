@@ -1,5 +1,5 @@
 import React, { Fragment, useState, useEffect, memo } from 'react';
-import { CreditCard, FileText, Fingerprint, Heart, KeyRound, Layers, LayoutDashboard, Plus, Search, User } from 'lucide-react';
+import { ArrowLeft, CreditCard, FileText, Fingerprint, Heart, KeyRound, Layers, LayoutDashboard, Plus, Search, User } from 'lucide-react';
 
 import type { VaultCategoryFilter } from '../hooks/useVaultFilters';
 
@@ -214,9 +214,11 @@ export function VaultWorkspaceContent({
         </div>
 
         <div className="px-3 pb-2 shrink-0">
-          <div
+          <button
+            type="button"
+            data-testid="vault-dashboard-card"
             onClick={onSelectDashboard}
-            className={`group p-3 rounded-lg border flex items-center gap-3 cursor-pointer transition-all ${
+            className={`group w-full p-3 rounded-lg border flex items-center gap-3 text-left cursor-pointer transition-all focus:outline-none focus:ring-1 focus:ring-brand-primary/40 ${
               selectedItem === null
                 ? 'border-brand-primary/20 bg-brand-primary/10'
                 : 'border-outline-variant/10 hover:border-brand-primary/10 hover:bg-surface-low/70'
@@ -232,7 +234,7 @@ export function VaultWorkspaceContent({
               </h3>
               <p className="text-[10px] text-on-surface-variant font-mono truncate">{t('vaultList.dashboardDescription')}</p>
             </div>
-          </div>
+          </button>
         </div>
 
         <div
@@ -266,8 +268,8 @@ export function VaultWorkspaceContent({
       </section>
 
       <section
-        className={`flex-1 p-4 lg:p-6 overflow-y-auto scrollbar-hide bg-brand-bg ${
-          !selectedItem || mobileActiveView === 'list' ? 'hidden lg:block' : 'block'
+        className={`flex-1 min-h-0 p-3 sm:p-4 lg:p-6 overflow-y-auto scrollbar-hide bg-brand-bg safe-bottom ${
+          mobileActiveView === 'list' ? 'hidden lg:block' : 'block'
         }`}
       >
         {selectedItem ? (
@@ -291,10 +293,24 @@ export function VaultWorkspaceContent({
             onDownloadAttachment={onDownloadAttachment}
           />
         ) : (
-          <div className="max-w-5xl mx-auto space-y-6 py-4 lg:py-5 animate-fade-in text-left">
+          <div className="max-w-6xl mx-auto space-y-4 sm:space-y-5 py-2 sm:py-4 lg:py-5 animate-fade-in text-left">
+            <div className="lg:hidden sticky top-0 z-20 -mx-3 px-3 py-2 mb-1 bg-brand-bg/95 backdrop-blur border-b border-outline-variant/10 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={onBackToList}
+                className="flex items-center gap-2 text-xs font-bold bg-[#1a1c1a] border border-outline-variant/15 px-3 py-2 rounded-lg text-on-surface hover:text-brand-primary active:scale-95 transition-all cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4 text-brand-primary" strokeWidth={2.5} />
+                <span>{t('detail.mobile.back')}</span>
+              </button>
+              <span className="w-9 h-9 rounded-lg bg-brand-primary/10 border border-brand-primary/15 flex items-center justify-center text-brand-primary">
+                <LayoutDashboard className="w-4 h-4" />
+              </span>
+            </div>
+
             <DashboardHeader profileName={profileName} onOpenProfile={onOpenProfile} />
 
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-5">
               <DashboardSecurityScoreCard auditReport={auditReport} activeItemCount={activeItems.length} />
 
               <DashboardCategoryStats
@@ -310,7 +326,7 @@ export function VaultWorkspaceContent({
               onOpenGenerator={onOpenGenerator}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-fade-in text-left">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 animate-fade-in text-left">
               <RecentVaultPanel
                 items={activeItems}
                 copiedField={copiedField}

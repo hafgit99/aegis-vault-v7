@@ -10,13 +10,13 @@ export default function DashboardHeader({ profileName, onOpenProfile }: Dashboar
   const { t } = useLanguage();
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-outline-variant/10 pb-5">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-outline-variant/10 pb-4 sm:pb-5">
       <div className="space-y-1">
-        <h2 className="font-display text-2xl font-bold text-on-surface flex items-center gap-2.5">
+        <h2 className="font-display text-xl sm:text-2xl font-bold text-on-surface flex flex-wrap items-center gap-x-2.5 gap-y-1">
           <span>{t('dashboard.title')}</span>
           <span className="text-brand-primary">{APP_NAME}</span>
         </h2>
-        <p className="text-on-surface-variant text-xs">
+        <p className="hidden sm:block text-on-surface-variant text-xs">
           {t('dashboard.subtitle')}
         </p>
       </div>

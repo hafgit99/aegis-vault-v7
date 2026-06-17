@@ -54,8 +54,8 @@ export default function VaultItemDetailPanel({
   const { t } = useLanguage();
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 lg:space-y-8">
-      <div className="lg:hidden flex items-center justify-between pb-2 border-b border-outline-variant/10 mb-4">
+    <div className="max-w-6xl mx-auto space-y-4 lg:space-y-5">
+      <div className="lg:hidden sticky top-0 z-20 -mx-3 px-3 py-2 bg-brand-bg/95 backdrop-blur flex items-center justify-between border-b border-outline-variant/10">
         <button
           onClick={onBackToList}
           className="flex items-center gap-2 text-xs font-bold bg-[#1a1c1a] border border-outline-variant/15 px-3 py-2 rounded-lg text-on-surface hover:text-brand-primary active:scale-95 transition-all cursor-pointer"
@@ -77,8 +77,8 @@ export default function VaultItemDetailPanel({
 
       <VaultItemSecurityAssessment score={score} onOpenAudit={onOpenAudit} />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 space-y-4">
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-4 lg:gap-5">
+        <div className="space-y-3 sm:space-y-4 min-w-0">
           <LoginDetail
             item={item}
             copiedField={copiedField}
@@ -113,7 +113,9 @@ export default function VaultItemDetailPanel({
           <VaultItemAttachmentCard item={item} onDownload={onDownloadAttachment} />
         </div>
 
-        <VaultItemSideInfo item={item} />
+        <div className="xl:sticky xl:top-4 xl:self-start">
+          <VaultItemSideInfo item={item} />
+        </div>
       </div>
     </div>
   );

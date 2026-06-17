@@ -106,27 +106,27 @@ export default function DonationPanel({ copiedField, onCopyText }: DonationPanel
   }, []);
 
   return (
-    <section className="mx-auto w-full max-w-6xl space-y-6">
-      <div className="surface-panel p-6 lg:p-7">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+    <section className="mx-auto w-full max-w-6xl space-y-4 sm:space-y-6 pb-6">
+      <div className="surface-panel p-4 sm:p-6 lg:p-7">
+        <div className="flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex max-w-3xl items-start gap-4">
-            <div className="icon-tile h-12 w-12 shrink-0 text-brand-primary">
-              <HeartHandshake className="h-6 w-6" />
+            <div className="icon-tile h-10 w-10 sm:h-12 sm:w-12 shrink-0 text-brand-primary">
+              <HeartHandshake className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-brand-primary">
                 {t('donate.eyebrow')}
               </p>
-              <h2 className="mt-2 font-display text-3xl font-bold text-on-surface">
+              <h2 className="mt-1 sm:mt-2 font-display text-2xl sm:text-3xl font-bold text-on-surface">
                 {t('donate.title')}
               </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-on-surface-variant">
+              <p className="hidden sm:block mt-3 max-w-2xl text-sm leading-6 text-on-surface-variant">
                 {t('donate.subtitle')}
               </p>
             </div>
           </div>
 
-          <div className="surface-card flex min-w-[220px] items-center gap-3 rounded-lg p-4">
+          <div className="surface-card flex min-w-0 sm:min-w-[220px] items-center gap-3 rounded-lg p-3 sm:p-4">
             <ShieldCheck className="h-5 w-5 shrink-0 text-brand-tertiary" />
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-on-surface">
@@ -140,7 +140,7 @@ export default function DonationPanel({ copiedField, onCopyText }: DonationPanel
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
         {donationWallets.map((wallet) => {
           const copyField = `donation-${wallet.id}`;
           const copied = copiedField === copyField;
@@ -148,7 +148,7 @@ export default function DonationPanel({ copiedField, onCopyText }: DonationPanel
           return (
             <article
               key={wallet.id}
-              className="surface-card surface-card-hover rounded-lg p-4"
+              className="surface-card surface-card-hover rounded-lg p-3 sm:p-4"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
@@ -163,8 +163,8 @@ export default function DonationPanel({ copiedField, onCopyText }: DonationPanel
                 <Wallet className="h-4 w-4 shrink-0 text-on-surface-variant" />
               </div>
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-[112px_1fr]">
-                <div className="flex h-28 w-28 items-center justify-center rounded-lg border border-outline-variant/20 bg-[#f4f6ef] p-2">
+              <div className="mt-3 sm:mt-4 grid grid-cols-[88px_1fr] gap-3 sm:grid-cols-[112px_1fr]">
+                <div className="flex h-[88px] w-[88px] sm:h-28 sm:w-28 items-center justify-center rounded-lg border border-outline-variant/20 bg-[#f4f6ef] p-2">
                   {qrCodes[wallet.id] ? (
                     <img
                       src={qrCodes[wallet.id]}
@@ -180,7 +180,7 @@ export default function DonationPanel({ copiedField, onCopyText }: DonationPanel
                   <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
                     {t('donate.addressLabel')}
                   </p>
-                  <p className="break-all font-mono text-xs leading-5 text-on-surface">
+                  <p className="break-all font-mono text-[11px] sm:text-xs leading-5 text-on-surface">
                     {wallet.address}
                   </p>
                 </div>
@@ -199,7 +199,7 @@ export default function DonationPanel({ copiedField, onCopyText }: DonationPanel
         })}
       </div>
 
-      <div className="surface-panel p-5">
+      <div className="surface-panel p-4 sm:p-5">
         <div className="flex items-start gap-3">
           <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-brand-tertiary" />
           <p className="text-sm leading-6 text-on-surface-variant">

@@ -28,8 +28,8 @@ export default function VaultItemSideInfo({ item }: VaultItemSideInfoProps) {
   const { t } = useLanguage();
 
   return (
-    <div className="space-y-4 text-left">
-      <div className="glass-panel p-5 rounded-xl space-y-3">
+    <div className="space-y-3 sm:space-y-4 text-left">
+      <div className="glass-panel p-4 sm:p-5 rounded-xl space-y-3">
         <label className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase mb-2">
           {t('detail.side.title')}
         </label>
@@ -54,7 +54,7 @@ export default function VaultItemSideInfo({ item }: VaultItemSideInfoProps) {
       </div>
 
       {item.category !== 'secure_note' && (
-        <div className="bg-surface-high p-5 rounded-xl border border-outline-variant/10 space-y-2">
+        <div className="bg-surface-high p-4 sm:p-5 rounded-xl border border-outline-variant/10 space-y-2">
           <h5 className="font-bold text-xs uppercase tracking-wider text-on-surface">{t('detail.side.notesTitle')}</h5>
           <p className="text-xs text-on-surface-variant italic leading-relaxed break-words whitespace-pre-wrap">
             {item.notes || t('detail.side.emptyNotes')}

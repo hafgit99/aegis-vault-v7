@@ -32,11 +32,11 @@ export default function SidebarNavigation({
 
   return (
     <aside
-      className={`fixed left-0 top-0 h-full w-[280px] bg-surface-lowest border-r border-outline-variant/15 flex flex-col p-4 z-50 transition-transform duration-300 ${
+      className={`fixed left-0 top-0 h-full w-[280px] bg-surface-lowest border-r border-outline-variant/15 flex flex-col p-4 safe-bottom z-50 transition-transform duration-300 ${
         isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       }`}
     >
-      <div className="mb-7 px-1.5 flex items-center gap-3">
+      <div className="mb-5 sm:mb-7 px-1.5 flex items-center gap-3 shrink-0">
         <div className="w-9 h-9 rounded-lg bg-brand-primary/5 border border-brand-primary/10 flex items-center justify-center shadow-inner overflow-hidden">
           <img src={aegisLogo} alt="Aegis Logo" className="w-7 h-7 object-contain" />
         </div>
@@ -46,7 +46,7 @@ export default function SidebarNavigation({
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1">
+      <nav className="flex-1 min-h-0 space-y-1 overflow-y-auto scrollbar-hide pr-1">
         <button
           data-testid="nav-vault-button"
           onClick={() => onTabChange('vault')}
@@ -113,8 +113,8 @@ export default function SidebarNavigation({
         </button>
       </nav>
 
-      <div className="mt-auto pt-4 border-t border-outline-variant/10">
-        <div className="space-y-1 mb-4">
+      <div className="mt-auto shrink-0 pt-3 border-t border-outline-variant/10">
+        <div className="space-y-1 mb-3">
           <div className="flex items-center justify-between px-3 py-2 text-on-surface-variant text-xs surface-card rounded-lg">
             <div className="flex items-center gap-2.5">
               <Clock className="w-4 h-4" />
@@ -126,7 +126,7 @@ export default function SidebarNavigation({
         <button
           data-testid="lock-vault-button"
           onClick={onLock}
-          className="w-full flex items-center justify-center gap-2 bg-surface-low border border-outline-variant/20 text-on-surface py-3 rounded-lg font-bold text-xs hover:bg-surface-high transition-all cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 bg-surface-low border border-outline-variant/20 text-on-surface py-3 rounded-lg font-bold text-xs hover:bg-surface-high transition-all cursor-pointer mb-[max(env(safe-area-inset-bottom),0px)]"
         >
           <Lock className="w-4 h-4" />
           <span>{t('nav.lockVault')}</span>

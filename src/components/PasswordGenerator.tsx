@@ -173,15 +173,15 @@ export default function PasswordGenerator({ onCopyText, copiedField }: PasswordG
   ] as const;
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto pb-10" id="password-generator-root">
+    <div className="space-y-4 sm:space-y-6 max-w-4xl mx-auto pb-6 sm:pb-10" id="password-generator-root">
       {/* Header section */}
-      <div className="flex items-center gap-3 mb-2" id="generator-header">
-        <div className="w-10 h-10 rounded-xl bg-brand-primary/10 flex items-center justify-center border border-brand-primary/20">
+      <div className="flex items-center gap-3 mb-1 sm:mb-2" id="generator-header">
+        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-brand-primary/10 flex items-center justify-center border border-brand-primary/20">
           <KeyRound className="w-5 h-5 text-brand-primary" />
         </div>
         <div>
           <h2 className="text-xl font-bold font-display text-on-surface">{t('passwordGenerator.title')}</h2>
-          <p className="text-xs text-on-surface-variant">{t('passwordGenerator.subtitle')}</p>
+          <p className="hidden sm:block text-xs text-on-surface-variant">{t('passwordGenerator.subtitle')}</p>
         </div>
       </div>
 
@@ -215,10 +215,10 @@ export default function PasswordGenerator({ onCopyText, copiedField }: PasswordG
       </div>
 
       {/* Password display panel */}
-      <div className="glass-panel p-6 rounded-2xl relative overflow-hidden" id="password-display-card">
+      <div className="glass-panel p-4 sm:p-6 rounded-2xl relative overflow-hidden" id="password-display-card">
         <div className="absolute top-0 left-0 w-1 h-full bg-brand-primary"></div>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="font-mono text-sm md:text-lg break-all tracking-wide text-brand-primary select-all bg-[#0d0f0d]/40 p-4 rounded-xl border border-outline-variant/10 flex-1 min-h-[56px] flex items-center">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
+          <div className="font-mono text-xs sm:text-sm md:text-lg break-all tracking-wide text-brand-primary select-all bg-[#0d0f0d]/40 p-3 sm:p-4 rounded-xl border border-outline-variant/10 flex-1 min-h-[52px] flex items-center">
             {password || t('passwordGenerator.empty')}
           </div>
           <div className="flex gap-2">
@@ -232,7 +232,7 @@ export default function PasswordGenerator({ onCopyText, copiedField }: PasswordG
             </button>
             <button
               onClick={handleCopy}
-              className={`px-6 py-3.5 rounded-xl font-bold flex items-center gap-2 transition-all cursor-pointer ${
+              className={`flex-1 sm:flex-none justify-center px-4 sm:px-6 py-3.5 rounded-xl font-bold flex items-center gap-2 transition-all cursor-pointer ${
                 copied
                   ? 'bg-brand-tertiary text-brand-on-tertiary'
                   : 'bg-brand-primary text-brand-on-primary shadow-lg shadow-brand-primary/10 hover:brightness-110'
@@ -255,7 +255,7 @@ export default function PasswordGenerator({ onCopyText, copiedField }: PasswordG
         </div>
 
         {/* Dynamic Strength visual helper */}
-        <div className="mt-5 pt-5 border-t border-outline-variant/15 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="mt-4 sm:mt-5 pt-4 sm:pt-5 border-t border-outline-variant/15 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
               {t('passwordGenerator.strengthLevel')}
@@ -287,7 +287,7 @@ export default function PasswordGenerator({ onCopyText, copiedField }: PasswordG
       {/* Main Settings Body */}
       {mode === 'character' ? (
         /* Character-based Configurations Card */
-        <div className="glass-panel p-6 rounded-2xl space-y-6" id="chars-spec-panel">
+        <div className="glass-panel p-4 sm:p-6 rounded-2xl space-y-4 sm:space-y-6" id="chars-spec-panel">
           <div className="flex items-center gap-2 mb-2 pb-4 border-b border-outline-variant/10">
             <Sliders className="w-5 h-5 text-on-surface-variant" />
             <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider">{t('passwordGenerator.characterSettings')}</h3>
@@ -316,9 +316,9 @@ export default function PasswordGenerator({ onCopyText, copiedField }: PasswordG
           </div>
 
           {/* Toggles */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-1 sm:pt-2">
             {/* Upper letters */}
-            <label className="flex items-center justify-between p-4 bg-[#141614] hover:bg-[#181a18] rounded-xl border border-outline-variant/10 cursor-pointer transition-colors">
+            <label className="flex items-center justify-between p-3 sm:p-4 bg-[#141614] hover:bg-[#181a18] rounded-xl border border-outline-variant/10 cursor-pointer transition-colors">
               <div className="flex flex-col">
                 <span className="text-sm font-semibold">{t('passwordGenerator.uppercase')}</span>
                 <span className="text-xs text-on-surface-variant font-mono">A-Z</span>
@@ -332,7 +332,7 @@ export default function PasswordGenerator({ onCopyText, copiedField }: PasswordG
             </label>
 
             {/* Lower letters */}
-            <label className="flex items-center justify-between p-4 bg-[#141614] hover:bg-[#181a18] rounded-xl border border-outline-variant/10 cursor-pointer transition-colors">
+            <label className="flex items-center justify-between p-3 sm:p-4 bg-[#141614] hover:bg-[#181a18] rounded-xl border border-outline-variant/10 cursor-pointer transition-colors">
               <div className="flex flex-col">
                 <span className="text-sm font-semibold">{t('passwordGenerator.lowercase')}</span>
                 <span className="text-xs text-on-surface-variant font-mono">a-z</span>
@@ -346,7 +346,7 @@ export default function PasswordGenerator({ onCopyText, copiedField }: PasswordG
             </label>
 
             {/* Digits */}
-            <label className="flex items-center justify-between p-4 bg-[#141614] hover:bg-[#181a18] rounded-xl border border-outline-variant/10 cursor-pointer transition-colors">
+            <label className="flex items-center justify-between p-3 sm:p-4 bg-[#141614] hover:bg-[#181a18] rounded-xl border border-outline-variant/10 cursor-pointer transition-colors">
               <div className="flex flex-col">
                 <span className="text-sm font-semibold">{t('passwordGenerator.numbers')}</span>
                 <span className="text-xs text-on-surface-variant font-mono">0-9</span>
@@ -360,7 +360,7 @@ export default function PasswordGenerator({ onCopyText, copiedField }: PasswordG
             </label>
 
             {/* Symbols */}
-            <label className="flex items-center justify-between p-4 bg-[#141614] hover:bg-[#181a18] rounded-xl border border-outline-variant/10 cursor-pointer transition-colors">
+            <label className="flex items-center justify-between p-3 sm:p-4 bg-[#141614] hover:bg-[#181a18] rounded-xl border border-outline-variant/10 cursor-pointer transition-colors">
               <div className="flex flex-col">
                 <span className="text-sm font-semibold">{t('passwordGenerator.symbols')}</span>
                 <span className="text-xs text-on-surface-variant font-mono">@#$%!*</span>
@@ -376,7 +376,7 @@ export default function PasswordGenerator({ onCopyText, copiedField }: PasswordG
         </div>
       ) : (
         /* Diceware configurations Card */
-        <div className="glass-panel p-6 rounded-2xl space-y-6" id="diceware-spec-panel">
+        <div className="glass-panel p-4 sm:p-6 rounded-2xl space-y-4 sm:space-y-6" id="diceware-spec-panel">
           {/* Section banner */}
           <div className="flex items-center justify-between mb-2 pb-4 border-b border-outline-variant/10">
             <div className="flex items-center gap-2">
@@ -435,9 +435,9 @@ export default function PasswordGenerator({ onCopyText, copiedField }: PasswordG
           </div>
 
           {/* Diceware Advanced Settings Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1" id="diceware-options-checkboxes">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-1" id="diceware-options-checkboxes">
             {/* Wordlist Language */}
-            <div className="flex items-center justify-between p-4 bg-[#141614] rounded-xl border border-outline-variant/10">
+            <div className="flex items-center justify-between p-3 sm:p-4 bg-[#141614] rounded-xl border border-outline-variant/10">
               <div className="flex flex-col">
                 <span className="text-sm font-semibold flex items-center gap-1.5">
                   <Globe className="w-4 h-4 text-brand-primary" />
@@ -472,7 +472,7 @@ export default function PasswordGenerator({ onCopyText, copiedField }: PasswordG
             </div>
 
             {/* Capitalize First letters check */}
-            <label className="flex items-center justify-between p-4 bg-[#141614] hover:bg-[#181a18] rounded-xl border border-outline-variant/10 cursor-pointer transition-colors">
+            <label className="flex items-center justify-between p-3 sm:p-4 bg-[#141614] hover:bg-[#181a18] rounded-xl border border-outline-variant/10 cursor-pointer transition-colors">
               <div className="flex flex-col">
                 <span className="text-sm font-semibold">{t('passwordGenerator.capitalize')}</span>
                 <span className="text-xs text-on-surface-variant">{t('passwordGenerator.capitalizeHelp')}</span>
@@ -486,7 +486,7 @@ export default function PasswordGenerator({ onCopyText, copiedField }: PasswordG
             </label>
 
             {/* Add Random Numbers */}
-            <label className="flex items-center justify-between p-4 bg-[#141614] hover:bg-[#181a18] rounded-xl border border-outline-variant/10 cursor-pointer transition-colors">
+            <label className="flex items-center justify-between p-3 sm:p-4 bg-[#141614] hover:bg-[#181a18] rounded-xl border border-outline-variant/10 cursor-pointer transition-colors">
               <div className="flex flex-col">
                 <span className="text-sm font-semibold flex items-center gap-1.5">
                   <Hash className="w-4 h-4 text-brand-secondary" />
@@ -503,7 +503,7 @@ export default function PasswordGenerator({ onCopyText, copiedField }: PasswordG
             </label>
 
             {/* Add Random Symbols */}
-            <label className="flex items-center justify-between p-4 bg-[#141614] hover:bg-[#181a18] rounded-xl border border-outline-variant/10 cursor-pointer transition-colors">
+            <label className="flex items-center justify-between p-3 sm:p-4 bg-[#141614] hover:bg-[#181a18] rounded-xl border border-outline-variant/10 cursor-pointer transition-colors">
               <div className="flex flex-col font-sans">
                 <span className="text-sm font-semibold flex items-center gap-1.5">
                   <Minimize2 className="w-4 h-4 text-brand-tertiary" />

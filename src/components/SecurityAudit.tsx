@@ -68,22 +68,22 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex items-center gap-3 mb-2">
-        <div className="w-10 h-10 rounded-xl bg-brand-tertiary/10 flex items-center justify-center border border-brand-tertiary/20 animate-pulse">
+    <div className="space-y-4 sm:space-y-6 max-w-5xl mx-auto pb-6">
+      <div className="flex items-center gap-3 mb-1 sm:mb-2">
+        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-brand-tertiary/10 flex items-center justify-center border border-brand-tertiary/20 animate-pulse">
           <ShieldCheck className="w-5 h-5 text-brand-tertiary" />
         </div>
         <div>
           <h2 className="text-xl font-bold font-display text-on-surface">{t('securityAudit.title')}</h2>
-          <p className="text-xs text-on-surface-variant">{t('securityAudit.subtitle')}</p>
+          <p className="hidden sm:block text-xs text-on-surface-variant">{t('securityAudit.subtitle')}</p>
         </div>
       </div>
 
       {/* Main Score Visualizer matching user mockup card precisely */}
-      <div className={`glass-panel p-6 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-6 border-l-4 ${scoreFeedback.colorBorder}`}>
-        <div className="flex flex-col sm:flex-row items-center gap-6">
+      <div className={`glass-panel p-4 sm:p-6 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6 border-l-4 ${scoreFeedback.colorBorder}`}>
+        <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
           {/* Circular SVG dial */}
-          <div className="relative w-24 h-24 shrink-0">
+          <div className="relative w-20 h-20 sm:w-24 sm:h-24 shrink-0">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
               <path
                 className="text-[#1e201e] stroke-current"
@@ -100,13 +100,13 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
                 strokeWidth="3.2"
               ></path>
             </svg>
-            <div className={`absolute inset-0 flex items-center justify-center font-mono font-bold text-xl ${scoreFeedback.textColor}`}>
+            <div className={`absolute inset-0 flex items-center justify-center font-mono font-bold text-lg sm:text-xl ${scoreFeedback.textColor}`}>
               %{audit.score}
             </div>
           </div>
           <div className="text-center sm:text-left">
             <h4 className="font-bold text-lg font-display text-on-surface">{scoreFeedback.title}</h4>
-            <p className="text-on-surface-variant text-sm mt-1 max-w-lg">{scoreFeedback.desc}</p>
+            <p className="text-on-surface-variant text-xs sm:text-sm mt-1 max-w-lg leading-relaxed">{scoreFeedback.desc}</p>
           </div>
         </div>
         <div className="flex gap-4 items-center shrink-0">
@@ -117,8 +117,8 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
       </div>
 
       {/* Metric quick stats dashboard */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="glass-panel p-5 rounded-xl bg-brand-error/5 border border-brand-error/10">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <div className="glass-panel p-4 sm:p-5 rounded-xl bg-brand-error/5 border border-brand-error/10">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold tracking-wider text-on-surface-variant uppercase">{t('securityAudit.weakPasswords')}</span>
             <AlertCircle className="w-5 h-5 text-brand-error" />
@@ -129,7 +129,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
           </div>
         </div>
 
-        <div className="glass-panel p-5 rounded-xl bg-amber-500/5 border border-amber-500/10">
+        <div className="glass-panel p-4 sm:p-5 rounded-xl bg-amber-500/5 border border-amber-500/10">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold tracking-wider text-on-surface-variant uppercase">{t('securityAudit.reusedPasswords')}</span>
             <AlertTriangle className="w-5 h-5 text-amber-400" />
@@ -140,7 +140,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
           </div>
         </div>
 
-        <div className="glass-panel p-5 rounded-xl bg-brand-tertiary/5 border border-brand-tertiary/10">
+        <div className="glass-panel p-4 sm:p-5 rounded-xl bg-brand-tertiary/5 border border-brand-tertiary/10">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold tracking-wider text-on-surface-variant uppercase">{t('securityAudit.securePasswords')}</span>
             <Sparkles className="w-5 h-5 text-brand-tertiary" />
@@ -153,7 +153,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
       </div>
 
       {/* Action lists for correcting credentials */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 pt-1 sm:pt-2">
         {/* WEAK CRITICAL GROUP */}
         <div className="space-y-4">
           <h3 className="text-sm font-bold text-brand-error uppercase tracking-wider flex items-center gap-2">
@@ -171,7 +171,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
                 <div
                   key={item.id}
                   onClick={() => onSelectItem(item)}
-                  className="flex items-center justify-between p-4 bg-[#181212]/80 hover:bg-[#201515] border border-brand-error/15 rounded-xl cursor-pointer transition-all group"
+                  className="flex items-center justify-between gap-3 p-3 sm:p-4 bg-[#181212]/80 hover:bg-[#201515] border border-brand-error/15 rounded-xl cursor-pointer transition-all group"
                 >
                   <div className="overflow-hidden pr-2">
                     <h4 className="font-semibold text-sm text-brand-error group-hover:underline truncate">
@@ -182,7 +182,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
                       <span className="font-mono truncate">{item.username}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 text-xs font-semibold text-brand-error bg-brand-error/10 px-2.5 py-1 rounded-full shrink-0">
+                  <div className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-brand-error bg-brand-error/10 px-2.5 py-1 rounded-full shrink-0">
                     <span>{t('securityAudit.fixAction')}</span>
                     <ArrowRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" />
                   </div>
@@ -209,7 +209,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
                 <div
                   key={item.id}
                   onClick={() => onSelectItem(item)}
-                  className="flex items-center justify-between p-4 bg-[#181612]/80 hover:bg-[#221e15] border border-amber-500/10 rounded-xl cursor-pointer transition-all group"
+                  className="flex items-center justify-between gap-3 p-3 sm:p-4 bg-[#181612]/80 hover:bg-[#221e15] border border-amber-500/10 rounded-xl cursor-pointer transition-all group"
                 >
                   <div className="overflow-hidden pr-2">
                     <h4 className="font-semibold text-sm text-amber-300 group-hover:underline truncate">
@@ -220,7 +220,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
                       <span className="font-mono truncate">{item.username}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 text-xs font-semibold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full shrink-0">
+                  <div className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full shrink-0">
                     <span>{t('securityAudit.changeAction')}</span>
                     <ArrowRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" />
                   </div>

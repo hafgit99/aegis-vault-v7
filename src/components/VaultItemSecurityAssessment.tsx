@@ -40,10 +40,10 @@ export default function VaultItemSecurityAssessment({ score, onOpenAudit }: Vaul
 
   return (
     <div
-      className={`glass-panel p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 border-l-4 ${getBorderClass(score)}`}
+      className={`glass-panel p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 border-l-4 ${getBorderClass(score)}`}
     >
-      <div className="flex items-center gap-4">
-        <div className="relative w-14 h-14">
+      <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+        <div className="relative w-12 h-12 sm:w-14 sm:h-14 shrink-0">
           <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
             <path
               className="text-[#1e201e] stroke-current"
@@ -64,12 +64,12 @@ export default function VaultItemSecurityAssessment({ score, onOpenAudit }: Vaul
             %{score}
           </div>
         </div>
-        <div>
+        <div className="min-w-0">
           <h4 className="font-bold text-sm text-on-surface">{t('detail.security.title')}</h4>
-          <p className="text-on-surface-variant text-[11px] mt-0.5">{t(getDescriptionKey(score))}</p>
+          <p className="text-on-surface-variant text-[11px] mt-0.5 leading-relaxed">{t(getDescriptionKey(score))}</p>
         </div>
       </div>
-      <button onClick={onOpenAudit} className={`text-xs font-bold px-3 py-2 rounded-lg shrink-0 ${getButtonClass(score)}`}>
+      <button onClick={onOpenAudit} className={`text-xs font-bold px-3 py-2 rounded-lg shrink-0 w-full sm:w-auto ${getButtonClass(score)}`}>
         {t('detail.security.auditAll')}
       </button>
     </div>

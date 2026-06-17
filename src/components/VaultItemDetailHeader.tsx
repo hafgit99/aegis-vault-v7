@@ -25,42 +25,42 @@ export default function VaultItemDetailHeader({
   const logoUrl = getLogoForPlatform(item.title, item.url);
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-outline-variant/10 animate-fade-in">
-      <div className="flex items-center gap-6">
-        <div className="w-20 h-20 rounded-2xl bg-surface-high flex items-center justify-center border border-outline-variant/30 custom-shadow overflow-hidden shrink-0">
+    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 pb-3 sm:pb-4 border-b border-outline-variant/10 animate-fade-in">
+      <div className="flex items-center gap-3 sm:gap-5 min-w-0">
+        <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl bg-surface-high flex items-center justify-center border border-outline-variant/30 custom-shadow overflow-hidden shrink-0">
           {logoUrl ? (
             <img
               alt={`${item.title} Logo`}
-              className="w-12 h-12 object-contain"
+              className="w-9 h-9 sm:w-12 sm:h-12 object-contain"
               referrerPolicy="no-referrer"
               src={logoUrl}
             />
           ) : (
-            <span className="font-display font-bold text-3xl text-brand-primary">
+            <span className="font-display font-bold text-2xl sm:text-3xl text-brand-primary">
               {item.title.charAt(0).toUpperCase()}
             </span>
           )}
         </div>
-        <div>
-          <h1 className="font-display text-2xl font-bold text-on-surface flex items-center gap-2">
-            <span>{item.title}</span>
+        <div className="min-w-0">
+          <h1 className="font-display text-xl sm:text-2xl font-bold text-on-surface flex items-center gap-2 min-w-0">
+            <span className="truncate">{item.title}</span>
             {item.favorite && <Heart className="w-5 h-5 fill-red-500 text-red-500 shrink-0" />}
           </h1>
           {item.url && (
             <a
-              className="text-brand-primary hover:underline text-xs flex items-center gap-1 mt-1.5 font-semibold"
+              className="text-brand-primary hover:underline text-xs flex items-center gap-1 mt-1.5 font-semibold min-w-0"
               href={`https://${item.url}`}
               target="_blank"
               rel="noreferrer"
             >
-              <span>{item.url}</span>
+              <span className="truncate">{item.url}</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
           )}
         </div>
       </div>
 
-      <div className="flex gap-2.5">
+      <div className="flex gap-2 sm:gap-2.5 overflow-x-auto scrollbar-hide pb-0.5">
         <button
           data-testid="toggle-favorite-button"
           onClick={() => {
