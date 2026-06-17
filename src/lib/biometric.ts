@@ -88,6 +88,18 @@ interface BiometricInfoV2 {
   bundle: WebCryptoAesGcmPayload;
 }
 
+interface NativeBiometricInfoV3 {
+  version: 3;
+  provider: 'Tauri Native Biometric';
+  kdf: 'WebCrypto PBKDF2-SHA256';
+  cipher: 'WebCrypto AES-256-GCM';
+  wrappingSecret: string;
+  salt: string;
+  bundle: WebCryptoAesGcmPayload;
+}
+
+type BiometricInfo = BiometricInfoV2 | NativeBiometricInfoV3;
+
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
   bytes.forEach((byte) => {
@@ -119,12 +131,12 @@ function initBiometricDB(): Promise<IDBDatabase> {
   });
 }
 
-function loadBiometricFromIndexedDB(): Promise<BiometricInfoV2 | null> {
+function loadBiometricFromIndexedDB(): Promise<BiometricInfo | null> {
   if (typeof indexedDB === 'undefined') {
     return Promise.resolve(null);
   }
   return initBiometricDB().then((db) => {
-    return new Promise<BiometricInfoV2 | null>((resolve, reject) => {
+    return new Promise<BiometricInfo | null>((resolve, reject) => {
       const transaction = db.transaction(BIOMETRIC_STORE_NAME, 'readonly');
       const store = transaction.objectStore(BIOMETRIC_STORE_NAME);
       const request = store.get(BIOMETRIC_KEY);
@@ -140,7 +152,7 @@ function loadBiometricFromIndexedDB(): Promise<BiometricInfoV2 | null> {
   });
 }
 
-function saveBiometricToIndexedDB(info: BiometricInfoV2): Promise<void> {
+function saveBiometricToIndexedDB(info: BiometricInfo): Promise<void> {
   if (typeof indexedDB === 'undefined') {
     return Promise.resolve();
   }
@@ -182,7 +194,7 @@ function deleteBiometricFromIndexedDB(): Promise<void> {
   });
 }
 
-let cachedBiometricInfo: BiometricInfoV2 | null = null;
+let cachedBiometricInfo: BiometricInfo | null = null;
 let isHydrated = false;
 
 export async function hydrateBiometric(): Promise<void> {
@@ -200,8 +212,59 @@ export function resetBiometricCacheForTesting(): void {
   isHydrated = false;
 }
 
+function hasWebAuthnSupport(): boolean {
+  return typeof window !== 'undefined' && !!window.PublicKeyCredential && !!navigator.credentials;
+}
+
+function isTauriAndroidRuntime(): boolean {
+  if (typeof window === 'undefined' || !(window as any).__TAURI_INTERNALS__) {
+    return false;
+  }
+
+  return /Android/i.test(navigator.userAgent || '');
+}
+
+async function loadNativeBiometricApi(): Promise<{
+  authenticate: (reason: string, options?: {
+    allowDeviceCredential?: boolean;
+    title?: string;
+    subtitle?: string;
+    confirmationRequired?: boolean;
+  }) => Promise<void>;
+  checkStatus: () => Promise<{ isAvailable: boolean; error?: string; errorCode?: string }>;
+} | null> {
+  if (!isTauriAndroidRuntime()) {
+    return null;
+  }
+
+  try {
+    return await import('@tauri-apps/plugin-biometric');
+  } catch {
+    return null;
+  }
+}
+
+async function isNativeBiometricAvailable(): Promise<boolean> {
+  const nativeBiometric = await loadNativeBiometricApi();
+  return nativeBiometric !== null;
+}
+
+async function authenticateNativeBiometric(): Promise<void> {
+  const nativeBiometric = await loadNativeBiometricApi();
+  if (!nativeBiometric) {
+    throw new BiometricError(biometricErrorCodes.unsupported);
+  }
+
+  await nativeBiometric.authenticate('Unlock Aegis Vault', {
+    allowDeviceCredential: true,
+    title: APP_NAME,
+    subtitle: 'Confirm your screen lock to continue',
+    confirmationRequired: true,
+  });
+}
+
 export function isBiometricSupported(): boolean {
-  return typeof window !== 'undefined' && !!window.PublicKeyCredential;
+  return hasWebAuthnSupport() || isTauriAndroidRuntime();
 }
 
 export function isBiometricEnabled(): boolean {
@@ -214,7 +277,21 @@ export function disableBiometric(): void {
 }
 
 export async function registerBiometric(masterPassword: string): Promise<void> {
-  if (!isBiometricSupported()) {
+  if (hasWebAuthnSupport()) {
+    await registerWebAuthnBiometric(masterPassword);
+    return;
+  }
+
+  if (await isNativeBiometricAvailable()) {
+    await registerNativeBiometric(masterPassword);
+    return;
+  }
+
+  throw new BiometricError(biometricErrorCodes.unsupported);
+}
+
+async function registerWebAuthnBiometric(masterPassword: string): Promise<void> {
+  if (!hasWebAuthnSupport()) {
     throw new BiometricError(biometricErrorCodes.unsupported);
   }
 
@@ -275,10 +352,45 @@ export async function registerBiometric(masterPassword: string): Promise<void> {
   await saveBiometricToIndexedDB(biometricInfo);
 }
 
+async function registerNativeBiometric(masterPassword: string): Promise<void> {
+  await authenticateNativeBiometric();
+
+  const wrappingSecret = secureRandomBytes(32);
+  const salt = secureRandomBytes(16);
+  const wrappingKey = await deriveWebCryptoPbkdf2Key(wrappingSecret, salt, 10000, 32);
+  const bundle = await webCryptoAesGcmEncrypt(masterPassword, wrappingKey, generateSafeIv());
+
+  const biometricInfo: NativeBiometricInfoV3 = {
+    version: 3,
+    provider: 'Tauri Native Biometric',
+    kdf: 'WebCrypto PBKDF2-SHA256',
+    cipher: 'WebCrypto AES-256-GCM',
+    wrappingSecret: bytesToBase64(wrappingSecret),
+    salt: bytesToBase64(salt),
+    bundle,
+  };
+
+  cachedBiometricInfo = biometricInfo;
+  await saveBiometricToIndexedDB(biometricInfo);
+}
+
 export async function authenticateBiometric(): Promise<string> {
   const biometricInfo = cachedBiometricInfo;
   if (!biometricInfo) {
     throw new BiometricError(biometricErrorCodes.missingBundle);
+  }
+
+  if (biometricInfo.version === 3) {
+    await authenticateNativeBiometric();
+
+    try {
+      const wrappingSecret = base64ToBytes(biometricInfo.wrappingSecret);
+      const saltBytes = base64ToBytes(biometricInfo.salt);
+      const wrappingKey = await deriveWebCryptoPbkdf2Key(wrappingSecret, saltBytes, 10000, 32);
+      return webCryptoAesGcmDecrypt(biometricInfo.bundle, wrappingKey);
+    } catch {
+      throw new BiometricError(biometricErrorCodes.integrityMismatch);
+    }
   }
 
   const credIdBytes = base64ToBytes(biometricInfo.credentialId);

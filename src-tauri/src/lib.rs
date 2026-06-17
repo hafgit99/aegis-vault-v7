@@ -288,8 +288,12 @@ pub fn run() {
         credentials: credentials.clone(),
     };
 
-    tauri::Builder::default()
-        .manage(state)
+    let builder = tauri::Builder::default().manage(state);
+
+    #[cfg(mobile)]
+    let builder = builder.plugin(tauri_plugin_biometric::init());
+
+    builder
         .setup(move |app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(

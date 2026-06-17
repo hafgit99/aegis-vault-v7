@@ -120,7 +120,7 @@ export function VaultWorkspaceContent({
     <>
       <section
         className={`w-full lg:w-[480px] xl:w-[540px] border-r border-outline-variant/15 flex flex-col bg-surface-lowest/55 h-full ${
-          selectedItem && mobileActiveView === 'detail' ? 'hidden lg:flex' : 'flex'
+          mobileActiveView === 'detail' ? 'hidden lg:flex' : 'flex'
         }`}
       >
         <div className="p-5 pb-2 space-y-3 shrink-0">
