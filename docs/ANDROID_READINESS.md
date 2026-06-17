@@ -16,6 +16,7 @@ This document tracks the Android preparation path for Aegis Vault 7. Android is 
 - Android remembered Secret Key state and biometric metadata now prefer an Android Keystore AES-GCM secure storage bridge, with browser storage kept as fallback and migration source.
 - Android native biometric registration requires the Android Keystore-backed secure storage bridge and will not fall back to IndexedDB for native wrapping metadata.
 - Android vault database persistence uses the Tauri app-data command path, which resolves to app-private storage on Android. When this native write succeeds, localStorage keeps only a desktop/mobile-managed setup marker instead of the encrypted row payload.
+- Android Autofill groundwork is registered through a native `AutofillService` and a WebView bridge that opens the Android system provider selection screen. The first phase intentionally does not fill secrets until package/domain verification and user approval are implemented.
 - Desktop storage uses Tauri app-data persistence plus a local fallback marker.
 - Browser/mobile web storage still relies on IndexedDB/localStorage/OPFS-style APIs.
 - Native file dialogs are implemented for Windows desktop, while Android uses its generated project bridge and Android document intents.
@@ -88,6 +89,7 @@ Manual smoke checklist for the first debug APK:
 - Auto-lock clears the active session.
 - Clipboard copy/clear behavior works under Android WebView.
 - Turkish, English, and Chinese UI remain readable on phone-sized screens.
+- Android settings can open the system Autofill provider selection screen and list Aegis Vault Autofill as a selectable service on Android 8.0+.
 
 ## Storage And Security Decisions
 
@@ -99,6 +101,7 @@ Android needs explicit decisions before release:
 - Attachment storage should remain app-private and must survive app restart.
 - Backup export/import now uses Android document picker/storage access APIs and needs broader regression testing.
 - Android document picker cancellation, native errors, and no-callback timeout behavior are covered by repeatable unit tests.
+- Android Autofill must not release credentials until package/domain matching, vault unlock state, and explicit user approval are implemented and tested.
 - Plain JSON export should be reviewed again for Android before public release.
 - `FLAG_SECURE` is enabled, but screenshots/task-switcher previews should still be manually verified on release candidate devices.
 
@@ -121,6 +124,10 @@ The app should move toward explicit platform adapters:
 - `BiometricAdapter`
   - WebAuthn/browser implementation
   - Android BiometricPrompt implementation
+- `AutofillAdapter`
+  - Android Autofill service registration
+  - Package/domain-aware credential matching
+  - User-approved fill response flow
 
 ## Release Boundary
 
@@ -129,5 +136,6 @@ Android should remain internal/debug-only until:
 - Storage adapter behavior is validated on release candidate devices, especially Android app-private vault persistence after restart.
 - Android backup/import/export flows are tested on a real device.
 - Android biometric behavior is Keystore-backed or explicitly disabled with clear copy.
+- Android Autofill package/domain matching and user approval are implemented with regression coverage.
 - A mobile smoke checklist is run on every release candidate.
 - APK/AAB signing plan is documented.
