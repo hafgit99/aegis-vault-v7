@@ -4,11 +4,12 @@
  */
 
 import React from 'react';
-import { ShieldCheck, AlertTriangle, AlertCircle, Sparkles, ArrowRight, User } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, AlertCircle, Sparkles, ArrowRight, User, WifiOff } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { VaultItem } from '../types';
 import { runVaultAudit, calculatePasswordScore } from '../lib/security';
+import { checkPasswordAgainstHibp } from '../lib/hibp';
 
 interface SecurityAuditProps {
   items: VaultItem[];
@@ -17,7 +18,46 @@ interface SecurityAuditProps {
 
 export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProps) {
   const { t } = useLanguage();
+  const [pwnedByPassword, setPwnedByPassword] = React.useState<Map<string, number>>(new Map());
+  const [hibpStatus, setHibpStatus] = React.useState<'idle' | 'checking' | 'complete' | 'unavailable'>('idle');
   const audit = runVaultAudit(items);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const uniquePasswords = [...new Set(items.map((item) => item.password || '').filter(Boolean))];
+
+    if (uniquePasswords.length === 0) {
+      setPwnedByPassword(new Map());
+      setHibpStatus('idle');
+      return;
+    }
+
+    setHibpStatus('checking');
+
+    (async () => {
+      const results = new Map<string, number>();
+      let unavailable = false;
+
+      for (const password of uniquePasswords) {
+        if (cancelled) return;
+        const result = await checkPasswordAgainstHibp(password);
+        if (result.status === 'pwned') {
+          results.set(password, result.count);
+        } else if (result.status === 'unavailable') {
+          unavailable = true;
+        }
+      }
+
+      if (!cancelled) {
+        setPwnedByPassword(results);
+        setHibpStatus(unavailable ? 'unavailable' : 'complete');
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [items]);
 
   // Group items by security status
   const weakItems = items.filter((i) => {
@@ -36,6 +76,10 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
   const reusedItems = items.filter((i) => {
     const pw = i.password || '';
     return pw && passwordFreq[pw] > 1;
+  });
+  const pwnedItems = items.filter((i) => {
+    const pw = i.password || '';
+    return pw && pwnedByPassword.has(pw);
   });
 
   const secureItems = items.filter((i) => {
@@ -117,7 +161,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
       </div>
 
       {/* Metric quick stats dashboard */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="glass-panel p-4 sm:p-5 rounded-xl bg-brand-error/5 border border-brand-error/10">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold tracking-wider text-on-surface-variant uppercase">{t('securityAudit.weakPasswords')}</span>
@@ -148,6 +192,27 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-3xl font-bold font-sans text-brand-tertiary">{secureItems.length}</span>
             <span className="text-xs text-on-surface-variant">{t('securityAudit.militaryProtection')}</span>
+          </div>
+        </div>
+
+        <div className="glass-panel p-4 sm:p-5 rounded-xl bg-red-500/5 border border-red-500/10">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold tracking-wider text-on-surface-variant uppercase">{t('securityAudit.pwnedPasswords')}</span>
+            {hibpStatus === 'unavailable' ? (
+              <WifiOff className="w-5 h-5 text-amber-300" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-red-300" />
+            )}
+          </div>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="text-3xl font-bold font-sans text-red-300">{pwnedItems.length}</span>
+            <span className="text-xs text-on-surface-variant">
+              {hibpStatus === 'checking'
+                ? t('securityAudit.pwnedChecking')
+                : hibpStatus === 'unavailable'
+                  ? t('securityAudit.pwnedUnavailable')
+                  : t('securityAudit.pwnedDescription')}
+            </span>
           </div>
         </div>
       </div>
@@ -230,6 +295,43 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
           </div>
         </div>
       </div>
+
+      {pwnedItems.length > 0 && (
+        <div className="space-y-4 pt-1 sm:pt-2">
+          <h3 className="text-sm font-bold text-red-300 uppercase tracking-wider flex items-center gap-2">
+            <AlertCircle className="w-4 h-4" />
+            <span>{t('securityAudit.pwnedGroup')} ({pwnedItems.length})</span>
+          </h3>
+
+          <div className="space-y-2.5">
+            {pwnedItems.map((item) => {
+              const count = pwnedByPassword.get(item.password || '') || 0;
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => onSelectItem(item)}
+                  className="flex items-center justify-between gap-3 p-3 sm:p-4 bg-[#1d1212]/80 hover:bg-[#261616] border border-red-400/15 rounded-xl cursor-pointer transition-all group"
+                >
+                  <div className="overflow-hidden pr-2">
+                    <h4 className="font-semibold text-sm text-red-200 group-hover:underline truncate">
+                      {item.title}
+                    </h4>
+                    <div className="flex items-center gap-1.5 text-xs text-on-surface-variant mt-0.5">
+                      <User className="w-3.5 h-3.5 shrink-0 text-on-surface-variant/50" />
+                      <span className="font-mono truncate">{item.username}</span>
+                      <span className="text-red-300/80 shrink-0">{t('securityAudit.pwnedCountPrefix')} {count}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-red-200 bg-red-500/10 px-2.5 py-1 rounded-full shrink-0">
+                    <span>{t('securityAudit.fixAction')}</span>
+                    <ArrowRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
