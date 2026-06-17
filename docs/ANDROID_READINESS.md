@@ -16,7 +16,7 @@ This document tracks the Android preparation path for Aegis Vault 7. Android is 
 - Android remembered Secret Key state and biometric metadata now prefer an Android Keystore AES-GCM secure storage bridge, with browser storage kept as fallback and migration source.
 - Android native biometric registration requires the Android Keystore-backed secure storage bridge and will not fall back to IndexedDB for native wrapping metadata.
 - Android vault database persistence uses the Tauri app-data command path, which resolves to app-private storage on Android. When this native write succeeds, localStorage keeps only a desktop/mobile-managed setup marker instead of the encrypted row payload.
-- Android Autofill groundwork is registered through a native `AutofillService` and a WebView bridge that opens the Android system provider selection screen. The service can detect likely login forms from non-secret field metadata and present an authenticated Aegis entry point, but it intentionally does not fill secrets until package/domain verification and user approval are implemented.
+- Android Autofill groundwork is registered through a native `AutofillService` and a WebView bridge that opens the Android system provider selection screen. The service can detect likely login forms from non-secret field metadata, present an authenticated Aegis entry point, and pass a pending Autofill launch request to the WebView bridge, but it intentionally does not fill secrets until package/domain verification and user approval are implemented.
 - Desktop storage uses Tauri app-data persistence plus a local fallback marker.
 - Browser/mobile web storage still relies on IndexedDB/localStorage/OPFS-style APIs.
 - Native file dialogs are implemented for Windows desktop, while Android uses its generated project bridge and Android document intents.
@@ -90,7 +90,7 @@ Manual smoke checklist for the first debug APK:
 - Clipboard copy/clear behavior works under Android WebView.
 - Turkish, English, and Chinese UI remain readable on phone-sized screens.
 - Android settings can open the system Autofill provider selection screen and list Aegis Vault Autofill as a selectable service on Android 8.0+.
-- Android Autofill can recognize login-like forms and show an Aegis authentication option without returning credential values.
+- Android Autofill can recognize login-like forms, show an Aegis authentication option, and expose the pending launch request to the app without returning credential values.
 
 ## Storage And Security Decisions
 
