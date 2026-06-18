@@ -166,16 +166,6 @@ export function androidAutofillTargetLabel(request: AndroidAutofillRequest | nul
   return appPackage || null;
 }
 
-export function androidAutofillDiagnosticSummary(request: AndroidAutofillRequest | null | undefined): string | null {
-  if (!request) return null;
-
-  const usernameCount = request.usernameFieldCount ?? 0;
-  const passwordCount = request.passwordFieldCount ?? 0;
-  const fillableCount = request.fillableFieldCount ?? usernameCount + passwordCount;
-
-  return `package=${request.appPackage || 'unknown'} domain=${request.webDomain || 'unknown'} usernameFields=${usernameCount} passwordFields=${passwordCount} fillableFields=${fillableCount}`;
-}
-
 export function isAndroidAutofillRequestFresh(
   request: AndroidAutofillRequest | null | undefined,
   now: number = Date.now(),
