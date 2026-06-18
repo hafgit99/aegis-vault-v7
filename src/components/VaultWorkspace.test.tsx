@@ -200,6 +200,7 @@ describe('VaultWorkspace', () => {
 
     expect(rows[0].textContent).toContain('Target Login');
     expect(screen.getByText('1 eşleşen kayıt öne çıkarıldı')).toBeTruthy();
+    expect(screen.getByTestId('autofill-recommended-badge')).toBeTruthy();
   });
 
   it('renders the empty filtered-list fallback', () => {

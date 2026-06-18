@@ -2,6 +2,7 @@ import { ArrowLeft, ShieldCheck, Smartphone } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { androidAutofillTargetLabel, type AndroidAutofillRequest } from '../lib/androidAutofill';
+import { isAndroidAutofillTargetMatch } from '../lib/androidAutofillMatching';
 import { VaultItem } from '../types';
 import CardDetail from './CardDetail';
 import IdentityDetail from './IdentityDetail';
@@ -61,6 +62,7 @@ export default function VaultItemDetailPanel({
   const { t } = useLanguage();
   const canApproveAutofill = isAutofillMode && item.category === 'login' && Boolean(item.password) && Boolean(onApproveAutofill);
   const autofillTargetLabel = androidAutofillTargetLabel(autofillRequest);
+  const isAutofillMatch = canApproveAutofill && isAndroidAutofillTargetMatch(item, autofillRequest);
 
   return (
     <div className="max-w-6xl mx-auto space-y-4 lg:space-y-5">
@@ -103,6 +105,14 @@ export default function VaultItemDetailPanel({
               {autofillTargetLabel && (
                 <p className="mt-2 inline-flex max-w-full items-center rounded-md border border-brand-primary/15 bg-[#080a09]/35 px-2 py-1 font-mono text-[10px] text-on-surface truncate">
                   {t('autofill.target.label')}: {autofillTargetLabel}
+                </p>
+              )}
+              {autofillTargetLabel && (
+                <p
+                  data-testid="autofill-match-status"
+                  className={`mt-2 text-[10px] font-bold ${isAutofillMatch ? 'text-brand-primary' : 'text-amber-300'}`}
+                >
+                  {isAutofillMatch ? t('autofill.match.confirmed') : t('autofill.match.warning')}
                 </p>
               )}
             </div>
