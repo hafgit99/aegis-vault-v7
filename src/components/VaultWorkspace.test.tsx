@@ -159,11 +159,19 @@ describe('VaultWorkspace', () => {
   it('renders Android Autofill mode and forwards cancel action', () => {
     const props = renderWorkspace({
       isAutofillMode: true,
+      autofillRequest: {
+        requestId: 'request-1',
+        createdAt: 123,
+        source: 'android-autofill',
+        appPackage: 'com.example.app',
+        webDomain: 'login.example.com',
+      },
       onCancelAutofill: vi.fn(),
     });
 
     expect(screen.getByTestId('vault-autofill-mode-banner')).toBeTruthy();
     expect(screen.getByText('Autofill Modu')).toBeTruthy();
+    expect(screen.getByText((_, element) => element?.textContent === 'Hedef: login.example.com')).toBeTruthy();
 
     fireEvent.click(screen.getByTestId('vault-autofill-cancel-button'));
 

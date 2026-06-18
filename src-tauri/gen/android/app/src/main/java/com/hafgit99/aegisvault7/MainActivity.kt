@@ -170,6 +170,8 @@ class MainActivity : TauriActivity() {
     pendingAutofillRequest = AutofillLaunchRequest(
       requestId = requestId,
       createdAt = System.currentTimeMillis(),
+      appPackage = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_APP_PACKAGE)?.takeIf { it.isNotBlank() },
+      webDomain = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_WEB_DOMAIN)?.takeIf { it.isNotBlank() },
       usernameIds = intent.autofillIdsExtra(AegisAutofillService.EXTRA_AUTOFILL_USERNAME_IDS),
       passwordIds = intent.autofillIdsExtra(AegisAutofillService.EXTRA_AUTOFILL_PASSWORD_IDS),
     )
@@ -436,6 +438,8 @@ class MainActivity : TauriActivity() {
   private data class AutofillLaunchRequest(
     val requestId: String,
     val createdAt: Long,
+    val appPackage: String?,
+    val webDomain: String?,
     val usernameIds: ArrayList<AutofillId>,
     val passwordIds: ArrayList<AutofillId>,
   ) {
@@ -444,6 +448,8 @@ class MainActivity : TauriActivity() {
         .put("requestId", requestId)
         .put("createdAt", createdAt)
         .put("source", "android-autofill")
+        .put("appPackage", appPackage)
+        .put("webDomain", webDomain)
   }
 
   companion object {

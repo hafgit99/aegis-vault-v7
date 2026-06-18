@@ -4,6 +4,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  androidAutofillTargetLabel,
   clearPendingAndroidAutofillRequest,
   completePendingAndroidAutofillRequest,
   getPendingAndroidAutofillRequest,
@@ -84,6 +85,8 @@ describe('android autofill bridge', () => {
         requestId: 'android-autofill-1',
         createdAt: 12345,
         source: 'android-autofill',
+        appPackage: 'com.example.app',
+        webDomain: 'login.example.com',
       }),
       clearPendingRequest,
       completePendingRequest,
@@ -93,11 +96,31 @@ describe('android autofill bridge', () => {
       requestId: 'android-autofill-1',
       createdAt: 12345,
       source: 'android-autofill',
+      appPackage: 'com.example.app',
+      webDomain: 'login.example.com',
     });
+    expect(androidAutofillTargetLabel(getPendingAndroidAutofillRequest())).toBe('login.example.com');
     expect(clearPendingAndroidAutofillRequest('android-autofill-1')).toBe(true);
     expect(clearPendingRequest).toHaveBeenCalledWith('android-autofill-1');
     expect(completePendingAndroidAutofillRequest('android-autofill-1', 'ada@example.com', 'secret', 'Aegis Mail')).toBe(true);
     expect(completePendingRequest).toHaveBeenCalledWith('android-autofill-1', 'ada@example.com', 'secret', 'Aegis Mail');
+  });
+
+  it('formats the best available Autofill target label', () => {
+    expect(androidAutofillTargetLabel(null)).toBeNull();
+    expect(androidAutofillTargetLabel({
+      requestId: 'request-1',
+      createdAt: 1,
+      source: 'android-autofill',
+      appPackage: 'com.example.app',
+    })).toBe('com.example.app');
+    expect(androidAutofillTargetLabel({
+      requestId: 'request-2',
+      createdAt: 2,
+      source: 'android-autofill',
+      appPackage: 'com.example.app',
+      webDomain: 'login.example.com',
+    })).toBe('login.example.com');
   });
 
   it('ignores malformed pending Android Autofill request payloads', () => {

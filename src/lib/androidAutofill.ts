@@ -23,6 +23,8 @@ export interface AndroidAutofillRequest {
   requestId: string;
   createdAt: number;
   source: 'android-autofill';
+  appPackage?: string | null;
+  webDomain?: string | null;
 }
 
 type AndroidAutofillRequestListener = (request: AndroidAutofillRequest) => void;
@@ -37,9 +39,14 @@ function androidAutofillBridge(): NonNullable<Window['AegisAndroidAutofill']> | 
 function isAndroidAutofillRequest(value: unknown): value is AndroidAutofillRequest {
   if (!value || typeof value !== 'object') return false;
   const candidate = value as Partial<AndroidAutofillRequest>;
+  const hasValidAppPackage = candidate.appPackage === undefined || candidate.appPackage === null || typeof candidate.appPackage === 'string';
+  const hasValidWebDomain = candidate.webDomain === undefined || candidate.webDomain === null || typeof candidate.webDomain === 'string';
+
   return typeof candidate.requestId === 'string' &&
     typeof candidate.createdAt === 'number' &&
-    candidate.source === 'android-autofill';
+    candidate.source === 'android-autofill' &&
+    hasValidAppPackage &&
+    hasValidWebDomain;
 }
 
 function parsePendingRequest(payload: string | null): AndroidAutofillRequest | null {
@@ -133,6 +140,16 @@ export function completePendingAndroidAutofillRequest(
   } catch {
     return false;
   }
+}
+
+export function androidAutofillTargetLabel(request: AndroidAutofillRequest | null | undefined): string | null {
+  if (!request) return null;
+
+  const webDomain = request.webDomain?.trim();
+  if (webDomain) return webDomain;
+
+  const appPackage = request.appPackage?.trim();
+  return appPackage || null;
 }
 
 export function subscribeAndroidAutofillRequests(listener: AndroidAutofillRequestListener): () => void {

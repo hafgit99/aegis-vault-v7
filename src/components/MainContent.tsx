@@ -1,6 +1,7 @@
 import { memo } from 'react';
 
 import type { VaultCategoryFilter } from '../hooks/useVaultFilters';
+import type { AndroidAutofillRequest } from '../lib/androidAutofill';
 import { ActiveTab, AppNotification, AuditReport, VaultItem } from '../types';
 import PasswordGenerator from './PasswordGenerator';
 import SecurityAudit from './SecurityAudit';
@@ -59,6 +60,7 @@ interface MainContentProps {
   onRestoreTrashItem: (item: VaultItem) => void;
   onDeleteTrashItemPermanently: (item: VaultItem) => void;
   isAutofillMode?: boolean;
+  autofillRequest?: AndroidAutofillRequest | null;
   onCancelAutofill?: () => void;
   onApproveAutofill?: (item: VaultItem) => void;
 }
@@ -113,6 +115,7 @@ export function MainContentComponent({
   onRestoreTrashItem,
   onDeleteTrashItemPermanently,
   isAutofillMode = false,
+  autofillRequest = null,
   onCancelAutofill,
   onApproveAutofill,
 }: MainContentProps) {
@@ -159,6 +162,7 @@ export function MainContentComponent({
           onCopyText={onCopyText}
           onDownloadAttachment={onDownloadAttachment}
           isAutofillMode={isAutofillMode}
+          autofillRequest={autofillRequest}
           onCancelAutofill={onCancelAutofill}
           onApproveAutofill={onApproveAutofill}
         />
