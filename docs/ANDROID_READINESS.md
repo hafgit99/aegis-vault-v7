@@ -34,6 +34,7 @@ npm run android:build:apk
 npm run android:build:apk:debug
 npm run android:build:apk:debug:aarch64
 npm run android:build:apk:aarch64
+npm run android:release:gate
 npm run android:release:signing:check
 npm run android:release:report
 npm run android:device:install
@@ -50,6 +51,8 @@ The target-specific APK commands run `android:clean:jni` first because Tauri/Gra
 
 Use `npm run android:release:report` after APK/AAB builds to record artifact size, SHA-256, package metadata, requested permissions, backup settings, cleartext traffic status, Autofill service protection, and FileProvider export status.
 
+Use `npm run android:release:gate` for the normal internal release candidate gate. It runs lint, web build, target-specific Android debug APK build, and artifact reporting. Add `-- --device` when a USB-debugging device is connected and the candidate should also be installed, launched, and smoke-tested.
+
 Use `npm run android:release:signing:check` before public release builds. Release signing is configured from environment variables so private keys and passwords never need to be committed:
 
 ```powershell
@@ -60,6 +63,12 @@ $env:AEGIS_ANDROID_KEY_PASSWORD='<secret>'
 ```
 
 The keystore file should live outside the repository. The repository ignores common Android signing files such as `.jks`, `.keystore`, `.p12`, `.pfx`, `keystore.properties`, and `key.properties`.
+
+For a signed APK candidate, set the signing environment and run:
+
+```bash
+npm run android:release:gate -- --signed
+```
 
 Local size baseline from this workstation:
 
@@ -84,8 +93,8 @@ Before treating Android as a product target, verify:
 - `npm run test:unit`
 - `npm run build`
 - `npm run android:init`
-- `npm run android:build:apk:debug:aarch64`
-- `npm run android:device:smoke`
+- `npm run android:release:gate`
+- `npm run android:release:gate -- --device` when a physical device is connected
 - Optional compatibility check: `npm run android:build:apk:debug`
 
 The device smoke gate installs the current debug APK, launches `com.hafgit99.aegisvault7.debug`, waits for the process to become visible, and fails if Android reports a non-private app data directory.
@@ -115,6 +124,7 @@ Run this checklist before every APK/AAB candidate that may be shared outside loc
 ### Build And Size
 
 - Build target-specific debug smoke APK: `npm run android:build:apk:debug:aarch64`.
+- Run the internal gate: `npm run android:release:gate`.
 - Run `npm run android:release:signing:check` before building a signed release candidate.
 - Build release APK/AAB with signing configuration when release keys are ready.
 - Run `npm run android:release:report` and store the output with the release candidate notes.

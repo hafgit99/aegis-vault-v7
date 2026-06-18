@@ -148,7 +148,8 @@ Recently improved:
   - `npm run lint`
   - `npm run test:unit`
   - `npm run build`
-  - `npm run android:build:apk:debug:aarch64`
+  - `npm run android:release:gate`
+  - `npm run android:release:gate -- --device` for connected-device candidates
   - `npm run android:release:signing:check` before signed release candidates
   - `npm run android:release:report`
   - `npm run android:device:smoke`
