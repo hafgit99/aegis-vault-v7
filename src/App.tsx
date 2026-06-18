@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import LockScreen from './components/LockScreen';
 import MobileSidebarBackdrop from './components/MobileSidebarBackdrop';
@@ -34,10 +34,19 @@ import { useSelectedItemScore } from './hooks/useSelectedItemScore';
 import { useVaultStatusAction } from './hooks/useVaultStatusAction';
 import { useRuntimeSecurity } from './hooks/useRuntimeSecurity';
 import { useLanguage } from './i18n/LanguageContext';
+import {
+  AndroidAutofillRequest,
+  getPendingAndroidAutofillRequest,
+  subscribeAndroidAutofillRequests,
+} from './lib/androidAutofill';
 import { syncExtensionCredentials, clearExtensionCredentials } from './lib/desktopStorage';
 
 export default function App() {
   const { t } = useLanguage();
+  const [pendingAutofillRequest, setPendingAutofillRequest] = useState<AndroidAutofillRequest | null>(() =>
+    getPendingAndroidAutofillRequest(),
+  );
+  const notifiedAutofillRequestRef = useRef<string | null>(null);
   const { copiedField, copyText: handleCopyText, clearCopiedField } = useClipboardFeedback();
   const { revealed, toggleReveal, resetReveals } = useSensitiveReveal();
   const isPasswordRevealed = revealed.password;
@@ -167,6 +176,30 @@ export default function App() {
     closeConfirm: handleCloseConfirm,
   } = useConfirmModal();
 
+  useEffect(() => {
+    const pending = getPendingAndroidAutofillRequest();
+    if (pending) {
+      setPendingAutofillRequest(pending);
+    }
+
+    return subscribeAndroidAutofillRequests((request) => {
+      setPendingAutofillRequest(request);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!unlocked || !pendingAutofillRequest) return;
+    if (notifiedAutofillRequestRef.current === pendingAutofillRequest.requestId) return;
+
+    notifiedAutofillRequestRef.current = pendingAutofillRequest.requestId;
+    setActiveTab('vault');
+    showNotification({
+      title: t('autofill.notification.title'),
+      message: t('autofill.notification.message'),
+      type: 'info',
+    });
+  }, [pendingAutofillRequest, setActiveTab, showNotification, t, unlocked]);
+
   const {
     openVaultStatus: handleOpenVaultStatus,
   } = useVaultStatusAction({ openConfirm });
@@ -261,7 +294,7 @@ export default function App() {
 
   // If locked, return the beautiful LockScreen UI
   if (!unlocked) {
-    return <LockScreen onUnlock={handleUnlock} />;
+    return <LockScreen onUnlock={handleUnlock} isAutofillPending={Boolean(pendingAutofillRequest)} />;
   }
 
   return (

@@ -15,7 +15,8 @@ import {
   Download,
   Languages,
   AlertTriangle,
-  RotateCcw
+  RotateCcw,
+  Smartphone
 } from 'lucide-react';
 import {
   getRememberedAccountSecretKey,
@@ -101,9 +102,10 @@ function getBiometricUnlockErrorMessage(err: any, t: ReturnType<typeof useLangua
 
 interface LockScreenProps {
   onUnlock: () => void;
+  isAutofillPending?: boolean;
 }
 
-export default function LockScreen({ onUnlock }: LockScreenProps) {
+export default function LockScreen({ onUnlock, isAutofillPending = false }: LockScreenProps) {
   const { language, setLanguage, t } = useLanguage();
   const isSetup = isMasterPasswordSet();
   const requiresSecretKey = isAccountSecretKeyRequired();
@@ -386,6 +388,19 @@ export default function LockScreen({ onUnlock }: LockScreenProps) {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+                {isAutofillPending && isSetup && (
+                  <div
+                    data-testid="lock-autofill-pending-banner"
+                    className="flex items-start gap-3 p-4 rounded-xl bg-[#2096f3]/10 border border-[#2096f3]/25 text-[#9fd3ff] text-xs leading-relaxed animate-fade-in"
+                  >
+                    <Smartphone className="w-5 h-5 shrink-0 text-[#60b7ff] mt-0.5" />
+                    <div className="text-left">
+                      <span className="block font-bold text-on-surface">{t('lock.autofill.title')}</span>
+                      <span className="block mt-1 text-on-surface-variant">{t('lock.autofill.description')}</span>
+                    </div>
+                  </div>
+                )}
+
                 {error && (
                   <div className="flex items-start gap-3 p-4 rounded-xl bg-brand-error/10 border border-brand-error/20 text-brand-error text-xs leading-relaxed animate-fade-in">
                     <ShieldAlert className="w-5 h-5 shrink-0 text-red-400 mt-0.5" />
