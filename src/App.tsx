@@ -46,6 +46,17 @@ import { logAndroidAutofillSecurityEvent } from './lib/androidAutofillSecurity';
 import { syncExtensionCredentials, clearExtensionCredentials } from './lib/desktopStorage';
 import type { VaultItem } from './types';
 
+const MIN_BACKGROUND_LOCK_DELAY_MS = 60_000;
+const MAX_BACKGROUND_LOCK_DELAY_MS = 15 * 60_000;
+
+function backgroundLockDelayFromAutoLock(autoLockDurationSeconds: number): number {
+  if (autoLockDurationSeconds === 0) return MAX_BACKGROUND_LOCK_DELAY_MS;
+  return Math.min(
+    Math.max(autoLockDurationSeconds * 1000, MIN_BACKGROUND_LOCK_DELAY_MS),
+    MAX_BACKGROUND_LOCK_DELAY_MS,
+  );
+}
+
 export default function App() {
   const { t } = useLanguage();
   const [pendingAutofillRequest, setPendingAutofillRequest] = useState<AndroidAutofillRequest | null>(() =>
@@ -129,6 +140,7 @@ export default function App() {
       resetReveals();
       clearCopiedField();
     },
+    backgroundLockDelayMs: backgroundLockDelayFromAutoLock(autoLockDuration),
   });
 
   useEffect(() => {
