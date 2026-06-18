@@ -5,6 +5,7 @@ import type { VaultCategoryFilter } from '../hooks/useVaultFilters';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { androidAutofillTargetLabel, type AndroidAutofillRequest } from '../lib/androidAutofill';
+import { isAndroidAutofillTargetMatch, sortAndroidAutofillMatches } from '../lib/androidAutofillMatching';
 import { AuditReport, VaultItem } from '../types';
 import AegisGuardReport from './AegisGuardReport';
 import CryptoShieldPanel from './CryptoShieldPanel';
@@ -126,7 +127,11 @@ export function VaultWorkspaceContent({
     }
   };
 
-  const displayedItems = filteredItems.slice(0, visibleCount);
+  const autofillMatchCount = isAutofillMode
+    ? filteredItems.filter((item) => isAndroidAutofillTargetMatch(item, autofillRequest)).length
+    : 0;
+  const orderedItems = isAutofillMode ? sortAndroidAutofillMatches(filteredItems, autofillRequest) : filteredItems;
+  const displayedItems = orderedItems.slice(0, visibleCount);
 
   return (
     <>
@@ -242,6 +247,11 @@ export function VaultWorkspaceContent({
                 {autofillTargetLabel && (
                   <p className="mt-1.5 inline-flex max-w-full items-center rounded-md border border-brand-primary/15 bg-[#080a09]/35 px-2 py-1 font-mono text-[10px] text-on-surface truncate">
                     {t('autofill.target.label')}: {autofillTargetLabel}
+                  </p>
+                )}
+                {autofillMatchCount > 0 && (
+                  <p className="mt-1 text-[10px] font-semibold text-brand-primary">
+                    {autofillMatchCount} {t('autofill.matchesFound')}
                   </p>
                 )}
               </div>
