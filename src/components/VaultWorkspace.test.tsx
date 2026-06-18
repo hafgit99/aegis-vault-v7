@@ -33,6 +33,10 @@ const item = (id: string, title: string, favorite = false): VaultItem => ({
 });
 
 const activeItems = [item('mail', 'Aegis Mail', true), item('bank', 'Aegis Bank')];
+const autofillItems = [
+  { ...item('unrelated', 'Unrelated'), url: 'https://unrelated.test' },
+  { ...item('target', 'Target Login'), url: 'https://login.example.com' },
+];
 
 function buttonByText(text: string) {
   const button = screen.getAllByRole('button').find((element) => element.textContent?.includes(text));
@@ -176,6 +180,26 @@ describe('VaultWorkspace', () => {
     fireEvent.click(screen.getByTestId('vault-autofill-cancel-button'));
 
     expect(props.onCancelAutofill).toHaveBeenCalledTimes(1);
+  });
+
+  it('promotes matching Android Autofill login items in the vault list', () => {
+    renderWorkspace({
+      isAutofillMode: true,
+      filteredItems: autofillItems,
+      activeItems: autofillItems,
+      loginCount: 2,
+      autofillRequest: {
+        requestId: 'request-1',
+        createdAt: 123,
+        source: 'android-autofill',
+        webDomain: 'login.example.com',
+      },
+    });
+
+    const rows = screen.getAllByText(/Target Login|Unrelated/);
+
+    expect(rows[0].textContent).toContain('Target Login');
+    expect(screen.getByText('1 eşleşen kayıt öne çıkarıldı')).toBeTruthy();
   });
 
   it('renders the empty filtered-list fallback', () => {
