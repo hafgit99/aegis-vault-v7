@@ -11,6 +11,7 @@ const skipBuild = args.has('--skip-build');
 const skipAndroidBuild = args.has('--skip-android-build');
 const skipDevice = args.has('--skip-device') || !device;
 const evidence = args.has('--evidence');
+const allowDirty = args.has('--allow-dirty');
 
 function printHelp() {
   console.log(`Android release gate
@@ -25,6 +26,7 @@ Options:
   --skip-android-build  Skip Android APK build.
   --skip-device         Skip device smoke even when --device is present.
   --evidence            Copy APK/AAB artifacts and release report under release-local/android.
+  --allow-dirty         Allow evidence export from a dirty working tree.
   --help                Show this help.
 `);
 }
@@ -96,6 +98,7 @@ console.log(signed
 
 if (!skipBuild) {
   run('npm', ['run', 'lint']);
+  run('npm', ['run', 'android:release:version:check']);
   run('npm', ['run', 'build']);
 }
 
@@ -110,7 +113,7 @@ if (!skipAndroidBuild) {
 run('npm', ['run', 'android:release:report', '--', '--strict']);
 
 if (evidence) {
-  run('npm', ['run', 'android:release:evidence']);
+  run('npm', ['run', 'android:release:evidence', '--', ...(allowDirty ? ['--allow-dirty'] : [])]);
 }
 
 if (!skipDevice) {

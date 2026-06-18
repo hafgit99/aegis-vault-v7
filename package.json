@@ -28,6 +28,7 @@
     "android:build:apk:aarch64": "npm run android:clean:jni && tauri android build --apk --target aarch64",
     "android:release:gate": "node scripts/android-release-gate.cjs",
     "android:release:evidence": "node scripts/android-release-evidence.cjs",
+    "android:release:version:check": "node scripts/android-version-check.cjs",
     "android:release:signing:check": "node scripts/android-signing-check.cjs",
     "android:release:report": "node scripts/android-release-report.cjs",
     "android:device:install": "node scripts/android-device-smoke.cjs install",
