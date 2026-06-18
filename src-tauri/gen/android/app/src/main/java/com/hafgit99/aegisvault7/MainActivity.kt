@@ -13,6 +13,7 @@ import android.security.keystore.KeyProperties
 import android.service.autofill.Dataset
 import android.service.autofill.FillResponse
 import android.util.Base64
+import android.util.Log
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.view.WindowManager
@@ -366,6 +367,10 @@ class MainActivity : TauriActivity() {
 
         val result = Intent().putExtra(AutofillManager.EXTRA_AUTHENTICATION_RESULT, response)
         setResult(Activity.RESULT_OK, result)
+        Log.i(
+          AUTOFILL_LOG_TAG,
+          "Returned authenticated Autofill response requestId=$requestId usernameFields=${current.usernameIds.size} passwordFields=${current.passwordIds.size}"
+        )
         pendingAutofillRequest = null
         finish()
         true
@@ -476,5 +481,6 @@ class MainActivity : TauriActivity() {
     private const val SECURE_STORAGE_KEY_ALIAS = "aegis_vault_v7_secure_storage"
     private const val SECURE_STORAGE_CIPHER = "AES/GCM/NoPadding"
     private const val AUTOFILL_REQUEST_MAX_AGE_MS = 5 * 60 * 1000L
+    private const val AUTOFILL_LOG_TAG = "AegisAutofill"
   }
 }
