@@ -148,6 +148,7 @@ Recently improved:
   - `npm run lint`
   - `npm run test:unit`
   - `npm run build`
+  - `npm run android:release:version:check`
   - `npm run android:release:gate`
   - `npm run android:release:gate -- --evidence` for shareable internal candidates
   - `npm run android:release:gate -- --device` for connected-device candidates
