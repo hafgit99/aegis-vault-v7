@@ -10,6 +10,7 @@ const device = args.has('--device');
 const skipBuild = args.has('--skip-build');
 const skipAndroidBuild = args.has('--skip-android-build');
 const skipDevice = args.has('--skip-device') || !device;
+const evidence = args.has('--evidence');
 
 function printHelp() {
   console.log(`Android release gate
@@ -23,6 +24,7 @@ Options:
   --skip-build          Skip lint and web build.
   --skip-android-build  Skip Android APK build.
   --skip-device         Skip device smoke even when --device is present.
+  --evidence            Copy APK/AAB artifacts and release report under release-local/android.
   --help                Show this help.
 `);
 }
@@ -106,6 +108,10 @@ if (!skipAndroidBuild) {
 }
 
 run('npm', ['run', 'android:release:report', '--', '--strict']);
+
+if (evidence) {
+  run('npm', ['run', 'android:release:evidence']);
+}
 
 if (!skipDevice) {
   run('npm', ['run', 'android:device:smoke']);
