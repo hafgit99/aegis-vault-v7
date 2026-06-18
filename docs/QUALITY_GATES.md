@@ -151,7 +151,7 @@ Recently improved:
   - `npm run android:release:gate`
   - `npm run android:release:gate -- --device` for connected-device candidates
   - `npm run android:release:signing:check` before signed release candidates
-  - `npm run android:release:report`
+  - `npm run android:release:report -- --strict`
   - `npm run android:device:smoke`
   - Manual Android release candidate checklist from `docs/ANDROID_READINESS.md`.
 - Expand smoke E2E coverage for detail actions, broader translated screens, desktop persistence, and mobile smoke viewports.

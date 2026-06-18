@@ -49,9 +49,9 @@ Use `android:build:apk:debug:aarch64` for normal phone smoke tests. The generic 
 
 The target-specific APK commands run `android:clean:jni` first because Tauri/Gradle can leave native library symlinks from previous multi-architecture builds under `src-tauri/gen/android/app/src/main/jniLibs`. Cleaning those ignored intermediates prevents stale ABIs from being packed into a later single-target APK.
 
-Use `npm run android:release:report` after APK/AAB builds to record artifact size, SHA-256, package metadata, requested permissions, backup settings, cleartext traffic status, Autofill service protection, and FileProvider export status.
+Use `npm run android:release:report` after APK/AAB builds to record artifact size, SHA-256, package metadata, requested permissions, backup settings, cleartext traffic status, Autofill service protection, and FileProvider export status. Add `-- --strict` when warnings should fail the command.
 
-Use `npm run android:release:gate` for the normal internal release candidate gate. It runs lint, web build, target-specific Android debug APK build, and artifact reporting. Add `-- --device` when a USB-debugging device is connected and the candidate should also be installed, launched, and smoke-tested.
+Use `npm run android:release:gate` for the normal internal release candidate gate. It runs lint, web build, target-specific Android debug APK build, and strict artifact reporting. Add `-- --device` when a USB-debugging device is connected and the candidate should also be installed, launched, and smoke-tested.
 
 Use `npm run android:release:signing:check` before public release builds. Release signing is configured from environment variables so private keys and passwords never need to be committed:
 
@@ -127,7 +127,7 @@ Run this checklist before every APK/AAB candidate that may be shared outside loc
 - Run the internal gate: `npm run android:release:gate`.
 - Run `npm run android:release:signing:check` before building a signed release candidate.
 - Build release APK/AAB with signing configuration when release keys are ready.
-- Run `npm run android:release:report` and store the output with the release candidate notes.
+- Run `npm run android:release:report -- --strict` and store the output with the release candidate notes.
 - Confirm the release artifact does not contain stale multi-ABI debug libraries.
 - Record artifact sizes:
   - Universal debug APK is expected to be large because it contains multiple ABIs.

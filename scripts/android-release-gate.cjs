@@ -105,7 +105,7 @@ if (!skipAndroidBuild) {
   run('npm', ['run', signed ? 'android:build:apk:aarch64' : 'android:build:apk:debug:aarch64']);
 }
 
-run('npm', ['run', 'android:release:report']);
+run('npm', ['run', 'android:release:report', '--', '--strict']);
 
 if (!skipDevice) {
   run('npm', ['run', 'android:device:smoke']);
