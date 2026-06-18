@@ -58,6 +58,8 @@ interface MainContentProps {
   onEmptyTrash: () => void;
   onRestoreTrashItem: (item: VaultItem) => void;
   onDeleteTrashItemPermanently: (item: VaultItem) => void;
+  isAutofillMode?: boolean;
+  onCancelAutofill?: () => void;
 }
 
 export function MainContentComponent({
@@ -109,6 +111,8 @@ export function MainContentComponent({
   onEmptyTrash,
   onRestoreTrashItem,
   onDeleteTrashItemPermanently,
+  isAutofillMode = false,
+  onCancelAutofill,
 }: MainContentProps) {
   return (
     <div className="flex flex-1 overflow-hidden">
@@ -152,6 +156,8 @@ export function MainContentComponent({
           onToggleReveal={onToggleReveal}
           onCopyText={onCopyText}
           onDownloadAttachment={onDownloadAttachment}
+          isAutofillMode={isAutofillMode}
+          onCancelAutofill={onCancelAutofill}
         />
       )}
 

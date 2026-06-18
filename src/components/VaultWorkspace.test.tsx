@@ -64,6 +64,9 @@ function renderWorkspace(
     loginCount: 2,
     cardCount: 0,
     secureNoteCount: 0,
+    passkeyCount: 0,
+    identityCount: 0,
+    selectedCategory: 'all',
     auditReport,
     profileName: 'Hafız',
     copiedField: null,
@@ -80,6 +83,7 @@ function renderWorkspace(
     onOpenAudit: vi.fn(),
     onOpenGenerator: vi.fn(),
     onSetFavoritesOnly: vi.fn(),
+    onSelectCategory: vi.fn(),
     onSelectDashboard: vi.fn(),
     onBackToList: vi.fn(),
     onSelectItem: vi.fn(),
@@ -150,6 +154,20 @@ describe('VaultWorkspace', () => {
     fireEvent.click(allButton);
 
     expect(props.onSetFavoritesOnly).toHaveBeenCalledWith(false);
+  });
+
+  it('renders Android Autofill mode and forwards cancel action', () => {
+    const props = renderWorkspace({
+      isAutofillMode: true,
+      onCancelAutofill: vi.fn(),
+    });
+
+    expect(screen.getByTestId('vault-autofill-mode-banner')).toBeTruthy();
+    expect(screen.getByText('Autofill Modu')).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId('vault-autofill-cancel-button'));
+
+    expect(props.onCancelAutofill).toHaveBeenCalledTimes(1);
   });
 
   it('renders the empty filtered-list fallback', () => {

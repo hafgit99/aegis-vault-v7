@@ -1,5 +1,5 @@
 import React, { Fragment, useState, useEffect, memo } from 'react';
-import { ArrowLeft, CreditCard, FileText, Fingerprint, Heart, KeyRound, Layers, LayoutDashboard, Lock, Plus, Search, User } from 'lucide-react';
+import { ArrowLeft, CreditCard, FileText, Fingerprint, Heart, KeyRound, Layers, LayoutDashboard, Lock, Plus, Search, Smartphone, User, X } from 'lucide-react';
 
 import type { VaultCategoryFilter } from '../hooks/useVaultFilters';
 
@@ -54,6 +54,8 @@ interface VaultWorkspaceProps {
   onToggleReveal: (field: 'password' | 'cardNumber' | 'cardCvv' | 'cardPin' | 'passkeyPrivateExponent') => void;
   onCopyText: (text: string, field: string) => void;
   onDownloadAttachment: (id: string, name: string) => void;
+  isAutofillMode?: boolean;
+  onCancelAutofill?: () => void;
 }
 
 export function VaultWorkspaceContent({
@@ -95,6 +97,8 @@ export function VaultWorkspaceContent({
   onToggleReveal,
   onCopyText,
   onDownloadAttachment,
+  isAutofillMode = false,
+  onCancelAutofill,
 }: VaultWorkspaceProps) {
   const { t } = useLanguage();
 
@@ -213,6 +217,37 @@ export function VaultWorkspaceContent({
               </p>
             )}
           </div>
+
+          {isAutofillMode && (
+            <div
+              data-testid="vault-autofill-mode-banner"
+              className="flex items-start gap-2.5 rounded-lg border border-brand-primary/20 bg-brand-primary/10 px-3 py-2.5 text-left shadow-sm"
+            >
+              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-brand-primary/20 bg-brand-primary/10 text-brand-primary">
+                <Smartphone className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-brand-primary">
+                  {t('autofill.vault.title')}
+                </p>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-on-surface-variant">
+                  {t('autofill.vault.description')}
+                </p>
+              </div>
+              {onCancelAutofill && (
+                <button
+                  type="button"
+                  data-testid="vault-autofill-cancel-button"
+                  onClick={onCancelAutofill}
+                  className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-outline-variant/15 bg-surface-low text-on-surface-variant hover:border-red-400/25 hover:bg-red-500/10 hover:text-red-200 focus:outline-none focus:ring-1 focus:ring-red-300/40 active:scale-95 transition-all cursor-pointer"
+                  title={t('autofill.vault.cancel')}
+                  aria-label={t('autofill.vault.cancel')}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="px-3 pb-2 shrink-0">
