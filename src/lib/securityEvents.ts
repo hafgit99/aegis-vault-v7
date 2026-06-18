@@ -13,6 +13,10 @@ export const securityEventCodes = {
   attachmentLegacyMigrationFailed: 'attachment.legacyMigration.failed',
   networkBlocked: 'network.blocked',
   unexpectedUiError: 'ui.unexpectedError',
+  androidAutofillRequested: 'android.autofill.requested',
+  androidAutofillCancelled: 'android.autofill.cancelled',
+  androidAutofillCompleted: 'android.autofill.completed',
+  androidAutofillFailed: 'android.autofill.failed',
 } as const;
 
 export type SecurityEventCode = (typeof securityEventCodes)[keyof typeof securityEventCodes];

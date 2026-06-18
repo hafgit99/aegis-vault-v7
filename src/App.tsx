@@ -41,6 +41,7 @@ import {
   getPendingAndroidAutofillRequest,
   subscribeAndroidAutofillRequests,
 } from './lib/androidAutofill';
+import { logAndroidAutofillSecurityEvent } from './lib/androidAutofillSecurity';
 import { syncExtensionCredentials, clearExtensionCredentials } from './lib/desktopStorage';
 import type { VaultItem } from './types';
 
@@ -195,6 +196,7 @@ export default function App() {
     if (notifiedAutofillRequestRef.current === pendingAutofillRequest.requestId) return;
 
     notifiedAutofillRequestRef.current = pendingAutofillRequest.requestId;
+    logAndroidAutofillSecurityEvent('requested', pendingAutofillRequest);
     setActiveTab('vault');
     showNotification({
       title: t('autofill.notification.title'),
@@ -206,6 +208,7 @@ export default function App() {
   const handleCancelAutofillRequest = useCallback(() => {
     if (pendingAutofillRequest) {
       clearPendingAndroidAutofillRequest(pendingAutofillRequest.requestId);
+      logAndroidAutofillSecurityEvent('cancelled', pendingAutofillRequest);
     }
 
     notifiedAutofillRequestRef.current = null;
@@ -228,6 +231,7 @@ export default function App() {
     );
 
     if (!completed) {
+      logAndroidAutofillSecurityEvent('failed', pendingAutofillRequest, item);
       showNotification({
         title: t('autofill.failed.title'),
         message: t('autofill.failed.message'),
@@ -238,6 +242,7 @@ export default function App() {
 
     notifiedAutofillRequestRef.current = null;
     setPendingAutofillRequest(null);
+    logAndroidAutofillSecurityEvent('completed', pendingAutofillRequest, item);
     showNotification({
       title: t('autofill.completed.title'),
       message: t('autofill.completed.message'),
