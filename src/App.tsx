@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import LockScreen from './components/LockScreen';
 import MobileSidebarBackdrop from './components/MobileSidebarBackdrop';
@@ -36,6 +36,7 @@ import { useRuntimeSecurity } from './hooks/useRuntimeSecurity';
 import { useLanguage } from './i18n/LanguageContext';
 import {
   AndroidAutofillRequest,
+  clearPendingAndroidAutofillRequest,
   getPendingAndroidAutofillRequest,
   subscribeAndroidAutofillRequests,
 } from './lib/androidAutofill';
@@ -199,6 +200,20 @@ export default function App() {
       type: 'info',
     });
   }, [pendingAutofillRequest, setActiveTab, showNotification, t, unlocked]);
+
+  const handleCancelAutofillRequest = useCallback(() => {
+    if (pendingAutofillRequest) {
+      clearPendingAndroidAutofillRequest(pendingAutofillRequest.requestId);
+    }
+
+    notifiedAutofillRequestRef.current = null;
+    setPendingAutofillRequest(null);
+    showNotification({
+      title: t('autofill.cancelled.title'),
+      message: t('autofill.cancelled.message'),
+      type: 'info',
+    });
+  }, [pendingAutofillRequest, showNotification, t]);
 
   const {
     openVaultStatus: handleOpenVaultStatus,
@@ -373,6 +388,8 @@ export default function App() {
           onEmptyTrash={handleEmptyTrash}
           onRestoreTrashItem={handleRestoreTrashItem}
           onDeleteTrashItemPermanently={handleDeleteTrashItemPermanently}
+          isAutofillMode={Boolean(pendingAutofillRequest)}
+          onCancelAutofill={handleCancelAutofillRequest}
         />
       </main>
 
