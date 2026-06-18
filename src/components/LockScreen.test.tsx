@@ -97,6 +97,19 @@ describe('LockScreen', () => {
     expect(setupMasterPasswordWithSecretKey).not.toHaveBeenCalled();
   });
 
+  it('shows a pending Android Autofill banner on the unlock screen', () => {
+    vi.mocked(isMasterPasswordSet).mockReturnValue(true);
+
+    render(
+      <LanguageProvider>
+        <LockScreen onUnlock={vi.fn()} isAutofillPending />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByTestId('lock-autofill-pending-banner')).toBeTruthy();
+    expect(screen.getByText('Android Autofill isteği bekliyor')).toBeTruthy();
+  });
+
   it('sets up the master password and unlocks when confirmation matches', async () => {
     const onUnlock = vi.fn();
     render(<LockScreen onUnlock={onUnlock} />);
