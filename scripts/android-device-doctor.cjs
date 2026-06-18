@@ -20,7 +20,12 @@ const apk = path.join(
   'app-universal-debug.apk',
 );
 const packageName = 'com.hafgit99.aegisvault7.debug';
-const autofillServiceName = 'com.hafgit99.aegisvault7/.AegisAutofillService';
+const autofillServiceNames = [
+  'com.hafgit99.aegisvault7/.AegisAutofillService',
+  'com.hafgit99.aegisvault7/com.hafgit99.aegisvault7.AegisAutofillService',
+  `${packageName}/.AegisAutofillService`,
+  `${packageName}/com.hafgit99.aegisvault7.AegisAutofillService`,
+];
 let failed = false;
 
 function pass(message) {
@@ -141,7 +146,7 @@ if (readyDevices.length > 0) {
   }
 
   const autofillSetting = tryRun(['shell', 'settings', 'get', 'secure', 'autofill_service']);
-  if (autofillSetting.includes(autofillServiceName)) {
+  if (autofillServiceNames.some((serviceName) => autofillSetting.includes(serviceName))) {
     pass('Aegis is the active Android Autofill service');
   } else {
     warn(`Aegis is not the active Android Autofill service: ${autofillSetting || 'empty'}`);
