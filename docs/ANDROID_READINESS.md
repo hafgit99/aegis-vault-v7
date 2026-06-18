@@ -39,6 +39,7 @@ npm run android:release:evidence
 npm run android:release:version:check
 npm run android:release:signing:check
 npm run android:release:report
+npm run android:device:doctor
 npm run android:device:install
 npm run android:device:launch
 npm run android:device:status
@@ -53,7 +54,9 @@ The target-specific APK commands run `android:clean:jni` first because Tauri/Gra
 
 Use `npm run android:release:report` after APK/AAB builds to record artifact size, SHA-256, package metadata, requested permissions, backup settings, cleartext traffic status, Autofill service protection, and FileProvider export status. Add `-- --strict` when warnings should fail the command.
 
-Use `npm run android:release:gate` for the normal internal release candidate gate. It runs lint, version consistency checks, web build, target-specific Android debug APK build, and strict artifact reporting. Add `-- --device` when a USB-debugging device is connected and the candidate should also be installed, launched, and smoke-tested. Add `-- --evidence` to copy APK/AAB artifacts, SHA-256 sums, metadata, and the strict report under `release-local/android/<timestamp>/`.
+Use `npm run android:device:doctor` before device testing to diagnose SDK/ADB setup, authorized USB devices, APK presence, installed package state, app-private data directory, and active Autofill provider status.
+
+Use `npm run android:release:gate` for the normal internal release candidate gate. It runs lint, version consistency checks, web build, target-specific Android debug APK build, and strict artifact reporting. Add `-- --device` when a USB-debugging device is connected and the candidate should also be diagnosed, installed, launched, and smoke-tested. Add `-- --evidence` to copy APK/AAB artifacts, SHA-256 sums, metadata, and the strict report under `release-local/android/<timestamp>/`.
 
 Shareable evidence requires a clean working tree. For local experiments only, `npm run android:release:gate -- --evidence --allow-dirty` records dirty status in `metadata.json` and still writes the evidence folder.
 
@@ -98,6 +101,7 @@ Before treating Android as a product target, verify:
 - `npm run build`
 - `npm run android:init`
 - `npm run android:release:gate`
+- `npm run android:device:doctor` before connected-device testing
 - `npm run android:release:gate -- --device` when a physical device is connected
 - Optional compatibility check: `npm run android:build:apk:debug`
 

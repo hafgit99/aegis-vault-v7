@@ -21,7 +21,7 @@ Usage:
 
 Options:
   --signed              Require Android release signing env and build release APK.
-  --device              Install, launch, and smoke-test the current debug APK on USB device.
+  --device              Diagnose, install, launch, and smoke-test the current debug APK on USB device.
   --skip-build          Skip lint and web build.
   --skip-android-build  Skip Android APK build.
   --skip-device         Skip device smoke even when --device is present.
@@ -117,6 +117,7 @@ if (evidence) {
 }
 
 if (!skipDevice) {
+  run('npm', ['run', 'android:device:doctor']);
   run('npm', ['run', 'android:device:smoke']);
 }
 
