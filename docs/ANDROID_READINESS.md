@@ -34,6 +34,7 @@ npm run android:build:apk
 npm run android:build:apk:debug
 npm run android:build:apk:debug:aarch64
 npm run android:build:apk:aarch64
+npm run android:release:report
 npm run android:device:install
 npm run android:device:launch
 npm run android:device:status
@@ -45,6 +46,8 @@ On this Windows workstation, Android builds also require the Android Studio JBR,
 Use `android:build:apk:debug:aarch64` for normal phone smoke tests. The generic `android:build:apk:debug` command creates a universal debug APK that bundles `arm64-v8a`, `armeabi-v7a`, `x86`, and `x86_64` native libraries; it is useful for broad compatibility checks but is expected to be much larger.
 
 The target-specific APK commands run `android:clean:jni` first because Tauri/Gradle can leave native library symlinks from previous multi-architecture builds under `src-tauri/gen/android/app/src/main/jniLibs`. Cleaning those ignored intermediates prevents stale ABIs from being packed into a later single-target APK.
+
+Use `npm run android:release:report` after APK/AAB builds to record artifact size, SHA-256, package metadata, requested permissions, backup settings, cleartext traffic status, Autofill service protection, and FileProvider export status.
 
 Local size baseline from this workstation:
 
@@ -101,6 +104,7 @@ Run this checklist before every APK/AAB candidate that may be shared outside loc
 
 - Build target-specific debug smoke APK: `npm run android:build:apk:debug:aarch64`.
 - Build release APK/AAB with signing configuration when release keys are ready.
+- Run `npm run android:release:report` and store the output with the release candidate notes.
 - Confirm the release artifact does not contain stale multi-ABI debug libraries.
 - Record artifact sizes:
   - Universal debug APK is expected to be large because it contains multiple ABIs.
