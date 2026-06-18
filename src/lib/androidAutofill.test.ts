@@ -4,10 +4,12 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  ANDROID_AUTOFILL_REQUEST_MAX_AGE_MS,
   androidAutofillTargetLabel,
   clearPendingAndroidAutofillRequest,
   completePendingAndroidAutofillRequest,
   getPendingAndroidAutofillRequest,
+  isAndroidAutofillRequestFresh,
   isAndroidAutofillEnabled,
   isAndroidAutofillSupported,
   openAndroidAutofillSettings,
@@ -121,6 +123,26 @@ describe('android autofill bridge', () => {
       appPackage: 'com.example.app',
       webDomain: 'login.example.com',
     })).toBe('login.example.com');
+  });
+
+  it('classifies stale Android Autofill requests by age', () => {
+    const now = 10_000_000;
+    const freshRequest = {
+      requestId: 'fresh',
+      createdAt: now - ANDROID_AUTOFILL_REQUEST_MAX_AGE_MS + 1,
+      source: 'android-autofill' as const,
+    };
+
+    expect(isAndroidAutofillRequestFresh(freshRequest, now)).toBe(true);
+    expect(isAndroidAutofillRequestFresh({
+      ...freshRequest,
+      createdAt: now - ANDROID_AUTOFILL_REQUEST_MAX_AGE_MS - 1,
+    }, now)).toBe(false);
+    expect(isAndroidAutofillRequestFresh({
+      ...freshRequest,
+      createdAt: now + 1,
+    }, now)).toBe(false);
+    expect(isAndroidAutofillRequestFresh(null, now)).toBe(false);
   });
 
   it('ignores malformed pending Android Autofill request payloads', () => {

@@ -29,6 +29,8 @@ export interface AndroidAutofillRequest {
 
 type AndroidAutofillRequestListener = (request: AndroidAutofillRequest) => void;
 
+export const ANDROID_AUTOFILL_REQUEST_MAX_AGE_MS = 5 * 60 * 1000;
+
 const listeners = new Set<AndroidAutofillRequestListener>();
 
 function androidAutofillBridge(): NonNullable<Window['AegisAndroidAutofill']> | null {
@@ -150,6 +152,17 @@ export function androidAutofillTargetLabel(request: AndroidAutofillRequest | nul
 
   const appPackage = request.appPackage?.trim();
   return appPackage || null;
+}
+
+export function isAndroidAutofillRequestFresh(
+  request: AndroidAutofillRequest | null | undefined,
+  now: number = Date.now(),
+): boolean {
+  if (!request) return false;
+  if (!Number.isFinite(request.createdAt)) return false;
+
+  const ageMs = now - request.createdAt;
+  return ageMs >= 0 && ageMs <= ANDROID_AUTOFILL_REQUEST_MAX_AGE_MS;
 }
 
 export function subscribeAndroidAutofillRequests(listener: AndroidAutofillRequestListener): () => void {

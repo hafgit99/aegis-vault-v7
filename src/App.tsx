@@ -39,6 +39,7 @@ import {
   clearPendingAndroidAutofillRequest,
   completePendingAndroidAutofillRequest,
   getPendingAndroidAutofillRequest,
+  isAndroidAutofillRequestFresh,
   subscribeAndroidAutofillRequests,
 } from './lib/androidAutofill';
 import { logAndroidAutofillSecurityEvent } from './lib/androidAutofillSecurity';
@@ -180,19 +181,33 @@ export default function App() {
     closeConfirm: handleCloseConfirm,
   } = useConfirmModal();
 
+  const rejectStaleAutofillRequest = useCallback((request: AndroidAutofillRequest): boolean => {
+    if (isAndroidAutofillRequestFresh(request)) return false;
+
+    clearPendingAndroidAutofillRequest(request.requestId);
+    logAndroidAutofillSecurityEvent('failed', request);
+    if (notifiedAutofillRequestRef.current === request.requestId) {
+      notifiedAutofillRequestRef.current = null;
+    }
+    setPendingAutofillRequest(null);
+    return true;
+  }, []);
+
   useEffect(() => {
     const pending = getPendingAndroidAutofillRequest();
-    if (pending) {
+    if (pending && !rejectStaleAutofillRequest(pending)) {
       setPendingAutofillRequest(pending);
     }
 
     return subscribeAndroidAutofillRequests((request) => {
+      if (rejectStaleAutofillRequest(request)) return;
       setPendingAutofillRequest(request);
     });
-  }, []);
+  }, [rejectStaleAutofillRequest]);
 
   useEffect(() => {
     if (!unlocked || !pendingAutofillRequest) return;
+    if (rejectStaleAutofillRequest(pendingAutofillRequest)) return;
     if (notifiedAutofillRequestRef.current === pendingAutofillRequest.requestId) return;
 
     notifiedAutofillRequestRef.current = pendingAutofillRequest.requestId;
@@ -222,6 +237,14 @@ export default function App() {
 
   const handleApproveAutofillRequest = useCallback((item: VaultItem) => {
     if (!pendingAutofillRequest) return;
+    if (rejectStaleAutofillRequest(pendingAutofillRequest)) {
+      showNotification({
+        title: t('autofill.failed.title'),
+        message: t('autofill.failed.message'),
+        type: 'danger',
+      });
+      return;
+    }
 
     const completed = completePendingAndroidAutofillRequest(
       pendingAutofillRequest.requestId,
@@ -248,7 +271,7 @@ export default function App() {
       message: t('autofill.completed.message'),
       type: 'success',
     });
-  }, [pendingAutofillRequest, showNotification, t]);
+  }, [pendingAutofillRequest, rejectStaleAutofillRequest, showNotification, t]);
 
   const {
     openVaultStatus: handleOpenVaultStatus,
