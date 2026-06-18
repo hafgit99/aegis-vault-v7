@@ -35,6 +35,7 @@ npm run android:build:apk:debug
 npm run android:build:apk:debug:aarch64
 npm run android:build:apk:aarch64
 npm run android:release:gate
+npm run android:release:evidence
 npm run android:release:signing:check
 npm run android:release:report
 npm run android:device:install
@@ -51,7 +52,7 @@ The target-specific APK commands run `android:clean:jni` first because Tauri/Gra
 
 Use `npm run android:release:report` after APK/AAB builds to record artifact size, SHA-256, package metadata, requested permissions, backup settings, cleartext traffic status, Autofill service protection, and FileProvider export status. Add `-- --strict` when warnings should fail the command.
 
-Use `npm run android:release:gate` for the normal internal release candidate gate. It runs lint, web build, target-specific Android debug APK build, and strict artifact reporting. Add `-- --device` when a USB-debugging device is connected and the candidate should also be installed, launched, and smoke-tested.
+Use `npm run android:release:gate` for the normal internal release candidate gate. It runs lint, web build, target-specific Android debug APK build, and strict artifact reporting. Add `-- --device` when a USB-debugging device is connected and the candidate should also be installed, launched, and smoke-tested. Add `-- --evidence` to copy APK/AAB artifacts, SHA-256 sums, metadata, and the strict report under `release-local/android/<timestamp>/`.
 
 Use `npm run android:release:signing:check` before public release builds. Release signing is configured from environment variables so private keys and passwords never need to be committed:
 
@@ -67,7 +68,7 @@ The keystore file should live outside the repository. The repository ignores com
 For a signed APK candidate, set the signing environment and run:
 
 ```bash
-npm run android:release:gate -- --signed
+npm run android:release:gate -- --signed --evidence
 ```
 
 Local size baseline from this workstation:
@@ -125,6 +126,7 @@ Run this checklist before every APK/AAB candidate that may be shared outside loc
 
 - Build target-specific debug smoke APK: `npm run android:build:apk:debug:aarch64`.
 - Run the internal gate: `npm run android:release:gate`.
+- For shareable candidates, run `npm run android:release:gate -- --evidence` and archive the generated `release-local/android/<timestamp>/` folder.
 - Run `npm run android:release:signing:check` before building a signed release candidate.
 - Build release APK/AAB with signing configuration when release keys are ready.
 - Run `npm run android:release:report -- --strict` and store the output with the release candidate notes.
