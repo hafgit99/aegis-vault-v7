@@ -10,6 +10,8 @@ import android.service.autofill.FillRequest
 import android.service.autofill.SaveCallback
 import android.service.autofill.SaveRequest
 import android.text.InputType
+import android.util.Log
+import android.view.View
 import android.view.autofill.AutofillId
 import android.app.assist.AssistStructure
 import android.widget.RemoteViews
@@ -30,9 +32,21 @@ class AegisAutofillService : AutofillService() {
     val structure = request.fillContexts.lastOrNull()?.structure
     val loginFields = structure?.let { collectLoginFields(it) }
     if (loginFields == null || !loginFields.hasFillableLogin()) {
+      Log.i(
+        AUTOFILL_LOG_TAG,
+        "FillRequest ignored package=${loginFields?.appPackage ?: structure?.activityComponent?.packageName ?: "unknown"} " +
+          "domain=${loginFields?.webDomain ?: "unknown"} usernameFields=${loginFields?.usernameIds?.size ?: 0} " +
+          "passwordFields=${loginFields?.passwordIds?.size ?: 0} fillableFields=${loginFields?.allIds()?.size ?: 0}"
+      )
       callback.onSuccess(null)
       return
     }
+
+    Log.i(
+      AUTOFILL_LOG_TAG,
+      "FillRequest accepted package=${loginFields.appPackage ?: "unknown"} domain=${loginFields.webDomain ?: "unknown"} " +
+        "usernameFields=${loginFields.usernameIds.size} passwordFields=${loginFields.passwordIds.size} fillableFields=${loginFields.allIds().size}"
+    )
 
     val authenticationIds = loginFields.allIds().toTypedArray()
     @Suppress("DEPRECATION")
@@ -64,7 +78,7 @@ class AegisAutofillService : AutofillService() {
     }
 
     val autofillId = node.autofillId
-    if (autofillId != null) {
+    if (autofillId != null && node.visibility == View.VISIBLE) {
       when {
         isPasswordField(node) -> fields.passwordIds.add(autofillId)
         isUsernameField(node) -> fields.usernameIds.add(autofillId)
@@ -105,6 +119,10 @@ class AegisAutofillService : AutofillService() {
     values.add(hint?.toString().orEmpty())
     values.add(idEntry.orEmpty())
     values.add(className?.toString().orEmpty())
+    htmlInfo?.attributes?.forEach { attribute ->
+      values.add(attribute.first.orEmpty())
+      values.add(attribute.second.orEmpty())
+    }
     return values
       .flatMap { it.split(' ', '_', '-', '.', ':', '/', '\\') }
       .map { it.trim().lowercase() }
@@ -146,6 +164,7 @@ class AegisAutofillService : AutofillService() {
   }
 
   companion object {
+    private const val AUTOFILL_LOG_TAG = "AegisAutofill"
     const val ACTION_AUTOFILL_AUTHENTICATE = "com.hafgit99.aegisvault7.action.AUTOFILL_AUTHENTICATE"
     const val EXTRA_AUTOFILL_REQUEST_ID = "com.hafgit99.aegisvault7.extra.AUTOFILL_REQUEST_ID"
     const val EXTRA_AUTOFILL_CREATED_AT = "com.hafgit99.aegisvault7.extra.AUTOFILL_CREATED_AT"
