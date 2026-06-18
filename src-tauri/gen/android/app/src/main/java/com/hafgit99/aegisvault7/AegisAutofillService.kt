@@ -112,11 +112,13 @@ class AegisAutofillService : AutofillService() {
   }
 
   private fun createAuthenticationIntent(loginFields: LoginFields): PendingIntent {
-    val requestId = "android-autofill-${System.currentTimeMillis()}"
+    val createdAt = System.currentTimeMillis()
+    val requestId = "android-autofill-$createdAt"
     val intent = Intent(this, MainActivity::class.java).apply {
       action = ACTION_AUTOFILL_AUTHENTICATE
       addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
       putExtra(EXTRA_AUTOFILL_REQUEST_ID, requestId)
+      putExtra(EXTRA_AUTOFILL_CREATED_AT, createdAt)
       putExtra(EXTRA_AUTOFILL_APP_PACKAGE, loginFields.appPackage)
       putExtra(EXTRA_AUTOFILL_WEB_DOMAIN, loginFields.webDomain)
       putParcelableArrayListExtra(EXTRA_AUTOFILL_USERNAME_IDS, ArrayList(loginFields.usernameIds))
@@ -147,6 +149,7 @@ class AegisAutofillService : AutofillService() {
   companion object {
     const val ACTION_AUTOFILL_AUTHENTICATE = "com.hafgit99.aegisvault7.action.AUTOFILL_AUTHENTICATE"
     const val EXTRA_AUTOFILL_REQUEST_ID = "com.hafgit99.aegisvault7.extra.AUTOFILL_REQUEST_ID"
+    const val EXTRA_AUTOFILL_CREATED_AT = "com.hafgit99.aegisvault7.extra.AUTOFILL_CREATED_AT"
     const val EXTRA_AUTOFILL_APP_PACKAGE = "com.hafgit99.aegisvault7.extra.AUTOFILL_APP_PACKAGE"
     const val EXTRA_AUTOFILL_WEB_DOMAIN = "com.hafgit99.aegisvault7.extra.AUTOFILL_WEB_DOMAIN"
     const val EXTRA_AUTOFILL_USERNAME_IDS = "com.hafgit99.aegisvault7.extra.AUTOFILL_USERNAME_IDS"

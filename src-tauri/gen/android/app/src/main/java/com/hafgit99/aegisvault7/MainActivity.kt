@@ -167,9 +167,10 @@ class MainActivity : TauriActivity() {
 
     val requestId = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_REQUEST_ID)
       ?: "android-autofill-${System.currentTimeMillis()}"
+    val createdAt = intent.getLongExtra(AegisAutofillService.EXTRA_AUTOFILL_CREATED_AT, System.currentTimeMillis())
     pendingAutofillRequest = AutofillLaunchRequest(
       requestId = requestId,
-      createdAt = System.currentTimeMillis(),
+      createdAt = createdAt,
       appPackage = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_APP_PACKAGE)?.takeIf { it.isNotBlank() },
       webDomain = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_WEB_DOMAIN)?.takeIf { it.isNotBlank() },
       usernameIds = intent.autofillIdsExtra(AegisAutofillService.EXTRA_AUTOFILL_USERNAME_IDS),
@@ -320,6 +321,12 @@ class MainActivity : TauriActivity() {
 
     @JavascriptInterface
     fun getPendingRequest(): String? {
+      val current = pendingAutofillRequest ?: return null
+      if (!current.isFresh()) {
+        pendingAutofillRequest = null
+        return null
+      }
+
       return pendingAutofillRequest?.toJson()?.toString()
     }
 
@@ -337,6 +344,10 @@ class MainActivity : TauriActivity() {
 
       val current = pendingAutofillRequest ?: return false
       if (current.requestId != requestId) return false
+      if (!current.isFresh()) {
+        pendingAutofillRequest = null
+        return false
+      }
       if (current.passwordIds.isEmpty()) return false
 
       return try {
@@ -443,6 +454,11 @@ class MainActivity : TauriActivity() {
     val usernameIds: ArrayList<AutofillId>,
     val passwordIds: ArrayList<AutofillId>,
   ) {
+    fun isFresh(now: Long = System.currentTimeMillis()): Boolean {
+      val ageMs = now - createdAt
+      return ageMs in 0..AUTOFILL_REQUEST_MAX_AGE_MS
+    }
+
     fun toJson(): JSONObject =
       JSONObject()
         .put("requestId", requestId)
@@ -459,5 +475,6 @@ class MainActivity : TauriActivity() {
     private const val SECURE_PREFS_NAME = "aegis_secure_storage"
     private const val SECURE_STORAGE_KEY_ALIAS = "aegis_vault_v7_secure_storage"
     private const val SECURE_STORAGE_CIPHER = "AES/GCM/NoPadding"
+    private const val AUTOFILL_REQUEST_MAX_AGE_MS = 5 * 60 * 1000L
   }
 }
