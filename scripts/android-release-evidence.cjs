@@ -8,6 +8,7 @@ const repoRoot = path.resolve(__dirname, '..');
 const args = new Set(process.argv.slice(2));
 const allowDirty = args.has('--allow-dirty');
 const androidOutputsRoot = path.join(repoRoot, 'src-tauri', 'gen', 'android', 'app', 'build', 'outputs');
+const manualSmokeChecklistPath = path.join(repoRoot, 'docs', 'ANDROID_MANUAL_SMOKE_CHECKLIST.md');
 const releaseRoot = path.join(repoRoot, 'release-local', 'android');
 const startedAt = new Date();
 const stamp = startedAt.toISOString().replace(/[:.]/g, '-');
@@ -97,7 +98,9 @@ function findArtifacts() {
 }
 
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-const report = run(npmCommand, ['run', 'android:release:report', '--', '--strict']);
+const report = run(npmCommand, ['run', 'android:release:report', '--', '--strict'], {
+  shell: process.platform === 'win32',
+});
 const gitFallback = readGitHeadFallback();
 const rawDirtyStatus = run('git', ['status', '--short']);
 const dirtyStatus = isSpawnBlocked(rawDirtyStatus)
@@ -159,10 +162,15 @@ fs.writeFileSync(
     '- `android-release-report.txt`: strict Android artifact/security report.',
     '- `metadata.json`: machine-readable build metadata.',
     '- `SHA256SUMS.txt`: checksums for copied artifacts.',
+    '- `ANDROID_MANUAL_SMOKE_CHECKLIST.md`: manual QA checklist for this candidate.',
     '- `artifacts/`: copied APK/AAB files for this candidate.',
     '',
   ].join('\n'),
 );
+
+if (fs.existsSync(manualSmokeChecklistPath)) {
+  fs.copyFileSync(manualSmokeChecklistPath, path.join(outDir, 'ANDROID_MANUAL_SMOKE_CHECKLIST.md'));
+}
 
 console.log(`Android release evidence written to ${path.relative(repoRoot, outDir)}`);
 console.log(`Artifacts copied: ${copiedArtifacts.length}`);

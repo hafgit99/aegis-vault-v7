@@ -60,6 +60,8 @@ Use `npm run android:release:gate` for the normal internal release candidate gat
 
 Shareable evidence requires a clean working tree. For local experiments only, `npm run android:release:gate -- --evidence --allow-dirty` records dirty status in `metadata.json` and still writes the evidence folder.
 
+Every evidence folder includes a copy of `docs/ANDROID_MANUAL_SMOKE_CHECKLIST.md`. Complete that copy for backup/import, attachment, biometric, Autofill, safe-area, and mobile UI release checks.
+
 Use `npm run android:release:signing:check` before public release builds. Release signing is configured from environment variables so private keys and passwords never need to be committed:
 
 ```powershell
