@@ -34,6 +34,7 @@ npm run android:build:apk
 npm run android:build:apk:debug
 npm run android:build:apk:debug:aarch64
 npm run android:build:apk:aarch64
+npm run android:release:signing:check
 npm run android:release:report
 npm run android:device:install
 npm run android:device:launch
@@ -48,6 +49,17 @@ Use `android:build:apk:debug:aarch64` for normal phone smoke tests. The generic 
 The target-specific APK commands run `android:clean:jni` first because Tauri/Gradle can leave native library symlinks from previous multi-architecture builds under `src-tauri/gen/android/app/src/main/jniLibs`. Cleaning those ignored intermediates prevents stale ABIs from being packed into a later single-target APK.
 
 Use `npm run android:release:report` after APK/AAB builds to record artifact size, SHA-256, package metadata, requested permissions, backup settings, cleartext traffic status, Autofill service protection, and FileProvider export status.
+
+Use `npm run android:release:signing:check` before public release builds. Release signing is configured from environment variables so private keys and passwords never need to be committed:
+
+```powershell
+$env:AEGIS_ANDROID_KEYSTORE_PATH='C:\secure\aegis-vault-release.jks'
+$env:AEGIS_ANDROID_KEY_ALIAS='aegis-vault'
+$env:AEGIS_ANDROID_KEYSTORE_PASSWORD='<secret>'
+$env:AEGIS_ANDROID_KEY_PASSWORD='<secret>'
+```
+
+The keystore file should live outside the repository. The repository ignores common Android signing files such as `.jks`, `.keystore`, `.p12`, `.pfx`, `keystore.properties`, and `key.properties`.
 
 Local size baseline from this workstation:
 
@@ -103,6 +115,7 @@ Run this checklist before every APK/AAB candidate that may be shared outside loc
 ### Build And Size
 
 - Build target-specific debug smoke APK: `npm run android:build:apk:debug:aarch64`.
+- Run `npm run android:release:signing:check` before building a signed release candidate.
 - Build release APK/AAB with signing configuration when release keys are ready.
 - Run `npm run android:release:report` and store the output with the release candidate notes.
 - Confirm the release artifact does not contain stale multi-ABI debug libraries.

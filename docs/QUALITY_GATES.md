@@ -149,6 +149,7 @@ Recently improved:
   - `npm run test:unit`
   - `npm run build`
   - `npm run android:build:apk:debug:aarch64`
+  - `npm run android:release:signing:check` before signed release candidates
   - `npm run android:release:report`
   - `npm run android:device:smoke`
   - Manual Android release candidate checklist from `docs/ANDROID_READINESS.md`.

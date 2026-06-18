@@ -12,6 +12,16 @@ val tauriProperties = Properties().apply {
         propFile.inputStream().use { load(it) }
     }
 }
+val releaseKeystorePath = System.getenv("AEGIS_ANDROID_KEYSTORE_PATH").orEmpty()
+val releaseKeyAlias = System.getenv("AEGIS_ANDROID_KEY_ALIAS").orEmpty()
+val releaseKeystorePassword = System.getenv("AEGIS_ANDROID_KEYSTORE_PASSWORD").orEmpty()
+val releaseKeyPassword = System.getenv("AEGIS_ANDROID_KEY_PASSWORD").orEmpty()
+val releaseSigningConfigured = listOf(
+    releaseKeystorePath,
+    releaseKeyAlias,
+    releaseKeystorePassword,
+    releaseKeyPassword
+).all { it.isNotBlank() }
 
 android {
     compileSdk = 36
@@ -23,6 +33,16 @@ android {
         targetSdk = 36
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
         versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
+    }
+    signingConfigs {
+        if (releaseSigningConfigured) {
+            create("aegisRelease") {
+                storeFile = file(releaseKeystorePath)
+                storePassword = releaseKeystorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
     }
     buildTypes {
         getByName("debug") {
@@ -39,6 +59,9 @@ android {
         }
         getByName("release") {
             isMinifyEnabled = true
+            if (releaseSigningConfigured) {
+                signingConfig = signingConfigs.getByName("aegisRelease")
+            }
             proguardFiles(
                 *fileTree(".") { include("**/*.pro") }
                     .plus(getDefaultProguardFile("proguard-android-optimize.txt"))

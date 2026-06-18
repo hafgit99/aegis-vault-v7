@@ -6,6 +6,12 @@ coverage/
 *.log
 .env*
 !.env.example
+*.keystore
+*.jks
+*.p12
+*.pfx
+keystore.properties
+key.properties
 
 # Desktop / mobile build outputs
 src-tauri/target/

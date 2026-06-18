@@ -139,7 +139,7 @@ Before the first public release, decide:
 
 Android builds are internal-only until the readiness checklist in `docs/ANDROID_READINESS.md` is complete. A public Android release additionally needs:
 
-- APK/AAB signing procedure.
+- APK/AAB signing procedure with `AEGIS_ANDROID_KEYSTORE_PATH`, `AEGIS_ANDROID_KEY_ALIAS`, `AEGIS_ANDROID_KEYSTORE_PASSWORD`, and `AEGIS_ANDROID_KEY_PASSWORD`.
 - Android storage and backup UX decision.
 - Android biometric decision.
 - Real-device smoke test evidence.
