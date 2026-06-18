@@ -188,6 +188,7 @@ describe('SettingsPanel import/export', () => {
     expect(screen.getByText('Enable Biometrics')).toBeTruthy();
     expect(screen.getByText('Android Autofill')).toBeTruthy();
     expect(screen.getByText('Open Android Autofill Settings')).toBeTruthy();
+    expect(screen.getByText(/Chrome may hide Aegis suggestions/)).toBeTruthy();
     expect(screen.getByText('Encrypted Backup Export')).toBeTruthy();
     expect(screen.getByText(/Convert all vault records/)).toBeTruthy();
     expect(screen.getByText('Use my vault master password as the backup password')).toBeTruthy();

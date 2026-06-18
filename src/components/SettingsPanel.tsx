@@ -989,6 +989,10 @@ export default function SettingsPanel({
               <p className="text-[11px] text-on-surface-variant mt-1 leading-relaxed">
                 {t('settings.autofill.safetyNote')}
               </p>
+              <p className="mt-2 flex items-start gap-1.5 rounded-lg border border-[#2096f3]/20 bg-[#2096f3]/10 px-2.5 py-2 text-[11px] leading-relaxed text-on-surface-variant">
+                <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#2096f3]" />
+                <span>{t('settings.autofill.chromeNote')}</span>
+              </p>
             </div>
             <button
               type="button"
