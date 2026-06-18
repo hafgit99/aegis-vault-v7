@@ -116,7 +116,6 @@ class AegisAutofillService : AutofillService() {
     val requestId = "android-autofill-$createdAt"
     val intent = Intent(this, MainActivity::class.java).apply {
       action = ACTION_AUTOFILL_AUTHENTICATE
-      addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
       putExtra(EXTRA_AUTOFILL_REQUEST_ID, requestId)
       putExtra(EXTRA_AUTOFILL_CREATED_AT, createdAt)
       putExtra(EXTRA_AUTOFILL_APP_PACKAGE, loginFields.appPackage)
