@@ -4,6 +4,8 @@ const fs = require('fs');
 const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..');
+const args = new Set(process.argv.slice(2));
+const strict = args.has('--strict');
 const androidRoot = path.join(repoRoot, 'src-tauri', 'gen', 'android');
 const outputsRoot = path.join(androidRoot, 'app', 'build', 'outputs');
 const sourceManifestPath = path.join(androidRoot, 'app', 'src', 'main', 'AndroidManifest.xml');
@@ -11,6 +13,7 @@ const appGradlePath = path.join(androidRoot, 'app', 'build.gradle.kts');
 const tauriPropertiesPath = path.join(androidRoot, 'app', 'tauri.properties');
 const sdkRoot = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || '';
 const sizeWarnMiB = 250;
+let warningCount = 0;
 
 function walk(dir, files = []) {
   if (!fs.existsSync(dir)) return files;
@@ -169,8 +172,14 @@ function inspectManifest(apkPath) {
   };
 }
 
-function status(value) {
-  return value ? 'PASS' : 'WARN';
+function check(label, value) {
+  const prefix = value ? 'PASS' : 'WARN';
+  if (!value) warningCount += 1;
+  console.log(`  ${prefix} ${label}`);
+}
+
+function info(label) {
+  console.log(`  INFO ${label}`);
 }
 
 function reportArtifact(file) {
@@ -208,14 +217,16 @@ function reportArtifact(file) {
     manifest.permissions.every((permission) => expectedPermissions.has(permission)) &&
     (!sourceOnlyPermissions || manifest.permissions.includes('android.permission.INTERNET'));
 
-  console.log(`  ${status(permissionsExpected)} permissions-expected`);
-  console.log(`  ${status(manifest.allowBackupDisabled)} allowBackup-disabled`);
-  console.log(`  ${status(manifest.fullBackupDisabled)} fullBackup-disabled`);
-  console.log(isDebugBuild
-    ? '  INFO cleartext-debug-allowed'
-    : `  ${status(manifest.cleartextDisabled)} cleartext-disabled`);
-  console.log(`  ${status(manifest.autofillServiceProtected)} autofill-service-protected`);
-  console.log(`  ${status(manifest.fileProviderPrivate)} fileprovider-private`);
+  check('permissions-expected', permissionsExpected);
+  check('allowBackup-disabled', manifest.allowBackupDisabled);
+  check('fullBackup-disabled', manifest.fullBackupDisabled);
+  if (isDebugBuild) {
+    info('cleartext-debug-allowed');
+  } else {
+    check('cleartext-disabled', manifest.cleartextDisabled);
+  }
+  check('autofill-service-protected', manifest.autofillServiceProtected);
+  check('fileprovider-private', manifest.fileProviderPrivate);
 }
 
 const artifacts = findArtifacts();
@@ -227,3 +238,8 @@ if (artifacts.length === 0) {
 console.log('Android release artifact report');
 console.log(`SDK: ${sdkRoot || 'not configured'}`);
 artifacts.forEach(reportArtifact);
+
+if (strict && warningCount > 0) {
+  console.error(`\nAndroid release artifact report failed with ${warningCount} warning(s).`);
+  process.exit(1);
+}
