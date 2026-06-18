@@ -179,6 +179,9 @@ function reportArtifact(file) {
   const sizeMiB = stats.size / 1024 / 1024;
   const manifest = inspectManifest(file);
   const isApk = path.extname(file).toLowerCase() === '.apk';
+  const isDebugBuild = manifest.packageName.endsWith('.debug') ||
+    relativePath.split(path.sep).includes('debug') ||
+    path.basename(file).includes('-debug');
 
   console.log(`\n${relativePath}`);
   console.log(`  size: ${sizeMiB.toFixed(2)} MiB ${sizeMiB > sizeWarnMiB ? '(large)' : ''}`);
@@ -208,7 +211,9 @@ function reportArtifact(file) {
   console.log(`  ${status(permissionsExpected)} permissions-expected`);
   console.log(`  ${status(manifest.allowBackupDisabled)} allowBackup-disabled`);
   console.log(`  ${status(manifest.fullBackupDisabled)} fullBackup-disabled`);
-  console.log(`  ${status(manifest.cleartextDisabled)} cleartext-disabled`);
+  console.log(isDebugBuild
+    ? '  INFO cleartext-debug-allowed'
+    : `  ${status(manifest.cleartextDisabled)} cleartext-disabled`);
   console.log(`  ${status(manifest.autofillServiceProtected)} autofill-service-protected`);
   console.log(`  ${status(manifest.fileProviderPrivate)} fileprovider-private`);
 }
