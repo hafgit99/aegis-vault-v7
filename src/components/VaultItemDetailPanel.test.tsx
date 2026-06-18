@@ -81,4 +81,32 @@ describe('VaultItemDetailPanel', () => {
     expect(props.onToggleReveal).toHaveBeenCalledWith('password');
     expect(props.onCopyText).toHaveBeenCalledWith('ada@example.com', 'username');
   });
+
+  it('renders Autofill approval action for login items', () => {
+    const props = renderPanel({
+      isAutofillMode: true,
+      onApproveAutofill: vi.fn(),
+    });
+
+    expect(screen.getByTestId('autofill-approval-panel')).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId('autofill-approve-button'));
+
+    expect(props.onApproveAutofill).toHaveBeenCalledWith(loginItem);
+  });
+
+  it('does not render Autofill approval action for non-login items', () => {
+    renderPanel({
+      item: {
+        ...loginItem,
+        id: 'note-1',
+        category: 'secure_note',
+        password: '',
+      },
+      isAutofillMode: true,
+      onApproveAutofill: vi.fn(),
+    });
+
+    expect(screen.queryByTestId('autofill-approval-panel')).toBeNull();
+  });
 });

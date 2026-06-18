@@ -5,6 +5,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   clearPendingAndroidAutofillRequest,
+  completePendingAndroidAutofillRequest,
   getPendingAndroidAutofillRequest,
   isAndroidAutofillEnabled,
   isAndroidAutofillSupported,
@@ -22,6 +23,7 @@ describe('android autofill bridge', () => {
     expect(isAndroidAutofillSupported()).toBe(false);
     expect(isAndroidAutofillEnabled()).toBe(false);
     expect(openAndroidAutofillSettings()).toBe(false);
+    expect(completePendingAndroidAutofillRequest('request-1', 'user', 'pass', 'Example')).toBe(false);
   });
 
   it('proxies support, enabled state, and settings opening through the native bridge', () => {
@@ -32,6 +34,7 @@ describe('android autofill bridge', () => {
       openSettings,
       getPendingRequest: () => null,
       clearPendingRequest: () => true,
+      completePendingRequest: () => true,
     };
 
     expect(isAndroidAutofillSupported()).toBe(true);
@@ -57,6 +60,9 @@ describe('android autofill bridge', () => {
       clearPendingRequest: () => {
         throw new Error('bridge unavailable');
       },
+      completePendingRequest: () => {
+        throw new Error('bridge unavailable');
+      },
     };
 
     expect(isAndroidAutofillSupported()).toBe(false);
@@ -64,10 +70,12 @@ describe('android autofill bridge', () => {
     expect(openAndroidAutofillSettings()).toBe(false);
     expect(getPendingAndroidAutofillRequest()).toBeNull();
     expect(clearPendingAndroidAutofillRequest('request-1')).toBe(false);
+    expect(completePendingAndroidAutofillRequest('request-1', 'user', 'pass', 'Example')).toBe(false);
   });
 
-  it('reads and clears a pending Android Autofill launch request', () => {
+  it('reads, clears, and completes a pending Android Autofill launch request', () => {
     const clearPendingRequest = vi.fn(() => true);
+    const completePendingRequest = vi.fn(() => true);
     window.AegisAndroidAutofill = {
       isSupported: () => true,
       isEnabled: () => true,
@@ -78,6 +86,7 @@ describe('android autofill bridge', () => {
         source: 'android-autofill',
       }),
       clearPendingRequest,
+      completePendingRequest,
     };
 
     expect(getPendingAndroidAutofillRequest()).toEqual({
@@ -87,6 +96,8 @@ describe('android autofill bridge', () => {
     });
     expect(clearPendingAndroidAutofillRequest('android-autofill-1')).toBe(true);
     expect(clearPendingRequest).toHaveBeenCalledWith('android-autofill-1');
+    expect(completePendingAndroidAutofillRequest('android-autofill-1', 'ada@example.com', 'secret', 'Aegis Mail')).toBe(true);
+    expect(completePendingRequest).toHaveBeenCalledWith('android-autofill-1', 'ada@example.com', 'secret', 'Aegis Mail');
   });
 
   it('ignores malformed pending Android Autofill request payloads', () => {
@@ -96,6 +107,7 @@ describe('android autofill bridge', () => {
       openSettings: () => true,
       getPendingRequest: () => '{"requestId":42}',
       clearPendingRequest: () => true,
+      completePendingRequest: () => true,
     };
 
     expect(getPendingAndroidAutofillRequest()).toBeNull();

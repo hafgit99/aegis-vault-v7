@@ -11,6 +11,7 @@ declare global {
       openSettings(): boolean;
       getPendingRequest(): string | null;
       clearPendingRequest(requestId: string): boolean;
+      completePendingRequest(requestId: string, username: string, password: string, label: string): boolean;
     };
     __aegisAndroidAutofill?: {
       onRequest(request: AndroidAutofillRequest | null): void;
@@ -113,6 +114,22 @@ export function clearPendingAndroidAutofillRequest(requestId: string): boolean {
 
   try {
     return Boolean(bridge.clearPendingRequest(requestId));
+  } catch {
+    return false;
+  }
+}
+
+export function completePendingAndroidAutofillRequest(
+  requestId: string,
+  username: string,
+  password: string,
+  label: string,
+): boolean {
+  const bridge = androidAutofillBridge();
+  if (!bridge) return false;
+
+  try {
+    return Boolean(bridge.completePendingRequest(requestId, username, password, label));
   } catch {
     return false;
   }

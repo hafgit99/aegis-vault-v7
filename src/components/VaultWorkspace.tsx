@@ -56,6 +56,7 @@ interface VaultWorkspaceProps {
   onDownloadAttachment: (id: string, name: string) => void;
   isAutofillMode?: boolean;
   onCancelAutofill?: () => void;
+  onApproveAutofill?: (item: VaultItem) => void;
 }
 
 export function VaultWorkspaceContent({
@@ -99,6 +100,7 @@ export function VaultWorkspaceContent({
   onDownloadAttachment,
   isAutofillMode = false,
   onCancelAutofill,
+  onApproveAutofill,
 }: VaultWorkspaceProps) {
   const { t } = useLanguage();
 
@@ -328,6 +330,8 @@ export function VaultWorkspaceContent({
             onToggleReveal={onToggleReveal}
             onCopyText={onCopyText}
             onDownloadAttachment={onDownloadAttachment}
+            isAutofillMode={isAutofillMode}
+            onApproveAutofill={onApproveAutofill}
           />
         ) : (
           <div className="max-w-6xl mx-auto space-y-4 sm:space-y-5 py-2 sm:py-4 lg:py-5 animate-fade-in text-left">
