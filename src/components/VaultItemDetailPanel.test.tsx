@@ -103,8 +103,8 @@ describe('VaultItemDetailPanel', () => {
     expect(props.onApproveAutofill).toHaveBeenCalledWith(loginItem);
   });
 
-  it('warns when the selected Autofill login does not match the target', () => {
-    renderPanel({
+  it('requires a second confirmation when the selected Autofill login does not match the target', () => {
+    const props = renderPanel({
       isAutofillMode: true,
       autofillRequest: {
         requestId: 'request-1',
@@ -118,6 +118,19 @@ describe('VaultItemDetailPanel', () => {
     expect(screen.getByTestId('autofill-match-status').textContent).toBe(
       'Bu kayıt hedefle eşleşmiyor. Devam etmeden önce dikkatlice kontrol edin.',
     );
+    expect(screen.getByTestId('autofill-approve-button').textContent).toBe('Eşleşmeyi Kontrol Et');
+
+    fireEvent.click(screen.getByTestId('autofill-approve-button'));
+
+    expect(props.onApproveAutofill).not.toHaveBeenCalled();
+    expect(screen.getByTestId('autofill-match-status').textContent).toBe(
+      'Hedef eşleşmiyor. Onaylarsanız bu kayıt yine de doldurulacak.',
+    );
+    expect(screen.getByTestId('autofill-approve-button').textContent).toBe('Yine de Doldur');
+
+    fireEvent.click(screen.getByTestId('autofill-approve-button'));
+
+    expect(props.onApproveAutofill).toHaveBeenCalledWith(loginItem);
   });
 
   it('does not render Autofill approval action for non-login items', () => {

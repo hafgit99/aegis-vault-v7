@@ -1,4 +1,5 @@
 import { ArrowLeft, ShieldCheck, Smartphone } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { androidAutofillTargetLabel, type AndroidAutofillRequest } from '../lib/androidAutofill';
@@ -63,6 +64,21 @@ export default function VaultItemDetailPanel({
   const canApproveAutofill = isAutofillMode && item.category === 'login' && Boolean(item.password) && Boolean(onApproveAutofill);
   const autofillTargetLabel = androidAutofillTargetLabel(autofillRequest);
   const isAutofillMatch = canApproveAutofill && isAndroidAutofillTargetMatch(item, autofillRequest);
+  const requiresMismatchConfirmation = canApproveAutofill && Boolean(autofillTargetLabel) && !isAutofillMatch;
+  const [mismatchConfirmed, setMismatchConfirmed] = useState(false);
+
+  useEffect(() => {
+    setMismatchConfirmed(false);
+  }, [autofillRequest?.requestId, item.id]);
+
+  const handleAutofillApproveClick = () => {
+    if (requiresMismatchConfirmation && !mismatchConfirmed) {
+      setMismatchConfirmed(true);
+      return;
+    }
+
+    onApproveAutofill?.(item);
+  };
 
   return (
     <div className="max-w-6xl mx-auto space-y-4 lg:space-y-5">
@@ -112,7 +128,11 @@ export default function VaultItemDetailPanel({
                   data-testid="autofill-match-status"
                   className={`mt-2 text-[10px] font-bold ${isAutofillMatch ? 'text-brand-primary' : 'text-amber-300'}`}
                 >
-                  {isAutofillMatch ? t('autofill.match.confirmed') : t('autofill.match.warning')}
+                  {isAutofillMatch
+                    ? t('autofill.match.confirmed')
+                    : mismatchConfirmed
+                      ? t('autofill.match.confirmAnyway')
+                      : t('autofill.match.warning')}
                 </p>
               )}
             </div>
@@ -120,11 +140,21 @@ export default function VaultItemDetailPanel({
           <button
             type="button"
             data-testid="autofill-approve-button"
-            onClick={() => onApproveAutofill?.(item)}
-            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-brand-primary/25 bg-brand-primary px-4 text-xs font-bold text-[#081008] shadow-lg shadow-brand-primary/10 hover:bg-brand-primary/90 focus:outline-none focus:ring-1 focus:ring-brand-primary/50 active:scale-[0.98] transition-all cursor-pointer"
+            onClick={handleAutofillApproveClick}
+            className={`inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border px-4 text-xs font-bold shadow-lg focus:outline-none focus:ring-1 active:scale-[0.98] transition-all cursor-pointer ${
+              requiresMismatchConfirmation && !mismatchConfirmed
+                ? 'border-amber-300/30 bg-amber-300/15 text-amber-100 shadow-amber-400/5 hover:bg-amber-300/20 focus:ring-amber-300/40'
+                : 'border-brand-primary/25 bg-brand-primary text-[#081008] shadow-brand-primary/10 hover:bg-brand-primary/90 focus:ring-brand-primary/50'
+            }`}
           >
             <ShieldCheck className="h-4 w-4" />
-            <span>{t('autofill.detail.approve')}</span>
+            <span>
+              {requiresMismatchConfirmation && !mismatchConfirmed
+                ? t('autofill.detail.reviewMismatch')
+                : requiresMismatchConfirmation
+                  ? t('autofill.detail.approveMismatch')
+                  : t('autofill.detail.approve')}
+            </span>
           </button>
         </div>
       )}
