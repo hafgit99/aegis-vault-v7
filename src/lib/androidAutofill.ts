@@ -25,6 +25,9 @@ export interface AndroidAutofillRequest {
   source: 'android-autofill';
   appPackage?: string | null;
   webDomain?: string | null;
+  usernameFieldCount?: number;
+  passwordFieldCount?: number;
+  fillableFieldCount?: number;
 }
 
 type AndroidAutofillRequestListener = (request: AndroidAutofillRequest) => void;
@@ -43,12 +46,21 @@ function isAndroidAutofillRequest(value: unknown): value is AndroidAutofillReque
   const candidate = value as Partial<AndroidAutofillRequest>;
   const hasValidAppPackage = candidate.appPackage === undefined || candidate.appPackage === null || typeof candidate.appPackage === 'string';
   const hasValidWebDomain = candidate.webDomain === undefined || candidate.webDomain === null || typeof candidate.webDomain === 'string';
+  const hasValidUsernameFieldCount = candidate.usernameFieldCount === undefined ||
+    (Number.isInteger(candidate.usernameFieldCount) && candidate.usernameFieldCount >= 0);
+  const hasValidPasswordFieldCount = candidate.passwordFieldCount === undefined ||
+    (Number.isInteger(candidate.passwordFieldCount) && candidate.passwordFieldCount >= 0);
+  const hasValidFillableFieldCount = candidate.fillableFieldCount === undefined ||
+    (Number.isInteger(candidate.fillableFieldCount) && candidate.fillableFieldCount >= 0);
 
   return typeof candidate.requestId === 'string' &&
     typeof candidate.createdAt === 'number' &&
     candidate.source === 'android-autofill' &&
     hasValidAppPackage &&
-    hasValidWebDomain;
+    hasValidWebDomain &&
+    hasValidUsernameFieldCount &&
+    hasValidPasswordFieldCount &&
+    hasValidFillableFieldCount;
 }
 
 function parsePendingRequest(payload: string | null): AndroidAutofillRequest | null {
@@ -152,6 +164,16 @@ export function androidAutofillTargetLabel(request: AndroidAutofillRequest | nul
 
   const appPackage = request.appPackage?.trim();
   return appPackage || null;
+}
+
+export function androidAutofillDiagnosticSummary(request: AndroidAutofillRequest | null | undefined): string | null {
+  if (!request) return null;
+
+  const usernameCount = request.usernameFieldCount ?? 0;
+  const passwordCount = request.passwordFieldCount ?? 0;
+  const fillableCount = request.fillableFieldCount ?? usernameCount + passwordCount;
+
+  return `package=${request.appPackage || 'unknown'} domain=${request.webDomain || 'unknown'} usernameFields=${usernameCount} passwordFields=${passwordCount} fillableFields=${fillableCount}`;
 }
 
 export function isAndroidAutofillRequestFresh(

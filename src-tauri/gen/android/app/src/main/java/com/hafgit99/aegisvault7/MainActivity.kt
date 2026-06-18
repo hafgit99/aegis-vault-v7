@@ -471,6 +471,9 @@ class MainActivity : TauriActivity() {
         .put("source", "android-autofill")
         .put("appPackage", appPackage)
         .put("webDomain", webDomain)
+        .put("usernameFieldCount", usernameIds.size)
+        .put("passwordFieldCount", passwordIds.size)
+        .put("fillableFieldCount", usernameIds.size + passwordIds.size)
   }
 
   companion object {
