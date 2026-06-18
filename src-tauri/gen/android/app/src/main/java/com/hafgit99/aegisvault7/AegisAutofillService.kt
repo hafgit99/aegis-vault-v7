@@ -37,7 +37,7 @@ class AegisAutofillService : AutofillService() {
     val authenticationIds = loginFields.allIds().toTypedArray()
     @Suppress("DEPRECATION")
     val response = FillResponse.Builder()
-      .setAuthentication(authenticationIds, createAuthenticationIntent().intentSender, createAuthenticationPresentation())
+      .setAuthentication(authenticationIds, createAuthenticationIntent(loginFields).intentSender, createAuthenticationPresentation())
       .build()
 
     callback.onSuccess(response)
@@ -106,14 +106,18 @@ class AegisAutofillService : AutofillService() {
       .filter { it.isNotBlank() }
   }
 
-  private fun createAuthenticationIntent(): PendingIntent {
+  private fun createAuthenticationIntent(loginFields: LoginFields): PendingIntent {
+    val requestId = "android-autofill-${System.currentTimeMillis()}"
     val intent = Intent(this, MainActivity::class.java).apply {
       action = ACTION_AUTOFILL_AUTHENTICATE
       addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+      putExtra(EXTRA_AUTOFILL_REQUEST_ID, requestId)
+      putParcelableArrayListExtra(EXTRA_AUTOFILL_USERNAME_IDS, ArrayList(loginFields.usernameIds))
+      putParcelableArrayListExtra(EXTRA_AUTOFILL_PASSWORD_IDS, ArrayList(loginFields.passwordIds))
     }
 
     val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-    return PendingIntent.getActivity(this, AUTOFILL_AUTH_REQUEST_CODE, intent, flags)
+    return PendingIntent.getActivity(this, requestId.hashCode(), intent, flags)
   }
 
   private fun createAuthenticationPresentation(): RemoteViews {
@@ -133,6 +137,8 @@ class AegisAutofillService : AutofillService() {
 
   companion object {
     const val ACTION_AUTOFILL_AUTHENTICATE = "com.hafgit99.aegisvault7.action.AUTOFILL_AUTHENTICATE"
-    private const val AUTOFILL_AUTH_REQUEST_CODE = 7201
+    const val EXTRA_AUTOFILL_REQUEST_ID = "com.hafgit99.aegisvault7.extra.AUTOFILL_REQUEST_ID"
+    const val EXTRA_AUTOFILL_USERNAME_IDS = "com.hafgit99.aegisvault7.extra.AUTOFILL_USERNAME_IDS"
+    const val EXTRA_AUTOFILL_PASSWORD_IDS = "com.hafgit99.aegisvault7.extra.AUTOFILL_PASSWORD_IDS"
   }
 }

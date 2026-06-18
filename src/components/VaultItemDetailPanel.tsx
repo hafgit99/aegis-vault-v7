@@ -1,4 +1,4 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, Smartphone } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { VaultItem } from '../types';
@@ -30,6 +30,8 @@ interface VaultItemDetailPanelProps {
   onToggleReveal: (field: 'password' | 'cardNumber' | 'cardCvv' | 'cardPin' | 'passkeyPrivateExponent') => void;
   onCopyText: (text: string, field: string) => void;
   onDownloadAttachment: (id: string, name: string) => void;
+  isAutofillMode?: boolean;
+  onApproveAutofill?: (item: VaultItem) => void;
 }
 
 export default function VaultItemDetailPanel({
@@ -50,8 +52,11 @@ export default function VaultItemDetailPanel({
   onToggleReveal,
   onCopyText,
   onDownloadAttachment,
+  isAutofillMode = false,
+  onApproveAutofill,
 }: VaultItemDetailPanelProps) {
   const { t } = useLanguage();
+  const canApproveAutofill = isAutofillMode && item.category === 'login' && Boolean(item.password) && Boolean(onApproveAutofill);
 
   return (
     <div className="max-w-6xl mx-auto space-y-4 lg:space-y-5">
@@ -74,6 +79,36 @@ export default function VaultItemDetailPanel({
         onCopyText={onCopyText}
         onDelete={onDelete}
       />
+
+      {canApproveAutofill && (
+        <div
+          data-testid="autofill-approval-panel"
+          className="rounded-lg border border-brand-primary/20 bg-brand-primary/10 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-3"
+        >
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-brand-primary/20 bg-brand-primary/10 text-brand-primary">
+              <Smartphone className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-bold uppercase tracking-wide text-brand-primary">
+                {t('autofill.detail.title')}
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-on-surface-variant">
+                {t('autofill.detail.description')}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            data-testid="autofill-approve-button"
+            onClick={() => onApproveAutofill?.(item)}
+            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-brand-primary/25 bg-brand-primary px-4 text-xs font-bold text-[#081008] shadow-lg shadow-brand-primary/10 hover:bg-brand-primary/90 focus:outline-none focus:ring-1 focus:ring-brand-primary/50 active:scale-[0.98] transition-all cursor-pointer"
+          >
+            <ShieldCheck className="h-4 w-4" />
+            <span>{t('autofill.detail.approve')}</span>
+          </button>
+        </div>
+      )}
 
       <VaultItemSecurityAssessment score={score} onOpenAudit={onOpenAudit} />
 

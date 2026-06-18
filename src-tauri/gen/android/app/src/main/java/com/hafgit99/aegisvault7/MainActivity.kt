@@ -10,11 +10,16 @@ import android.provider.Settings
 import android.provider.OpenableColumns
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import android.service.autofill.Dataset
+import android.service.autofill.FillResponse
 import android.util.Base64
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.view.WindowManager
+import android.view.autofill.AutofillId
 import android.view.autofill.AutofillManager
+import android.view.autofill.AutofillValue
+import android.widget.RemoteViews
 import androidx.activity.enableEdgeToEdge
 import java.nio.charset.StandardCharsets
 import java.security.KeyStore
@@ -160,9 +165,13 @@ class MainActivity : TauriActivity() {
   private fun captureAutofillIntent(intent: Intent?) {
     if (intent?.action != AegisAutofillService.ACTION_AUTOFILL_AUTHENTICATE) return
 
+    val requestId = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_REQUEST_ID)
+      ?: "android-autofill-${System.currentTimeMillis()}"
     pendingAutofillRequest = AutofillLaunchRequest(
-      requestId = "android-autofill-${System.currentTimeMillis()}",
+      requestId = requestId,
       createdAt = System.currentTimeMillis(),
+      usernameIds = intent.autofillIdsExtra(AegisAutofillService.EXTRA_AUTOFILL_USERNAME_IDS),
+      passwordIds = intent.autofillIdsExtra(AegisAutofillService.EXTRA_AUTOFILL_PASSWORD_IDS),
     )
   }
 
@@ -174,6 +183,17 @@ class MainActivity : TauriActivity() {
 
   private fun jsonStringOrNull(value: String?): String {
     return if (value == null) "null" else JSONObject.quote(value)
+  }
+
+  private fun Intent.autofillIdsExtra(name: String): ArrayList<AutofillId> {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return arrayListOf()
+
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      getParcelableArrayListExtra(name, AutofillId::class.java) ?: arrayListOf()
+    } else {
+      @Suppress("DEPRECATION")
+      getParcelableArrayListExtra(name) ?: arrayListOf()
+    }
   }
 
   inner class AndroidFileBridge {
@@ -308,6 +328,44 @@ class MainActivity : TauriActivity() {
       pendingAutofillRequest = null
       return true
     }
+
+    @JavascriptInterface
+    fun completePendingRequest(requestId: String, username: String, password: String, label: String): Boolean {
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
+
+      val current = pendingAutofillRequest ?: return false
+      if (current.requestId != requestId) return false
+      if (current.passwordIds.isEmpty()) return false
+
+      return try {
+        val presentationLabel = label.ifBlank { "Aegis Vault" }
+        val datasetBuilder = Dataset.Builder(createAutofillPresentation(presentationLabel))
+        current.usernameIds.forEach { autofillId ->
+          datasetBuilder.setValue(autofillId, AutofillValue.forText(username))
+        }
+        current.passwordIds.forEach { autofillId ->
+          datasetBuilder.setValue(autofillId, AutofillValue.forText(password))
+        }
+
+        val response = FillResponse.Builder()
+          .addDataset(datasetBuilder.build())
+          .build()
+
+        val result = Intent().putExtra(AutofillManager.EXTRA_AUTHENTICATION_RESULT, response)
+        setResult(Activity.RESULT_OK, result)
+        pendingAutofillRequest = null
+        finish()
+        true
+      } catch (_: Exception) {
+        false
+      }
+    }
+  }
+
+  private fun createAutofillPresentation(label: String): RemoteViews {
+    return RemoteViews(packageName, android.R.layout.simple_list_item_1).apply {
+      setTextViewText(android.R.id.text1, label)
+    }
   }
 
   private fun securePreferences() =
@@ -375,7 +433,12 @@ class MainActivity : TauriActivity() {
 
   private data class PendingSave(val requestId: String, val bytes: ByteArray)
   private data class AndroidImportFile(val name: String, val contents: String)
-  private data class AutofillLaunchRequest(val requestId: String, val createdAt: Long) {
+  private data class AutofillLaunchRequest(
+    val requestId: String,
+    val createdAt: Long,
+    val usernameIds: ArrayList<AutofillId>,
+    val passwordIds: ArrayList<AutofillId>,
+  ) {
     fun toJson(): JSONObject =
       JSONObject()
         .put("requestId", requestId)

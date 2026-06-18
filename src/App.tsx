@@ -37,10 +37,12 @@ import { useLanguage } from './i18n/LanguageContext';
 import {
   AndroidAutofillRequest,
   clearPendingAndroidAutofillRequest,
+  completePendingAndroidAutofillRequest,
   getPendingAndroidAutofillRequest,
   subscribeAndroidAutofillRequests,
 } from './lib/androidAutofill';
 import { syncExtensionCredentials, clearExtensionCredentials } from './lib/desktopStorage';
+import type { VaultItem } from './types';
 
 export default function App() {
   const { t } = useLanguage();
@@ -212,6 +214,34 @@ export default function App() {
       title: t('autofill.cancelled.title'),
       message: t('autofill.cancelled.message'),
       type: 'info',
+    });
+  }, [pendingAutofillRequest, showNotification, t]);
+
+  const handleApproveAutofillRequest = useCallback((item: VaultItem) => {
+    if (!pendingAutofillRequest) return;
+
+    const completed = completePendingAndroidAutofillRequest(
+      pendingAutofillRequest.requestId,
+      item.username ?? '',
+      item.password,
+      item.title || 'Aegis Vault',
+    );
+
+    if (!completed) {
+      showNotification({
+        title: t('autofill.failed.title'),
+        message: t('autofill.failed.message'),
+        type: 'danger',
+      });
+      return;
+    }
+
+    notifiedAutofillRequestRef.current = null;
+    setPendingAutofillRequest(null);
+    showNotification({
+      title: t('autofill.completed.title'),
+      message: t('autofill.completed.message'),
+      type: 'success',
     });
   }, [pendingAutofillRequest, showNotification, t]);
 
@@ -390,6 +420,7 @@ export default function App() {
           onDeleteTrashItemPermanently={handleDeleteTrashItemPermanently}
           isAutofillMode={Boolean(pendingAutofillRequest)}
           onCancelAutofill={handleCancelAutofillRequest}
+          onApproveAutofill={handleApproveAutofillRequest}
         />
       </main>
 
