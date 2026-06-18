@@ -318,6 +318,7 @@ export function VaultWorkspaceContent({
                   item={item}
                   isSelected={selectedItem?.id === item.id}
                   onSelect={onSelectItem}
+                  autofillRecommended={isAutofillMode && isAndroidAutofillTargetMatch(item, autofillRequest)}
                 />
               </Fragment>
             ))

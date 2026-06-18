@@ -1,4 +1,4 @@
-import { Heart } from 'lucide-react';
+import { Heart, Sparkles } from 'lucide-react';
 import { memo } from 'react';
 
 import { useLanguage } from '../i18n/LanguageContext';
@@ -11,6 +11,7 @@ interface VaultListItemProps {
   item: VaultItem;
   isSelected: boolean;
   onSelect: (item: VaultItem) => void;
+  autofillRecommended?: boolean;
 }
 
 const strengthLabelKeys: Record<ReturnType<typeof getStrengthLabel>['label'], TranslationKey> = {
@@ -20,7 +21,7 @@ const strengthLabelKeys: Record<ReturnType<typeof getStrengthLabel>['label'], Tr
   SECURE: 'vaultItem.strength.secure',
 };
 
-function VaultListItemContent({ item, isSelected, onSelect }: VaultListItemProps) {
+function VaultListItemContent({ item, isSelected, onSelect, autofillRecommended = false }: VaultListItemProps) {
   const { t } = useLanguage();
   const logoUrl = getLogoForPlatform(item.title, item.url);
   const itemStrength = getStrengthLabel(item.password || '');
@@ -54,6 +55,16 @@ function VaultListItemContent({ item, isSelected, onSelect }: VaultListItemProps
         <p className="text-on-surface-variant text-xs truncate font-mono mt-0.5">{item.username}</p>
       </div>
       <div className="shrink-0 flex flex-col items-end gap-1.5">
+        {autofillRecommended && (
+          <span
+            data-testid="autofill-recommended-badge"
+            className="inline-flex items-center gap-1 rounded-md border border-brand-primary/20 bg-brand-primary/10 px-2 py-0.5 text-[9px] font-bold text-brand-primary"
+            title={t('autofill.recommended')}
+          >
+            <Sparkles className="h-3 w-3" />
+            <span>{t('autofill.recommended')}</span>
+          </span>
+        )}
         {item.favorite && <Heart className="w-3.5 h-3.5 fill-red-500 text-red-500 animate-pulse shrink-0" />}
         <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider ${itemStrength.colorClass}`}>
           {t(strengthLabelKeys[itemStrength.label])}
@@ -73,6 +84,7 @@ export default memo(VaultListItemContent, (prevProps, nextProps) => {
     prevProps.item.favorite === nextProps.item.favorite &&
     prevProps.item.password === nextProps.item.password &&
     prevProps.isSelected === nextProps.isSelected &&
+    prevProps.autofillRecommended === nextProps.autofillRecommended &&
     prevProps.onSelect === nextProps.onSelect
   );
 });

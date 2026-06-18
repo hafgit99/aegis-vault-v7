@@ -89,17 +89,35 @@ describe('VaultItemDetailPanel', () => {
         requestId: 'request-1',
         createdAt: 123,
         source: 'android-autofill',
-        appPackage: 'com.example.app',
+        webDomain: 'example.com',
       },
       onApproveAutofill: vi.fn(),
     });
 
     expect(screen.getByTestId('autofill-approval-panel')).toBeTruthy();
-    expect(screen.getByText((_, element) => element?.textContent === 'Hedef: com.example.app')).toBeTruthy();
+    expect(screen.getByText((_, element) => element?.textContent === 'Hedef: example.com')).toBeTruthy();
+    expect(screen.getByTestId('autofill-match-status').textContent).toBe('Bu kayıt hedefle eşleşiyor.');
 
     fireEvent.click(screen.getByTestId('autofill-approve-button'));
 
     expect(props.onApproveAutofill).toHaveBeenCalledWith(loginItem);
+  });
+
+  it('warns when the selected Autofill login does not match the target', () => {
+    renderPanel({
+      isAutofillMode: true,
+      autofillRequest: {
+        requestId: 'request-1',
+        createdAt: 123,
+        source: 'android-autofill',
+        webDomain: 'unrelated.test',
+      },
+      onApproveAutofill: vi.fn(),
+    });
+
+    expect(screen.getByTestId('autofill-match-status').textContent).toBe(
+      'Bu kayıt hedefle eşleşmiyor. Devam etmeden önce dikkatlice kontrol edin.',
+    );
   });
 
   it('does not render Autofill approval action for non-login items', () => {

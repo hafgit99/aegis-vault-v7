@@ -72,6 +72,20 @@ describe('VaultListItem', () => {
     expect(screen.getByText('ZAYIF')).toBeTruthy();
   });
 
+  it('renders an Autofill recommendation badge when requested', () => {
+    render(
+      <VaultListItem
+        item={vaultItem}
+        isSelected={false}
+        onSelect={vi.fn()}
+        autofillRecommended
+      />,
+    );
+
+    expect(screen.getByTestId('autofill-recommended-badge')).toBeTruthy();
+    expect(screen.getByText('Önerilen')).toBeTruthy();
+  });
+
   it('renders password strength in the selected language', () => {
     window.localStorage.setItem(languageStorageKey, 'zh');
 
