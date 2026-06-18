@@ -144,7 +144,13 @@ Recently improved:
 
 ## Next Gates
 
-- Add Android readiness gate: `android:init`, debug APK build, and manual smoke checklist from `docs/ANDROID_READINESS.md`.
+- Add Android release gate:
+  - `npm run lint`
+  - `npm run test:unit`
+  - `npm run build`
+  - `npm run android:build:apk:debug:aarch64`
+  - `npm run android:device:smoke`
+  - Manual Android release candidate checklist from `docs/ANDROID_READINESS.md`.
 - Expand smoke E2E coverage for detail actions, broader translated screens, desktop persistence, and mobile smoke viewports.
 - Add mutation tests only for critical `src/lib` modules first.
 - Raise global coverage thresholds after the low-coverage critical modules improve.

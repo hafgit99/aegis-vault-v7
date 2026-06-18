@@ -8,6 +8,7 @@ This document tracks the Android preparation path for Aegis Vault 7. Android is 
 - Android bundle metadata exists in `src-tauri/tauri.conf.json`.
 - Android launcher icons are present under `src-tauri/icons/android`.
 - The generated Android project is initialized under `src-tauri/gen/android`.
+- The Android manifest disables OS backup for the vault app data with `android:allowBackup="false"` and `android:fullBackupContent="false"`.
 - The universal debug APK build has been validated locally.
 - The `aarch64` debug APK has been installed and smoke-tested on a physical Android device.
 - The main Android activity sets `FLAG_SECURE` to block normal screenshots, screen recordings, and task-switcher previews on supported system surfaces.
@@ -16,7 +17,7 @@ This document tracks the Android preparation path for Aegis Vault 7. Android is 
 - Android remembered Secret Key state and biometric metadata now prefer an Android Keystore AES-GCM secure storage bridge, with browser storage kept as fallback and migration source.
 - Android native biometric registration requires the Android Keystore-backed secure storage bridge and will not fall back to IndexedDB for native wrapping metadata.
 - Android vault database persistence uses the Tauri app-data command path, which resolves to app-private storage on Android. When this native write succeeds, localStorage keeps only a desktop/mobile-managed setup marker instead of the encrypted row payload.
-- Android Autofill groundwork is registered through a native `AutofillService` and a WebView bridge that opens the Android system provider selection screen. The service can detect likely login forms from non-secret field metadata, present an authenticated Aegis entry point, and pass a pending Autofill launch request to the WebView bridge, but it intentionally does not fill secrets until package/domain verification and user approval are implemented.
+- Android Autofill is registered through a native `AutofillService` and a WebView bridge. The service detects likely login forms from non-secret field metadata, presents an authenticated Aegis entry point, prioritizes package/domain matches, requires explicit user approval, and returns credentials only through the active Android Autofill session.
 - Desktop storage uses Tauri app-data persistence plus a local fallback marker.
 - Browser/mobile web storage still relies on IndexedDB/localStorage/OPFS-style APIs.
 - Native file dialogs are implemented for Windows desktop, while Android uses its generated project bridge and Android document intents.
@@ -90,7 +91,76 @@ Manual smoke checklist for the first debug APK:
 - Clipboard copy/clear behavior works under Android WebView.
 - Turkish, English, and Chinese UI remain readable on phone-sized screens.
 - Android settings can open the system Autofill provider selection screen and list Aegis Vault Autofill as a selectable service on Android 8.0+.
-- Android Autofill can recognize login-like forms, show an Aegis authentication option, and expose the pending launch request to the app without returning credential values.
+- Android Autofill can recognize login-like forms, show an Aegis authentication option, promote matching vault records, require approval, and fill supported browsers/apps.
+
+## Android Release Candidate Checklist
+
+Run this checklist before every APK/AAB candidate that may be shared outside local development.
+
+### Build And Size
+
+- Build target-specific debug smoke APK: `npm run android:build:apk:debug:aarch64`.
+- Build release APK/AAB with signing configuration when release keys are ready.
+- Confirm the release artifact does not contain stale multi-ABI debug libraries.
+- Record artifact sizes:
+  - Universal debug APK is expected to be large because it contains multiple ABIs.
+  - `aarch64` debug APK should remain close to the current local baseline unless a native dependency changes.
+  - Release APK/AAB should be compared against the latest clean release candidate, not the universal debug APK.
+
+### Manifest And Permissions
+
+- Verify requested permissions stay minimal. Current expected runtime permission surface: `android.permission.INTERNET`.
+- Verify `android:usesCleartextTraffic` is `false` for release builds.
+- Verify `android:allowBackup="false"` and `android:fullBackupContent="false"` remain present.
+- Verify `AegisAutofillService` remains protected by `android.permission.BIND_AUTOFILL_SERVICE`.
+- Verify `FileProvider` remains `exported="false"` and `grantUriPermissions="true"`.
+
+### Device Security
+
+- Verify `FLAG_SECURE` blocks screenshots, screen recording, and task-switcher previews on the target device.
+- Send app to background and return:
+  - Sensitive content should be shielded immediately.
+  - Vault should not require master password again before the configured background lock delay unless Android kills the process.
+- Verify manual Lock Vault always clears the active session immediately.
+- Verify clipboard copy still clears according to the app policy.
+
+### Backup, Import, And Attachments
+
+- Encrypted `.aegis` export opens Android document picker and lets the user choose the destination.
+- Plain `.json` export requires explicit confirmation and opens Android document picker.
+- Import opens Android document picker, handles cancellation cleanly, and imports a valid encrypted `.aegis` backup.
+- Attachment download opens Android document picker and writes a readable file.
+- Attachment delete updates the vault card and survives app restart.
+
+### Biometric And Secret Storage
+
+- Biometric enable succeeds only when an active vault session exists.
+- Biometric metadata and remembered Secret Key prefer Android Keystore secure storage.
+- Biometric unsupported/cancelled/error paths show localized user-facing messages.
+- Disable biometric removes local biometric unlock state.
+
+### Autofill
+
+- Aegis Vault Autofill appears as a selectable Android Autofill provider.
+- Aloha/browser baseline: Aegis prompt appears, matching record is promoted, approval fills username/password.
+- Chrome baseline: if Google Password Manager has priority, switch Chrome to fill with another app; verify Aegis prompt then appears and fills.
+- Mismatched records require the second confirmation before filling.
+- Stale Autofill requests expire and do not fill credentials.
+
+### Safe-Area And Mobile UI
+
+- Lock screen language selector does not overlap system status icons.
+- Dashboard header, sidebar, bottom lock action, settings, donation, trash, security analysis, and password manager views respect top/bottom safe areas.
+- New password modal remains usable on a phone viewport; category tabs and save/cancel actions are reachable.
+- Vault detail view is not an overly long unstructured block and the mobile back action remains visible.
+
+### Settings Flow
+
+- Auto-lock selection persists after restart.
+- Android Autofill settings button opens the system provider screen or shows a localized unsupported message.
+- Chrome Autofill guidance is visible in Settings.
+- Master password change warns before re-encryption and keeps existing records readable.
+- Destructive reset requires explicit confirmation.
 
 ## Storage And Security Decisions
 
