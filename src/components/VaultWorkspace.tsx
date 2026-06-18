@@ -4,6 +4,7 @@ import { ArrowLeft, CreditCard, FileText, Fingerprint, Heart, KeyRound, Layers, 
 import type { VaultCategoryFilter } from '../hooks/useVaultFilters';
 
 import { useLanguage } from '../i18n/LanguageContext';
+import { androidAutofillTargetLabel, type AndroidAutofillRequest } from '../lib/androidAutofill';
 import { AuditReport, VaultItem } from '../types';
 import AegisGuardReport from './AegisGuardReport';
 import CryptoShieldPanel from './CryptoShieldPanel';
@@ -55,6 +56,7 @@ interface VaultWorkspaceProps {
   onCopyText: (text: string, field: string) => void;
   onDownloadAttachment: (id: string, name: string) => void;
   isAutofillMode?: boolean;
+  autofillRequest?: AndroidAutofillRequest | null;
   onCancelAutofill?: () => void;
   onApproveAutofill?: (item: VaultItem) => void;
 }
@@ -99,10 +101,12 @@ export function VaultWorkspaceContent({
   onCopyText,
   onDownloadAttachment,
   isAutofillMode = false,
+  autofillRequest = null,
   onCancelAutofill,
   onApproveAutofill,
 }: VaultWorkspaceProps) {
   const { t } = useLanguage();
+  const autofillTargetLabel = androidAutofillTargetLabel(autofillRequest);
 
   const [visibleCount, setVisibleCount] = useState(30);
 
@@ -235,6 +239,11 @@ export function VaultWorkspaceContent({
                 <p className="mt-0.5 text-[11px] leading-relaxed text-on-surface-variant">
                   {t('autofill.vault.description')}
                 </p>
+                {autofillTargetLabel && (
+                  <p className="mt-1.5 inline-flex max-w-full items-center rounded-md border border-brand-primary/15 bg-[#080a09]/35 px-2 py-1 font-mono text-[10px] text-on-surface truncate">
+                    {t('autofill.target.label')}: {autofillTargetLabel}
+                  </p>
+                )}
               </div>
               {onCancelAutofill && (
                 <button
@@ -331,6 +340,7 @@ export function VaultWorkspaceContent({
             onCopyText={onCopyText}
             onDownloadAttachment={onDownloadAttachment}
             isAutofillMode={isAutofillMode}
+            autofillRequest={autofillRequest}
             onApproveAutofill={onApproveAutofill}
           />
         ) : (

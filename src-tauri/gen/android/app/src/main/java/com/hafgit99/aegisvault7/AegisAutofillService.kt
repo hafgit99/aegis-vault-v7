@@ -48,7 +48,7 @@ class AegisAutofillService : AutofillService() {
   }
 
   private fun collectLoginFields(structure: AssistStructure): LoginFields {
-    val fields = LoginFields()
+    val fields = LoginFields(appPackage = structure.activityComponent?.packageName)
 
     for (windowIndex in 0 until structure.windowNodeCount) {
       traverseNode(structure.getWindowNodeAt(windowIndex).rootViewNode, fields)
@@ -58,6 +58,11 @@ class AegisAutofillService : AutofillService() {
   }
 
   private fun traverseNode(node: AssistStructure.ViewNode, fields: LoginFields) {
+    val domain = node.webDomain?.trim()
+    if (fields.webDomain.isNullOrBlank() && !domain.isNullOrBlank()) {
+      fields.webDomain = domain
+    }
+
     val autofillId = node.autofillId
     if (autofillId != null) {
       when {
@@ -112,6 +117,8 @@ class AegisAutofillService : AutofillService() {
       action = ACTION_AUTOFILL_AUTHENTICATE
       addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
       putExtra(EXTRA_AUTOFILL_REQUEST_ID, requestId)
+      putExtra(EXTRA_AUTOFILL_APP_PACKAGE, loginFields.appPackage)
+      putExtra(EXTRA_AUTOFILL_WEB_DOMAIN, loginFields.webDomain)
       putParcelableArrayListExtra(EXTRA_AUTOFILL_USERNAME_IDS, ArrayList(loginFields.usernameIds))
       putParcelableArrayListExtra(EXTRA_AUTOFILL_PASSWORD_IDS, ArrayList(loginFields.passwordIds))
     }
@@ -129,6 +136,8 @@ class AegisAutofillService : AutofillService() {
   private data class LoginFields(
     val usernameIds: MutableList<AutofillId> = mutableListOf(),
     val passwordIds: MutableList<AutofillId> = mutableListOf(),
+    var appPackage: String? = null,
+    var webDomain: String? = null,
   ) {
     fun hasFillableLogin(): Boolean = passwordIds.isNotEmpty() && (usernameIds.isNotEmpty() || passwordIds.size == 1)
 
@@ -138,6 +147,8 @@ class AegisAutofillService : AutofillService() {
   companion object {
     const val ACTION_AUTOFILL_AUTHENTICATE = "com.hafgit99.aegisvault7.action.AUTOFILL_AUTHENTICATE"
     const val EXTRA_AUTOFILL_REQUEST_ID = "com.hafgit99.aegisvault7.extra.AUTOFILL_REQUEST_ID"
+    const val EXTRA_AUTOFILL_APP_PACKAGE = "com.hafgit99.aegisvault7.extra.AUTOFILL_APP_PACKAGE"
+    const val EXTRA_AUTOFILL_WEB_DOMAIN = "com.hafgit99.aegisvault7.extra.AUTOFILL_WEB_DOMAIN"
     const val EXTRA_AUTOFILL_USERNAME_IDS = "com.hafgit99.aegisvault7.extra.AUTOFILL_USERNAME_IDS"
     const val EXTRA_AUTOFILL_PASSWORD_IDS = "com.hafgit99.aegisvault7.extra.AUTOFILL_PASSWORD_IDS"
   }

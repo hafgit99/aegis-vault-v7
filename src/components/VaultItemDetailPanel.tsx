@@ -1,6 +1,7 @@
 import { ArrowLeft, ShieldCheck, Smartphone } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
+import { androidAutofillTargetLabel, type AndroidAutofillRequest } from '../lib/androidAutofill';
 import { VaultItem } from '../types';
 import CardDetail from './CardDetail';
 import IdentityDetail from './IdentityDetail';
@@ -31,6 +32,7 @@ interface VaultItemDetailPanelProps {
   onCopyText: (text: string, field: string) => void;
   onDownloadAttachment: (id: string, name: string) => void;
   isAutofillMode?: boolean;
+  autofillRequest?: AndroidAutofillRequest | null;
   onApproveAutofill?: (item: VaultItem) => void;
 }
 
@@ -53,10 +55,12 @@ export default function VaultItemDetailPanel({
   onCopyText,
   onDownloadAttachment,
   isAutofillMode = false,
+  autofillRequest = null,
   onApproveAutofill,
 }: VaultItemDetailPanelProps) {
   const { t } = useLanguage();
   const canApproveAutofill = isAutofillMode && item.category === 'login' && Boolean(item.password) && Boolean(onApproveAutofill);
+  const autofillTargetLabel = androidAutofillTargetLabel(autofillRequest);
 
   return (
     <div className="max-w-6xl mx-auto space-y-4 lg:space-y-5">
@@ -96,6 +100,11 @@ export default function VaultItemDetailPanel({
               <p className="mt-1 text-xs leading-relaxed text-on-surface-variant">
                 {t('autofill.detail.description')}
               </p>
+              {autofillTargetLabel && (
+                <p className="mt-2 inline-flex max-w-full items-center rounded-md border border-brand-primary/15 bg-[#080a09]/35 px-2 py-1 font-mono text-[10px] text-on-surface truncate">
+                  {t('autofill.target.label')}: {autofillTargetLabel}
+                </p>
+              )}
             </div>
           </div>
           <button

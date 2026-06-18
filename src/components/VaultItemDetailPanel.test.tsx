@@ -85,10 +85,17 @@ describe('VaultItemDetailPanel', () => {
   it('renders Autofill approval action for login items', () => {
     const props = renderPanel({
       isAutofillMode: true,
+      autofillRequest: {
+        requestId: 'request-1',
+        createdAt: 123,
+        source: 'android-autofill',
+        appPackage: 'com.example.app',
+      },
       onApproveAutofill: vi.fn(),
     });
 
     expect(screen.getByTestId('autofill-approval-panel')).toBeTruthy();
+    expect(screen.getByText((_, element) => element?.textContent === 'Hedef: com.example.app')).toBeTruthy();
 
     fireEvent.click(screen.getByTestId('autofill-approve-button'));
 

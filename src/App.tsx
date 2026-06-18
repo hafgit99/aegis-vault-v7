@@ -419,6 +419,7 @@ export default function App() {
           onRestoreTrashItem={handleRestoreTrashItem}
           onDeleteTrashItemPermanently={handleDeleteTrashItemPermanently}
           isAutofillMode={Boolean(pendingAutofillRequest)}
+          autofillRequest={pendingAutofillRequest}
           onCancelAutofill={handleCancelAutofillRequest}
           onApproveAutofill={handleApproveAutofillRequest}
         />
