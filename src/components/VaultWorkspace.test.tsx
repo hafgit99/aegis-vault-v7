@@ -179,9 +179,7 @@ describe('VaultWorkspace', () => {
     expect(screen.getByTestId('vault-autofill-mode-banner')).toBeTruthy();
     expect(screen.getByText('Autofill Modu')).toBeTruthy();
     expect(screen.getByText((_, element) => element?.textContent === 'Hedef: login.example.com')).toBeTruthy();
-    expect(screen.getByTestId('vault-autofill-diagnostics').textContent).toContain(
-      'package=com.example.app domain=login.example.com usernameFields=1 passwordFields=1 fillableFields=2',
-    );
+    expect(screen.queryByTestId('vault-autofill-diagnostics')).toBeNull();
 
     fireEvent.click(screen.getByTestId('vault-autofill-cancel-button'));
 

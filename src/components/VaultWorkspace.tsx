@@ -4,7 +4,7 @@ import { ArrowLeft, CreditCard, FileText, Fingerprint, Heart, KeyRound, Layers, 
 import type { VaultCategoryFilter } from '../hooks/useVaultFilters';
 
 import { useLanguage } from '../i18n/LanguageContext';
-import { androidAutofillDiagnosticSummary, androidAutofillTargetLabel, type AndroidAutofillRequest } from '../lib/androidAutofill';
+import { androidAutofillTargetLabel, type AndroidAutofillRequest } from '../lib/androidAutofill';
 import { isAndroidAutofillTargetMatch, sortAndroidAutofillMatches } from '../lib/androidAutofillMatching';
 import { AuditReport, VaultItem } from '../types';
 import AegisGuardReport from './AegisGuardReport';
@@ -108,7 +108,6 @@ export function VaultWorkspaceContent({
 }: VaultWorkspaceProps) {
   const { t } = useLanguage();
   const autofillTargetLabel = androidAutofillTargetLabel(autofillRequest);
-  const autofillDiagnosticSummary = androidAutofillDiagnosticSummary(autofillRequest);
 
   const [visibleCount, setVisibleCount] = useState(30);
 
@@ -248,15 +247,6 @@ export function VaultWorkspaceContent({
                 {autofillTargetLabel && (
                   <p className="mt-1.5 inline-flex max-w-full items-center rounded-md border border-brand-primary/15 bg-[#080a09]/35 px-2 py-1 font-mono text-[10px] text-on-surface truncate">
                     {t('autofill.target.label')}: {autofillTargetLabel}
-                  </p>
-                )}
-                {autofillDiagnosticSummary && (
-                  <p
-                    data-testid="vault-autofill-diagnostics"
-                    className="mt-1.5 max-w-full rounded-md border border-outline-variant/15 bg-surface-low/70 px-2 py-1 font-mono text-[9px] leading-relaxed text-on-surface-variant break-words"
-                    title={autofillDiagnosticSummary}
-                  >
-                    <span className="font-bold text-on-surface">{t('autofill.diagnostics.label')}:</span> {autofillDiagnosticSummary}
                   </p>
                 )}
                 {autofillMatchCount > 0 && (
