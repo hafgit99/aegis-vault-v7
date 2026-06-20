@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 95.36% |
-| Statements | 95.36% |
-| Functions | 92.39% |
-| Branches | 88.55% |
+| Lines | 95.38% |
+| Statements | 95.38% |
+| Functions | 92.56% |
+| Branches | 88.56% |
 
 Coverage thresholds now act as a release-quality regression gate while staying slightly below the current baseline:
 
@@ -55,10 +55,10 @@ Current measured mutation baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Mutants | 420 |
-| Mutation score | 80.00% |
-| Covered mutation score | 80.77% |
-| Killed | 331 |
+| Mutants | 460 |
+| Mutation score | 81.74% |
+| Covered mutation score | 82.46% |
+| Killed | 371 |
 | Timed out | 5 |
 | Survived | 80 |
 | No coverage | 4 |
@@ -179,6 +179,7 @@ Recently improved:
 - `src/lib/biometric.ts`: covered PBKDF2 compatibility vectors, WebAuthn support detection, registration options, credential request options, WebCrypto bundle metadata, disable flow, unsupported registration, cancelled registration, missing stored bundle, cancelled authentication, mismatched authenticator rejection, and legacy bundle unwrap failures so biometric helpers now report full coverage.
 - `src/lib/random.ts`: covered WebCrypto and Math.random fallback paths, non-positive ranges, unbiased-index retries, randomUUID usage, UUID v4 fallback formatting, and empty token generation so entropy helpers now report full coverage.
 - `src/lib/otp.ts`: added to the core mutation gate with RFC vectors, otpauth URI parsing, period/digit validation, Base32 whitespace/padding normalization, eight-digit formatting, and high-counter serialization coverage; TOTP mutation score now reports 92.19%.
+- `src/lib/securityEvents.ts`: added to the core mutation gate with structured error construction, severity routing, public error copy, metadata redaction, control-character normalization, truncation, and non-string metadata preservation; security event mutation score now reports 100%.
 - `src/lib/hibp.ts`: covered k-anonymity range lookup, Add-Padding/no-store request options, prefix cache reuse, and fail-closed unavailable responses.
 - `src/lib/importer.ts`: covered sparse Aegis JSON defaults, sparse and unknown Bitwarden JSON types, numeric Bitwarden CSV categories/favorites, LastPass optional-column fallbacks, and universal CSV fallback defaults.
 - `src/lib/legacyCrypto.ts`: covered malformed legacy hashes, compact KDF parameters, SHA-256/HMAC/HKDF vectors, authenticated legacy AES-GCM-compatible decrypt paths, tamper rejection, old stream-cipher fallback envelopes, malformed secure envelopes, checksum failures, and unsupported envelope versions.
@@ -200,5 +201,5 @@ Recently improved:
   - `npm run android:device:smoke`
   - Manual Android release candidate checklist from `docs/ANDROID_READINESS.md`.
 - Expand smoke E2E coverage for detail actions, broader translated screens, desktop persistence, and mobile smoke viewports.
-- Expand mutation testing from the current core library gate into security taxonomy, import/export, and storage migration modules.
+- Expand mutation testing from the current core library gate into import/export and storage migration modules.
 - Keep global coverage thresholds at or above 90% lines/statements, 85% functions, and 80% branches; raise them again after the current priority targets improve.

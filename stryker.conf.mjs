@@ -9,6 +9,7 @@ export default {
     'src/lib/otp.ts',
     'src/lib/random.ts',
     'src/lib/secretKey.ts',
+    'src/lib/securityEvents.ts',
   ],
   testFiles: [
     'src/lib/diceware.test.ts',
@@ -16,6 +17,7 @@ export default {
     'src/lib/otp.test.ts',
     'src/lib/random.test.ts',
     'src/lib/secretKey.test.ts',
+    'src/lib/securityEvents.test.ts',
   ],
   vitest: {
     configFile: 'vitest.config.ts',
