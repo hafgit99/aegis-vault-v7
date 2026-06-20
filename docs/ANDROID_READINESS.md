@@ -53,7 +53,7 @@ Use `android:build:apk:debug:aarch64` for normal phone smoke tests. The generic 
 
 The target-specific APK commands run `android:clean:jni` first because Tauri/Gradle can leave native library symlinks from previous multi-architecture builds under `src-tauri/gen/android/app/src/main/jniLibs`. Cleaning those ignored intermediates prevents stale ABIs from being packed into a later single-target APK.
 
-Use `npm run android:release:report` after APK/AAB builds to record artifact size, SHA-256, package metadata, requested permissions, backup settings, cleartext traffic status, Autofill service protection, and FileProvider export status. Add `-- --strict` when warnings should fail the command.
+Use `npm run android:release:report` after APK/AAB builds to record artifact size, SHA-256, package metadata, requested permissions, backup settings, cleartext traffic status, native ABI metadata, APK signature verification, signer certificate SHA-256, Autofill service protection, and FileProvider export status. Add `-- --strict` when warnings should fail the command.
 
 Use `npm run android:device:doctor` before device testing to diagnose SDK/ADB setup, authorized USB devices, APK presence, installed package state, app-private data directory, and active Autofill provider status. Add `-- --enable-autofill` on a local debug device when the test reinstall resets the active Android Autofill provider; some OEM Android builds reject shell activation and still require manual provider selection.
 
@@ -72,7 +72,7 @@ $env:AEGIS_ANDROID_KEYSTORE_PASSWORD='<secret>'
 $env:AEGIS_ANDROID_KEY_PASSWORD='<secret>'
 ```
 
-The keystore file should live outside the repository. The repository ignores common Android signing files such as `.jks`, `.keystore`, `.p12`, `.pfx`, `keystore.properties`, and `key.properties`.
+The keystore file should preferably live outside the repository. If you keep it in a local `.secrets/` folder for convenience, keep that folder ignored, never stage it, and back it up separately in a password manager or offline storage. The repository ignores `.secrets/` and common Android signing files such as `.jks`, `.keystore`, `.p12`, `.pfx`, `keystore.properties`, and `key.properties`.
 
 Create a local release keystore outside the repository with Android Studio JBR `keytool`:
 
