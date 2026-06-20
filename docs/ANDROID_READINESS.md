@@ -83,7 +83,7 @@ npm run android:release:gate -- --signed --evidence
 Local size baseline from this workstation:
 
 - Universal debug APK: about 438 MiB after bundling four ABIs.
-- Clean `aarch64` debug APK: about 120 MiB with only `arm64-v8a`.
+- Current target-specific debug APK should report a single native ABI: `arm64-v8a`.
 
 Local device smoke baseline from this workstation:
 
@@ -143,7 +143,7 @@ Run this checklist before every APK/AAB candidate that may be shared outside loc
 - Run `npm run android:release:signing:check` before building a signed release candidate.
 - Build release APK/AAB with signing configuration when release keys are ready.
 - Run `npm run android:release:report -- --strict` and store the output with the release candidate notes.
-- Confirm the release artifact does not contain stale multi-ABI debug libraries.
+- Confirm the release artifact does not contain stale multi-ABI debug libraries; `android:release:report -- --strict` now reports and gates native ABI count.
 - Record artifact sizes:
   - Universal debug APK is expected to be large because it contains multiple ABIs.
   - `aarch64` debug APK should remain close to the current local baseline unless a native dependency changes.
