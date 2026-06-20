@@ -9,6 +9,8 @@ const args = new Set(process.argv.slice(2));
 const allowDirty = args.has('--allow-dirty');
 const includeDeviceEvidence = args.has('--device');
 const enableAutofill = args.has('--enable-autofill');
+const signed = args.has('--signed');
+const deviceModeArgs = signed ? ['--release'] : [];
 const androidOutputsRoot = path.join(repoRoot, 'src-tauri', 'gen', 'android', 'app', 'build', 'outputs');
 const manualSmokeChecklistPath = path.join(repoRoot, 'docs', 'ANDROID_MANUAL_SMOKE_CHECKLIST.md');
 const releaseRoot = path.join(repoRoot, 'release-local', 'android');
@@ -104,10 +106,10 @@ const report = run(npmCommand, ['run', 'android:release:report', '--', '--strict
   shell: process.platform === 'win32',
 });
 const deviceDoctorReport = includeDeviceEvidence
-  ? run(npmCommand, ['run', 'android:device:doctor', '--', ...(enableAutofill ? ['--enable-autofill'] : [])], { shell: process.platform === 'win32' })
+  ? run(npmCommand, ['run', 'android:device:doctor', '--', ...(enableAutofill ? ['--enable-autofill'] : []), ...deviceModeArgs], { shell: process.platform === 'win32' })
   : '';
 const deviceSecurityReport = includeDeviceEvidence
-  ? run(npmCommand, ['run', 'android:device:security', '--', '--launch'], { shell: process.platform === 'win32' })
+  ? run(npmCommand, ['run', 'android:device:security', '--', '--launch', ...deviceModeArgs], { shell: process.platform === 'win32' })
   : '';
 const gitFallback = readGitHeadFallback();
 const rawDirtyStatus = run('git', ['status', '--short']);
@@ -147,6 +149,7 @@ const metadata = {
   allowDirty,
   deviceEvidence: includeDeviceEvidence,
   enableAutofill,
+  signed,
   androidHome: process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || '',
   artifacts: copiedArtifacts,
 };
