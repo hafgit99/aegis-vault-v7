@@ -14,26 +14,27 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 99% |
-| Statements | 99% |
-| Functions | 95% |
-| Branches | 93.24% |
+| Lines | 94.94% |
+| Statements | 94.94% |
+| Functions | 91.89% |
+| Branches | 87.43% |
 
-Initial thresholds are intentionally below the current baseline:
+Coverage thresholds now act as a release-quality regression gate while staying slightly below the current baseline:
 
 | Metric | Current threshold |
 | --- | ---: |
-| Lines | 60% |
-| Statements | 60% |
-| Functions | 65% |
-| Branches | 70% |
+| Lines | 90% |
+| Statements | 90% |
+| Functions | 85% |
+| Branches | 80% |
 
-These thresholds prevent large regressions while leaving room to add tests around under-covered areas.
+These thresholds prevent meaningful regressions while leaving room to add tests around under-covered areas.
 
 ## Priority Coverage Targets
 
 1. `src/components/SettingsPanel.tsx`: reduce remaining fallback-message and desktop-runtime branch gaps.
-2. `src/lib/diceware.ts`: cover remaining locale word-list fallback and option-combination branches.
+2. `src/lib/emergencyKit.ts`: cover browser-download fallback and save-error branches.
+3. `src/lib/diceware.ts`: cover remaining locale word-list fallback and option-combination branches.
 
 ## Current E2E Smoke Gate
 
@@ -160,4 +161,4 @@ Recently improved:
   - Manual Android release candidate checklist from `docs/ANDROID_READINESS.md`.
 - Expand smoke E2E coverage for detail actions, broader translated screens, desktop persistence, and mobile smoke viewports.
 - Add mutation tests only for critical `src/lib` modules first.
-- Raise global coverage thresholds after the low-coverage critical modules improve.
+- Keep global coverage thresholds at or above 90% lines/statements, 85% functions, and 80% branches; raise them again after the current priority targets improve.
