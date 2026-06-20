@@ -26,9 +26,16 @@ describe('emergencyKit', () => {
   it('builds an offline recovery kit without including a master password', () => {
     const kit = buildEmergencyKitText(secretKey, { generatedAt: new Date('2026-06-20T12:00:00.000Z') });
 
-    expect(kit).toContain('Aegis Vault 7 Emergency Kit');
-    expect(kit).toContain('Generated: 2026-06-20T12:00:00.000Z');
-    expect(kit).toContain(`Account Secret Key: ${secretKey}`);
+    expect(kit.split('\n')).toEqual([
+      'Aegis Vault 7 Emergency Kit',
+      '',
+      'Generated: 2026-06-20T12:00:00.000Z',
+      `Account Secret Key: ${secretKey}`,
+      '',
+      'Keep this file offline and outside the vault.',
+      'You need this secret key together with your master password to unlock this vault on a new device.',
+      'Aegis Vault 7 cannot recover the secret key or master password for you.',
+    ]);
     expect(kit).not.toContain('Master Password:');
   });
 
@@ -66,6 +73,9 @@ describe('emergencyKit', () => {
     await expect(saveEmergencyKit(secretKey)).resolves.toBe(true);
 
     expect(createObjectUrlSpy).toHaveBeenCalledWith(expect.any(Blob));
+    const blob = createObjectUrlSpy.mock.calls[0][0] as Blob;
+    expect(blob.size).toBeGreaterThan(0);
+    expect(blob.type).toBe('text/plain;charset=utf-8');
     expect(appendSpy).toHaveBeenCalledWith(expect.any(HTMLAnchorElement));
     expect(clickSpy).toHaveBeenCalledTimes(1);
     expect(removeSpy).toHaveBeenCalledTimes(1);

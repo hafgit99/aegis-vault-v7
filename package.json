@@ -48,7 +48,10 @@
     "build:extension": "node scripts/build-extension.js",
     "package:firefox:xpi": "node scripts/firefox-xpi.cjs",
     "sign:firefox:xpi": "node scripts/firefox-xpi.cjs --sign",
-    "register:extension": "node scripts/register-host.js"
+    "register:extension": "node scripts/register-host.js",
+    "test:mutation": "stryker run stryker.conf.mjs",
+    "test:mutation:core": "stryker run stryker.conf.mjs",
+    "test:mutation:core:dry": "stryker run stryker.conf.mjs --dryRunOnly"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",
@@ -64,6 +67,9 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
+    "@stryker-mutator/core": "^9.6.1",
+    "@stryker-mutator/typescript-checker": "^9.6.1",
+    "@stryker-mutator/vitest-runner": "^9.6.1",
     "@tauri-apps/cli": "^2.11.2",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",

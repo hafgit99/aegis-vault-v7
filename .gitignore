@@ -27,6 +27,8 @@ release-local/
 .vitest/
 playwright-report/
 test-results/
+reports/
+.stryker-tmp/
 
 # Local signing secrets
 .secrets/
