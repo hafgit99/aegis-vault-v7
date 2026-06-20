@@ -47,15 +47,19 @@ if (keystorePath) {
 
   const relativeToRepo = path.relative(repoRoot, resolved);
   const isInsideRepo = relativeToRepo === '' || (!relativeToRepo.startsWith('..') && !path.isAbsolute(relativeToRepo));
-  if (isInsideRepo) {
-    fail('keystore file is inside the repository; move it outside the repo before release');
+  const normalizedRelative = relativeToRepo.split(path.sep).join('/');
+  const isIgnoredSecretsPath = normalizedRelative.startsWith('.secrets/');
+  if (isInsideRepo && isIgnoredSecretsPath) {
+    warn('keystore file is inside the local .secrets folder; acceptable for local builds only if it remains ignored and backed up separately');
+  } else if (isInsideRepo) {
+    fail('keystore file is inside the repository; move it outside the repo or into ignored .secrets before release');
   } else {
     pass('keystore file is outside the repository');
   }
-}
 
+}
 const ignoredPatterns = fs.readFileSync(path.join(repoRoot, '.gitignore'), 'utf8');
-for (const pattern of ['*.keystore', '*.jks', '*.p12', '*.pfx', 'keystore.properties', 'key.properties']) {
+for (const pattern of ['.secrets/', '*.keystore', '*.jks', '*.p12', '*.pfx', 'keystore.properties', 'key.properties']) {
   if (ignoredPatterns.includes(pattern)) {
     pass(`${pattern} is ignored`);
   } else {

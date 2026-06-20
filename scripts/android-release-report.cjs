@@ -6,6 +6,7 @@ const path = require('path');
 const repoRoot = path.resolve(__dirname, '..');
 const args = new Set(process.argv.slice(2));
 const strict = args.has('--strict');
+const signedOnly = args.has('--signed');
 const androidRoot = path.join(repoRoot, 'src-tauri', 'gen', 'android');
 const outputsRoot = path.join(androidRoot, 'app', 'build', 'outputs');
 const sourceManifestPath = path.join(androidRoot, 'app', 'src', 'main', 'AndroidManifest.xml');
@@ -29,9 +30,12 @@ function walk(dir, files = []) {
 }
 
 function findArtifacts() {
-  return walk(outputsRoot)
+  const artifacts = walk(outputsRoot)
     .filter((file) => ['.apk', '.aab'].includes(path.extname(file).toLowerCase()))
+    .filter((file) => !signedOnly || file.split(path.sep).includes('release'))
     .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+
+  return artifacts;
 }
 
 function sha256(file) {
@@ -50,6 +54,25 @@ function latestBuildTool(toolName) {
     .filter((candidate) => fs.existsSync(candidate))
     .sort()
     .reverse()[0] || null;
+}
+
+function latestBuildToolJar(jarName) {
+  if (!sdkRoot) return null;
+  const buildToolsDir = path.join(sdkRoot, 'build-tools');
+  if (!fs.existsSync(buildToolsDir)) return null;
+
+  return fs.readdirSync(buildToolsDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join(buildToolsDir, entry.name, 'lib', jarName))
+    .filter((candidate) => fs.existsSync(candidate))
+    .sort()
+    .reverse()[0] || null;
+}
+
+function javaExecutable() {
+  const javaHome = process.env.JAVA_HOME || '';
+  const candidate = javaHome ? path.join(javaHome, 'bin', process.platform === 'win32' ? 'java.exe' : 'java') : '';
+  return candidate && fs.existsSync(candidate) ? candidate : 'java';
 }
 
 function runTool(tool, args) {
@@ -171,6 +194,48 @@ function inspectManifest(apkPath) {
   };
 }
 
+function inspectApkSignature(apkPath) {
+  if (path.extname(apkPath).toLowerCase() !== '.apk') {
+    return { available: false, verified: false, reason: 'non-apk' };
+  }
+
+  const apksignerJar = latestBuildToolJar('apksigner.jar');
+  if (!apksignerJar) {
+    return { available: false, verified: false, reason: 'apksigner.jar unavailable' };
+  }
+
+  try {
+    const output = execFileSync(javaExecutable(), [
+      '-jar',
+      apksignerJar,
+      'verify',
+      '--print-certs',
+      apkPath,
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      maxBuffer: 10 * 1024 * 1024,
+    });
+
+    const sha256Digest = output.match(/Signer #1 certificate SHA-256 digest: ([a-fA-F0-9]+)/)?.[1] || '';
+    const distinguishedName = output.match(/Signer #1 certificate DN: (.+)/)?.[1]?.trim() || '';
+    return {
+      available: true,
+      verified: true,
+      sha256Digest,
+      distinguishedName,
+    };
+  } catch (error) {
+    const output = String(error.stdout || '') + String(error.stderr || error.message || '');
+    return {
+      available: true,
+      verified: false,
+      reason: output.replace(/\s+/g, ' ').trim().slice(0, 300) || 'verification failed',
+    };
+  }
+}
+
 function check(label, value) {
   const prefix = value ? 'PASS' : 'WARN';
   if (!value) warningCount += 1;
@@ -200,6 +265,11 @@ function reportArtifact(file) {
   console.log(`  permissions: ${manifest.permissions.length ? manifest.permissions.join(', ') : 'none detected'}`);
   console.log(`  native ABIs: ${manifest.nativeAbis?.length ? manifest.nativeAbis.join(', ') : 'none detected'}`);
   console.log(`  inspection: ${manifest.source}`);
+  const signature = inspectApkSignature(file);
+  console.log('  signature: ' + (signature.verified ? 'verified' : 'not verified'));
+  if (signature.sha256Digest) console.log('  signer SHA-256: ' + signature.sha256Digest);
+  if (signature.distinguishedName) console.log('  signer DN: ' + signature.distinguishedName);
+  if (!signature.verified && signature.reason) console.log('  signature reason: ' + signature.reason);
 
   if (!isApk) {
     console.log('  manifest checks: skipped for non-APK artifact');
@@ -225,6 +295,7 @@ function reportArtifact(file) {
   } else {
     check('cleartext-disabled', manifest.cleartextDisabled);
   }
+  check('apk-signature-verified', signature.verified);
   const nativeAbiCount = manifest.nativeAbis?.length || 0;
   check('native-abi-single-target', nativeAbiCount <= 1);
   if (nativeAbiCount === 1) {
@@ -241,6 +312,7 @@ if (artifacts.length === 0) {
 }
 
 console.log('Android release artifact report');
+if (signedOnly) console.log('Mode: signed release artifacts only');
 console.log(`SDK: ${sdkRoot || 'not configured'}`);
 artifacts.forEach(reportArtifact);
 

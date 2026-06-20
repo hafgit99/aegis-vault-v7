@@ -98,11 +98,12 @@ function copyArtifact(file) {
 function findArtifacts() {
   return walk(androidOutputsRoot)
     .filter((file) => ['.apk', '.aab'].includes(path.extname(file).toLowerCase()))
+    .filter((file) => !signed || file.split(path.sep).includes('release'))
     .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
 }
 
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-const report = run(npmCommand, ['run', 'android:release:report', '--', '--strict'], {
+const report = run(npmCommand, ['run', 'android:release:report', '--', '--strict', ...(signed ? ['--signed'] : [])], {
   shell: process.platform === 'win32',
 });
 const deviceDoctorReport = includeDeviceEvidence

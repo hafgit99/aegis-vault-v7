@@ -27,3 +27,6 @@ release-local/
 .vitest/
 playwright-report/
 test-results/
+
+# Local signing secrets
+.secrets/

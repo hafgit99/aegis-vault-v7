@@ -112,7 +112,7 @@ if (!skipAndroidBuild) {
   run('npm', ['run', signed ? 'android:build:apk:aarch64' : 'android:build:apk:debug:aarch64']);
 }
 
-run('npm', ['run', 'android:release:report', '--', '--strict']);
+run('npm', ['run', 'android:release:report', '--', '--strict', ...(signed ? ['--signed'] : [])]);
 
 if (!skipDevice) {
   const deviceModeArgs = signed ? ['--release'] : [];
