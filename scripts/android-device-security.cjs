@@ -5,9 +5,11 @@ const path = require('path');
 const repoRoot = path.resolve(__dirname, '..');
 const args = new Set(process.argv.slice(2));
 const launchApp = args.has('--launch');
+const releaseMode = args.has('--release');
+const buildType = releaseMode ? 'release' : 'debug';
 const sdkRoot = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || '';
 const adb = sdkRoot ? path.join(sdkRoot, 'platform-tools', process.platform === 'win32' ? 'adb.exe' : 'adb') : 'adb';
-const packageName = 'com.hafgit99.aegisvault7.debug';
+const packageName = releaseMode ? 'com.hafgit99.aegisvault7' : 'com.hafgit99.aegisvault7.debug';
 const mainActivitySource = path.join(
   repoRoot,
   'src-tauri',
@@ -56,6 +58,10 @@ function tryRun(commandArgs) {
 
 function sleep(ms) {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+function hasExactPackage(packageList, name) {
+  return packageList.split(/\\r?\\n/).some((line) => line.trim() === 'package:' + name);
 }
 
 function parseReadyDevices(output) {
@@ -111,7 +117,7 @@ function summarizeRelevantLogcat() {
   console.log('INFO recent-logcat-end');
 }
 
-console.log('Android device security doctor');
+console.log('Android device security doctor (' + buildType + ', ' + packageName + ')');
 
 if (fs.existsSync(adb) || adb === 'adb') {
   pass(`adb resolved: ${adb}`);
@@ -130,7 +136,7 @@ if (devices.length > 0) {
   tryRun(['shell', 'cmd', 'package', 'install-existing', '--user', '0', packageName]);
 
   const packages = tryRun(['shell', 'pm', 'list', 'packages', '--user', '0', packageName]);
-  if (packages.includes(packageName)) {
+  if (hasExactPackage(packages, packageName)) {
     pass(`${packageName} is installed for user 0`);
   } else {
     fail(`${packageName} is not installed for user 0`);

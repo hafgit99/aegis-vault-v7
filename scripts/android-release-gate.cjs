@@ -115,11 +115,12 @@ if (!skipAndroidBuild) {
 run('npm', ['run', 'android:release:report', '--', '--strict']);
 
 if (!skipDevice) {
-  run('npm', ['run', 'android:device:doctor']);
-  run('npm', ['run', 'android:device:smoke']);
-  run('npm', ['run', 'android:device:security', '--', '--launch']);
+  const deviceModeArgs = signed ? ['--release'] : [];
+  run('npm', ['run', 'android:device:doctor', '--', ...deviceModeArgs]);
+  run('npm', ['run', 'android:device:smoke', '--', ...deviceModeArgs]);
+  run('npm', ['run', 'android:device:security', '--', '--launch', ...deviceModeArgs]);
   if (enableAutofill) {
-    run('npm', ['run', 'android:device:doctor', '--', '--enable-autofill']);
+    run('npm', ['run', 'android:device:doctor', '--', '--enable-autofill', ...deviceModeArgs]);
   }
 }
 
@@ -131,6 +132,7 @@ if (evidence) {
     ...(allowDirty ? ['--allow-dirty'] : []),
     ...(!skipDevice ? ['--device'] : []),
     ...(enableAutofill ? ['--enable-autofill'] : []),
+    ...(signed ? ['--signed'] : []),
   ]);
 }
 

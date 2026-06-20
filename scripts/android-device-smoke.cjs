@@ -3,6 +3,10 @@ const fs = require('fs');
 const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..');
+const rawArgs = process.argv.slice(2);
+const releaseMode = rawArgs.includes('--release');
+const command = rawArgs.find((arg) => !arg.startsWith('--')) || 'smoke';
+const buildType = releaseMode ? 'release' : 'debug';
 const sdkRoot = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT;
 const adb = sdkRoot ? path.join(sdkRoot, 'platform-tools', process.platform === 'win32' ? 'adb.exe' : 'adb') : 'adb';
 const apk = path.join(
@@ -15,10 +19,10 @@ const apk = path.join(
   'outputs',
   'apk',
   'universal',
-  'debug',
-  'app-universal-debug.apk',
+  buildType,
+  `app-universal-${buildType}.apk`,
 );
-const packageName = 'com.hafgit99.aegisvault7.debug';
+const packageName = releaseMode ? 'com.hafgit99.aegisvault7' : 'com.hafgit99.aegisvault7.debug';
 const processWaitTimeoutMs = 15000;
 const processPollIntervalMs = 500;
 
@@ -42,6 +46,10 @@ function tryRun(args) {
   } catch {
     return '';
   }
+}
+
+function hasExactPackage(packageList, name) {
+  return packageList.split(/\\r?\\n/).some((line) => line.trim() === 'package:' + name);
 }
 
 function listReadyDevices() {
@@ -78,7 +86,7 @@ function launch() {
 
 function status() {
   const packages = run(['shell', 'pm', 'list', 'packages', '--user', '0', packageName]);
-  if (!packages.includes(packageName)) {
+  if (!hasExactPackage(packages, packageName)) {
     throw new Error(`${packageName} is not installed.`);
   }
 
@@ -149,9 +157,8 @@ function printRecentCrashLog() {
   }
 }
 
-const command = process.argv[2] || 'smoke';
-
 ensureReadyDevice();
+console.log(`Android device smoke mode: ${buildType} (${packageName})`);
 
 if (command === 'install') {
   install();

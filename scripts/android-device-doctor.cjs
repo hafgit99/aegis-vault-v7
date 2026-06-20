@@ -6,6 +6,8 @@ const path = require('path');
 const repoRoot = path.resolve(__dirname, '..');
 const args = new Set(process.argv.slice(2));
 const enableAutofill = args.has('--enable-autofill');
+const releaseMode = args.has('--release');
+const buildType = releaseMode ? 'release' : 'debug';
 const sdkRoot = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || '';
 const adb = sdkRoot ? path.join(sdkRoot, 'platform-tools', process.platform === 'win32' ? 'adb.exe' : 'adb') : 'adb';
 const apk = path.join(
@@ -18,10 +20,10 @@ const apk = path.join(
   'outputs',
   'apk',
   'universal',
-  'debug',
-  'app-universal-debug.apk',
+  buildType,
+  'app-universal-' + buildType + '.apk',
 );
-const packageName = 'com.hafgit99.aegisvault7.debug';
+const packageName = releaseMode ? 'com.hafgit99.aegisvault7' : 'com.hafgit99.aegisvault7.debug';
 const debugAutofillServiceName = `${packageName}/com.hafgit99.aegisvault7.AegisAutofillService`;
 const autofillServiceNames = [
   'com.hafgit99.aegisvault7/.AegisAutofillService',
@@ -64,6 +66,10 @@ function sha256(file) {
   return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 }
 
+function hasExactPackage(packageList, name) {
+  return packageList.split(/\\r?\\n/).some((line) => line.trim() === 'package:' + name);
+}
+
 function parseDevices(output) {
   return output
     .split(/\r?\n/)
@@ -76,7 +82,7 @@ function parseDevices(output) {
     });
 }
 
-console.log('Android device doctor');
+console.log('Android device doctor (' + buildType + ', ' + packageName + ')');
 
 if (sdkRoot) {
   pass(`Android SDK configured: ${sdkRoot}`);
@@ -92,11 +98,11 @@ if (fs.existsSync(adb) || adb === 'adb') {
 
 if (fs.existsSync(apk)) {
   const stats = fs.statSync(apk);
-  pass(`debug APK exists: ${path.relative(repoRoot, apk)}`);
+  pass(buildType + ' APK exists: ' + path.relative(repoRoot, apk));
   console.log(`INFO apk-size ${(stats.size / 1024 / 1024).toFixed(2)} MiB`);
   console.log(`INFO apk-sha256 ${sha256(apk)}`);
 } else {
-  fail(`debug APK not found: ${path.relative(repoRoot, apk)}`);
+  fail(buildType + ' APK not found: ' + path.relative(repoRoot, apk));
 }
 
 const devicesOutput = tryRun(['devices', '-l']);
@@ -127,7 +133,7 @@ if (readyDevices.length > 0) {
   console.log(`INFO device-abi ${abi || 'unknown'}`);
 
   const installedPackages = tryRun(['shell', 'pm', 'list', 'packages', packageName]);
-  if (installedPackages.includes(packageName)) {
+  if (hasExactPackage(installedPackages, packageName)) {
     pass(`${packageName} is installed`);
 
     const packageDump = tryRun(['shell', 'dumpsys', 'package', packageName]);

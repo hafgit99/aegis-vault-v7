@@ -74,6 +74,16 @@ $env:AEGIS_ANDROID_KEY_PASSWORD='<secret>'
 
 The keystore file should live outside the repository. The repository ignores common Android signing files such as `.jks`, `.keystore`, `.p12`, `.pfx`, `keystore.properties`, and `key.properties`.
 
+Create a local release keystore outside the repository with Android Studio JBR `keytool`:
+
+```powershell
+$secureDir = "$env:USERPROFILE\AegisVaultKeys"
+New-Item -ItemType Directory -Force -Path $secureDir | Out-Null
+& "$env:JAVA_HOME\bin\keytool.exe" -genkeypair -v -storetype PKCS12 -keystore "$secureDir\aegis-vault-release.p12" -alias aegis-vault -keyalg RSA -keysize 4096 -validity 10000
+```
+
+Use unique, saved passwords for the keystore and key. Losing this keystore means future Android updates cannot be signed with the same identity.
+
 For a signed APK candidate, set the signing environment and run:
 
 ```bash
@@ -141,7 +151,7 @@ Run this checklist before every APK/AAB candidate that may be shared outside loc
 - For shareable candidates, run `npm run android:release:gate -- --evidence` and archive the generated `release-local/android/<timestamp>/` folder.
 - Confirm `metadata.json` reports `"dirty": false` before sharing any APK/AAB outside local development.
 - Run `npm run android:release:signing:check` before building a signed release candidate.
-- Build release APK/AAB with signing configuration when release keys are ready.
+- Build release APK/AAB with signing configuration when release keys are ready. Use `npm run android:release:gate -- --signed --evidence` for artifact evidence, and add `--device` only when a physical device should install/test the signed release package `com.hafgit99.aegisvault7`.
 - Run `npm run android:release:report -- --strict` and store the output with the release candidate notes.
 - Confirm the release artifact does not contain stale multi-ABI debug libraries; `android:release:report -- --strict` now reports and gates native ABI count.
 - Record artifact sizes:
