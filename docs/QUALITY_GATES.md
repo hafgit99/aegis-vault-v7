@@ -17,7 +17,7 @@ Current measured baseline:
 | Lines | 95.34% |
 | Statements | 95.34% |
 | Functions | 92.39% |
-| Branches | 87.98% |
+| Branches | 88.02% |
 
 Coverage thresholds now act as a release-quality regression gate while staying slightly below the current baseline:
 
@@ -33,6 +33,44 @@ These thresholds prevent meaningful regressions while leaving room to add tests 
 ## Priority Coverage Targets
 
 1. `src/components/SettingsPanel.tsx`: reduce remaining fallback-message and desktop-runtime branch gaps.
+
+## Current Mutation Gate
+
+The first practical mutation gate runs against critical library helpers with:
+
+```bash
+npm run test:mutation:core:dry
+npm run test:mutation:core
+```
+
+Current mutation scope:
+
+- `src/lib/diceware.ts`
+- `src/lib/emergencyKit.ts`
+- `src/lib/random.ts`
+- `src/lib/secretKey.ts`
+
+Current measured mutation baseline:
+
+| Metric | Baseline |
+| --- | ---: |
+| Mutants | 292 |
+| Mutation score | 74.66% |
+| Covered mutation score | 75.69% |
+| Killed | 213 |
+| Timed out | 5 |
+| Survived | 70 |
+| No coverage | 4 |
+
+Mutation thresholds:
+
+| Threshold | Current value |
+| --- | ---: |
+| High | 80% |
+| Low | 70% |
+| Break | 65% |
+
+The Diceware word lists live in `src/lib/dicewareWords.ts` so mutation testing focuses on passphrase behavior instead of static vocabulary data.
 
 ## Current E2E Smoke Gate
 
@@ -72,7 +110,7 @@ Recently improved:
 - `src/lib/sqlite_opfs.ts`: covered master setup/verification, encrypted row persistence, desktop payload hydration, OPFS file hydration, missing OPFS file initialization, OPFS write failures, desktop read fallback, legacy localStorage migration, read-only SQL console behavior, row update/defaults, reseed/delete/reset flows, query log subscriptions, localStorage fallback hydration, and missing-key decryption guards.
 - `src/lib/storage.ts`: covered setup detection, no-session guards, save/delete/reseed wrappers, trash move/restore, expired trash cleanup, and full trash emptying.
 - `src/components/PasswordGenerator.tsx`: covered character option changes, all character toggles, strength bar tone branches, diceware mode settings, word-count descriptions, diceware toggles, copy feedback, unmount cleanup, and safe clipboard clearing behavior.
-- `src/lib/diceware.ts`: covered Turkish/English word selection, EFF-sized word-pool expansion, separator formats, capitalization, number and symbol placement, camel/none separator handling, and optional entropy calculations.
+- `src/lib/diceware.ts`: covered Turkish/English word selection, EFF-sized word-pool expansion, separator formats, capitalization, number and symbol placement, camel/none separator handling, optional entropy calculations, and static word-list separation for practical mutation testing.
 - `src/components/VaultFormModal.tsx`: covered card, passkey, identity, secure note, attachment upload, oversized-file rejection, existing attachment download/removal, and non-login username normalization.
 - `src/components/ProfileModal.tsx`: covered gradient detection, profile name validation, preset selection, image file validation, local image loading, save, and cancel flows.
 - `src/components/ConfirmModal.tsx`: covered closed state, confirm/cancel behavior, header close, and alert-only mode.
@@ -160,5 +198,5 @@ Recently improved:
   - `npm run android:device:smoke`
   - Manual Android release candidate checklist from `docs/ANDROID_READINESS.md`.
 - Expand smoke E2E coverage for detail actions, broader translated screens, desktop persistence, and mobile smoke viewports.
-- Add mutation tests only for critical `src/lib` modules first.
+- Expand mutation testing from the current core library gate into OTP, security taxonomy, import/export, and storage migration modules.
 - Keep global coverage thresholds at or above 90% lines/statements, 85% functions, and 80% branches; raise them again after the current priority targets improve.

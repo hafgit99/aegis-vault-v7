@@ -127,6 +127,12 @@ Run production web build:
 npm run build
 ```
 
+Run the critical library mutation gate:
+
+```bash
+npm run test:mutation:core
+```
+
 Run Playwright smoke tests when the browser test environment is prepared:
 
 ```bash
@@ -136,14 +142,15 @@ npm run test:e2e
 Latest local verification before this README update:
 
 - `npm run lint` passed.
-- `npm run test:unit` passed: 88 test files, 553 tests.
-- `npm run test:coverage` passed: 88 test files, 553 tests.
+- `npm run test:unit` passed: 89 test files, 558 tests.
+- `npm run test:coverage` passed: 89 test files, 558 tests.
 - `npm run build` passed.
+- `npm run test:mutation:core` passed: 292 mutants, 74.66% mutation score.
 
 ## Coverage
 
 ![Statements](https://img.shields.io/badge/statements-95.34%25-brightgreen)
-![Branches](https://img.shields.io/badge/branches-87.98%25-green)
+![Branches](https://img.shields.io/badge/branches-88.02%25-green)
 ![Functions](https://img.shields.io/badge/functions-92.39%25-brightgreen)
 ![Lines](https://img.shields.io/badge/lines-95.34%25-brightgreen)
 
@@ -152,14 +159,15 @@ Coverage was generated locally with `npm run test:coverage`.
 | Metric | Coverage |
 | --- | ---: |
 | Statements | 95.34% |
-| Branches | 87.98% |
+| Branches | 88.02% |
 | Functions | 92.39% |
 | Lines | 95.34% |
 
 | Suite | Result |
 | --- | ---: |
-| Test files | 88 passed |
-| Tests | 553 passed |
+| Test files | 89 passed |
+| Tests | 558 passed |
+| Core mutation score | 74.66% passed |
 
 ## Desktop Builds
 
