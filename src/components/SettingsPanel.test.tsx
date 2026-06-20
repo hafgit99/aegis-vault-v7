@@ -9,11 +9,12 @@ import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from '..
 import { isNativeFileDialogSupported, openDesktopImportFile, saveDesktopExportFile } from '../lib/desktopFiles';
 import { isAndroidAutofillSupported, openAndroidAutofillSettings } from '../lib/androidAutofill';
 import { disableBiometric, isBiometricEnabled, isBiometricSupported, registerBiometric } from '../lib/biometric';
-import { changeMasterPassword, getVaultItems, resetSystem, reseedDemoData, saveVaultItem, saveVaultItems, verifyMasterPassword } from '../lib/storage';
+import { changeMasterPassword, getRememberedAccountSecretKey, getVaultItems, isAccountSecretKeyRequired, resetSystem, reseedDemoData, saveVaultItem, saveVaultItems, verifyMasterPassword } from '../lib/storage';
 import { closeVaultSession, openVaultSession } from '../lib/vaultSession';
 import { VaultItem } from '../types';
 import { LanguageProvider } from '../i18n/LanguageContext';
 import { languageStorageKey } from '../i18n/translations';
+import { saveEmergencyKit } from '../lib/emergencyKit';
 import SettingsPanel from './SettingsPanel';
 
 const vaultItems: VaultItem[] = [
@@ -33,7 +34,9 @@ const vaultItems: VaultItem[] = [
 
 vi.mock('../lib/storage', () => ({
   changeMasterPassword: vi.fn(),
+  getRememberedAccountSecretKey: vi.fn(() => null),
   getVaultItems: vi.fn(async () => vaultItems),
+  isAccountSecretKeyRequired: vi.fn(() => true),
   resetSystem: vi.fn(),
   reseedDemoData: vi.fn(async () => vaultItems),
   saveVaultItem: vi.fn(async () => vaultItems),
@@ -72,6 +75,10 @@ vi.mock('../lib/biometric', () => ({
   isBiometricEnabled: vi.fn(() => false),
   isBiometricSupported: vi.fn(() => false),
   registerBiometric: vi.fn(),
+}));
+
+vi.mock('../lib/emergencyKit', () => ({
+  saveEmergencyKit: vi.fn(async () => true),
 }));
 
 function renderSettings() {
@@ -138,11 +145,14 @@ beforeEach(() => {
   vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
   vi.spyOn(window, 'confirm').mockReturnValue(false);
   delete window.__TAURI_INTERNALS__;
+  vi.mocked(getRememberedAccountSecretKey).mockReturnValue(null);
   vi.mocked(getVaultItems).mockResolvedValue(vaultItems);
+  vi.mocked(isAccountSecretKeyRequired).mockReturnValue(true);
   vi.mocked(isNativeFileDialogSupported).mockReturnValue(false);
   vi.mocked(openDesktopImportFile).mockResolvedValue(null);
   vi.mocked(reseedDemoData).mockResolvedValue(vaultItems);
   vi.mocked(saveDesktopExportFile).mockResolvedValue(false);
+  vi.mocked(saveEmergencyKit).mockResolvedValue(true);
   vi.mocked(verifyMasterPassword).mockResolvedValue(true);
 });
 
@@ -629,6 +639,60 @@ describe('SettingsPanel biometric controls', () => {
 
     await waitFor(() => {
       expect(container.textContent).toContain('An error occurred during the operation.');
+    });
+  });
+});
+
+describe('SettingsPanel Emergency Kit controls', () => {
+  it('shows an error when Secret Key protection is not enabled', async () => {
+    vi.mocked(isAccountSecretKeyRequired).mockReturnValueOnce(false);
+    const { container } = renderSettingsWithLanguage('en');
+
+    fireEvent.click(screen.getByText('Save Kit'));
+
+    await waitFor(() => {
+      expect(container.textContent).toContain('Secret Key protection is not enabled for this vault.');
+    });
+    expect(saveEmergencyKit).not.toHaveBeenCalled();
+  });
+
+  it('requires a valid Secret Key before saving an emergency kit', async () => {
+    const { container } = renderSettingsWithLanguage('en');
+
+    fireEvent.click(screen.getByText('Save Kit'));
+
+    await waitFor(() => {
+      expect(container.textContent).toContain('Enter a valid A3 Secret Key');
+    });
+    expect(saveEmergencyKit).not.toHaveBeenCalled();
+  });
+
+  it('saves the emergency kit with a remembered Secret Key', async () => {
+    const rememberedSecretKey = 'A3-ABCD-EFGH-JKLM-NPQR-STUV-WXYZ-2345-2673';
+    vi.mocked(getRememberedAccountSecretKey).mockReturnValueOnce(rememberedSecretKey);
+    const { container } = renderSettingsWithLanguage('en');
+
+    fireEvent.click(screen.getByText('Save Kit'));
+
+    await waitFor(() => {
+      expect(saveEmergencyKit).toHaveBeenCalledWith(rememberedSecretKey);
+      expect(container.textContent).toContain('Emergency kit was saved to the location you selected.');
+    });
+  });
+
+  it('shows the default save error when emergency kit saving fails without a message', async () => {
+    vi.mocked(saveEmergencyKit).mockRejectedValueOnce(new Error());
+    const { container } = renderSettingsWithLanguage('en');
+    const secretInput = screen.getByPlaceholderText('A3-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX');
+
+    fireEvent.change(secretInput, {
+      target: { value: 'A3-ABCD-EFGH-JKLM-NPQR-STUV-WXYZ-2345-2673' },
+    });
+    fireEvent.click(screen.getByText('Save Kit'));
+
+    await waitFor(() => {
+      expect(container.textContent).toContain('Emergency kit could not be saved');
+      expect(container.textContent).toContain('The file could not be saved.');
     });
   });
 });
