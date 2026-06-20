@@ -1,4 +1,4 @@
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -53,18 +53,15 @@ function latestBuildTool(toolName) {
 }
 
 function runTool(tool, args) {
-  const quote = (value) => `"${String(value).replaceAll('"', '\\"')}"`;
-  const command = [quote(tool), ...args.map(quote)].join(' ');
-
   try {
-    return execSync(command, {
+    return execFileSync(tool, args, {
       cwd: repoRoot,
       encoding: 'utf8',
-      shell: true,
+      stdio: ['ignore', 'pipe', 'pipe'],
       maxBuffer: 10 * 1024 * 1024,
     });
   } catch (error) {
-    return `${error.stdout || ''}${error.stderr || error.message || ''}`;
+    return String(error.stdout || '') + String(error.stderr || error.message || '');
   }
 }
 
@@ -124,6 +121,7 @@ function parseAaptBadging(output) {
   const versionCode = output.match(/^package: .*versionCode='([^']+)'/m)?.[1] || 'unknown';
   const sdkVersion = output.match(/^sdkVersion:'([^']+)'/m)?.[1] || 'unknown';
   const targetSdkVersion = output.match(/^targetSdkVersion:'([^']+)'/m)?.[1] || 'unknown';
+  const nativeAbis = output.match(/^native-code:(.*)$/m)?.[1]?.match(/'([^']+)'/g)?.map((value) => value.slice(1, -1)) || [];
 
   return {
     packageName,
@@ -131,6 +129,7 @@ function parseAaptBadging(output) {
     versionCode,
     sdkVersion,
     targetSdkVersion,
+    nativeAbis,
     permissions,
   };
 }
@@ -199,6 +198,7 @@ function reportArtifact(file) {
   console.log(`  version: ${manifest.versionName} (${manifest.versionCode})`);
   console.log(`  sdk: min ${manifest.sdkVersion}, target ${manifest.targetSdkVersion}`);
   console.log(`  permissions: ${manifest.permissions.length ? manifest.permissions.join(', ') : 'none detected'}`);
+  console.log(`  native ABIs: ${manifest.nativeAbis?.length ? manifest.nativeAbis.join(', ') : 'none detected'}`);
   console.log(`  inspection: ${manifest.source}`);
 
   if (!isApk) {
@@ -224,6 +224,11 @@ function reportArtifact(file) {
     info('cleartext-debug-allowed');
   } else {
     check('cleartext-disabled', manifest.cleartextDisabled);
+  }
+  const nativeAbiCount = manifest.nativeAbis?.length || 0;
+  check('native-abi-single-target', nativeAbiCount <= 1);
+  if (nativeAbiCount === 1) {
+    check('native-abi-arm64-v8a', manifest.nativeAbis[0] === 'arm64-v8a');
   }
   check('autofill-service-protected', manifest.autofillServiceProtected);
   check('fileprovider-private', manifest.fileProviderPrivate);
