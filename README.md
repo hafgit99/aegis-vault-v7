@@ -137,7 +137,29 @@ Latest local verification before this README update:
 
 - `npm run lint` passed.
 - `npm run test:unit` passed: 88 test files, 543 tests.
+- `npm run test:coverage` passed: 88 test files, 543 tests.
 - `npm run build` passed.
+
+## Coverage
+
+![Statements](https://img.shields.io/badge/statements-94.94%25-brightgreen)
+![Branches](https://img.shields.io/badge/branches-87.43%25-green)
+![Functions](https://img.shields.io/badge/functions-91.89%25-brightgreen)
+![Lines](https://img.shields.io/badge/lines-94.94%25-brightgreen)
+
+Coverage was generated locally with `npm run test:coverage`.
+
+| Metric | Coverage |
+| --- | ---: |
+| Statements | 94.94% |
+| Branches | 87.43% |
+| Functions | 91.89% |
+| Lines | 94.94% |
+
+| Suite | Result |
+| --- | ---: |
+| Test files | 88 passed |
+| Tests | 543 passed |
 
 ## Desktop Builds
 
