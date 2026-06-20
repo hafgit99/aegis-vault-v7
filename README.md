@@ -1,158 +1,224 @@
-# 🛡️ Aegis Vault 7
+# Aegis Vault 7
 
-Aegis Vault 7 is a state-of-the-art, **local-first, privacy-respecting credentials manager and secure vault**. Designed with a security-first philosophy, it stores passwords, payment cards, passkeys, identities, and secure notes entirely on your local machine with zero external cloud dependencies.
+Aegis Vault 7 is a local-first password manager and secure vault built with React, TypeScript, WebCrypto, SQLite/OPFS, and Tauri. It is designed for desktop-first use today, with an Android release candidate path already in active validation.
 
-This repository serves as the shared core and web foundation, packaged for the desktop using **Tauri**, and architected to share its cryptographic core with a future Android application.
+The project focuses on keeping sensitive data under the user's control: vault data is encrypted locally, recovery material is saved through explicit file picker flows, and release candidates are gated by repeatable tests, artifact checks, and device smoke evidence.
 
----
+## Current Status
 
-## ✨ Key Features
+- Desktop application: active development and local release builds through Tauri.
+- Android application: signed APK workflow is active, with physical-device smoke testing, safe-area fixes, Autofill support, document picker backup/import, FLAG_SECURE screenshot protection, and Emergency Kit save flow validated.
+- Browser extension: Firefox XPI packaging/signing flow is available for the desktop companion experience.
+- Internationalization: Turkish, English, and Chinese UI strings are maintained in the app.
+- CI note: GitHub Actions can be disabled when quota is unavailable; local release scripts and the private build repository path are documented for Windows, Linux, macOS, and Android candidates.
 
-*   **🔒 Local-First Storage:** Powered by SQLite inside the **Origin Private File System (OPFS)**. Your data stays entirely sandboxed in your browser or local desktop container.
-*   **🛡️ Hardened Cryptography:** Dual-layer **AES-GCM 256-bit encryption** using the native WebCrypto API.
-*   **⚙️ Advanced Key Derivation:** Custom **Argon2id KDF** module configured with premium parameters: `128 MiB memory` and `4 iterations (passes)` for maximum resistance against brute-force and side-channel attacks.
-*   **🔄 Seamless Auto-Migration:** Automated key derivation upgrade mechanism that transparently re-encrypts legacy databases to the latest cryptographic standard upon successful master password entry.
-*   **🏷️ Categorized Organization:** Real-time filtered dashboard offering custom categorization for:
-    *   **Giriş Bilgileri (Logins)**
-    *   **Ödeme Kartları (Cards)**
-    *   **Passkey / API Anahtarları**
-    *   **Kimlik Belgeleri (Identities)**
-    *   **Güvenli Notlar (Secure Notes)**
-*   **⏱️ Integrated Authenticator (TOTP):** Stable 2FA code generation aligned with RFC 6238 time steps.
-*   **📊 Security Auditing:** Built-in Aegis Guard engine that evaluates password strength, detects reused credentials, and generates a visual Virtual Protection Score.
-*   **🗑️ Retention-Based Trash:** Recover deleted items safely before they are permanently purged.
+## Core Features
 
----
+- Local-first encrypted vault for logins, payment cards, passkeys/API keys, identities, and secure notes.
+- Master password plus Account Secret Key setup flow.
+- Emergency Kit generation during setup and from Settings after unlock.
+- Android document picker integration for Emergency Kit, encrypted backup export, plain JSON export, encrypted import, and attachment download.
+- Android Autofill provider with explicit vault unlock, target matching, user approval, and stale-request handling.
+- Password generator with character and Diceware modes.
+- RFC 6238-compatible TOTP generation.
+- Security audit for weak, reused, and breached-password risk signals.
+- Attachment encryption and legacy attachment migration.
+- Retention-based trash and restore flow.
+- Donation page with crypto address display and QR support.
 
-## 🏗️ Architecture & Cryptography Flow
+## Security Model
 
-The diagram below outlines the secure data flow inside Aegis Vault 7, from master key derivation to encrypted SQLite disk storage.
+Aegis Vault 7 is designed as a local-first vault. The main security assumptions are:
 
-```mermaid
-flowchart TD
-    Master[Master Password] --> |Argon2id: 128MB / 4 passes| KEK[Key Encryption Key - KEK]
-    KEK --> |AES-GCM-256 Wrap| DEK[Database Encryption Key - DEK]
-    DEK --> |WebCrypto AES-256| DB[SQLite DB File]
-    DB --> |Persisted via OPFS| Storage[(Origin Private File System)]
-    
-    UI[React Web App] --> |Input/Actions| Core[Aegis Shared Core / Hooks]
-    Core --> |SQL Queries| DB
-```
+- The vault is protected by a master password and Account Secret Key.
+- Key derivation uses Argon2id for modern vault data.
+- Record and backup encryption use authenticated encryption through WebCrypto-backed primitives.
+- Cryptographic randomness requires WebCrypto CSPRNG; insecure random fallbacks are not used.
+- TOTP follows RFC 6238 with Base32 secret decoding and HMAC-based generation.
+- Android remembered Secret Key and biometric metadata prefer the Android Keystore-backed secure storage bridge.
+- Android sensitive screens use FLAG_SECURE to block screenshots and task-switcher previews on supported devices.
+- Network access is intentionally narrow; HIBP checks use the k-anonymity range API path where enabled.
 
----
+Security claims are intentionally conservative. See `docs/SECURITY_NOTES.md` and `docs/THREAT_MODEL.md` before positioning the app for public release.
 
-## 📂 Project Directory Structure
+## Android Release Readiness
 
-Aegis Vault 7 maintains a modular and strict structure separating frontend components, business hooks, database abstraction, and cryptographic services:
+Android is no longer just a future target; it is in internal release candidate validation.
+
+Important Android work already in place:
+
+- Real app icon applied to Android builds.
+- Safe-area layout fixes for lock screen, dashboard, menu, Settings, item detail, and modal screens.
+- Signed APK build path verified locally.
+- APK artifact reporting, SHA-256 evidence, ABI checks, and signing checks.
+- Physical-device smoke scripts for install, launch, package status, private data directory, and runtime security checks.
+- Android Autofill diagnostics and browser-specific validation notes.
+- Document picker save/open bridge with timeout, cancellation, and native-error handling.
+- Emergency Kit save path validated on device.
+
+Primary docs:
+
+- `docs/ANDROID_READINESS.md`
+- `docs/ANDROID_MANUAL_SMOKE_CHECKLIST.md`
+- `docs/QUALITY_GATES.md`
+
+## Project Structure
 
 ```text
-├── .github/workflows/      # CI/CD pipelines (Windows Desktop builds)
-├── src/
-│   ├── components/         # Reusable UI components (React + TSX)
-│   │   ├── VaultWorkspace  # Main password list panel & category chips
-│   │   ├── MainContent     # Central workspace router
-│   │   ├── SettingsPanel   # Lock settings, DB management & KDF specs
-│   │   └── ...
-│   ├── hooks/              # Custom React state hooks (Business logic)
-│   │   ├── useVaultQueries # Handles searching, sorting, and auditing
-│   │   ├── useVaultFilters # Manages query filters & category selection
-│   │   └── ...
-│   ├── i18n/               # Internationalization engine
-│   │   └── translations.ts # English, Turkish, and Chinese translations
-│   ├── lib/                # Core libraries & logic
-│   │   ├── sqlite_opfs.ts  # SQLite integration with OPFS & Migration rules
-│   │   ├── encryption.ts   # Core encryption & file import/export envelope
-│   │   ├── argon2id.ts     # Argon2id wrapper & default params
-│   │   ├── webcrypto.ts    # WebCrypto AES-GCM abstraction
-│   │   └── security.ts     # Password audit algorithm (Aegis Guard)
-│   ├── types.ts            # Shared TypeScript definitions
-│   ├── App.tsx             # Application shell & orchestration layer
-│   └── main.tsx            # Application entry point
-├── src-tauri/              # Tauri configuration & Rust bindings for desktop
-├── vite.config.ts          # Vite configuration
-└── package.json            # NPM dependencies and script commands
+.github/                  GitHub workflow definitions when enabled
+assets/                   App icons and visual assets
+docs/                     Security, release, Android readiness, and quality docs
+scripts/                  Release, Android, extension, and evidence scripts
+src/                      React/TypeScript application
+  components/             UI components and feature panels
+  hooks/                  App state, vault, lock, and UI hooks
+  i18n/                   Turkish, English, and Chinese translations
+  lib/                    Crypto, storage, import/export, Android bridges, audit logic
+  types.ts                Shared TypeScript model types
+src-tauri/                Tauri desktop and Android configuration/native code
+tests/e2e/                Playwright smoke tests
 ```
 
----
+## Requirements
 
-## 🚀 Getting Started
+- Node.js 22 or newer
+- npm
+- Rust stable toolchain for Tauri desktop builds
+- Android Studio / Android SDK / NDK for Android builds
+- Java runtime from Android Studio for Android build commands
 
-### Prerequisites
-*   **Node.js:** v22 or newer
-*   **Rust (optional for Desktop development):** Stable toolchain
+## Development
 
-### Installation & Run
+Install dependencies:
 
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/hafgit99/aegis-vault-v7.git
-    cd aegis-vault-v7
-    ```
+```bash
+npm install
+```
 
-2.  **Install dependencies:**
-    ```bash
-    npm install
-    ```
+Run the web development server:
 
-3.  **Run the local development server:**
-    ```bash
-    npm run dev
-    ```
-    The server will start on `http://localhost:3000`.
+```bash
+npm run dev
+```
 
----
+Run the desktop development app:
 
-## 📊 Security Comparison & Standards
+```bash
+npm run desktop:dev
+```
 
-To objectively evaluate the security profile of Aegis Vault 7, the table below compares its core architectural choices against industry-standard password manager profiles:
+## Verification
 
-| Security Feature | Aegis Vault 7 | Typical Cloud-Based Manager | Traditional Offline Manager |
-|:---|:---:|:---:|:---:|
-| **Storage Architecture** | **Local-First (OPFS & Sandboxed DB)** | Centralized Cloud Database | Local Filesystem Binary |
-| **Key Derivation Function (KDF)** | **Argon2id (Hardened: 128MB / 4 passes)** | PBKDF2 / Light Argon2id | AES-KDF / Argon2d |
-| **Symmetric Encryption** | **AES-256-GCM (Authenticated AEAD)** | AES-CBC (Lack of Integrity Check) | AES-256 / ChaCha20 |
-| **Plaintext Password in RAM** | **Zeroized** (`Uint8Array.fill(0)` on Lock) | Variable (GC/Immutable Strings) | Variable |
-| **Symmetric Key Cache Protection** | **SHA-256 Hashed Cache Keys** | Raw Key Hex String Caching | Raw Key Caching |
-| **IV / Nonce Generation** | **NIST SP 800-38D Counter-Based** | Random (Birthday Collision Risks) | Random or Static |
-| **Network Attack Surface** | **Application-Level Air-Gap Policy** | Permanent Remote Sync Syncing | Native File (System Dependent) |
-| **Biometric Metadata Isolation** | **Sandboxed IndexedDB Storage** | Plain LocalStorage / Browser Cache | Plugin / System Dependent |
-| **Downgrade Attack Prevention** | **Enforced Minimum KDF Thresholds** | Client-Dependent | Client-Dependent |
+Run TypeScript validation:
 
----
+```bash
+npm run lint
+```
 
-## 🧪 Quality and Testing
+Run the full unit suite:
 
-Aegis Vault 7 enforces clean code and verification through automated unit testing (Vitest) and typechecking.
+```bash
+npm run test:unit
+```
 
-### Code Coverage
+Run production web build:
 
-![Statement Coverage](https://img.shields.io/badge/Statements-95.73%25-brightgreen)
-![Branch Coverage](https://img.shields.io/badge/Branches-88.73%25-brightgreen)
-![Function Coverage](https://img.shields.io/badge/Functions-92.06%25-brightgreen)
-![Line Coverage](https://img.shields.io/badge/Lines-95.73%25-brightgreen)
+```bash
+npm run build
+```
 
-| Metric | Coverage |
-| :--- | :---: |
-| **Statements** | `95.73%` |
-| **Branches** | `88.73%` |
-| **Functions** | `92.06%` |
-| **Lines** | `95.73%` |
+Run Playwright smoke tests when the browser test environment is prepared:
 
-*   **Run all unit tests:**
-    ```bash
-    npm run test:unit
-    ```
-*   **Run TypeScript compiler validation:**
-    ```bash
-    npm run typecheck
-    ```
-*   **Compile production build bundle:**
-    ```bash
-    npm run build
-    ```
+```bash
+npm run test:e2e
+```
 
----
+Latest local verification before this README update:
 
-## 🛡️ Security & Disclosure
+- `npm run lint` passed.
+- `npm run test:unit` passed: 88 test files, 543 tests.
+- `npm run build` passed.
 
-This application stores sensitive credentials locally. For production deployment, ensure the environment runs over **HTTPS** (or inside local Tauri sandboxing) to satisfy the WebCrypto API requirements.
+## Desktop Builds
+
+Build the Tauri desktop app:
+
+```bash
+npm run desktop:build
+```
+
+Local release helper commands are available:
+
+```bash
+npm run release:local
+npm run release:windows
+npm run release:linux
+npm run release:macos
+```
+
+Linux and macOS artifacts can also be produced from the private build repository workflow when available.
+
+## Android Builds
+
+Debug APK for device smoke testing:
+
+```bash
+npm run android:build:apk:debug:aarch64
+```
+
+Install/launch/smoke on a connected device:
+
+```bash
+npm run android:device:doctor
+npm run android:device:smoke
+npm run android:device:security -- --launch
+```
+
+Release gate and evidence collection:
+
+```bash
+npm run android:release:gate
+npm run android:release:gate -- --signed --evidence
+npm run android:release:report -- --strict
+```
+
+Signed release builds require local signing configuration. Keep keystore material outside git; this repo ignores `.secrets/` for that purpose.
+
+## Browser Extension
+
+Firefox extension package/sign flow:
+
+```bash
+npm run build:extension
+npm run package:firefox:xpi
+npm run sign:firefox:xpi
+```
+
+See `FIREFOX_XPI.md` for AMO signing notes.
+
+## Release Evidence
+
+Release candidate evidence is written under `release-local/` and normally includes:
+
+- Android release report
+- metadata and dirty-tree status
+- SHA-256 checksums
+- copied APK/AAB artifacts
+- optional device doctor/security output
+- manual Android smoke checklist copy
+
+Do not publish a release candidate if the evidence metadata reports a dirty working tree unless it is an intentional internal-only diagnostic build.
+
+## Documentation Index
+
+- `docs/ROADMAP.md` - current roadmap and completed phases
+- `docs/SECURITY_NOTES.md` - security implementation notes and residual review items
+- `docs/THREAT_MODEL.md` - threat model and mitigations
+- `docs/QUALITY_GATES.md` - test, coverage, mutation, and release gates
+- `docs/ANDROID_READINESS.md` - Android release readiness plan
+- `docs/RELEASE_PLAN.md` - desktop and release packaging plan
+- `FIREFOX_XPI.md` - Firefox XPI packaging/signing notes
+
+## Responsible Use
+
+Aegis Vault stores highly sensitive credentials. Use only trusted builds, keep your master password and Emergency Kit offline, and verify release artifacts before sharing them outside your own devices.
