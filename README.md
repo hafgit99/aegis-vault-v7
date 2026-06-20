@@ -142,32 +142,32 @@ npm run test:e2e
 Latest local verification before this README update:
 
 - `npm run lint` passed.
-- `npm run test:unit` passed: 89 test files, 558 tests.
-- `npm run test:coverage` passed: 89 test files, 558 tests.
+- `npm run test:unit` passed: 89 test files, 564 tests.
+- `npm run test:coverage` passed: 89 test files, 564 tests.
 - `npm run build` passed.
-- `npm run test:mutation:core` passed: 292 mutants, 74.66% mutation score.
+- `npm run test:mutation:core` passed: 420 mutants, 80.00% mutation score.
 
 ## Coverage
 
-![Statements](https://img.shields.io/badge/statements-95.34%25-brightgreen)
-![Branches](https://img.shields.io/badge/branches-88.02%25-green)
+![Statements](https://img.shields.io/badge/statements-95.36%25-brightgreen)
+![Branches](https://img.shields.io/badge/branches-88.55%25-green)
 ![Functions](https://img.shields.io/badge/functions-92.39%25-brightgreen)
-![Lines](https://img.shields.io/badge/lines-95.34%25-brightgreen)
+![Lines](https://img.shields.io/badge/lines-95.36%25-brightgreen)
 
 Coverage was generated locally with `npm run test:coverage`.
 
 | Metric | Coverage |
 | --- | ---: |
-| Statements | 95.34% |
-| Branches | 88.02% |
+| Statements | 95.36% |
+| Branches | 88.55% |
 | Functions | 92.39% |
-| Lines | 95.34% |
+| Lines | 95.36% |
 
 | Suite | Result |
 | --- | ---: |
 | Test files | 89 passed |
-| Tests | 558 passed |
-| Core mutation score | 74.66% passed |
+| Tests | 564 passed |
+| Core mutation score | 80.00% passed |
 
 ## Desktop Builds
 
