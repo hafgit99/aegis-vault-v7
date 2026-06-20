@@ -217,4 +217,5 @@
   - [x] Install and launch the debug APK on a physical Android device.
 - [x] Define Android backup and recovery UX.
   - [x] Route export, import, and attachment download through Android document picker flows.
-  - [ ] Add automated or repeatable Android backup/import regression coverage.
+  - [x] Add automated or repeatable Android backup/import regression coverage.
+    - Covered Android document picker save/open/cancel/error behavior, backup export/import flows, attachment download, and Emergency Kit save helper with unit tests.

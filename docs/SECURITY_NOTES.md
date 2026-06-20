@@ -21,7 +21,7 @@ This project is a password vault, so security claims must stay conservative unti
 - TOTP generation now follows the RFC 6238 flow for Base32 secrets, HMAC-SHA1/SHA-256/SHA-512, 8-byte counters, dynamic truncation, and `otpauth://totp` URI parsing.
 - Desktop Windows builds enable native screen capture protection through `SetWindowDisplayAffinity`.
 - Android builds set `FLAG_SECURE` on the main activity to block screenshots and task-switcher previews for supported system surfaces.
-- Android import, export, backup, and attachment download flows now use the Android document picker bridge instead of invisible browser downloads.
+- Android Emergency Kit, import, export, backup, and attachment download flows now use the Android document picker bridge instead of invisible browser downloads.
 - Android document picker calls now include a safety timeout and regression coverage for native errors, user cancellation, and no-callback failures.
 - Android remembered Secret Key state and biometric metadata now prefer a JavaScript bridge backed by Android Keystore AES-GCM encrypted SharedPreferences, with browser storage retained only as a fallback or legacy migration source.
 - Android native biometric registration now requires the Android Keystore-backed secure storage bridge and refuses to store native wrapping metadata in IndexedDB fallback storage.

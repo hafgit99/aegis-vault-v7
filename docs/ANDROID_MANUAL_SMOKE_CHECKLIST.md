@@ -16,7 +16,7 @@ Candidate:
 
 - [ ] Fresh install opens the master password setup flow.
 - [ ] New vault setup creates a master password and Secret Key.
-- [ ] Emergency kit download/share path is available or shows clear Android guidance.
+- [ ] Emergency kit opens Android document picker and saves to the selected destination.
 - [ ] Unlock succeeds with the correct master password and Secret Key.
 - [ ] Wrong master password is rejected.
 - [ ] Wrong Secret Key is rejected.

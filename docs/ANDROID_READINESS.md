@@ -12,7 +12,7 @@ This document tracks the Android preparation path for Aegis Vault 7. Android is 
 - The universal debug APK build has been validated locally.
 - The `aarch64` debug APK has been installed and smoke-tested on a physical Android device.
 - The main Android activity sets `FLAG_SECURE` to block normal screenshots, screen recordings, and task-switcher previews on supported system surfaces.
-- Android backup export, plaintext export, encrypted import, and attachment download flows use the system document picker bridge so users choose the destination or source file explicitly.
+- Android Emergency Kit, backup export, plaintext export, encrypted import, and attachment download flows use the system document picker bridge so users choose the destination or source file explicitly.
 - Android document picker requests now fail closed with a safety timeout if the native bridge never calls back, surface native picker errors, and treat user cancellation as an explicit `false`/`null` result.
 - Android remembered Secret Key state and biometric metadata now prefer an Android Keystore AES-GCM secure storage bridge, with browser storage kept as fallback and migration source.
 - Android native biometric registration requires the Android Keystore-backed secure storage bridge and will not fall back to IndexedDB for native wrapping metadata.
@@ -125,7 +125,7 @@ The device smoke gate installs the current debug APK, launches `com.hafgit99.aeg
 Manual smoke checklist for the first debug APK:
 
 - First-run setup creates a vault with master password and Secret Key.
-- Emergency kit download path is either available or clearly unavailable with Android-specific guidance.
+- Emergency kit opens Android document picker and writes the kit to the user-selected destination.
 - Unlock works after app restart.
 - Wrong master password and wrong Secret Key are rejected.
 - Create, edit, favorite, search, and delete a login item.
@@ -178,6 +178,7 @@ Run this checklist before every APK/AAB candidate that may be shared outside loc
 
 ### Backup, Import, And Attachments
 
+- Emergency Kit download opens Android document picker and lets the user choose the destination.
 - Encrypted `.aegis` export opens Android document picker and lets the user choose the destination.
 - Plain `.json` export requires explicit confirmation and opens Android document picker.
 - Import opens Android document picker, handles cancellation cleanly, and imports a valid encrypted `.aegis` backup.
@@ -210,7 +211,7 @@ Run this checklist before every APK/AAB candidate that may be shared outside loc
 
 - Auto-lock selection persists after restart.
 - Android Autofill settings button opens the system provider screen or shows a localized unsupported message.
-- Chrome Autofill guidance is visible in Settings.
+- Emergency Kit is available from Settings after unlock and can be recreated without storing the master password in the kit.
 - Master password change warns before re-encryption and keeps existing records readable.
 - Destructive reset requires explicit confirmation.
 
@@ -222,7 +223,7 @@ Android needs explicit decisions before release:
 - Remembered Secret Key is routed through the Android Keystore-backed secure storage bridge when running inside the Android WebView.
 - Biometric metadata is routed through the Android Keystore-backed secure storage bridge when available, and native biometric registration is blocked if that bridge is unavailable. The biometric prompt/wrapping design still needs final release review on target devices.
 - Attachment storage should remain app-private and must survive app restart.
-- Backup export/import now uses Android document picker/storage access APIs and needs broader regression testing.
+- Emergency Kit, backup export/import, and attachment download now use Android document picker/storage access APIs and need release-candidate device regression testing.
 - Android document picker cancellation, native errors, and no-callback timeout behavior are covered by repeatable unit tests.
 - Android Autofill must not release credentials until package/domain matching, vault unlock state, and explicit user approval are implemented and tested.
 - Plain JSON export should be reviewed again for Android before public release.
