@@ -19,7 +19,6 @@ const apk = path.join(
   'app-universal-debug.apk',
 );
 const packageName = 'com.hafgit99.aegisvault7.debug';
-const activityName = 'com.hafgit99.aegisvault7.MainActivity';
 const processWaitTimeoutMs = 15000;
 const processPollIntervalMs = 500;
 
@@ -68,15 +67,17 @@ function install() {
   }
   console.log(`Installing ${path.relative(repoRoot, apk)}`);
   run(['install', '-r', apk], { stdio: 'inherit' });
+  tryRun(['shell', 'cmd', 'package', 'install-existing', '--user', '0', packageName]);
 }
 
 function launch() {
-  console.log(`Launching ${packageName}`);
-  run(['shell', 'am', 'start', '-n', `${packageName}/${activityName}`], { stdio: 'inherit' });
+  const component = resolveLaunchComponent();
+  console.log(`Launching ${component}`);
+  run(['shell', 'am', 'start', '-n', component], { stdio: 'inherit' });
 }
 
 function status() {
-  const packages = run(['shell', 'pm', 'list', 'packages', packageName]);
+  const packages = run(['shell', 'pm', 'list', 'packages', '--user', '0', packageName]);
   if (!packages.includes(packageName)) {
     throw new Error(`${packageName} is not installed.`);
   }
@@ -89,6 +90,20 @@ function status() {
 
   assertAppPrivateDataDir();
   console.log(`${packageName} is running with pid ${pid}.`);
+}
+
+function resolveLaunchComponent() {
+  const resolved = run(['shell', 'cmd', 'package', 'resolve-activity', '--brief', packageName])
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .find((line) => line.includes('/'));
+
+  if (!resolved) {
+    throw new Error(`No launchable activity found for ${packageName}.`);
+  }
+
+  return resolved;
 }
 
 function waitForPid() {

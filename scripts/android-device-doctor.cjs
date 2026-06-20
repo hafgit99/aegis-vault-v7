@@ -4,6 +4,8 @@ const fs = require('fs');
 const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..');
+const args = new Set(process.argv.slice(2));
+const enableAutofill = args.has('--enable-autofill');
 const sdkRoot = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || '';
 const adb = sdkRoot ? path.join(sdkRoot, 'platform-tools', process.platform === 'win32' ? 'adb.exe' : 'adb') : 'adb';
 const apk = path.join(
@@ -20,6 +22,7 @@ const apk = path.join(
   'app-universal-debug.apk',
 );
 const packageName = 'com.hafgit99.aegisvault7.debug';
+const debugAutofillServiceName = `${packageName}/com.hafgit99.aegisvault7.AegisAutofillService`;
 const autofillServiceNames = [
   'com.hafgit99.aegisvault7/.AegisAutofillService',
   'com.hafgit99.aegisvault7/com.hafgit99.aegisvault7.AegisAutofillService',
@@ -145,11 +148,21 @@ if (readyDevices.length > 0) {
     warn(`${packageName} is not installed yet; run npm run android:device:install or android:release:gate -- --device`);
   }
 
+  let autofillEnableOutput = '';
+  if (enableAutofill) {
+    const settingsOutput = tryRun(['shell', 'settings', 'put', 'secure', 'autofill_service', debugAutofillServiceName]);
+    const roleOutput = tryRun(['shell', 'cmd', 'role', 'add-role-holder', 'android.app.role.AUTOFILL', packageName]);
+    autofillEnableOutput = [settingsOutput, roleOutput].filter(Boolean).join(' | ');
+  }
+
   const autofillSetting = tryRun(['shell', 'settings', 'get', 'secure', 'autofill_service']);
   if (autofillServiceNames.some((serviceName) => autofillSetting.includes(serviceName))) {
     pass('Aegis is the active Android Autofill service');
   } else {
     warn(`Aegis is not the active Android Autofill service: ${autofillSetting || 'empty'}`);
+    if (enableAutofill && autofillEnableOutput) {
+      warn(`Android rejected automatic Autofill activation: ${autofillEnableOutput.replace(/\s+/g, ' ').slice(0, 600)}`);
+    }
   }
 }
 
