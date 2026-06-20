@@ -33,9 +33,9 @@ import { supportedLanguages, languageLabels, type LanguageCode } from '../i18n/t
 import {
   generateAccountSecretKey,
   isAccountSecretKeyFormatValid,
-  normalizeAccountSecretKey,
 } from '../lib/secretKey';
 import aegisLogo from '../../assets/aegis-app-icon.png';
+import { saveEmergencyKit } from '../lib/emergencyKit';
 
 const MIN_MASTER_PASSWORD_LENGTH = 12;
 const LOCKOUT_STORAGE_KEY = 'aegis_lockout_state';
@@ -234,23 +234,16 @@ export default function LockScreen({ onUnlock, isAutofillPending = false }: Lock
     }
   };
 
-  const handleDownloadEmergencyKit = () => {
-    const normalizedSecretKey = normalizeAccountSecretKey(secretKey);
-    const kit = [
-      `${APP_NAME} Emergency Kit`,
-      '',
-      `Account Secret Key: ${normalizedSecretKey}`,
-      '',
-      'Keep this file offline. You need this secret key together with your master password to unlock this vault on a new device.',
-      'Aegis Vault cannot recover the secret key or master password for you.',
-    ].join('\n');
-    const blob = new Blob([kit], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = 'aegis-vault-emergency-kit.txt';
-    anchor.click();
-    URL.revokeObjectURL(url);
+  const handleDownloadEmergencyKit = async () => {
+    try {
+      const saved = await saveEmergencyKit(secretKey);
+      if (!saved) {
+        setError(t('lock.error.emergencyKitCancelled'));
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(`${t('lock.error.emergencyKitSaveFailed')} (${message})`);
+    }
   };
 
   return (
