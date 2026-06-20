@@ -24,7 +24,7 @@ import {
   Fingerprint,
   Smartphone
 } from 'lucide-react';
-import { changeMasterPassword, getVaultItems, resetSystem, reseedDemoData, saveVaultItem, saveVaultItems, verifyMasterPassword } from '../lib/storage';
+import { changeMasterPassword, getRememberedAccountSecretKey, getVaultItems, isAccountSecretKeyRequired, resetSystem, reseedDemoData, saveVaultItem, saveVaultItems, verifyMasterPassword } from '../lib/storage';
 import { AppNotification, VaultItem } from '../types';
 import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from '../lib/encryption';
 import { parseUniversalImport, decodeFileBuffer } from '../lib/importer';
@@ -33,6 +33,8 @@ import { registerBiometric, isBiometricEnabled, disableBiometric, isBiometricSup
 import { getActiveBackupPassword, getActiveMasterPassword } from '../lib/vaultSession';
 import { isNativeFileDialogSupported, openDesktopImportFile, saveDesktopExportFile } from '../lib/desktopFiles';
 import { isAndroidAutofillEnabled, isAndroidAutofillSupported, openAndroidAutofillSettings } from '../lib/androidAutofill';
+import { saveEmergencyKit } from '../lib/emergencyKit';
+import { isAccountSecretKeyFormatValid } from '../lib/secretKey';
 import { useLanguage } from '../i18n/LanguageContext';
 import { languageLabels, supportedLanguages, type LanguageCode } from '../i18n/translations';
 
@@ -113,6 +115,9 @@ export default function SettingsPanel({
   const [autofillEnabled, setAutofillEnabled] = useState(isAndroidAutofillEnabled());
   const [autofillMessage, setAutofillMessage] = useState<string | null>(null);
   const [autofillError, setAutofillError] = useState<string | null>(null);
+  const [emergencySecretKey, setEmergencySecretKey] = useState('');
+  const [emergencyKitSuccess, setEmergencyKitSuccess] = useState<string | null>(null);
+  const [emergencyKitError, setEmergencyKitError] = useState<string | null>(null);
 
   // Auto-Lock Option Selectors
   const lockOptions = [
@@ -251,6 +256,32 @@ export default function SettingsPanel({
 
     setAutofillEnabled(isAndroidAutofillEnabled());
     setAutofillMessage(t('settings.autofill.opened'));
+  };
+
+  const handleDownloadEmergencyKitFromSettings = async () => {
+    setEmergencyKitSuccess(null);
+    setEmergencyKitError(null);
+
+    if (!isAccountSecretKeyRequired()) {
+      setEmergencyKitError(t('settings.emergencyKit.notEnabled'));
+      return;
+    }
+
+    const secretKey = getRememberedAccountSecretKey() ?? emergencySecretKey;
+    if (!isAccountSecretKeyFormatValid(secretKey)) {
+      setEmergencyKitError(t('settings.emergencyKit.invalidSecretKey'));
+      return;
+    }
+
+    try {
+      const saved = await saveEmergencyKit(secretKey);
+      if (!saved) return;
+      setEmergencySecretKey('');
+      setEmergencyKitSuccess(t('settings.emergencyKit.success'));
+      setTimeout(() => setEmergencyKitSuccess(null), 5000);
+    } catch (err: any) {
+      setEmergencyKitError(`${t('settings.emergencyKit.errorPrefix')}: ${err?.message || t('settings.export.defaultSaveError')}`);
+    }
   };
 
   // Handle Master Password updating
@@ -874,6 +905,63 @@ export default function SettingsPanel({
         </div>
       </div>
 
+      {/* Emergency Kit Card */}
+      <div className="glass-panel p-4 sm:p-6 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 items-center border border-outline-variant/10" id="emergency-kit-settings-card">
+        <div className="md:col-span-1 space-y-1.5">
+          <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2">
+            <Download className="w-4 h-4 text-brand-secondary" />
+            <span>{t('settings.emergencyKit.title')}</span>
+          </h3>
+          <p className="hidden sm:block text-xs text-on-surface-variant leading-relaxed">
+            {t('settings.emergencyKit.description')}
+          </p>
+        </div>
+
+        <div className="md:col-span-2 space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end bg-[#141614] p-3 sm:p-4 rounded-xl border border-outline-variant/10">
+            <div>
+              <label className="block text-[10px] font-bold text-on-surface-variant/85 uppercase mb-1.5">
+                {t('settings.emergencyKit.secretKeyLabel')}
+              </label>
+              <input
+                type="password"
+                value={emergencySecretKey}
+                onChange={(e) => setEmergencySecretKey(e.target.value)}
+                className="w-full bg-[#0f100f] border border-outline-variant/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 text-on-surface"
+                placeholder={t('settings.emergencyKit.secretKeyPlaceholder')}
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <p className="mt-1.5 text-[11px] text-on-surface-variant leading-relaxed">
+                {t('settings.emergencyKit.rememberedHint')}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleDownloadEmergencyKitFromSettings}
+              className="px-5 py-2.5 rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 shrink-0 bg-brand-secondary text-black hover:brightness-110 shadow-md shadow-brand-secondary/10"
+            >
+              <Download className="w-4 h-4" />
+              <span>{t('settings.emergencyKit.download')}</span>
+            </button>
+          </div>
+
+          {emergencyKitSuccess && (
+            <div className="p-3 bg-brand-tertiary/10 border border-brand-tertiary/20 rounded-lg text-brand-tertiary text-xs leading-relaxed animate-fade-in flex items-start gap-2">
+              <Check className="w-4 h-4 shrink-0 text-brand-tertiary mt-0.5" />
+              <span>{emergencyKitSuccess}</span>
+            </div>
+          )}
+
+          {emergencyKitError && (
+            <div className="p-3 bg-brand-error/10 border border-brand-error/20 rounded-lg text-brand-error text-xs leading-relaxed animate-fade-in flex items-start gap-2">
+              <ShieldAlert className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
+              <span>{emergencyKitError}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Dynamic Auto-Lock Interval Card */}
       <div className="glass-panel p-4 sm:p-6 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 items-center" id="auto-lock-settings-card">
         <div className="md:col-span-1 space-y-1.5">
@@ -988,10 +1076,6 @@ export default function SettingsPanel({
               </span>
               <p className="text-[11px] text-on-surface-variant mt-1 leading-relaxed">
                 {t('settings.autofill.safetyNote')}
-              </p>
-              <p className="mt-2 flex items-start gap-1.5 rounded-lg border border-[#2096f3]/20 bg-[#2096f3]/10 px-2.5 py-2 text-[11px] leading-relaxed text-on-surface-variant">
-                <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#2096f3]" />
-                <span>{t('settings.autofill.chromeNote')}</span>
               </p>
             </div>
             <button
