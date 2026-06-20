@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 94.94% |
-| Statements | 94.94% |
-| Functions | 91.89% |
-| Branches | 87.43% |
+| Lines | 95.07% |
+| Statements | 95.07% |
+| Functions | 92.06% |
+| Branches | 87.48% |
 
 Coverage thresholds now act as a release-quality regression gate while staying slightly below the current baseline:
 
@@ -33,8 +33,7 @@ These thresholds prevent meaningful regressions while leaving room to add tests 
 ## Priority Coverage Targets
 
 1. `src/components/SettingsPanel.tsx`: reduce remaining fallback-message and desktop-runtime branch gaps.
-2. `src/lib/emergencyKit.ts`: cover browser-download fallback and save-error branches.
-3. `src/lib/diceware.ts`: cover remaining locale word-list fallback and option-combination branches.
+2. `src/lib/diceware.ts`: cover remaining locale word-list fallback and option-combination branches.
 
 ## Current E2E Smoke Gate
 
@@ -81,7 +80,7 @@ Recently improved:
 - `src/components/SecurityAudit.tsx`: covered empty secure state, critical weak/reused groups, medium-score feedback, excellent-score feedback, metric rendering, and audit item selection.
 - `src/components/SettingsPanel.tsx`: covered master password validation/update, auto-lock selection, demo reseed notification, safe destructive confirmation, biometric enable/disable/error paths, plain export fallback/error paths, and import error feedback.
 - `src/components/LockScreen.tsx`: covered setup mismatch, password visibility toggles, manual unlock, biometric unsupported/success/integrity/permission-error paths, auto-triggered biometric unlock, and Emergency Kit save routing.
-- `src/lib/emergencyKit.ts`: covered Secret Key validation, kit contents, native save-dialog success, and native cancellation without hidden browser fallback.
+- `src/lib/emergencyKit.ts`: covered Secret Key validation, kit contents, native save-dialog success, native cancellation without hidden browser fallback, web browser-download fallback, and native save-error propagation.
 - `src/components/LockScreen.tsx` and `src/components/DashboardHeader.tsx`: covered selected-language rendering for the expanded Turkish, English, and Chinese i18n surface.
 - `src/components/VaultWorkspace.tsx` and `src/components/FloatingVaultAction.tsx`: covered selected-language rendering for vault list controls and new-item actions.
 - Dashboard summary components: covered selected-language rendering for quick actions, security score copy, and category summary labels.
