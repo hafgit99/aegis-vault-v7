@@ -87,6 +87,56 @@ describe('otp helpers', () => {
     expect(firstCode).not.toBe(secondCode);
   });
 
+  it('normalizes Base32 secrets with repeated whitespace and trailing padding', () => {
+    const clean = generateTOTP(rfcSha1Secret, {
+      digits: 8,
+      timestampMs: 59_000,
+      formatted: false,
+    });
+    const spaced = generateTOTP('GEZD  GNBV\nGY3TQOJQ  GEZDGNBVGY3TQOJQ====', {
+      digits: 8,
+      timestampMs: 59_000,
+      formatted: false,
+    });
+
+    expect(spaced).toBe(clean);
+  });
+
+  it('keeps eight-digit codes ungrouped when formatted output is requested', () => {
+    expect(generateTOTP(rfcSha1Secret, {
+      digits: 8,
+      timestampMs: 59_000,
+      formatted: true,
+    })).toBe('94287082');
+  });
+
+  it('uses URI period values when calculating the TOTP step', () => {
+    const uri = `otpauth://totp/Aegis:test@example.com?secret=${rfcSha1Secret}&issuer=Aegis&period=45`;
+
+    expect(generateTOTP(uri, { timestampMs: 44_000, formatted: false })).not.toBe(
+      generateTOTP(uri, { timestampMs: 45_000, formatted: false }),
+    );
+  });
+
+  it('rejects unsupported otpauth URI types and empty URI secrets safely', () => {
+    expect(generateTOTP(`otpauth://hotp/Aegis:test@example.com?secret=${rfcSha1Secret}`)).toBe('000 000');
+    expect(generateTOTP('otpauth://totp/Aegis:test@example.com')).toBe('000 000');
+  });
+
+  it('rejects unsupported digit and period options safely', () => {
+    expect(generateTOTP(rfcSha1Secret, { digits: 5 })).toBe('000 000');
+    expect(generateTOTP(rfcSha1Secret, { digits: 9 })).toBe('000 000');
+    expect(generateTOTP(rfcSha1Secret, { periodSeconds: 0 })).toBe('000 000');
+    expect(generateTOTP('====')).toBe('000 000');
+  });
+
+  it('serializes counters beyond the low 32-bit range in big-endian form', () => {
+    expect(generateTOTP(rfcSha1Secret, {
+      timestampMs: (0x100000000 + 1) * 30_000,
+      formatted: false,
+    })).toBe('108930');
+  });
+
   it('reports remaining seconds in the current 30-second cycle', () => {
     vi.useFakeTimers();
 

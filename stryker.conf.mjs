@@ -6,12 +6,14 @@ export default {
   mutate: [
     'src/lib/diceware.ts',
     'src/lib/emergencyKit.ts',
+    'src/lib/otp.ts',
     'src/lib/random.ts',
     'src/lib/secretKey.ts',
   ],
   testFiles: [
     'src/lib/diceware.test.ts',
     'src/lib/emergencyKit.test.ts',
+    'src/lib/otp.test.ts',
     'src/lib/random.test.ts',
     'src/lib/secretKey.test.ts',
   ],
