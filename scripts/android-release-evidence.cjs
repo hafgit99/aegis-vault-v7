@@ -7,6 +7,8 @@ const path = require('path');
 const repoRoot = path.resolve(__dirname, '..');
 const args = new Set(process.argv.slice(2));
 const allowDirty = args.has('--allow-dirty');
+const includeDeviceEvidence = args.has('--device');
+const enableAutofill = args.has('--enable-autofill');
 const androidOutputsRoot = path.join(repoRoot, 'src-tauri', 'gen', 'android', 'app', 'build', 'outputs');
 const manualSmokeChecklistPath = path.join(repoRoot, 'docs', 'ANDROID_MANUAL_SMOKE_CHECKLIST.md');
 const releaseRoot = path.join(repoRoot, 'release-local', 'android');
@@ -101,6 +103,9 @@ const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const report = run(npmCommand, ['run', 'android:release:report', '--', '--strict'], {
   shell: process.platform === 'win32',
 });
+const deviceDoctorReport = includeDeviceEvidence
+  ? run(npmCommand, ['run', 'android:device:doctor', '--', ...(enableAutofill ? ['--enable-autofill'] : [])], { shell: process.platform === 'win32' })
+  : '';
 const gitFallback = readGitHeadFallback();
 const rawDirtyStatus = run('git', ['status', '--short']);
 const dirtyStatus = isSpawnBlocked(rawDirtyStatus)
@@ -137,11 +142,16 @@ const metadata = {
   dirty,
   dirtyStatus,
   allowDirty,
+  deviceEvidence: includeDeviceEvidence,
+  enableAutofill,
   androidHome: process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || '',
   artifacts: copiedArtifacts,
 };
 
 fs.writeFileSync(path.join(outDir, 'android-release-report.txt'), `${report}\n`);
+if (includeDeviceEvidence) {
+  fs.writeFileSync(path.join(outDir, 'android-device-doctor.txt'), `${deviceDoctorReport}\n`);
+}
 fs.writeFileSync(path.join(outDir, 'metadata.json'), `${JSON.stringify(metadata, null, 2)}\n`);
 fs.writeFileSync(
   path.join(outDir, 'SHA256SUMS.txt'),
@@ -160,6 +170,7 @@ fs.writeFileSync(
     '## Files',
     '',
     '- `android-release-report.txt`: strict Android artifact/security report.',
+    ...(includeDeviceEvidence ? ['- `android-device-doctor.txt`: connected-device diagnostic report.'] : []),
     '- `metadata.json`: machine-readable build metadata.',
     '- `SHA256SUMS.txt`: checksums for copied artifacts.',
     '- `ANDROID_MANUAL_SMOKE_CHECKLIST.md`: manual QA checklist for this candidate.',

@@ -11,6 +11,7 @@ const skipBuild = args.has('--skip-build');
 const skipAndroidBuild = args.has('--skip-android-build');
 const skipDevice = args.has('--skip-device') || !device;
 const evidence = args.has('--evidence');
+const enableAutofill = args.has('--enable-autofill');
 const allowDirty = args.has('--allow-dirty');
 
 function printHelp() {
@@ -26,6 +27,7 @@ Options:
   --skip-android-build  Skip Android APK build.
   --skip-device         Skip device smoke even when --device is present.
   --evidence            Copy APK/AAB artifacts and release report under release-local/android.
+  --enable-autofill     Try to re-enable Aegis as Android Autofill provider after APK install.
   --allow-dirty         Allow evidence export from a dirty working tree.
   --help                Show this help.
 `);
@@ -112,13 +114,23 @@ if (!skipAndroidBuild) {
 
 run('npm', ['run', 'android:release:report', '--', '--strict']);
 
-if (evidence) {
-  run('npm', ['run', 'android:release:evidence', '--', ...(allowDirty ? ['--allow-dirty'] : [])]);
-}
-
 if (!skipDevice) {
   run('npm', ['run', 'android:device:doctor']);
   run('npm', ['run', 'android:device:smoke']);
+  if (enableAutofill) {
+    run('npm', ['run', 'android:device:doctor', '--', '--enable-autofill']);
+  }
+}
+
+if (evidence) {
+  run('npm', [
+    'run',
+    'android:release:evidence',
+    '--',
+    ...(allowDirty ? ['--allow-dirty'] : []),
+    ...(!skipDevice ? ['--device'] : []),
+    ...(enableAutofill ? ['--enable-autofill'] : []),
+  ]);
 }
 
 console.log('\nAndroid release gate completed.');
