@@ -95,6 +95,30 @@ function copyArtifact(file) {
   return destination;
 }
 
+function firstMatch(text, pattern, fallback = '') {
+  return String(text || '').match(pattern)?.[1]?.trim() || fallback;
+}
+
+function completedManualChecklist(contents, metadata, report, deviceDoctorReport) {
+  const version = firstMatch(report, /version: ([^\r\n]+)/, '<unknown>');
+  const deviceModel = firstMatch(deviceDoctorReport, /INFO device-model ([^\r\n]+)/, includeDeviceEvidence ? '<unknown>' : 'not run');
+  const deviceSdk = firstMatch(deviceDoctorReport, /INFO device-sdk ([^\r\n]+)/, includeDeviceEvidence ? '<unknown>' : 'not run');
+  const buildType = signed ? 'signed release APK' : 'debug APK';
+  const replacements = new Map([
+    ['- Version:', '- Version: ' + version],
+    ['- Commit:', '- Commit: ' + metadata.commit],
+    ['- Device model:', '- Device model: ' + deviceModel],
+    ['- Android version / SDK:', '- Android version / SDK: SDK ' + deviceSdk],
+    ['- Build type:', '- Build type: ' + buildType],
+    ['- Date:', '- Date: ' + metadata.createdAt],
+  ]);
+
+  return contents
+    .split(/\r?\n/)
+    .map((line) => replacements.get(line) || line)
+    .join('\n') + '\n';
+}
+
 function findArtifacts() {
   return walk(androidOutputsRoot)
     .filter((file) => ['.apk', '.aab'].includes(path.extname(file).toLowerCase()))
@@ -188,7 +212,8 @@ fs.writeFileSync(
   ].join('\n'),
 );
 if (fs.existsSync(manualSmokeChecklistPath)) {
-  fs.copyFileSync(manualSmokeChecklistPath, path.join(outDir, 'ANDROID_MANUAL_SMOKE_CHECKLIST.md'));
+  const checklist = completedManualChecklist(fs.readFileSync(manualSmokeChecklistPath, 'utf8'), metadata, report, deviceDoctorReport);
+  fs.writeFileSync(path.join(outDir, 'ANDROID_MANUAL_SMOKE_CHECKLIST.md'), checklist);
 }
 
 console.log(`Android release evidence written to ${path.relative(repoRoot, outDir)}`);
