@@ -92,4 +92,104 @@ describe('diceware passphrase generator', () => {
       addSymbol: true,
     })).toBe('7AppleRiver$');
   });
+
+  it('covers dot and default space separators with prepended and appended numbers', () => {
+    secureRandomIndex
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(1)
+      .mockReturnValueOnce(8)
+      .mockReturnValueOnce(0);
+
+    expect(generateDiceware({
+      wordCount: 2,
+      separator: 'dot',
+      language: 'en',
+      capitalize: false,
+      addNumber: true,
+      addSymbol: false,
+    })).toBe('8.apple.river');
+
+    secureRandomIndex.mockReset();
+    secureRandomIndex
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(1)
+      .mockReturnValueOnce(9)
+      .mockReturnValueOnce(1);
+
+    expect(generateDiceware({
+      wordCount: 2,
+      separator: 'space',
+      language: 'en',
+      capitalize: false,
+      addNumber: true,
+      addSymbol: false,
+    })).toBe('apple river 9');
+  });
+
+  it('covers symbol placement with camel and normal separators', () => {
+    secureRandomIndex
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(1)
+      .mockReturnValueOnce(1)
+      .mockReturnValueOnce(0);
+
+    expect(generateDiceware({
+      wordCount: 2,
+      separator: 'camel',
+      language: 'en',
+      capitalize: false,
+      addNumber: false,
+      addSymbol: true,
+    })).toBe('@appleRiver');
+
+    secureRandomIndex.mockReset();
+    secureRandomIndex
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(1)
+      .mockReturnValueOnce(4)
+      .mockReturnValueOnce(1);
+
+    expect(generateDiceware({
+      wordCount: 2,
+      separator: 'hyphen',
+      language: 'en',
+      capitalize: false,
+      addNumber: false,
+      addSymbol: true,
+    })).toBe('apple-river-%');
+  });
+
+  it('appends numbers without separators for camel-case passphrases', () => {
+    secureRandomIndex
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(1)
+      .mockReturnValueOnce(11)
+      .mockReturnValueOnce(1);
+
+    expect(generateDiceware({
+      wordCount: 2,
+      separator: 'camel',
+      language: 'en',
+      capitalize: false,
+      addNumber: true,
+      addSymbol: false,
+    })).toBe('appleRiver11');
+  });
+
+  it('adds entropy for optional numbers and symbols', () => {
+    const baseEntropy = calculateDicewareEntropyBits({
+      language: 'en',
+      wordCount: 4,
+      addNumber: false,
+      addSymbol: false,
+    });
+    const hardenedEntropy = calculateDicewareEntropyBits({
+      language: 'en',
+      wordCount: 4,
+      addNumber: true,
+      addSymbol: true,
+    });
+
+    expect(hardenedEntropy).toBeGreaterThan(baseEntropy + 10);
+  });
 });
