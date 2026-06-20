@@ -106,6 +106,9 @@ const report = run(npmCommand, ['run', 'android:release:report', '--', '--strict
 const deviceDoctorReport = includeDeviceEvidence
   ? run(npmCommand, ['run', 'android:device:doctor', '--', ...(enableAutofill ? ['--enable-autofill'] : [])], { shell: process.platform === 'win32' })
   : '';
+const deviceSecurityReport = includeDeviceEvidence
+  ? run(npmCommand, ['run', 'android:device:security', '--', '--launch'], { shell: process.platform === 'win32' })
+  : '';
 const gitFallback = readGitHeadFallback();
 const rawDirtyStatus = run('git', ['status', '--short']);
 const dirtyStatus = isSpawnBlocked(rawDirtyStatus)
@@ -148,9 +151,10 @@ const metadata = {
   artifacts: copiedArtifacts,
 };
 
-fs.writeFileSync(path.join(outDir, 'android-release-report.txt'), `${report}\n`);
+fs.writeFileSync(path.join(outDir, 'android-release-report.txt'), report + '\n');
 if (includeDeviceEvidence) {
-  fs.writeFileSync(path.join(outDir, 'android-device-doctor.txt'), `${deviceDoctorReport}\n`);
+  fs.writeFileSync(path.join(outDir, 'android-device-doctor.txt'), deviceDoctorReport + '\n');
+  fs.writeFileSync(path.join(outDir, 'android-device-security.txt'), deviceSecurityReport + '\n');
 }
 fs.writeFileSync(path.join(outDir, 'metadata.json'), `${JSON.stringify(metadata, null, 2)}\n`);
 fs.writeFileSync(
@@ -171,6 +175,7 @@ fs.writeFileSync(
     '',
     '- `android-release-report.txt`: strict Android artifact/security report.',
     ...(includeDeviceEvidence ? ['- `android-device-doctor.txt`: connected-device diagnostic report.'] : []),
+    ...(includeDeviceEvidence ? ['- `android-device-security.txt`: connected-device security/runtime report.'] : []),
     '- `metadata.json`: machine-readable build metadata.',
     '- `SHA256SUMS.txt`: checksums for copied artifacts.',
     '- `ANDROID_MANUAL_SMOKE_CHECKLIST.md`: manual QA checklist for this candidate.',
@@ -178,7 +183,6 @@ fs.writeFileSync(
     '',
   ].join('\n'),
 );
-
 if (fs.existsSync(manualSmokeChecklistPath)) {
   fs.copyFileSync(manualSmokeChecklistPath, path.join(outDir, 'ANDROID_MANUAL_SMOKE_CHECKLIST.md'));
 }

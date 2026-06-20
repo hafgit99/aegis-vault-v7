@@ -117,6 +117,7 @@ run('npm', ['run', 'android:release:report', '--', '--strict']);
 if (!skipDevice) {
   run('npm', ['run', 'android:device:doctor']);
   run('npm', ['run', 'android:device:smoke']);
+  run('npm', ['run', 'android:device:security', '--', '--launch']);
   if (enableAutofill) {
     run('npm', ['run', 'android:device:doctor', '--', '--enable-autofill']);
   }

@@ -36,6 +36,7 @@
     "android:device:launch": "node scripts/android-device-smoke.cjs launch",
     "android:device:status": "node scripts/android-device-smoke.cjs status",
     "android:device:smoke": "node scripts/android-device-smoke.cjs smoke",
+    "android:device:security": "node scripts/android-device-security.cjs",
     "release:local": "node scripts/local-release.cjs",
     "release:local:skip-tests": "node scripts/local-release.cjs --skip-tests",
     "release:windows": "node scripts/local-release.cjs",
