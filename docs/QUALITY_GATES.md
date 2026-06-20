@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 95.07% |
-| Statements | 95.07% |
-| Functions | 92.06% |
-| Branches | 87.89% |
+| Lines | 95.34% |
+| Statements | 95.34% |
+| Functions | 92.39% |
+| Branches | 87.98% |
 
 Coverage thresholds now act as a release-quality regression gate while staying slightly below the current baseline:
 
@@ -133,6 +133,7 @@ Recently improved:
 - `src/components/SecurityAudit.tsx`: covered missing-password audit classification so empty credentials are weak, non-reused, non-secure, and selectable.
 - `src/components/ProfileModal.tsx`: covered file-reader failures, empty file selections, fallback avatar initials, and upload button forwarding so the modal now reports full component coverage.
 - `src/components/SettingsPanel.tsx`: covered destructive reset confirmation, drag-and-drop JSON import, desktop import cancellation, decrypt-password validation, malformed decrypted backups, and encrypted export failures.
+- `src/components/SettingsPanel.tsx`: covered Emergency Kit settings flows for disabled Secret Key protection, invalid keys, remembered Secret Key saves, and default save-error fallbacks.
 - `src/components/VaultFormModal.tsx`: covered legacy edit payloads with missing fields and missing attachment metadata. The remaining selected-file input reset branch is intentionally defensive because the file input is unmounted when a selected file is displayed.
 - `src/lib/clipboard.ts`: covered unavailable clipboard APIs, rejected writes, empty expected text, missing clear methods, read failures, and clear-write failures so clipboard helpers now report full coverage.
 - `src/lib/encryption.ts`: covered malformed backup JSON, legacy envelope routing, missing secure envelope fields, and checksum tampering so the secure backup envelope module now reports full coverage.
