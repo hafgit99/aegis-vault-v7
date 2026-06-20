@@ -17,7 +17,7 @@ Current measured baseline:
 | Lines | 95.07% |
 | Statements | 95.07% |
 | Functions | 92.06% |
-| Branches | 87.48% |
+| Branches | 87.89% |
 
 Coverage thresholds now act as a release-quality regression gate while staying slightly below the current baseline:
 
@@ -33,7 +33,6 @@ These thresholds prevent meaningful regressions while leaving room to add tests 
 ## Priority Coverage Targets
 
 1. `src/components/SettingsPanel.tsx`: reduce remaining fallback-message and desktop-runtime branch gaps.
-2. `src/lib/diceware.ts`: cover remaining locale word-list fallback and option-combination branches.
 
 ## Current E2E Smoke Gate
 
@@ -73,7 +72,7 @@ Recently improved:
 - `src/lib/sqlite_opfs.ts`: covered master setup/verification, encrypted row persistence, desktop payload hydration, OPFS file hydration, missing OPFS file initialization, OPFS write failures, desktop read fallback, legacy localStorage migration, read-only SQL console behavior, row update/defaults, reseed/delete/reset flows, query log subscriptions, localStorage fallback hydration, and missing-key decryption guards.
 - `src/lib/storage.ts`: covered setup detection, no-session guards, save/delete/reseed wrappers, trash move/restore, expired trash cleanup, and full trash emptying.
 - `src/components/PasswordGenerator.tsx`: covered character option changes, all character toggles, strength bar tone branches, diceware mode settings, word-count descriptions, diceware toggles, copy feedback, unmount cleanup, and safe clipboard clearing behavior.
-- `src/lib/diceware.ts`: covered Turkish/English word selection, separator formats, capitalization, random number placement, and symbol placement.
+- `src/lib/diceware.ts`: covered Turkish/English word selection, EFF-sized word-pool expansion, separator formats, capitalization, number and symbol placement, camel/none separator handling, and optional entropy calculations.
 - `src/components/VaultFormModal.tsx`: covered card, passkey, identity, secure note, attachment upload, oversized-file rejection, existing attachment download/removal, and non-login username normalization.
 - `src/components/ProfileModal.tsx`: covered gradient detection, profile name validation, preset selection, image file validation, local image loading, save, and cancel flows.
 - `src/components/ConfirmModal.tsx`: covered closed state, confirm/cancel behavior, header close, and alert-only mode.
@@ -81,6 +80,7 @@ Recently improved:
 - `src/components/SettingsPanel.tsx`: covered master password validation/update, auto-lock selection, demo reseed notification, safe destructive confirmation, biometric enable/disable/error paths, plain export fallback/error paths, and import error feedback.
 - `src/components/LockScreen.tsx`: covered setup mismatch, password visibility toggles, manual unlock, biometric unsupported/success/integrity/permission-error paths, auto-triggered biometric unlock, and Emergency Kit save routing.
 - `src/lib/emergencyKit.ts`: covered Secret Key validation, kit contents, native save-dialog success, native cancellation without hidden browser fallback, web browser-download fallback, and native save-error propagation.
+- `src/lib/diceware.ts`: reached full statement, branch, function, and line coverage for Diceware passphrase generation.
 - `src/components/LockScreen.tsx` and `src/components/DashboardHeader.tsx`: covered selected-language rendering for the expanded Turkish, English, and Chinese i18n surface.
 - `src/components/VaultWorkspace.tsx` and `src/components/FloatingVaultAction.tsx`: covered selected-language rendering for vault list controls and new-item actions.
 - Dashboard summary components: covered selected-language rendering for quick actions, security score copy, and category summary labels.
