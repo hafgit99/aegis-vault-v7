@@ -25,6 +25,27 @@ describe('universal importer', () => {
     ]);
   });
 
+  it('keeps comma as the tie-break delimiter and ignores blank rows', () => {
+    expect(parseCSV('name,url;note\nSite,https://example.com;main\n,,\n')).toEqual([
+      ['name', 'url;note'],
+      ['Site', 'https://example.com;main'],
+    ]);
+  });
+
+  it('preserves delimiters and escaped quotes inside quoted CSV fields', () => {
+    expect(parseCSV('name,notes\n"Site","quoted, semicolon; tab\t and ""quote"""')).toEqual([
+      ['name', 'notes'],
+      ['Site', 'quoted, semicolon; tab\t and "quote"'],
+    ]);
+  });
+
+  it('handles CR-only rows and preserves quoted inner whitespace', () => {
+    expect(parseCSV(' name , notes \r " Mail " , " quoted note " ')).toEqual([
+      ['name', 'notes'],
+      [' Mail ', ' quoted note '],
+    ]);
+  });
+
   it('parses quoted CSV values with commas, escaped quotes, and newlines', () => {
     const rows = parseCSV('name,notes\n"GitHub, Main","line 1\nline ""2"""');
 
@@ -64,6 +85,47 @@ describe('universal importer', () => {
       username: 'owner@example.com',
       password: 'secret',
     });
+  });
+
+  it('uses localized labels across every default label boundary', () => {
+    const labels = {
+      errorEmpty: 'empty-x',
+      formatAegisJson: 'aegis-x',
+      formatBitwardenJson: 'bitwarden-json-x',
+      errorUnsupportedJson: 'unsupported-json-x',
+      errorJsonPrefix: 'json-prefix-x',
+      errorCsvHeader: 'csv-header-x',
+      formatBitwardenCsv: 'bitwarden-csv-x',
+      formatLastPassCsv: 'lastpass-x',
+      formatChromeCsv: 'chrome-x',
+      formatOnePasswordCsv: 'onepassword-x',
+      untitledUniversal: 'untitled-x',
+      formatUniversalCsv: 'universal-x',
+      errorCsvColumns: 'csv-columns-x',
+    };
+
+    const parseSuccess = (content: string) => {
+      const result = parseUniversalImport(content, labels);
+      expect(result.type).toBe('success');
+      if (result.type !== 'success') throw new Error('Expected successful import');
+      return result;
+    };
+
+    expect(parseUniversalImport('', labels)).toEqual({ type: 'error', message: 'empty-x' });
+    expect(parseSuccess('[{}]').formatName).toBe('aegis-x');
+    expect(parseSuccess('{"items":[]}').formatName).toBe('bitwarden-json-x');
+    expect(parseUniversalImport('{"unknown":true}', labels)).toEqual({ type: 'error', message: 'unsupported-json-x' });
+    const malformed = parseUniversalImport('{"items": [', labels);
+    expect(malformed.type === 'error' ? malformed.message : '').toContain('json-prefix-x');
+    expect(parseUniversalImport('name,password', labels)).toEqual({ type: 'error', message: 'csv-header-x' });
+    expect(parseSuccess('login_username,login_password\nu,p').formatName).toBe('bitwarden-csv-x');
+    expect(parseSuccess('grouping,extra\ng,n').formatName).toBe('lastpass-x');
+    expect(parseSuccess('name,url,username,password\ns,u,p,w').formatName).toBe('chrome-x');
+    expect(parseSuccess('title,website,password\ns,u,p').formatName).toBe('onepassword-x');
+    const universal = parseSuccess('email,pwd\nu,p');
+    expect(universal.formatName).toBe('universal-x');
+    expect(universal.items[0].title).toBe('untitled-x');
+    expect(parseUniversalImport('alpha,beta\na,b', labels)).toEqual({ type: 'error', message: 'csv-columns-x' });
   });
 
 
@@ -242,7 +304,7 @@ describe('universal importer', () => {
     const result = parseUniversalImport(
       JSON.stringify({
         items: [
-          { type: 1 },
+          { type: 1, login: {} },
           { type: 3, card: { expMonth: '1' } },
           { type: 4, identity: { ssn: '111-22-3333' } },
           { type: 99, name: '' },
@@ -337,9 +399,9 @@ describe('universal importer', () => {
   it('parses Bitwarden CSV numeric category and favorite variants', () => {
     const result = parseUniversalImport(
       [
-        'favorite,type,name,login_username,login_password',
-        '1,3,Payment,,',
-        '0,4,Identity,,',
+        'favorite,type,title,login_username,login_password,uri,otp,notes',
+        '1,3,Payment,,,https://pay.example.com,123456,card note',
+        '0,4,Identity,,,,,',
       ].join('\n'),
     );
 
@@ -351,6 +413,9 @@ describe('universal importer', () => {
       category: 'card',
       username: '',
       password: '',
+      url: 'https://pay.example.com',
+      totpSecret: '123456',
+      notes: 'card note',
     });
     expect(result.items[1]).toMatchObject({
       title: 'Identity',
@@ -379,7 +444,7 @@ describe('universal importer', () => {
   });
 
   it('applies LastPass CSV fallbacks for missing optional credential columns', () => {
-    const result = parseUniversalImport('grouping,extra\nPersonal,');
+    const result = parseUniversalImport('grouping,extra,favorite\nPersonal,,true');
 
     expect(result.type).toBe('success');
     if (result.type !== 'success') return;
@@ -389,14 +454,14 @@ describe('universal importer', () => {
       password: '',
       url: '',
       notes: '',
-      favorite: false,
+      favorite: true,
       category: 'login',
     });
   });
 
   it('parses 1Password CSV exports', () => {
     const result = parseUniversalImport(
-      'title,website,username,password,notes\nAdmin,https://admin.example.com,root,secret,privileged',
+      'title,url,username,password,notes\nAdmin,https://admin.example.com,root,secret,privileged',
     );
 
     expect(result.type).toBe('success');
@@ -447,6 +512,20 @@ describe('universal importer', () => {
     });
   });
 
+  it('uses universal CSV fallback with title-only and partial column aliases', () => {
+    const result = parseUniversalImport('service label,login email,password value,description text,authenticator key\nPortal,owner@example.com,secret,private,JBSWY3DPEHPK3PXP');
+
+    expect(result.type).toBe('success');
+    if (result.type !== 'success') return;
+    expect(result.items[0]).toMatchObject({
+      title: 'Portal',
+      username: 'owner@example.com',
+      password: 'secret',
+      notes: 'private',
+      totpSecret: 'JBSWY3DPEHPK3PXP',
+    });
+  });
+
   it('returns a readable error for CSV without usable credential columns', () => {
     const result = parseUniversalImport('alpha,beta\na,b');
 
@@ -466,6 +545,12 @@ describe('universal importer', () => {
     );
 
     expect(result.type).toBe('encrypted_aegis');
+  });
+
+  it('requires encrypted Aegis envelopes to include salt and payload', () => {
+    expect(parseUniversalImport(JSON.stringify({ version: '1.1', salt: 'abc' })).type).toBe('error');
+    expect(parseUniversalImport(JSON.stringify({ kdf: 'Argon2id', payload: 'encrypted' })).type).toBe('error');
+    expect(parseUniversalImport(JSON.stringify({ encrypted: true, salt: 'abc', payload: 'encrypted' })).type).toBe('encrypted_aegis');
   });
 
   it('returns a readable error for unsupported files', () => {
