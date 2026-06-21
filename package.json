@@ -51,7 +51,9 @@
     "register:extension": "node scripts/register-host.js",
     "test:mutation": "stryker run stryker.conf.mjs",
     "test:mutation:core": "stryker run stryker.conf.mjs",
-    "test:mutation:core:dry": "stryker run stryker.conf.mjs --dryRunOnly"
+    "test:mutation:core:dry": "stryker run stryker.conf.mjs --dryRunOnly",
+    "test:mutation:importer": "stryker run stryker.importer.conf.mjs",
+    "test:mutation:importer:dry": "stryker run stryker.importer.conf.mjs --dryRunOnly"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",

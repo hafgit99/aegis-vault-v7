@@ -2,6 +2,29 @@ import { describe, expect, it } from 'vitest';
 import { parseCSV, parseUniversalImport, decodeFileBuffer } from './importer';
 
 describe('universal importer', () => {
+
+  it('returns no rows for an empty CSV string', () => {
+    expect(parseCSV('')).toEqual([]);
+  });
+
+  it('auto-detects semicolon and tab delimiters', () => {
+    expect(parseCSV('name;username;password\nGitHub;octo;secret')).toEqual([
+      ['name', 'username', 'password'],
+      ['GitHub', 'octo', 'secret'],
+    ]);
+    expect(parseCSV('name\tusername\tpassword\nGitHub\tocto\tsecret')).toEqual([
+      ['name', 'username', 'password'],
+      ['GitHub', 'octo', 'secret'],
+    ]);
+  });
+
+  it('handles CRLF rows and quoted final fields', () => {
+    expect(parseCSV('name,notes\r\nMail,"quoted note"\r\n')).toEqual([
+      ['name', 'notes'],
+      ['Mail', 'quoted note'],
+    ]);
+  });
+
   it('parses quoted CSV values with commas, escaped quotes, and newlines', () => {
     const rows = parseCSV('name,notes\n"GitHub, Main","line 1\nline ""2"""');
 
@@ -43,12 +66,54 @@ describe('universal importer', () => {
     });
   });
 
+
+  it('uses stable default labels for supported import formats and errors', () => {
+    const empty = parseUniversalImport('   ');
+    expect(empty).toEqual({ type: 'error', message: 'File content is empty.' });
+
+    const unsupportedJson = parseUniversalImport('{"unknown":true}');
+    expect(unsupportedJson).toEqual({ type: 'error', message: 'Unsupported or unrecognized JSON structure.' });
+
+    const csvHeader = parseUniversalImport('name,password');
+    expect(csvHeader).toEqual({ type: 'error', message: 'Empty CSV file or missing header row.' });
+
+    const badCsv = parseUniversalImport('alpha,beta\na,b');
+    expect(badCsv).toEqual({
+      type: 'error',
+      message: 'CSV structure could not be resolved. No password or username columns were found.',
+    });
+  });
+
   it('returns a readable error for malformed JSON', () => {
     const result = parseUniversalImport('{"items": [');
 
     expect(result.type).toBe('error');
     if (result.type !== 'error') return;
     expect(result.message).toContain('JSON');
+  });
+
+
+  it('reports stable default format names for all supported import formats', () => {
+    const aegis = parseUniversalImport('[{}]');
+    expect(aegis.type === 'success' ? aegis.formatName : '').toBe('Aegis Secure JSON Backup');
+
+    const bitwardenJson = parseUniversalImport('{"items":[]}');
+    expect(bitwardenJson.type === 'success' ? bitwardenJson.formatName : '').toBe('Bitwarden Password Manager (JSON)');
+
+    const bitwardenCsv = parseUniversalImport('login_username,login_password\nu,p');
+    expect(bitwardenCsv.type === 'success' ? bitwardenCsv.formatName : '').toBe('Bitwarden Import (CSV)');
+
+    const lastPass = parseUniversalImport('grouping,extra\nPersonal,note');
+    expect(lastPass.type === 'success' ? lastPass.formatName : '').toBe('LastPass Password Import (CSV)');
+
+    const chrome = parseUniversalImport('name,url,username,password\nSite,https://example.com,u,p');
+    expect(chrome.type === 'success' ? chrome.formatName : '').toBe('Google Chrome / Password Manager (CSV)');
+
+    const onePassword = parseUniversalImport('title,website,password\nSite,https://example.com,p');
+    expect(onePassword.type === 'success' ? onePassword.formatName : '').toBe('1Password Password Import (CSV)');
+
+    const universal = parseUniversalImport('email,pwd\nu,p');
+    expect(universal.type === 'success' ? universal.formatName : '').toBe('Universal Column-Compatible CSV');
   });
 
   it('parses native Aegis JSON array backups', () => {
@@ -442,6 +507,23 @@ describe('universal importer', () => {
       for (let i = 0; i < text.length; i++) {
         arr[i * 2] = text.charCodeAt(i);
         arr[i * 2 + 1] = 0;
+      }
+      expect(decodeFileBuffer(arr.buffer)).toBe(text);
+    });
+
+
+    it('decodes UTF-16 BE with BOM', () => {
+      const text = 'BE';
+      const arr = new Uint8Array([0xFE, 0xFF, 0x00, 0x42, 0x00, 0x45]);
+      expect(decodeFileBuffer(arr.buffer)).toBe(text);
+    });
+
+    it('decodes UTF-16 BE without BOM (heuristics)', () => {
+      const text = 'This is a heuristic test for UTF-16 BE without BOM';
+      const arr = new Uint8Array(text.length * 2);
+      for (let i = 0; i < text.length; i++) {
+        arr[i * 2] = 0;
+        arr[i * 2 + 1] = text.charCodeAt(i);
       }
       expect(decodeFileBuffer(arr.buffer)).toBe(text);
     });
