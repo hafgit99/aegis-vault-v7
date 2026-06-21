@@ -17,7 +17,7 @@ Current measured baseline:
 | Lines | 95.47% |
 | Statements | 95.47% |
 | Functions | 92.56% |
-| Branches | 89.32% |
+| Branches | 89.55% |
 
 Coverage thresholds now act as a release-quality regression gate while staying slightly below the current baseline:
 
@@ -93,12 +93,12 @@ Current measured importer mutation baseline:
 | Metric | Baseline |
 | --- | ---: |
 | Mutants | 994 |
-| Mutation score | 71.33% |
-| Covered mutation score | 73.78% |
-| Killed | 705 |
+| Mutation score | 73.64% |
+| Covered mutation score | 75.54% |
+| Killed | 728 |
 | Timed out | 4 |
-| Survived | 252 |
-| No coverage | 33 |
+| Survived | 237 |
+| No coverage | 25 |
 
 ## Current E2E Smoke Gate
 
@@ -208,7 +208,7 @@ Recently improved:
 - `src/lib/otp.ts`: added to the core mutation gate with RFC vectors, otpauth URI parsing, period/digit validation, Base32 whitespace/padding normalization, eight-digit formatting, and high-counter serialization coverage; TOTP mutation score now reports 92.19%.
 - `src/lib/securityEvents.ts`: added to the core mutation gate with structured error construction, severity routing, public error copy, metadata redaction, control-character normalization, truncation, and non-string metadata preservation; security event mutation score now reports 100%.
 - `src/lib/hibp.ts`: covered k-anonymity range lookup, Add-Padding/no-store request options, prefix cache reuse, and fail-closed unavailable responses.
-- `src/lib/importer.ts`: covered sparse Aegis JSON defaults, sparse and unknown Bitwarden JSON types, numeric Bitwarden CSV categories/favorites, LastPass optional-column fallbacks, universal CSV fallback defaults, delimiter auto-detection, CRLF parsing, stable default format labels, empty/error states, and UTF-16 BE decoding.
+- `src/lib/importer.ts`: covered sparse Aegis JSON defaults, sparse and unknown Bitwarden JSON types, numeric Bitwarden CSV categories/favorites, LastPass optional-column fallbacks, universal CSV fallback defaults, delimiter auto-detection, tie-break delimiter behavior, CRLF/CR parsing, quoted delimiter preservation, stable default/localized format labels, encrypted-envelope guards, empty/error states, and UTF-16 BE decoding.
 - `src/lib/legacyCrypto.ts`: covered malformed legacy hashes, compact KDF parameters, SHA-256/HMAC/HKDF vectors, authenticated legacy AES-GCM-compatible decrypt paths, tamper rejection, old stream-cipher fallback envelopes, malformed secure envelopes, checksum failures, and unsupported envelope versions.
 - `src/lib/attachments.ts`: covered AES-GCM metadata validation, legacy records without explicit algorithms, binary MIME fallback, unreadable FileReader results, FileReader errors, and stored-record decrypt failures so attachment branch coverage now reports full coverage.
 
