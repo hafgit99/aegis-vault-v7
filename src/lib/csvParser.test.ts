@@ -36,4 +36,68 @@ describe('CSV parser helper', () => {
       ['"open,closed"tail'],
     ]);
   });
+
+  it('keeps semicolon as delimiter only when it beats tab count', () => {
+    expect(parseCSV('name;url\tlabel;notes\nPortal;https://example.test\tprimary;main')).toEqual([
+      ['name', 'url\tlabel', 'notes'],
+      ['Portal', 'https://example.test\tprimary', 'main'],
+    ]);
+  });
+
+  it('keeps tab as delimiter only when it beats semicolon count', () => {
+    expect(parseCSV('name\turl;label\tnotes\nPortal\thttps://example.test;primary\tmain')).toEqual([
+      ['name', 'url;label', 'notes'],
+      ['Portal', 'https://example.test;primary', 'main'],
+    ]);
+  });
+
+  it('preserves escaped quotes inside quoted fields', () => {
+    expect(parseCSV('title,notes\nVault,"contains ""quoted"" text"')).toEqual([
+      ['title', 'notes'],
+      ['Vault', 'contains "quoted" text'],
+    ]);
+  });
+
+  it('does not trim characters from unquoted fields at delimiters, newlines, or EOF', () => {
+    expect(parseCSV('first,second\nplain,text\nomega,theta')).toEqual([
+      ['first', 'second'],
+      ['plain', 'text'],
+      ['omega', 'theta'],
+    ]);
+  });
+
+  it('handles CRLF rows without leaking carriage returns or blank rows', () => {
+    expect(parseCSV('first,second\r\nplain,text\r\nomega,theta')).toEqual([
+      ['first', 'second'],
+      ['plain', 'text'],
+      ['omega', 'theta'],
+    ]);
+  });
+
+  it('keeps comma fallback when semicolon and tab counts tie above comma count', () => {
+    expect(parseCSV('name;url\tlabel\nPortal;https://example.test\tprimary')).toEqual([
+      ['name;url\tlabel'],
+      ['Portal;https://example.test\tprimary'],
+    ]);
+  });
+
+  it('detects single-semicolon exports without a comma count fallback', () => {
+    expect(parseCSV('name;url\nPortal;https://example.test')).toEqual([
+      ['name', 'url'],
+      ['Portal', 'https://example.test'],
+    ]);
+  });
+
+  it('detects single-tab exports without semicolon count fallback', () => {
+    expect(parseCSV('name\turl\nPortal\thttps://example.test')).toEqual([
+      ['name', 'url'],
+      ['Portal', 'https://example.test'],
+    ]);
+  });
+
+  it('keeps comma fallback for plain one-column text without synthetic delimiter counts', () => {
+    expect(parseCSV('plain text only')).toEqual([
+      ['plain text only'],
+    ]);
+  });
 });
