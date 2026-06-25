@@ -417,4 +417,191 @@ describe('vault session storage', () => {
 
     expect(sqliteOPFSInstance.saveVaultItems).toHaveBeenCalledWith([item], 'master-pass');
   });
+
+  it('ignores missing, disabled, or malformed account secret-key profiles', () => {
+    expect(isAccountSecretKeyRequired()).toBe(false);
+
+    localStorage.setItem('aegis_account_secret_profile', JSON.stringify({ enabled: false, fingerprint: '3456-7' }));
+    expect(isAccountSecretKeyRequired()).toBe(false);
+
+    localStorage.setItem('aegis_account_secret_profile', '{not json');
+    expect(isAccountSecretKeyRequired()).toBe(false);
+  });
+
+  it('falls back to the raw master password when a secret-key profile has no usable key', async () => {
+    localStorage.setItem('aegis_account_secret_profile', JSON.stringify({
+      enabled: true,
+      fingerprint: '3456-7',
+    }));
+    sqliteOPFSInstance.verifyPassword.mockResolvedValueOnce(true);
+
+    await expect(verifyMasterPassword('master-pass')).resolves.toBe(true);
+
+    expect(sqliteOPFSInstance.verifyPassword).toHaveBeenCalledWith('master-pass');
+    expect(getActiveMasterPassword()).toBe('master-pass');
+  });
+
+  it('accepts already combined credentials while keeping the raw master password as backup', async () => {
+    const combinedCredential = 'aegis-vault-v7:master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567';
+    sqliteOPFSInstance.verifyPassword.mockResolvedValueOnce(true);
+
+    await expect(verifyMasterPassword(combinedCredential)).resolves.toBe(true);
+
+    expect(sqliteOPFSInstance.verifyPassword).toHaveBeenCalledWith(combinedCredential);
+    expect(getActiveMasterPassword()).toBe(combinedCredential);
+    expect(getActiveBackupPassword()).toBe('master-pass');
+  });
+
+  it('does not open a vault session after failed verification', async () => {
+    sqliteOPFSInstance.verifyPassword.mockResolvedValueOnce(false);
+
+    await expect(verifyMasterPassword('wrong-pass')).resolves.toBe(false);
+
+    expect(getActiveMasterPassword()).toBeNull();
+    expect(migrateLegacyAttachmentsToAesGcm).not.toHaveBeenCalled();
+  });
+
+  it('keeps setup successful when legacy attachment migration fails', async () => {
+    migrateLegacyAttachmentsToAesGcm.mockRejectedValueOnce(new Error('setup migration failed'));
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      await expect(setupMasterPassword('master-pass')).resolves.toBeUndefined();
+
+      expect(sqliteOPFSInstance.setupMaster).toHaveBeenCalledWith('master-pass');
+      expect(localStorage.getItem('aegis_is_setup')).toBe('true');
+      expect(warnSpy).toHaveBeenCalledWith(expect.objectContaining({
+        code: 'attachment.legacyMigration.failed',
+        source: 'AegisSecurity',
+      }));
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it('forgets any remembered secret key when setup chooses not to remember this device', async () => {
+    localStorage.setItem('aegis_account_secret_key_remembered', 'A3-OLD-SECRET');
+
+    await setupMasterPasswordWithSecretKey(
+      'master-pass',
+      'A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
+      false,
+    );
+
+    expect(localStorage.getItem('aegis_account_secret_key_remembered')).toBeNull();
+    expect(getRememberedAccountSecretKey()).toBeNull();
+  });
+
+  it('rejects master password rotation when the current password is invalid', async () => {
+    sqliteOPFSInstance.verifyPassword.mockResolvedValueOnce(false);
+
+    await expect(changeMasterPassword('wrong-pass', 'new-master-pass-12')).rejects.toThrow(
+      'current-master-password-invalid',
+    );
+
+    expect(reencryptAttachmentsForMasterPasswordChange).not.toHaveBeenCalled();
+    expect(sqliteOPFSInstance.changeMasterPassword).not.toHaveBeenCalled();
+  });
+
+  it('does not roll attachment encryption back when no attachments were rotated', async () => {
+    sqliteOPFSInstance.verifyPassword.mockResolvedValueOnce(true);
+    reencryptAttachmentsForMasterPasswordChange.mockResolvedValueOnce(0);
+    sqliteOPFSInstance.changeMasterPassword.mockRejectedValueOnce(new Error('db failed'));
+
+    await expect(changeMasterPassword('old-master-pass', 'new-master-pass-12')).rejects.toThrow('db failed');
+
+    expect(reencryptAttachmentsForMasterPasswordChange).toHaveBeenCalledTimes(1);
+    expect(reencryptAttachmentsForMasterPasswordChange).toHaveBeenCalledWith(
+      'old-master-pass',
+      'new-master-pass-12',
+    );
+  });
+
+  it('removes setup, fallback, and secret-key markers when the vault is reset', async () => {
+    localStorage.setItem('aegis_is_setup', 'true');
+    localStorage.setItem('aegis_sqlite_fallback', '{"user_secrets":[{}]}');
+    localStorage.setItem('aegis_account_secret_profile', '{"enabled":true}');
+    localStorage.setItem('aegis_account_secret_key_remembered', 'A3-OLD-SECRET');
+    openVaultSession('master-pass');
+
+    await resetSystem();
+
+    expect(sqliteOPFSInstance.resetAll).toHaveBeenCalledTimes(1);
+    expect(getActiveMasterPassword()).toBeNull();
+    expect(localStorage.getItem('aegis_is_setup')).toBeNull();
+    expect(localStorage.getItem('aegis_sqlite_fallback')).toBeNull();
+    expect(localStorage.getItem('aegis_account_secret_profile')).toBeNull();
+    expect(localStorage.getItem('aegis_account_secret_key_remembered')).toBeNull();
+  });
+
+  it('returns an empty item list when reads happen without an active session', async () => {
+    await expect(getVaultItems()).resolves.toEqual([]);
+
+    expect(sqliteOPFSInstance.getVaultItems).not.toHaveBeenCalled();
+  });
+
+  it('returns active vault items unchanged when no trash cleanup is needed', async () => {
+    const activeItem = sampleItem({ id: 'active-item' });
+    sqliteOPFSInstance.getVaultItems.mockResolvedValueOnce([activeItem]);
+    openVaultSession('master-pass');
+
+    await expect(getVaultItems()).resolves.toEqual([activeItem]);
+
+    expect(sqliteOPFSInstance.deletePermanentlyBatch).not.toHaveBeenCalled();
+  });
+
+  it('treats trash items at the exact retention boundary as expired', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-02-01T00:00:00.000Z'));
+    const boundaryTrash = sampleItem({
+      id: 'boundary-trash',
+      deleted: true,
+      deletedAt: '2026-01-17T00:00:00.000Z',
+    });
+    sqliteOPFSInstance.getVaultItems.mockResolvedValueOnce([boundaryTrash]);
+    sqliteOPFSInstance.deletePermanentlyBatch.mockResolvedValueOnce([]);
+    openVaultSession('master-pass');
+
+    await expect(getVaultItems()).resolves.toEqual([]);
+
+    expect(sqliteOPFSInstance.deletePermanentlyBatch).toHaveBeenCalledWith(['boundary-trash'], 'master-pass');
+  });
+
+  it('keeps trash items younger than the retention window', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-02-01T00:00:00.000Z'));
+    const recentTrash = sampleItem({
+      id: 'recent-trash',
+      deleted: true,
+      deletedAt: '2026-01-17T00:01:00.000Z',
+    });
+    sqliteOPFSInstance.getVaultItems.mockResolvedValueOnce([recentTrash]);
+    openVaultSession('master-pass');
+
+    await expect(getVaultItems()).resolves.toEqual([recentTrash]);
+
+    expect(sqliteOPFSInstance.deletePermanentlyBatch).not.toHaveBeenCalled();
+  });
+
+  it('passes progress callbacks through the bulk save wrapper', async () => {
+    const item = sampleItem();
+    const onProgress = vi.fn();
+    sqliteOPFSInstance.saveVaultItems.mockResolvedValueOnce([item]);
+    openVaultSession('master-pass');
+
+    await expect(saveVaultItems([item], onProgress)).resolves.toEqual([item]);
+
+    expect(sqliteOPFSInstance.saveVaultItems).toHaveBeenCalledWith([item], 'master-pass', onProgress);
+  });
+
+  it('returns existing items when empty trash has no deleted entries', async () => {
+    const activeItem = sampleItem({ id: 'active-item' });
+    sqliteOPFSInstance.getVaultItems.mockResolvedValueOnce([activeItem]);
+    openVaultSession('master-pass');
+
+    await expect(emptyTrashComplete()).resolves.toEqual([activeItem]);
+
+    expect(sqliteOPFSInstance.deletePermanentlyBatch).not.toHaveBeenCalled();
+  });
+
 });
