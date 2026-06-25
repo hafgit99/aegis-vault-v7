@@ -200,12 +200,12 @@ Current measured storage orchestration mutation baseline:
 | Metric | Baseline |
 | --- | ---: |
 | Mutants | 242 |
-| Mutation score | 81.82% |
-| Covered mutation score | 83.54% |
-| Killed | 198 |
+| Mutation score | 88.43% |
+| Covered mutation score | 88.43% |
+| Killed | 214 |
 | Timed out | 0 |
-| Survived | 39 |
-| No coverage | 5 |
+| Survived | 28 |
+| No coverage | 0 |
 
 ## Current E2E Smoke Gate
 
@@ -321,7 +321,7 @@ Recently improved:
 - `src/lib/legacyCrypto.ts`: covered malformed legacy hashes, compact KDF parameters, SHA-256/HMAC/HKDF vectors, authenticated legacy AES-GCM-compatible decrypt paths, tamper rejection, old stream-cipher fallback envelopes, malformed secure envelopes, checksum failures, and unsupported envelope versions.
 - `src/lib/attachments.ts`: covered AES-GCM metadata validation, legacy records without explicit algorithms, binary MIME fallback, unreadable FileReader results, FileReader errors, and stored-record decrypt failures so attachment branch coverage now reports full coverage.
 - Storage bridge helpers: added a dedicated mutation gate for desktop native persistence and Android secure storage, covering runtime scope detection, native command routing, extension credential shaping, secure bridge validation, and fail-closed native errors.
-- Storage orchestration: added a dedicated mutation gate for vault setup/unlock, Secret Key routing, remembered-key cleanup, rotation rollback, reset cleanup, trash retention, and bulk-save orchestration; storage orchestration mutation score now reports 81.82%.
+- Storage orchestration: hardened initialization, setup reseeding, Secret Key secure-storage fallback/cleanup, setup migration warnings, no-session bulk-save guards, setup detection edge cases, rotation biometric reset, trash retention, and bulk-save orchestration; storage orchestration mutation score now reports 88.43% with zero no-coverage mutants.
 
 ## Next Gates
 
@@ -339,5 +339,5 @@ Recently improved:
   - `npm run android:device:smoke`
   - Manual Android release candidate checklist from `docs/ANDROID_READINESS.md`.
 - Expand smoke E2E coverage for detail actions, broader translated screens, desktop persistence, and mobile smoke viewports.
-- Push importer helper mutation score toward the 90% high threshold, harden the remaining storage orchestration survivors, and then expand mutation testing into SQLite migration modules.
+- Push importer helper and storage orchestration mutation scores toward the 90% high threshold, then expand mutation testing into SQLite migration modules.
 - Keep global coverage thresholds at or above 90% lines/statements, 85% functions, and 80% branches; raise them again after the current priority targets improve.

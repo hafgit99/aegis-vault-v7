@@ -20,6 +20,8 @@ const sqliteOPFSInstance = vi.hoisted(() => ({
 
 const migrateLegacyAttachmentsToAesGcm = vi.hoisted(() => vi.fn(async () => 0));
 const reencryptAttachmentsForMasterPasswordChange = vi.hoisted(() => vi.fn(async () => 0));
+const disableBiometric = vi.hoisted(() => vi.fn());
+const hydrateBiometric = vi.hoisted(() => vi.fn(async () => undefined));
 
 vi.mock('./sqlite_opfs', () => ({
   sqliteOPFSInstance,
@@ -31,8 +33,8 @@ vi.mock('./attachments', () => ({
 }));
 
 vi.mock('./biometric', () => ({
-  disableBiometric: vi.fn(),
-  hydrateBiometric: vi.fn(async () => undefined),
+  disableBiometric,
+  hydrateBiometric,
 }));
 
 import {
@@ -53,6 +55,9 @@ import {
   setupMasterPassword,
   setupMasterPasswordWithSecretKey,
   verifyMasterPassword,
+  initializeStorage,
+  rememberAccountSecretKey,
+  forgetRememberedAccountSecretKey,
 } from './storage';
 import { closeVaultSession, getActiveBackupPassword, getActiveMasterPassword, openVaultSession } from './vaultSession';
 import type { VaultItem } from '../types';
@@ -81,12 +86,40 @@ afterEach(() => {
 });
 
 describe('vault session storage', () => {
+  it('initializes sqlite, biometric state, and secure-storage migration in order', async () => {
+    const secureValues = new Map<string, string>();
+    window.AegisAndroidSecureStorage = {
+      getItem: vi.fn((key) => secureValues.get(key) ?? null),
+      setItem: vi.fn((key, value) => {
+        secureValues.set(key, value);
+        return true;
+      }),
+      removeItem: vi.fn((key) => secureValues.delete(key)),
+    };
+    localStorage.setItem('aegis_account_secret_key_remembered', 'A3-LEGACY-SECRET');
+
+    await initializeStorage();
+
+    expect(sqliteOPFSInstance.hydrate).toHaveBeenCalledTimes(1);
+    expect(hydrateBiometric).toHaveBeenCalledTimes(1);
+    expect(window.AegisAndroidSecureStorage.setItem).toHaveBeenCalledWith(
+      'aegis_account_secret_key_remembered',
+      'A3-LEGACY-SECRET',
+    );
+    expect(localStorage.getItem('aegis_account_secret_key_remembered')).toBeNull();
+  });
+
   it('opens an in-memory session during setup without writing the master password to sessionStorage', async () => {
     await setupMasterPassword('master-pass');
 
     expect(sqliteOPFSInstance.setupMaster).toHaveBeenCalledWith('master-pass');
     expect(getActiveMasterPassword()).toBe('master-pass');
     expect(sessionStorage.getItem('aegis_session_master_pass')).toBeNull();
+    expect(localStorage.getItem('aegis_is_setup')).toBe('true');
+    expect(sqliteOPFSInstance.reseedDemo).toHaveBeenCalledWith(
+      'master-pass',
+      expect.arrayContaining([expect.objectContaining({ id: '1', title: 'Demo Developer Portal' })]),
+    );
   });
 
   it('sets up a secret-key protected vault and can remember the second key locally', async () => {
@@ -105,6 +138,54 @@ describe('vault session storage', () => {
       'aegis-vault-v7:master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
     );
     expect(getActiveBackupPassword()).toBe('master-pass');
+    expect(localStorage.getItem('aegis_is_setup')).toBe('true');
+    expect(sqliteOPFSInstance.reseedDemo).toHaveBeenCalledWith(
+      'aegis-vault-v7:master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
+      expect.arrayContaining([expect.objectContaining({ id: '1', title: 'Demo Developer Portal' })]),
+    );
+  });
+
+  it('normalizes remembered secret keys and falls back to localStorage when secure storage rejects writes', () => {
+    window.AegisAndroidSecureStorage = {
+      getItem: vi.fn(() => null),
+      setItem: vi.fn(() => false),
+      removeItem: vi.fn(() => false),
+    };
+
+    rememberAccountSecretKey('  a3-abcd-efgh-ijkl-mnop-qrst-uvwx-yz23-4567  ');
+
+    expect(window.AegisAndroidSecureStorage.setItem).toHaveBeenCalledWith(
+      'aegis_account_secret_key_remembered',
+      'A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
+    );
+    expect(localStorage.getItem('aegis_account_secret_key_remembered')).toBe(
+      'A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
+    );
+    expect(getRememberedAccountSecretKey()).toBe('A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567');
+  });
+
+  it('removes remembered secret keys from both secure storage and the legacy fallback', () => {
+    const secureValues = new Map<string, string>([[
+      'aegis_account_secret_key_remembered',
+      'A3-SECURE-SECRET',
+    ]]);
+    window.AegisAndroidSecureStorage = {
+      getItem: vi.fn((key) => secureValues.get(key) ?? null),
+      setItem: vi.fn((key, value) => {
+        secureValues.set(key, value);
+        return true;
+      }),
+      removeItem: vi.fn((key) => secureValues.delete(key)),
+    };
+    localStorage.setItem('aegis_account_secret_key_remembered', 'A3-LEGACY-SECRET');
+
+    forgetRememberedAccountSecretKey();
+
+    expect(window.AegisAndroidSecureStorage.removeItem).toHaveBeenCalledWith(
+      'aegis_account_secret_key_remembered',
+    );
+    expect(localStorage.getItem('aegis_account_secret_key_remembered')).toBeNull();
+    expect(getRememberedAccountSecretKey()).toBeNull();
   });
 
   it('stores remembered secret keys in Android secure storage when the bridge is available', async () => {
@@ -256,7 +337,9 @@ describe('vault session storage', () => {
       expect(getActiveMasterPassword()).toBe('master-pass');
       expect(warnSpy).toHaveBeenCalledWith(expect.objectContaining({
         code: 'attachment.legacyMigration.failed',
+        severity: 'warning',
         source: 'AegisSecurity',
+        meta: expect.objectContaining({ error: 'migration failed' }),
       }));
     } finally {
       warnSpy.mockRestore();
@@ -293,16 +376,31 @@ describe('vault session storage', () => {
     expect(isMasterPasswordSet()).toBe(true);
   });
 
+
+  it('does not treat empty or malformed fallback user secret arrays as setup', () => {
+    localStorage.setItem('aegis_sqlite_fallback', JSON.stringify({ user_secrets: [] }));
+    expect(isMasterPasswordSet()).toBe(false);
+
+    localStorage.setItem('aegis_sqlite_fallback', JSON.stringify({ user_secrets: null }));
+    expect(isMasterPasswordSet()).toBe(false);
+
+    localStorage.setItem('aegis_sqlite_fallback', JSON.stringify({ records: [{ id: 'secret' }] }));
+    expect(isMasterPasswordSet()).toBe(false);
+  });
+
   it('returns empty lists for mutating wrappers when no vault session is active', async () => {
     await expect(saveVaultItem(sampleItem())).resolves.toEqual([]);
     await expect(deleteVaultItem('item-1')).resolves.toEqual([]);
     await expect(moveToTrash('item-1')).resolves.toEqual([]);
     await expect(restoreFromTrash('item-1')).resolves.toEqual([]);
     await expect(deletePermanently('item-1')).resolves.toEqual([]);
+    await expect(saveVaultItems([sampleItem()], vi.fn())).resolves.toEqual([]);
     await expect(emptyTrashComplete()).resolves.toEqual([]);
     await expect(reseedDemoData()).resolves.toEqual([]);
 
     expect(sqliteOPFSInstance.saveVaultItem).not.toHaveBeenCalled();
+    expect(sqliteOPFSInstance.saveVaultItems).not.toHaveBeenCalled();
+    expect(sqliteOPFSInstance.getVaultItems).not.toHaveBeenCalled();
     expect(sqliteOPFSInstance.deletePermanently).not.toHaveBeenCalled();
     expect(sqliteOPFSInstance.reseedDemo).not.toHaveBeenCalled();
   });
@@ -472,7 +570,33 @@ describe('vault session storage', () => {
       expect(localStorage.getItem('aegis_is_setup')).toBe('true');
       expect(warnSpy).toHaveBeenCalledWith(expect.objectContaining({
         code: 'attachment.legacyMigration.failed',
+        severity: 'warning',
         source: 'AegisSecurity',
+        meta: expect.objectContaining({ error: 'setup migration failed' }),
+      }));
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+
+  it('keeps secret-key setup successful when legacy attachment migration fails', async () => {
+    migrateLegacyAttachmentsToAesGcm.mockRejectedValueOnce(new Error('secret setup migration failed'));
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      await expect(setupMasterPasswordWithSecretKey(
+        'master-pass',
+        'A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
+        false,
+      )).resolves.toBeUndefined();
+
+      expect(localStorage.getItem('aegis_is_setup')).toBe('true');
+      expect(warnSpy).toHaveBeenCalledWith(expect.objectContaining({
+        code: 'attachment.legacyMigration.failed',
+        severity: 'warning',
+        source: 'AegisSecurity',
+        meta: expect.objectContaining({ error: 'secret setup migration failed' }),
       }));
     } finally {
       warnSpy.mockRestore();

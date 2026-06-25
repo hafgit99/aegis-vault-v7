@@ -15,9 +15,9 @@ export default {
   },
   reporters: ['progress', 'clear-text', 'html', 'json'],
   thresholds: {
-    high: 80,
-    low: 70,
-    break: 65,
+    high: 90,
+    low: 85,
+    break: 85,
   },
   timeoutMS: 15000,
   dryRunTimeoutMinutes: 3,
