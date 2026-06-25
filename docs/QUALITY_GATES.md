@@ -121,19 +121,19 @@ Current measured importer helper mutation baseline:
 | Metric | Baseline |
 | --- | ---: |
 | Mutants | 288 |
-| Mutation score | 85.42% |
-| Covered mutation score | 85.71% |
-| Killed | 242 |
+| Mutation score | 87.85% |
+| Covered mutation score | 88.15% |
+| Killed | 249 |
 | Timed out | 4 |
-| Survived | 41 |
+| Survived | 34 |
 | No coverage | 1 |
 
 File scores:
 
 | File | Mutation score |
 | --- | ---: |
-| `src/lib/csvParser.ts` | 84.46% |
-| `src/lib/fileDecoder.ts` | 87.37% |
+| `src/lib/csvParser.ts` | 87.56% |
+| `src/lib/fileDecoder.ts` | 88.42% |
 
 `src/lib/csvParser.ts` now exceeds the 80% target after the parser was hardened to treat quotes as structural only at field boundaries and preserve malformed quote data literally. `src/lib/fileDecoder.ts` now exceeds the 85% target after BOM marker, invalid post-BOM byte, and UTF-16 heuristic threshold boundaries were covered.
 
@@ -142,8 +142,8 @@ Importer helper mutation thresholds:
 | Level | Threshold |
 | --- | ---: |
 | High | 90% |
-| Low | 85% |
-| Break | 80% |
+| Low | 87% |
+| Break | 85% |
 
 ## Storage Bridge Mutation Gate
 
@@ -317,7 +317,7 @@ Recently improved:
 - `src/lib/securityEvents.ts`: added to the core mutation gate with structured error construction, severity routing, public error copy, metadata redaction, control-character normalization, truncation, and non-string metadata preservation; security event mutation score now reports 100%.
 - `src/lib/hibp.ts`: covered k-anonymity range lookup, Add-Padding/no-store request options, prefix cache reuse, and fail-closed unavailable responses.
 - `src/lib/importer.ts`: covered sparse Aegis JSON defaults, sparse and unknown Bitwarden JSON types, numeric Bitwarden CSV categories/favorites, LastPass optional-column fallbacks, universal CSV fallback defaults, stable default/localized format labels, encrypted-envelope guards, and empty/error states. CSV delimiter parsing, label defaults, and file decoding were split into `src/lib/csvParser.ts`, `src/lib/importerLabels.ts`, and `src/lib/fileDecoder.ts`; importer mutation score now reports 80.35%.
-- Importer helpers: added direct CSV parser and file decoder coverage plus a dedicated helper mutation gate, with 288 scoped mutants and an 85.42% baseline.
+- Importer helpers: expanded CSV parser and file decoder edge coverage for empty exports, CR-only row separators, closing-quote whitespace, malformed quoted fields, blank records, short UTF-16 samples, incomplete BOM prefixes, and tied UTF-16 null-byte votes; the dedicated helper gate now reports 87.85% with a break threshold of 85.
 - `src/lib/legacyCrypto.ts`: covered malformed legacy hashes, compact KDF parameters, SHA-256/HMAC/HKDF vectors, authenticated legacy AES-GCM-compatible decrypt paths, tamper rejection, old stream-cipher fallback envelopes, malformed secure envelopes, checksum failures, and unsupported envelope versions.
 - `src/lib/attachments.ts`: covered AES-GCM metadata validation, legacy records without explicit algorithms, binary MIME fallback, unreadable FileReader results, FileReader errors, and stored-record decrypt failures so attachment branch coverage now reports full coverage.
 - Storage bridge helpers: added a dedicated mutation gate for desktop native persistence and Android secure storage, covering runtime scope detection, native command routing, extension credential shaping, secure bridge validation, and fail-closed native errors.

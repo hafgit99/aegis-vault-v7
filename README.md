@@ -166,12 +166,12 @@ npm run test:e2e
 Latest local verification before this README update:
 
 - `npm run lint` passed.
-- `npm run test:unit` passed: 92 test files, 631 tests.
-- `npm run test:coverage` passed: 92 test files, 631 tests.
+- `npm run test:unit` passed: 92 test files, 640 tests.
+- `npm run test:coverage` passed: 92 test files, 640 tests.
 - `npm run build` passed.
 - `npm run test:mutation:core` passed: 460 mutants, 81.74% mutation score.
 - `npm run test:mutation:importer` passed: 682 mutants, 80.35% mutation score.
-- `npm run test:mutation:importer:helpers` passed: 288 mutants, 85.42% mutation score.
+- `npm run test:mutation:importer:helpers` passed: 288 mutants, 87.85% mutation score.
 - `npm run test:mutation:storage` passed: 131 mutants, 90.84% mutation score.
 - `npm run test:mutation:storage:orchestration` passed: 242 mutants, 88.43% mutation score.
 
@@ -187,17 +187,17 @@ Coverage was generated locally with `npm run test:coverage`.
 | Metric | Coverage |
 | --- | ---: |
 | Statements | 95.84% |
-| Branches | 90.30% |
+| Branches | 90.33% |
 | Functions | 92.76% |
 | Lines | 95.84% |
 
 | Suite | Result |
 | --- | ---: |
 | Test files | 92 passed |
-| Tests | 631 passed |
+| Tests | 640 passed |
 | Core mutation score | 81.74% passed |
 | Importer mutation score | 80.35% passed |
-| Importer helper mutation score | 85.42% passed |
+| Importer helper mutation score | 87.85% passed |
 | Storage bridge mutation score | 90.84% passed |
 | Storage orchestration mutation score | 88.43% passed |
 

@@ -51,4 +51,25 @@ describe('file decoder helper', () => {
     expect(decodeFileBuffer(new Uint8Array([0x41, 0x00, 0x42, 0x00, 0x43, 0x44, 0x45, 0x46]).buffer)).toBe('A\u0000B\u0000CDEF');
     expect(decodeFileBuffer(new Uint8Array([0x00, 0x41, 0x00, 0x42, 0x43, 0x44, 0x45, 0x46]).buffer)).toBe('\u0000A\u0000BCDEF');
   });
+
+  it('returns an empty string for an empty buffer', () => {
+    expect(decodeFileBuffer(new Uint8Array([]).buffer)).toBe('');
+  });
+
+  it('does not run UTF-16 heuristics on samples shorter than four bytes', () => {
+    expect(decodeFileBuffer(new Uint8Array([0x41, 0x00, 0x42]).buffer)).toBe('A\u0000B');
+  });
+
+  it('requires complete BOM prefixes before using marker decoders', () => {
+    expect(decodeFileBuffer(new Uint8Array([0xEF, 0xBB]).buffer)).not.toBe('');
+    expect(decodeFileBuffer(new Uint8Array([0xFF]).buffer)).not.toBe('');
+    expect(decodeFileBuffer(new Uint8Array([0xFE]).buffer)).not.toBe('');
+  });
+
+  it('uses big-endian UTF-16 when null-byte votes are tied above the heuristic threshold', () => {
+    const bytes = new Uint8Array([0x00, 0x41, 0x42, 0x00, 0x00, 0x43]);
+
+    expect(decodeFileBuffer(bytes.buffer)).toBe(new TextDecoder('utf-16be').decode(bytes));
+    expect(decodeFileBuffer(bytes.buffer)).not.toBe(new TextDecoder('utf-16le').decode(bytes));
+  });
 });

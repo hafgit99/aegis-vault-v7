@@ -128,4 +128,39 @@ describe('CSV parser helper', () => {
       ['name', 'value'],
     ]);
   });
+
+  it('returns no rows for an empty export', () => {
+    expect(parseCSV('')).toEqual([]);
+  });
+
+  it('handles CR-only row separators without dropping the first character of the next row', () => {
+    expect(parseCSV('first,second\rplain,text\romega,theta')).toEqual([
+      ['first', 'second'],
+      ['plain', 'text'],
+      ['omega', 'theta'],
+    ]);
+  });
+
+  it('ignores whitespace after a closing quote before delimiters and row breaks', () => {
+    expect(parseCSV('name,value\n"alpha"  ,"beta"\t\n"gamma" ,delta')).toEqual([
+      ['name', 'value'],
+      ['alpha', 'beta'],
+      ['gamma', 'delta'],
+    ]);
+  });
+
+  it('preserves malformed quoted fields when text follows closing-quote whitespace', () => {
+    expect(parseCSV('name,value\n"alpha"  tail,beta')).toEqual([
+      ['name', 'value'],
+      ['"alpha"  tail', 'beta'],
+    ]);
+  });
+
+  it('drops blank records between valid rows without losing final empty fields', () => {
+    expect(parseCSV('name,value\n\nalpha,\n\nomega,theta')).toEqual([
+      ['name', 'value'],
+      ['alpha', ''],
+      ['omega', 'theta'],
+    ]);
+  });
 });
