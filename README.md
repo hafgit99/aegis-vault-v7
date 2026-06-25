@@ -166,12 +166,12 @@ npm run test:e2e
 Latest local verification before this README update:
 
 - `npm run lint` passed.
-- `npm run test:unit` passed: 92 test files, 623 tests.
-- `npm run test:coverage` passed: 92 test files, 623 tests.
+- `npm run test:unit` passed: 92 test files, 626 tests.
+- `npm run test:coverage` passed: 92 test files, 626 tests.
 - `npm run build` passed.
 - `npm run test:mutation:core` passed: 460 mutants, 81.74% mutation score.
 - `npm run test:mutation:importer` passed: 682 mutants, 80.35% mutation score.
-- `npm run test:mutation:importer:helpers` passed: 288 mutants, 82.99% mutation score.
+- `npm run test:mutation:importer:helpers` passed: 288 mutants, 85.42% mutation score.
 - `npm run test:mutation:storage` passed: 131 mutants, 90.84% mutation score.
 - `npm run test:mutation:storage:orchestration` passed: 242 mutants, 81.82% mutation score.
 
@@ -194,10 +194,10 @@ Coverage was generated locally with `npm run test:coverage`.
 | Suite | Result |
 | --- | ---: |
 | Test files | 92 passed |
-| Tests | 623 passed |
+| Tests | 626 passed |
 | Core mutation score | 81.74% passed |
 | Importer mutation score | 80.35% passed |
-| Importer helper mutation score | 82.99% passed |
+| Importer helper mutation score | 85.42% passed |
 | Storage bridge mutation score | 90.84% passed |
 | Storage orchestration mutation score | 81.82% passed |
 

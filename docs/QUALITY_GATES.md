@@ -121,11 +121,11 @@ Current measured importer helper mutation baseline:
 | Metric | Baseline |
 | --- | ---: |
 | Mutants | 288 |
-| Mutation score | 82.99% |
-| Covered mutation score | 83.28% |
-| Killed | 235 |
+| Mutation score | 85.42% |
+| Covered mutation score | 85.71% |
+| Killed | 242 |
 | Timed out | 4 |
-| Survived | 48 |
+| Survived | 41 |
 | No coverage | 1 |
 
 File scores:
@@ -133,17 +133,17 @@ File scores:
 | File | Mutation score |
 | --- | ---: |
 | `src/lib/csvParser.ts` | 84.46% |
-| `src/lib/fileDecoder.ts` | 80.00% |
+| `src/lib/fileDecoder.ts` | 87.37% |
 
-`src/lib/csvParser.ts` now exceeds the 80% target after the parser was hardened to treat quotes as structural only at field boundaries and preserve malformed quote data literally. `src/lib/fileDecoder.ts` remains at the initial 80% target.
+`src/lib/csvParser.ts` now exceeds the 80% target after the parser was hardened to treat quotes as structural only at field boundaries and preserve malformed quote data literally. `src/lib/fileDecoder.ts` now exceeds the 85% target after BOM marker, invalid post-BOM byte, and UTF-16 heuristic threshold boundaries were covered.
 
 Importer helper mutation thresholds:
 
 | Level | Threshold |
 | --- | ---: |
-| High | 85% |
-| Low | 80% |
-| Break | 75% |
+| High | 90% |
+| Low | 85% |
+| Break | 80% |
 
 ## Storage Bridge Mutation Gate
 
@@ -241,7 +241,7 @@ Recently improved:
 - Localization audit: verified production code outside `src/i18n/translations.ts` no longer contains Turkish user-facing literals, with biometric/backup/legacy crypto errors represented by stable codes.
 - Production build: covered Vite manual vendor chunking so the app, vendor, and Argon2 bundles stay below the 500 kB warning threshold.
 - `src/lib/importer.ts`: covered supported JSON/CSV formats, encrypted envelope detection, malformed inputs, vault-item normalization, and parser/decoder delegation through focused helper modules.
-- `src/lib/csvParser.ts` and `src/lib/fileDecoder.ts`: added direct helper tests and a dedicated importer helper mutation gate; CSV parsing now reports 84.46%, file decoding reports 80.00%, and the combined helper gate reports 82.99%.
+- `src/lib/csvParser.ts` and `src/lib/fileDecoder.ts`: added direct helper tests and a dedicated importer helper mutation gate; CSV parsing now reports 84.46%, file decoding reports 87.37%, and the combined helper gate reports 85.42%.
 - `src/lib/attachments.ts`: covered IndexedDB save/read/delete paths, bulk legacy migration, missing records, and connection cleanup behavior.
 - `src/lib/sqlite_opfs.ts`: covered master setup/verification, encrypted row persistence, desktop payload hydration, OPFS file hydration, missing OPFS file initialization, OPFS write failures, desktop read fallback, legacy localStorage migration, read-only SQL console behavior, row update/defaults, reseed/delete/reset flows, query log subscriptions, localStorage fallback hydration, and missing-key decryption guards.
 - `src/lib/storage.ts`: covered setup detection, Secret Key profile fallbacks, remembered-key migration/forget flows, failed unlock session guards, master-password rotation rollback rules, reset marker cleanup, no-session guards, save/delete/reseed wrappers, trash move/restore, retention-boundary cleanup, bulk-save progress callbacks, and full trash emptying.
@@ -317,7 +317,7 @@ Recently improved:
 - `src/lib/securityEvents.ts`: added to the core mutation gate with structured error construction, severity routing, public error copy, metadata redaction, control-character normalization, truncation, and non-string metadata preservation; security event mutation score now reports 100%.
 - `src/lib/hibp.ts`: covered k-anonymity range lookup, Add-Padding/no-store request options, prefix cache reuse, and fail-closed unavailable responses.
 - `src/lib/importer.ts`: covered sparse Aegis JSON defaults, sparse and unknown Bitwarden JSON types, numeric Bitwarden CSV categories/favorites, LastPass optional-column fallbacks, universal CSV fallback defaults, stable default/localized format labels, encrypted-envelope guards, and empty/error states. CSV delimiter parsing, label defaults, and file decoding were split into `src/lib/csvParser.ts`, `src/lib/importerLabels.ts`, and `src/lib/fileDecoder.ts`; importer mutation score now reports 80.35%.
-- Importer helpers: added direct CSV parser and file decoder coverage plus a dedicated helper mutation gate, with 288 scoped mutants and an 82.99% baseline.
+- Importer helpers: added direct CSV parser and file decoder coverage plus a dedicated helper mutation gate, with 288 scoped mutants and an 85.42% baseline.
 - `src/lib/legacyCrypto.ts`: covered malformed legacy hashes, compact KDF parameters, SHA-256/HMAC/HKDF vectors, authenticated legacy AES-GCM-compatible decrypt paths, tamper rejection, old stream-cipher fallback envelopes, malformed secure envelopes, checksum failures, and unsupported envelope versions.
 - `src/lib/attachments.ts`: covered AES-GCM metadata validation, legacy records without explicit algorithms, binary MIME fallback, unreadable FileReader results, FileReader errors, and stored-record decrypt failures so attachment branch coverage now reports full coverage.
 - Storage bridge helpers: added a dedicated mutation gate for desktop native persistence and Android secure storage, covering runtime scope detection, native command routing, extension credential shaping, secure bridge validation, and fail-closed native errors.
@@ -339,5 +339,5 @@ Recently improved:
   - `npm run android:device:smoke`
   - Manual Android release candidate checklist from `docs/ANDROID_READINESS.md`.
 - Expand smoke E2E coverage for detail actions, broader translated screens, desktop persistence, and mobile smoke viewports.
-- Raise file decoder helper mutation score above 85%, harden the remaining storage orchestration survivors, and then expand mutation testing into SQLite migration modules.
+- Push importer helper mutation score toward the 90% high threshold, harden the remaining storage orchestration survivors, and then expand mutation testing into SQLite migration modules.
 - Keep global coverage thresholds at or above 90% lines/statements, 85% functions, and 80% branches; raise them again after the current priority targets improve.
