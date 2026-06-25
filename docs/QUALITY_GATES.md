@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 95.47% |
-| Statements | 95.47% |
+| Lines | 95.51% |
+| Statements | 95.51% |
 | Functions | 92.56% |
-| Branches | 89.55% |
+| Branches | 89.76% |
 
 Coverage thresholds now act as a release-quality regression gate while staying slightly below the current baseline:
 
@@ -99,6 +99,41 @@ Current measured importer mutation baseline:
 | Timed out | 4 |
 | Survived | 237 |
 | No coverage | 25 |
+
+## Storage Bridge Mutation Gate
+
+Native persistence and Android secure-storage bridges have a dedicated mutation gate. The broader vault session/storage orchestration remains intentionally separate because it pulls in heavier mocked SQLite/session flows.
+
+Run it with:
+
+```bash
+npm run test:mutation:storage:dry
+npm run test:mutation:storage
+```
+
+Current mutation scope:
+
+- `src/lib/desktopStorage.ts`
+- `src/lib/secureStorage.ts`
+
+Current measured storage bridge mutation baseline:
+
+| Metric | Baseline |
+| --- | ---: |
+| Mutants | 131 |
+| Mutation score | 90.84% |
+| Covered mutation score | 92.97% |
+| Killed | 119 |
+| Timed out | 0 |
+| Survived | 9 |
+| No coverage | 3 |
+
+File scores:
+
+| File | Mutation score |
+| --- | ---: |
+| `src/lib/desktopStorage.ts` | 91.46% |
+| `src/lib/secureStorage.ts` | 89.80% |
 
 ## Current E2E Smoke Gate
 
@@ -211,6 +246,7 @@ Recently improved:
 - `src/lib/importer.ts`: covered sparse Aegis JSON defaults, sparse and unknown Bitwarden JSON types, numeric Bitwarden CSV categories/favorites, LastPass optional-column fallbacks, universal CSV fallback defaults, delimiter auto-detection, tie-break delimiter behavior, CRLF/CR parsing, quoted delimiter preservation, stable default/localized format labels, encrypted-envelope guards, empty/error states, and UTF-16 BE decoding.
 - `src/lib/legacyCrypto.ts`: covered malformed legacy hashes, compact KDF parameters, SHA-256/HMAC/HKDF vectors, authenticated legacy AES-GCM-compatible decrypt paths, tamper rejection, old stream-cipher fallback envelopes, malformed secure envelopes, checksum failures, and unsupported envelope versions.
 - `src/lib/attachments.ts`: covered AES-GCM metadata validation, legacy records without explicit algorithms, binary MIME fallback, unreadable FileReader results, FileReader errors, and stored-record decrypt failures so attachment branch coverage now reports full coverage.
+- Storage bridge helpers: added a dedicated mutation gate for desktop native persistence and Android secure storage, covering runtime scope detection, native command routing, extension credential shaping, secure bridge validation, and fail-closed native errors.
 
 ## Next Gates
 
@@ -228,5 +264,5 @@ Recently improved:
   - `npm run android:device:smoke`
   - Manual Android release candidate checklist from `docs/ANDROID_READINESS.md`.
 - Expand smoke E2E coverage for detail actions, broader translated screens, desktop persistence, and mobile smoke viewports.
-- Raise the dedicated importer mutation score toward 80% and expand mutation testing into storage migration modules.
+- Raise the dedicated importer mutation score toward 80%, add a separate vault storage orchestration mutation gate, and then expand mutation testing into SQLite migration modules.
 - Keep global coverage thresholds at or above 90% lines/statements, 85% functions, and 80% branches; raise them again after the current priority targets improve.

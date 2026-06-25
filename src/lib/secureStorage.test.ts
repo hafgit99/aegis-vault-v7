@@ -26,14 +26,22 @@ describe('secure storage bridge', () => {
   });
 
   it('reports unavailable when the Android bridge shape is incomplete', () => {
-    window.AegisAndroidSecureStorage = {
-      getItem: vi.fn(() => null),
-    } as unknown as typeof window.AegisAndroidSecureStorage;
+    const incompleteBridges = [
+      { getItem: vi.fn(() => null) },
+      { setItem: vi.fn(() => true) },
+      { removeItem: vi.fn(() => true) },
+      { getItem: 'not-a-function', setItem: vi.fn(() => true), removeItem: vi.fn(() => true) },
+      { getItem: vi.fn(() => null), setItem: 'not-a-function', removeItem: vi.fn(() => true) },
+      { getItem: vi.fn(() => null), setItem: vi.fn(() => true), removeItem: 'not-a-function' },
+    ];
 
-    expect(isSecureStorageAvailable()).toBe(false);
-    expect(getSecureStorageItem(secureStorageKeys.rememberedSecretKey)).toBeNull();
-    expect(setSecureStorageItem(secureStorageKeys.rememberedSecretKey, 'secret')).toBe(false);
-    expect(removeSecureStorageItem(secureStorageKeys.rememberedSecretKey)).toBe(false);
+    for (const bridge of incompleteBridges) {
+      window.AegisAndroidSecureStorage = bridge as unknown as typeof window.AegisAndroidSecureStorage;
+      expect(isSecureStorageAvailable()).toBe(false);
+      expect(getSecureStorageItem(secureStorageKeys.rememberedSecretKey)).toBeNull();
+      expect(setSecureStorageItem(secureStorageKeys.rememberedSecretKey, 'secret')).toBe(false);
+      expect(removeSecureStorageItem(secureStorageKeys.rememberedSecretKey)).toBe(false);
+    }
   });
 
   it('routes get, set, and remove through the Android secure storage bridge', () => {

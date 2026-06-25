@@ -100,6 +100,7 @@ describe('desktopStorage', () => {
   it('syncs extension credentials with a short native lease', async () => {
     window.__TAURI_INTERNALS__ = {};
 
+    expect(EXTENSION_CREDENTIAL_LEASE_MS).toBe(300000);
     await syncExtensionCredentials(items);
 
     expect(invoke).toHaveBeenCalledWith('sync_extension_credentials', {
@@ -116,6 +117,48 @@ describe('desktopStorage', () => {
         },
       ],
     });
+  });
+
+  it('syncs extension credentials with card fallbacks and a custom lease', async () => {
+    window.__TAURI_INTERNALS__ = {};
+    const cardItem: VaultItem = {
+      id: 'card-1',
+      title: 'Card',
+      username: '',
+      password: '',
+      cardholderName: 'Ada Lovelace',
+      cardNumber: '4111111111111111',
+      url: '',
+      category: 'card',
+      favorite: true,
+      createdAt: '2026-06-17',
+      updatedAt: '2026-06-17',
+    };
+
+    await syncExtensionCredentials([cardItem], 1000);
+
+    expect(invoke).toHaveBeenCalledWith('sync_extension_credentials', {
+      ttlMs: 1000,
+      credentials: [expect.objectContaining({
+        username: 'Ada Lovelace',
+        password: '4111111111111111',
+        url: '',
+        favorite: true,
+      })],
+    });
+  });
+
+  it('fails closed when extension sync commands throw', async () => {
+    window.__TAURI_INTERNALS__ = {};
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    invoke.mockRejectedValueOnce(new Error('sync failed')).mockRejectedValueOnce(new Error('clear failed'));
+
+    await syncExtensionCredentials(items);
+    await clearExtensionCredentials();
+
+    expect(errorSpy).toHaveBeenNthCalledWith(1, 'Failed to sync credentials to extension:', expect.any(Error));
+    expect(errorSpy).toHaveBeenNthCalledWith(2, 'Failed to clear extension credentials:', expect.any(Error));
+    errorSpy.mockRestore();
   });
 
   it('clears extension credentials through the native bridge', async () => {
