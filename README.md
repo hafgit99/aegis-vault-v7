@@ -139,6 +139,12 @@ Run the dedicated importer mutation gate:
 npm run test:mutation:importer
 ```
 
+Run the storage bridge mutation gate:
+
+```bash
+npm run test:mutation:storage
+```
+
 Run Playwright smoke tests when the browser test environment is prepared:
 
 ```bash
@@ -148,34 +154,36 @@ npm run test:e2e
 Latest local verification before this README update:
 
 - `npm run lint` passed.
-- `npm run test:unit` passed: 90 test files, 583 tests.
-- `npm run test:coverage` passed: 90 test files, 583 tests.
+- `npm run test:unit` passed: 90 test files, 585 tests.
+- `npm run test:coverage` passed: 90 test files, 585 tests.
 - `npm run build` passed.
 - `npm run test:mutation:core` passed: 460 mutants, 81.74% mutation score.
 - `npm run test:mutation:importer` passed: 994 mutants, 73.64% mutation score.
+- `npm run test:mutation:storage` passed: 131 mutants, 90.84% mutation score.
 
 ## Coverage
 
-![Statements](https://img.shields.io/badge/statements-95.47%25-brightgreen)
-![Branches](https://img.shields.io/badge/branches-89.55%25-green)
+![Statements](https://img.shields.io/badge/statements-95.51%25-brightgreen)
+![Branches](https://img.shields.io/badge/branches-89.76%25-green)
 ![Functions](https://img.shields.io/badge/functions-92.56%25-brightgreen)
-![Lines](https://img.shields.io/badge/lines-95.47%25-brightgreen)
+![Lines](https://img.shields.io/badge/lines-95.51%25-brightgreen)
 
 Coverage was generated locally with `npm run test:coverage`.
 
 | Metric | Coverage |
 | --- | ---: |
-| Statements | 95.47% |
-| Branches | 89.55% |
+| Statements | 95.51% |
+| Branches | 89.76% |
 | Functions | 92.56% |
-| Lines | 95.47% |
+| Lines | 95.51% |
 
 | Suite | Result |
 | --- | ---: |
 | Test files | 90 passed |
-| Tests | 583 passed |
+| Tests | 585 passed |
 | Core mutation score | 81.74% passed |
 | Importer mutation score | 73.64% passed |
+| Storage bridge mutation score | 90.84% passed |
 
 ## Desktop Builds
 
