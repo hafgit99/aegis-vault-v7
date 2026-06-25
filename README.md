@@ -164,7 +164,7 @@ Latest local verification before this README update:
 - `npm run test:coverage` passed: 90 test files, 600 tests.
 - `npm run build` passed.
 - `npm run test:mutation:core` passed: 460 mutants, 81.74% mutation score.
-- `npm run test:mutation:importer` passed: 994 mutants, 73.64% mutation score.
+- `npm run test:mutation:importer` passed: 682 mutants, 80.35% mutation score.
 - `npm run test:mutation:storage` passed: 131 mutants, 90.84% mutation score.
 - `npm run test:mutation:storage:orchestration` passed: 242 mutants, 81.82% mutation score.
 
@@ -189,7 +189,7 @@ Coverage was generated locally with `npm run test:coverage`.
 | Test files | 90 passed |
 | Tests | 600 passed |
 | Core mutation score | 81.74% passed |
-| Importer mutation score | 73.64% passed |
+| Importer mutation score | 80.35% passed |
 | Storage bridge mutation score | 90.84% passed |
 | Storage orchestration mutation score | 81.82% passed |
 

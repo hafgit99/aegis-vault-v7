@@ -75,7 +75,7 @@ The Diceware word lists live in `src/lib/dicewareWords.ts` and the TOTP HMAC/SHA
 
 ## Dedicated Importer Mutation Gate
 
-The universal import parser has its own mutation gate because adding it to the core gate increases the dry-run scope to 1,454 mutants. Keeping it separate preserves a fast critical-core signal while still measuring import/export correctness directly.
+The universal import parser has its own mutation gate because adding it to the core gate increases the dry-run scope substantially. The gate focuses on import format detection and vault-item normalization; CSV parsing, default labels, and binary file decoding live in separate helper modules so they can receive focused gates later without diluting the importer signal.
 
 Run it with:
 
@@ -92,13 +92,13 @@ Current measured importer mutation baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Mutants | 994 |
-| Mutation score | 73.64% |
-| Covered mutation score | 75.54% |
-| Killed | 728 |
-| Timed out | 4 |
-| Survived | 237 |
-| No coverage | 25 |
+| Mutants | 682 |
+| Mutation score | 80.35% |
+| Covered mutation score | 83.28% |
+| Killed | 548 |
+| Timed out | 0 |
+| Survived | 110 |
+| No coverage | 24 |
 
 ## Storage Bridge Mutation Gate
 
@@ -195,7 +195,7 @@ Recently improved:
 
 - Localization audit: verified production code outside `src/i18n/translations.ts` no longer contains Turkish user-facing literals, with biometric/backup/legacy crypto errors represented by stable codes.
 - Production build: covered Vite manual vendor chunking so the app, vendor, and Argon2 bundles stay below the 500 kB warning threshold.
-- `src/lib/importer.ts`: covered supported JSON/CSV formats, encrypted envelope detection, malformed inputs, and quote-aware CSV parsing.
+- `src/lib/importer.ts`: covered supported JSON/CSV formats, encrypted envelope detection, malformed inputs, vault-item normalization, and parser/decoder delegation through focused helper modules.
 - `src/lib/attachments.ts`: covered IndexedDB save/read/delete paths, bulk legacy migration, missing records, and connection cleanup behavior.
 - `src/lib/sqlite_opfs.ts`: covered master setup/verification, encrypted row persistence, desktop payload hydration, OPFS file hydration, missing OPFS file initialization, OPFS write failures, desktop read fallback, legacy localStorage migration, read-only SQL console behavior, row update/defaults, reseed/delete/reset flows, query log subscriptions, localStorage fallback hydration, and missing-key decryption guards.
 - `src/lib/storage.ts`: covered setup detection, Secret Key profile fallbacks, remembered-key migration/forget flows, failed unlock session guards, master-password rotation rollback rules, reset marker cleanup, no-session guards, save/delete/reseed wrappers, trash move/restore, retention-boundary cleanup, bulk-save progress callbacks, and full trash emptying.
@@ -270,7 +270,7 @@ Recently improved:
 - `src/lib/otp.ts`: added to the core mutation gate with RFC vectors, otpauth URI parsing, period/digit validation, Base32 whitespace/padding normalization, eight-digit formatting, and high-counter serialization coverage; TOTP mutation score now reports 92.19%.
 - `src/lib/securityEvents.ts`: added to the core mutation gate with structured error construction, severity routing, public error copy, metadata redaction, control-character normalization, truncation, and non-string metadata preservation; security event mutation score now reports 100%.
 - `src/lib/hibp.ts`: covered k-anonymity range lookup, Add-Padding/no-store request options, prefix cache reuse, and fail-closed unavailable responses.
-- `src/lib/importer.ts`: covered sparse Aegis JSON defaults, sparse and unknown Bitwarden JSON types, numeric Bitwarden CSV categories/favorites, LastPass optional-column fallbacks, universal CSV fallback defaults, delimiter auto-detection, tie-break delimiter behavior, CRLF/CR parsing, quoted delimiter preservation, stable default/localized format labels, encrypted-envelope guards, empty/error states, and UTF-16 BE decoding.
+- `src/lib/importer.ts`: covered sparse Aegis JSON defaults, sparse and unknown Bitwarden JSON types, numeric Bitwarden CSV categories/favorites, LastPass optional-column fallbacks, universal CSV fallback defaults, stable default/localized format labels, encrypted-envelope guards, and empty/error states. CSV delimiter parsing, label defaults, and file decoding were split into `src/lib/csvParser.ts`, `src/lib/importerLabels.ts`, and `src/lib/fileDecoder.ts`; importer mutation score now reports 80.35%.
 - `src/lib/legacyCrypto.ts`: covered malformed legacy hashes, compact KDF parameters, SHA-256/HMAC/HKDF vectors, authenticated legacy AES-GCM-compatible decrypt paths, tamper rejection, old stream-cipher fallback envelopes, malformed secure envelopes, checksum failures, and unsupported envelope versions.
 - `src/lib/attachments.ts`: covered AES-GCM metadata validation, legacy records without explicit algorithms, binary MIME fallback, unreadable FileReader results, FileReader errors, and stored-record decrypt failures so attachment branch coverage now reports full coverage.
 - Storage bridge helpers: added a dedicated mutation gate for desktop native persistence and Android secure storage, covering runtime scope detection, native command routing, extension credential shaping, secure bridge validation, and fail-closed native errors.
@@ -292,5 +292,5 @@ Recently improved:
   - `npm run android:device:smoke`
   - Manual Android release candidate checklist from `docs/ANDROID_READINESS.md`.
 - Expand smoke E2E coverage for detail actions, broader translated screens, desktop persistence, and mobile smoke viewports.
-- Raise the dedicated importer mutation score toward 80%, harden the remaining storage orchestration survivors, and then expand mutation testing into SQLite migration modules.
+- Add focused mutation gates for `src/lib/csvParser.ts` and `src/lib/fileDecoder.ts`, harden the remaining storage orchestration survivors, and then expand mutation testing into SQLite migration modules.
 - Keep global coverage thresholds at or above 90% lines/statements, 85% functions, and 80% branches; raise them again after the current priority targets improve.
