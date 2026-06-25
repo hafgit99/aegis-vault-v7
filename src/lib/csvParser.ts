@@ -10,7 +10,6 @@
 export function parseCSV(text: string): string[][] {
   if (!text) return [];
 
-  // Auto-detect delimiter based on occurrences in the first line
   const firstLine = text.split(/\r?\n/)[0] || '';
   const commaCount = (firstLine.match(/,/g) || []).length;
   const semicolonCount = (firstLine.match(/;/g) || []).length;
@@ -25,69 +24,92 @@ export function parseCSV(text: string): string[][] {
 
   const result: string[][] = [];
   let row: string[] = [];
+  let field = '';
   let inQuotes = false;
-  let startIdx = 0;
-  const len = text.length;
+  let quotedField = false;
+  let lastWasDelimiter = false;
+  let afterClosingQuote = false;
+  let trailingQuoteWhitespace = '';
 
-  for (let i = 0; i < len; i++) {
+  const pushField = () => {
+    row.push(quotedField ? field : field.trim().replace(/""/g, '"'));
+    field = '';
+    quotedField = false;
+    afterClosingQuote = false;
+    trailingQuoteWhitespace = '';
+    lastWasDelimiter = false;
+  };
+
+  const pushRow = () => {
+    if (row.some(value => value !== '')) {
+      result.push(row);
+    }
+    row = [];
+  };
+
+  for (let i = 0; i < text.length; i++) {
     const char = text[i];
 
+    if (afterClosingQuote && !inQuotes) {
+      if (char === ' ' || char === '\t') {
+        trailingQuoteWhitespace += char;
+        continue;
+      }
+
+      if (char !== delimiter && char !== '\r' && char !== '\n') {
+        field = '"' + field + '"' + trailingQuoteWhitespace + char;
+        quotedField = false;
+        afterClosingQuote = false;
+        trailingQuoteWhitespace = '';
+        lastWasDelimiter = false;
+        continue;
+      }
+    }
+
     if (char === '"') {
-      // Look ahead to check if it's an escaped quote ("")
-      if (inQuotes && text[i + 1] === '"') {
-        i++; // skip next quote
+      if (inQuotes) {
+        if (text[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else {
+          inQuotes = false;
+          afterClosingQuote = true;
+          trailingQuoteWhitespace = '';
+        }
+      } else if (field.trim() === '') {
+        field = '';
+        inQuotes = true;
+        quotedField = true;
+        afterClosingQuote = false;
       } else {
-        inQuotes = !inQuotes;
+        field += char;
       }
-    } else if (char === delimiter && !inQuotes) {
-      let val = text.substring(startIdx, i);
-      
-      // Clean quotes
-      val = val.trim();
-      if (val.startsWith('"') && val.endsWith('"') && val.length >= 2) {
-        val = val.substring(1, val.length - 1);
-      }
-      val = val.replace(/""/g, '"');
-      
-      row.push(val);
-      startIdx = i + 1;
-    } else if ((char === '\r' || char === '\n') && !inQuotes) {
-      let val = text.substring(startIdx, i);
-      
-      val = val.trim();
-      if (val.startsWith('"') && val.endsWith('"') && val.length >= 2) {
-        val = val.substring(1, val.length - 1);
-      }
-      val = val.replace(/""/g, '"');
-      
-      row.push(val);
+      continue;
+    }
 
-      if (row.length > 0 && row.some(x => x !== '')) {
-        result.push(row);
-      }
-      row = [];
+    if (char === delimiter && !inQuotes) {
+      pushField();
+      lastWasDelimiter = true;
+      continue;
+    }
 
+    if ((char === '\r' || char === '\n') && !inQuotes) {
+      pushField();
+      pushRow();
       if (char === '\r' && text[i + 1] === '\n') {
-        i++; // Skip LF after CR
+        i++;
       }
-      startIdx = i + 1;
+      continue;
     }
+
+    field += char;
+    lastWasDelimiter = false;
   }
 
-  // Handle last remaining field
-  if (startIdx < len) {
-    let val = text.substring(startIdx);
-    val = val.trim();
-    if (val.startsWith('"') && val.endsWith('"') && val.length >= 2) {
-      val = val.substring(1, val.length - 1);
-    }
-    val = val.replace(/""/g, '"');
-    row.push(val);
+  if (field !== '' || row.length > 0 || lastWasDelimiter) {
+    pushField();
+    pushRow();
   }
 
-  if (row.length > 0 && row.some(x => x !== '')) {
-    result.push(row);
-  }
-
-  return result.filter(r => r.length > 0 && r.some(val => val !== ''));
+  return result;
 }

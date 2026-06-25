@@ -100,4 +100,32 @@ describe('CSV parser helper', () => {
       ['plain text only'],
     ]);
   });
+
+  it('does not strip a one-sided trailing quote before a delimiter', () => {
+    expect(parseCSV('name,value\nleft,open",right')).toEqual([
+      ['name', 'value'],
+      ['left', 'open"', 'right'],
+    ]);
+  });
+
+  it('does not strip a one-sided trailing quote before a newline', () => {
+    expect(parseCSV('name,value\nleft,open"\nright,ok')).toEqual([
+      ['name', 'value'],
+      ['left', 'open"'],
+      ['right', 'ok'],
+    ]);
+  });
+
+  it('does not strip a one-sided trailing quote at EOF', () => {
+    expect(parseCSV('name,value\nleft,open"')).toEqual([
+      ['name', 'value'],
+      ['left', 'open"'],
+    ]);
+  });
+
+  it('drops trailing blank records after CRLF and delimiter-only rows', () => {
+    expect(parseCSV('name,value\r\n,\r\n"",""\r\n')).toEqual([
+      ['name', 'value'],
+    ]);
+  });
 });
