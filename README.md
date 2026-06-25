@@ -145,6 +145,12 @@ Run the storage bridge mutation gate:
 npm run test:mutation:storage
 ```
 
+Run the vault storage orchestration mutation gate:
+
+```bash
+npm run test:mutation:storage:orchestration
+```
+
 Run Playwright smoke tests when the browser test environment is prepared:
 
 ```bash
@@ -154,36 +160,38 @@ npm run test:e2e
 Latest local verification before this README update:
 
 - `npm run lint` passed.
-- `npm run test:unit` passed: 90 test files, 585 tests.
-- `npm run test:coverage` passed: 90 test files, 585 tests.
+- `npm run test:unit` passed: 90 test files, 600 tests.
+- `npm run test:coverage` passed: 90 test files, 600 tests.
 - `npm run build` passed.
 - `npm run test:mutation:core` passed: 460 mutants, 81.74% mutation score.
 - `npm run test:mutation:importer` passed: 994 mutants, 73.64% mutation score.
 - `npm run test:mutation:storage` passed: 131 mutants, 90.84% mutation score.
+- `npm run test:mutation:storage:orchestration` passed: 242 mutants, 81.82% mutation score.
 
 ## Coverage
 
-![Statements](https://img.shields.io/badge/statements-95.51%25-brightgreen)
-![Branches](https://img.shields.io/badge/branches-89.76%25-green)
-![Functions](https://img.shields.io/badge/functions-92.56%25-brightgreen)
-![Lines](https://img.shields.io/badge/lines-95.51%25-brightgreen)
+![Statements](https://img.shields.io/badge/statements-95.76%25-brightgreen)
+![Branches](https://img.shields.io/badge/branches-90.22%25-green)
+![Functions](https://img.shields.io/badge/functions-92.73%25-brightgreen)
+![Lines](https://img.shields.io/badge/lines-95.76%25-brightgreen)
 
 Coverage was generated locally with `npm run test:coverage`.
 
 | Metric | Coverage |
 | --- | ---: |
-| Statements | 95.51% |
-| Branches | 89.76% |
-| Functions | 92.56% |
-| Lines | 95.51% |
+| Statements | 95.76% |
+| Branches | 90.22% |
+| Functions | 92.73% |
+| Lines | 95.76% |
 
 | Suite | Result |
 | --- | ---: |
 | Test files | 90 passed |
-| Tests | 585 passed |
+| Tests | 600 passed |
 | Core mutation score | 81.74% passed |
 | Importer mutation score | 73.64% passed |
 | Storage bridge mutation score | 90.84% passed |
+| Storage orchestration mutation score | 81.82% passed |
 
 ## Desktop Builds
 

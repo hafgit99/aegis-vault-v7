@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 95.51% |
-| Statements | 95.51% |
-| Functions | 92.56% |
-| Branches | 89.76% |
+| Lines | 95.76% |
+| Statements | 95.76% |
+| Functions | 92.73% |
+| Branches | 90.22% |
 
 Coverage thresholds now act as a release-quality regression gate while staying slightly below the current baseline:
 
@@ -102,7 +102,7 @@ Current measured importer mutation baseline:
 
 ## Storage Bridge Mutation Gate
 
-Native persistence and Android secure-storage bridges have a dedicated mutation gate. The broader vault session/storage orchestration remains intentionally separate because it pulls in heavier mocked SQLite/session flows.
+Native persistence and Android secure-storage bridges have a dedicated mutation gate. Vault session/storage orchestration has its own separate gate so bridge failures and session/data-loss behavior can be measured independently.
 
 Run it with:
 
@@ -134,6 +134,33 @@ File scores:
 | --- | ---: |
 | `src/lib/desktopStorage.ts` | 91.46% |
 | `src/lib/secureStorage.ts` | 89.80% |
+
+## Storage Orchestration Mutation Gate
+
+Vault session orchestration has a dedicated mutation gate because it protects setup/unlock, Secret Key routing, master-password rotation, trash retention, reset cleanup, and bulk-save paths that can otherwise cause silent data-loss or session-integrity regressions.
+
+Run it with:
+
+```bash
+npm run test:mutation:storage:orchestration:dry
+npm run test:mutation:storage:orchestration
+```
+
+Current mutation scope:
+
+- `src/lib/storage.ts`
+
+Current measured storage orchestration mutation baseline:
+
+| Metric | Baseline |
+| --- | ---: |
+| Mutants | 242 |
+| Mutation score | 81.82% |
+| Covered mutation score | 83.54% |
+| Killed | 198 |
+| Timed out | 0 |
+| Survived | 39 |
+| No coverage | 5 |
 
 ## Current E2E Smoke Gate
 
@@ -171,7 +198,7 @@ Recently improved:
 - `src/lib/importer.ts`: covered supported JSON/CSV formats, encrypted envelope detection, malformed inputs, and quote-aware CSV parsing.
 - `src/lib/attachments.ts`: covered IndexedDB save/read/delete paths, bulk legacy migration, missing records, and connection cleanup behavior.
 - `src/lib/sqlite_opfs.ts`: covered master setup/verification, encrypted row persistence, desktop payload hydration, OPFS file hydration, missing OPFS file initialization, OPFS write failures, desktop read fallback, legacy localStorage migration, read-only SQL console behavior, row update/defaults, reseed/delete/reset flows, query log subscriptions, localStorage fallback hydration, and missing-key decryption guards.
-- `src/lib/storage.ts`: covered setup detection, no-session guards, save/delete/reseed wrappers, trash move/restore, expired trash cleanup, and full trash emptying.
+- `src/lib/storage.ts`: covered setup detection, Secret Key profile fallbacks, remembered-key migration/forget flows, failed unlock session guards, master-password rotation rollback rules, reset marker cleanup, no-session guards, save/delete/reseed wrappers, trash move/restore, retention-boundary cleanup, bulk-save progress callbacks, and full trash emptying.
 - `src/components/PasswordGenerator.tsx`: covered character option changes, all character toggles, strength bar tone branches, diceware mode settings, word-count descriptions, diceware toggles, copy feedback, unmount cleanup, and safe clipboard clearing behavior.
 - `src/lib/diceware.ts`: covered Turkish/English word selection, EFF-sized word-pool expansion, separator formats, capitalization, number and symbol placement, camel/none separator handling, optional entropy calculations, and static word-list separation for practical mutation testing.
 - `src/components/VaultFormModal.tsx`: covered card, passkey, identity, secure note, attachment upload, oversized-file rejection, existing attachment download/removal, and non-login username normalization.
@@ -247,6 +274,7 @@ Recently improved:
 - `src/lib/legacyCrypto.ts`: covered malformed legacy hashes, compact KDF parameters, SHA-256/HMAC/HKDF vectors, authenticated legacy AES-GCM-compatible decrypt paths, tamper rejection, old stream-cipher fallback envelopes, malformed secure envelopes, checksum failures, and unsupported envelope versions.
 - `src/lib/attachments.ts`: covered AES-GCM metadata validation, legacy records without explicit algorithms, binary MIME fallback, unreadable FileReader results, FileReader errors, and stored-record decrypt failures so attachment branch coverage now reports full coverage.
 - Storage bridge helpers: added a dedicated mutation gate for desktop native persistence and Android secure storage, covering runtime scope detection, native command routing, extension credential shaping, secure bridge validation, and fail-closed native errors.
+- Storage orchestration: added a dedicated mutation gate for vault setup/unlock, Secret Key routing, remembered-key cleanup, rotation rollback, reset cleanup, trash retention, and bulk-save orchestration; storage orchestration mutation score now reports 81.82%.
 
 ## Next Gates
 
@@ -264,5 +292,5 @@ Recently improved:
   - `npm run android:device:smoke`
   - Manual Android release candidate checklist from `docs/ANDROID_READINESS.md`.
 - Expand smoke E2E coverage for detail actions, broader translated screens, desktop persistence, and mobile smoke viewports.
-- Raise the dedicated importer mutation score toward 80%, add a separate vault storage orchestration mutation gate, and then expand mutation testing into SQLite migration modules.
+- Raise the dedicated importer mutation score toward 80%, harden the remaining storage orchestration survivors, and then expand mutation testing into SQLite migration modules.
 - Keep global coverage thresholds at or above 90% lines/statements, 85% functions, and 80% branches; raise them again after the current priority targets improve.
