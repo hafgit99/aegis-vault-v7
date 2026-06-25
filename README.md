@@ -139,6 +139,12 @@ Run the dedicated importer mutation gate:
 npm run test:mutation:importer
 ```
 
+Run the importer helper mutation gate:
+
+```bash
+npm run test:mutation:importer:helpers
+```
+
 Run the storage bridge mutation gate:
 
 ```bash
@@ -160,18 +166,19 @@ npm run test:e2e
 Latest local verification before this README update:
 
 - `npm run lint` passed.
-- `npm run test:unit` passed: 90 test files, 600 tests.
-- `npm run test:coverage` passed: 90 test files, 600 tests.
+- `npm run test:unit` passed: 92 test files, 610 tests.
+- `npm run test:coverage` passed: 92 test files, 610 tests.
 - `npm run build` passed.
 - `npm run test:mutation:core` passed: 460 mutants, 81.74% mutation score.
 - `npm run test:mutation:importer` passed: 682 mutants, 80.35% mutation score.
+- `npm run test:mutation:importer:helpers` passed: 298 mutants, 72.82% mutation score.
 - `npm run test:mutation:storage` passed: 131 mutants, 90.84% mutation score.
 - `npm run test:mutation:storage:orchestration` passed: 242 mutants, 81.82% mutation score.
 
 ## Coverage
 
 ![Statements](https://img.shields.io/badge/statements-95.76%25-brightgreen)
-![Branches](https://img.shields.io/badge/branches-90.22%25-green)
+![Branches](https://img.shields.io/badge/branches-90.23%25-green)
 ![Functions](https://img.shields.io/badge/functions-92.73%25-brightgreen)
 ![Lines](https://img.shields.io/badge/lines-95.76%25-brightgreen)
 
@@ -180,16 +187,17 @@ Coverage was generated locally with `npm run test:coverage`.
 | Metric | Coverage |
 | --- | ---: |
 | Statements | 95.76% |
-| Branches | 90.22% |
+| Branches | 90.23% |
 | Functions | 92.73% |
 | Lines | 95.76% |
 
 | Suite | Result |
 | --- | ---: |
-| Test files | 90 passed |
-| Tests | 600 passed |
+| Test files | 92 passed |
+| Tests | 610 passed |
 | Core mutation score | 81.74% passed |
 | Importer mutation score | 80.35% passed |
+| Importer helper mutation score | 72.82% passed |
 | Storage bridge mutation score | 90.84% passed |
 | Storage orchestration mutation score | 81.82% passed |
 
