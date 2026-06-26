@@ -815,7 +815,24 @@ class SQLiteOPFS {
     this.logQuery(`INSERT OR REPLACE INTO vault_items (${items.length} records);`, 'SUCCESS', items.length);
     await this.saveToPersistentStorage();
 
-    return items.map(item => ({ ...item }));
+    return allRows.map((row) => {
+      const cachedItem = this.decryptedItemsCache.get(row.id)?.item;
+      return {
+        ...(cachedItem ?? {}),
+        id: row.id,
+        title: row.title,
+        username: cachedItem?.username || row.username || '',
+        password: cachedItem?.password || '',
+        url: cachedItem?.url || '',
+        notes: cachedItem?.notes,
+        category: row.category as VaultItem['category'],
+        favorite: row.favorite === 1,
+        deleted: row.deleted === 1,
+        deletedAt: row.deleted_at || undefined,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      };
+    });
   }
 
   /**

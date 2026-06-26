@@ -166,8 +166,8 @@ npm run test:e2e
 Latest local verification before this README update:
 
 - `npm run lint` passed.
-- `npm run test:unit` passed: 92 test files, 641 tests.
-- `npm run test:coverage` passed: 92 test files, 641 tests.
+- `npm run test:unit` passed: 92 test files, 642 tests.
+- `npm run test:coverage` passed: 92 test files, 642 tests.
 - `npm run build` passed.
 - `npm run test:mutation:core` passed: 460 mutants, 81.74% mutation score.
 - `npm run test:mutation:importer` passed: 682 mutants, 80.35% mutation score.
@@ -194,7 +194,7 @@ Coverage was generated locally with `npm run test:coverage`.
 | Suite | Result |
 | --- | ---: |
 | Test files | 92 passed |
-| Tests | 641 passed |
+| Tests | 642 passed |
 | Core mutation score | 81.74% passed |
 | Importer mutation score | 80.35% passed |
 | Importer helper mutation score | 87.85% passed |

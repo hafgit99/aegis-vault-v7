@@ -639,6 +639,36 @@ describe('SQLite OPFS persistence engine', () => {
     );
   });
 
+  it('returns generated ids and normalized fields from bulk saves without a decrypt sweep', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+
+    const saved = await sqlite.saveVaultItems([
+      sampleItem({ id: '', title: '', category: undefined as VaultItem['category'], createdAt: '' }),
+    ], 'master-pass');
+
+    expect(saved).toHaveLength(1);
+    expect(saved[0]).toMatchObject({
+      title: 'Imported Record',
+      category: 'login',
+      username: 'ada',
+      password: 'secret-password',
+      favorite: true,
+      deleted: false,
+    });
+    expect(saved[0].id).toHaveLength(9);
+    expect(saved[0].createdAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(saved[0].updatedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+
+    await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual([
+      expect.objectContaining({
+        id: saved[0].id,
+        title: 'Imported Record',
+        password: 'secret-password',
+      }),
+    ]);
+  });
+
   it('uses the cached KDF derived key when password and salt match, avoiding Argon2id calls', async () => {
     const sqlite = await freshSqliteInstance();
     await sqlite.setupMaster('master-pass');
