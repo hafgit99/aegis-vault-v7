@@ -39,6 +39,8 @@ export interface WaSqliteEngineHealth {
 export interface WaSqliteEngine {
   initialize(): Promise<WaSqliteEngineHealth>;
   execute(sql: string): Promise<VaultStorageQueryResult>;
+  executeReadOnly(sql: string): Promise<VaultStorageQueryResult>;
+  selectObjects(sql: string): Promise<Array<Record<string, unknown>>>;
   close(): Promise<void>;
 }
 
@@ -113,6 +115,16 @@ function normalizeWaSqliteValue(value: WaSqliteCompatibleValue): unknown {
   return value;
 }
 
+function isReadOnlySelect(sql: string): boolean {
+  const normalizedSql = sql.trim().replace(/^--.*$/gm, '').trim().toLowerCase();
+  return normalizedSql.startsWith('select ') || normalizedSql.startsWith('with ');
+}
+
+function rowsToObjects(result: VaultStorageQueryResult): Array<Record<string, unknown>> {
+  return result.rows.map((row) => Object.fromEntries(
+    result.columns.map((column, index) => [column, row[index]]),
+  ));
+}
 export function createWaSqliteEngine(options: WaSqliteEngineOptions = {}): WaSqliteEngine {
   const databaseName = options.databaseName ?? DEFAULT_DATABASE_NAME;
   const loadRuntime = options.loadRuntime ?? (() => loadDefaultWaSqliteRuntime(options));
@@ -172,6 +184,27 @@ export function createWaSqliteEngine(options: WaSqliteEngineOptions = {}): WaSql
         columns,
         rows,
       };
+    },
+
+    async executeReadOnly(sql: string): Promise<VaultStorageQueryResult> {
+      if (!isReadOnlySelect(sql)) {
+        return {
+          columns: [],
+          rows: [],
+          error: 'wa-sqlite-read-only-query-required',
+        };
+      }
+
+      return this.execute(sql);
+    },
+
+    async selectObjects(sql: string): Promise<Array<Record<string, unknown>>> {
+      const result = await this.executeReadOnly(sql);
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      return rowsToObjects(result);
     },
 
     async close(): Promise<void> {

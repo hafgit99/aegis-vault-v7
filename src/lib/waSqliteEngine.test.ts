@@ -24,6 +24,16 @@ function createRuntimeStub(): WaSqliteRuntime & {
       return 0;
     }
 
+    if (sql.includes('SELECT id, title FROM vault_items')) {
+      callback?.(['item-1', 'Example'], ['id', 'title']);
+      callback?.(['item-2', 'Second'], ['id', 'title']);
+      return 0;
+    }
+
+    if (sql.trim().toLowerCase().startsWith('with ')) {
+      callback?.(['ready'], ['status']);
+      return 0;
+    }
     if (sql.includes('BROKEN')) {
       throw new Error('sqlite syntax error');
     }
@@ -106,6 +116,38 @@ describe('wa-sqlite engine', () => {
     });
   });
 
+  it('allows only read-only SELECT/CTE statements through executeReadOnly', async () => {
+    const runtime = createRuntimeStub();
+    const engine = createWaSqliteEngine({
+      loadRuntime: vi.fn(async () => runtime),
+    });
+
+    await expect(engine.executeReadOnly('SELECT payload FROM vault_items;')).resolves.toEqual({
+      columns: ['big', 'blob', 'text', 'empty'],
+      rows: [['123', [1, 2, 3], 'ok', null]],
+    });
+    await expect(engine.executeReadOnly('WITH status AS (SELECT "ready" AS value) SELECT value FROM status;')).resolves.toEqual({
+      columns: ['status'],
+      rows: [['ready']],
+    });
+    await expect(engine.executeReadOnly('UPDATE vault_items SET title = "bad";')).resolves.toEqual({
+      columns: [],
+      rows: [],
+      error: 'wa-sqlite-read-only-query-required',
+    });
+  });
+
+  it('maps selected rows to objects and throws on blocked statements', async () => {
+    const engine = createWaSqliteEngine({
+      loadRuntime: vi.fn(async () => createRuntimeStub()),
+    });
+
+    await expect(engine.selectObjects('SELECT id, title FROM vault_items;')).resolves.toEqual([
+      { id: 'item-1', title: 'Example' },
+      { id: 'item-2', title: 'Second' },
+    ]);
+    await expect(engine.selectObjects('DELETE FROM vault_items;')).rejects.toThrow('wa-sqlite-read-only-query-required');
+  });
   it('closes an open database exactly once', async () => {
     const runtime = createRuntimeStub();
     const engine = createWaSqliteEngine({
