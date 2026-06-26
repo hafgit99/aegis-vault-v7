@@ -12,6 +12,62 @@ describe('HIBP password checks', () => {
     vi.unstubAllGlobals();
   });
 
+  it('treats empty passwords as clean without making network requests', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(checkPasswordAgainstHibp('')).resolves.toEqual({ status: 'clean', count: 0 });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('ignores malformed range lines and non-positive counts', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      text: async () => [
+        'MALFORMED',
+        '1E4C9B93F3F0682250B6CF8331B7EE68FD8:0',
+        '1E4C9B93F3F0682250B6CF8331B7EE68FD8:not-a-number',
+        '00000000000000000000000000000000000:42',
+      ].join('\n'),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(checkPasswordAgainstHibp('password')).resolves.toEqual({ status: 'clean', count: 0 });
+  });
+
+  it('returns unavailable for non-successful HIBP responses', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: false,
+      status: 503,
+      text: async () => '',
+    })));
+
+    await expect(checkPasswordAgainstHibp('password')).resolves.toEqual({
+      status: 'unavailable',
+      count: 0,
+      reason: 'HIBP range request failed with HTTP 503.',
+    });
+  });
+
+  it('returns unavailable when WebCrypto SHA-1 digest is missing', async () => {
+    const originalCrypto = globalThis.crypto;
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('crypto', {});
+
+    try {
+      await expect(checkPasswordAgainstHibp('password')).resolves.toEqual({
+        status: 'unavailable',
+        count: 0,
+        reason: 'WebCrypto SHA-1 digest is not available.',
+      });
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      vi.stubGlobal('crypto', originalCrypto);
+    }
+  });
+
   it('uses k-anonymity range lookup without sending the full password hash', async () => {
     const fetchMock = vi.fn(async () => ({
       ok: true,
