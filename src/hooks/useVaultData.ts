@@ -70,7 +70,7 @@ export function useVaultData() {
     const updatedItem = { ...item, favorite: !item.favorite };
     const updated = await saveVaultItem(updatedItem);
     setItems(updated);
-    setSelectedItem(updatedItem);
+    setSelectedItem(updated.find((entry) => entry.id === item.id) ?? updatedItem);
   };
 
   return {

@@ -83,9 +83,9 @@ describe('useVaultData', () => {
     expect(result.current.selectedItem).toEqual(saved);
   });
 
-  it('toggles favorite state and selects the updated item', async () => {
-    const entry = item('mail', { favorite: false });
-    const updated = item('mail', { favorite: true });
+  it('toggles favorite state and selects the persisted updated item', async () => {
+    const entry = item('mail', { favorite: false, updatedAt: '2026-06-10T12:00:00.000Z' });
+    const updated = item('mail', { favorite: true, updatedAt: '2026-06-26T12:00:00.000Z' });
     vi.mocked(saveVaultItem).mockResolvedValue([updated]);
     const { result } = renderHook(() => useVaultData());
 
@@ -96,5 +96,32 @@ describe('useVaultData', () => {
     expect(saveVaultItem).toHaveBeenCalledWith(expect.objectContaining({ favorite: true }));
     expect(result.current.items).toEqual([updated]);
     expect(result.current.selectedItem).toEqual(updated);
+  });
+
+  it('falls back to the optimistic favorite item if the saved response omits it', async () => {
+    const entry = item('mail', { favorite: false });
+    const other = item('other', { favorite: false });
+    vi.mocked(saveVaultItem).mockResolvedValue([other]);
+    const { result } = renderHook(() => useVaultData());
+
+    await act(async () => {
+      await result.current.toggleFavorite(entry);
+    });
+
+    expect(result.current.items).toEqual([other]);
+    expect(result.current.selectedItem).toEqual(expect.objectContaining({ id: 'mail', favorite: true }));
+  });
+
+  it('renders large vault datasets progressively while preserving the first active selection', async () => {
+    const largeDataset = Array.from({ length: 125 }, (_, index) => item(`item-${index.toString().padStart(3, '0')}`));
+    vi.mocked(getVaultItems).mockResolvedValue(largeDataset);
+    const { result } = renderHook(() => useVaultData());
+
+    await act(async () => {
+      await result.current.refreshDatabase();
+    });
+
+    expect(result.current.items).toHaveLength(125);
+    expect(result.current.selectedItem?.id).toBe('item-000');
   });
 });
