@@ -82,6 +82,106 @@ fn enable_screen_capture_protection(app: AppHandle) -> Result<bool, String> {
     apply_screen_capture_protection(&app)
 }
 
+#[cfg(target_os = "windows")]
+#[tauri::command]
+fn write_clipboard_text_protected(text: String) -> Result<bool, String> {
+    use windows_sys::Win32::System::DataExchange::{
+        CloseClipboard, EmptyClipboard, OpenClipboard, RegisterClipboardFormatW, SetClipboardData,
+    };
+    use windows_sys::Win32::System::Memory::{
+        GlobalAlloc, GlobalLock, GlobalUnlock, GMEM_MOVEABLE,
+    };
+
+    // Unicode Text Format ID is 13 (CF_UNICODETEXT)
+    const CF_UNICODETEXT: u32 = 13;
+
+    // Convert text to wide string (UTF-16) with null terminator
+    let wide_text: Vec<u16> = text.encode_utf16().chain(std::iter::once(0)).collect();
+
+    // Register exclusion formats
+    let format_exclude_monitor_name: Vec<u16> = "ExcludeClipboardContentFromMonitorProcessing"
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect();
+    let format_exclude_history_name: Vec<u16> = "CanIncludeInClipboardHistory"
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect();
+    let format_exclude_cloud_name: Vec<u16> = "CanUploadToCloudClipboard"
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect();
+
+    unsafe {
+        let fmt_monitor = RegisterClipboardFormatW(format_exclude_monitor_name.as_ptr());
+        let fmt_history = RegisterClipboardFormatW(format_exclude_history_name.as_ptr());
+        let fmt_cloud = RegisterClipboardFormatW(format_exclude_cloud_name.as_ptr());
+
+        if OpenClipboard(std::ptr::null_mut()) == 0 {
+            return Err("Failed to open clipboard".to_string());
+        }
+
+        // Empty the clipboard first
+        EmptyClipboard();
+
+        // Helper to write data to clipboard
+        let write_to_clipboard = |format: u32, data: &[u8]| -> Result<(), String> {
+            let hmem = GlobalAlloc(GMEM_MOVEABLE, data.len());
+            if hmem.is_null() {
+                return Err("Failed to allocate global memory".to_string());
+            }
+            let ptr = GlobalLock(hmem);
+            if ptr.is_null() {
+                return Err("Failed to lock global memory".to_string());
+            }
+            std::ptr::copy_nonoverlapping(data.as_ptr(), ptr as *mut u8, data.len());
+            GlobalUnlock(hmem);
+            if SetClipboardData(format, hmem).is_null() {
+                return Err(format!("Failed to set clipboard data for format {}", format));
+            }
+            Ok(())
+        };
+
+        // 1. Write the Unicode text
+        let text_bytes = std::slice::from_raw_parts(
+            wide_text.as_ptr() as *const u8,
+            wide_text.len() * std::mem::size_of::<u16>(),
+        );
+        if let Err(e) = write_to_clipboard(CF_UNICODETEXT, text_bytes) {
+            CloseClipboard();
+            return Err(e);
+        }
+
+        // 2. Write exclusion flags (DWORD = 0)
+        let zero_dword: u32 = 0;
+        let dword_bytes = std::slice::from_raw_parts(
+            &zero_dword as *const u32 as *const u8,
+            std::mem::size_of::<u32>(),
+        );
+
+        if fmt_monitor != 0 {
+            let _ = write_to_clipboard(fmt_monitor, dword_bytes);
+        }
+        if fmt_history != 0 {
+            let _ = write_to_clipboard(fmt_history, dword_bytes);
+        }
+        if fmt_cloud != 0 {
+            let _ = write_to_clipboard(fmt_cloud, dword_bytes);
+        }
+
+        CloseClipboard();
+    }
+
+    Ok(true)
+}
+
+#[cfg(not(target_os = "windows"))]
+#[tauri::command]
+fn write_clipboard_text_protected(_text: String) -> Result<bool, String> {
+    Ok(false)
+}
+
+
 fn vault_database_path(app: &AppHandle) -> Result<PathBuf, String> {
     let app_data_dir = app
         .path()
@@ -484,6 +584,7 @@ pub fn run() {
             write_vault_database,
             reset_vault_database,
             enable_screen_capture_protection,
+            write_clipboard_text_protected,
             save_export_file,
             save_binary_file,
             open_import_file,

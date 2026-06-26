@@ -247,3 +247,21 @@ export function generatePassword(options: GeneratorOptions): string {
 
   return passwordArray.join('');
 }
+
+/**
+ * Validates that the master password meets length and complexity requirements:
+ * - Minimum length: 12 characters
+ * - Complexity: at least 3 character classes (uppercase, lowercase, numbers, symbols)
+ */
+export function validateMasterPassword(password: string): boolean {
+  if (!password || password.length < 12) {
+    return false;
+  }
+  const hasUpper = /[A-Z]/.test(password);
+  const hasLower = /[a-z]/.test(password);
+  const hasDigit = /[0-9]/.test(password);
+  const hasSymbol = /[^A-Za-z0-9]/.test(password);
+  const classCount = [hasUpper, hasLower, hasDigit, hasSymbol].filter(Boolean).length;
+  return classCount >= 3;
+}
+

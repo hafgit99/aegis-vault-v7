@@ -36,6 +36,7 @@ import { isAndroidAutofillEnabled, isAndroidAutofillSupported, openAndroidAutofi
 import { saveEmergencyKit } from '../lib/emergencyKit';
 import { isAccountSecretKeyFormatValid } from '../lib/secretKey';
 import { useLanguage } from '../i18n/LanguageContext';
+import { validateMasterPassword } from '../lib/security';
 import { languageLabels, supportedLanguages, type LanguageCode } from '../i18n/translations';
 
 interface SettingsPanelProps {
@@ -295,8 +296,8 @@ export default function SettingsPanel({
       setPasswordError(t('settings.password.error.current'));
       return;
     }
-    if (newPassword.length < 12) {
-      setPasswordError(t('settings.password.error.length'));
+    if (!validateMasterPassword(newPassword)) {
+      setPasswordError(t('settings.password.error.complexity'));
       return;
     }
     if (newPassword !== confirmPassword) {

@@ -1,6 +1,18 @@
+import { invoke } from '@tauri-apps/api/core';
+import { isDesktopRuntime } from './desktopStorage';
+
 export const DEFAULT_CLIPBOARD_CLEAR_DELAY_MS = 30_000;
 
 export async function writeClipboardText(text: string): Promise<boolean> {
+  if (isDesktopRuntime()) {
+    try {
+      const success = await invoke<boolean>('write_clipboard_text_protected', { text });
+      if (success) return true;
+    } catch (e) {
+      console.warn('Native protected clipboard write failed, falling back to navigator.clipboard:', e);
+    }
+  }
+
   const clipboard = navigator.clipboard;
   if (!clipboard?.writeText) return false;
 
@@ -20,8 +32,7 @@ export async function clearClipboardIfUnchanged(expectedText: string): Promise<b
     const currentText = await clipboard.readText();
     if (currentText !== expectedText) return false;
 
-    await clipboard.writeText('');
-    return true;
+    return await writeClipboardText('');
   } catch {
     return false;
   }

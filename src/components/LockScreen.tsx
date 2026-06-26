@@ -36,6 +36,7 @@ import {
 } from '../lib/secretKey';
 import aegisLogo from '../../assets/aegis-app-icon.png';
 import { saveEmergencyKit } from '../lib/emergencyKit';
+import { validateMasterPassword } from '../lib/security';
 
 const MIN_MASTER_PASSWORD_LENGTH = 12;
 const LOCKOUT_STORAGE_KEY = 'aegis_lockout_state';
@@ -188,8 +189,8 @@ export default function LockScreen({ onUnlock, isAutofillPending = false }: Lock
 
     try {
       if (!isSetup) {
-        if (password.length < MIN_MASTER_PASSWORD_LENGTH) {
-          setError(t('lock.error.minimumLength'));
+        if (!validateMasterPassword(password)) {
+          setError(t('lock.error.complexity'));
           return;
         }
         if (password !== confirmPassword) {

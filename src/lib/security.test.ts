@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { calculatePasswordScore, generatePassword, getStrengthLabel, runVaultAudit } from './security';
+import { calculatePasswordScore, generatePassword, getStrengthLabel, runVaultAudit, validateMasterPassword } from './security';
 import { VaultItem } from '../types';
 import { closeVaultSession } from './vaultSession';
 import zxcvbn from 'zxcvbn';
@@ -80,5 +80,32 @@ describe('security helpers', () => {
 
     calculatePasswordScore(pw);
     expect(zxcvbn).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('validateMasterPassword', () => {
+  it('rejects passwords shorter than 12 characters', () => {
+    expect(validateMasterPassword('')).toBe(false);
+    expect(validateMasterPassword('Short1!')).toBe(false);
+    expect(validateMasterPassword('A1b2C3d4E5f')).toBe(false); // 11 characters
+  });
+
+  it('rejects passwords of length >= 12 but with less than 3 character classes', () => {
+    expect(validateMasterPassword('abcdefghijkl')).toBe(false); // only lowercase
+    expect(validateMasterPassword('ABCDEFGHIJKL')).toBe(false); // only uppercase
+    expect(validateMasterPassword('123456789012')).toBe(false); // only digits
+    expect(validateMasterPassword('!!!!!!!!!!!!')).toBe(false); // only symbols
+    expect(validateMasterPassword('abcdeABCDEab')).toBe(false); // lowercase + uppercase (2 classes)
+    expect(validateMasterPassword('abcde12345ab')).toBe(false); // lowercase + digits (2 classes)
+    expect(validateMasterPassword('abcde!!!!_ab')).toBe(false); // lowercase + symbols (2 classes)
+  });
+
+  it('accepts passwords of length >= 12 with 3 or more character classes', () => {
+    expect(validateMasterPassword('abcdeABCDE12')).toBe(true); // lower, upper, digit
+    expect(validateMasterPassword('abcdeABCDE!!')).toBe(true); // lower, upper, symbol
+    expect(validateMasterPassword('abcde12345!!')).toBe(true); // lower, digit, symbol
+    expect(validateMasterPassword('ABCDE12345!!')).toBe(true); // upper, digit, symbol
+    expect(validateMasterPassword('abcdeABCDE12!!')).toBe(true); // all 4 classes
+    expect(validateMasterPassword('A1b2C3d4E5f6')).toBe(true); // 12 chars, 3 classes (upper, lower, digit)
   });
 });

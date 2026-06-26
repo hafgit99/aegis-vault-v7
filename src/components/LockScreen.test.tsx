@@ -93,7 +93,7 @@ describe('LockScreen', () => {
     fireEvent.change(confirmation, { target: { value: '12345' } });
     fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 
-    expect(screen.getByText('The master password must be at least 12 characters.')).toBeTruthy();
+    expect(screen.getByText(/must be at least 12 characters/i)).toBeTruthy();
     expect(setupMasterPasswordWithSecretKey).not.toHaveBeenCalled();
   });
 
