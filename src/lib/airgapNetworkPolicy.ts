@@ -8,6 +8,47 @@ import { AegisSecurityError, logSecurityEvent, securityEventCodes } from './secu
 const HIBP_RANGE_ORIGIN = 'https://api.pwnedpasswords.com';
 const HIBP_RANGE_PATH_PATTERN = /^\/range\/[0-9A-Fa-f]{5}$/;
 
+/**
+ * Runtime-managed set of HTTPS origins approved for E2EE sync providers.
+ * Origins are added when a user configures WebDAV (or similar) and removed
+ * when they disable sync. Only HTTPS origins are ever stored here.
+ */
+const syncAllowedOrigins = new Set<string>();
+
+/**
+ * Register a sync provider origin in the air-gap whitelist.
+ * Only HTTPS origins (or localhost / LAN) are accepted.
+ */
+export function addSyncAllowedOrigin(origin: string): void {
+  try {
+    const parsed = new URL(origin);
+    const isLocal =
+      parsed.hostname === 'localhost' ||
+      parsed.hostname.startsWith('192.168.') ||
+      parsed.hostname.startsWith('10.') ||
+      parsed.hostname.startsWith('172.');
+    if (parsed.protocol !== 'https:' && !isLocal) {
+      console.warn('[AegisAirGap] Refused to whitelist non-HTTPS sync origin:', origin);
+      return;
+    }
+    syncAllowedOrigins.add(parsed.origin);
+  } catch {
+    console.warn('[AegisAirGap] Invalid sync origin, not whitelisted:', origin);
+  }
+}
+
+/** Remove a previously registered sync provider origin from the whitelist. */
+export function removeSyncAllowedOrigin(origin: string): void {
+  try {
+    syncAllowedOrigins.delete(new URL(origin).origin);
+  } catch { /* ignore */ }
+}
+
+/** Returns a read-only snapshot of currently whitelisted sync origins (for diagnostics). */
+export function getSyncAllowedOrigins(): ReadonlySet<string> {
+  return syncAllowedOrigins;
+}
+
 let installed = false;
 
 function resolveUrl(input: string | URL): URL | null {
@@ -26,7 +67,12 @@ export function isNetworkUrlAllowed(input: string | URL): boolean {
   if (url.hostname === 'ipc.localhost' || url.hostname === 'tauri.localhost') return true;
   if (typeof location !== 'undefined' && url.origin === location.origin) return true;
 
-  return url.origin === HIBP_RANGE_ORIGIN && HIBP_RANGE_PATH_PATTERN.test(url.pathname) && url.search === '';
+  if (url.origin === HIBP_RANGE_ORIGIN && HIBP_RANGE_PATH_PATTERN.test(url.pathname) && url.search === '') return true;
+
+  // E2EE sync provider origins, user-approved at configuration time
+  if (syncAllowedOrigins.has(url.origin)) return true;
+
+  return false;
 }
 
 export function assertNetworkUrlAllowed(input: string | URL): void {

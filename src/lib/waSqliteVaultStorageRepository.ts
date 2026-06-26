@@ -137,8 +137,42 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
     this.logQuery('INSERT INTO user_secrets (username, argon_hash) VALUES ("owner", "[argon2id verification hash]");', 'SUCCESS', 1);
   }
 
-  public async changeMasterPassword(): Promise<void> {
-    this.rejectWrite('changeMasterPassword');
+  public async changeMasterPassword(oldPassword: string, newPassword: string): Promise<void> {
+    const verified = await this.verifyPassword(oldPassword);
+    if (!verified) {
+      this.logQuery('UPDATE user_secrets SET argon_hash = "[rekey blocked: invalid current password]";', 'ERROR', 0);
+      throw new Error('current-master-password-invalid');
+    }
+
+    const oldSalt = await this.ensureVaultEncryptionSalt();
+    const oldKey = await this.deriveEncryptionKey(oldPassword, oldSalt);
+    const rows = await this.readVaultItemRows();
+    const items: VaultItem[] = [];
+
+    for (const row of rows) {
+      items.push(await this.mapVaultItemRow(row, oldKey));
+    }
+
+    const newSalt = this.createVaultEncryptionSalt();
+    const newKey = await deriveArgon2idKey(newPassword, newSalt, DEFAULT_KDF_PARAMS);
+    const newArgonHash = await createArgon2idHash(newPassword, secureRandomToken(16));
+    const rekeyedRows = await Promise.all(items.map((item) => this.createEncryptedRow(item, newKey)));
+
+    await this.runTransaction(async () => {
+      await this.executeRequired('DELETE FROM user_secrets;');
+      await this.upsertStorageMetadata(VAULT_ENCRYPTION_SALT_KEY, newSalt);
+      await this.upsertStorageMetadata(VAULT_KDF_PARAMS_KEY, JSON.stringify(DEFAULT_KDF_PARAMS));
+      await this.executeRequired(
+        'INSERT INTO user_secrets (username, argon_hash) VALUES '
+        + `(${this.sqlString('owner')}, ${this.sqlString(newArgonHash)});`,
+      );
+      await this.executeRequired('DELETE FROM vault_items;');
+      for (const row of rekeyedRows) {
+        await this.executeRequired(this.createVaultItemUpsertSql(row));
+      }
+    });
+
+    this.logQuery('UPDATE user_secrets SET argon_hash = "[rotated argon2id verification hash]"; REKEY vault_items;', 'SUCCESS', rekeyedRows.length);
   }
 
   public async deriveEncryptionKey(password: string, salt?: string): Promise<Uint8Array> {
@@ -152,15 +186,12 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
       throw new Error(WA_SQLITE_INVALID_MASTER_PASSWORD_ERROR);
     }
 
-    const rows = await this.engine.selectObjects(`
-SELECT id, title, category, favorite, deleted, deleted_at, created_at, updated_at, username_db, notes_db, enc_metadata, enc_kdf
-FROM vault_items;
-`);
+    const rows = await this.readVaultItemRows();
     const key = await this.deriveEncryptionKey(masterPasswordPlain);
     const items: VaultItem[] = [];
 
-    for (const row of rows.filter((candidate) => typeof candidate.id === 'string' && candidate.id.length > 0)) {
-      items.push(await this.mapVaultItemRow(row as WaSqliteVaultItemRow, key));
+    for (const row of rows) {
+      items.push(await this.mapVaultItemRow(row, key));
     }
 
     this.logQuery('SELECT id, title, category, favorite, deleted, deleted_at, created_at, updated_at, username_db, notes_db, enc_metadata, enc_kdf FROM vault_items;', 'SUCCESS', items.length);
@@ -299,6 +330,14 @@ FROM vault_items;
   private rejectWrite(operation: string): never {
     this.logQuery(`WA_SQLITE_REPOSITORY BLOCKED ${operation};`, 'ERROR', 0);
     throw new Error(WA_SQLITE_WRITE_NOT_READY_ERROR);
+  }
+
+  private async readVaultItemRows(): Promise<WaSqliteVaultItemRow[]> {
+    const rows = await this.engine.selectObjects(`
+SELECT id, title, category, favorite, deleted, deleted_at, created_at, updated_at, username_db, notes_db, enc_metadata, enc_kdf
+FROM vault_items;
+`);
+    return rows.filter((candidate) => typeof candidate.id === 'string' && candidate.id.length > 0) as WaSqliteVaultItemRow[];
   }
 
   private async mapVaultItemRow(row: WaSqliteVaultItemRow, key: Uint8Array): Promise<VaultItem> {
