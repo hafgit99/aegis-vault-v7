@@ -14,19 +14,19 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 96.33% |
-| Statements | 96.33% |
-| Functions | 93.91% |
-| Branches | 89.90% |
+| Lines | 96.35% |
+| Statements | 96.35% |
+| Functions | 93.93% |
+| Branches | 89.95% |
 
 Coverage thresholds now act as a release-quality regression gate while staying slightly below the current baseline:
 
 | Metric | Current threshold |
 | --- | ---: |
-| Lines | 96.33% |
-| Statements | 96.33% |
-| Functions | 93.91% |
-| Branches | 89.90% |
+| Lines | 96.35% |
+| Statements | 96.35% |
+| Functions | 93.93% |
+| Branches | 89.95% |
 
 These thresholds prevent meaningful regressions while leaving room to add tests around under-covered areas.
 
@@ -252,6 +252,7 @@ Recently improved:
 - wa-sqlite read-only query gate: added `executeReadOnly` and `selectObjects` helpers so future adapter reads can map SQLite rows safely while blocking mutating SQL before it reaches the engine.
 - wa-sqlite adapter engine reads: wired the read-only migration mirror to optionally initialize the real wa-sqlite engine and merge engine vault row metadata with decrypted OPFS source items while keeping all write paths fail-closed.
 - wa-sqlite dry-run metadata seed: connected the provider dry-run target to the real engine and added source-to-target metadata seeding for empty wa-sqlite tables without copying usernames, passwords, notes, or other decrypted secret fields into SQL seed statements.
+- wa-sqlite dry-run target validation: extended migration dry-run results with target item counts and source/target identity checks so mismatched, missing, duplicate, unreadable, or extra target records block migration readiness before any active backend switch.
 - `src/lib/storage.ts`: covered setup detection, Secret Key profile fallbacks, remembered-key migration/forget flows, failed unlock session guards, master-password rotation rollback rules, reset marker cleanup, no-session guards, save/delete/reseed wrappers, trash move/restore, retention-boundary cleanup, bulk-save progress callbacks, and full trash emptying.
 - `src/components/PasswordGenerator.tsx`: covered character option changes, all character toggles, strength bar tone branches, diceware mode settings, word-count descriptions, diceware toggles, copy feedback, unmount cleanup, and safe clipboard clearing behavior.
 - `src/lib/diceware.ts`: covered Turkish/English word selection, EFF-sized word-pool expansion, separator formats, capitalization, number and symbol placement, camel/none separator handling, optional entropy calculations, and static word-list separation for practical mutation testing.

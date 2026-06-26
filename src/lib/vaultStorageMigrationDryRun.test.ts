@@ -64,6 +64,7 @@ describe('vault storage migration dry-run', () => {
       sourceBackend: 'opfs',
       targetBackend: null,
       itemCount: 0,
+      targetItemCount: 0,
       issues: ['vault-storage-dry-run-disabled'],
     });
 
@@ -79,6 +80,7 @@ describe('vault storage migration dry-run', () => {
       sourceBackend: 'opfs',
       targetBackend: 'wa-sqlite',
       itemCount: 2,
+      targetItemCount: 0,
       issues: [],
     });
 
@@ -89,18 +91,92 @@ describe('vault storage migration dry-run', () => {
     expect(repository.resetAll).not.toHaveBeenCalled();
   });
 
+  it('validates a target repository after source checks pass', async () => {
+    const repository = repositoryStub([item(), item({ id: 'item-2' })]);
+    const targetRepository = repositoryStub([item({ title: 'Mirror' }), item({ id: 'item-2', title: 'Mirror 2' })]);
+
+    await expect(runVaultStorageMigrationDryRun(
+      repository,
+      dryRunSelection,
+      'master-pass',
+      targetRepository,
+    )).resolves.toEqual({
+      status: 'ready',
+      sourceBackend: 'opfs',
+      targetBackend: 'wa-sqlite',
+      itemCount: 2,
+      targetItemCount: 2,
+      issues: [],
+    });
+
+    expect(targetRepository.hydrate).toHaveBeenCalledOnce();
+    expect(targetRepository.getVaultItems).toHaveBeenCalledWith('master-pass');
+    expect(targetRepository.saveVaultItems).not.toHaveBeenCalled();
+  });
+
+  it('blocks dry-run plans when target repository identity checks fail', async () => {
+    const repository = repositoryStub([item(), item({ id: 'item-2' })]);
+    const targetRepository = repositoryStub([
+      item({ id: 'item-1' }),
+      item({ id: 'unexpected' }),
+      item({ id: '' }),
+    ]);
+
+    await expect(runVaultStorageMigrationDryRun(
+      repository,
+      dryRunSelection,
+      'master-pass',
+      targetRepository,
+    )).resolves.toEqual({
+      status: 'blocked',
+      sourceBackend: 'opfs',
+      targetBackend: 'wa-sqlite',
+      itemCount: 2,
+      targetItemCount: 3,
+      issues: [
+        'vault-storage-dry-run-target-count-mismatch',
+        'vault-storage-dry-run-target-missing-item-id',
+        'vault-storage-dry-run-target-missing-source-id',
+        'vault-storage-dry-run-target-extra-id',
+      ],
+    });
+  });
+
+  it('blocks dry-run plans when target repository cannot be read', async () => {
+    const repository = repositoryStub([item()]);
+    const targetRepository = repositoryStub([item()]);
+    vi.mocked(targetRepository.getVaultItems).mockRejectedValueOnce(new Error('target unavailable'));
+
+    await expect(runVaultStorageMigrationDryRun(
+      repository,
+      dryRunSelection,
+      'master-pass',
+      targetRepository,
+    )).resolves.toEqual({
+      status: 'blocked',
+      sourceBackend: 'opfs',
+      targetBackend: 'wa-sqlite',
+      itemCount: 1,
+      targetItemCount: 0,
+      issues: ['vault-storage-dry-run-target-read-failed'],
+    });
+  });
+
   it('blocks dry-run plans when credentials cannot unlock the source vault', async () => {
     const repository = repositoryStub([item()], false);
+    const targetRepository = repositoryStub([item()]);
 
-    await expect(runVaultStorageMigrationDryRun(repository, dryRunSelection, 'wrong-pass')).resolves.toEqual({
+    await expect(runVaultStorageMigrationDryRun(repository, dryRunSelection, 'wrong-pass', targetRepository)).resolves.toEqual({
       status: 'blocked',
       sourceBackend: 'opfs',
       targetBackend: 'wa-sqlite',
       itemCount: 0,
+      targetItemCount: 0,
       issues: ['vault-storage-dry-run-invalid-password'],
     });
 
     expect(repository.getVaultItems).not.toHaveBeenCalled();
+    expect(targetRepository.hydrate).not.toHaveBeenCalled();
   });
 
   it('blocks duplicate or malformed item identifiers before migration work starts', async () => {
@@ -109,16 +185,20 @@ describe('vault storage migration dry-run', () => {
       item({ id: 'duplicate' }),
       item({ id: '' }),
     ]);
+    const targetRepository = repositoryStub([item({ id: 'duplicate' })]);
 
-    await expect(runVaultStorageMigrationDryRun(repository, dryRunSelection, 'master-pass')).resolves.toEqual({
+    await expect(runVaultStorageMigrationDryRun(repository, dryRunSelection, 'master-pass', targetRepository)).resolves.toEqual({
       status: 'blocked',
       sourceBackend: 'opfs',
       targetBackend: 'wa-sqlite',
       itemCount: 3,
+      targetItemCount: 0,
       issues: [
         'vault-storage-dry-run-duplicate-item-id',
         'vault-storage-dry-run-missing-item-id',
       ],
     });
+
+    expect(targetRepository.hydrate).not.toHaveBeenCalled();
   });
 });
