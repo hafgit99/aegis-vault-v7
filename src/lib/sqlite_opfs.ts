@@ -190,6 +190,29 @@ class SQLiteOPFS {
     );
   }
 
+  private cloneState(): VersionedVaultDatabaseState {
+    return JSON.parse(JSON.stringify(this.state)) as VersionedVaultDatabaseState;
+  }
+
+  private cloneDecryptedItemsCache(): Map<string, { enc_metadata: string; item: VaultItem }> {
+    return new Map(Array.from(this.decryptedItemsCache.entries()).map(([id, entry]) => [
+      id,
+      {
+        enc_metadata: entry.enc_metadata,
+        item: { ...entry.item },
+      },
+    ]));
+  }
+
+  private restoreTransactionalState(
+    state: VersionedVaultDatabaseState,
+    decryptedItemsCache: Map<string, { enc_metadata: string; item: VaultItem }>,
+  ): void {
+    this.state = state;
+    this.clearDerivedKeyCache();
+    this.decryptedItemsCache = decryptedItemsCache;
+  }
+
   private sanitizeLogValue(value: string): string {
     return value.replace(/[\r\n\t]/g, ' ').replace(/["\\<>]/g, '_').slice(0, 120);
   }
@@ -248,7 +271,7 @@ class SQLiteOPFS {
   /**
    * Saves raw DB state to private OPFS.
    */
-  private async saveToPersistentStorage() {
+  private async saveToPersistentStorage(): Promise<boolean> {
     try {
       const payloadStr = JSON.stringify(this.state);
       const savedToDesktop = await writeDesktopVaultDatabase(payloadStr);
@@ -260,6 +283,7 @@ class SQLiteOPFS {
         // Execute OPFS write in background with a timeout to avoid freezing the UI on lock leaks.
         void this.writeToOPFSWithTimeout(payloadStr, 1000);
       }
+      return true;
     } catch (err) {
       logSecurityEvent(
         securityEventCodes.storageDesktopWriteFailed,
@@ -267,6 +291,7 @@ class SQLiteOPFS {
         'critical',
         { error: err instanceof Error ? err.message : String(err) },
       );
+      return false;
     }
   }
 
@@ -438,51 +463,67 @@ class SQLiteOPFS {
     }
 
     const items = await this.getVaultItems(oldPassword);
-    const argonHash = await createArgon2idHash(newPassword, secureRandomToken(16));
-    this.clearDerivedKeyCache();
-    this.state.encryption_salt = this.createVaultEncryptionSalt();
-    this.state.kdfParams = NEW_VAULT_ITEM_KDF_PARAMS;
-    this.state.user_secrets = [{
-      username: 'owner',
-      argon_hash: argonHash,
-    }];
+    const previousState = this.cloneState();
+    const previousDecryptedItemsCache = this.cloneDecryptedItemsCache();
 
-    const derivedKey = await this.deriveEncryptionKey(newPassword);
-    this.state.vault_items = await Promise.all(items.map(async (item) => {
-      const encrypted = await webCryptoAesGcmEncrypt(JSON.stringify(item), derivedKey, generateSafeIv());
-      const nowStr = new Date().toISOString().split('T')[0];
+    try {
+      const argonHash = await createArgon2idHash(newPassword, secureRandomToken(16));
+      this.clearDerivedKeyCache();
+      this.state.encryption_salt = this.createVaultEncryptionSalt();
+      this.state.kdfParams = NEW_VAULT_ITEM_KDF_PARAMS;
+      this.state.user_secrets = [{
+        username: 'owner',
+        argon_hash: argonHash,
+      }];
 
-      return {
-        id: item.id || secureRandomToken(9),
-        title: item.title || 'Imported Record',
-        category: item.category || 'login',
-        favorite: item.favorite ? 1 : 0,
-        deleted: item.deleted ? 1 : 0,
-        deleted_at: item.deletedAt || null,
-        created_at: item.createdAt || nowStr,
-        updated_at: item.updatedAt || nowStr,
-        username: item.username || '',
-        username_db: '[encrypted: aes-256-gcm]',
-        password_db: '[encrypted: aes-256-gcm]',
-        notes_db: item.notes ? '[encrypted: aes-256-gcm]' : '',
-        enc_metadata: JSON.stringify(encrypted),
-        enc_kdf: VAULT_ITEM_KDF,
-      };
-    }));
+      const derivedKey = await this.deriveEncryptionKey(newPassword);
+      this.state.vault_items = await Promise.all(items.map(async (item) => {
+        const encrypted = await webCryptoAesGcmEncrypt(JSON.stringify(item), derivedKey, generateSafeIv());
+        const nowStr = new Date().toISOString().split('T')[0];
 
-    this.decryptedItemsCache.clear();
-    for (const item of items) {
-      const row = this.state.vault_items.find((candidate) => candidate.id === item.id);
-      if (row) {
-        this.decryptedItemsCache.set(row.id, {
-          enc_metadata: row.enc_metadata,
-          item,
-        });
+        return {
+          id: item.id || secureRandomToken(9),
+          title: item.title || 'Imported Record',
+          category: item.category || 'login',
+          favorite: item.favorite ? 1 : 0,
+          deleted: item.deleted ? 1 : 0,
+          deleted_at: item.deletedAt || null,
+          created_at: item.createdAt || nowStr,
+          updated_at: item.updatedAt || nowStr,
+          username: item.username || '',
+          username_db: '[encrypted: aes-256-gcm]',
+          password_db: '[encrypted: aes-256-gcm]',
+          notes_db: item.notes ? '[encrypted: aes-256-gcm]' : '',
+          enc_metadata: JSON.stringify(encrypted),
+          enc_kdf: VAULT_ITEM_KDF,
+        };
+      }));
+
+      this.decryptedItemsCache.clear();
+      for (const item of items) {
+        const row = this.state.vault_items.find((candidate) => candidate.id === item.id);
+        if (row) {
+          this.decryptedItemsCache.set(row.id, {
+            enc_metadata: row.enc_metadata,
+            item,
+          });
+        }
       }
-    }
 
-    this.logQuery('UPDATE user_secrets SET argon_hash = "[rotated argon2id verification hash]"; REKEY vault_items;', 'SUCCESS', items.length);
-    await this.saveToPersistentStorage();
+      const persisted = await this.saveToPersistentStorage();
+      if (!persisted) {
+        throw new Error('master-password-rotation-persist-failed');
+      }
+
+      this.logQuery('UPDATE user_secrets SET argon_hash = "[rotated argon2id verification hash]"; REKEY vault_items;', 'SUCCESS', items.length);
+    } catch (err) {
+      this.restoreTransactionalState(previousState, previousDecryptedItemsCache);
+      this.logQuery('UPDATE user_secrets SET argon_hash = "[rekey rolled back: persistence failed]"; REKEY vault_items;', 'ERROR', 0);
+      if (err instanceof Error && err.message === 'master-password-rotation-persist-failed') {
+        throw err;
+      }
+      throw new Error('master-password-rotation-failed');
+    }
   }
 
   private getKdfParams() {

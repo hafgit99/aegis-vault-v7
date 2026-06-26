@@ -616,6 +616,42 @@ describe('SQLite OPFS persistence engine', () => {
     );
   });
 
+  it('rolls back master password rotation when persistence cannot be written', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    await sqlite.saveVaultItem(sampleItem({ id: 'rollback-row', title: 'Rollback Row' }), 'master-pass');
+    const before = localStorage.getItem('aegis_sqlite_fallback');
+    writeDesktopVaultDatabase.mockClear();
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('quota exceeded');
+    });
+
+    await expect(sqlite.changeMasterPassword('master-pass', 'new-master-pass')).rejects.toThrow(
+      'master-password-rotation-persist-failed',
+    );
+
+    setItemSpy.mockRestore();
+    expect(localStorage.getItem('aegis_sqlite_fallback')).toBe(before);
+    await expect(sqlite.verifyPassword('master-pass')).resolves.toBe(true);
+    await expect(sqlite.verifyPassword('new-master-pass')).resolves.toBe(false);
+    await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual([
+      expect.objectContaining({
+        id: 'rollback-row',
+        title: 'Rollback Row',
+        password: 'secret-password',
+      }),
+    ]);
+    expect(sqlite.getQueryLogs()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          query: expect.stringContaining('rekey rolled back'),
+          status: 'ERROR',
+          rowsAffected: 0,
+        }),
+      ]),
+    );
+  });
+
   it('performs bulk saves securely in a single sweep using saveVaultItems', async () => {
     const sqlite = await freshSqliteInstance();
     await sqlite.setupMaster('master-pass');
