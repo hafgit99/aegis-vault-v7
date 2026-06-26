@@ -135,6 +135,52 @@ describe('read-only wa-sqlite vault storage adapter', () => {
     expect(adapter.getQueryLogs()[0].query).toBe('WA_SQLITE_MIRROR SELECT vault_items FROM source fallback;');
   });
 
+  it('can seed empty wa-sqlite metadata from source items during dry-run reads', async () => {
+    const mirroredRows: Array<Record<string, unknown>> = [];
+    const sourceItem = sampleItem({
+      title: "Source's Login",
+      username: 'private-user',
+      password: 'private-password',
+      favorite: true,
+    });
+    const sourceRepository = createRepositoryStub([sourceItem]);
+    const engine = createEngineStub(mirroredRows);
+    vi.mocked(engine.execute).mockImplementation(async (sql: string) => {
+      if (sql.startsWith('DELETE FROM vault_items')) {
+        mirroredRows.length = 0;
+      }
+
+      if (sql.startsWith('INSERT INTO vault_items')) {
+        mirroredRows.push({
+          id: 'item-1',
+          title: "Source's Login",
+          category: 'login',
+          favorite: 1,
+          deleted: 0,
+          deleted_at: null,
+          created_at: '2026-01-01',
+          updated_at: '2026-01-01',
+        });
+      }
+
+      return { columns: [], rows: [] };
+    });
+    const adapter = createReadOnlyWaSqliteVaultStorageAdapter(sourceRepository, {
+      engine,
+      mirrorSourceOnEmptyEngine: true,
+    });
+
+    const items = await adapter.getVaultItems('valid-master');
+    const executedSql = vi.mocked(engine.execute).mock.calls.map(([sql]) => sql).join('\n');
+
+    expect(items).toEqual([{ ...sourceItem, favorite: true, deleted: false, deletedAt: undefined }]);
+    expect(engine.selectObjects).toHaveBeenCalledTimes(2);
+    expect(executedSql).toContain("'Source''s Login'");
+    expect(executedSql).not.toContain('private-user');
+    expect(executedSql).not.toContain('private-password');
+    expect(adapter.getQueryLogs()[1].query).toBe('WA_SQLITE_MIRROR seed vault_items metadata from source;');
+  });
+
   it('fails closed when the engine cannot be initialized or queried', async () => {
     const initializeFailureEngine = createEngineStub();
     vi.mocked(initializeFailureEngine.initialize).mockRejectedValueOnce(new Error('open failed'));

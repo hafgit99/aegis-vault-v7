@@ -17,6 +17,7 @@ export const WA_SQLITE_ENGINE_READ_ERROR = 'wa-sqlite-engine-read-failed';
 
 export interface ReadOnlyWaSqliteVaultStorageAdapterOptions {
   engine?: WaSqliteEngine;
+  mirrorSourceOnEmptyEngine?: boolean;
 }
 
 type WaSqliteVaultItemRow = {
@@ -40,9 +41,9 @@ const VALID_CATEGORIES = new Set<VaultItem['category']>(['login', 'card', 'passk
 /**
  * Read-only migration mirror for the future wa-sqlite backend.
  *
- * This adapter intentionally does not persist data yet. It lets migration tests
- * exercise the same repository contract through a wa-sqlite-shaped boundary
- * while production storage remains on the vetted OPFS implementation.
+ * The public repository surface still rejects writes. Internally, an explicit
+ * dry-run option may seed metadata into the target engine so migration checks
+ * can exercise real SQLite reads without changing the production OPFS vault.
  */
 export class ReadOnlyWaSqliteVaultStorageAdapter implements VaultStorageRepository {
   private logs: SQLCommandLog[] = [];
@@ -125,7 +126,12 @@ export class ReadOnlyWaSqliteVaultStorageAdapter implements VaultStorageReposito
       return sourceCopies;
     }
 
-    const engineRows = await this.readEngineVaultItemRows();
+    let engineRows = await this.readEngineVaultItemRows();
+    if (engineRows.length === 0 && this.options.mirrorSourceOnEmptyEngine && sourceCopies.length > 0) {
+      await this.seedEngineVaultItemMetadata(sourceCopies);
+      engineRows = await this.readEngineVaultItemRows();
+    }
+
     if (engineRows.length === 0) {
       this.logQuery('WA_SQLITE_MIRROR SELECT vault_items FROM source fallback;', 'SUCCESS', sourceCopies.length);
       return sourceCopies;
@@ -196,6 +202,48 @@ export class ReadOnlyWaSqliteVaultStorageAdapter implements VaultStorageReposito
     }
   }
 
+  private async seedEngineVaultItemMetadata(items: VaultItem[]): Promise<void> {
+    if (!this.options.engine) {
+      return;
+    }
+
+    try {
+      const deleteResult = await this.options.engine.execute('DELETE FROM vault_items;');
+      if (deleteResult.error) {
+        throw new Error(deleteResult.error);
+      }
+
+      for (const item of items) {
+        const insertResult = await this.options.engine.execute(this.createMetadataInsertSql(item));
+        if (insertResult.error) {
+          throw new Error(insertResult.error);
+        }
+      }
+
+      this.logQuery('WA_SQLITE_MIRROR seed vault_items metadata from source;', 'SUCCESS', items.length);
+    } catch (error) {
+      this.logQuery(`WA_SQLITE_MIRROR seed vault_items failed: ${this.errorMessage(error)};`, 'ERROR', 0);
+      throw new Error(WA_SQLITE_ENGINE_READ_ERROR);
+    }
+  }
+
+  private createMetadataInsertSql(item: VaultItem): string {
+    return `INSERT INTO vault_items (`
+      + 'id, title, category, favorite, deleted, deleted_at, created_at, updated_at, enc_metadata, enc_kdf'
+      + `) VALUES (`
+      + `${this.sqlString(item.id)}, `
+      + `${this.sqlString(item.title || 'Imported Record')}, `
+      + `${this.sqlString(this.normalizeCategory(item.category, 'login'))}, `
+      + `${item.favorite ? 1 : 0}, `
+      + `${item.deleted ? 1 : 0}, `
+      + `${this.sqlNullableString(item.deletedAt)}, `
+      + `${this.sqlString(item.createdAt || new Date(0).toISOString())}, `
+      + `${this.sqlString(item.updatedAt || item.createdAt || new Date(0).toISOString())}, `
+      + `${this.sqlString('[dry-run metadata mirror]')}, `
+      + `${this.sqlString('[dry-run kdf mirror]')}`
+      + `);`;
+  }
+
   private mergeEngineRowWithSourceItem(row: WaSqliteVaultItemRow, sourceItem?: VaultItem): VaultItem {
     const base: VaultItem = sourceItem ?? {
       id: row.id,
@@ -238,6 +286,15 @@ export class ReadOnlyWaSqliteVaultStorageAdapter implements VaultStorageReposito
       return undefined;
     }
     return String(value);
+  }
+
+  private sqlNullableString(value: unknown): string {
+    const normalizedValue = this.optionalString(value);
+    return normalizedValue ? this.sqlString(normalizedValue) : 'NULL';
+  }
+
+  private sqlString(value: string): string {
+    return `'${value.replace(/'/g, "''")}'`;
   }
 
   private errorMessage(error: unknown): string {
