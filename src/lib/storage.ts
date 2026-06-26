@@ -10,7 +10,7 @@ import {
   getSecretKeyFingerprint,
   normalizeAccountSecretKey,
 } from './secretKey';
-import { sqliteOPFSInstance } from './sqlite_opfs';
+import { getVaultStorageRepository } from './vaultStorageProvider';
 import { logSecurityEvent, securityEventCodes } from './securityEvents';
 import { closeVaultSession, getActiveBackupPassword, getActiveMasterPassword, openVaultSession } from './vaultSession';
 import { disableBiometric, hydrateBiometric } from './biometric';
@@ -34,7 +34,7 @@ interface AccountSecretProfile {
 }
 
 export async function initializeStorage(): Promise<void> {
-  await sqliteOPFSInstance.hydrate();
+  await getVaultStorageRepository().hydrate();
   await hydrateBiometric();
   migrateRememberedSecretKeyToSecureStorage();
 }
@@ -142,7 +142,7 @@ function resolveCurrentVaultCredential(password: string): string {
 export async function verifyMasterPassword(password: string, secretKey?: string | null): Promise<boolean> {
   await initializeStorage();
   const credential = resolveVaultCredential(password, secretKey);
-  const isCorrect = await sqliteOPFSInstance.verifyPassword(credential);
+  const isCorrect = await getVaultStorageRepository().verifyPassword(credential);
   if (isCorrect) {
     let rawMasterPassword = password;
     if (password.startsWith('aegis-vault-v7:')) {
@@ -172,7 +172,7 @@ export async function verifyMasterPassword(password: string, secretKey?: string 
 export async function setupMasterPassword(password: string): Promise<void> {
   await initializeStorage();
   const credential = resolveVaultCredential(password);
-  await sqliteOPFSInstance.setupMaster(credential);
+  await getVaultStorageRepository().setupMaster(credential);
   openVaultSession(credential, password);
   try {
     await migrateLegacyAttachmentsToAesGcm();
@@ -187,7 +187,7 @@ export async function setupMasterPassword(password: string): Promise<void> {
   localStorage.setItem(STORAGE_KEYS.IS_SET_UP, 'true');
 
   // Seed default items in SQLite
-  await sqliteOPFSInstance.reseedDemo(credential, INITIAL_DEMO_ITEMS);
+  await getVaultStorageRepository().reseedDemo(credential, INITIAL_DEMO_ITEMS);
 }
 
 export async function setupMasterPasswordWithSecretKey(
@@ -199,7 +199,7 @@ export async function setupMasterPasswordWithSecretKey(
   const credential = combineMasterPasswordAndSecretKey(password, normalizedSecretKey);
 
   await initializeStorage();
-  await sqliteOPFSInstance.setupMaster(credential);
+  await getVaultStorageRepository().setupMaster(credential);
   openVaultSession(credential, password);
   try {
     await migrateLegacyAttachmentsToAesGcm();
@@ -223,13 +223,13 @@ export async function setupMasterPasswordWithSecretKey(
     forgetRememberedAccountSecretKey();
   }
 
-  await sqliteOPFSInstance.reseedDemo(credential, INITIAL_DEMO_ITEMS);
+  await getVaultStorageRepository().reseedDemo(credential, INITIAL_DEMO_ITEMS);
 }
 
 export async function changeMasterPassword(oldPassword: string, newPassword: string): Promise<void> {
   await initializeStorage();
   const oldCredential = resolveCurrentVaultCredential(oldPassword);
-  const isCorrectOld = await sqliteOPFSInstance.verifyPassword(oldCredential);
+  const isCorrectOld = await getVaultStorageRepository().verifyPassword(oldCredential);
   if (!isCorrectOld) {
     throw new Error('current-master-password-invalid');
   }
@@ -237,7 +237,7 @@ export async function changeMasterPassword(oldPassword: string, newPassword: str
   const newCredential = resolveRotatedVaultCredential(newPassword);
   const rotatedAttachmentCount = await reencryptAttachmentsForMasterPasswordChange(oldCredential, newCredential);
   try {
-    await sqliteOPFSInstance.changeMasterPassword(oldCredential, newCredential);
+    await getVaultStorageRepository().changeMasterPassword(oldCredential, newCredential);
   } catch (err) {
     if (rotatedAttachmentCount > 0) {
       await reencryptAttachmentsForMasterPasswordChange(newCredential, oldCredential);
@@ -253,7 +253,7 @@ export async function changeMasterPassword(oldPassword: string, newPassword: str
  * Resets the master password and wipes all database contents.
  */
 export async function resetSystem(): Promise<void> {
-  await sqliteOPFSInstance.resetAll();
+  await getVaultStorageRepository().resetAll();
   closeVaultSession();
   localStorage.removeItem(STORAGE_KEYS.IS_SET_UP);
   localStorage.removeItem('aegis_sqlite_fallback');
@@ -272,7 +272,7 @@ export async function getVaultItems(): Promise<VaultItem[]> {
   const password = getSessionMasterPassword();
   if (!password) return [];
   
-  const rawItems = await sqliteOPFSInstance.getVaultItems(password);
+  const rawItems = await getVaultStorageRepository().getVaultItems(password);
 
   // Auto clean trash items older than 15 days
   let hasChanges = false;
@@ -292,7 +292,7 @@ export async function getVaultItems(): Promise<VaultItem[]> {
   });
 
   if (hasChanges) {
-    return sqliteOPFSInstance.deletePermanentlyBatch(expiredIds, password);
+    return getVaultStorageRepository().deletePermanentlyBatch(expiredIds, password);
   }
   return cleanItems;
 }
@@ -303,16 +303,16 @@ export async function getVaultItems(): Promise<VaultItem[]> {
 export async function saveVaultItem(item: VaultItem): Promise<VaultItem[]> {
   const password = getSessionMasterPassword();
   if (!password) return [];
-  return sqliteOPFSInstance.saveVaultItem(item, password);
+  return getVaultStorageRepository().saveVaultItem(item, password);
 }
 
 export async function saveVaultItems(items: VaultItem[], onProgress?: (count: number) => void): Promise<VaultItem[]> {
   const password = getSessionMasterPassword();
   if (!password) return [];
   if (onProgress) {
-    return sqliteOPFSInstance.saveVaultItems(items, password, onProgress);
+    return getVaultStorageRepository().saveVaultItems(items, password, onProgress);
   }
-  return sqliteOPFSInstance.saveVaultItems(items, password);
+  return getVaultStorageRepository().saveVaultItems(items, password);
 }
 
 /**
@@ -321,7 +321,7 @@ export async function saveVaultItems(items: VaultItem[], onProgress?: (count: nu
 export async function deleteVaultItem(id: string): Promise<VaultItem[]> {
   const password = getSessionMasterPassword();
   if (!password) return [];
-  return sqliteOPFSInstance.deletePermanently(id, password);
+  return getVaultStorageRepository().deletePermanently(id, password);
 }
 
 /**
@@ -331,14 +331,14 @@ export async function moveToTrash(id: string): Promise<VaultItem[]> {
   const password = getSessionMasterPassword();
   if (!password) return [];
   
-  const items = await sqliteOPFSInstance.getVaultItems(password);
+  const items = await getVaultStorageRepository().getVaultItems(password);
   const found = items.find(x => x.id === id);
   if (found) {
     found.deleted = true;
     found.deletedAt = new Date().toISOString();
-    await sqliteOPFSInstance.saveVaultItem(found, password);
+    await getVaultStorageRepository().saveVaultItem(found, password);
   }
-  return sqliteOPFSInstance.getVaultItems(password);
+  return getVaultStorageRepository().getVaultItems(password);
 }
 
 /**
@@ -348,14 +348,14 @@ export async function restoreFromTrash(id: string): Promise<VaultItem[]> {
   const password = getSessionMasterPassword();
   if (!password) return [];
 
-  const items = await sqliteOPFSInstance.getVaultItems(password);
+  const items = await getVaultStorageRepository().getVaultItems(password);
   const found = items.find(x => x.id === id);
   if (found) {
     found.deleted = false;
     delete found.deletedAt;
-    await sqliteOPFSInstance.saveVaultItem(found, password);
+    await getVaultStorageRepository().saveVaultItem(found, password);
   }
-  return sqliteOPFSInstance.getVaultItems(password);
+  return getVaultStorageRepository().getVaultItems(password);
 }
 
 /**
@@ -364,7 +364,7 @@ export async function restoreFromTrash(id: string): Promise<VaultItem[]> {
 export async function deletePermanently(id: string): Promise<VaultItem[]> {
   const password = getSessionMasterPassword();
   if (!password) return [];
-  return sqliteOPFSInstance.deletePermanently(id, password);
+  return getVaultStorageRepository().deletePermanently(id, password);
 }
 
 /**
@@ -374,11 +374,11 @@ export async function emptyTrashComplete(): Promise<VaultItem[]> {
   const password = getSessionMasterPassword();
   if (!password) return [];
 
-  const items = await sqliteOPFSInstance.getVaultItems(password);
+  const items = await getVaultStorageRepository().getVaultItems(password);
   const deletedIds = items.filter(item => item.deleted).map(item => item.id);
   
   if (deletedIds.length > 0) {
-    return sqliteOPFSInstance.deletePermanentlyBatch(deletedIds, password);
+    return getVaultStorageRepository().deletePermanentlyBatch(deletedIds, password);
   }
   return items;
 }
@@ -389,5 +389,5 @@ export async function emptyTrashComplete(): Promise<VaultItem[]> {
 export async function reseedDemoData(): Promise<VaultItem[]> {
   const password = getSessionMasterPassword();
   if (!password) return [];
-  return sqliteOPFSInstance.reseedDemo(password, INITIAL_DEMO_ITEMS);
+  return getVaultStorageRepository().reseedDemo(password, INITIAL_DEMO_ITEMS);
 }
