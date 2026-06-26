@@ -652,6 +652,65 @@ describe('SQLite OPFS persistence engine', () => {
     );
   });
 
+  it('rolls back a single vault item save when persistence cannot be written', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    const before = localStorage.getItem('aegis_sqlite_fallback');
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('quota exceeded');
+    });
+
+    await expect(sqlite.saveVaultItem(sampleItem({ id: 'lost-row' }), 'master-pass')).rejects.toThrow(
+      'vault-item-persist-failed',
+    );
+
+    setItemSpy.mockRestore();
+    expect(localStorage.getItem('aegis_sqlite_fallback')).toBe(before);
+    await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual([]);
+    expect(sqlite.getQueryLogs()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          query: expect.stringContaining('rolled back because persistence failed'),
+          status: 'ERROR',
+          rowsAffected: 0,
+        }),
+      ]),
+    );
+  });
+
+  it('rolls back bulk vault item saves when persistence cannot be written', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    await sqlite.saveVaultItem(sampleItem({ id: 'existing-row', title: 'Existing Row' }), 'master-pass');
+    const before = localStorage.getItem('aegis_sqlite_fallback');
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('quota exceeded');
+    });
+
+    await expect(sqlite.saveVaultItems([
+      sampleItem({ id: 'existing-row', title: 'Updated Row' }),
+      sampleItem({ id: 'new-bulk-row', title: 'New Bulk Row' }),
+    ], 'master-pass')).rejects.toThrow('vault-items-persist-failed');
+
+    setItemSpy.mockRestore();
+    expect(localStorage.getItem('aegis_sqlite_fallback')).toBe(before);
+    await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual([
+      expect.objectContaining({
+        id: 'existing-row',
+        title: 'Existing Row',
+        password: 'secret-password',
+      }),
+    ]);
+    expect(sqlite.getQueryLogs()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          query: expect.stringContaining('2 records) rolled back'),
+          status: 'ERROR',
+          rowsAffected: 0,
+        }),
+      ]),
+    );
+  });
   it('performs bulk saves securely in a single sweep using saveVaultItems', async () => {
     const sqlite = await freshSqliteInstance();
     await sqlite.setupMaster('master-pass');

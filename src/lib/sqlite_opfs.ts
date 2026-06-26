@@ -4,7 +4,7 @@
  */
 
 import { VaultItem } from '../types';
-import { 
+import {
   decryptLegacyAes256Gcm,
   generateLegacyArgon2idHash,
   generateLegacyArgon2idKey,
@@ -31,8 +31,8 @@ import {
 import { logSecurityEvent, securityEventCodes } from './securityEvents';
 import { registerOnCloseSession } from './vaultSession';
 
-const isTestEnv = typeof window === 'undefined' || 
-  (typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.includes('jsdom')) || 
+const isTestEnv = typeof window === 'undefined' ||
+  (typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.includes('jsdom')) ||
   (typeof window !== 'undefined' && (window as any).__happyDOM__);
 
 async function maybeDelay(ms: number): Promise<void> {
@@ -245,7 +245,7 @@ class SQLiteOPFS {
           await this.saveToPersistentStorage();
           return;
         }
-        
+
         const file = await fileHandle.getFile();
         const content = await file.text();
         if (content) {
@@ -307,7 +307,7 @@ class SQLiteOPFS {
     const opfsWritePromise = (async () => {
       const root = await navigator.storage.getDirectory();
       const fileHandle = await root.getFileHandle(DB_FILENAME, { create: true });
-      
+
       // Use createWritable if supported (standard), or fallback to alternative file APIs
       if ('createWritable' in fileHandle) {
         const writable = await (fileHandle as any).createWritable();
@@ -364,7 +364,7 @@ class SQLiteOPFS {
       try {
         const passwordPlain = atob(legacyPass);
         const argonHash = generateLegacyArgon2idHash(passwordPlain);
-        
+
         this.state.user_secrets = [{
           username: 'owner',
           argon_hash: argonHash,
@@ -377,7 +377,7 @@ class SQLiteOPFS {
         this.state.vault_items = await Promise.all(items.map(async (item) => {
           const sensitivePayload = JSON.stringify(item);
           const encrypted = await webCryptoAesGcmEncrypt(sensitivePayload, derivedKey, generateSafeIv());
-          
+
           return {
             id: item.id,
             title: item.title,
@@ -569,7 +569,7 @@ class SQLiteOPFS {
    */
   public async getVaultItems(masterPasswordPlain: string): Promise<VaultItem[]> {
     const queryStr = 'SELECT id, title, category, favorite, deleted, username_db, enc_metadata FROM vault_items;';
-    
+
     if (this.state.vault_items.length === 0) {
       this.logQuery(queryStr, 'SUCCESS', 0);
       return [];
@@ -582,7 +582,7 @@ class SQLiteOPFS {
       const shouldMigrateKdf = !this.state.kdfParams;
       const shouldMigrateStaticSalt = !this.state.encryption_salt;
       const migratedSalt = shouldMigrateStaticSalt ? this.createVaultEncryptionSalt() : this.state.encryption_salt;
-      
+
       const migrationKey = (shouldMigrateStaticSalt || shouldMigrateKdf)
         ? await deriveVettedArgon2idKey(masterPasswordPlain, migratedSalt, NEW_VAULT_ITEM_KDF_PARAMS)
         : derivedKey;
@@ -606,7 +606,7 @@ class SQLiteOPFS {
 
       for (let i = 0; i < totalItems; i++) {
         const row = this.state.vault_items[i];
-        
+
         try {
           const cachedEntry = this.decryptedItemsCache.get(row.id);
           const isLegacyRow = row.enc_kdf !== VAULT_ITEM_KDF;
@@ -623,7 +623,7 @@ class SQLiteOPFS {
                 ? decryptLegacyAes256Gcm(encryptedPayload, legacyDerivedKey)
                 : await webCryptoAesGcmDecrypt(encryptedPayload as WebCryptoAesGcmPayload, derivedKey);
             }
-            
+
             const originalItem: VaultItem = JSON.parse(decryptedJson);
 
             if (isLegacyRow || shouldMigrateStaticSalt || shouldMigrateKdf) {
@@ -712,68 +712,83 @@ class SQLiteOPFS {
    * Saves or updates a specific Item row inside SQLite and OPFS with separate fresh 12-byte GCM IV.
    */
   public async saveVaultItem(item: VaultItem, masterPasswordPlain: string): Promise<VaultItem[]> {
-    this.ensureVaultEncryptionSalt();
-    const derivedKey = await this.deriveEncryptionKey(masterPasswordPlain);
-    const index = this.state.vault_items.findIndex(x => x.id === item.id);
+    const previousState = this.cloneState();
+    const previousDecryptedItemsCache = this.cloneDecryptedItemsCache();
 
-    // Build fresh serialized payload
-    const rawSensitive = JSON.stringify(item);
-    // Uses separate secure 12-byte IV for this encryption action automatically inside aes256GcmEncrypt!
-    const encrypted = await webCryptoAesGcmEncrypt(rawSensitive, derivedKey, generateSafeIv());
+    try {
+      this.ensureVaultEncryptionSalt();
+      const derivedKey = await this.deriveEncryptionKey(masterPasswordPlain);
+      const index = this.state.vault_items.findIndex(x => x.id === item.id);
 
-    const nowStr = new Date().toISOString().split('T')[0];
-    const category = item.category || 'login';
+      // Build fresh serialized payload
+      const rawSensitive = JSON.stringify(item);
+      // Uses separate secure 12-byte IV for this encryption action automatically inside aes256GcmEncrypt!
+      const encrypted = await webCryptoAesGcmEncrypt(rawSensitive, derivedKey, generateSafeIv());
 
-    const row: SQLiteRow = {
-      id: item.id || secureRandomToken(9),
-      title: item.title || 'Imported Record',
-      category: category,
-      favorite: item.favorite ? 1 : 0,
-      deleted: item.deleted ? 1 : 0,
-      deleted_at: item.deletedAt || null,
-      created_at: item.createdAt || nowStr,
-      updated_at: nowStr,
-      
-      // Decrypted display properties
-      username: item.username || '',
+      const nowStr = new Date().toISOString().split('T')[0];
+      const category = item.category || 'login';
 
-      // SQLite visible values (completely masked for security)
-      username_db: '[encrypted: aes-256-gcm]',
-      password_db: '[encrypted: aes-256-gcm]',
-      notes_db: item.notes ? '[encrypted: aes-256-gcm]' : '',
-      
-      enc_metadata: JSON.stringify(encrypted),
-      enc_kdf: VAULT_ITEM_KDF,
-    };
+      const row: SQLiteRow = {
+        id: item.id || secureRandomToken(9),
+        title: item.title || 'Imported Record',
+        category: category,
+        favorite: item.favorite ? 1 : 0,
+        deleted: item.deleted ? 1 : 0,
+        deleted_at: item.deletedAt || null,
+        created_at: item.createdAt || nowStr,
+        updated_at: nowStr,
 
-    let query = '';
-    const safeId = this.sanitizeLogValue(row.id);
-    const safeTitle = this.sanitizeLogValue(row.title);
-    const safeCategory = this.sanitizeLogValue(row.category);
-    if (index > -1) {
-      this.state.vault_items[index] = row;
-      query = `UPDATE vault_items SET title = "${safeTitle}", category = "${safeCategory}", enc_metadata = "[encrypted metadata payload]" WHERE id = "${safeId}";`;
-    } else {
-      this.state.vault_items.push(row);
-      query = `INSERT INTO vault_items (id, title, category, favorite, username_db, password_db, enc_metadata) VALUES ("${safeId}", "${safeTitle}", "${safeCategory}", ${row.favorite}, "${row.username_db}", "${row.password_db}", "[encrypted metadata]");`;
+        // Decrypted display properties
+        username: item.username || '',
+
+        // SQLite visible values (completely masked for security)
+        username_db: '[encrypted: aes-256-gcm]',
+        password_db: '[encrypted: aes-256-gcm]',
+        notes_db: item.notes ? '[encrypted: aes-256-gcm]' : '',
+
+        enc_metadata: JSON.stringify(encrypted),
+        enc_kdf: VAULT_ITEM_KDF,
+      };
+
+      let query = '';
+      const safeId = this.sanitizeLogValue(row.id);
+      const safeTitle = this.sanitizeLogValue(row.title);
+      const safeCategory = this.sanitizeLogValue(row.category);
+      if (index > -1) {
+        this.state.vault_items[index] = row;
+        query = `UPDATE vault_items SET title = "${safeTitle}", category = "${safeCategory}", enc_metadata = "[encrypted metadata payload]" WHERE id = "${safeId}";`;
+      } else {
+        this.state.vault_items.push(row);
+        query = `INSERT INTO vault_items (id, title, category, favorite, username_db, password_db, enc_metadata) VALUES ("${safeId}", "${safeTitle}", "${safeCategory}", ${row.favorite}, "${row.username_db}", "${row.password_db}", "[encrypted metadata]");`;
+      }
+
+      // Cache the decrypted item so we don't have to decrypt it when returning getVaultItems
+      this.decryptedItemsCache.set(row.id, {
+        enc_metadata: row.enc_metadata,
+        item: { ...item, id: row.id }
+      });
+
+      const persisted = await this.saveToPersistentStorage();
+      if (!persisted) {
+        throw new Error('vault-item-persist-failed');
+      }
+
+      this.logQuery(query, 'SUCCESS', 1);
+      return this.getVaultItems(masterPasswordPlain);
+    } catch (err) {
+      this.restoreTransactionalState(previousState, previousDecryptedItemsCache);
+      this.logQuery('INSERT OR UPDATE vault_items rolled back because persistence failed;', 'ERROR', 0);
+      if (err instanceof Error && err.message === 'vault-item-persist-failed') {
+        throw err;
+      }
+      throw new Error('vault-item-save-failed');
     }
-
-    // Cache the decrypted item so we don't have to decrypt it when returning getVaultItems
-    this.decryptedItemsCache.set(row.id, {
-      enc_metadata: row.enc_metadata,
-      item: { ...item, id: row.id }
-    });
-
-    this.logQuery(query, 'SUCCESS', 1);
-    await this.saveToPersistentStorage();
-    return this.getVaultItems(masterPasswordPlain);
   }
-
   /**
    * Saves or updates multiple items in a single transaction (batch operation).
    * Reduces KDF derivations, disk writes, and decryption sweeps to O(1) database cycles.
    * Returns the saved items directly without re-decrypting the entire database.
-   * 
+   *
    * For very large imports (600+ items), processes items sequentially (not in parallel)
    * with frequent yielding to absolutely prevent main thread blocking.
    * Trade-off: Slower execution but zero UI freezing.
@@ -783,99 +798,113 @@ class SQLiteOPFS {
     masterPasswordPlain: string,
     onProgress?: (count: number) => void
   ): Promise<VaultItem[]> {
-    this.ensureVaultEncryptionSalt();
-    const derivedKey = await this.deriveEncryptionKey(masterPasswordPlain);
-    const nowStr = new Date().toISOString().split('T')[0];
+    const previousState = this.cloneState();
+    const previousDecryptedItemsCache = this.cloneDecryptedItemsCache();
 
-    const allRows: SQLiteRow[] = [];
-    const CHUNK_SIZE = 50;
-    let lastYield = performance.now();
+    try {
+      this.ensureVaultEncryptionSalt();
+      const derivedKey = await this.deriveEncryptionKey(masterPasswordPlain);
+      const nowStr = new Date().toISOString().split('T')[0];
 
-    for (let i = 0; i < items.length; i += CHUNK_SIZE) {
-      const chunk = items.slice(i, i + CHUNK_SIZE);
-      const chunkRows = await Promise.all(
-        chunk.map(async (item) => {
-          try {
-            const rawSensitive = JSON.stringify(item);
-            const encrypted = await webCryptoAesGcmEncrypt(rawSensitive, derivedKey, generateSafeIv());
-            const category = item.category || 'login';
+      const allRows: SQLiteRow[] = [];
+      const CHUNK_SIZE = 50;
 
-            const row: SQLiteRow = {
-              id: item.id || secureRandomToken(9),
-              title: item.title || 'Imported Record',
-              category: category,
-              favorite: item.favorite ? 1 : 0,
-              deleted: item.deleted ? 1 : 0,
-              deleted_at: item.deletedAt || null,
-              created_at: item.createdAt || nowStr,
-              updated_at: nowStr,
-              username: item.username || '',
-              username_db: '[encrypted: aes-256-gcm]',
-              password_db: '[encrypted: aes-256-gcm]',
-              notes_db: item.notes ? '[encrypted: aes-256-gcm]' : '',
-              enc_metadata: JSON.stringify(encrypted),
-              enc_kdf: VAULT_ITEM_KDF,
-            };
+      for (let i = 0; i < items.length; i += CHUNK_SIZE) {
+        const chunk = items.slice(i, i + CHUNK_SIZE);
+        const chunkRows = await Promise.all(
+          chunk.map(async (item) => {
+            try {
+              const rawSensitive = JSON.stringify(item);
+              const encrypted = await webCryptoAesGcmEncrypt(rawSensitive, derivedKey, generateSafeIv());
+              const category = item.category || 'login';
 
-            this.decryptedItemsCache.set(row.id, {
-              enc_metadata: row.enc_metadata,
-              item: { ...item, id: row.id }
-            });
+              const row: SQLiteRow = {
+                id: item.id || secureRandomToken(9),
+                title: item.title || 'Imported Record',
+                category: category,
+                favorite: item.favorite ? 1 : 0,
+                deleted: item.deleted ? 1 : 0,
+                deleted_at: item.deletedAt || null,
+                created_at: item.createdAt || nowStr,
+                updated_at: nowStr,
+                username: item.username || '',
+                username_db: '[encrypted: aes-256-gcm]',
+                password_db: '[encrypted: aes-256-gcm]',
+                notes_db: item.notes ? '[encrypted: aes-256-gcm]' : '',
+                enc_metadata: JSON.stringify(encrypted),
+                enc_kdf: VAULT_ITEM_KDF,
+              };
 
-            return row;
-          } catch (e) {
-            console.error('Encryption error for item:', item.id, e);
-            return null;
+              this.decryptedItemsCache.set(row.id, {
+                enc_metadata: row.enc_metadata,
+                item: { ...item, id: row.id }
+              });
+
+              return row;
+            } catch (e) {
+              console.error('Encryption error for item:', item.id, e);
+              return null;
+            }
+          })
+        );
+
+        for (const row of chunkRows) {
+          if (row) {
+            allRows.push(row);
           }
-        })
-      );
+        }
 
-      for (const row of chunkRows) {
-        if (row) {
-          allRows.push(row);
+        if (onProgress) {
+          onProgress(allRows.length);
+        }
+
+        // Yield after each batch to keep the UI absolutely responsive and flush GCM thread pools
+        await maybeDelay(20);
+      }
+
+      for (const row of allRows) {
+        const index = this.state.vault_items.findIndex(x => x.id === row.id);
+        if (index > -1) {
+          this.state.vault_items[index] = row;
+        } else {
+          this.state.vault_items.push(row);
         }
       }
 
-      if (onProgress) {
-        onProgress(allRows.length);
+      const persisted = await this.saveToPersistentStorage();
+      if (!persisted) {
+        throw new Error('vault-items-persist-failed');
       }
 
-      // Yield after each batch to keep the UI absolutely responsive and flush GCM thread pools
-      await maybeDelay(20);
-    }
+      this.logQuery(`INSERT OR REPLACE INTO vault_items (${items.length} records);`, 'SUCCESS', items.length);
 
-    for (const row of allRows) {
-      const index = this.state.vault_items.findIndex(x => x.id === row.id);
-      if (index > -1) {
-        this.state.vault_items[index] = row;
-      } else {
-        this.state.vault_items.push(row);
+      return allRows.map((row) => {
+        const cachedItem = this.decryptedItemsCache.get(row.id)?.item;
+        return {
+          ...(cachedItem ?? {}),
+          id: row.id,
+          title: row.title,
+          username: cachedItem?.username || row.username || '',
+          password: cachedItem?.password || '',
+          url: cachedItem?.url || '',
+          notes: cachedItem?.notes,
+          category: row.category as VaultItem['category'],
+          favorite: row.favorite === 1,
+          deleted: row.deleted === 1,
+          deletedAt: row.deleted_at || undefined,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+        };
+      });
+    } catch (err) {
+      this.restoreTransactionalState(previousState, previousDecryptedItemsCache);
+      this.logQuery(`INSERT OR REPLACE INTO vault_items (${items.length} records) rolled back because persistence failed;`, 'ERROR', 0);
+      if (err instanceof Error && err.message === 'vault-items-persist-failed') {
+        throw err;
       }
+      throw new Error('vault-items-save-failed');
     }
-
-    this.logQuery(`INSERT OR REPLACE INTO vault_items (${items.length} records);`, 'SUCCESS', items.length);
-    await this.saveToPersistentStorage();
-
-    return allRows.map((row) => {
-      const cachedItem = this.decryptedItemsCache.get(row.id)?.item;
-      return {
-        ...(cachedItem ?? {}),
-        id: row.id,
-        title: row.title,
-        username: cachedItem?.username || row.username || '',
-        password: cachedItem?.password || '',
-        url: cachedItem?.url || '',
-        notes: cachedItem?.notes,
-        category: row.category as VaultItem['category'],
-        favorite: row.favorite === 1,
-        deleted: row.deleted === 1,
-        deletedAt: row.deleted_at || undefined,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-      };
-    });
   }
-
   /**
    * SQL Parser implementation simulating typical queries execution.
    * Useful for the Interactive SQL Command Terminal inside Settings/Audit!
@@ -883,7 +912,7 @@ class SQLiteOPFS {
   public executeCustomSQL(sql: string, masterPasswordPlain: string): { columns: string[]; rows: any[][]; error?: string } {
     const sanitized = sql.trim().replace(/;$/, '');
     const tokens = sanitized.split(/\s+/);
-    
+
     if (tokens.length === 0) {
       return { columns: [], rows: [] };
     }
@@ -903,7 +932,7 @@ class SQLiteOPFS {
       // 2. SELECT * FROM vault_items
       if (sanitized.toUpperCase().includes('VAULT_ITEMS')) {
         let itemsToUse = this.state.vault_items;
-        
+
         // Handle filter WHERE deleted = 0
         if (sanitized.toUpperCase().includes('WHERE DELETED = 0')) {
           itemsToUse = itemsToUse.filter(i => i.deleted === 0);
@@ -912,9 +941,9 @@ class SQLiteOPFS {
         }
 
         const isAsterisk = tokens[1] === '*';
-        
+
         this.logQuery(sql, 'SUCCESS', itemsToUse.length);
-        
+
         if (isAsterisk) {
           return {
             columns: ['id', 'title', 'category', 'favorite', 'deleted', 'username_db', 'password_db', 'notes_db', 'enc_metadata'],
@@ -934,7 +963,7 @@ class SQLiteOPFS {
           // Parse columns e.g. SELECT id, title, category FROM
           const selectPart = sanitized.toUpperCase().split('FROM')[0];
           const cols = selectPart.replace('SELECT', '').split(',').map(c => c.trim().toLowerCase());
-          
+
           return {
             columns: cols,
             rows: itemsToUse.map(i => {
@@ -993,7 +1022,7 @@ class SQLiteOPFS {
    */
   public async deletePermanentlyBatch(ids: string[], passwordPlain: string): Promise<VaultItem[]> {
     if (ids.length === 0) return this.getVaultItems(passwordPlain);
-    
+
     const idSet = new Set(ids);
     this.state.vault_items = this.state.vault_items.filter(row => !idSet.has(row.id));
     for (const id of ids) {
@@ -1011,11 +1040,11 @@ class SQLiteOPFS {
     this.ensureVaultEncryptionSalt();
     this.decryptedItemsCache.clear();
     const derivedKey = await this.deriveEncryptionKey(passwordPlain);
-    
+
     this.state.vault_items = await Promise.all(demoItems.map(async (item) => {
       const sensitivePayload = JSON.stringify(item);
       const encrypted = await webCryptoAesGcmEncrypt(sensitivePayload, derivedKey, generateSafeIv());
-      
+
       return {
         id: item.id,
         title: item.title,
