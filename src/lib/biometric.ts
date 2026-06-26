@@ -93,6 +93,7 @@ interface BiometricInfoV2 {
   credentialId: string;
   salt: string;
   bundle: WebCryptoAesGcmPayload;
+  pbkdf2Iterations?: number;
 }
 
 interface NativeBiometricInfoV3 {
@@ -103,6 +104,7 @@ interface NativeBiometricInfoV3 {
   wrappingSecret: string;
   salt: string;
   bundle: WebCryptoAesGcmPayload;
+  pbkdf2Iterations?: number;
 }
 
 type BiometricInfo = BiometricInfoV2 | NativeBiometricInfoV3;
@@ -363,7 +365,9 @@ async function registerWebAuthnBiometric(masterPassword: string): Promise<void> 
   // Clean generated 16-byte random salt for PBKDF2-SHA256
   const salt = secureRandomBytes(16);
 
-  const wrappingKey = await deriveWebCryptoPbkdf2Key(rawIdBytes, salt, 10000, 32);
+  const PBKDF2_ITERATIONS = 100_000;
+
+  const wrappingKey = await deriveWebCryptoPbkdf2Key(rawIdBytes, salt, PBKDF2_ITERATIONS, 32);
 
   const bundle = await webCryptoAesGcmEncrypt(masterPassword, wrappingKey, generateSafeIv());
 
@@ -373,7 +377,8 @@ async function registerWebAuthnBiometric(masterPassword: string): Promise<void> 
     cipher: 'WebCrypto AES-256-GCM',
     credentialId: bytesToBase64(new Uint8Array(credential.rawId)),
     salt: bytesToBase64(salt),
-    bundle: bundle
+    bundle: bundle,
+    pbkdf2Iterations: PBKDF2_ITERATIONS,
   };
 
   cachedBiometricInfo = biometricInfo;
@@ -391,9 +396,11 @@ async function registerNativeBiometric(masterPassword: string): Promise<void> {
 
   await authenticateNativeBiometric();
 
+  const PBKDF2_ITERATIONS = 100_000;
+
   const wrappingSecret = secureRandomBytes(32);
   const salt = secureRandomBytes(16);
-  const wrappingKey = await deriveWebCryptoPbkdf2Key(wrappingSecret, salt, 10000, 32);
+  const wrappingKey = await deriveWebCryptoPbkdf2Key(wrappingSecret, salt, PBKDF2_ITERATIONS, 32);
   const bundle = await webCryptoAesGcmEncrypt(masterPassword, wrappingKey, generateSafeIv());
 
   const biometricInfo: NativeBiometricInfoV3 = {
@@ -404,6 +411,7 @@ async function registerNativeBiometric(masterPassword: string): Promise<void> {
     wrappingSecret: bytesToBase64(wrappingSecret),
     salt: bytesToBase64(salt),
     bundle,
+    pbkdf2Iterations: PBKDF2_ITERATIONS,
   };
 
   if (!saveBiometricToSecureStorage(biometricInfo)) {
@@ -425,7 +433,8 @@ export async function authenticateBiometric(): Promise<string> {
     try {
       const wrappingSecret = base64ToBytes(biometricInfo.wrappingSecret);
       const saltBytes = base64ToBytes(biometricInfo.salt);
-      const wrappingKey = await deriveWebCryptoPbkdf2Key(wrappingSecret, saltBytes, 10000, 32);
+      const iterations = biometricInfo.pbkdf2Iterations ?? 10_000;
+      const wrappingKey = await deriveWebCryptoPbkdf2Key(wrappingSecret, saltBytes, iterations, 32);
       return webCryptoAesGcmDecrypt(biometricInfo.bundle, wrappingKey);
     } catch {
       throw new BiometricError(biometricErrorCodes.integrityMismatch);
@@ -460,7 +469,8 @@ export async function authenticateBiometric(): Promise<string> {
 
   try {
     if (biometricInfo.version === 2 && biometricInfo.cipher === 'WebCrypto AES-256-GCM') {
-      const wrappingKey = await deriveWebCryptoPbkdf2Key(rawIdBytes, saltBytes, 10000, 32);
+      const iterations = biometricInfo.pbkdf2Iterations ?? 10_000;
+      const wrappingKey = await deriveWebCryptoPbkdf2Key(rawIdBytes, saltBytes, iterations, 32);
       return webCryptoAesGcmDecrypt(biometricInfo.bundle, wrappingKey);
     }
 

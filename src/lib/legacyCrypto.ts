@@ -21,6 +21,7 @@ export const legacyCryptoErrorCodes = {
   missingFields: 'legacyCrypto.missingFields',
   checksumMismatch: 'legacyCrypto.checksumMismatch',
   unsupportedEnvelope: 'legacyCrypto.unsupportedEnvelope',
+  streamCipherRemoved: 'legacyCrypto.streamCipherRemoved',
 } as const;
 
 export type LegacyCryptoErrorCode = (typeof legacyCryptoErrorCodes)[keyof typeof legacyCryptoErrorCodes];
@@ -442,48 +443,15 @@ export function decryptLegacyDataWithPassword(envelopeJsonStr: string, password:
     }, aesKey);
   }
 
-  // Support legacy fallbacks from old iterations (soft translation)
+  // Legacy stream cipher fallback has been permanently removed (security hardening).
+  // Backups created with the old stream cipher format (pre-v1.1) are no longer supported.
   if (parsed.encrypted && parsed.salt && parsed.payload) {
     logSecurityEvent(
       'security.legacyCryptoWarning' as any,
-      'Decrypting weak legacy backup (2000 iterations, stream cipher). Please re-export your vault immediately to update to the modern format.',
-      'warning'
+      'Rejected legacy stream cipher backup. This cryptographically weak format is no longer supported. Re-export from a previous Aegis Vault version first.',
+      'critical'
     );
-    // Generate stretched key from old simple algorithm parameters
-    let current = password + parsed.salt;
-    for (let i = 0; i < 2000; i++) {
-      let hash = 0;
-      for (let j = 0; j < current.length; j++) {
-        hash = (hash << 5) - hash + current.charCodeAt(j);
-        hash = hash & hash;
-      }
-      current = hash.toString(16) + current.substring(0, Math.min(current.length, 16));
-    }
-    const legacyKey = new Uint8Array(32);
-    for (let i = 0; i < 32; i++) {
-      legacyKey[i] = Math.abs(current.charCodeAt(i % current.length) ^ (i * 17)) % 256;
-    }
-
-    // Uses stream cipher decryption fallback
-    let state = 0;
-    for (let i = 0; i < legacyKey.length; i++) {
-      state = (state + legacyKey[i] * (i + 13)) & 0xffffffff;
-    }
-    const nextByte = () => {
-      state = (state * 1664525 + 1013904223) & 0xffffffff;
-      return (state >> 16) & 0xff;
-    };
-
-    const binaryStr = atob(parsed.payload);
-    const decryptedBytes = new Uint8Array(binaryStr.length);
-    for (let i = 0; i < binaryStr.length; i++) {
-      const encryptedByte = binaryStr.charCodeAt(i);
-      const keyByte = nextByte();
-      decryptedBytes[i] = encryptedByte ^ keyByte;
-    }
-
-    const decoder = new TextDecoder();
-    return decoder.decode(decryptedBytes);
+    throw new LegacyCryptoError(legacyCryptoErrorCodes.streamCipherRemoved);
   }
 
   throw new LegacyCryptoError(legacyCryptoErrorCodes.unsupportedEnvelope);

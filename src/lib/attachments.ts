@@ -18,6 +18,7 @@ export const attachmentErrorCodes = {
   missingEncryptionMetadata: 'attachment.missingEncryptionMetadata',
   unreadableFileData: 'attachment.unreadableFileData',
   legacyEncryptionBlocked: 'attachment.legacyEncryptionBlocked',
+  xorLegacyRemoved: 'attachment.xorLegacyRemoved',
 } as const;
 
 export type AttachmentErrorCode = (typeof attachmentErrorCodes)[keyof typeof attachmentErrorCodes];
@@ -62,17 +63,17 @@ export interface AttachmentRecord {
 }
 
 /**
- * Legacy attachment fallback for records written before the AES-GCM attachment format.
+ * Legacy XOR attachment fallback has been permanently removed (security hardening).
+ * XOR with a hardcoded key is obfuscation, not encryption. Records must be migrated
+ * from a previous Aegis Vault version before upgrading.
  */
-function decryptLegacyXorBufferForMigration(buffer: ArrayBuffer, keyStr: string = 'aegis_secure_file'): ArrayBuffer {
-  const view = new Uint8Array(buffer);
-  const keyBytes = new TextEncoder().encode(keyStr);
-  const result = new Uint8Array(view.length);
-  
-  for (let i = 0; i < view.length; i++) {
-    result[i] = view[i] ^ keyBytes[i % keyBytes.length];
-  }
-  return result.buffer;
+function rejectLegacyXorRecord(): never {
+  logSecurityEvent(
+    'attachment.legacyMigration.failed' as any,
+    'Rejected legacy XOR-obfuscated attachment. This format is no longer supported. Migrate from a previous Aegis Vault version first.',
+    'critical',
+  );
+  throw new AttachmentError(attachmentErrorCodes.xorLegacyRemoved);
 }
 
 async function deriveAttachmentKey(masterPassword: string, attachmentId: string): Promise<Uint8Array> {
@@ -175,12 +176,11 @@ export async function migrateAttachmentRecordToAesGcm(record: AttachmentRecord):
     return record;
   }
 
-  let rawBuffer: ArrayBuffer;
-  if (record.algorithm === 'AES-256-GCM') {
-    rawBuffer = await decryptAttachmentData(record);
-  } else {
-    rawBuffer = decryptLegacyXorBufferForMigration(record.data);
+  if (record.algorithm !== 'AES-256-GCM') {
+    rejectLegacyXorRecord();
   }
+
+  const rawBuffer = await decryptAttachmentData(record);
   const encryptedAttachment = await encryptAttachmentData(record.id, rawBuffer);
 
   return {
@@ -266,9 +266,10 @@ export async function reencryptAttachmentsForMasterPasswordChange(
     }
 
     const migratedRecords = await Promise.all(records.map(async (record) => {
-      const rawBuffer = record.algorithm === 'AES-256-GCM'
-        ? await decryptAttachmentDataWithMasterPassword(record, oldMasterPassword)
-        : decryptLegacyXorBufferForMigration(record.data);
+      if (record.algorithm !== 'AES-256-GCM') {
+        rejectLegacyXorRecord();
+      }
+      const rawBuffer = await decryptAttachmentDataWithMasterPassword(record, oldMasterPassword);
       const encryptedAttachment = await encryptAttachmentDataWithMasterPassword(
         newMasterPassword,
         record.id,

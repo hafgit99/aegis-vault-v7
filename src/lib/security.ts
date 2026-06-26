@@ -11,6 +11,7 @@ import { registerOnCloseSession } from './vaultSession';
 /**
  * In-memory score cache: avoids re-running zxcvbn for the same password string.
  * Bounded to MAX_SCORE_CACHE_SIZE entries to prevent unbounded memory growth.
+ * Cache keys are hashed to avoid storing plaintext passwords in memory.
  */
 const MAX_SCORE_CACHE_SIZE = 2000;
 const passwordScoreCache = new Map<string, number>();
@@ -19,9 +20,31 @@ registerOnCloseSession(() => {
   passwordScoreCache.clear();
 });
 
+/**
+ * Fast synchronous hash for cache keys. Not cryptographic — used only to avoid
+ * storing plaintext passwords as Map keys during the active session.
+ * Uses FNV-1a inspired mixing with a wider avalanche pass.
+ */
+function hashCacheKey(password: string): string {
+  let h1 = 0x811c9dc5 >>> 0;
+  let h2 = 0x01000193 >>> 0;
+  for (let i = 0; i < password.length; i++) {
+    const c = password.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 0x01000193) >>> 0;
+    h2 = Math.imul(h2 ^ (c + i), 0x1b873593) >>> 0;
+  }
+  // Finalisation avalanche
+  h1 ^= h1 >>> 16;
+  h1 = Math.imul(h1, 0x85ebca6b) >>> 0;
+  h2 ^= h2 >>> 13;
+  h2 = Math.imul(h2, 0xc2b2ae35) >>> 0;
+  return `${h1.toString(36)}_${h2.toString(36)}_${password.length}`;
+}
+
 function getCachedOrComputeScore(password: string): number {
   if (!password) return 0;
-  const cached = passwordScoreCache.get(password);
+  const cacheKey = hashCacheKey(password);
+  const cached = passwordScoreCache.get(cacheKey);
   if (cached !== undefined) return cached;
 
   const result = zxcvbn(password);
@@ -35,7 +58,7 @@ function getCachedOrComputeScore(password: string): number {
     const firstKey = passwordScoreCache.keys().next().value;
     if (firstKey !== undefined) passwordScoreCache.delete(firstKey);
   }
-  passwordScoreCache.set(password, score);
+  passwordScoreCache.set(cacheKey, score);
   return score;
 }
 

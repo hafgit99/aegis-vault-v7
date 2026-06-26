@@ -121,10 +121,13 @@ describe('legacy crypto compatibility helpers', () => {
     }, key)).toThrow(LegacyCryptoError);
   });
 
-  it('decrypts old stream-cipher fallback envelopes', () => {
+  it('rejects old stream-cipher fallback envelopes with a dedicated error code', () => {
     const envelope = createLegacyStreamEnvelope('{"items":[{"title":"Legacy"}]}', 'backup-pass', 'legacy-salt');
 
-    expect(decryptLegacyDataWithPassword(envelope, 'backup-pass')).toBe('{"items":[{"title":"Legacy"}]}');
+    expect(() => decryptLegacyDataWithPassword(envelope, 'backup-pass')).toThrow(LegacyCryptoError);
+    expect(() => decryptLegacyDataWithPassword(envelope, 'backup-pass')).toThrow(
+      legacyCryptoErrorCodes.streamCipherRemoved,
+    );
   });
 
   it('rejects malformed, incomplete, tampered, and unsupported backup envelopes', () => {

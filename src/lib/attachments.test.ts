@@ -212,7 +212,7 @@ describe('attachment encryption', () => {
     expect(error.code).toBe(attachmentErrorCodes.unreadableFileData);
   });
 
-  it('migrates legacy XOR attachment records to AES-GCM', async () => {
+  it('rejects legacy XOR attachment records during single-record migration', async () => {
     openVaultSession('master-pass');
     const legacyRecord: AttachmentRecord = {
       id: 'legacy-attachment',
@@ -224,12 +224,10 @@ describe('attachment encryption', () => {
       algorithm: 'XOR-LEGACY',
     };
 
-    const migrated = await migrateAttachmentRecordToAesGcm(legacyRecord);
-
-    expect(migrated.algorithm).toBe('AES-256-GCM');
-    expect(migrated.iv).toHaveLength(24);
-    expect(migrated.tag).toHaveLength(32);
-    await expect(decryptAttachmentData(migrated).then(text)).resolves.toBe('private file');
+    await expect(migrateAttachmentRecordToAesGcm(legacyRecord)).rejects.toMatchObject({
+      code: attachmentErrorCodes.xorLegacyRemoved,
+      name: 'AttachmentError',
+    });
   });
 
   it('leaves AES-GCM attachment records unchanged during single-record migration', async () => {
@@ -359,7 +357,7 @@ describe('attachment encryption', () => {
     await expect(getAttachmentBlob('missing')).resolves.toBeNull();
   });
 
-  it('migrates legacy IndexedDB attachment records in bulk', async () => {
+  it('rejects legacy XOR attachment records during bulk migration', async () => {
     openVaultSession('master-pass');
     await putAttachmentRecord({
       id: 'legacy-attachment',
@@ -371,14 +369,10 @@ describe('attachment encryption', () => {
       algorithm: 'XOR-LEGACY',
     });
 
-    await expect(migrateLegacyAttachmentsToAesGcm()).resolves.toBe(1);
-
-    const migrated = await getStoredAttachmentRecord('legacy-attachment');
-    expect(migrated?.algorithm).toBe('AES-256-GCM');
-    expect(migrated?.iv).toHaveLength(24);
-    expect(migrated?.tag).toHaveLength(32);
-    const result = await getAttachmentBlob('legacy-attachment');
-    await expect(blobText(result?.blob)).resolves.toBe('private file');
+    await expect(migrateLegacyAttachmentsToAesGcm()).rejects.toMatchObject({
+      code: attachmentErrorCodes.xorLegacyRemoved,
+      name: 'AttachmentError',
+    });
   });
 
   it('returns zero when bulk migration finds no legacy records', async () => {
