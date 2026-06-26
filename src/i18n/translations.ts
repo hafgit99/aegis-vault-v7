@@ -678,6 +678,9 @@ export const translations = {
     'lock.privacy.description': 'Biz verilerinize veya master şifrenize asla erişemeyiz. Şifrenizi kaybetmemek için lütfen güvenli bir yerde saklayın.',
     'lock.footer.name': 'Aegis Vault 7 Siber Güvenlik Altyapısı',
     'lock.footer.crypto': 'AES-256-GCM Uçtan Uca İstemci Taraflı Kriptografi',
+    'security.screenCaptureDetected': 'Ekran kaydı veya paylaşımı algılandı. Güvenliğiniz için ekran gizlendi.',
+    'security.x11WarningTitle': 'Güvensiz Görüntü Sunucusu (X11)',
+    'security.x11WarningMessage': 'Masaüstünüz X11 oturumu kullanıyor. Standart pencere koruması ekran kaydını engelleyemez. Wayland oturumuna geçmeniz önerilir.',
   },
   en: {
     'nav.localFirst': 'Local-First Secure',
@@ -1344,6 +1347,9 @@ export const translations = {
     'lock.privacy.description': 'We can never access your data or master password. Please keep your password somewhere safe.',
     'lock.footer.name': 'Aegis Vault 7 Cyber Security Infrastructure',
     'lock.footer.crypto': 'AES-256-GCM End-To-End Client-Side Cryptography',
+    'security.screenCaptureDetected': 'Screen recording or sharing detected. View is hidden for safety.',
+    'security.x11WarningTitle': 'Insecure Display Server (X11)',
+    'security.x11WarningMessage': 'Your desktop is running X11. Standard window protection cannot block screen capture. We recommend switching to Wayland.',
   },
   zh: {
     'nav.localFirst': '本地优先安全',
@@ -2010,6 +2016,9 @@ export const translations = {
     'lock.privacy.description': '我们永远无法访问您的数据或主密码。请将密码保存在安全位置。',
     'lock.footer.name': 'Aegis Vault 7 网络安全基础设施',
     'lock.footer.crypto': 'AES-256-GCM 端到端客户端加密',
+    'security.screenCaptureDetected': '检测到屏幕录制或共享。为了您的安全，视图已被隐藏。',
+    'security.x11WarningTitle': '不安全的显示服务器 (X11)',
+    'security.x11WarningMessage': '您的桌面运行在 X11 上。标准窗口保护无法阻止屏幕捕获。建议切换到 Wayland 会话。',
   },
 } as const;
 

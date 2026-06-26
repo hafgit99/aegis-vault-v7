@@ -10,6 +10,18 @@ vi.mock('../lib/nativeSecurity', () => ({
   enableNativeScreenCaptureProtection: vi.fn(async () => true),
 }));
 
+let eventListenerCallback: ((event: { payload: boolean }) => void) | null = null;
+const listenMock = vi.fn().mockImplementation((eventName: string, callback: (event: any) => void) => {
+  if (eventName === 'screen-capture-status-changed') {
+    eventListenerCallback = callback;
+  }
+  return Promise.resolve(vi.fn());
+});
+
+vi.mock('@tauri-apps/api/event', () => ({
+  listen: (...args: any[]) => listenMock(...args),
+}));
+
 function setDocumentHidden(hidden: boolean) {
   Object.defineProperty(document, 'hidden', {
     configurable: true,
@@ -21,12 +33,15 @@ describe('useRuntimeSecurity', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     setDocumentHidden(false);
+    eventListenerCallback = null;
+    (window as any).__TAURI_INTERNALS__ = {};
   });
 
   afterEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
     setDocumentHidden(false);
+    delete (window as any).__TAURI_INTERNALS__;
   });
 
   it('enables native screen capture protection on mount', () => {
@@ -115,5 +130,42 @@ describe('useRuntimeSecurity', () => {
 
     expect(result.current.privacyShieldVisible).toBe(true);
     expect(onSensitiveStateClear).toHaveBeenCalledTimes(1);
+  });
+
+  it('shields the screen and clears sensitive state when screen capture is detected via tauri event', async () => {
+    const onLock = vi.fn();
+    const onSensitiveStateClear = vi.fn();
+    
+    const { result } = renderHook(() =>
+      useRuntimeSecurity({
+        unlocked: true,
+        onLock,
+        onSensitiveStateClear,
+      }),
+    );
+
+    expect(listenMock).toHaveBeenCalledWith('screen-capture-status-changed', expect.any(Function));
+    expect(eventListenerCallback).not.toBeNull();
+
+    // Trigger screen recording detected (payload = true)
+    await act(async () => {
+      if (eventListenerCallback) {
+        eventListenerCallback({ payload: true });
+      }
+    });
+
+    expect(result.current.privacyShieldVisible).toBe(true);
+    expect(result.current.screenRecordingDetected).toBe(true);
+    expect(onSensitiveStateClear).toHaveBeenCalledTimes(1);
+
+    // Trigger screen recording stopped (payload = false)
+    await act(async () => {
+      if (eventListenerCallback) {
+        eventListenerCallback({ payload: false });
+      }
+    });
+
+    expect(result.current.privacyShieldVisible).toBe(false);
+    expect(result.current.screenRecordingDetected).toBe(false);
   });
 });

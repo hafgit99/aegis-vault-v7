@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { listen } from '@tauri-apps/api/event';
 
 import { enableNativeScreenCaptureProtection } from '../lib/nativeSecurity';
 
@@ -16,10 +17,35 @@ export function useRuntimeSecurity({
   backgroundLockDelayMs = 15_000,
 }: UseRuntimeSecurityOptions) {
   const [privacyShieldVisible, setPrivacyShieldVisible] = useState(false);
+  const [screenRecordingDetected, setScreenRecordingDetected] = useState(false);
 
   useEffect(() => {
     void enableNativeScreenCaptureProtection();
   }, []);
+
+  useEffect(() => {
+    let unlistenFn: (() => void) | null = null;
+
+    if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
+      listen<boolean>('screen-capture-status-changed', (event) => {
+        const isRecording = event.payload;
+        setScreenRecordingDetected(isRecording);
+        if (isRecording) {
+          onSensitiveStateClear();
+        }
+      }).then((unlisten) => {
+        unlistenFn = unlisten;
+      }).catch(err => {
+        console.error('Failed to listen to screen-capture-status-changed:', err);
+      });
+    }
+
+    return () => {
+      if (unlistenFn) {
+        unlistenFn();
+      }
+    };
+  }, [onSensitiveStateClear]);
 
   useEffect(() => {
     if (!unlocked) {
@@ -77,5 +103,8 @@ export function useRuntimeSecurity({
     };
   }, [backgroundLockDelayMs, onLock, onSensitiveStateClear, unlocked]);
 
-  return { privacyShieldVisible };
+  return {
+    privacyShieldVisible: privacyShieldVisible || screenRecordingDetected,
+    screenRecordingDetected,
+  };
 }

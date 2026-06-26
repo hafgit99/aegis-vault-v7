@@ -5,13 +5,14 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
+import { invoke } from '@tauri-apps/api/core';
 import LockScreen from './components/LockScreen';
 import MobileSidebarBackdrop from './components/MobileSidebarBackdrop';
 import SidebarNavigation from './components/SidebarNavigation';
 import TopBar from './components/TopBar';
 import MainContent from './components/MainContent';
 import FloatingVaultAction from './components/FloatingVaultAction';
-import { Check } from 'lucide-react';
+import { Check, ShieldAlert } from 'lucide-react';
 import AppModals from './components/AppModals';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -133,7 +134,7 @@ export default function App() {
     clearCopiedField,
   });
 
-  const { privacyShieldVisible } = useRuntimeSecurity({
+  const { privacyShieldVisible, screenRecordingDetected } = useRuntimeSecurity({
     unlocked,
     onLock: handleLock,
     onSensitiveStateClear: () => {
@@ -142,6 +143,24 @@ export default function App() {
     },
     backgroundLockDelayMs: backgroundLockDelayFromAutoLock(autoLockDuration),
   });
+
+  useEffect(() => {
+    if (unlocked && typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
+      invoke<any>('get_linux_security_status')
+        .then((status) => {
+          if (status && status.is_x11) {
+            showNotification({
+              title: t('security.x11WarningTitle'),
+              message: t('security.x11WarningMessage'),
+              type: 'warning',
+            });
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to query Linux security status:', err);
+        });
+    }
+  }, [unlocked, showNotification, t]);
 
   useEffect(() => {
     if (!unlocked) {
@@ -474,10 +493,18 @@ export default function App() {
         >
           <div className="text-center px-8">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-md border border-[#84cc16]/40 bg-[#172012]">
-              <Check size={24} className="text-[#a3e635]" />
+              {screenRecordingDetected ? (
+                <ShieldAlert size={24} className="text-red-500 animate-pulse" />
+              ) : (
+                <Check size={24} className="text-[#a3e635]" />
+              )}
             </div>
             <p className="text-sm font-semibold tracking-[0.18em] uppercase">Aegis Vault</p>
-            <p className="mt-2 text-xs text-[#aeb5aa]">Secure display shield active</p>
+            <p className="mt-2 text-xs text-[#aeb5aa]">
+              {screenRecordingDetected
+                ? t('security.screenCaptureDetected')
+                : 'Secure display shield active'}
+            </p>
           </div>
         </div>
       )}
