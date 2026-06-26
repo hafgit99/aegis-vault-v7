@@ -14,19 +14,19 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 96.57% |
-| Statements | 96.57% |
-| Functions | 93.72% |
-| Branches | 90.35% |
+| Lines | 96.60% |
+| Statements | 96.60% |
+| Functions | 93.94% |
+| Branches | 90.46% |
 
 Coverage thresholds now act as a release-quality regression gate while staying slightly below the current baseline:
 
 | Metric | Current threshold |
 | --- | ---: |
-| Lines | 96.57% |
-| Statements | 96.57% |
-| Functions | 93.72% |
-| Branches | 90.35% |
+| Lines | 96.60% |
+| Statements | 96.60% |
+| Functions | 93.94% |
+| Branches | 90.46% |
 
 These thresholds prevent meaningful regressions while leaving room to add tests around under-covered areas.
 
@@ -247,6 +247,7 @@ Recently improved:
 - Storage backend contract: introduced `src/lib/vaultStorageRepository.ts` so the current OPFS-backed engine and a future real SQLite/wa-sqlite backend must expose the same persistence, migration, reset, SQL-console, and encrypted-item operations.
 - Storage backend provider: routed `src/lib/storage.ts` through `src/lib/vaultStorageProvider.ts` so OPFS and future SQLite repositories can be swapped behind the same tested contract without changing app workflows.
 - Storage migration dry-run: added fail-closed `VITE_AEGIS_STORAGE_BACKEND` parsing and a read-only wa-sqlite dry-run planner that validates unlockability and item identity integrity without writing to the vault.
+- wa-sqlite migration mirror: added a read-only `ReadOnlyWaSqliteVaultStorageAdapter` behind the provider dry-run target so future SQLite work can exercise the repository contract without allowing writes or changing production OPFS behavior.
 - `src/lib/storage.ts`: covered setup detection, Secret Key profile fallbacks, remembered-key migration/forget flows, failed unlock session guards, master-password rotation rollback rules, reset marker cleanup, no-session guards, save/delete/reseed wrappers, trash move/restore, retention-boundary cleanup, bulk-save progress callbacks, and full trash emptying.
 - `src/components/PasswordGenerator.tsx`: covered character option changes, all character toggles, strength bar tone branches, diceware mode settings, word-count descriptions, diceware toggles, copy feedback, unmount cleanup, and safe clipboard clearing behavior.
 - `src/lib/diceware.ts`: covered Turkish/English word selection, EFF-sized word-pool expansion, separator formats, capitalization, number and symbol placement, camel/none separator handling, optional entropy calculations, and static word-list separation for practical mutation testing.

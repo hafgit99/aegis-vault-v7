@@ -4,7 +4,8 @@
  */
 
 import { sqliteOPFSInstance } from './sqlite_opfs';
-import { getVaultStorageBackendSelection } from './vaultStorageBackend';
+import { getVaultStorageBackendSelection, type VaultStorageBackendSelection } from './vaultStorageBackend';
+import { createReadOnlyWaSqliteVaultStorageAdapter } from './vaultStorageWaSqliteAdapter';
 import type { VaultStorageRepository } from './vaultStorageRepository';
 
 let activeVaultStorageRepository: VaultStorageRepository = sqliteOPFSInstance;
@@ -17,6 +18,15 @@ export function getActiveVaultStorageBackendSelection() {
   return getVaultStorageBackendSelection();
 }
 
+export function getVaultStorageMigrationTargetRepository(
+  selection: VaultStorageBackendSelection = getVaultStorageBackendSelection(),
+): VaultStorageRepository | null {
+  if (selection.mode === 'dry-run' && selection.target === 'wa-sqlite') {
+    return createReadOnlyWaSqliteVaultStorageAdapter(activeVaultStorageRepository);
+  }
+
+  return null;
+}
 export function setVaultStorageRepositoryForTesting(repository: VaultStorageRepository): () => void {
   const previousRepository = activeVaultStorageRepository;
   activeVaultStorageRepository = repository;

@@ -6,7 +6,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { sqliteOPFSInstance } from './sqlite_opfs';
-import { getActiveVaultStorageBackendSelection, getVaultStorageRepository, setVaultStorageRepositoryForTesting } from './vaultStorageProvider';
+import { getActiveVaultStorageBackendSelection, getVaultStorageMigrationTargetRepository, getVaultStorageRepository, setVaultStorageRepositoryForTesting } from './vaultStorageProvider';
 import type { VaultStorageRepository } from './vaultStorageRepository';
 
 function createRepositoryStub(): VaultStorageRepository {
@@ -43,6 +43,30 @@ describe('vault storage provider', () => {
       target: null,
       mode: 'active',
     });
+  });
+  it('does not expose a migration target unless dry-run is enabled', () => {
+    expect(getVaultStorageMigrationTargetRepository()).toBeNull();
+  });
+
+  it('exposes a read-only wa-sqlite migration target during dry-run', async () => {
+    const repository = createRepositoryStub();
+    const restore = setVaultStorageRepositoryForTesting(repository);
+
+    try {
+      const targetRepository = getVaultStorageMigrationTargetRepository({
+        active: 'opfs',
+        target: 'wa-sqlite',
+        mode: 'dry-run',
+      });
+
+      expect(targetRepository).not.toBeNull();
+      expect(await targetRepository?.verifyPassword('master')).toBe(false);
+      expect(repository.verifyPassword).toHaveBeenCalledWith('master');
+      await expect(targetRepository?.saveVaultItems([], 'master')).rejects.toThrow('wa-sqlite-adapter-read-only');
+      expect(repository.saveVaultItems).not.toHaveBeenCalled();
+    } finally {
+      restore();
+    }
   });
   it('can temporarily swap the active repository for migration tests', () => {
     const repository = createRepositoryStub();
