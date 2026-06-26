@@ -14,19 +14,19 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 96.59% |
-| Statements | 96.59% |
-| Functions | 93.63% |
-| Branches | 90.52% |
+| Lines | 96.58% |
+| Statements | 96.58% |
+| Functions | 93.81% |
+| Branches | 90.29% |
 
 Coverage thresholds now act as a release-quality regression gate while staying slightly below the current baseline:
 
 | Metric | Current threshold |
 | --- | ---: |
-| Lines | 90% |
-| Statements | 90% |
-| Functions | 85% |
-| Branches | 80% |
+| Lines | 96.58% |
+| Statements | 96.58% |
+| Functions | 93.81% |
+| Branches | 90.29% |
 
 These thresholds prevent meaningful regressions while leaving room to add tests around under-covered areas.
 
@@ -243,7 +243,7 @@ Recently improved:
 - `src/lib/importer.ts`: covered supported JSON/CSV formats, encrypted envelope detection, malformed inputs, vault-item normalization, and parser/decoder delegation through focused helper modules.
 - `src/lib/csvParser.ts` and `src/lib/fileDecoder.ts`: added direct helper tests and a dedicated importer helper mutation gate; CSV parsing now reports 84.46%, file decoding reports 87.37%, and the combined helper gate reports 85.42%.
 - `src/lib/attachments.ts`: covered IndexedDB save/read/delete paths, bulk legacy migration, missing records, and connection cleanup behavior.
-- `src/lib/sqlite_opfs.ts`: covered master setup/verification, encrypted row persistence, desktop payload hydration, OPFS file hydration, missing OPFS file initialization, OPFS write failures, desktop read fallback, legacy localStorage migration, read-only SQL console behavior, row update/defaults, reseed/delete/reset flows, query log subscriptions, localStorage fallback hydration, missing-key decryption guards, and master-password rotation rollback when persistence cannot be written, and single/bulk vault-item save rollback when persistence cannot be written.
+- `src/lib/sqlite_opfs.ts`: covered master setup/verification, encrypted row persistence, desktop payload hydration, OPFS file hydration, missing OPFS file initialization, OPFS write failures, desktop read fallback, legacy localStorage migration, read-only SQL console behavior, row update/defaults, reseed/delete/reset flows, query log subscriptions, localStorage fallback hydration, missing-key decryption guards, and master-password rotation rollback when persistence cannot be written, and single/bulk vault-item save rollback, permanent-delete rollback, bulk-delete rollback, and demo-reseed rollback when persistence cannot be written.
 - `src/lib/storage.ts`: covered setup detection, Secret Key profile fallbacks, remembered-key migration/forget flows, failed unlock session guards, master-password rotation rollback rules, reset marker cleanup, no-session guards, save/delete/reseed wrappers, trash move/restore, retention-boundary cleanup, bulk-save progress callbacks, and full trash emptying.
 - `src/components/PasswordGenerator.tsx`: covered character option changes, all character toggles, strength bar tone branches, diceware mode settings, word-count descriptions, diceware toggles, copy feedback, unmount cleanup, and safe clipboard clearing behavior.
 - `src/lib/diceware.ts`: covered Turkish/English word selection, EFF-sized word-pool expansion, separator formats, capitalization, number and symbol placement, camel/none separator handling, optional entropy calculations, and static word-list separation for practical mutation testing.

@@ -1010,11 +1010,26 @@ class SQLiteOPFS {
    * Permanently purges an item
    */
   public async deletePermanently(id: string, passwordPlain: string): Promise<VaultItem[]> {
-    this.state.vault_items = this.state.vault_items.filter(row => row.id !== id);
-    this.decryptedItemsCache.delete(id);
-    this.logQuery(`DELETE FROM vault_items WHERE id = "${this.sanitizeLogValue(id)}";`, 'SUCCESS', 1);
-    await this.saveToPersistentStorage();
-    return this.getVaultItems(passwordPlain);
+    const previousState = this.cloneState();
+    const previousDecryptedItemsCache = this.cloneDecryptedItemsCache();
+
+    try {
+      this.state.vault_items = this.state.vault_items.filter(row => row.id !== id);
+      this.decryptedItemsCache.delete(id);
+      const persisted = await this.saveToPersistentStorage();
+      if (!persisted) {
+        throw new Error('vault-item-delete-persist-failed');
+      }
+      this.logQuery(`DELETE FROM vault_items WHERE id = "${this.sanitizeLogValue(id)}";`, 'SUCCESS', 1);
+      return this.getVaultItems(passwordPlain);
+    } catch (err) {
+      this.restoreTransactionalState(previousState, previousDecryptedItemsCache);
+      this.logQuery(`DELETE FROM vault_items WHERE id = "${this.sanitizeLogValue(id)}" rolled back because persistence failed;`, 'ERROR', 0);
+      if (err instanceof Error && err.message === 'vault-item-delete-persist-failed') {
+        throw err;
+      }
+      throw new Error('vault-item-delete-failed');
+    }
   }
 
   /**
@@ -1023,50 +1038,79 @@ class SQLiteOPFS {
   public async deletePermanentlyBatch(ids: string[], passwordPlain: string): Promise<VaultItem[]> {
     if (ids.length === 0) return this.getVaultItems(passwordPlain);
 
-    const idSet = new Set(ids);
-    this.state.vault_items = this.state.vault_items.filter(row => !idSet.has(row.id));
-    for (const id of ids) {
-      this.decryptedItemsCache.delete(id);
+    const previousState = this.cloneState();
+    const previousDecryptedItemsCache = this.cloneDecryptedItemsCache();
+
+    try {
+      const idSet = new Set(ids);
+      this.state.vault_items = this.state.vault_items.filter(row => !idSet.has(row.id));
+      for (const id of ids) {
+        this.decryptedItemsCache.delete(id);
+      }
+      const persisted = await this.saveToPersistentStorage();
+      if (!persisted) {
+        throw new Error('vault-items-delete-persist-failed');
+      }
+      this.logQuery(`DELETE FROM vault_items WHERE id IN (${ids.map(id => `"${this.sanitizeLogValue(id)}"`).join(', ')});`, 'SUCCESS', ids.length);
+      return this.getVaultItems(passwordPlain);
+    } catch (err) {
+      this.restoreTransactionalState(previousState, previousDecryptedItemsCache);
+      this.logQuery(`DELETE FROM vault_items WHERE id IN (${ids.map(id => `"${this.sanitizeLogValue(id)}"`).join(', ')}) rolled back because persistence failed;`, 'ERROR', 0);
+      if (err instanceof Error && err.message === 'vault-items-delete-persist-failed') {
+        throw err;
+      }
+      throw new Error('vault-items-delete-failed');
     }
-    this.logQuery(`DELETE FROM vault_items WHERE id IN (${ids.map(id => `"${this.sanitizeLogValue(id)}"`).join(', ')});`, 'SUCCESS', ids.length);
-    await this.saveToPersistentStorage();
-    return this.getVaultItems(passwordPlain);
   }
 
   /**
    * Seeds demo data.
    */
   public async reseedDemo(passwordPlain: string, demoItems: VaultItem[]): Promise<VaultItem[]> {
-    this.ensureVaultEncryptionSalt();
-    this.decryptedItemsCache.clear();
-    const derivedKey = await this.deriveEncryptionKey(passwordPlain);
+    const previousState = this.cloneState();
+    const previousDecryptedItemsCache = this.cloneDecryptedItemsCache();
 
-    this.state.vault_items = await Promise.all(demoItems.map(async (item) => {
-      const sensitivePayload = JSON.stringify(item);
-      const encrypted = await webCryptoAesGcmEncrypt(sensitivePayload, derivedKey, generateSafeIv());
+    try {
+      this.ensureVaultEncryptionSalt();
+      this.decryptedItemsCache.clear();
+      const derivedKey = await this.deriveEncryptionKey(passwordPlain);
 
-      return {
-        id: item.id,
-        title: item.title,
-        category: item.category,
-        favorite: item.favorite ? 1 : 0,
-        deleted: item.deleted ? 1 : 0,
-        deleted_at: item.deletedAt || null,
-        created_at: item.createdAt || new Date().toISOString().split('T')[0],
-        updated_at: new Date().toISOString().split('T')[0],
-        username: item.username || '',
-        username_db: '[encrypted: aes-256-gcm]',
-        password_db: '[encrypted: aes-256-gcm]',
-        notes_db: item.notes ? '[encrypted: aes-256-gcm]' : '',
-        enc_metadata: JSON.stringify(encrypted),
-        enc_kdf: VAULT_ITEM_KDF,
-      };
-    }));
+      this.state.vault_items = await Promise.all(demoItems.map(async (item) => {
+        const sensitivePayload = JSON.stringify(item);
+        const encrypted = await webCryptoAesGcmEncrypt(sensitivePayload, derivedKey, generateSafeIv());
 
-    this.logQuery(`RESEED: INSERT ${demoItems.length} rows into 'vault_items'`, 'SUCCESS', demoItems.length);
-    await this.saveToPersistentStorage();
-    return this.getVaultItems(passwordPlain);
+        return {
+          id: item.id,
+          title: item.title,
+          category: item.category,
+          favorite: item.favorite ? 1 : 0,
+          deleted: item.deleted ? 1 : 0,
+          deleted_at: item.deletedAt || null,
+          created_at: item.createdAt || new Date().toISOString().split('T')[0],
+          updated_at: new Date().toISOString().split('T')[0],
+          username: item.username || '',
+          username_db: '[encrypted: aes-256-gcm]',
+          password_db: '[encrypted: aes-256-gcm]',
+          notes_db: item.notes ? '[encrypted: aes-256-gcm]' : '',
+          enc_metadata: JSON.stringify(encrypted),
+          enc_kdf: VAULT_ITEM_KDF,
+        };
+      }));
+
+      const persisted = await this.saveToPersistentStorage();
+      if (!persisted) {
+        throw new Error('vault-reseed-persist-failed');
+      }
+      this.logQuery(`RESEED: INSERT ${demoItems.length} rows into 'vault_items'`, 'SUCCESS', demoItems.length);
+      return this.getVaultItems(passwordPlain);
+    } catch (err) {
+      this.restoreTransactionalState(previousState, previousDecryptedItemsCache);
+      this.logQuery(`RESEED: INSERT ${demoItems.length} rows into 'vault_items' rolled back because persistence failed`, 'ERROR', 0);
+      if (err instanceof Error && err.message === 'vault-reseed-persist-failed') {
+        throw err;
+      }
+      throw new Error('vault-reseed-failed');
+    }
   }
 }
-
 export const sqliteOPFSInstance = new SQLiteOPFS();

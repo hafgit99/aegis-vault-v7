@@ -711,6 +711,73 @@ describe('SQLite OPFS persistence engine', () => {
       ]),
     );
   });
+  it('rolls back permanent deletes when persistence cannot be written', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    await sqlite.saveVaultItems([
+      sampleItem({ id: 'delete-keep', title: 'Keep Row' }),
+      sampleItem({ id: 'delete-target', title: 'Delete Target' }),
+    ], 'master-pass');
+    const before = localStorage.getItem('aegis_sqlite_fallback');
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('quota exceeded');
+    });
+
+    await expect(sqlite.deletePermanently('delete-target', 'master-pass')).rejects.toThrow(
+      'vault-item-delete-persist-failed',
+    );
+
+    setItemSpy.mockRestore();
+    expect(localStorage.getItem('aegis_sqlite_fallback')).toBe(before);
+    await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual([
+      expect.objectContaining({ id: 'delete-keep', title: 'Keep Row' }),
+      expect.objectContaining({ id: 'delete-target', title: 'Delete Target' }),
+    ]);
+  });
+
+  it('rolls back bulk permanent deletes when persistence cannot be written', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    await sqlite.saveVaultItems([
+      sampleItem({ id: 'batch-delete-1', title: 'Batch Delete 1' }),
+      sampleItem({ id: 'batch-delete-2', title: 'Batch Delete 2' }),
+    ], 'master-pass');
+    const before = localStorage.getItem('aegis_sqlite_fallback');
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('quota exceeded');
+    });
+
+    await expect(sqlite.deletePermanentlyBatch(['batch-delete-1', 'batch-delete-2'], 'master-pass')).rejects.toThrow(
+      'vault-items-delete-persist-failed',
+    );
+
+    setItemSpy.mockRestore();
+    expect(localStorage.getItem('aegis_sqlite_fallback')).toBe(before);
+    await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual([
+      expect.objectContaining({ id: 'batch-delete-1', title: 'Batch Delete 1' }),
+      expect.objectContaining({ id: 'batch-delete-2', title: 'Batch Delete 2' }),
+    ]);
+  });
+
+  it('rolls back demo reseed when persistence cannot be written', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    await sqlite.saveVaultItem(sampleItem({ id: 'existing-before-reseed', title: 'Existing Before Reseed' }), 'master-pass');
+    const before = localStorage.getItem('aegis_sqlite_fallback');
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('quota exceeded');
+    });
+
+    await expect(sqlite.reseedDemo('master-pass', [
+      sampleItem({ id: 'new-demo-row', title: 'New Demo Row' }),
+    ])).rejects.toThrow('vault-reseed-persist-failed');
+
+    setItemSpy.mockRestore();
+    expect(localStorage.getItem('aegis_sqlite_fallback')).toBe(before);
+    await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual([
+      expect.objectContaining({ id: 'existing-before-reseed', title: 'Existing Before Reseed' }),
+    ]);
+  });
   it('performs bulk saves securely in a single sweep using saveVaultItems', async () => {
     const sqlite = await freshSqliteInstance();
     await sqlite.setupMaster('master-pass');
