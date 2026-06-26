@@ -318,6 +318,94 @@ fn open_import_file() -> Result<Option<ImportFilePayload>, String> {
     Ok(Some(ImportFilePayload { name, contents }))
 }
 
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RustArgon2idOptions {
+    memory_kib: Option<u32>,
+    iterations: Option<u32>,
+    parallelism: Option<u32>,
+    hash_length: Option<u32>,
+}
+
+impl RustArgon2idOptions {
+    fn to_params(&self) -> Result<argon2::Params, String> {
+        let mem = self.memory_kib.unwrap_or(128 * 1024);
+        let time = self.iterations.unwrap_or(4);
+        let lanes = self.parallelism.unwrap_or(1);
+        let key_len = self.hash_length.unwrap_or(32);
+
+        argon2::Params::new(mem, time, lanes, Some(key_len as usize))
+            .map_err(|e| format!("invalid Argon2id parameters: {e}"))
+    }
+}
+
+fn get_params(options: Option<RustArgon2idOptions>) -> Result<argon2::Params, String> {
+    let opts = options.unwrap_or(RustArgon2idOptions {
+        memory_kib: None,
+        iterations: None,
+        parallelism: None,
+        hash_length: None,
+    });
+    opts.to_params()
+}
+
+#[tauri::command]
+fn derive_argon2id_key(
+    password: String,
+    salt: String,
+    options: Option<RustArgon2idOptions>,
+) -> Result<Vec<u8>, String> {
+    use argon2::{Argon2, Algorithm, Version};
+
+    let params = get_params(options)?;
+    let output_len = params.output_len().unwrap_or(32);
+    let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
+    let mut hash = vec![0u8; output_len];
+    argon2
+        .hash_password_into(password.as_bytes(), salt.as_bytes(), &mut hash)
+        .map_err(|e| format!("Argon2id key derivation failed: {e}"))?;
+    Ok(hash)
+}
+
+#[tauri::command]
+fn create_argon2id_hash(
+    password: String,
+    salt: String,
+    options: Option<RustArgon2idOptions>,
+) -> Result<String, String> {
+    use argon2::{
+        password_hash::{PasswordHasher, SaltString},
+        Argon2, Algorithm, Version
+    };
+
+    let params = get_params(options)?;
+    let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
+    let salt_string = SaltString::from_b64(&salt)
+        .or_else(|_| SaltString::encode_b64(salt.as_bytes()))
+        .map_err(|e| format!("invalid salt format: {e}"))?;
+
+    let hash = argon2
+        .hash_password(password.as_bytes(), &salt_string)
+        .map_err(|e| format!("Argon2id hashing failed: {e}"))?;
+    Ok(hash.to_string())
+}
+
+#[tauri::command]
+fn verify_argon2id_hash(password: String, encoded_hash: String) -> Result<bool, String> {
+    use argon2::{
+        password_hash::{PasswordHash, PasswordVerifier},
+        Argon2
+    };
+
+    let parsed_hash = PasswordHash::new(&encoded_hash)
+        .map_err(|e| format!("invalid password hash format: {e}"))?;
+
+    let verified = Argon2::default()
+        .verify_password(password.as_bytes(), &parsed_hash)
+        .is_ok();
+    Ok(verified)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let args: Vec<String> = std::env::args().collect();
@@ -378,7 +466,10 @@ pub fn run() {
             save_binary_file,
             open_import_file,
             sync_extension_credentials,
-            clear_extension_credentials
+            clear_extension_credentials,
+            derive_argon2id_key,
+            create_argon2id_hash,
+            verify_argon2id_hash
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

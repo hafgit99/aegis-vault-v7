@@ -1,3 +1,5 @@
+import { invoke } from '@tauri-apps/api/core';
+
 export interface Argon2idOptions {
   memoryKiB?: number;
   iterations?: number;
@@ -34,6 +36,16 @@ interface Argon2BrowserImport {
   default?: Argon2BrowserModule;
 }
 
+declare global {
+  interface Window {
+    __TAURI_INTERNALS__?: unknown;
+  }
+}
+
+export function isDesktopRuntime(): boolean {
+  return typeof window !== 'undefined' && Boolean(window.__TAURI_INTERNALS__);
+}
+
 const DEFAULT_OPTIONS: Required<Argon2idOptions> = {
   memoryKiB: 128 * 1024,
   iterations: 4,
@@ -67,6 +79,19 @@ export async function deriveArgon2idKey(
   salt: string,
   options?: Argon2idOptions,
 ): Promise<Uint8Array> {
+  if (isDesktopRuntime()) {
+    try {
+      const keyBytes = await invoke<number[]>('derive_argon2id_key', {
+        password,
+        salt,
+        options: options || null,
+      });
+      return new Uint8Array(keyBytes);
+    } catch (error) {
+      console.error('Rust deriveArgon2idKey failed, falling back to WebAssembly:', error);
+    }
+  }
+
   const argon2 = await loadArgon2();
   const resolved = resolveOptions(options);
   const result = await argon2.hash({
@@ -87,6 +112,18 @@ export async function createArgon2idHash(
   salt: string,
   options?: Argon2idOptions,
 ): Promise<string> {
+  if (isDesktopRuntime()) {
+    try {
+      return await invoke<string>('create_argon2id_hash', {
+        password,
+        salt,
+        options: options || null,
+      });
+    } catch (error) {
+      console.error('Rust createArgon2idHash failed, falling back to WebAssembly:', error);
+    }
+  }
+
   const argon2 = await loadArgon2();
   const resolved = resolveOptions(options);
   const result = await argon2.hash({
@@ -103,6 +140,17 @@ export async function createArgon2idHash(
 }
 
 export async function verifyArgon2idHash(password: string, encodedHash: string): Promise<boolean> {
+  if (isDesktopRuntime()) {
+    try {
+      return await invoke<boolean>('verify_argon2id_hash', {
+        password,
+        encodedHash,
+      });
+    } catch (error) {
+      console.error('Rust verifyArgon2idHash failed, falling back to WebAssembly:', error);
+    }
+  }
+
   try {
     const argon2 = await loadArgon2();
     await argon2.verify({
