@@ -120,6 +120,75 @@ describe('useAttachmentDownload', () => {
     expect(onNotify).not.toHaveBeenCalled();
   });
 
+  it('does not fall back to browser download when the native save dialog is cancelled', async () => {
+    window.__TAURI_INTERNALS__ = {};
+    const blob = new Blob(['secret'], { type: 'text/plain' });
+    vi.mocked(getAttachmentBlob).mockResolvedValue({ blob, name: 'secret.txt' });
+    vi.mocked(saveDesktopBinaryFile).mockResolvedValue(false);
+    const createObjectURL = vi.fn(() => 'blob:attachment');
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: createObjectURL,
+    });
+    const onNotify = vi.fn();
+    const { result } = renderAttachmentDownload(onNotify);
+
+    await act(async () => {
+      await result.current.downloadAttachment('attachment-1', 'download.txt');
+    });
+
+    expect(saveDesktopBinaryFile).toHaveBeenCalledWith('secret.txt', expect.any(Uint8Array));
+    expect(createObjectURL).not.toHaveBeenCalled();
+    expect(onNotify).not.toHaveBeenCalled();
+  });
+
+  it('uses FileReader fallback when Blob.arrayBuffer is unavailable in desktop runtime', async () => {
+    window.__TAURI_INTERNALS__ = {};
+    const blob = new Blob(['legacy-reader'], { type: 'text/plain' });
+    Object.defineProperty(blob, 'arrayBuffer', {
+      configurable: true,
+      value: undefined,
+    });
+    vi.mocked(getAttachmentBlob).mockResolvedValue({ blob, name: 'legacy.txt' });
+    vi.mocked(saveDesktopBinaryFile).mockResolvedValue(true);
+    const onNotify = vi.fn();
+    const { result } = renderAttachmentDownload(onNotify);
+
+    await act(async () => {
+      await result.current.downloadAttachment('attachment-legacy', 'download.txt');
+    });
+
+    const savedBytes = vi.mocked(saveDesktopBinaryFile).mock.calls[0][1];
+    expect(Array.from(savedBytes)).toEqual(Array.from(new TextEncoder().encode('legacy-reader')));
+    expect(onNotify).not.toHaveBeenCalled();
+  });
+
+  it('uses the requested fallback filename when stored attachment metadata has no name', async () => {
+    const blob = new Blob(['secret'], { type: 'text/plain' });
+    vi.mocked(getAttachmentBlob).mockResolvedValue({ blob, name: '' });
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: vi.fn(() => 'blob:attachment'),
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      value: vi.fn(),
+    });
+    let clickedDownload = '';
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function clickMock(this: HTMLAnchorElement) {
+      clickedDownload = this.download;
+    });
+    const onNotify = vi.fn();
+    const { result } = renderAttachmentDownload(onNotify);
+
+    await act(async () => {
+      await result.current.downloadAttachment('attachment-1', 'fallback.txt');
+    });
+
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(clickedDownload).toBe('fallback.txt');
+  });
+
   it('notifies when an attachment cannot be found', async () => {
     vi.mocked(getAttachmentBlob).mockResolvedValue(null);
     const onNotify = vi.fn();

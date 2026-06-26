@@ -17,7 +17,7 @@ Current measured baseline:
 | Lines | 96.17% |
 | Statements | 96.17% |
 | Functions | 93.60% |
-| Branches | 90.78% |
+| Branches | 90.82% |
 
 Coverage thresholds now act as a release-quality regression gate while staying slightly below the current baseline:
 
@@ -288,7 +288,7 @@ Recently improved:
 - Profile settings hook: covered selected-language rendering for the default profile identity fallback.
 - Notification hooks: covered selected-language rendering for the vault status alert and profile-save notification keys.
 - Trash action hooks: covered selected-language rendering for move, empty, restore, and permanent-delete confirmation flows.
-- Attachment download hook: covered selected-language rendering for missing-file and decrypt-failure notifications.
+- Attachment download hook: covered selected-language rendering for missing-file/decrypt-failure notifications, native-save cancellation, FileReader byte fallback, and fallback filenames so Android/desktop attachment saves avoid unintended browser downloads after user cancellation.
 - Attachment library: covered stable error codes for missing vault sessions, missing encryption metadata, and unreadable file data at localization boundaries.
 - Universal importer: covered localized parser labels and selected-language Settings import error rendering.
 - `src/components/VaultFormModal.tsx`: covered edit-save identity preservation, title validation, password visibility/autogeneration, selected file removal, attachment upload failures, existing attachment removal before save, and download error notifications.
