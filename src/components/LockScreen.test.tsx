@@ -11,6 +11,7 @@ import {
   authenticateBiometric,
   isBiometricEnabled,
   isBiometricSupported,
+  getBiometricType,
 } from '../lib/biometric';
 import {
   getRememberedAccountSecretKey,
@@ -33,6 +34,7 @@ vi.mock('../lib/biometric', () => ({
   authenticateBiometric: vi.fn(),
   isBiometricEnabled: vi.fn(() => false),
   isBiometricSupported: vi.fn(() => false),
+  getBiometricType: vi.fn(() => 'platform'),
 }));
 
 function passwordInput(): HTMLInputElement {
@@ -52,6 +54,9 @@ beforeEach(() => {
   vi.mocked(isAccountSecretKeyRequired).mockReturnValue(false);
   vi.mocked(getRememberedAccountSecretKey).mockReturnValue(null);
   vi.mocked(verifyMasterPassword).mockResolvedValue(false);
+  vi.mocked(isBiometricEnabled).mockReturnValue(false);
+  vi.mocked(isBiometricSupported).mockReturnValue(false);
+  vi.mocked(getBiometricType).mockReturnValue('platform');
 });
 
 afterEach(() => {
@@ -263,7 +268,7 @@ describe('LockScreen', () => {
 
     render(<LockScreen onUnlock={onUnlock} />);
 
-    fireEvent.click(screen.getByText(/Biyometrik/));
+    fireEvent.click(screen.getByText(/OS/));
 
     await waitFor(() => {
       expect(screen.getByText(/desteklenmiyor/)).toBeTruthy();
@@ -277,12 +282,32 @@ describe('LockScreen', () => {
     vi.mocked(isBiometricEnabled).mockReturnValue(true);
     vi.mocked(isBiometricSupported).mockReturnValue(true);
     vi.mocked(authenticateBiometric).mockResolvedValueOnce('bio-master');
-    vi.mocked(verifyMasterPassword).mockResolvedValueOnce(true);
+    vi.mocked(verifyMasterPassword).mockResolvedValue(true);
     const onUnlock = vi.fn();
 
     render(<LockScreen onUnlock={onUnlock} />);
 
-    fireEvent.click(screen.getByText(/Biyometrik/));
+    fireEvent.click(screen.getByText(/OS/));
+
+    await waitFor(() => {
+      expect(authenticateBiometric).toHaveBeenCalled();
+      expect(verifyMasterPassword).toHaveBeenCalledWith('bio-master', null);
+      expect(onUnlock).toHaveBeenCalled();
+    });
+  });
+
+  it('unlocks with a verified FIDO2 security key', async () => {
+    vi.mocked(isMasterPasswordSet).mockReturnValue(true);
+    vi.mocked(isBiometricEnabled).mockReturnValue(true);
+    vi.mocked(isBiometricSupported).mockReturnValue(true);
+    vi.mocked(getBiometricType).mockReturnValue('cross-platform');
+    vi.mocked(authenticateBiometric).mockResolvedValueOnce('bio-master');
+    vi.mocked(verifyMasterPassword).mockResolvedValue(true);
+    const onUnlock = vi.fn();
+
+    render(<LockScreen onUnlock={onUnlock} />);
+
+    fireEvent.click(screen.getByText(/FIDO2/));
 
     await waitFor(() => {
       expect(authenticateBiometric).toHaveBeenCalled();
@@ -300,7 +325,7 @@ describe('LockScreen', () => {
 
     render(<LockScreen onUnlock={vi.fn()} />);
 
-    fireEvent.click(screen.getByText(/Biyometrik/));
+    fireEvent.click(screen.getByText(/OS/));
 
     await waitFor(() => {
       expect(screen.getByText(/manuel olarak/)).toBeTruthy();
@@ -317,7 +342,7 @@ describe('LockScreen', () => {
 
     render(<LockScreen onUnlock={vi.fn()} />);
 
-    fireEvent.click(screen.getByText(/Biyometrik/));
+    fireEvent.click(screen.getByText(/OS/));
 
     await waitFor(() => {
       expect(screen.getByText(/iptal edildi/)).toBeTruthy();
@@ -330,7 +355,7 @@ describe('LockScreen', () => {
     vi.mocked(isBiometricEnabled).mockReturnValue(true);
     vi.mocked(isBiometricSupported).mockReturnValue(true);
     vi.mocked(authenticateBiometric).mockResolvedValueOnce('auto-master');
-    vi.mocked(verifyMasterPassword).mockResolvedValueOnce(true);
+    vi.mocked(verifyMasterPassword).mockResolvedValue(true);
     const onUnlock = vi.fn();
 
     render(<LockScreen onUnlock={onUnlock} />);

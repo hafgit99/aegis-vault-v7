@@ -24,6 +24,7 @@ import {
   registerBiometric,
   hydrateBiometric,
   resetBiometricCacheForTesting,
+  getBiometricType,
 } from './biometric';
 
 const rawId = new Uint8Array([1, 2, 3, 4]).buffer;
@@ -359,5 +360,18 @@ describe('biometric master password wrapper', () => {
     expect(nativeAuthenticate).toHaveBeenCalledTimes(1);
     expect(await getStoredBiometricFromDB()).toBeNull();
     expect(isBiometricEnabled()).toBe(false);
+  });
+
+  it('correctly returns the biometric type', async () => {
+    expect(getBiometricType()).toBeNull();
+
+    await registerBiometric('master-pass', 'platform');
+    expect(getBiometricType()).toBe('platform');
+
+    disableBiometric();
+    expect(getBiometricType()).toBeNull();
+
+    await registerBiometric('master-pass', 'cross-platform');
+    expect(getBiometricType()).toBe('cross-platform');
   });
 });

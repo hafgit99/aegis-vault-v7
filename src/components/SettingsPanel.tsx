@@ -29,7 +29,7 @@ import { AppNotification, VaultItem } from '../types';
 import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from '../lib/encryption';
 import { parseUniversalImport, decodeFileBuffer } from '../lib/importer';
 import { secureRandomToken } from '../lib/random';
-import { registerBiometric, isBiometricEnabled, disableBiometric, isBiometricSupported } from '../lib/biometric';
+import { registerBiometric, isBiometricEnabled, disableBiometric, isBiometricSupported, getBiometricType } from '../lib/biometric';
 import { getActiveBackupPassword, getActiveMasterPassword } from '../lib/vaultSession';
 import { isNativeFileDialogSupported, openDesktopImportFile, saveDesktopExportFile } from '../lib/desktopFiles';
 import { isAndroidAutofillEnabled, isAndroidAutofillSupported, openAndroidAutofillSettings } from '../lib/androidAutofill';
@@ -203,7 +203,7 @@ export default function SettingsPanel({
   };
 
   // Handle Toggle Biometric Lock status
-  const handleToggleBiometric = async () => {
+  const handleToggleBiometric = async (type: 'platform' | 'cross-platform' = 'platform') => {
     setBiometricError(null);
     setBiometricSuccess(null);
     setBiometricLoading(true);
@@ -229,7 +229,7 @@ export default function SettingsPanel({
           throw new Error(t('settings.biometric.missingSessionError'));
         }
         
-        await registerBiometric(masterPassword);
+        await registerBiometric(masterPassword, type);
         setBiometricEnabled(true);
         setBiometricSuccess(t('settings.biometric.enabledSuccess'));
       } catch (err: any) {
@@ -1011,34 +1011,53 @@ export default function SettingsPanel({
         <div className="md:col-span-2 space-y-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 justify-between bg-[#141614] p-3 sm:p-4 rounded-xl border border-outline-variant/10">
             <div>
-              <span className="text-xs font-bold text-on-surface block uppercase">{t('settings.biometric.statusLabel')}: {biometricEnabled ? t('settings.biometric.statusActive') : t('settings.biometric.statusPassive')}</span>
+              <span className="text-xs font-bold text-on-surface block uppercase">
+                {t('settings.biometric.statusLabel')}:{' '}
+                {biometricEnabled
+                  ? getBiometricType() === 'cross-platform'
+                    ? t('settings.biometric.statusActiveFido2')
+                    : t('settings.biometric.statusActivePlatform')
+                  : t('settings.biometric.statusPassive')}
+              </span>
               <p className="text-[11px] text-on-surface-variant mt-1 leading-relaxed">
-                {biometricEnabled 
-                  ? t('settings.biometric.activeDescription')
+                {biometricEnabled
+                  ? getBiometricType() === 'cross-platform'
+                    ? t('settings.biometric.activeDescriptionFido2')
+                    : t('settings.biometric.activeDescriptionPlatform')
                   : t('settings.biometric.passiveDescription')}
               </p>
             </div>
-            <button
-              type="button"
-              disabled={biometricLoading}
-              onClick={handleToggleBiometric}
-              className={`px-5 py-2.5 rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                biometricEnabled
-                  ? 'border border-red-500/30 text-red-400 hover:bg-red-500/10'
-                  : 'bg-brand-primary text-brand-on-primary hover:brightness-110 shadow-md shadow-brand-primary/10'
-              }`}
-            >
-              {biometricLoading ? (
-                <span>{t('settings.biometric.loading')}</span>
-              ) : biometricEnabled ? (
-                <span>{t('settings.biometric.disable')}</span>
-              ) : (
-                <>
+            {biometricEnabled ? (
+              <button
+                type="button"
+                disabled={biometricLoading}
+                onClick={() => handleToggleBiometric('platform')}
+                className="px-5 py-2.5 rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 shrink-0 border border-red-500/30 text-red-400 hover:bg-red-500/10"
+              >
+                {biometricLoading ? <span>{t('settings.biometric.loading')}</span> : <span>{t('settings.biometric.disable')}</span>}
+              </button>
+            ) : (
+              <div className="flex flex-col sm:flex-row gap-2 shrink-0 w-full sm:w-auto">
+                <button
+                  type="button"
+                  disabled={biometricLoading}
+                  onClick={() => handleToggleBiometric('platform')}
+                  className="px-4 py-2.5 rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 bg-brand-primary text-brand-on-primary hover:brightness-110 shadow-md shadow-brand-primary/10"
+                >
                   <Fingerprint className="w-4 h-4" />
-                  <span>{t('settings.biometric.enable')}</span>
-                </>
-              )}
-            </button>
+                  <span>{t('settings.biometric.enablePlatform')}</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={biometricLoading}
+                  onClick={() => handleToggleBiometric('cross-platform')}
+                  className="px-4 py-2.5 rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 bg-brand-primary/10 border border-brand-primary/30 text-brand-primary hover:bg-brand-primary/20"
+                >
+                  <Key className="w-4 h-4" />
+                  <span>{t('settings.biometric.enableFido2')}</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {biometricSuccess && (

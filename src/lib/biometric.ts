@@ -94,6 +94,7 @@ interface BiometricInfoV2 {
   salt: string;
   bundle: WebCryptoAesGcmPayload;
   pbkdf2Iterations?: number;
+  authenticatorType?: 'platform' | 'cross-platform';
 }
 
 interface NativeBiometricInfoV3 {
@@ -300,15 +301,21 @@ export function isBiometricEnabled(): boolean {
   return cachedBiometricInfo !== null;
 }
 
+export function getBiometricType(): 'platform' | 'cross-platform' | 'native' | null {
+  if (!cachedBiometricInfo) return null;
+  if (cachedBiometricInfo.version === 3) return 'native';
+  return cachedBiometricInfo.authenticatorType ?? 'platform';
+}
+
 export function disableBiometric(): void {
   cachedBiometricInfo = null;
   removeSecureStorageItem(secureStorageKeys.biometricInfo);
   void deleteBiometricFromIndexedDB();
 }
 
-export async function registerBiometric(masterPassword: string): Promise<void> {
+export async function registerBiometric(masterPassword: string, type: 'platform' | 'cross-platform' = 'platform'): Promise<void> {
   if (hasWebAuthnSupport()) {
-    await registerWebAuthnBiometric(masterPassword);
+    await registerWebAuthnBiometric(masterPassword, type);
     return;
   }
 
@@ -320,7 +327,7 @@ export async function registerBiometric(masterPassword: string): Promise<void> {
   throw new BiometricError(biometricErrorCodes.unsupported);
 }
 
-async function registerWebAuthnBiometric(masterPassword: string): Promise<void> {
+async function registerWebAuthnBiometric(masterPassword: string, type: 'platform' | 'cross-platform'): Promise<void> {
   if (!hasWebAuthnSupport()) {
     throw new BiometricError(biometricErrorCodes.unsupported);
   }
@@ -347,7 +354,7 @@ async function registerWebAuthnBiometric(masterPassword: string): Promise<void> 
         { alg: -257, type: "public-key" }, // RS256
       ],
       authenticatorSelection: {
-        authenticatorAttachment: "platform", // platform-specific (Touch ID, Windows Hello, Face ID)
+        authenticatorAttachment: type,
         userVerification: "required",
       },
       timeout: 60000,
@@ -379,6 +386,7 @@ async function registerWebAuthnBiometric(masterPassword: string): Promise<void> 
     salt: bytesToBase64(salt),
     bundle: bundle,
     pbkdf2Iterations: PBKDF2_ITERATIONS,
+    authenticatorType: type,
   };
 
   cachedBiometricInfo = biometricInfo;

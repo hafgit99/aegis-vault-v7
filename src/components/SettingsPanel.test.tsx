@@ -75,6 +75,7 @@ vi.mock('../lib/biometric', () => ({
   isBiometricEnabled: vi.fn(() => false),
   isBiometricSupported: vi.fn(() => false),
   registerBiometric: vi.fn(),
+  getBiometricType: vi.fn(() => 'platform'),
 }));
 
 vi.mock('../lib/emergencyKit', () => ({
@@ -191,11 +192,12 @@ describe('SettingsPanel import/export', () => {
     expect(screen.getByText('The app locks itself securely when it stays idle in the background or the selected duration expires.')).toBeTruthy();
     expect(screen.getByText('5 Minutes')).toBeTruthy();
     expect(screen.getByText('Never Lock')).toBeTruthy();
-    expect(screen.getByText('Biometric Unlock')).toBeTruthy();
+    expect(screen.getByText('Device Lock & FIDO2 Security Key')).toBeTruthy();
     expect(screen.getByText(/Integrate OS biometrics/)).toBeTruthy();
     expect(screen.getByText('Status: PASSIVE 🔴')).toBeTruthy();
-    expect(screen.getByText('Biometric unlock is disabled. You can sign in only with your master password.')).toBeTruthy();
-    expect(screen.getByText('Enable Biometrics')).toBeTruthy();
+    expect(screen.getByText('Unlock assistance is disabled. You can sign in only with your master password.')).toBeTruthy();
+    expect(screen.getByText('Enable Device Lock (Touch ID / Face ID / Hello)')).toBeTruthy();
+    expect(screen.getByText('Enable Security Key (FIDO2 / YubiKey)')).toBeTruthy();
     expect(screen.getByText('Android Autofill')).toBeTruthy();
     expect(screen.getByText('Open Android Autofill Settings')).toBeTruthy();
     expect(screen.getByText('Emergency Kit')).toBeTruthy();
@@ -555,7 +557,7 @@ describe('SettingsPanel biometric controls', () => {
     vi.mocked(isBiometricSupported).mockReturnValue(false);
     const { container } = renderSettings();
 
-    fireEvent.click(screen.getByText(/Biyometriyi/));
+    fireEvent.click(screen.getByRole('button', { name: /Touch ID/ }));
 
     await waitFor(() => {
       expect(container.textContent).toContain('desteklenmiyor');
@@ -563,16 +565,30 @@ describe('SettingsPanel biometric controls', () => {
     expect(registerBiometric).not.toHaveBeenCalled();
   });
 
-  it('registers biometrics with the active master password', async () => {
+  it('registers platform biometrics with the active master password', async () => {
     openVaultSession('master-pass');
     vi.mocked(isBiometricSupported).mockReturnValue(true);
     vi.mocked(registerBiometric).mockResolvedValueOnce(undefined);
     const { container } = renderSettings();
 
-    fireEvent.click(screen.getByText(/Biyometriyi/));
+    fireEvent.click(screen.getByRole('button', { name: /Touch ID/ }));
 
     await waitFor(() => {
-      expect(registerBiometric).toHaveBeenCalledWith('master-pass');
+      expect(registerBiometric).toHaveBeenCalledWith('master-pass', 'platform');
+      expect(container.textContent).toContain('AKT');
+    });
+  });
+
+  it('registers FIDO2 security key with the active master password', async () => {
+    openVaultSession('master-pass');
+    vi.mocked(isBiometricSupported).mockReturnValue(true);
+    vi.mocked(registerBiometric).mockResolvedValueOnce(undefined);
+    const { container } = renderSettings();
+
+    fireEvent.click(screen.getByRole('button', { name: /YubiKey/ }));
+
+    await waitFor(() => {
+      expect(registerBiometric).toHaveBeenCalledWith('master-pass', 'cross-platform');
       expect(container.textContent).toContain('AKT');
     });
   });
@@ -581,7 +597,7 @@ describe('SettingsPanel biometric controls', () => {
     vi.mocked(isBiometricSupported).mockReturnValue(true);
     const { container } = renderSettings();
 
-    fireEvent.click(screen.getByText(/Biyometriyi/));
+    fireEvent.click(screen.getByRole('button', { name: /Touch ID/ }));
 
     await waitFor(() => {
       expect(container.textContent).toContain('Oturum');
@@ -595,7 +611,7 @@ describe('SettingsPanel biometric controls', () => {
     vi.mocked(registerBiometric).mockRejectedValueOnce(Object.assign(new Error('blocked'), { name: 'NotAllowedError' }));
     const { container } = renderSettings();
 
-    fireEvent.click(screen.getByText(/Biyometriyi/));
+    fireEvent.click(screen.getByRole('button', { name: /Touch ID/ }));
 
     await waitFor(() => {
       expect(container.textContent).toContain('WebAuthn');
@@ -606,7 +622,7 @@ describe('SettingsPanel biometric controls', () => {
     vi.mocked(isBiometricEnabled).mockReturnValueOnce(true);
     const { container } = renderSettings();
 
-    fireEvent.click(screen.getByText(/Biyometriyi/));
+    fireEvent.click(screen.getByText(/Korumayı/));
 
     await waitFor(() => {
       expect(disableBiometric).toHaveBeenCalledTimes(1);
@@ -621,7 +637,7 @@ describe('SettingsPanel biometric controls', () => {
     });
     const { container } = renderSettings();
 
-    fireEvent.click(screen.getByText(/Biyometriyi/));
+    fireEvent.click(screen.getByText(/Korumayı/));
 
     await waitFor(() => {
       expect(container.textContent).toContain('remove failed');
@@ -635,7 +651,7 @@ describe('SettingsPanel biometric controls', () => {
     });
     const { container } = renderSettingsWithLanguage('en');
 
-    fireEvent.click(screen.getByText('Remove Biometrics'));
+    fireEvent.click(screen.getByText('Disable Protection'));
 
     await waitFor(() => {
       expect(container.textContent).toContain('An error occurred during the operation.');
