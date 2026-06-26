@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 95.86% |
-| Statements | 95.86% |
+| Lines | 95.87% |
+| Statements | 95.87% |
 | Functions | 92.92% |
-| Branches | 90.29% |
+| Branches | 90.28% |
 
 Coverage thresholds now act as a release-quality regression gate while staying slightly below the current baseline:
 

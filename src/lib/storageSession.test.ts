@@ -516,6 +516,22 @@ describe('vault session storage', () => {
     expect(sqliteOPFSInstance.saveVaultItems).toHaveBeenCalledWith([item], 'master-pass');
   });
 
+  it('returns database-normalized records from the bulk save wrapper', async () => {
+    const importedItem = sampleItem({ id: '', title: '' });
+    const normalizedItem = sampleItem({
+      id: 'generated-id',
+      title: 'Imported Record',
+      createdAt: '2026-06-26',
+      updatedAt: '2026-06-26',
+    });
+    sqliteOPFSInstance.saveVaultItems.mockResolvedValueOnce([normalizedItem]);
+    openVaultSession('master-pass');
+
+    await expect(saveVaultItems([importedItem])).resolves.toEqual([normalizedItem]);
+
+    expect(sqliteOPFSInstance.saveVaultItems).toHaveBeenCalledWith([importedItem], 'master-pass');
+  });
+
   it('ignores missing, disabled, or malformed account secret-key profiles', () => {
     expect(isAccountSecretKeyRequired()).toBe(false);
 
