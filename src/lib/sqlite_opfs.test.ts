@@ -587,6 +587,35 @@ describe('SQLite OPFS persistence engine', () => {
     );
   });
 
+  it('blocks direct SQLite master password rotation when the current password is invalid', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    await sqlite.saveVaultItem(sampleItem({ id: 'protected-row' }), 'master-pass');
+    const before = localStorage.getItem('aegis_sqlite_fallback');
+    writeDesktopVaultDatabase.mockClear();
+
+    await expect(sqlite.changeMasterPassword('wrong-pass', 'new-master-pass')).rejects.toThrow(
+      'current-master-password-invalid',
+    );
+
+    expect(localStorage.getItem('aegis_sqlite_fallback')).toBe(before);
+    expect(writeDesktopVaultDatabase).not.toHaveBeenCalled();
+    await expect(sqlite.verifyPassword('master-pass')).resolves.toBe(true);
+    await expect(sqlite.verifyPassword('new-master-pass')).resolves.toBe(false);
+    await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual([
+      expect.objectContaining({ id: 'protected-row', password: 'secret-password' }),
+    ]);
+    expect(sqlite.getQueryLogs()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          query: expect.stringContaining('rekey blocked: invalid current password'),
+          status: 'ERROR',
+          rowsAffected: 0,
+        }),
+      ]),
+    );
+  });
+
   it('performs bulk saves securely in a single sweep using saveVaultItems', async () => {
     const sqlite = await freshSqliteInstance();
     await sqlite.setupMaster('master-pass');

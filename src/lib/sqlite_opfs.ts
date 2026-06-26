@@ -431,6 +431,12 @@ class SQLiteOPFS {
    */
   public async changeMasterPassword(oldPassword: string, newPassword: string): Promise<void> {
     await this.hydrate();
+    const isCurrentPasswordValid = await this.verifyPassword(oldPassword);
+    if (!isCurrentPasswordValid) {
+      this.logQuery('UPDATE user_secrets SET argon_hash = "[rekey blocked: invalid current password]";', 'ERROR', 0);
+      throw new Error('current-master-password-invalid');
+    }
+
     const items = await this.getVaultItems(oldPassword);
     const argonHash = await createArgon2idHash(newPassword, secureRandomToken(16));
     this.clearDerivedKeyCache();
