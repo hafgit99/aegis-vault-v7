@@ -9,13 +9,14 @@ import { createEmptyVaultDatabaseState, type VersionedVaultDatabaseState } from 
 
 const writeDesktopVaultDatabase = vi.hoisted(() => vi.fn(async () => false));
 const readDesktopVaultDatabase = vi.hoisted(() => vi.fn(async () => null));
+const resetDesktopVaultDatabase = vi.hoisted(() => vi.fn(async () => false));
 const getNativeVaultStorageScope = vi.hoisted(() => vi.fn(() => 'desktop-app-data'));
 const originalNavigatorStorage = navigator.storage;
 
 vi.mock('./desktopStorage', () => ({
   getNativeVaultStorageScope,
   readDesktopVaultDatabase,
-  resetDesktopVaultDatabase: vi.fn(async () => false),
+  resetDesktopVaultDatabase,
   writeDesktopVaultDatabase,
 }));
 
@@ -56,6 +57,7 @@ beforeEach(() => {
   sessionStorage.clear();
   vi.clearAllMocks();
   getNativeVaultStorageScope.mockReturnValue('desktop-app-data');
+  resetDesktopVaultDatabase.mockResolvedValue(false);
 });
 
 afterEach(() => {
@@ -145,12 +147,37 @@ describe('SQLite OPFS persistence engine', () => {
     const afterDelete = await sqlite.deletePermanently('trash-item', 'master-pass');
     expect(afterDelete.map((item) => item.id)).toEqual(['active-item']);
 
+    resetDesktopVaultDatabase.mockResolvedValueOnce(true);
     await sqlite.resetAll();
 
     await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual([]);
     await expect(sqlite.verifyPassword('master-pass')).resolves.toBe(false);
   });
 
+  it('does not report reset success when native reset fails in desktop storage', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    await sqlite.saveVaultItem(sampleItem({ id: 'reset-protected', title: 'Reset Protected' }), 'master-pass');
+    const before = localStorage.getItem('aegis_sqlite_fallback');
+    resetDesktopVaultDatabase.mockResolvedValueOnce(false);
+
+    await expect(sqlite.resetAll()).rejects.toThrow('vault-reset-native-persist-failed');
+
+    expect(localStorage.getItem('aegis_sqlite_fallback')).toBe(before);
+    await expect(sqlite.verifyPassword('master-pass')).resolves.toBe(true);
+    await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual([
+      expect.objectContaining({ id: 'reset-protected', title: 'Reset Protected' }),
+    ]);
+    expect(sqlite.getQueryLogs()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          query: expect.stringContaining('rolled back because native reset failed'),
+          status: 'ERROR',
+          rowsAffected: 0,
+        }),
+      ]),
+    );
+  });
   it('hydrates an existing fallback database from localStorage', async () => {
     const state: VersionedVaultDatabaseState = {
       ...createEmptyVaultDatabaseState(),

@@ -999,13 +999,26 @@ class SQLiteOPFS {
    * Resets entire SQLite database schemas.
    */
   public async resetAll(): Promise<void> {
-    this.state = createEmptyVaultDatabaseState();
-    this.logQuery('DROP TABLE user_secrets; DROP TABLE vault_items;', 'SUCCESS', 1);
-    await resetDesktopVaultDatabase();
-    localStorage.removeItem(LOCAL_FALLBACK_KEY);
-    await this.saveToPersistentStorage();
-  }
+    const previousState = this.cloneState();
+    const previousDecryptedItemsCache = this.cloneDecryptedItemsCache();
 
+    this.state = createEmptyVaultDatabaseState();
+    const nativeReset = await resetDesktopVaultDatabase();
+    if (!nativeReset && getNativeVaultStorageScope() !== 'browser-fallback') {
+      this.restoreTransactionalState(previousState, previousDecryptedItemsCache);
+      this.logQuery('DROP TABLE user_secrets; DROP TABLE vault_items; -- rolled back because native reset failed', 'ERROR', 0);
+      throw new Error('vault-reset-native-persist-failed');
+    }
+
+    localStorage.removeItem(LOCAL_FALLBACK_KEY);
+    const persisted = await this.saveToPersistentStorage();
+    if (!persisted) {
+      this.logQuery('DROP TABLE user_secrets; DROP TABLE vault_items; -- reset persistence failed', 'ERROR', 0);
+      throw new Error('vault-reset-persist-failed');
+    }
+
+    this.logQuery('DROP TABLE user_secrets; DROP TABLE vault_items;', 'SUCCESS', 1);
+  }
   /**
    * Permanently purges an item
    */
