@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { createWaSqliteEngine, WA_SQLITE_BOOTSTRAP_SCHEMA, type WaSqliteRuntime } from './waSqliteEngine';
+import { createWaSqliteEngine, createWaSqliteModuleConfig, WA_SQLITE_BOOTSTRAP_SCHEMA, type WaSqliteRuntime } from './waSqliteEngine';
 
 function createRuntimeStub(): WaSqliteRuntime & {
   exec: ReturnType<typeof vi.fn>;
@@ -45,6 +45,26 @@ function createRuntimeStub(): WaSqliteRuntime & {
 }
 
 describe('wa-sqlite engine', () => {
+  it('creates a Vite-safe module config and preserves explicit WASM overrides', () => {
+    const wasmBinary = new Uint8Array([0, 1, 2]);
+    const customLocateFile = vi.fn((path: string, prefix: string) => `${prefix}${path}`);
+
+    const defaultConfig = createWaSqliteModuleConfig() as {
+      locateFile: (path: string, prefix?: string) => string;
+    };
+    const overrideConfig = createWaSqliteModuleConfig({
+      locateFile: customLocateFile,
+      wasmBinary,
+    }) as {
+      locateFile: (path: string, prefix?: string) => string;
+      wasmBinary: Uint8Array;
+    };
+
+    expect(defaultConfig.locateFile('wa-sqlite.wasm', '/assets/')).toContain('wa-sqlite.wasm');
+    expect(defaultConfig.locateFile('other.data', '/assets/')).toBe('other.data');
+    expect(overrideConfig.locateFile('wa-sqlite.wasm', '/assets/')).toBe('/assets/wa-sqlite.wasm');
+    expect(overrideConfig.wasmBinary).toBe(wasmBinary);
+  });
   it('opens the database lazily and bootstraps the Aegis schema', async () => {
     const runtime = createRuntimeStub();
     const engine = createWaSqliteEngine({

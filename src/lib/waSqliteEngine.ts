@@ -26,7 +26,7 @@ export interface WaSqliteRuntime {
 export interface WaSqliteEngineOptions {
   databaseName?: string;
   loadRuntime?: () => Promise<WaSqliteRuntime>;
-  locateFile?: (path: string) => string;
+  locateFile?: (path: string, prefix?: string) => string;
   wasmBinary?: unknown;
 }
 
