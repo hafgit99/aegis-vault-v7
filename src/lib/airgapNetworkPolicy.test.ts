@@ -46,6 +46,58 @@ describe('air-gap network policy', () => {
     }
   });
 
+  it('guards fetch after policy installation', async () => {
+    const nativeFetch = vi.fn(async () => new Response('ok'));
+    vi.stubGlobal('fetch', nativeFetch);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { installAirgapNetworkPolicy } = await import('./airgapNetworkPolicy');
+
+    installAirgapNetworkPolicy();
+
+    await expect(fetch('/assets/app.js')).resolves.toBeInstanceOf(Response);
+    expect(nativeFetch).toHaveBeenCalledWith('/assets/app.js', undefined);
+    expect(() => fetch('https://telemetry.example.test/collect')).toThrow('air-gap policy');
+    expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({
+      code: 'network.blocked',
+      source: 'AegisSecurity',
+    }));
+  });
+
+  it('guards XMLHttpRequest.open after policy installation', async () => {
+    const nativeOpen = vi.spyOn(XMLHttpRequest.prototype, 'open').mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { installAirgapNetworkPolicy } = await import('./airgapNetworkPolicy');
+
+    installAirgapNetworkPolicy();
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', '/local.json');
+    expect(nativeOpen).toHaveBeenCalledWith('GET', '/local.json', true, null, null);
+    expect(() => xhr.open('POST', 'https://telemetry.example.test/collect')).toThrow('air-gap policy');
+    expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({
+      code: 'network.blocked',
+      source: 'AegisSecurity',
+    }));
+  });
+
+  it('guards WebSocket after policy installation', async () => {
+    const NativeWebSocket = vi.fn(function WebSocketMock(this: { url: string }, url: string | URL) {
+      this.url = String(url);
+    });
+    vi.stubGlobal('WebSocket', NativeWebSocket);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { installAirgapNetworkPolicy } = await import('./airgapNetworkPolicy');
+
+    installAirgapNetworkPolicy();
+
+    expect(() => new WebSocket('wss://telemetry.example.test/socket')).toThrow('air-gap policy');
+    expect(NativeWebSocket).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({
+      code: 'network.blocked',
+      source: 'AegisSecurity',
+    }));
+  });
+
   it('guards sendBeacon after policy installation', async () => {
     const nativeSendBeacon = vi.fn(() => true);
     Object.defineProperty(window.navigator, 'sendBeacon', {
