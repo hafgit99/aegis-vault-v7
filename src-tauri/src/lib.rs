@@ -38,7 +38,29 @@ fn apply_screen_capture_protection_to_window(
     Ok(true)
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "macos")]
+fn apply_screen_capture_protection_to_window(
+    window: &WebviewWindow,
+) -> Result<bool, String> {
+    use objc2_app_kit::{NSWindow, NSWindowSharingNone};
+
+    let ns_window_ptr = window
+        .ns_window()
+        .map_err(|error| format!("failed to resolve NSWindow pointer: {error}"))? as *mut NSWindow;
+
+    if ns_window_ptr.is_null() {
+        return Err("NSWindow pointer is null".to_string());
+    }
+
+    unsafe {
+        let ns_window = &*ns_window_ptr;
+        ns_window.setSharingType(NSWindowSharingNone);
+    }
+
+    Ok(true)
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn apply_screen_capture_protection_to_window(
     _window: &WebviewWindow,
 ) -> Result<bool, String> {
