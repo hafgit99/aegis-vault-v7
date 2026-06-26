@@ -44,6 +44,18 @@ import { isAccountSecretKeyFormatValid } from '../lib/secretKey';
 import { useLanguage } from '../i18n/LanguageContext';
 import { validateMasterPassword } from '../lib/security';
 import { languageLabels, supportedLanguages, type LanguageCode } from '../i18n/translations';
+import {
+  getLastSyncTime,
+  hasSyncConfig,
+  validateWebDavConfig,
+  WebDavSyncProvider,
+  saveSyncConfig,
+  clearSyncConfig,
+  loadSyncConfig,
+  createSyncProvider,
+  performSync,
+  saveLastSyncTime,
+} from '../lib/sync';
 
 interface SettingsPanelProps {
   onDatabaseChanged: () => void | Promise<void>;
@@ -140,7 +152,6 @@ export default function SettingsPanel({
 
   // Load last sync time and detect saved config on mount
   useEffect(() => {
-    const { getLastSyncTime, hasSyncConfig } = require('../lib/sync');
     setSyncLastAt(getLastSyncTime());
     if (hasSyncConfig()) {
       setSyncProvider('webdav');
@@ -148,7 +159,6 @@ export default function SettingsPanel({
   }, []);
 
   const handleSyncTest = async () => {
-    const { validateWebDavConfig, WebDavSyncProvider } = require('../lib/sync');
     const err = validateWebDavConfig({ url: syncUrl, username: syncUsername, password: syncPassword });
     if (err) { setSyncTestResult(`❌ ${err}`); return; }
     setSyncTestLoading(true);
@@ -165,7 +175,6 @@ export default function SettingsPanel({
   };
 
   const handleSyncSave = async () => {
-    const { validateWebDavConfig, saveSyncConfig } = require('../lib/sync');
     const err = validateWebDavConfig({ url: syncUrl, username: syncUsername, password: syncPassword });
     if (err) { setSyncMessage(`❌ ${err}`); return; }
     const masterPw = getActiveMasterPassword();
@@ -175,7 +184,6 @@ export default function SettingsPanel({
   };
 
   const handleSyncDisable = async () => {
-    const { clearSyncConfig } = require('../lib/sync');
     clearSyncConfig();
     setSyncProvider('disabled');
     setSyncUrl(''); setSyncUsername(''); setSyncPassword('');
@@ -183,7 +191,6 @@ export default function SettingsPanel({
   };
 
   const handleSyncNow = async () => {
-    const { loadSyncConfig, createSyncProvider, performSync, saveLastSyncTime } = require('../lib/sync');
     const masterPw = getActiveMasterPassword();
     if (!masterPw) return;
     setSyncLoading(true);

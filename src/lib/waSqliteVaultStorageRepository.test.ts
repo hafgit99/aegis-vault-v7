@@ -349,7 +349,7 @@ describe('wa-sqlite vault storage repository', () => {
   it('keeps custom SQL and master rotation fail-closed while encrypted row writes are isolated', async () => {
     const repository = createWaSqliteVaultStorageRepository({ engine: createEngineStub() });
 
-    await expect(repository.changeMasterPassword('old', 'new')).rejects.toThrow(WA_SQLITE_WRITE_NOT_READY_ERROR);
+    await expect(repository.changeMasterPassword('old', 'new')).rejects.toThrow('current-master-password-invalid');
     expect(repository.executeCustomSQL('SELECT * FROM vault_items;', 'valid-master')).toEqual({
       columns: [],
       rows: [],
