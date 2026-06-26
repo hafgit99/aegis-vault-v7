@@ -6,7 +6,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { sqliteOPFSInstance } from './sqlite_opfs';
-import { getVaultStorageRepository, setVaultStorageRepositoryForTesting } from './vaultStorageProvider';
+import { getActiveVaultStorageBackendSelection, getVaultStorageRepository, setVaultStorageRepositoryForTesting } from './vaultStorageProvider';
 import type { VaultStorageRepository } from './vaultStorageRepository';
 
 function createRepositoryStub(): VaultStorageRepository {
@@ -36,6 +36,14 @@ describe('vault storage provider', () => {
     expect(getVaultStorageRepository()).toBe(sqliteOPFSInstance);
   });
 
+
+  it('exposes the active backend selection for migration orchestration', () => {
+    expect(getActiveVaultStorageBackendSelection()).toEqual({
+      active: 'opfs',
+      target: null,
+      mode: 'active',
+    });
+  });
   it('can temporarily swap the active repository for migration tests', () => {
     const repository = createRepositoryStub();
     const restore = setVaultStorageRepositoryForTesting(repository);
