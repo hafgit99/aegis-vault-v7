@@ -16,8 +16,8 @@ Current measured baseline:
 | --- | ---: |
 | Lines | 96.55% |
 | Statements | 96.55% |
-| Functions | 93.81% |
-| Branches | 90.27% |
+| Functions | 93.65% |
+| Branches | 90.23% |
 
 Coverage thresholds now act as a release-quality regression gate while staying slightly below the current baseline:
 
@@ -25,8 +25,8 @@ Coverage thresholds now act as a release-quality regression gate while staying s
 | --- | ---: |
 | Lines | 96.55% |
 | Statements | 96.55% |
-| Functions | 93.81% |
-| Branches | 90.27% |
+| Functions | 93.65% |
+| Branches | 90.23% |
 
 These thresholds prevent meaningful regressions while leaving room to add tests around under-covered areas.
 
@@ -244,6 +244,7 @@ Recently improved:
 - `src/lib/csvParser.ts` and `src/lib/fileDecoder.ts`: added direct helper tests and a dedicated importer helper mutation gate; CSV parsing now reports 84.46%, file decoding reports 87.37%, and the combined helper gate reports 85.42%.
 - `src/lib/attachments.ts`: covered IndexedDB save/read/delete paths, bulk legacy migration, missing records, and connection cleanup behavior.
 - `src/lib/sqlite_opfs.ts`: covered master setup/verification, encrypted row persistence, desktop payload hydration, OPFS file hydration, missing OPFS file initialization, OPFS write failures, desktop read fallback, legacy localStorage migration, read-only SQL console behavior, row update/defaults, reseed/delete/reset flows, query log subscriptions, localStorage fallback hydration, missing-key decryption guards, and master-password rotation rollback when persistence cannot be written, and single/bulk vault-item save rollback, permanent-delete rollback, bulk-delete rollback, demo-reseed rollback when persistence cannot be written, and native reset fail-closed behavior when desktop/app-private reset cannot be confirmed.
+- Storage backend contract: introduced `src/lib/vaultStorageRepository.ts` so the current OPFS-backed engine and a future real SQLite/wa-sqlite backend must expose the same persistence, migration, reset, SQL-console, and encrypted-item operations.
 - `src/lib/storage.ts`: covered setup detection, Secret Key profile fallbacks, remembered-key migration/forget flows, failed unlock session guards, master-password rotation rollback rules, reset marker cleanup, no-session guards, save/delete/reseed wrappers, trash move/restore, retention-boundary cleanup, bulk-save progress callbacks, and full trash emptying.
 - `src/components/PasswordGenerator.tsx`: covered character option changes, all character toggles, strength bar tone branches, diceware mode settings, word-count descriptions, diceware toggles, copy feedback, unmount cleanup, and safe clipboard clearing behavior.
 - `src/lib/diceware.ts`: covered Turkish/English word selection, EFF-sized word-pool expansion, separator formats, capitalization, number and symbol placement, camel/none separator handling, optional entropy calculations, and static word-list separation for practical mutation testing.

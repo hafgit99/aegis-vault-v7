@@ -30,6 +30,12 @@ import {
 } from './desktopStorage';
 import { logSecurityEvent, securityEventCodes } from './securityEvents';
 import { registerOnCloseSession } from './vaultSession';
+import type {
+  SQLCommandLog,
+  SQLCommandStatus,
+  VaultStorageQueryResult,
+  VaultStorageRepository,
+} from './vaultStorageRepository';
 
 const isTestEnv = typeof window === 'undefined' ||
   (typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.includes('jsdom')) ||
@@ -45,13 +51,6 @@ async function maybeDelay(ms: number): Promise<void> {
  */
 export type SQLiteRow = VaultDatabaseRow;
 
-export interface SQLCommandLog {
-  id: string;
-  timestamp: string;
-  query: string;
-  status: 'SUCCESS' | 'ERROR';
-  rowsAffected: number;
-}
 
 const DB_FILENAME = 'aegis_sqlite.db';
 const LOCAL_FALLBACK_KEY = 'aegis_sqlite_fallback';
@@ -71,7 +70,7 @@ const NEW_VAULT_ITEM_KDF_PARAMS = {
   hashLength: 32,
 };
 
-class SQLiteOPFS {
+class SQLiteOPFS implements VaultStorageRepository {
   private state: VersionedVaultDatabaseState = createEmptyVaultDatabaseState();
 
   private logs: SQLCommandLog[] = [];
@@ -143,7 +142,7 @@ class SQLiteOPFS {
     return [...this.logs].reverse().slice(0, 50); // Get latest 50 queries
   }
 
-  public logQuery(query: string, status: 'SUCCESS' | 'ERROR', rowsAffected: number) {
+  public logQuery(query: string, status: SQLCommandStatus, rowsAffected: number) {
     this.logs.push({
       id: secureRandomToken(7),
       timestamp: new Date().toLocaleTimeString(),
@@ -909,7 +908,7 @@ class SQLiteOPFS {
    * SQL Parser implementation simulating typical queries execution.
    * Useful for the Interactive SQL Command Terminal inside Settings/Audit!
    */
-  public executeCustomSQL(sql: string, masterPasswordPlain: string): { columns: string[]; rows: any[][]; error?: string } {
+  public executeCustomSQL(sql: string, masterPasswordPlain: string): VaultStorageQueryResult {
     const sanitized = sql.trim().replace(/;$/, '');
     const tokens = sanitized.split(/\s+/);
 
