@@ -59,4 +59,27 @@ describe('androidAutofillMatching', () => {
 
     expect(isAndroidAutofillTargetMatch(item('package', 'https://accounts.example.com'), packageRequest)).toBe(true);
   });
+
+  it('does not match when the request has no usable target label', () => {
+    expect(isAndroidAutofillTargetMatch(item('missing-target', 'https://example.com'), {
+      requestId: 'request-3',
+      createdAt: 789,
+      source: 'android-autofill',
+      appPackage: '   ',
+      webDomain: '   ',
+    })).toBe(false);
+    expect(sortAndroidAutofillMatches([item('a', 'https://a.test')], null).map((entry) => entry.id)).toEqual(['a']);
+  });
+
+  it('normalizes malformed host-like strings without promoting deceptive suffixes', () => {
+    const malformedRequest: AndroidAutofillRequest = {
+      requestId: 'request-4',
+      createdAt: 987,
+      source: 'android-autofill',
+      webDomain: 'https://login.example.com/not a valid path%',
+    };
+
+    expect(isAndroidAutofillTargetMatch(item('host-only', 'www.login.example.com/account'), malformedRequest)).toBe(true);
+    expect(isAndroidAutofillTargetMatch(item('deceptive', 'https://login.example.com.evil.test'), malformedRequest)).toBe(false);
+  });
 });

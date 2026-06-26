@@ -51,6 +51,48 @@ describe('androidAutofillSecurity', () => {
     expect(JSON.stringify(info.mock.calls[0][0])).not.toContain('ada@example.com');
   });
 
+  it('logs requested Autofill diagnostics without a selected item', () => {
+    const info = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+    logAndroidAutofillSecurityEvent('requested', {
+      ...request,
+      usernameFieldCount: 1,
+      passwordFieldCount: 2,
+      fillableFieldCount: 4,
+    });
+
+    expect(info).toHaveBeenCalledWith(expect.objectContaining({
+      code: securityEventCodes.androidAutofillRequested,
+      severity: 'info',
+      meta: expect.objectContaining({
+        requestId: 'request-1',
+        appPackage: 'com.example.app',
+        webDomain: 'login.example.com',
+        usernameFieldCount: 1,
+        passwordFieldCount: '[redacted]',
+        fillableFieldCount: 4,
+        itemMatchesTarget: undefined,
+      }),
+    }));
+  });
+
+  it('logs cancelled Autofill events with null request metadata safely', () => {
+    const info = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+    logAndroidAutofillSecurityEvent('cancelled', null);
+
+    expect(info).toHaveBeenCalledWith(expect.objectContaining({
+      code: securityEventCodes.androidAutofillCancelled,
+      severity: 'info',
+      meta: expect.objectContaining({
+        requestId: undefined,
+        target: null,
+        itemId: undefined,
+        itemMatchesTarget: undefined,
+      }),
+    }));
+  });
+
   it('logs failed Autofill events as warnings', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 

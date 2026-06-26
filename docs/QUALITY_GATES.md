@@ -17,7 +17,7 @@ Current measured baseline:
 | Lines | 96.04% |
 | Statements | 96.04% |
 | Functions | 93.43% |
-| Branches | 90.27% |
+| Branches | 90.46% |
 
 Coverage thresholds now act as a release-quality regression gate while staying slightly below the current baseline:
 
@@ -317,6 +317,7 @@ Recently improved:
 - `src/lib/securityEvents.ts`: added to the core mutation gate with structured error construction, severity routing, public error copy, metadata redaction, control-character normalization, truncation, and non-string metadata preservation; security event mutation score now reports 100%.
 - `src/lib/hibp.ts`: covered k-anonymity range lookup, Add-Padding/no-store request options, prefix cache reuse, and fail-closed unavailable responses.
 - `src/lib/airgapNetworkPolicy.ts`: covered policy installation guards for fetch, XMLHttpRequest, WebSocket, sendBeacon, and EventSource so unexpected outbound channels fail closed while same-origin, Tauri IPC, and HIBP range requests remain allowed.
+- Android Autofill helpers: covered missing-target matching, malformed host normalization, deceptive suffix rejection, requested/cancelled security logs, diagnostic field redaction, and completed/failed event routing.
 - `src/lib/importer.ts`: covered sparse Aegis JSON defaults, sparse and unknown Bitwarden JSON types, numeric Bitwarden CSV categories/favorites, LastPass optional-column fallbacks, universal CSV fallback defaults, stable default/localized format labels, encrypted-envelope guards, and empty/error states. CSV delimiter parsing, label defaults, and file decoding were split into `src/lib/csvParser.ts`, `src/lib/importerLabels.ts`, and `src/lib/fileDecoder.ts`; importer mutation score now reports 80.35%.
 - Importer helpers: expanded CSV parser and file decoder edge coverage for empty exports, CR-only row separators, closing-quote whitespace, malformed quoted fields, blank records, short UTF-16 samples, incomplete BOM prefixes, and tied UTF-16 null-byte votes; the dedicated helper gate now reports 87.85% with a break threshold of 85.
 - `src/lib/legacyCrypto.ts`: covered malformed legacy hashes, compact KDF parameters, SHA-256/HMAC/HKDF vectors, authenticated legacy AES-GCM-compatible decrypt paths, tamper rejection, old stream-cipher fallback envelopes, malformed secure envelopes, checksum failures, and unsupported envelope versions.
