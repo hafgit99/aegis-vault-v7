@@ -231,4 +231,18 @@ describe('vault storage migration', () => {
       issues: ['target write failed', 'target rollback failed'],
     });
   });
+  it('sanitizes target error messages before they become migration issues', async () => {
+    const sourceRepository = repositoryStub([item()]);
+    const targetRepository = repositoryStub([]);
+    vi.mocked(targetRepository.saveVaultItems).mockRejectedValueOnce(
+      new Error('target failed\n<script>alert("secret")</script>'),
+    );
+
+    await expect(runVaultStorageMigration(sourceRepository, targetRepository, 'master-pass', 'opfs', 'wa-sqlite', {
+      verifyPersistentTarget: passingSmoke(),
+    })).resolves.toMatchObject({
+      status: 'rolled-back',
+      issues: ['target failed &lt;script_alert("secret")_/script_'],
+    });
+  });
 });

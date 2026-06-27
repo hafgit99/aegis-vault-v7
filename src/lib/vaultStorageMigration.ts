@@ -104,7 +104,7 @@ export async function runVaultStorageMigration(
       issues: [],
     };
   } catch (error) {
-    issues.push(error instanceof Error ? error.message : 'vault-storage-migration-target-write-failed');
+    issues.push(migrationIssueFromError(error, 'vault-storage-migration-target-write-failed'));
     await rollbackTarget(targetRepository, issues);
     return {
       status: 'rolled-back',
@@ -214,10 +214,22 @@ function normalizeVaultItemForMigration(item: VaultItem): VaultItem {
   };
 }
 
+function migrationIssueFromError(error: unknown, fallback: string): string {
+  const rawMessage = error instanceof Error ? error.message : String(error || fallback);
+  const sanitizedMessage = rawMessage
+    .replace(/[\r\n\t]/g, ' ')
+    .replace(/<script/gi, '&lt;script')
+    .replace(/[<>]/g, '_')
+    .trim()
+    .slice(0, 160);
+
+  return sanitizedMessage || fallback;
+}
+
 async function rollbackTarget(targetRepository: VaultStorageRepository, issues: string[]): Promise<void> {
   try {
     await targetRepository.resetAll();
   } catch (error) {
-    issues.push(error instanceof Error ? error.message : 'vault-storage-migration-target-rollback-failed');
+    issues.push(migrationIssueFromError(error, 'vault-storage-migration-target-rollback-failed'));
   }
 }
