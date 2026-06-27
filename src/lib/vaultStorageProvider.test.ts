@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { sqliteOPFSInstance } from './sqlite_opfs';
 import { createVaultStorageMigrationWriteTargetRepository, getActiveVaultStorageBackendSelection, getVaultStorageMigrationTargetRepository, getVaultStorageRepository, setVaultStorageRepositoryForTesting } from './vaultStorageProvider';
 import type { VaultStorageRepository } from './vaultStorageRepository';
+import { createWaSqlitePersistenceProfile, WA_SQLITE_PERSISTENT_VFS_UNAVAILABLE } from './waSqlitePersistence';
 
 function createRepositoryStub(): VaultStorageRepository {
   return {
@@ -70,7 +71,9 @@ describe('vault storage provider', () => {
   });
 
   it('creates an explicit wa-sqlite write target for controlled migrations', () => {
-    const targetRepository = createVaultStorageMigrationWriteTargetRepository('wa-sqlite');
+    const targetRepository = createVaultStorageMigrationWriteTargetRepository('wa-sqlite', {
+      persistenceProfile: createWaSqlitePersistenceProfile('desktop-app-data', true),
+    });
 
     expect(targetRepository).toMatchObject({
       hydrate: expect.any(Function),
@@ -82,6 +85,12 @@ describe('vault storage provider', () => {
     expect(() => createVaultStorageMigrationWriteTargetRepository(null)).toThrow(
       'vault-storage-migration-target-unsupported',
     );
+  });
+
+  it('blocks wa-sqlite migration write targets when persistent storage is unavailable', () => {
+    expect(() => createVaultStorageMigrationWriteTargetRepository('wa-sqlite', {
+      persistenceProfile: createWaSqlitePersistenceProfile('desktop-app-data', false),
+    })).toThrow(WA_SQLITE_PERSISTENT_VFS_UNAVAILABLE);
   });
 
   it('can temporarily swap the active repository for migration tests', () => {

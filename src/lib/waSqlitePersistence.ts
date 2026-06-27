@@ -70,3 +70,11 @@ export function assertWaSqlitePersistenceReadyForActiveBackend(
     throw new Error(profile.blocker);
   }
 }
+
+export function assertWaSqlitePersistenceReadyForMigrationTarget(
+  profile: WaSqlitePersistenceProfile = createWaSqlitePersistenceProfile(),
+): void {
+  if (!profile.persistentVfsReady) {
+    throw new Error(profile.blocker || WA_SQLITE_PERSISTENT_VFS_UNAVAILABLE);
+  }
+}

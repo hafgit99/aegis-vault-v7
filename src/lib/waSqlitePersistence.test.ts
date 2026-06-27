@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   assertWaSqlitePersistenceReadyForActiveBackend,
+  assertWaSqlitePersistenceReadyForMigrationTarget,
   createWaSqlitePersistenceProfile,
   WA_SQLITE_ACTIVE_BACKEND_BLOCKER,
   WA_SQLITE_PERSISTENT_VFS_UNAVAILABLE,
@@ -52,5 +53,14 @@ describe('wa-sqlite persistence profile', () => {
     expect(() => assertWaSqlitePersistenceReadyForActiveBackend(
       createWaSqlitePersistenceProfile('desktop-app-data', true),
     )).toThrow(WA_SQLITE_ACTIVE_BACKEND_BLOCKER);
+  });
+
+  it('allows migration write targets only when the persistent VFS is available', () => {
+    expect(() => assertWaSqlitePersistenceReadyForMigrationTarget(
+      createWaSqlitePersistenceProfile('desktop-app-data', true),
+    )).not.toThrow();
+    expect(() => assertWaSqlitePersistenceReadyForMigrationTarget(
+      createWaSqlitePersistenceProfile('desktop-app-data', false),
+    )).toThrow(WA_SQLITE_PERSISTENT_VFS_UNAVAILABLE);
   });
 });
