@@ -43,18 +43,65 @@ export function evaluateWaSqlitePromotionReadiness(
 
   if (!dryRunResult) {
     issues.push('wa-sqlite-promotion-dry-run-not-run');
-  } else if (dryRunResult.status !== 'ready') {
-    issues.push('wa-sqlite-promotion-dry-run-not-ready', ...dryRunResult.issues);
+  } else {
+    if (dryRunResult.status !== 'ready') {
+      issues.push('wa-sqlite-promotion-dry-run-not-ready', ...dryRunResult.issues);
+    }
+    validateDryRunResult(dryRunResult, issues);
   }
 
   if (!migrationResult) {
     issues.push('wa-sqlite-promotion-migration-not-run');
-  } else if (migrationResult.status !== 'migrated') {
-    issues.push('wa-sqlite-promotion-migration-not-migrated', ...migrationResult.issues);
+  } else {
+    if (migrationResult.status !== 'migrated') {
+      issues.push('wa-sqlite-promotion-migration-not-migrated', ...migrationResult.issues);
+    }
+    validateMigrationResult(migrationResult, issues);
+  }
+
+  if (dryRunResult && migrationResult) {
+    validateReadinessResultParity(dryRunResult, migrationResult, issues);
   }
 
   return {
     status: issues.length === 0 ? 'ready' : 'blocked',
     issues: Array.from(new Set(issues)),
   };
+}
+
+function validateDryRunResult(result: VaultStorageMigrationDryRunResult, issues: string[]): void {
+  if (result.sourceBackend !== 'opfs') {
+    issues.push('wa-sqlite-promotion-dry-run-source-backend-mismatch');
+  }
+  if (result.targetBackend !== 'wa-sqlite') {
+    issues.push('wa-sqlite-promotion-dry-run-target-backend-mismatch');
+  }
+  if (result.itemCount !== result.targetItemCount) {
+    issues.push('wa-sqlite-promotion-dry-run-count-mismatch');
+  }
+}
+
+function validateMigrationResult(result: VaultStorageMigrationResult, issues: string[]): void {
+  if (result.sourceBackend !== 'opfs') {
+    issues.push('wa-sqlite-promotion-migration-source-backend-mismatch');
+  }
+  if (result.targetBackend !== 'wa-sqlite') {
+    issues.push('wa-sqlite-promotion-migration-target-backend-mismatch');
+  }
+  if (result.itemCount !== result.targetItemCount) {
+    issues.push('wa-sqlite-promotion-migration-count-mismatch');
+  }
+}
+
+function validateReadinessResultParity(
+  dryRunResult: VaultStorageMigrationDryRunResult,
+  migrationResult: VaultStorageMigrationResult,
+  issues: string[],
+): void {
+  if (dryRunResult.itemCount !== migrationResult.itemCount) {
+    issues.push('wa-sqlite-promotion-source-count-changed-after-dry-run');
+  }
+  if (dryRunResult.targetItemCount !== migrationResult.targetItemCount) {
+    issues.push('wa-sqlite-promotion-target-count-changed-after-dry-run');
+  }
 }

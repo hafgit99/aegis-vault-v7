@@ -104,4 +104,50 @@ describe('wa-sqlite promotion readiness', () => {
       ],
     });
   });
+  it('blocks promotion when dry-run or migration results point at the wrong backend', () => {
+    expect(evaluateWaSqlitePromotionReadiness({
+      persistenceProfile: createWaSqlitePersistenceProfile('desktop-app-data', true),
+      smokeResult: passedSmoke,
+      dryRunResult: {
+        ...readyDryRun,
+        targetBackend: null,
+      },
+      migrationResult: {
+        ...migrated,
+        sourceBackend: 'wa-sqlite',
+        targetBackend: 'opfs',
+      },
+    })).toEqual({
+      status: 'blocked',
+      issues: [
+        'wa-sqlite-promotion-dry-run-target-backend-mismatch',
+        'wa-sqlite-promotion-migration-source-backend-mismatch',
+        'wa-sqlite-promotion-migration-target-backend-mismatch',
+      ],
+    });
+  });
+
+  it('blocks promotion when dry-run and migration item counts diverge', () => {
+    expect(evaluateWaSqlitePromotionReadiness({
+      persistenceProfile: createWaSqlitePersistenceProfile('desktop-app-data', true),
+      smokeResult: passedSmoke,
+      dryRunResult: {
+        ...readyDryRun,
+        itemCount: 3,
+        targetItemCount: 3,
+      },
+      migrationResult: {
+        ...migrated,
+        itemCount: 2,
+        targetItemCount: 1,
+      },
+    })).toEqual({
+      status: 'blocked',
+      issues: [
+        'wa-sqlite-promotion-migration-count-mismatch',
+        'wa-sqlite-promotion-source-count-changed-after-dry-run',
+        'wa-sqlite-promotion-target-count-changed-after-dry-run',
+      ],
+    });
+  });
 });
