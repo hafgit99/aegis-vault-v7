@@ -7,31 +7,50 @@ import { describe, expect, it } from 'vitest';
 import {
   assertWaSqlitePersistenceReadyForActiveBackend,
   createWaSqlitePersistenceProfile,
-  WA_SQLITE_PERSISTENT_VFS_BLOCKER,
+  WA_SQLITE_ACTIVE_BACKEND_BLOCKER,
+  WA_SQLITE_PERSISTENT_VFS_UNAVAILABLE,
 } from './waSqlitePersistence';
 
 describe('wa-sqlite persistence profile', () => {
-  it('uses separate database names for desktop, Android, and browser scopes', () => {
-    expect(createWaSqlitePersistenceProfile('desktop-app-data')).toEqual({
-      databaseName: 'aegis-wa-sqlite.desktop.db',
+  it('uses separate persistent IndexedDB VFS database names for desktop, Android, and browser scopes', () => {
+    expect(createWaSqlitePersistenceProfile('desktop-app-data', true)).toEqual({
+      databaseName: '/aegis-wa-sqlite.desktop.db',
       storageScope: 'desktop-app-data',
-      persistenceKind: 'volatile-wasm',
+      persistenceKind: 'indexeddb-batch-atomic-vfs',
+      vfsName: 'aegis-wa-sqlite-desktop-idb',
+      persistentVfsReady: true,
       activeBackendReady: false,
-      blocker: WA_SQLITE_PERSISTENT_VFS_BLOCKER,
+      blocker: WA_SQLITE_ACTIVE_BACKEND_BLOCKER,
     });
-    expect(createWaSqlitePersistenceProfile('android-app-private')).toMatchObject({
-      databaseName: 'aegis-wa-sqlite.android.db',
+    expect(createWaSqlitePersistenceProfile('android-app-private', true)).toMatchObject({
+      databaseName: '/aegis-wa-sqlite.android.db',
       storageScope: 'android-app-private',
+      vfsName: 'aegis-wa-sqlite-android-idb',
+      persistentVfsReady: true,
     });
-    expect(createWaSqlitePersistenceProfile('browser-fallback')).toMatchObject({
-      databaseName: 'aegis-wa-sqlite.browser.db',
+    expect(createWaSqlitePersistenceProfile('browser-fallback', true)).toMatchObject({
+      databaseName: '/aegis-wa-sqlite.browser.db',
       storageScope: 'browser-fallback',
+      vfsName: 'aegis-wa-sqlite-browser-idb',
+      persistentVfsReady: true,
     });
   });
 
-  it('blocks active backend promotion until a persistent VFS is configured', () => {
+  it('falls back to volatile wasm storage when IndexedDB persistence is unavailable', () => {
+    expect(createWaSqlitePersistenceProfile('desktop-app-data', false)).toEqual({
+      databaseName: '/aegis-wa-sqlite.desktop.db',
+      storageScope: 'desktop-app-data',
+      persistenceKind: 'volatile-wasm',
+      vfsName: null,
+      persistentVfsReady: false,
+      activeBackendReady: false,
+      blocker: WA_SQLITE_PERSISTENT_VFS_UNAVAILABLE,
+    });
+  });
+
+  it('blocks active backend promotion until the migration switch is enabled', () => {
     expect(() => assertWaSqlitePersistenceReadyForActiveBackend(
-      createWaSqlitePersistenceProfile('desktop-app-data'),
-    )).toThrow(WA_SQLITE_PERSISTENT_VFS_BLOCKER);
+      createWaSqlitePersistenceProfile('desktop-app-data', true),
+    )).toThrow(WA_SQLITE_ACTIVE_BACKEND_BLOCKER);
   });
 });

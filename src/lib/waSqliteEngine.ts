@@ -4,24 +4,39 @@
  */
 
 import type { VaultStorageQueryResult } from './vaultStorageRepository';
-import { createWaSqlitePersistenceProfile, type WaSqlitePersistenceProfile } from './waSqlitePersistence';
+import {
+  createWaSqlitePersistenceProfile,
+  type WaSqlitePersistenceProfile,
+} from './waSqlitePersistence';
 import waSqliteWasmUrl from 'wa-sqlite/dist/wa-sqlite.wasm?url';
+import waSqliteAsyncWasmUrl from 'wa-sqlite/dist/wa-sqlite-async.wasm?url';
 
 type WaSqliteCompatibleValue = number | string | Uint8Array | Array<number> | bigint | null;
 
+interface WaSqliteVfs {
+  name: string;
+  close?: () => Promise<void> | void;
+}
+
 interface WaSqliteApi {
-  open_v2(databaseName: string): Promise<number>;
+  open_v2(databaseName: string, flags?: number, vfsName?: string): Promise<number>;
   exec(
     db: number,
     sql: string,
     callback?: (row: Array<WaSqliteCompatibleValue>, columns: string[]) => void,
   ): Promise<number>;
   close(db: number): Promise<number>;
+  vfs_register?: (vfs: unknown, makeDefault?: boolean) => number;
 }
 
 export interface WaSqliteRuntime {
   sqlite3: WaSqliteApi;
   module: unknown;
+}
+
+export interface WaSqliteRegisteredVfs {
+  name: string;
+  close?: () => Promise<void> | void;
 }
 
 export interface WaSqliteEngineOptions {
@@ -30,6 +45,10 @@ export interface WaSqliteEngineOptions {
   locateFile?: (path: string, prefix?: string) => string;
   wasmBinary?: unknown;
   persistenceProfile?: WaSqlitePersistenceProfile;
+  registerPersistentVfs?: (
+    runtime: WaSqliteRuntime,
+    profile: WaSqlitePersistenceProfile,
+  ) => Promise<WaSqliteRegisteredVfs | null>;
 }
 
 export interface WaSqliteEngineHealth {
@@ -46,7 +65,6 @@ export interface WaSqliteEngine {
   selectObjects(sql: string): Promise<Array<Record<string, unknown>>>;
   close(): Promise<void>;
 }
-
 
 export const WA_SQLITE_BOOTSTRAP_SCHEMA = `
 PRAGMA foreign_keys = ON;
@@ -83,25 +101,51 @@ VALUES ('schema_version', '1');
 `;
 
 export function createWaSqliteModuleConfig(
-  options: Pick<WaSqliteEngineOptions, 'locateFile' | 'wasmBinary'> = {},
+  options: Pick<WaSqliteEngineOptions, 'locateFile' | 'wasmBinary'> & { asyncRuntime?: boolean } = {},
 ): object {
   return {
-    locateFile: options.locateFile ?? ((path: string) => (path.endsWith('.wasm') ? waSqliteWasmUrl : path)),
+    locateFile: options.locateFile ?? ((path: string) => {
+      if (!path.endsWith('.wasm')) return path;
+      return options.asyncRuntime ? waSqliteAsyncWasmUrl : waSqliteWasmUrl;
+    }),
     ...(options.wasmBinary ? { wasmBinary: options.wasmBinary } : {}),
   };
 }
 
 async function loadDefaultWaSqliteRuntime(
-  options: Pick<WaSqliteEngineOptions, 'locateFile' | 'wasmBinary'> = {},
+  options: Pick<WaSqliteEngineOptions, 'locateFile' | 'wasmBinary'> & { asyncRuntime?: boolean } = {},
 ): Promise<WaSqliteRuntime> {
   const [{ default: SQLiteESMFactory }, SQLite] = await Promise.all([
-    import('wa-sqlite/dist/wa-sqlite.mjs'),
+    options.asyncRuntime
+      ? import('wa-sqlite/dist/wa-sqlite-async.mjs')
+      : import('wa-sqlite/dist/wa-sqlite.mjs'),
     import('wa-sqlite'),
   ]);
   const module = await SQLiteESMFactory(createWaSqliteModuleConfig(options));
   return {
     sqlite3: SQLite.Factory(module),
     module,
+  };
+}
+
+async function registerIndexedDbBatchAtomicVfs(
+  runtime: WaSqliteRuntime,
+  profile: WaSqlitePersistenceProfile,
+): Promise<WaSqliteRegisteredVfs | null> {
+  if (!profile.vfsName || profile.persistenceKind !== 'indexeddb-batch-atomic-vfs') {
+    return null;
+  }
+
+  if (!runtime.sqlite3.vfs_register) {
+    return null;
+  }
+
+  const { IDBBatchAtomicVFS } = await import('wa-sqlite/src/examples/IDBBatchAtomicVFS.js');
+  const vfs = new IDBBatchAtomicVFS(profile.vfsName, { durability: 'strict', purge: 'deferred' });
+  runtime.sqlite3.vfs_register(vfs, false);
+  return {
+    name: vfs.name,
+    close: () => vfs.close(),
   };
 }
 
@@ -127,20 +171,32 @@ function rowsToObjects(result: VaultStorageQueryResult): Array<Record<string, un
     result.columns.map((column, index) => [column, row[index]]),
   ));
 }
+
 export function createWaSqliteEngine(options: WaSqliteEngineOptions = {}): WaSqliteEngine {
   const persistenceProfile = options.persistenceProfile ?? createWaSqlitePersistenceProfile();
   const databaseName = options.databaseName ?? persistenceProfile.databaseName;
-  const loadRuntime = options.loadRuntime ?? (() => loadDefaultWaSqliteRuntime(options));
+  const registerPersistentVfs = options.registerPersistentVfs ?? registerIndexedDbBatchAtomicVfs;
+  const loadRuntime = options.loadRuntime ?? (() => loadDefaultWaSqliteRuntime({
+    ...options,
+    asyncRuntime: persistenceProfile.persistentVfsReady,
+  }));
   let runtime: WaSqliteRuntime | null = null;
   let db: number | null = null;
+  let registeredVfs: WaSqliteRegisteredVfs | null = null;
 
   async function ensureOpen(): Promise<{ sqlite3: WaSqliteApi; db: number }> {
     if (!runtime) {
       runtime = await loadRuntime();
     }
 
+    if (persistenceProfile.persistentVfsReady && !registeredVfs) {
+      registeredVfs = await registerPersistentVfs(runtime, persistenceProfile);
+    }
+
     if (db === null) {
-      db = await runtime.sqlite3.open_v2(databaseName);
+      db = registeredVfs?.name
+        ? await runtime.sqlite3.open_v2(databaseName, undefined, registeredVfs.name)
+        : await runtime.sqlite3.open_v2(databaseName);
     }
 
     return {
@@ -216,6 +272,12 @@ export function createWaSqliteEngine(options: WaSqliteEngineOptions = {}): WaSql
         const closingDb = db;
         db = null;
         await runtime.sqlite3.close(closingDb);
+      }
+
+      if (registeredVfs) {
+        const closingVfs = registeredVfs;
+        registeredVfs = null;
+        await closingVfs.close?.();
       }
     },
   };

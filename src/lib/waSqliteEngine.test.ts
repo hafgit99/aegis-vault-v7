@@ -87,7 +87,7 @@ describe('wa-sqlite engine', () => {
       initialized: true,
       databaseName: 'aegis-test.db',
       tableCount: 3,
-      persistenceProfile: createWaSqlitePersistenceProfile(),
+      persistenceProfile: createWaSqlitePersistenceProfile('browser-fallback', false),
     });
 
     expect(runtime.open_v2).toHaveBeenCalledWith('aegis-test.db');
@@ -96,17 +96,46 @@ describe('wa-sqlite engine', () => {
 
   it('uses the scoped wa-sqlite persistence profile database name by default', async () => {
     const runtime = createRuntimeStub();
-    const persistenceProfile = createWaSqlitePersistenceProfile('desktop-app-data');
+    const persistenceProfile = createWaSqlitePersistenceProfile('desktop-app-data', false);
     const engine = createWaSqliteEngine({
       persistenceProfile,
       loadRuntime: vi.fn(async () => runtime),
     });
 
     await expect(engine.initialize()).resolves.toMatchObject({
-      databaseName: 'aegis-wa-sqlite.desktop.db',
+      databaseName: '/aegis-wa-sqlite.desktop.db',
       persistenceProfile,
     });
-    expect(runtime.open_v2).toHaveBeenCalledWith('aegis-wa-sqlite.desktop.db');
+    expect(runtime.open_v2).toHaveBeenCalledWith('/aegis-wa-sqlite.desktop.db');
+  });
+
+  it('registers and opens the persistent IndexedDB VFS when the profile is ready', async () => {
+    const runtime = createRuntimeStub();
+    const closeVfs = vi.fn(async () => undefined);
+    const persistenceProfile = createWaSqlitePersistenceProfile('android-app-private', true);
+    const engine = createWaSqliteEngine({
+      persistenceProfile,
+      loadRuntime: vi.fn(async () => runtime),
+      registerPersistentVfs: vi.fn(async () => ({
+        name: 'aegis-wa-sqlite-android-idb',
+        close: closeVfs,
+      })),
+    });
+
+    await expect(engine.initialize()).resolves.toMatchObject({
+      databaseName: '/aegis-wa-sqlite.android.db',
+      persistenceProfile,
+    });
+    expect(runtime.open_v2).toHaveBeenCalledWith(
+      '/aegis-wa-sqlite.android.db',
+      undefined,
+      'aegis-wa-sqlite-android-idb',
+    );
+
+    await engine.close();
+
+    expect(runtime.close).toHaveBeenCalledWith(42);
+    expect(closeVfs).toHaveBeenCalledOnce();
   });
 
   it('normalizes BigInt and blob query values into repository-safe rows', async () => {
