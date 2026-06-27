@@ -16,7 +16,7 @@ describe('wa-sqlite persistence profile', () => {
     expect(createWaSqlitePersistenceProfile('desktop-app-data', true)).toEqual({
       databaseName: '/aegis-wa-sqlite.desktop.db',
       storageScope: 'desktop-app-data',
-      persistenceKind: 'indexeddb-batch-atomic-vfs',
+      persistenceKind: 'indexeddb-minimal-vfs',
       vfsName: 'aegis-wa-sqlite-desktop-idb',
       persistentVfsReady: true,
       activeBackendReady: false,

@@ -128,11 +128,11 @@ async function loadDefaultWaSqliteRuntime(
   };
 }
 
-async function registerIndexedDbBatchAtomicVfs(
+async function registerIndexedDbMinimalVfs(
   runtime: WaSqliteRuntime,
   profile: WaSqlitePersistenceProfile,
 ): Promise<WaSqliteRegisteredVfs | null> {
-  if (!profile.vfsName || profile.persistenceKind !== 'indexeddb-batch-atomic-vfs') {
+  if (!profile.vfsName || profile.persistenceKind !== 'indexeddb-minimal-vfs') {
     return null;
   }
 
@@ -140,8 +140,8 @@ async function registerIndexedDbBatchAtomicVfs(
     return null;
   }
 
-  const { IDBBatchAtomicVFS } = await import('wa-sqlite/src/examples/IDBBatchAtomicVFS.js');
-  const vfs = new IDBBatchAtomicVFS(profile.vfsName, { durability: 'strict', purge: 'deferred' });
+  const { IDBMinimalVFS } = await import('wa-sqlite/src/examples/IDBMinimalVFS.js');
+  const vfs = new IDBMinimalVFS(profile.vfsName, { durability: 'strict' });
   runtime.sqlite3.vfs_register(vfs, false);
   return {
     name: vfs.name,
@@ -175,7 +175,7 @@ function rowsToObjects(result: VaultStorageQueryResult): Array<Record<string, un
 export function createWaSqliteEngine(options: WaSqliteEngineOptions = {}): WaSqliteEngine {
   const persistenceProfile = options.persistenceProfile ?? createWaSqlitePersistenceProfile();
   const databaseName = options.databaseName ?? persistenceProfile.databaseName;
-  const registerPersistentVfs = options.registerPersistentVfs ?? registerIndexedDbBatchAtomicVfs;
+  const registerPersistentVfs = options.registerPersistentVfs ?? registerIndexedDbMinimalVfs;
   const loadRuntime = options.loadRuntime ?? (() => loadDefaultWaSqliteRuntime({
     ...options,
     asyncRuntime: persistenceProfile.persistentVfsReady,

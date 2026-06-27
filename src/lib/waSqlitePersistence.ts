@@ -5,7 +5,7 @@
 
 import { getNativeVaultStorageScope, type NativeVaultStorageScope } from './desktopStorage';
 
-export type WaSqlitePersistenceKind = 'indexeddb-batch-atomic-vfs' | 'volatile-wasm';
+export type WaSqlitePersistenceKind = 'indexeddb-minimal-vfs' | 'volatile-wasm';
 
 export interface WaSqlitePersistenceProfile {
   databaseName: string;
@@ -55,7 +55,7 @@ export function createWaSqlitePersistenceProfile(
   return {
     databaseName: DATABASE_NAMES[storageScope],
     storageScope,
-    persistenceKind: 'indexeddb-batch-atomic-vfs',
+    persistenceKind: 'indexeddb-minimal-vfs',
     vfsName: VFS_NAMES[storageScope],
     persistentVfsReady: true,
     activeBackendReady: false,
