@@ -123,6 +123,12 @@ export default function App() {
     selectedCategory,
     setSelectedCategory,
   } = useVaultFilters();
+  const {
+    confirmConfig,
+    openConfirm,
+    showNotification,
+    closeConfirm: handleCloseConfirm,
+  } = useConfirmModal();
 
   const {
     unlocked,
@@ -205,12 +211,6 @@ export default function App() {
     };
   }, [handleTriggerNew]);
 
-  const {
-    confirmConfig,
-    openConfirm,
-    showNotification,
-    closeConfirm: handleCloseConfirm,
-  } = useConfirmModal();
 
   const rejectStaleAutofillRequest = useCallback((request: AndroidAutofillRequest): boolean => {
     if (isAndroidAutofillRequestFresh(request)) return false;

@@ -14,6 +14,11 @@ import {
   WA_SQLITE_WRITE_NOT_READY_ERROR,
 } from './waSqliteVaultStorageRepository';
 
+const mockState = vi.hoisted(() => ({
+  randomByteFill: 17,
+  encryptionCounter: 0,
+}));
+
 vi.mock('./argon2id', () => ({
   createArgon2idHash: vi.fn(async (password: string, salt: string) => `$argon2id$${salt}$${password}`),
   verifyArgon2idHash: vi.fn(async (password: string, encodedHash: string) => encodedHash.endsWith(`$${password}`)),
@@ -21,7 +26,7 @@ vi.mock('./argon2id', () => ({
 }));
 
 vi.mock('./random', () => ({
-  secureRandomBytes: vi.fn((length: number) => new Uint8Array(length).fill(17)),
+  secureRandomBytes: vi.fn((length: number) => new Uint8Array(length).fill(mockState.randomByteFill++)),
   secureRandomToken: vi.fn(() => 'fixedsalt'),
 }));
 
@@ -30,13 +35,13 @@ vi.mock('./webcrypto', () => ({
   webCryptoAesGcmEncrypt: vi.fn(async (plaintext: string) => ({
     iv: '010101010101010101010101',
     tag: '02020202020202020202020202020202',
-    ciphertext: `sealed:${Buffer.from(plaintext, 'utf8').toString('base64')}`,
+    ciphertext: `sealed:${++mockState.encryptionCounter}:${Buffer.from(plaintext, 'utf8').toString('base64')}`,
   })),
   webCryptoAesGcmDecrypt: vi.fn(async (payload: { ciphertext: string }) => {
     if (!payload.ciphertext.startsWith('sealed:')) {
       throw new Error('invalid-ciphertext');
     }
-    return Buffer.from(payload.ciphertext.slice('sealed:'.length), 'base64').toString('utf8');
+    return Buffer.from(payload.ciphertext.split(':').slice(2).join(':'), 'base64').toString('utf8');
   }),
 }));
 
@@ -202,7 +207,8 @@ function createEngineStub(): WaSqliteEngine & {
         return { columns: [], rows: [] };
       }
       if (normalizedSql.startsWith('INSERT INTO user_secrets')) {
-        state.userSecretHash = '$argon2id$fixedsalt$valid-master';
+        const values = splitSqlValues(normalizedSql.match(/VALUES \((.*)\);/s)?.[1] ?? '');
+        state.userSecretHash = String(values[1]);
         return { columns: [], rows: [] };
       }
       if (normalizedSql.startsWith('INSERT INTO storage_metadata')) {
@@ -251,6 +257,8 @@ function createVaultItem(overrides: Partial<VaultItem> = {}): VaultItem {
 
 describe('wa-sqlite vault storage repository', () => {
   beforeEach(() => {
+    mockState.randomByteFill = 17;
+    mockState.encryptionCounter = 0;
     vi.clearAllMocks();
   });
 
@@ -346,10 +354,63 @@ describe('wa-sqlite vault storage repository', () => {
     expect(engine.vaultRows).toHaveLength(1);
   });
 
-  it('keeps custom SQL and master rotation fail-closed while encrypted row writes are isolated', async () => {
+  it('rotates the master password and re-encrypts existing vault rows', async () => {
+    const engine = createEngineStub();
+    const repository = createWaSqliteVaultStorageRepository({ engine });
+    await repository.setupMaster('valid-master');
+    await repository.saveVaultItem(createVaultItem(), 'valid-master');
+    const oldCiphertext = String(engine.vaultRows[0].enc_metadata);
+    const oldSalt = engine.metadata.get('vault_encryption_salt');
+
+    await repository.changeMasterPassword('valid-master', 'new-master');
+
+    expect(engine.userSecretHash).toBe('$argon2id$fixedsalt$new-master');
+    expect(engine.metadata.get('vault_encryption_salt')).not.toBe(oldSalt);
+    expect(String(engine.vaultRows[0].enc_metadata)).not.toBe(oldCiphertext);
+    await expect(repository.verifyPassword('valid-master')).resolves.toBe(false);
+    await expect(repository.getVaultItems('new-master')).resolves.toEqual([
+      expect.objectContaining({
+        id: 'item-1',
+        username: 'alice',
+        password: 'Secret-123!',
+      }),
+    ]);
+  });
+
+  it('rejects master rotation when the current password is invalid', async () => {
+    const engine = createEngineStub();
+    const repository = createWaSqliteVaultStorageRepository({ engine });
+    await repository.setupMaster('valid-master');
+    await repository.saveVaultItem(createVaultItem(), 'valid-master');
+
+    await expect(repository.changeMasterPassword('wrong-master', 'new-master')).rejects.toThrow('current-master-password-invalid');
+
+    await expect(repository.getVaultItems('valid-master')).resolves.toHaveLength(1);
+    await expect(repository.verifyPassword('new-master')).resolves.toBe(false);
+  });
+
+  it('rolls back master rotation when re-encrypted row persistence fails', async () => {
+    const engine = createEngineStub();
+    const repository = createWaSqliteVaultStorageRepository({ engine });
+    await repository.setupMaster('valid-master');
+    await repository.saveVaultItem(createVaultItem(), 'valid-master');
+    const oldHash = engine.userSecretHash;
+    const oldSalt = engine.metadata.get('vault_encryption_salt');
+    const oldRows = engine.vaultRows.map((row) => ({ ...row }));
+
+    engine.failNextUpsert = true;
+    await expect(repository.changeMasterPassword('valid-master', 'new-master')).rejects.toThrow('injected-upsert-failure');
+
+    expect(engine.userSecretHash).toBe(oldHash);
+    expect(engine.metadata.get('vault_encryption_salt')).toBe(oldSalt);
+    expect(engine.vaultRows).toEqual(oldRows);
+    await expect(repository.getVaultItems('valid-master')).resolves.toHaveLength(1);
+    await expect(repository.verifyPassword('new-master')).resolves.toBe(false);
+  });
+
+  it('keeps custom SQL fail-closed while encrypted row writes are isolated', async () => {
     const repository = createWaSqliteVaultStorageRepository({ engine: createEngineStub() });
 
-    await expect(repository.changeMasterPassword('old', 'new')).rejects.toThrow('current-master-password-invalid');
     expect(repository.executeCustomSQL('SELECT * FROM vault_items;', 'valid-master')).toEqual({
       columns: [],
       rows: [],
