@@ -143,7 +143,7 @@ describe('attachment encryption', () => {
       type: 'text/plain',
       size: 12,
       ...encrypted,
-      tag: `00${encrypted.tag?.slice(2)}`,
+      tag: `${encrypted.tag?.startsWith('00') ? 'ff' : '00'}${encrypted.tag?.slice(2)}`,
     };
 
     await expect(decryptAttachmentData(record)).rejects.toThrow();

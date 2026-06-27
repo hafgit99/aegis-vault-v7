@@ -25,6 +25,23 @@ function item(overrides: Partial<VaultItem> = {}): VaultItem {
   };
 }
 
+function passingSmoke() {
+  return vi.fn(async () => ({
+    status: 'passed' as const,
+    databaseName: '/aegis-wa-sqlite.test.db',
+    vfsName: 'aegis-wa-sqlite-test-idb',
+  }));
+}
+
+function failingSmoke(issue = 'wa-sqlite-persistent-vfs-not-ready') {
+  return vi.fn(async () => ({
+    status: 'failed' as const,
+    databaseName: '/aegis-wa-sqlite.test.db',
+    vfsName: null,
+    issue,
+  }));
+}
+
 function repositoryStub(items: VaultItem[], isPasswordValid = true): VaultStorageRepository {
   let storedItems = items.map((candidate) => ({ ...candidate }));
 
@@ -62,7 +79,9 @@ describe('vault storage migration', () => {
     const sourceRepository = repositoryStub([item(), item({ id: 'item-2', title: 'Second' })]);
     const targetRepository = repositoryStub([]);
 
-    await expect(runVaultStorageMigration(sourceRepository, targetRepository, 'master-pass')).resolves.toEqual({
+    await expect(runVaultStorageMigration(sourceRepository, targetRepository, 'master-pass', 'opfs', 'wa-sqlite', {
+      verifyPersistentTarget: passingSmoke(),
+    })).resolves.toEqual({
       status: 'migrated',
       sourceBackend: 'opfs',
       targetBackend: 'wa-sqlite',
@@ -125,12 +144,44 @@ describe('vault storage migration', () => {
     expect(targetRepository.saveVaultItems).not.toHaveBeenCalled();
   });
 
+  it('blocks migration before target writes when persistent wa-sqlite smoke fails', async () => {
+    const sourceRepository = repositoryStub([item()]);
+    const targetRepository = repositoryStub([]);
+    const verifyPersistentTarget = failingSmoke('wa-sqlite-persistence-smoke-mismatch');
+
+    await expect(runVaultStorageMigration(
+      sourceRepository,
+      targetRepository,
+      'master-pass',
+      'opfs',
+      'wa-sqlite',
+      { verifyPersistentTarget },
+    )).resolves.toEqual({
+      status: 'blocked',
+      sourceBackend: 'opfs',
+      targetBackend: 'wa-sqlite',
+      itemCount: 1,
+      targetItemCount: 0,
+      issues: [
+        'vault-storage-migration-persistent-target-smoke-failed',
+        'wa-sqlite-persistence-smoke-mismatch',
+      ],
+    });
+
+    expect(verifyPersistentTarget).toHaveBeenCalledOnce();
+    expect(targetRepository.hydrate).not.toHaveBeenCalled();
+    expect(targetRepository.resetAll).not.toHaveBeenCalled();
+    expect(targetRepository.saveVaultItems).not.toHaveBeenCalled();
+  });
+
   it('rolls back the target when wa-sqlite writes fail', async () => {
     const sourceRepository = repositoryStub([item()]);
     const targetRepository = repositoryStub([]);
     vi.mocked(targetRepository.saveVaultItems).mockRejectedValueOnce(new Error('target write failed'));
 
-    await expect(runVaultStorageMigration(sourceRepository, targetRepository, 'master-pass')).resolves.toEqual({
+    await expect(runVaultStorageMigration(sourceRepository, targetRepository, 'master-pass', 'opfs', 'wa-sqlite', {
+      verifyPersistentTarget: passingSmoke(),
+    })).resolves.toEqual({
       status: 'rolled-back',
       sourceBackend: 'opfs',
       targetBackend: 'wa-sqlite',
@@ -149,7 +200,9 @@ describe('vault storage migration', () => {
       item({ password: 'tampered' }),
     ]);
 
-    await expect(runVaultStorageMigration(sourceRepository, targetRepository, 'master-pass')).resolves.toEqual({
+    await expect(runVaultStorageMigration(sourceRepository, targetRepository, 'master-pass', 'opfs', 'wa-sqlite', {
+      verifyPersistentTarget: passingSmoke(),
+    })).resolves.toEqual({
       status: 'rolled-back',
       sourceBackend: 'opfs',
       targetBackend: 'wa-sqlite',
@@ -167,7 +220,9 @@ describe('vault storage migration', () => {
     vi.mocked(targetRepository.saveVaultItems).mockRejectedValueOnce(new Error('target write failed'));
     vi.mocked(targetRepository.resetAll).mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('target rollback failed'));
 
-    await expect(runVaultStorageMigration(sourceRepository, targetRepository, 'master-pass')).resolves.toEqual({
+    await expect(runVaultStorageMigration(sourceRepository, targetRepository, 'master-pass', 'opfs', 'wa-sqlite', {
+      verifyPersistentTarget: passingSmoke(),
+    })).resolves.toEqual({
       status: 'rolled-back',
       sourceBackend: 'opfs',
       targetBackend: 'wa-sqlite',

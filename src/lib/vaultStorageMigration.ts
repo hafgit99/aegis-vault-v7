@@ -6,6 +6,10 @@
 import type { VaultItem } from '../types';
 import type { VaultStorageBackendKind } from './vaultStorageBackend';
 import type { VaultStorageRepository } from './vaultStorageRepository';
+import {
+  verifyWaSqlitePersistentVfsSmoke,
+  type WaSqlitePersistenceSmokeResult,
+} from './waSqlitePersistenceSmoke';
 
 export type VaultStorageMigrationStatus = 'migrated' | 'blocked' | 'rolled-back';
 
@@ -18,12 +22,17 @@ export interface VaultStorageMigrationResult {
   issues: string[];
 }
 
+interface VaultStorageMigrationOptions {
+  verifyPersistentTarget?: () => Promise<WaSqlitePersistenceSmokeResult>;
+}
+
 export async function runVaultStorageMigration(
   sourceRepository: VaultStorageRepository,
   targetRepository: VaultStorageRepository,
   masterPasswordPlain: string,
   sourceBackend: VaultStorageBackendKind = 'opfs',
   targetBackend: VaultStorageBackendKind = 'wa-sqlite',
+  options: VaultStorageMigrationOptions = {},
 ): Promise<VaultStorageMigrationResult> {
   const issues: string[] = [];
 
@@ -44,6 +53,23 @@ export async function runVaultStorageMigration(
       targetItemCount: 0,
       issues,
     };
+  }
+
+  if (targetBackend === 'wa-sqlite') {
+    const smokeResult = await (options.verifyPersistentTarget ?? verifyWaSqlitePersistentVfsSmoke)();
+    if (smokeResult.status !== 'passed') {
+      return {
+        status: 'blocked',
+        sourceBackend,
+        targetBackend,
+        itemCount: sourceItems.length,
+        targetItemCount: 0,
+        issues: [
+          'vault-storage-migration-persistent-target-smoke-failed',
+          smokeResult.issue ?? 'wa-sqlite-persistence-smoke-failed',
+        ],
+      };
+    }
   }
 
   try {
