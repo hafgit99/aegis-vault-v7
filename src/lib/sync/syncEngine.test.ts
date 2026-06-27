@@ -127,6 +127,12 @@ describe('buildSyncEnvelope / parseSyncEnvelope', () => {
     expect(recovered.find(i => i.id === 'x1')?.password).toBe('s3cr3t!');
   });
 
+  it('uses the newest item timestamp as remote metadata freshness', async () => {
+    const { metadata } = await buildSyncEnvelope(items, MASTER_PW);
+
+    expect(metadata.updatedAt).toBe('2024-01-02T00:00:00.000Z');
+  });
+
   it('rejects wrong password', async () => {
     const { encryptedBlob } = await buildSyncEnvelope(items, MASTER_PW);
     await expect(parseSyncEnvelope(encryptedBlob, 'WrongPassword999!')).rejects.toThrow();

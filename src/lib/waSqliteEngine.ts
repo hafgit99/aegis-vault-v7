@@ -4,6 +4,7 @@
  */
 
 import type { VaultStorageQueryResult } from './vaultStorageRepository';
+import { createWaSqlitePersistenceProfile, type WaSqlitePersistenceProfile } from './waSqlitePersistence';
 import waSqliteWasmUrl from 'wa-sqlite/dist/wa-sqlite.wasm?url';
 
 type WaSqliteCompatibleValue = number | string | Uint8Array | Array<number> | bigint | null;
@@ -28,12 +29,14 @@ export interface WaSqliteEngineOptions {
   loadRuntime?: () => Promise<WaSqliteRuntime>;
   locateFile?: (path: string, prefix?: string) => string;
   wasmBinary?: unknown;
+  persistenceProfile?: WaSqlitePersistenceProfile;
 }
 
 export interface WaSqliteEngineHealth {
   initialized: boolean;
   databaseName: string;
   tableCount: number;
+  persistenceProfile: WaSqlitePersistenceProfile;
 }
 
 export interface WaSqliteEngine {
@@ -44,7 +47,6 @@ export interface WaSqliteEngine {
   close(): Promise<void>;
 }
 
-const DEFAULT_DATABASE_NAME = 'aegis-wa-sqlite.db';
 
 export const WA_SQLITE_BOOTSTRAP_SCHEMA = `
 PRAGMA foreign_keys = ON;
@@ -126,7 +128,8 @@ function rowsToObjects(result: VaultStorageQueryResult): Array<Record<string, un
   ));
 }
 export function createWaSqliteEngine(options: WaSqliteEngineOptions = {}): WaSqliteEngine {
-  const databaseName = options.databaseName ?? DEFAULT_DATABASE_NAME;
+  const persistenceProfile = options.persistenceProfile ?? createWaSqlitePersistenceProfile();
+  const databaseName = options.databaseName ?? persistenceProfile.databaseName;
   const loadRuntime = options.loadRuntime ?? (() => loadDefaultWaSqliteRuntime(options));
   let runtime: WaSqliteRuntime | null = null;
   let db: number | null = null;
@@ -159,6 +162,7 @@ export function createWaSqliteEngine(options: WaSqliteEngineOptions = {}): WaSql
         initialized: true,
         databaseName,
         tableCount,
+        persistenceProfile,
       };
     },
 

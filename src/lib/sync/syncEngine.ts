@@ -46,8 +46,13 @@ export async function buildSyncEnvelope(
   const encryptedBlob = await encryptDataWithPasswordSecure(payload, masterPassword);
   const checksum = await sha256Hex(encryptedBlob);
 
+  const latestItemUpdatedAt = items.reduce((latest, item) => {
+    const candidate = new Date(item.updatedAt ?? item.createdAt).getTime();
+    return Number.isFinite(candidate) && candidate > latest ? candidate : latest;
+  }, 0);
+
   const metadata: SyncMetadata = {
-    updatedAt: new Date().toISOString(),
+    updatedAt: new Date(latestItemUpdatedAt || Date.now()).toISOString(),
     deviceId: getOrCreateDeviceId(),
     vaultVersion: VAULT_VERSION,
     checksum,

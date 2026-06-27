@@ -4,6 +4,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
+import { createWaSqlitePersistenceProfile } from './waSqlitePersistence';
 import { createWaSqliteEngine, createWaSqliteModuleConfig, WA_SQLITE_BOOTSTRAP_SCHEMA, type WaSqliteRuntime } from './waSqliteEngine';
 
 function createRuntimeStub(): WaSqliteRuntime & {
@@ -86,10 +87,26 @@ describe('wa-sqlite engine', () => {
       initialized: true,
       databaseName: 'aegis-test.db',
       tableCount: 3,
+      persistenceProfile: createWaSqlitePersistenceProfile(),
     });
 
     expect(runtime.open_v2).toHaveBeenCalledWith('aegis-test.db');
     expect(runtime.exec).toHaveBeenNthCalledWith(1, 42, WA_SQLITE_BOOTSTRAP_SCHEMA);
+  });
+
+  it('uses the scoped wa-sqlite persistence profile database name by default', async () => {
+    const runtime = createRuntimeStub();
+    const persistenceProfile = createWaSqlitePersistenceProfile('desktop-app-data');
+    const engine = createWaSqliteEngine({
+      persistenceProfile,
+      loadRuntime: vi.fn(async () => runtime),
+    });
+
+    await expect(engine.initialize()).resolves.toMatchObject({
+      databaseName: 'aegis-wa-sqlite.desktop.db',
+      persistenceProfile,
+    });
+    expect(runtime.open_v2).toHaveBeenCalledWith('aegis-wa-sqlite.desktop.db');
   });
 
   it('normalizes BigInt and blob query values into repository-safe rows', async () => {

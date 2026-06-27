@@ -17,7 +17,9 @@ export function isAndroidRuntime(): boolean {
   return isDesktopRuntime() && /Android/i.test(navigator.userAgent || '');
 }
 
-export function getNativeVaultStorageScope(): 'android-app-private' | 'desktop-app-data' | 'browser-fallback' {
+export type NativeVaultStorageScope = 'android-app-private' | 'desktop-app-data' | 'browser-fallback';
+
+export function getNativeVaultStorageScope(): NativeVaultStorageScope {
   if (!isDesktopRuntime()) return 'browser-fallback';
   return isAndroidRuntime() ? 'android-app-private' : 'desktop-app-data';
 }

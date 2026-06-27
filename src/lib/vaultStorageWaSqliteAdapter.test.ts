@@ -6,6 +6,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { VaultItem } from '../types';
 import type { VaultStorageRepository } from './vaultStorageRepository';
+import { createWaSqlitePersistenceProfile } from './waSqlitePersistence';
 import type { WaSqliteEngine } from './waSqliteEngine';
 import {
   createReadOnlyWaSqliteVaultStorageAdapter,
@@ -37,7 +38,12 @@ function createRepositoryStub(items: VaultItem[] = []): VaultStorageRepository {
 
 function createEngineStub(rows: Array<Record<string, unknown>> = []): WaSqliteEngine {
   return {
-    initialize: vi.fn(async () => ({ initialized: true, databaseName: 'mirror.db', tableCount: 4 })),
+    initialize: vi.fn(async () => ({
+      initialized: true,
+      databaseName: 'mirror.db',
+      tableCount: 4,
+      persistenceProfile: createWaSqlitePersistenceProfile(),
+    })),
     execute: vi.fn(async () => ({ columns: [], rows: [] })),
     executeReadOnly: vi.fn(async () => ({ columns: [], rows: [] })),
     selectObjects: vi.fn(async () => rows),

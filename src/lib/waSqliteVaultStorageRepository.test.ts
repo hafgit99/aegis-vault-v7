@@ -6,6 +6,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { VaultItem } from '../types';
 import type { VaultStorageQueryResult } from './vaultStorageRepository';
+import { createWaSqlitePersistenceProfile } from './waSqlitePersistence';
 import type { WaSqliteEngine } from './waSqliteEngine';
 import {
   createWaSqliteVaultStorageRepository,
@@ -174,7 +175,12 @@ function createEngineStub(): WaSqliteEngine & {
     set failNextUpsert(value: boolean) {
       state.failNextUpsert = value;
     },
-    initialize: vi.fn(async () => ({ initialized: true, databaseName: 'wa-test.db', tableCount: 3 })),
+    initialize: vi.fn(async () => ({
+      initialized: true,
+      databaseName: 'wa-test.db',
+      tableCount: 3,
+      persistenceProfile: createWaSqlitePersistenceProfile(),
+    })),
     execute: vi.fn(async (sql: string) => {
       const normalizedSql = sql.trim();
       if (normalizedSql === 'BEGIN IMMEDIATE;') {
