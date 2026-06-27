@@ -8,6 +8,7 @@ import {
   assertWaSqlitePersistenceReadyForActiveBackend,
   assertWaSqlitePersistenceReadyForMigrationTarget,
   createWaSqlitePersistenceProfile,
+  markWaSqlitePersistenceReadyForActiveBackend,
   WA_SQLITE_ACTIVE_BACKEND_BLOCKER,
   WA_SQLITE_PERSISTENT_VFS_UNAVAILABLE,
 } from './waSqlitePersistence';
@@ -62,5 +63,26 @@ describe('wa-sqlite persistence profile', () => {
     expect(() => assertWaSqlitePersistenceReadyForMigrationTarget(
       createWaSqlitePersistenceProfile('desktop-app-data', false),
     )).toThrow(WA_SQLITE_PERSISTENT_VFS_UNAVAILABLE);
+  });
+  it('marks a persistent profile ready only when explicit active backend promotion is requested', () => {
+    const readyProfile = markWaSqlitePersistenceReadyForActiveBackend(
+      createWaSqlitePersistenceProfile('desktop-app-data', true),
+    );
+    const volatileProfile = markWaSqlitePersistenceReadyForActiveBackend(
+      createWaSqlitePersistenceProfile('desktop-app-data', false),
+    );
+
+    expect(readyProfile).toMatchObject({
+      activeBackendReady: true,
+      blocker: '',
+    });
+    expect(() => assertWaSqlitePersistenceReadyForActiveBackend(readyProfile)).not.toThrow();
+    expect(volatileProfile).toMatchObject({
+      activeBackendReady: false,
+      blocker: WA_SQLITE_PERSISTENT_VFS_UNAVAILABLE,
+    });
+    expect(() => assertWaSqlitePersistenceReadyForActiveBackend(volatileProfile)).toThrow(
+      WA_SQLITE_PERSISTENT_VFS_UNAVAILABLE,
+    );
   });
 });

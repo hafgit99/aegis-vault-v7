@@ -78,3 +78,13 @@ export function assertWaSqlitePersistenceReadyForMigrationTarget(
     throw new Error(profile.blocker || WA_SQLITE_PERSISTENT_VFS_UNAVAILABLE);
   }
 }
+
+export function markWaSqlitePersistenceReadyForActiveBackend(
+  profile: WaSqlitePersistenceProfile = createWaSqlitePersistenceProfile(),
+): WaSqlitePersistenceProfile {
+  return {
+    ...profile,
+    activeBackendReady: profile.persistentVfsReady,
+    blocker: profile.persistentVfsReady ? '' : profile.blocker,
+  };
+}

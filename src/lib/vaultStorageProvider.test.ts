@@ -6,9 +6,9 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { sqliteOPFSInstance } from './sqlite_opfs';
-import { createVaultStorageMigrationWriteTargetRepository, getActiveVaultStorageBackendSelection, getVaultStorageMigrationTargetRepository, getVaultStorageRepository, setVaultStorageRepositoryForTesting } from './vaultStorageProvider';
+import { createVaultStorageMigrationWriteTargetRepository, createVaultStorageRepositoryForSelection, getActiveVaultStorageBackendSelection, getVaultStorageMigrationTargetRepository, getVaultStorageRepository, setVaultStorageRepositoryForTesting } from './vaultStorageProvider';
 import type { VaultStorageRepository } from './vaultStorageRepository';
-import { createWaSqlitePersistenceProfile, WA_SQLITE_PERSISTENT_VFS_UNAVAILABLE } from './waSqlitePersistence';
+import { createWaSqlitePersistenceProfile, markWaSqlitePersistenceReadyForActiveBackend, WA_SQLITE_ACTIVE_BACKEND_BLOCKER, WA_SQLITE_PERSISTENT_VFS_UNAVAILABLE } from './waSqlitePersistence';
 
 function createRepositoryStub(): VaultStorageRepository {
   return {
@@ -42,6 +42,46 @@ describe('vault storage provider', () => {
       active: 'opfs',
       target: null,
       mode: 'active',
+    });
+  });
+
+
+  it('creates the OPFS repository for active OPFS selections', () => {
+    expect(createVaultStorageRepositoryForSelection({
+      active: 'opfs',
+      target: null,
+      mode: 'active',
+    })).toBe(sqliteOPFSInstance);
+  });
+
+  it('blocks active wa-sqlite repositories until the active persistence profile is explicitly ready', () => {
+    expect(() => createVaultStorageRepositoryForSelection({
+      active: 'wa-sqlite',
+      target: null,
+      mode: 'active',
+    }, {
+      persistenceProfile: createWaSqlitePersistenceProfile('desktop-app-data', true),
+    })).toThrow(WA_SQLITE_ACTIVE_BACKEND_BLOCKER);
+  });
+
+  it('creates an active wa-sqlite repository only with an explicitly ready persistent profile', () => {
+    const repository = createVaultStorageRepositoryForSelection({
+      active: 'wa-sqlite',
+      target: null,
+      mode: 'active',
+    }, {
+      persistenceProfile: markWaSqlitePersistenceReadyForActiveBackend(
+        createWaSqlitePersistenceProfile('desktop-app-data', true),
+      ),
+    });
+
+    expect(repository).toMatchObject({
+      hydrate: expect.any(Function),
+      setupMaster: expect.any(Function),
+      verifyPassword: expect.any(Function),
+      getVaultItems: expect.any(Function),
+      saveVaultItems: expect.any(Function),
+      resetAll: expect.any(Function),
     });
   });
 

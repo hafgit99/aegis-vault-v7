@@ -8,7 +8,7 @@ import { getVaultStorageBackendSelection, type VaultStorageBackendSelection } fr
 import { createReadOnlyWaSqliteVaultStorageAdapter } from './vaultStorageWaSqliteAdapter';
 import type { VaultStorageRepository } from './vaultStorageRepository';
 import { createWaSqliteEngine } from './waSqliteEngine';
-import { assertWaSqlitePersistenceReadyForMigrationTarget, createWaSqlitePersistenceProfile, type WaSqlitePersistenceProfile } from './waSqlitePersistence';
+import { assertWaSqlitePersistenceReadyForActiveBackend, assertWaSqlitePersistenceReadyForMigrationTarget, createWaSqlitePersistenceProfile, type WaSqlitePersistenceProfile } from './waSqlitePersistence';
 import { createWaSqliteVaultStorageRepository } from './waSqliteVaultStorageRepository';
 
 let activeVaultStorageRepository: VaultStorageRepository = sqliteOPFSInstance;
@@ -19,6 +19,26 @@ export function getVaultStorageRepository(): VaultStorageRepository {
 
 export function getActiveVaultStorageBackendSelection() {
   return getVaultStorageBackendSelection();
+}
+
+export interface VaultStorageActiveRepositoryOptions {
+  persistenceProfile?: WaSqlitePersistenceProfile;
+}
+
+export function createVaultStorageRepositoryForSelection(
+  selection: VaultStorageBackendSelection = getVaultStorageBackendSelection(),
+  options: VaultStorageActiveRepositoryOptions = {},
+): VaultStorageRepository {
+  if (selection.active === 'opfs') {
+    return sqliteOPFSInstance;
+  }
+
+  const persistenceProfile = options.persistenceProfile ?? createWaSqlitePersistenceProfile();
+  assertWaSqlitePersistenceReadyForActiveBackend(persistenceProfile);
+
+  return createWaSqliteVaultStorageRepository({
+    engine: createWaSqliteEngine({ persistenceProfile }),
+  });
 }
 
 export function getVaultStorageMigrationTargetRepository(

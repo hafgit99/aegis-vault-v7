@@ -14,9 +14,9 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 93.97% |
-| Statements | 93.97% |
-| Functions | 91.87% |
+| Lines | 93.98% |
+| Statements | 93.98% |
+| Functions | 91.89% |
 | Branches | 87.86% |
 
 Coverage thresholds now act as a release-quality regression gate while staying slightly below the current baseline:
@@ -259,7 +259,7 @@ Recently improved:
 - wa-sqlite persistence smoke: added a reusable write-close-reopen-read smoke verifier with deterministic tests for pass, unavailable VFS, write failure, and mismatch paths so desktop/Android runtime checks can prove persistence before the backend is promoted.
 - wa-sqlite migration preflight: `runVaultStorageMigration` now requires a passing persistent-target smoke check before the wa-sqlite target is hydrated, reset, or written, blocks promotion when the VFS cannot prove write-close-reopen-read durability, and sanitizes target write/rollback errors before they become migration report issues.
 - wa-sqlite promotion readiness: added a single readiness report that keeps active backend promotion blocked until persistent VFS, smoke, dry-run, migration, backend direction, and dry-run/migration item-count parity checks have all passed and surfaces blocker codes for release review.
-- wa-sqlite active selection gate: active `VITE_AEGIS_STORAGE_BACKEND=wa-sqlite` requests now fail closed with structured blocker codes unless promotion readiness is ready and the active provider switch is explicitly enabled. Migration write-target repository creation also requires a persistent wa-sqlite VFS profile so volatile WASM storage cannot become the destination for a real migration.
+- wa-sqlite active selection gate: active `VITE_AEGIS_STORAGE_BACKEND=wa-sqlite` requests now fail closed with structured blocker codes unless promotion readiness is ready and the active provider switch is explicitly enabled. Active repository creation now has a provider-level factory that returns OPFS by default and requires an explicitly active-ready persistent wa-sqlite profile before constructing the real wa-sqlite repository. Migration write-target repository creation also requires a persistent wa-sqlite VFS profile so volatile WASM storage cannot become the destination for a real migration.
 - Sync metadata freshness: sync envelopes now publish the newest item timestamp as remote metadata freshness so near-simultaneous remote writes cannot be skipped because the envelope build time is equal to or older than local item timestamps.
 - `src/lib/storage.ts`: covered setup detection, Secret Key profile fallbacks, remembered-key migration/forget flows, failed unlock session guards, master-password rotation rollback rules, reset marker cleanup, no-session guards, save/delete/reseed wrappers, trash move/restore, retention-boundary cleanup, bulk-save progress callbacks, and full trash emptying.
 - `src/components/PasswordGenerator.tsx`: covered character option changes, all character toggles, strength bar tone branches, diceware mode settings, word-count descriptions, diceware toggles, copy feedback, unmount cleanup, and safe clipboard clearing behavior.
