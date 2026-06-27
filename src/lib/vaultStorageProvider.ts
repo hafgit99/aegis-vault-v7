@@ -8,6 +8,7 @@ import { getVaultStorageBackendSelection, type VaultStorageBackendSelection } fr
 import { createReadOnlyWaSqliteVaultStorageAdapter } from './vaultStorageWaSqliteAdapter';
 import type { VaultStorageRepository } from './vaultStorageRepository';
 import { createWaSqliteEngine } from './waSqliteEngine';
+import { createWaSqliteVaultStorageRepository } from './waSqliteVaultStorageRepository';
 
 let activeVaultStorageRepository: VaultStorageRepository = sqliteOPFSInstance;
 
@@ -31,6 +32,19 @@ export function getVaultStorageMigrationTargetRepository(
 
   return null;
 }
+
+export function createVaultStorageMigrationWriteTargetRepository(
+  targetBackend: VaultStorageBackendSelection['target'] = 'wa-sqlite',
+): VaultStorageRepository {
+  if (targetBackend !== 'wa-sqlite') {
+    throw new Error('vault-storage-migration-target-unsupported');
+  }
+
+  return createWaSqliteVaultStorageRepository({
+    engine: createWaSqliteEngine(),
+  });
+}
+
 export function setVaultStorageRepositoryForTesting(repository: VaultStorageRepository): () => void {
   const previousRepository = activeVaultStorageRepository;
   activeVaultStorageRepository = repository;

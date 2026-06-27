@@ -14,19 +14,19 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 94.07% |
-| Statements | 94.07% |
-| Functions | 91.99% |
-| Branches | 88.10% |
+| Lines | 94.10% |
+| Statements | 94.10% |
+| Functions | 92.08% |
+| Branches | 88.03% |
 
 Coverage thresholds now act as a release-quality regression gate while staying slightly below the current baseline:
 
 | Metric | Current threshold |
 | --- | ---: |
-| Lines | 94.07% |
-| Statements | 94.07% |
-| Functions | 91.99% |
-| Branches | 88.10% |
+| Lines | 94.10% |
+| Statements | 94.10% |
+| Functions | 92.08% |
+| Branches | 88.03% |
 
 These thresholds prevent meaningful regressions while leaving room to add tests around under-covered areas.
 
@@ -254,6 +254,7 @@ Recently improved:
 - wa-sqlite dry-run metadata seed: connected the provider dry-run target to the real engine and added source-to-target metadata seeding for empty wa-sqlite tables without copying usernames, passwords, notes, or other decrypted secret fields into SQL seed statements.
 - wa-sqlite dry-run target validation: extended migration dry-run results with target item counts and source/target identity checks so mismatched, missing, duplicate, unreadable, or extra target records block migration readiness before any active backend switch.
 - wa-sqlite repository write path: `WaSqliteVaultStorageRepository` now supports schema hydration, Argon2id-backed master setup/verification, per-vault salt/KDF metadata, AES-GCM encrypted vault row save/read, transaction rollback on failed upserts, permanent delete/reset/reseed flows, transaction-guarded master password rekey/rollback, no plaintext password-keyed cache, and a fail-closed direct SQL surface until active backend migration parity is complete.
+- wa-sqlite migration orchestration: added a controlled OPFS-to-wa-sqlite migration service with source unlock validation, source id integrity checks, target setup/save/read verification, content parity checks, target rollback on write/integrity failures, and an explicit provider factory for write-target repositories while keeping the active backend unchanged.
 - `src/lib/storage.ts`: covered setup detection, Secret Key profile fallbacks, remembered-key migration/forget flows, failed unlock session guards, master-password rotation rollback rules, reset marker cleanup, no-session guards, save/delete/reseed wrappers, trash move/restore, retention-boundary cleanup, bulk-save progress callbacks, and full trash emptying.
 - `src/components/PasswordGenerator.tsx`: covered character option changes, all character toggles, strength bar tone branches, diceware mode settings, word-count descriptions, diceware toggles, copy feedback, unmount cleanup, and safe clipboard clearing behavior.
 - `src/lib/diceware.ts`: covered Turkish/English word selection, EFF-sized word-pool expansion, separator formats, capitalization, number and symbol placement, camel/none separator handling, optional entropy calculations, and static word-list separation for practical mutation testing.

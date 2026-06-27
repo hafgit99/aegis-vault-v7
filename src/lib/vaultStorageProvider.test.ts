@@ -6,7 +6,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { sqliteOPFSInstance } from './sqlite_opfs';
-import { getActiveVaultStorageBackendSelection, getVaultStorageMigrationTargetRepository, getVaultStorageRepository, setVaultStorageRepositoryForTesting } from './vaultStorageProvider';
+import { createVaultStorageMigrationWriteTargetRepository, getActiveVaultStorageBackendSelection, getVaultStorageMigrationTargetRepository, getVaultStorageRepository, setVaultStorageRepositoryForTesting } from './vaultStorageProvider';
 import type { VaultStorageRepository } from './vaultStorageRepository';
 
 function createRepositoryStub(): VaultStorageRepository {
@@ -36,7 +36,6 @@ describe('vault storage provider', () => {
     expect(getVaultStorageRepository()).toBe(sqliteOPFSInstance);
   });
 
-
   it('exposes the active backend selection for migration orchestration', () => {
     expect(getActiveVaultStorageBackendSelection()).toEqual({
       active: 'opfs',
@@ -44,6 +43,7 @@ describe('vault storage provider', () => {
       mode: 'active',
     });
   });
+
   it('does not expose a migration target unless dry-run is enabled', () => {
     expect(getVaultStorageMigrationTargetRepository()).toBeNull();
   });
@@ -68,6 +68,22 @@ describe('vault storage provider', () => {
       restore();
     }
   });
+
+  it('creates an explicit wa-sqlite write target for controlled migrations', () => {
+    const targetRepository = createVaultStorageMigrationWriteTargetRepository('wa-sqlite');
+
+    expect(targetRepository).toMatchObject({
+      hydrate: expect.any(Function),
+      setupMaster: expect.any(Function),
+      saveVaultItems: expect.any(Function),
+      getVaultItems: expect.any(Function),
+      resetAll: expect.any(Function),
+    });
+    expect(() => createVaultStorageMigrationWriteTargetRepository(null)).toThrow(
+      'vault-storage-migration-target-unsupported',
+    );
+  });
+
   it('can temporarily swap the active repository for migration tests', () => {
     const repository = createRepositoryStub();
     const restore = setVaultStorageRepositoryForTesting(repository);
