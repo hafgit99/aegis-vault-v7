@@ -35,28 +35,18 @@ export interface VaultStorageRepositoryPromotionResult {
   restorePreviousRepository: () => void;
 }
 
+export interface VaultStorageRepositoryPromotionOptions {
+  createRepository?: (plan: WaSqliteActiveBackendPromotionPlan) => VaultStorageRepository;
+}
+
 export function promoteVaultStorageRepositoryFromPlan(
   plan: WaSqliteActiveBackendPromotionPlan,
 ): VaultStorageRepositoryPromotionResult {
-  const previousRepository = activeVaultStorageRepository;
   const repository = createVaultStorageRepositoryForPromotionPlan(plan);
-  activeVaultStorageRepository = repository;
-
-  return {
-    repository,
-    restorePreviousRepository: () => {
-      activeVaultStorageRepository = previousRepository;
-    },
-  };
+  return replaceActiveVaultStorageRepository(repository);
 }
 
-export interface VaultStorageActiveRepositoryOptions {
-  persistenceProfile?: WaSqlitePersistenceProfile;
-}
-
-export function createVaultStorageRepositoryForPromotionPlan(
-  plan: WaSqliteActiveBackendPromotionPlan,
-): VaultStorageRepository {
+function assertVaultStoragePromotionPlanReady(plan: WaSqliteActiveBackendPromotionPlan): void {
   if (plan.readinessReport.status !== 'ready') {
     throw new Error('vault-storage-promotion-plan-not-ready');
   }
@@ -67,6 +57,42 @@ export function createVaultStorageRepositoryForPromotionPlan(
   ) {
     throw new Error('vault-storage-promotion-plan-active-wa-sqlite-required');
   }
+}
+
+function replaceActiveVaultStorageRepository(
+  repository: VaultStorageRepository,
+): VaultStorageRepositoryPromotionResult {
+  const previousRepository = activeVaultStorageRepository;
+  activeVaultStorageRepository = repository;
+
+  return {
+    repository,
+    restorePreviousRepository: () => {
+      activeVaultStorageRepository = previousRepository;
+    },
+  };
+}
+
+export async function promoteAndHydrateVaultStorageRepositoryFromPlan(
+  plan: WaSqliteActiveBackendPromotionPlan,
+  options: VaultStorageRepositoryPromotionOptions = {},
+): Promise<VaultStorageRepositoryPromotionResult> {
+  assertVaultStoragePromotionPlanReady(plan);
+  const createRepository = options.createRepository ?? createVaultStorageRepositoryForPromotionPlan;
+  const repository = createRepository(plan);
+  await repository.hydrate();
+
+  return replaceActiveVaultStorageRepository(repository);
+}
+
+export interface VaultStorageActiveRepositoryOptions {
+  persistenceProfile?: WaSqlitePersistenceProfile;
+}
+
+export function createVaultStorageRepositoryForPromotionPlan(
+  plan: WaSqliteActiveBackendPromotionPlan,
+): VaultStorageRepository {
+  assertVaultStoragePromotionPlanReady(plan);
 
   return createVaultStorageRepositoryForSelection(plan.selection, {
     persistenceProfile: plan.persistenceProfile,

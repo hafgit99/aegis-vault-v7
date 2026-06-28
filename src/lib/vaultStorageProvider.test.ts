@@ -14,6 +14,7 @@ import {
   getActiveVaultStorageBackendSelection,
   getVaultStorageMigrationTargetRepository,
   getVaultStorageRepository,
+  promoteAndHydrateVaultStorageRepositoryFromPlan,
   promoteVaultStorageRepositoryFromPlan,
   setVaultStorageRepositoryForTesting,
 } from './vaultStorageProvider';
@@ -179,6 +180,62 @@ describe('vault storage provider', () => {
     } finally {
       result.restorePreviousRepository();
     }
+
+    expect(getVaultStorageRepository()).toBe(previousRepository);
+  });
+
+  it('hydrates a verified wa-sqlite repository before making it active', async () => {
+    const repository = createRepositoryStub();
+    const previousRepository = getVaultStorageRepository();
+    const result = await promoteAndHydrateVaultStorageRepositoryFromPlan({
+      selection: {
+        active: 'wa-sqlite',
+        target: null,
+        mode: 'active',
+      },
+      persistenceProfile: markWaSqlitePersistenceReadyForActiveBackend(
+        createWaSqlitePersistenceProfile('desktop-app-data', true),
+      ),
+      readinessReport: {
+        status: 'ready',
+        issues: [],
+      },
+    }, {
+      createRepository: () => repository,
+    });
+
+    try {
+      expect(repository.hydrate).toHaveBeenCalledTimes(1);
+      expect(getVaultStorageRepository()).toBe(repository);
+      expect(result.repository).toBe(repository);
+    } finally {
+      result.restorePreviousRepository();
+    }
+
+    expect(getVaultStorageRepository()).toBe(previousRepository);
+  });
+
+  it('keeps the previous active repository when hydrated promotion fails', async () => {
+    const repository = createRepositoryStub();
+    vi.mocked(repository.hydrate).mockRejectedValueOnce(new Error('hydrate failed'));
+    const previousRepository = getVaultStorageRepository();
+
+    await expect(promoteAndHydrateVaultStorageRepositoryFromPlan({
+      selection: {
+        active: 'wa-sqlite',
+        target: null,
+        mode: 'active',
+      },
+      persistenceProfile: markWaSqlitePersistenceReadyForActiveBackend(
+        createWaSqlitePersistenceProfile('desktop-app-data', true),
+      ),
+      readinessReport: {
+        status: 'ready',
+        issues: [],
+      },
+    }, {
+      createRepository: () => repository,
+    })).rejects.toThrow('hydrate failed');
 
     expect(getVaultStorageRepository()).toBe(previousRepository);
   });
