@@ -30,13 +30,18 @@ interface PersistedActiveVaultStorageBackend {
 }
 
 let activeVaultStorageRepository: VaultStorageRepository = sqliteOPFSInstance;
+let activeVaultStorageBackendSelection: VaultStorageBackendSelection = {
+  active: 'opfs',
+  target: null,
+  mode: 'active',
+};
 
 export function getVaultStorageRepository(): VaultStorageRepository {
   return activeVaultStorageRepository;
 }
 
 export function getActiveVaultStorageBackendSelection() {
-  return getVaultStorageBackendSelection();
+  return { ...activeVaultStorageBackendSelection };
 }
 
 function getBrowserStorage(): Storage | null {
@@ -96,7 +101,11 @@ export async function restorePersistedActiveVaultStorageBackend(
     assertWaSqlitePersistenceReadyForActiveBackend(marker.persistenceProfile);
     const repository = (options.createRepository ?? createActiveWaSqliteRepository)(marker.persistenceProfile);
     await repository.hydrate();
-    replaceActiveVaultStorageRepository(repository);
+    replaceActiveVaultStorageRepository(repository, {
+      active: 'wa-sqlite',
+      target: null,
+      mode: 'active',
+    });
     return true;
   } catch {
     clearPersistedActiveVaultStorageBackend();
@@ -140,7 +149,7 @@ export function promoteVaultStorageRepositoryFromPlan(
   plan: WaSqliteActiveBackendPromotionPlan,
 ): VaultStorageRepositoryPromotionResult {
   const repository = createVaultStorageRepositoryForPromotionPlan(plan);
-  return replaceActiveVaultStorageRepository(repository);
+  return replaceActiveVaultStorageRepository(repository, plan.selection);
 }
 
 function assertVaultStoragePromotionPlanReady(plan: WaSqliteActiveBackendPromotionPlan): void {
@@ -158,14 +167,18 @@ function assertVaultStoragePromotionPlanReady(plan: WaSqliteActiveBackendPromoti
 
 function replaceActiveVaultStorageRepository(
   repository: VaultStorageRepository,
+  selection: VaultStorageBackendSelection = activeVaultStorageBackendSelection,
 ): VaultStorageRepositoryPromotionResult {
   const previousRepository = activeVaultStorageRepository;
+  const previousSelection = activeVaultStorageBackendSelection;
   activeVaultStorageRepository = repository;
+  activeVaultStorageBackendSelection = { ...selection };
 
   return {
     repository,
     restorePreviousRepository: () => {
       activeVaultStorageRepository = previousRepository;
+      activeVaultStorageBackendSelection = previousSelection;
     },
   };
 }
@@ -179,7 +192,7 @@ export async function promoteAndHydrateVaultStorageRepositoryFromPlan(
   const repository = createRepository(plan);
   await repository.hydrate();
 
-  return replaceActiveVaultStorageRepository(repository);
+  return replaceActiveVaultStorageRepository(repository, plan.selection);
 }
 
 export interface VaultStorageActiveRepositoryOptions {
@@ -273,11 +286,21 @@ export function createVaultStorageMigrationRepositoryPair(
   };
 }
 
-export function setVaultStorageRepositoryForTesting(repository: VaultStorageRepository): () => void {
+export function setVaultStorageRepositoryForTesting(
+  repository: VaultStorageRepository,
+  selection: VaultStorageBackendSelection = {
+    active: 'opfs',
+    target: null,
+    mode: 'active',
+  },
+): () => void {
   const previousRepository = activeVaultStorageRepository;
+  const previousSelection = activeVaultStorageBackendSelection;
   activeVaultStorageRepository = repository;
+  activeVaultStorageBackendSelection = { ...selection };
 
   return () => {
     activeVaultStorageRepository = previousRepository;
+    activeVaultStorageBackendSelection = previousSelection;
   };
 }

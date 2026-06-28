@@ -55,6 +55,7 @@ function createRepositoryStub(): VaultStorageRepository {
 
 afterEach(() => {
   clearPersistedActiveVaultStorageBackend();
+  setVaultStorageRepositoryForTesting(sqliteOPFSInstance);
 });
 
 describe('vault storage provider', () => {
@@ -219,6 +220,11 @@ describe('vault storage provider', () => {
       expect(restored).toBe(true);
       expect(repository.hydrate).toHaveBeenCalledTimes(1);
       expect(getVaultStorageRepository()).toBe(repository);
+      expect(getActiveVaultStorageBackendSelection()).toEqual({
+        active: 'wa-sqlite',
+        target: null,
+        mode: 'active',
+      });
     } finally {
       setVaultStorageRepositoryForTesting(sqliteOPFSInstance);
     }
@@ -265,6 +271,11 @@ describe('vault storage provider', () => {
 
     expect(localStorage.getItem(ACTIVE_VAULT_STORAGE_BACKEND_KEY)).toBeNull();
     expect(getVaultStorageRepository()).toBe(previousRepository);
+    expect(getActiveVaultStorageBackendSelection()).toEqual({
+      active: 'opfs',
+      target: null,
+      mode: 'active',
+    });
   });
 
   it('promotes the active repository from a verified wa-sqlite plan and can restore the previous repository', () => {
@@ -288,11 +299,21 @@ describe('vault storage provider', () => {
     try {
       expect(getVaultStorageRepository()).toBe(result.repository);
       expect(getVaultStorageRepository()).not.toBe(previousRepository);
+      expect(getActiveVaultStorageBackendSelection()).toEqual({
+        active: 'wa-sqlite',
+        target: null,
+        mode: 'active',
+      });
     } finally {
       result.restorePreviousRepository();
     }
 
     expect(getVaultStorageRepository()).toBe(previousRepository);
+    expect(getActiveVaultStorageBackendSelection()).toEqual({
+      active: 'opfs',
+      target: null,
+      mode: 'active',
+    });
   });
 
   it('hydrates a verified wa-sqlite repository before making it active', async () => {
@@ -319,11 +340,21 @@ describe('vault storage provider', () => {
       expect(repository.hydrate).toHaveBeenCalledTimes(1);
       expect(getVaultStorageRepository()).toBe(repository);
       expect(result.repository).toBe(repository);
+      expect(getActiveVaultStorageBackendSelection()).toEqual({
+        active: 'wa-sqlite',
+        target: null,
+        mode: 'active',
+      });
     } finally {
       result.restorePreviousRepository();
     }
 
     expect(getVaultStorageRepository()).toBe(previousRepository);
+    expect(getActiveVaultStorageBackendSelection()).toEqual({
+      active: 'opfs',
+      target: null,
+      mode: 'active',
+    });
   });
 
   it('keeps the previous active repository when hydrated promotion fails', async () => {
@@ -451,14 +482,28 @@ describe('vault storage provider', () => {
     );
   });
 
-  it('can temporarily swap the active repository for migration tests', () => {
+  it('can temporarily swap the active repository and backend selection for migration tests', () => {
     const repository = createRepositoryStub();
-    const restore = setVaultStorageRepositoryForTesting(repository);
+    const restore = setVaultStorageRepositoryForTesting(repository, {
+      active: 'wa-sqlite',
+      target: null,
+      mode: 'active',
+    });
 
     expect(getVaultStorageRepository()).toBe(repository);
+    expect(getActiveVaultStorageBackendSelection()).toEqual({
+      active: 'wa-sqlite',
+      target: null,
+      mode: 'active',
+    });
 
     restore();
 
     expect(getVaultStorageRepository()).toBe(sqliteOPFSInstance);
+    expect(getActiveVaultStorageBackendSelection()).toEqual({
+      active: 'opfs',
+      target: null,
+      mode: 'active',
+    });
   });
 });

@@ -177,19 +177,19 @@ Latest local verification before this README update:
 
 ## Coverage
 
-![Statements](https://img.shields.io/badge/statements-94.01%25-brightgreen)
+![Statements](https://img.shields.io/badge/statements-94.02%25-brightgreen)
 ![Branches](https://img.shields.io/badge/branches-87.78%25-green)
 ![Functions](https://img.shields.io/badge/functions-91.90%25-brightgreen)
-![Lines](https://img.shields.io/badge/lines-94.01%25-brightgreen)
+![Lines](https://img.shields.io/badge/lines-94.02%25-brightgreen)
 
 Coverage was generated locally with `npm run test:coverage`.
 
 | Metric | Coverage |
 | --- | ---: |
-| Statements | 94.01% |
+| Statements | 94.02% |
 | Branches | 87.78% |
 | Functions | 91.90% |
-| Lines | 94.01% |
+| Lines | 94.02% |
 
 | Suite | Result |
 | --- | ---: |

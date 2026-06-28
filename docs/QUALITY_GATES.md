@@ -14,8 +14,8 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 94.01% |
-| Statements | 94.01% |
+| Lines | 94.02% |
+| Statements | 94.02% |
 | Functions | 91.90% |
 | Branches | 87.78% |
 
@@ -346,6 +346,7 @@ Recently improved:
 - Storage orchestration: hardened initialization, setup reseeding, Secret Key secure-storage fallback/cleanup, setup migration warnings, no-session bulk-save guards, setup detection edge cases, rotation biometric reset, trash retention, and bulk-save orchestration; storage orchestration mutation score now reports 88.43% with zero no-coverage mutants.
 - wa-sqlite settings migration control: covered the guarded Settings entry point for active backend promotion, confirmation cancellation, safety-check blockers, missing-session errors, success refresh, and user notification routing.
 - wa-sqlite persisted active backend marker: promoted backends now write a non-secret active backend marker, startup restores wa-sqlite only after hydrate succeeds, invalid markers are cleared fail-closed, reset removes the marker, and marker write failures roll promotion back.
+- wa-sqlite active backend reporting: provider diagnostics now track the live repository selection through verified promotion, hydrate-first promotion, persisted restore, rollback, and test swaps instead of falling back to build-time backend configuration after wa-sqlite becomes active.
 
 ## Next Gates
 
