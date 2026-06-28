@@ -115,9 +115,23 @@ export async function runWaSqliteActiveBackendMigration(
   }
 
   const promotionPlan = createWaSqliteActiveBackendPromotionPlan(readinessInput);
-  const promotionResult = await (options.promoteRepository ?? promoteAndHydrateVaultStorageRepositoryFromPlan)(
-    promotionPlan,
-  );
+  let promotionResult: VaultStorageRepositoryPromotionResult;
+
+  try {
+    promotionResult = await (options.promoteRepository ?? promoteAndHydrateVaultStorageRepositoryFromPlan)(
+      promotionPlan,
+    );
+  } catch (error) {
+    return {
+      status: 'blocked',
+      issues: [activeMigrationIssueFromError(error, 'wa-sqlite-active-backend-promotion-failed')],
+      readinessReport,
+      smokeResult,
+      dryRunResult,
+      persistentMigrationCandidateResult,
+      promotionResult: null,
+    };
+  }
 
   try {
     (options.persistPromotion ?? persistWaSqliteActiveBackendPromotion)(promotionPlan);
@@ -143,4 +157,16 @@ export async function runWaSqliteActiveBackendMigration(
     persistentMigrationCandidateResult,
     promotionResult,
   };
+}
+
+function activeMigrationIssueFromError(error: unknown, fallback: string): string {
+  const rawMessage = error instanceof Error ? error.message : String(error || fallback);
+  const sanitizedMessage = rawMessage
+    .replace(/[\r\n\t]/g, ' ')
+    .replace(/<script/gi, '&lt;script')
+    .replace(/[<>]/g, '_')
+    .trim()
+    .slice(0, 160);
+
+  return sanitizedMessage || fallback;
 }

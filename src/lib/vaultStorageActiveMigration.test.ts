@@ -175,6 +175,30 @@ describe('wa-sqlite active backend migration orchestration', () => {
     expect(result.promotionResult?.repository).toBe(promotionRepository);
   });
 
+  it('returns a sanitized blocker when active repository promotion fails', async () => {
+    const sourceRepository = createRepositoryStub({ initialItems: [item] });
+    const targetRepository = createRepositoryStub();
+    const persistPromotion = vi.fn();
+    const promoteRepository = vi.fn(async () => {
+      throw new Error('hydrate failed\n<script>secret</script>');
+    });
+
+    const result = await runWaSqliteActiveBackendMigration('master-pass', {
+      sourceRepository,
+      migrationPair: createMigrationPair(targetRepository),
+      verifyPersistentTarget: vi.fn(async () => passedSmoke()),
+      promoteRepository,
+      persistPromotion,
+    });
+
+    expect(result.status).toBe('blocked');
+    expect(result.issues).toEqual(['hydrate failed &lt;script_secret_/script_']);
+    expect(result.readinessReport).toEqual({ status: 'ready', issues: [] });
+    expect(result.promotionResult).toBeNull();
+    expect(promoteRepository).toHaveBeenCalledTimes(1);
+    expect(persistPromotion).not.toHaveBeenCalled();
+  });
+
   it('rolls back active repository promotion when the persisted backend marker cannot be written', async () => {
     const sourceRepository = createRepositoryStub({ initialItems: [item] });
     const targetRepository = createRepositoryStub();
