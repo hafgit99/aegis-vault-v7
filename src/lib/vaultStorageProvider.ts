@@ -121,16 +121,24 @@ export async function restorePersistedActiveVaultStorageBackend(
 
 function isPersistedActiveVaultStorageBackend(value: PersistedActiveVaultStorageBackend): value is PersistedActiveVaultStorageBackend {
   const profile = value?.persistenceProfile;
-  return value?.version === 1
-    && value.backend === 'wa-sqlite'
-    && typeof value.promotedAt === 'string'
-    && typeof profile?.databaseName === 'string'
-    && SUPPORTED_WA_SQLITE_STORAGE_SCOPES.has(profile.storageScope)
-    && profile.persistenceKind === 'indexeddb-minimal-vfs'
-    && typeof profile.vfsName === 'string'
-    && profile.vfsName.length > 0
-    && profile.persistentVfsReady === true
-    && profile.activeBackendReady === true;
+  if (
+    value?.version !== 1
+    || value.backend !== 'wa-sqlite'
+    || typeof value.promotedAt !== 'string'
+    || typeof profile?.databaseName !== 'string'
+    || !SUPPORTED_WA_SQLITE_STORAGE_SCOPES.has(profile.storageScope)
+    || profile.persistenceKind !== 'indexeddb-minimal-vfs'
+    || typeof profile.vfsName !== 'string'
+    || profile.vfsName.length === 0
+    || profile.persistentVfsReady !== true
+    || profile.activeBackendReady !== true
+  ) {
+    return false;
+  }
+
+  const expectedProfile = createWaSqlitePersistenceProfile(profile.storageScope, true);
+  return profile.databaseName === expectedProfile.databaseName
+    && profile.vfsName === expectedProfile.vfsName;
 }
 
 function createActiveWaSqliteRepository(profile: WaSqlitePersistenceProfile): VaultStorageRepository {

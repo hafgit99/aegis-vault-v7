@@ -260,6 +260,32 @@ describe('vault storage provider', () => {
 
     expect(readPersistedActiveVaultStorageBackend()).toBeNull();
     expect(localStorage.getItem(ACTIVE_VAULT_STORAGE_BACKEND_KEY)).toBeNull();
+
+    localStorage.setItem(ACTIVE_VAULT_STORAGE_BACKEND_KEY, JSON.stringify({
+      version: 1,
+      backend: 'wa-sqlite',
+      persistenceProfile: {
+        ...validProfile,
+        databaseName: '/aegis-wa-sqlite.android.db',
+      },
+      promotedAt: '2026-06-28T00:00:00.000Z',
+    }));
+
+    expect(readPersistedActiveVaultStorageBackend()).toBeNull();
+    expect(localStorage.getItem(ACTIVE_VAULT_STORAGE_BACKEND_KEY)).toBeNull();
+
+    localStorage.setItem(ACTIVE_VAULT_STORAGE_BACKEND_KEY, JSON.stringify({
+      version: 1,
+      backend: 'wa-sqlite',
+      persistenceProfile: {
+        ...validProfile,
+        vfsName: 'aegis-wa-sqlite-android-idb',
+      },
+      promotedAt: '2026-06-28T00:00:00.000Z',
+    }));
+
+    expect(readPersistedActiveVaultStorageBackend()).toBeNull();
+    expect(localStorage.getItem(ACTIVE_VAULT_STORAGE_BACKEND_KEY)).toBeNull();
   });
 
   it('clears invalid persisted active backend markers without replacing OPFS', async () => {

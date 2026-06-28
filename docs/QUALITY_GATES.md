@@ -17,7 +17,7 @@ Current measured baseline:
 | Lines | 94.06% |
 | Statements | 94.06% |
 | Functions | 91.91% |
-| Branches | 87.79% |
+| Branches | 87.80% |
 
 Coverage thresholds now act as a release-quality regression gate while staying slightly below the current baseline:
 
@@ -352,7 +352,7 @@ Recently improved:
 - wa-sqlite repository batch transaction integrity: batch save progress is now reported after successful encrypted upserts, and tests verify partial batch failures roll the target table back to its previous committed rows.
 - wa-sqlite active migration dry-run fail-closed path: active backend orchestration now converts unexpected post-migration dry-run exceptions into sanitized blocked readiness evidence, and tests verify promotion and active marker persistence are skipped.
 - wa-sqlite active migration pair creation failure: active backend orchestration now converts repository-pair creation exceptions into sanitized blocked readiness evidence before smoke, migration, promotion, or marker persistence can run.
-- wa-sqlite active marker profile validation: persisted active backend markers now reject unsupported storage scopes and missing IndexedDB VFS names before restore attempts, with tests proving forged markers are cleared without replacing OPFS.
+- wa-sqlite active marker profile validation: persisted active backend markers now reject unsupported storage scopes, missing IndexedDB VFS names, and database/VFS names that do not exactly match the selected storage scope, with tests proving forged markers are cleared without replacing OPFS.
 
 ## Next Gates
 
