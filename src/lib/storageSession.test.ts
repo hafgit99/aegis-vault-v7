@@ -362,10 +362,12 @@ describe('vault session storage', () => {
 
   it('clears the in-memory session when the system is reset', async () => {
     openVaultSession('master-pass');
+    localStorage.setItem('aegis_vault_storage_active_backend', JSON.stringify({ backend: 'wa-sqlite' }));
 
     await resetSystem();
 
     expect(getActiveMasterPassword()).toBeNull();
+    expect(localStorage.getItem('aegis_vault_storage_active_backend')).toBeNull();
   });
   it('requires an active session before running wa-sqlite active backend migration', async () => {
     await expect(migrateActiveVaultStorageToWaSqlite()).rejects.toThrow(

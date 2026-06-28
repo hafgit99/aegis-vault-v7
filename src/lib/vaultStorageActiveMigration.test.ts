@@ -130,9 +130,11 @@ describe('wa-sqlite active backend migration orchestration', () => {
     const sourceRepository = createRepositoryStub({ initialItems: [item] });
     const targetRepository = createRepositoryStub();
     const promotionRepository = createRepositoryStub();
+    const restorePreviousRepository = vi.fn();
+    const persistPromotion = vi.fn();
     const promoteRepository = vi.fn(async () => ({
       repository: promotionRepository,
-      restorePreviousRepository: vi.fn(),
+      restorePreviousRepository,
     }));
 
     const result = await runWaSqliteActiveBackendMigration('master-pass', {
@@ -140,6 +142,7 @@ describe('wa-sqlite active backend migration orchestration', () => {
       migrationPair: createMigrationPair(targetRepository),
       verifyPersistentTarget: vi.fn(async () => passedSmoke()),
       promoteRepository,
+      persistPromotion,
     });
 
     expect(result.status).toBe('promoted');
@@ -157,6 +160,7 @@ describe('wa-sqlite active backend migration orchestration', () => {
       targetItemCount: 1,
     });
     expect(promoteRepository).toHaveBeenCalledTimes(1);
+    expect(persistPromotion).toHaveBeenCalledTimes(1);
     expect(promoteRepository).toHaveBeenCalledWith(expect.objectContaining({
       selection: {
         active: 'wa-sqlite',
@@ -169,6 +173,32 @@ describe('wa-sqlite active backend migration orchestration', () => {
       },
     }));
     expect(result.promotionResult?.repository).toBe(promotionRepository);
+  });
+
+  it('rolls back active repository promotion when the persisted backend marker cannot be written', async () => {
+    const sourceRepository = createRepositoryStub({ initialItems: [item] });
+    const targetRepository = createRepositoryStub();
+    const promotionRepository = createRepositoryStub();
+    const restorePreviousRepository = vi.fn();
+    const promoteRepository = vi.fn(async () => ({
+      repository: promotionRepository,
+      restorePreviousRepository,
+    }));
+
+    const result = await runWaSqliteActiveBackendMigration('master-pass', {
+      sourceRepository,
+      migrationPair: createMigrationPair(targetRepository),
+      verifyPersistentTarget: vi.fn(async () => passedSmoke()),
+      promoteRepository,
+      persistPromotion: vi.fn(() => {
+        throw new Error('quota exceeded');
+      }),
+    });
+
+    expect(result.status).toBe('blocked');
+    expect(result.issues).toEqual(['wa-sqlite-active-backend-marker-write-failed']);
+    expect(result.promotionResult).toBeNull();
+    expect(restorePreviousRepository).toHaveBeenCalledTimes(1);
   });
 
   it('blocks before migration and promotion when persistent smoke fails', async () => {

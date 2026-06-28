@@ -4,9 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { sqliteOPFSInstance } from './sqlite_opfs';
 import {
+  ACTIVE_VAULT_STORAGE_BACKEND_KEY,
+  clearPersistedActiveVaultStorageBackend,
   createVaultStorageMigrationRepositoryPair,
   createVaultStorageMigrationWriteTargetRepository,
   createVaultStorageRepositoryForPromotionPlan,
@@ -14,8 +16,11 @@ import {
   getActiveVaultStorageBackendSelection,
   getVaultStorageMigrationTargetRepository,
   getVaultStorageRepository,
+  persistWaSqliteActiveBackendPromotion,
   promoteAndHydrateVaultStorageRepositoryFromPlan,
   promoteVaultStorageRepositoryFromPlan,
+  readPersistedActiveVaultStorageBackend,
+  restorePersistedActiveVaultStorageBackend,
   setVaultStorageRepositoryForTesting,
 } from './vaultStorageProvider';
 import type { VaultStorageRepository } from './vaultStorageRepository';
@@ -47,6 +52,10 @@ function createRepositoryStub(): VaultStorageRepository {
     reseedDemo: vi.fn(async () => []),
   };
 }
+
+afterEach(() => {
+  clearPersistedActiveVaultStorageBackend();
+});
 
 describe('vault storage provider', () => {
   it('uses the OPFS repository by default', () => {
@@ -154,6 +163,108 @@ describe('vault storage provider', () => {
         issues: [],
       },
     })).toThrow('vault-storage-promotion-plan-active-wa-sqlite-required');
+  });
+
+  it('persists and reads a verified wa-sqlite active backend marker', () => {
+    const persistenceProfile = markWaSqlitePersistenceReadyForActiveBackend(
+      createWaSqlitePersistenceProfile('desktop-app-data', true),
+    );
+
+    persistWaSqliteActiveBackendPromotion({
+      selection: {
+        active: 'wa-sqlite',
+        target: null,
+        mode: 'active',
+      },
+      persistenceProfile,
+      readinessReport: {
+        status: 'ready',
+        issues: [],
+      },
+    });
+
+    expect(readPersistedActiveVaultStorageBackend()).toMatchObject({
+      version: 1,
+      backend: 'wa-sqlite',
+      persistenceProfile,
+    });
+  });
+
+  it('restores a persisted wa-sqlite active backend only after hydration succeeds', async () => {
+    const repository = createRepositoryStub();
+    const persistenceProfile = markWaSqlitePersistenceReadyForActiveBackend(
+      createWaSqlitePersistenceProfile('desktop-app-data', true),
+    );
+    persistWaSqliteActiveBackendPromotion({
+      selection: {
+        active: 'wa-sqlite',
+        target: null,
+        mode: 'active',
+      },
+      persistenceProfile,
+      readinessReport: {
+        status: 'ready',
+        issues: [],
+      },
+    });
+
+    const restored = await restorePersistedActiveVaultStorageBackend({
+      createRepository: (profile) => {
+        expect(profile).toEqual(persistenceProfile);
+        return repository;
+      },
+    });
+
+    try {
+      expect(restored).toBe(true);
+      expect(repository.hydrate).toHaveBeenCalledTimes(1);
+      expect(getVaultStorageRepository()).toBe(repository);
+    } finally {
+      setVaultStorageRepositoryForTesting(sqliteOPFSInstance);
+    }
+  });
+
+  it('clears invalid persisted active backend markers without replacing OPFS', async () => {
+    localStorage.setItem(ACTIVE_VAULT_STORAGE_BACKEND_KEY, JSON.stringify({
+      version: 1,
+      backend: 'wa-sqlite',
+      persistenceProfile: createWaSqlitePersistenceProfile('desktop-app-data', true),
+      promotedAt: '2026-06-28T00:00:00.000Z',
+    }));
+    const previousRepository = getVaultStorageRepository();
+
+    await expect(restorePersistedActiveVaultStorageBackend()).resolves.toBe(false);
+
+    expect(localStorage.getItem(ACTIVE_VAULT_STORAGE_BACKEND_KEY)).toBeNull();
+    expect(getVaultStorageRepository()).toBe(previousRepository);
+  });
+
+  it('clears the persisted marker and keeps the previous repository when persisted restore hydration fails', async () => {
+    const repository = createRepositoryStub();
+    vi.mocked(repository.hydrate).mockRejectedValueOnce(new Error('hydrate failed'));
+    const persistenceProfile = markWaSqlitePersistenceReadyForActiveBackend(
+      createWaSqlitePersistenceProfile('desktop-app-data', true),
+    );
+    persistWaSqliteActiveBackendPromotion({
+      selection: {
+        active: 'wa-sqlite',
+        target: null,
+        mode: 'active',
+      },
+      persistenceProfile,
+      readinessReport: {
+        status: 'ready',
+        issues: [],
+      },
+    });
+    const previousRepository = getVaultStorageRepository();
+
+    await expect(restorePersistedActiveVaultStorageBackend({
+      createRepository: () => repository,
+    })).resolves.toBe(false);
+
+    expect(localStorage.getItem(ACTIVE_VAULT_STORAGE_BACKEND_KEY)).toBeNull();
+    expect(getVaultStorageRepository()).toBe(previousRepository);
   });
 
   it('promotes the active repository from a verified wa-sqlite plan and can restore the previous repository', () => {

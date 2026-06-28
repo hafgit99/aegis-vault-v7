@@ -7,6 +7,7 @@ import {
   getVaultStorageRepository,
   createVaultStorageMigrationRepositoryPair,
   promoteAndHydrateVaultStorageRepositoryFromPlan,
+  persistWaSqliteActiveBackendPromotion,
   type VaultStorageMigrationRepositoryPair,
   type VaultStorageRepositoryPromotionResult,
 } from './vaultStorageProvider';
@@ -49,6 +50,7 @@ export interface WaSqliteActiveBackendMigrationOptions {
   createMigrationPair?: () => VaultStorageMigrationRepositoryPair;
   verifyPersistentTarget?: () => Promise<WaSqlitePersistenceSmokeResult>;
   promoteRepository?: typeof promoteAndHydrateVaultStorageRepositoryFromPlan;
+  persistPromotion?: typeof persistWaSqliteActiveBackendPromotion;
 }
 
 export async function runWaSqliteActiveBackendMigration(
@@ -116,6 +118,21 @@ export async function runWaSqliteActiveBackendMigration(
   const promotionResult = await (options.promoteRepository ?? promoteAndHydrateVaultStorageRepositoryFromPlan)(
     promotionPlan,
   );
+
+  try {
+    (options.persistPromotion ?? persistWaSqliteActiveBackendPromotion)(promotionPlan);
+  } catch {
+    promotionResult.restorePreviousRepository();
+    return {
+      status: 'blocked',
+      issues: ['wa-sqlite-active-backend-marker-write-failed'],
+      readinessReport,
+      smokeResult,
+      dryRunResult,
+      persistentMigrationCandidateResult,
+      promotionResult: null,
+    };
+  }
 
   return {
     status: 'promoted',

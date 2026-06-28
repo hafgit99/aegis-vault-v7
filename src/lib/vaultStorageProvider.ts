@@ -20,6 +20,15 @@ import {
 } from './waSqlitePersistence';
 import { createWaSqliteVaultStorageRepository } from './waSqliteVaultStorageRepository';
 
+export const ACTIVE_VAULT_STORAGE_BACKEND_KEY = 'aegis_vault_storage_active_backend';
+
+interface PersistedActiveVaultStorageBackend {
+  version: 1;
+  backend: 'wa-sqlite';
+  persistenceProfile: WaSqlitePersistenceProfile;
+  promotedAt: string;
+}
+
 let activeVaultStorageRepository: VaultStorageRepository = sqliteOPFSInstance;
 
 export function getVaultStorageRepository(): VaultStorageRepository {
@@ -28,6 +37,94 @@ export function getVaultStorageRepository(): VaultStorageRepository {
 
 export function getActiveVaultStorageBackendSelection() {
   return getVaultStorageBackendSelection();
+}
+
+function getBrowserStorage(): Storage | null {
+  return typeof localStorage === 'undefined' ? null : localStorage;
+}
+
+export function clearPersistedActiveVaultStorageBackend(): void {
+  getBrowserStorage()?.removeItem(ACTIVE_VAULT_STORAGE_BACKEND_KEY);
+}
+
+export function persistWaSqliteActiveBackendPromotion(plan: WaSqliteActiveBackendPromotionPlan): void {
+  assertVaultStoragePromotionPlanReady(plan);
+  assertWaSqlitePersistenceReadyForActiveBackend(plan.persistenceProfile);
+
+  const storage = getBrowserStorage();
+  if (!storage) {
+    throw new Error('vault-storage-active-backend-marker-unavailable');
+  }
+
+  const marker: PersistedActiveVaultStorageBackend = {
+    version: 1,
+    backend: 'wa-sqlite',
+    persistenceProfile: plan.persistenceProfile,
+    promotedAt: new Date().toISOString(),
+  };
+  storage.setItem(ACTIVE_VAULT_STORAGE_BACKEND_KEY, JSON.stringify(marker));
+}
+
+export function readPersistedActiveVaultStorageBackend(): PersistedActiveVaultStorageBackend | null {
+  const raw = getBrowserStorage()?.getItem(ACTIVE_VAULT_STORAGE_BACKEND_KEY);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as PersistedActiveVaultStorageBackend;
+    if (!isPersistedActiveVaultStorageBackend(parsed)) {
+      clearPersistedActiveVaultStorageBackend();
+      return null;
+    }
+    return parsed;
+  } catch {
+    clearPersistedActiveVaultStorageBackend();
+    return null;
+  }
+}
+
+export interface RestorePersistedVaultStorageBackendOptions {
+  createRepository?: (profile: WaSqlitePersistenceProfile) => VaultStorageRepository;
+}
+
+export async function restorePersistedActiveVaultStorageBackend(
+  options: RestorePersistedVaultStorageBackendOptions = {},
+): Promise<boolean> {
+  const marker = readPersistedActiveVaultStorageBackend();
+  if (!marker) return false;
+
+  try {
+    assertWaSqlitePersistenceReadyForActiveBackend(marker.persistenceProfile);
+    const repository = (options.createRepository ?? createActiveWaSqliteRepository)(marker.persistenceProfile);
+    await repository.hydrate();
+    replaceActiveVaultStorageRepository(repository);
+    return true;
+  } catch {
+    clearPersistedActiveVaultStorageBackend();
+    return false;
+  }
+}
+
+function isPersistedActiveVaultStorageBackend(value: PersistedActiveVaultStorageBackend): value is PersistedActiveVaultStorageBackend {
+  const profile = value?.persistenceProfile;
+  return value?.version === 1
+    && value.backend === 'wa-sqlite'
+    && typeof value.promotedAt === 'string'
+    && typeof profile?.databaseName === 'string'
+    && typeof profile.storageScope === 'string'
+    && profile.persistenceKind === 'indexeddb-minimal-vfs'
+    && (typeof profile.vfsName === 'string' || profile.vfsName === null)
+    && profile.persistentVfsReady === true
+    && profile.activeBackendReady === true;
+}
+
+function createActiveWaSqliteRepository(profile: WaSqlitePersistenceProfile): VaultStorageRepository {
+  return createVaultStorageRepositoryForSelection({
+    active: 'wa-sqlite',
+    target: null,
+    mode: 'active',
+  }, {
+    persistenceProfile: profile,
+  });
 }
 
 export interface VaultStorageRepositoryPromotionResult {

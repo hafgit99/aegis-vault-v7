@@ -10,7 +10,7 @@ import {
   getSecretKeyFingerprint,
   normalizeAccountSecretKey,
 } from './secretKey';
-import { getVaultStorageRepository } from './vaultStorageProvider';
+import { clearPersistedActiveVaultStorageBackend, getVaultStorageRepository, restorePersistedActiveVaultStorageBackend } from './vaultStorageProvider';
 import {
   runWaSqliteActiveBackendMigration,
   type WaSqliteActiveBackendMigrationResult,
@@ -38,6 +38,7 @@ interface AccountSecretProfile {
 }
 
 export async function initializeStorage(): Promise<void> {
+  await restorePersistedActiveVaultStorageBackend();
   await getVaultStorageRepository().hydrate();
   await hydrateBiometric();
   migrateRememberedSecretKeyToSecureStorage();
@@ -263,6 +264,7 @@ export async function resetSystem(): Promise<void> {
   localStorage.removeItem('aegis_sqlite_fallback');
   localStorage.removeItem(STORAGE_KEYS.SECRET_PROFILE);
   localStorage.removeItem(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
+  clearPersistedActiveVaultStorageBackend();
 }
 
 export async function migrateActiveVaultStorageToWaSqlite(): Promise<WaSqliteActiveBackendMigrationResult> {
