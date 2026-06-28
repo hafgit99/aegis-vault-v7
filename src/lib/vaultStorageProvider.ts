@@ -22,6 +22,12 @@ import { createWaSqliteVaultStorageRepository } from './waSqliteVaultStorageRepo
 
 export const ACTIVE_VAULT_STORAGE_BACKEND_KEY = 'aegis_vault_storage_active_backend';
 
+const SUPPORTED_WA_SQLITE_STORAGE_SCOPES = new Set([
+  'android-app-private',
+  'desktop-app-data',
+  'browser-fallback',
+]);
+
 interface PersistedActiveVaultStorageBackend {
   version: 1;
   backend: 'wa-sqlite';
@@ -119,9 +125,10 @@ function isPersistedActiveVaultStorageBackend(value: PersistedActiveVaultStorage
     && value.backend === 'wa-sqlite'
     && typeof value.promotedAt === 'string'
     && typeof profile?.databaseName === 'string'
-    && typeof profile.storageScope === 'string'
+    && SUPPORTED_WA_SQLITE_STORAGE_SCOPES.has(profile.storageScope)
     && profile.persistenceKind === 'indexeddb-minimal-vfs'
-    && (typeof profile.vfsName === 'string' || profile.vfsName === null)
+    && typeof profile.vfsName === 'string'
+    && profile.vfsName.length > 0
     && profile.persistentVfsReady === true
     && profile.activeBackendReady === true;
 }

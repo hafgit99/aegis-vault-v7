@@ -230,6 +230,38 @@ describe('vault storage provider', () => {
     }
   });
 
+  it('clears forged active backend markers with unsupported scopes or missing VFS names', () => {
+    const validProfile = markWaSqlitePersistenceReadyForActiveBackend(
+      createWaSqlitePersistenceProfile('desktop-app-data', true),
+    );
+
+    localStorage.setItem(ACTIVE_VAULT_STORAGE_BACKEND_KEY, JSON.stringify({
+      version: 1,
+      backend: 'wa-sqlite',
+      persistenceProfile: {
+        ...validProfile,
+        storageScope: 'external-sd-card',
+      },
+      promotedAt: '2026-06-28T00:00:00.000Z',
+    }));
+
+    expect(readPersistedActiveVaultStorageBackend()).toBeNull();
+    expect(localStorage.getItem(ACTIVE_VAULT_STORAGE_BACKEND_KEY)).toBeNull();
+
+    localStorage.setItem(ACTIVE_VAULT_STORAGE_BACKEND_KEY, JSON.stringify({
+      version: 1,
+      backend: 'wa-sqlite',
+      persistenceProfile: {
+        ...validProfile,
+        vfsName: null,
+      },
+      promotedAt: '2026-06-28T00:00:00.000Z',
+    }));
+
+    expect(readPersistedActiveVaultStorageBackend()).toBeNull();
+    expect(localStorage.getItem(ACTIVE_VAULT_STORAGE_BACKEND_KEY)).toBeNull();
+  });
+
   it('clears invalid persisted active backend markers without replacing OPFS', async () => {
     localStorage.setItem(ACTIVE_VAULT_STORAGE_BACKEND_KEY, JSON.stringify({
       version: 1,
