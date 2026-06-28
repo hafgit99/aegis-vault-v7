@@ -102,6 +102,92 @@ describe('vault storage migration', () => {
     await expect(targetRepository.getVaultItems('master-pass')).resolves.toHaveLength(2);
   });
 
+  it('verifies reopened persistent target parity before reporting migration success', async () => {
+    const sourceRepository = repositoryStub([item(), item({ id: 'item-2', title: 'Second' })]);
+    const targetRepository = repositoryStub([]);
+    const reopenedRepository = repositoryStub([item(), item({ id: 'item-2', title: 'Second' })]);
+    const reopenTargetRepository = vi.fn(async () => reopenedRepository);
+
+    await expect(runVaultStorageMigration(sourceRepository, targetRepository, 'master-pass', 'opfs', 'wa-sqlite', {
+      verifyPersistentTarget: passingSmoke(),
+      reopenTargetRepository,
+    })).resolves.toEqual({
+      status: 'migrated',
+      sourceBackend: 'opfs',
+      targetBackend: 'wa-sqlite',
+      itemCount: 2,
+      targetItemCount: 2,
+      issues: [],
+    });
+
+    expect(reopenTargetRepository).toHaveBeenCalledOnce();
+    expect(reopenedRepository.hydrate).toHaveBeenCalledOnce();
+    expect(reopenedRepository.verifyPassword).toHaveBeenCalledWith('master-pass');
+    expect(reopenedRepository.getVaultItems).toHaveBeenCalledWith('master-pass');
+    expect(targetRepository.resetAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('rolls back when reopened persistent target verification rejects the master password', async () => {
+    const sourceRepository = repositoryStub([item()]);
+    const targetRepository = repositoryStub([]);
+    const reopenedRepository = repositoryStub([item()], false);
+
+    await expect(runVaultStorageMigration(sourceRepository, targetRepository, 'master-pass', 'opfs', 'wa-sqlite', {
+      verifyPersistentTarget: passingSmoke(),
+      reopenTargetRepository: () => reopenedRepository,
+    })).resolves.toEqual({
+      status: 'rolled-back',
+      sourceBackend: 'opfs',
+      targetBackend: 'wa-sqlite',
+      itemCount: 1,
+      targetItemCount: 1,
+      issues: ['vault-storage-migration-persistent-target-reopen-password-invalid'],
+    });
+
+    expect(targetRepository.resetAll).toHaveBeenCalledTimes(2);
+  });
+
+  it('rolls back when reopened persistent target content does not match the source', async () => {
+    const sourceRepository = repositoryStub([item()]);
+    const targetRepository = repositoryStub([]);
+    const reopenedRepository = repositoryStub([item({ password: 'tampered-after-reopen' })]);
+
+    await expect(runVaultStorageMigration(sourceRepository, targetRepository, 'master-pass', 'opfs', 'wa-sqlite', {
+      verifyPersistentTarget: passingSmoke(),
+      reopenTargetRepository: () => reopenedRepository,
+    })).resolves.toEqual({
+      status: 'rolled-back',
+      sourceBackend: 'opfs',
+      targetBackend: 'wa-sqlite',
+      itemCount: 1,
+      targetItemCount: 1,
+      issues: ['vault-storage-migration-target-content-mismatch'],
+    });
+
+    expect(targetRepository.resetAll).toHaveBeenCalledTimes(2);
+  });
+
+  it('rolls back when reopened persistent target hydration fails', async () => {
+    const sourceRepository = repositoryStub([item()]);
+    const targetRepository = repositoryStub([]);
+    const reopenedRepository = repositoryStub([item()]);
+    vi.mocked(reopenedRepository.hydrate).mockRejectedValueOnce(new Error('reopen failed\n<script>secret</script>'));
+
+    await expect(runVaultStorageMigration(sourceRepository, targetRepository, 'master-pass', 'opfs', 'wa-sqlite', {
+      verifyPersistentTarget: passingSmoke(),
+      reopenTargetRepository: () => reopenedRepository,
+    })).resolves.toEqual({
+      status: 'rolled-back',
+      sourceBackend: 'opfs',
+      targetBackend: 'wa-sqlite',
+      itemCount: 1,
+      targetItemCount: 1,
+      issues: ['reopen failed &lt;script_secret_/script_'],
+    });
+
+    expect(targetRepository.resetAll).toHaveBeenCalledTimes(2);
+  });
+
   it('blocks migration before target writes when the source password is invalid', async () => {
     const sourceRepository = repositoryStub([item()], false);
     const targetRepository = repositoryStub([]);

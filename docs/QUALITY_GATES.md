@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 93.98% |
-| Statements | 93.98% |
-| Functions | 91.89% |
-| Branches | 87.86% |
+| Lines | 93.99% |
+| Statements | 93.99% |
+| Functions | 91.90% |
+| Branches | 87.90% |
 
 Coverage thresholds now act as a release-quality regression gate while staying slightly below the current baseline:
 
@@ -254,7 +254,7 @@ Recently improved:
 - wa-sqlite dry-run metadata seed: connected the provider dry-run target to the real engine and added source-to-target metadata seeding for empty wa-sqlite tables without copying usernames, passwords, notes, or other decrypted secret fields into SQL seed statements.
 - wa-sqlite dry-run target validation: extended migration dry-run results with target item counts and source/target identity checks so mismatched, missing, duplicate, unreadable, or extra target records block migration readiness before any active backend switch.
 - wa-sqlite repository write path: `WaSqliteVaultStorageRepository` now supports schema hydration, Argon2id-backed master setup/verification, per-vault salt/KDF metadata, AES-GCM encrypted vault row save/read, transaction rollback on failed upserts, permanent delete/reset/reseed flows, transaction-guarded master password rekey/rollback, no plaintext password-keyed cache, and a fail-closed direct SQL surface until active backend migration parity is complete.
-- wa-sqlite migration orchestration: added a controlled OPFS-to-wa-sqlite migration service with source unlock validation, source id integrity checks, target setup/save/read verification, content parity checks, target rollback on write/integrity failures, and an explicit provider factory for write-target repositories while keeping the active backend unchanged.
+- wa-sqlite migration orchestration: added a controlled OPFS-to-wa-sqlite migration service with source unlock validation, source id integrity checks, target setup/save/read verification, content parity checks, target rollback on write/integrity failures, optional reopen-and-read persistent parity checks, and an explicit provider factory for write-target repositories while keeping the active backend unchanged.
 - wa-sqlite persistent VFS: wired the engine to the async wa-sqlite runtime with IndexedDB `IDBMinimalVFS`, scoped desktop/Android/browser database names, VFS registration/open/close handling, volatile fallback when IndexedDB is unavailable, and active backend promotion still fail-closed until migration switch testing is complete.
 - wa-sqlite persistence smoke: added a reusable write-close-reopen-read smoke verifier with deterministic tests for pass, unavailable VFS, write failure, and mismatch paths so desktop/Android runtime checks can prove persistence before the backend is promoted.
 - wa-sqlite migration preflight: `runVaultStorageMigration` now requires a passing persistent-target smoke check before the wa-sqlite target is hydrated, reset, or written, blocks promotion when the VFS cannot prove write-close-reopen-read durability, and sanitizes target write/rollback errors before they become migration report issues.

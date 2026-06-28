@@ -24,6 +24,7 @@ export interface VaultStorageMigrationResult {
 
 interface VaultStorageMigrationOptions {
   verifyPersistentTarget?: () => Promise<WaSqlitePersistenceSmokeResult>;
+  reopenTargetRepository?: () => VaultStorageRepository | Promise<VaultStorageRepository>;
 }
 
 export async function runVaultStorageMigration(
@@ -83,6 +84,20 @@ export async function runVaultStorageMigration(
     const targetItems = await targetRepository.getVaultItems(masterPasswordPlain);
     validateMigratedItems(sourceItems, sourceIds, targetItems, issues);
 
+    if (issues.length === 0 && options.reopenTargetRepository) {
+      const reopenedTargetItems = await verifyReopenedTargetRepository(
+        options.reopenTargetRepository,
+        masterPasswordPlain,
+        sourceItems,
+        sourceIds,
+        issues,
+      );
+
+      if (reopenedTargetItems) {
+        targetItems.splice(0, targetItems.length, ...reopenedTargetItems);
+      }
+    }
+
     if (issues.length > 0) {
       await rollbackTarget(targetRepository, issues);
       return {
@@ -114,6 +129,32 @@ export async function runVaultStorageMigration(
       targetItemCount: 0,
       issues,
     };
+  }
+}
+
+async function verifyReopenedTargetRepository(
+  createRepository: () => VaultStorageRepository | Promise<VaultStorageRepository>,
+  masterPasswordPlain: string,
+  sourceItems: VaultItem[],
+  sourceIds: Set<string>,
+  issues: string[],
+): Promise<VaultItem[] | null> {
+  try {
+    const reopenedRepository = await createRepository();
+    await reopenedRepository.hydrate();
+
+    const passwordValid = await reopenedRepository.verifyPassword(masterPasswordPlain);
+    if (!passwordValid) {
+      issues.push('vault-storage-migration-persistent-target-reopen-password-invalid');
+      return null;
+    }
+
+    const reopenedTargetItems = await reopenedRepository.getVaultItems(masterPasswordPlain);
+    validateMigratedItems(sourceItems, sourceIds, reopenedTargetItems, issues);
+    return reopenedTargetItems;
+  } catch (error) {
+    issues.push(migrationIssueFromError(error, 'vault-storage-migration-persistent-target-reopen-failed'));
+    return null;
   }
 }
 
