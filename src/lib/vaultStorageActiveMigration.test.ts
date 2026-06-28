@@ -32,9 +32,11 @@ const item: VaultItem = {
 function createRepositoryStub(options: {
   passwordValid?: boolean;
   initialItems?: VaultItem[];
+  failGetVaultItemsAfter?: number;
 } = {}): VaultStorageRepository {
   let items = [...(options.initialItems ?? [])];
   let setupPassword: string | null = options.passwordValid === false ? null : 'master-pass';
+  let getVaultItemsCallCount = 0;
   const logs: SQLCommandLog[] = [];
 
   return {
@@ -60,6 +62,10 @@ function createRepositoryStub(options: {
     }),
     deriveEncryptionKey: vi.fn(async () => new Uint8Array(32)),
     getVaultItems: vi.fn(async (password: string) => {
+      getVaultItemsCallCount += 1;
+      if (options.failGetVaultItemsAfter && getVaultItemsCallCount > options.failGetVaultItemsAfter) {
+        throw new Error('dry run failed\n<script>secret</script>');
+      }
       if (setupPassword !== password) {
         throw new Error('invalid-password');
       }
@@ -254,6 +260,41 @@ describe('wa-sqlite active backend migration orchestration', () => {
     expect(result.dryRunResult).toBeNull();
     expect(promoteRepository).not.toHaveBeenCalled();
     expect(targetRepository.resetAll).not.toHaveBeenCalled();
+  });
+
+  it('blocks promotion when post-migration dry-run verification throws', async () => {
+    const sourceRepository = createRepositoryStub({
+      initialItems: [item],
+      failGetVaultItemsAfter: 1,
+    });
+    const targetRepository = createRepositoryStub();
+    const promoteRepository = vi.fn();
+    const persistPromotion = vi.fn();
+
+    const result = await runWaSqliteActiveBackendMigration('master-pass', {
+      sourceRepository,
+      migrationPair: createMigrationPair(targetRepository),
+      verifyPersistentTarget: vi.fn(async () => passedSmoke()),
+      promoteRepository,
+      persistPromotion,
+    });
+
+    expect(result.status).toBe('blocked');
+    expect(result.dryRunResult).toEqual({
+      status: 'blocked',
+      sourceBackend: 'opfs',
+      targetBackend: 'wa-sqlite',
+      itemCount: 1,
+      targetItemCount: 1,
+      issues: ['dry run failed &lt;script_secret_/script_'],
+    });
+    expect(result.issues).toEqual([
+      'wa-sqlite-promotion-dry-run-not-ready',
+      'dry run failed &lt;script_secret_/script_',
+    ]);
+    expect(result.persistentMigrationCandidateResult?.migrationResult.status).toBe('migrated');
+    expect(promoteRepository).not.toHaveBeenCalled();
+    expect(persistPromotion).not.toHaveBeenCalled();
   });
 
   it('blocks promotion when the persistent migration candidate cannot unlock the source', async () => {

@@ -80,17 +80,28 @@ export async function runWaSqliteActiveBackendMigration(
     });
 
     if (persistentMigrationCandidateResult.migrationResult.status === 'migrated') {
-      const reopenedTargetRepository = migrationPair.reopenTargetRepository();
-      dryRunResult = await runVaultStorageMigrationDryRun(
-        sourceRepository,
-        {
-          active: 'opfs',
-          target: 'wa-sqlite',
-          mode: 'dry-run',
-        },
-        masterPasswordPlain,
-        reopenedTargetRepository,
-      );
+      try {
+        const reopenedTargetRepository = migrationPair.reopenTargetRepository();
+        dryRunResult = await runVaultStorageMigrationDryRun(
+          sourceRepository,
+          {
+            active: 'opfs',
+            target: 'wa-sqlite',
+            mode: 'dry-run',
+          },
+          masterPasswordPlain,
+          reopenedTargetRepository,
+        );
+      } catch (error) {
+        dryRunResult = {
+          status: 'blocked',
+          sourceBackend: 'opfs',
+          targetBackend: 'wa-sqlite',
+          itemCount: persistentMigrationCandidateResult.migrationResult.itemCount,
+          targetItemCount: persistentMigrationCandidateResult.migrationResult.targetItemCount,
+          issues: [activeMigrationIssueFromError(error, 'wa-sqlite-promotion-dry-run-failed')],
+        };
+      }
     }
   }
 

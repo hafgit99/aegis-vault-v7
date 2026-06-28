@@ -17,7 +17,7 @@ Current measured baseline:
 | Lines | 94.03% |
 | Statements | 94.03% |
 | Functions | 91.91% |
-| Branches | 87.72% |
+| Branches | 87.73% |
 
 Coverage thresholds now act as a release-quality regression gate while staying slightly below the current baseline:
 
@@ -350,6 +350,7 @@ Recently improved:
 - wa-sqlite startup restore integration: storage-session tests now verify that app initialization restores any persisted active wa-sqlite backend before hydrating the active repository, then continues biometric and secure-storage migration work in order.
 - wa-sqlite active promotion failure handling: active backend migration now returns a sanitized blocked result when hydrate-first promotion fails, and it does not write the active backend marker after a failed promotion attempt.
 - wa-sqlite repository batch transaction integrity: batch save progress is now reported after successful encrypted upserts, and tests verify partial batch failures roll the target table back to its previous committed rows.
+- wa-sqlite active migration dry-run fail-closed path: active backend orchestration now converts unexpected post-migration dry-run exceptions into sanitized blocked readiness evidence, and tests verify promotion and active marker persistence are skipped.
 
 ## Next Gates
 
