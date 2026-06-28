@@ -30,6 +30,26 @@ export function getActiveVaultStorageBackendSelection() {
   return getVaultStorageBackendSelection();
 }
 
+export interface VaultStorageRepositoryPromotionResult {
+  repository: VaultStorageRepository;
+  restorePreviousRepository: () => void;
+}
+
+export function promoteVaultStorageRepositoryFromPlan(
+  plan: WaSqliteActiveBackendPromotionPlan,
+): VaultStorageRepositoryPromotionResult {
+  const previousRepository = activeVaultStorageRepository;
+  const repository = createVaultStorageRepositoryForPromotionPlan(plan);
+  activeVaultStorageRepository = repository;
+
+  return {
+    repository,
+    restorePreviousRepository: () => {
+      activeVaultStorageRepository = previousRepository;
+    },
+  };
+}
+
 export interface VaultStorageActiveRepositoryOptions {
   persistenceProfile?: WaSqlitePersistenceProfile;
 }
