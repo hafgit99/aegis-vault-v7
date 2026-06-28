@@ -9,7 +9,7 @@ import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from '..
 import { isNativeFileDialogSupported, openDesktopImportFile, saveDesktopExportFile } from '../lib/desktopFiles';
 import { isAndroidAutofillSupported, openAndroidAutofillSettings } from '../lib/androidAutofill';
 import { disableBiometric, isBiometricEnabled, isBiometricSupported, registerBiometric } from '../lib/biometric';
-import { changeMasterPassword, getRememberedAccountSecretKey, getVaultItems, isAccountSecretKeyRequired, resetSystem, reseedDemoData, saveVaultItem, saveVaultItems, verifyMasterPassword } from '../lib/storage';
+import { changeMasterPassword, getRememberedAccountSecretKey, getVaultItems, isAccountSecretKeyRequired, migrateActiveVaultStorageToWaSqlite, resetSystem, reseedDemoData, saveVaultItem, saveVaultItems, verifyMasterPassword } from '../lib/storage';
 import { closeVaultSession, openVaultSession } from '../lib/vaultSession';
 import { VaultItem } from '../types';
 import { LanguageProvider } from '../i18n/LanguageContext';
@@ -37,6 +37,7 @@ vi.mock('../lib/storage', () => ({
   getRememberedAccountSecretKey: vi.fn(() => null),
   getVaultItems: vi.fn(async () => vaultItems),
   isAccountSecretKeyRequired: vi.fn(() => true),
+  migrateActiveVaultStorageToWaSqlite: vi.fn(),
   resetSystem: vi.fn(),
   reseedDemoData: vi.fn(async () => vaultItems),
   saveVaultItem: vi.fn(async () => vaultItems),
@@ -150,6 +151,15 @@ beforeEach(() => {
   vi.mocked(getVaultItems).mockResolvedValue(vaultItems);
   vi.mocked(isAccountSecretKeyRequired).mockReturnValue(true);
   vi.mocked(isNativeFileDialogSupported).mockReturnValue(false);
+  vi.mocked(migrateActiveVaultStorageToWaSqlite).mockResolvedValue({
+    status: 'promoted',
+    issues: [],
+    readinessReport: { status: 'ready', issues: [] },
+    smokeResult: { status: 'passed', databaseName: '/aegis-wa-sqlite.desktop.db', vfsName: 'aegis-wa-sqlite-desktop-idb' },
+    dryRunResult: null,
+    persistentMigrationCandidateResult: null,
+    promotionResult: null,
+  } as any);
   vi.mocked(openDesktopImportFile).mockResolvedValue(null);
   vi.mocked(reseedDemoData).mockResolvedValue(vaultItems);
   vi.mocked(saveDesktopExportFile).mockResolvedValue(false);
@@ -503,6 +513,62 @@ describe('SettingsPanel account and safety controls', () => {
           type: 'success',
         }),
       );
+    });
+  });
+
+  it('runs wa-sqlite migration after confirmation and refreshes the vault', async () => {
+    vi.mocked(window.confirm).mockReturnValueOnce(true);
+    const { props } = renderSettingsWithLanguage('en');
+
+    fireEvent.click(screen.getByTestId('wa-sqlite-migration-button'));
+
+    await waitFor(() => {
+      expect(migrateActiveVaultStorageToWaSqlite).toHaveBeenCalledTimes(1);
+      expect(props.onDatabaseChanged).toHaveBeenCalledTimes(1);
+      expect(props.onNotify).toHaveBeenCalledWith(expect.objectContaining({ type: 'success' }));
+    });
+    expect(screen.getByTestId('wa-sqlite-migration-message').textContent).toContain('The wa-sqlite storage engine is now active.');
+  });
+
+  it('does not run wa-sqlite migration when confirmation is cancelled', () => {
+    vi.mocked(window.confirm).mockReturnValueOnce(false);
+    renderSettingsWithLanguage('en');
+
+    fireEvent.click(screen.getByTestId('wa-sqlite-migration-button'));
+
+    expect(migrateActiveVaultStorageToWaSqlite).not.toHaveBeenCalled();
+  });
+
+  it('shows wa-sqlite blocker issues when migration safety checks stop promotion', async () => {
+    vi.mocked(window.confirm).mockReturnValueOnce(true);
+    vi.mocked(migrateActiveVaultStorageToWaSqlite).mockResolvedValueOnce({
+      status: 'blocked',
+      issues: ['wa-sqlite-promotion-dry-run-not-run'],
+      readinessReport: { status: 'blocked', issues: ['wa-sqlite-promotion-dry-run-not-run'] },
+      smokeResult: null,
+      dryRunResult: null,
+      persistentMigrationCandidateResult: null,
+      promotionResult: null,
+    } as any);
+    renderSettingsWithLanguage('en');
+
+    fireEvent.click(screen.getByTestId('wa-sqlite-migration-button'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wa-sqlite-migration-message').textContent).toContain('wa-sqlite migration was stopped by safety checks.');
+    });
+    expect(screen.getByTestId('wa-sqlite-migration-message').textContent).toContain('wa-sqlite-promotion-dry-run-not-run');
+  });
+
+  it('shows a session warning when wa-sqlite migration starts without an unlocked vault', async () => {
+    vi.mocked(window.confirm).mockReturnValueOnce(true);
+    vi.mocked(migrateActiveVaultStorageToWaSqlite).mockRejectedValueOnce(new Error('vault-storage-active-migration-session-required'));
+    renderSettingsWithLanguage('en');
+
+    fireEvent.click(screen.getByTestId('wa-sqlite-migration-button'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wa-sqlite-migration-message').textContent).toContain('An unlocked vault session is required before migration.');
     });
   });
 

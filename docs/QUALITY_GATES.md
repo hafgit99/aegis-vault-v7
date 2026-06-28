@@ -14,9 +14,9 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 94.05% |
-| Statements | 94.05% |
-| Functions | 91.95% |
+| Lines | 94.07% |
+| Statements | 94.07% |
+| Functions | 91.96% |
 | Branches | 87.89% |
 
 Coverage thresholds now act as a release-quality regression gate while staying slightly below the current baseline:
@@ -344,6 +344,7 @@ Recently improved:
 - `src/lib/attachments.ts`: covered AES-GCM metadata validation, legacy records without explicit algorithms, binary MIME fallback, unreadable FileReader results, FileReader errors, and stored-record decrypt failures so attachment branch coverage now reports full coverage.
 - Storage bridge helpers: added a dedicated mutation gate for desktop native persistence and Android secure storage, covering runtime scope detection, native command routing, extension credential shaping, secure bridge validation, and fail-closed native errors.
 - Storage orchestration: hardened initialization, setup reseeding, Secret Key secure-storage fallback/cleanup, setup migration warnings, no-session bulk-save guards, setup detection edge cases, rotation biometric reset, trash retention, and bulk-save orchestration; storage orchestration mutation score now reports 88.43% with zero no-coverage mutants.
+- wa-sqlite settings migration control: covered the guarded Settings entry point for active backend promotion, confirmation cancellation, safety-check blockers, missing-session errors, success refresh, and user notification routing.
 
 ## Next Gates
 
