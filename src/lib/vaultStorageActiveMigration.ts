@@ -59,11 +59,39 @@ export async function runWaSqliteActiveBackendMigration(
 ): Promise<WaSqliteActiveBackendMigrationResult> {
   const sourceRepository = options.sourceRepository ?? getVaultStorageRepository();
   const requestedPersistenceProfile = options.persistenceProfile ?? createWaSqlitePersistenceProfile();
-  const migrationPair = options.migrationPair ?? (
-    options.createMigrationPair ?? (() => createVaultStorageMigrationRepositoryPair('wa-sqlite', {
+  let migrationPair: VaultStorageMigrationRepositoryPair;
+
+  try {
+    migrationPair = options.migrationPair ?? (
+      options.createMigrationPair ?? (() => createVaultStorageMigrationRepositoryPair('wa-sqlite', {
+        persistenceProfile: requestedPersistenceProfile,
+      }))
+    )();
+  } catch (error) {
+    const smokeResult: WaSqlitePersistenceSmokeResult = {
+      status: 'failed',
+      databaseName: requestedPersistenceProfile.databaseName,
+      vfsName: requestedPersistenceProfile.vfsName,
+      issue: activeMigrationIssueFromError(error, 'wa-sqlite-active-migration-pair-create-failed'),
+    };
+    const readinessReport = evaluateWaSqlitePromotionReadiness({
       persistenceProfile: requestedPersistenceProfile,
-    }))
-  )();
+      smokeResult,
+      dryRunResult: null,
+      persistentMigrationCandidateResult: null,
+    });
+
+    return {
+      status: 'blocked',
+      issues: readinessReport.issues,
+      readinessReport,
+      smokeResult,
+      dryRunResult: null,
+      persistentMigrationCandidateResult: null,
+      promotionResult: null,
+    };
+  }
+
   const persistenceProfile = options.persistenceProfile ?? migrationPair.persistenceProfile;
   const verifyPersistentTarget = options.verifyPersistentTarget ?? (
     () => verifyWaSqlitePersistentVfsSmoke({ persistenceProfile })

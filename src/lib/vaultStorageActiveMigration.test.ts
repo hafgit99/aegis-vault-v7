@@ -231,6 +231,41 @@ describe('wa-sqlite active backend migration orchestration', () => {
     expect(restorePreviousRepository).toHaveBeenCalledTimes(1);
   });
 
+  it('blocks without throwing when the migration pair cannot be created', async () => {
+    const sourceRepository = createRepositoryStub({ initialItems: [item] });
+    const promoteRepository = vi.fn();
+    const verifyPersistentTarget = vi.fn(async () => passedSmoke());
+
+    const result = await runWaSqliteActiveBackendMigration('master-pass', {
+      sourceRepository,
+      persistenceProfile: createWaSqlitePersistenceProfile('desktop-app-data', true),
+      createMigrationPair: () => {
+        throw new Error('pair failed\n<script>secret</script>');
+      },
+      verifyPersistentTarget,
+      promoteRepository,
+    });
+
+    expect(result.status).toBe('blocked');
+    expect(result.smokeResult).toEqual({
+      status: 'failed',
+      databaseName: '/aegis-wa-sqlite.desktop.db',
+      vfsName: 'aegis-wa-sqlite-desktop-idb',
+      issue: 'pair failed &lt;script_secret_/script_',
+    });
+    expect(result.issues).toEqual([
+      'wa-sqlite-promotion-smoke-failed',
+      'pair failed &lt;script_secret_/script_',
+      'wa-sqlite-promotion-dry-run-not-run',
+      'wa-sqlite-promotion-persistent-migration-candidate-not-run',
+      'wa-sqlite-promotion-migration-not-run',
+    ]);
+    expect(result.persistentMigrationCandidateResult).toBeNull();
+    expect(result.dryRunResult).toBeNull();
+    expect(verifyPersistentTarget).not.toHaveBeenCalled();
+    expect(promoteRepository).not.toHaveBeenCalled();
+  });
+
   it('blocks before migration and promotion when persistent smoke fails', async () => {
     const sourceRepository = createRepositoryStub({ initialItems: [item] });
     const targetRepository = createRepositoryStub();
