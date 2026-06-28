@@ -23,6 +23,11 @@ const reencryptAttachmentsForMasterPasswordChange = vi.hoisted(() => vi.fn(async
 const disableBiometric = vi.hoisted(() => vi.fn());
 const hydrateBiometric = vi.hoisted(() => vi.fn(async () => undefined));
 const runWaSqliteActiveBackendMigration = vi.hoisted(() => vi.fn());
+const clearPersistedActiveVaultStorageBackend = vi.hoisted(() => vi.fn(() => {
+  localStorage.removeItem('aegis_vault_storage_active_backend');
+}));
+const getVaultStorageRepository = vi.hoisted(() => vi.fn(() => sqliteOPFSInstance));
+const restorePersistedActiveVaultStorageBackend = vi.hoisted(() => vi.fn(async () => false));
 
 vi.mock('./sqlite_opfs', () => ({
   sqliteOPFSInstance,
@@ -40,6 +45,12 @@ vi.mock('./biometric', () => ({
 
 vi.mock('./vaultStorageActiveMigration', () => ({
   runWaSqliteActiveBackendMigration,
+}));
+
+vi.mock('./vaultStorageProvider', () => ({
+  clearPersistedActiveVaultStorageBackend,
+  getVaultStorageRepository,
+  restorePersistedActiveVaultStorageBackend,
 }));
 
 import {
@@ -89,10 +100,12 @@ afterEach(() => {
   localStorage.clear();
   sessionStorage.clear();
   vi.clearAllMocks();
+  getVaultStorageRepository.mockReturnValue(sqliteOPFSInstance);
+  restorePersistedActiveVaultStorageBackend.mockResolvedValue(false);
 });
 
 describe('vault session storage', () => {
-  it('initializes sqlite, biometric state, and secure-storage migration in order', async () => {
+  it('initializes restored active storage, biometric state, and secure-storage migration in order', async () => {
     const secureValues = new Map<string, string>();
     window.AegisAndroidSecureStorage = {
       getItem: vi.fn((key) => secureValues.get(key) ?? null),
@@ -106,13 +119,39 @@ describe('vault session storage', () => {
 
     await initializeStorage();
 
+    expect(restorePersistedActiveVaultStorageBackend).toHaveBeenCalledTimes(1);
+    expect(getVaultStorageRepository).toHaveBeenCalledTimes(1);
     expect(sqliteOPFSInstance.hydrate).toHaveBeenCalledTimes(1);
     expect(hydrateBiometric).toHaveBeenCalledTimes(1);
+    expect(restorePersistedActiveVaultStorageBackend.mock.invocationCallOrder[0]).toBeLessThan(
+      getVaultStorageRepository.mock.invocationCallOrder[0],
+    );
+    expect(sqliteOPFSInstance.hydrate.mock.invocationCallOrder[0]).toBeLessThan(
+      hydrateBiometric.mock.invocationCallOrder[0],
+    );
     expect(window.AegisAndroidSecureStorage.setItem).toHaveBeenCalledWith(
       'aegis_account_secret_key_remembered',
       'A3-LEGACY-SECRET',
     );
     expect(localStorage.getItem('aegis_account_secret_key_remembered')).toBeNull();
+  });
+
+  it('hydrates the repository restored by the persisted wa-sqlite marker during initialization', async () => {
+    const restoredRepository = {
+      ...sqliteOPFSInstance,
+      hydrate: vi.fn(async () => undefined),
+    };
+    restorePersistedActiveVaultStorageBackend.mockImplementationOnce(async () => {
+      getVaultStorageRepository.mockReturnValue(restoredRepository);
+      return true;
+    });
+
+    await initializeStorage();
+
+    expect(restorePersistedActiveVaultStorageBackend).toHaveBeenCalledTimes(1);
+    expect(restoredRepository.hydrate).toHaveBeenCalledTimes(1);
+    expect(sqliteOPFSInstance.hydrate).not.toHaveBeenCalled();
+    expect(hydrateBiometric).toHaveBeenCalledTimes(1);
   });
 
   it('opens an in-memory session during setup without writing the master password to sessionStorage', async () => {
@@ -367,6 +406,7 @@ describe('vault session storage', () => {
     await resetSystem();
 
     expect(getActiveMasterPassword()).toBeNull();
+    expect(clearPersistedActiveVaultStorageBackend).toHaveBeenCalledTimes(1);
     expect(localStorage.getItem('aegis_vault_storage_active_backend')).toBeNull();
   });
   it('requires an active session before running wa-sqlite active backend migration', async () => {
