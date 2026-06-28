@@ -97,6 +97,7 @@ function createEngineStub(): WaSqliteEngine & {
   vaultRows: Array<Record<string, unknown>>;
   metadata: Map<string, string>;
   failNextUpsert: boolean;
+  failUpsertAfterCount: number | null;
 } {
   const state = {
     userSecretHash: null as string | null,
@@ -108,9 +109,12 @@ function createEngineStub(): WaSqliteEngine & {
       metadata: Map<string, string>;
     },
     failNextUpsert: false,
+    failUpsertAfterCount: null as number | null,
+    upsertCount: 0,
   };
 
   function snapshot() {
+    state.upsertCount = 0;
     state.txSnapshot = {
       userSecretHash: state.userSecretHash,
       vaultRows: state.vaultRows.map((row) => ({ ...row })),
@@ -127,8 +131,10 @@ function createEngineStub(): WaSqliteEngine & {
   }
 
   function upsertVaultRow(sql: string): VaultStorageQueryResult {
-    if (state.failNextUpsert) {
+    state.upsertCount += 1;
+    if (state.failNextUpsert || state.failUpsertAfterCount === state.upsertCount) {
       state.failNextUpsert = false;
+      state.failUpsertAfterCount = null;
       return { columns: [], rows: [], error: 'injected-upsert-failure' };
     }
 
@@ -174,6 +180,12 @@ function createEngineStub(): WaSqliteEngine & {
     },
     set failNextUpsert(value: boolean) {
       state.failNextUpsert = value;
+    },
+    get failUpsertAfterCount() {
+      return state.failUpsertAfterCount;
+    },
+    set failUpsertAfterCount(value: number | null) {
+      state.failUpsertAfterCount = value;
     },
     initialize: vi.fn(async () => ({
       initialized: true,
@@ -334,6 +346,29 @@ describe('wa-sqlite vault storage repository', () => {
     expect(engine.vaultRows).toHaveLength(1);
     expect(engine.vaultRows[0].title).toBe('Example Login');
     expect(engine.execute).toHaveBeenCalledWith('ROLLBACK;');
+  });
+
+  it('rolls back partial batch saves when a later encrypted upsert fails', async () => {
+    const engine = createEngineStub();
+    const repository = createWaSqliteVaultStorageRepository({ engine });
+    const onProgress = vi.fn();
+    await repository.setupMaster('valid-master');
+    await repository.saveVaultItem(createVaultItem({ id: 'existing', title: 'Existing' }), 'valid-master');
+    const beforeRows = engine.vaultRows.map((row) => ({ ...row }));
+
+    engine.failUpsertAfterCount = 2;
+    await expect(repository.saveVaultItems([
+      createVaultItem({ id: 'item-1', title: 'One' }),
+      createVaultItem({ id: 'item-2', title: 'Two' }),
+    ], 'valid-master', onProgress)).rejects.toThrow('injected-upsert-failure');
+
+    expect(engine.vaultRows).toEqual(beforeRows);
+    expect(engine.execute).toHaveBeenCalledWith('ROLLBACK;');
+    expect(onProgress).toHaveBeenCalledTimes(1);
+    expect(onProgress).toHaveBeenCalledWith(1);
+    await expect(repository.getVaultItems('valid-master')).resolves.toEqual([
+      expect.objectContaining({ id: 'existing', title: 'Existing' }),
+    ]);
   });
 
   it('saves batch rows, reports progress, deletes records, and reseeds demo rows', async () => {

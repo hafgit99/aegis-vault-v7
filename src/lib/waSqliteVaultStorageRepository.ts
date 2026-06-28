@@ -232,12 +232,12 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
 
     for (const item of items) {
       rows.push(await this.createEncryptedRow(item, key));
-      onProgress?.(rows.length);
     }
 
     await this.runTransaction(async () => {
-      for (const row of rows) {
+      for (const [index, row] of rows.entries()) {
         await this.executeRequired(this.createVaultItemUpsertSql(row));
+        onProgress?.(index + 1);
       }
     });
 
