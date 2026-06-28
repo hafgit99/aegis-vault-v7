@@ -4,6 +4,7 @@
  */
 
 import type { VaultStorageMigrationResult } from './vaultStorageMigration';
+import type { WaSqlitePersistentMigrationCandidateResult } from './vaultStorageMigrationCandidate';
 import type { VaultStorageMigrationDryRunResult } from './vaultStorageMigrationDryRun';
 import type { WaSqlitePersistenceProfile } from './waSqlitePersistence';
 import type { WaSqlitePersistenceSmokeResult } from './waSqlitePersistenceSmoke';
@@ -20,13 +21,15 @@ export interface WaSqlitePromotionReadinessInput {
   smokeResult?: WaSqlitePersistenceSmokeResult | null;
   dryRunResult?: VaultStorageMigrationDryRunResult | null;
   migrationResult?: VaultStorageMigrationResult | null;
+  persistentMigrationCandidateResult?: WaSqlitePersistentMigrationCandidateResult | null;
 }
 
 export function evaluateWaSqlitePromotionReadiness(
   input: WaSqlitePromotionReadinessInput,
 ): WaSqlitePromotionReadinessReport {
   const issues: string[] = [];
-  const { persistenceProfile, smokeResult, dryRunResult, migrationResult } = input;
+  const { persistenceProfile, smokeResult, dryRunResult, persistentMigrationCandidateResult } = input;
+  const migrationResult = persistentMigrationCandidateResult?.migrationResult ?? input.migrationResult;
 
   if (!persistenceProfile.persistentVfsReady) {
     issues.push(persistenceProfile.blocker || 'wa-sqlite-persistent-vfs-unavailable');
@@ -50,6 +53,12 @@ export function evaluateWaSqlitePromotionReadiness(
     validateDryRunResult(dryRunResult, issues);
   }
 
+  if (!persistentMigrationCandidateResult) {
+    issues.push('wa-sqlite-promotion-persistent-migration-candidate-not-run');
+  } else if (persistenceProfile.persistentVfsReady) {
+    validatePersistentMigrationCandidateProfile(persistenceProfile, persistentMigrationCandidateResult.persistenceProfile, issues);
+  }
+
   if (!migrationResult) {
     issues.push('wa-sqlite-promotion-migration-not-run');
   } else {
@@ -69,6 +78,21 @@ export function evaluateWaSqlitePromotionReadiness(
   };
 }
 
+function validatePersistentMigrationCandidateProfile(
+  expectedProfile: WaSqlitePersistenceProfile,
+  candidateProfile: WaSqlitePersistenceProfile,
+  issues: string[],
+): void {
+  if (candidateProfile.databaseName !== expectedProfile.databaseName) {
+    issues.push('wa-sqlite-promotion-candidate-database-mismatch');
+  }
+  if (candidateProfile.storageScope !== expectedProfile.storageScope) {
+    issues.push('wa-sqlite-promotion-candidate-storage-scope-mismatch');
+  }
+  if (candidateProfile.vfsName !== expectedProfile.vfsName) {
+    issues.push('wa-sqlite-promotion-candidate-vfs-mismatch');
+  }
+}
 function validateDryRunResult(result: VaultStorageMigrationDryRunResult, issues: string[]): void {
   if (result.sourceBackend !== 'opfs') {
     issues.push('wa-sqlite-promotion-dry-run-source-backend-mismatch');

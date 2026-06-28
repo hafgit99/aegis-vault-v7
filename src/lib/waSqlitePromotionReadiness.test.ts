@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { evaluateWaSqlitePromotionReadiness } from './waSqlitePromotionReadiness';
 import { createWaSqlitePersistenceProfile } from './waSqlitePersistence';
 import type { VaultStorageMigrationResult } from './vaultStorageMigration';
+import type { WaSqlitePersistentMigrationCandidateResult } from './vaultStorageMigrationCandidate';
 import type { VaultStorageMigrationDryRunResult } from './vaultStorageMigrationDryRun';
 import type { WaSqlitePersistenceSmokeResult } from './waSqlitePersistenceSmoke';
 
@@ -25,6 +26,8 @@ const readyDryRun: VaultStorageMigrationDryRunResult = {
   issues: [],
 };
 
+const persistentProfile = createWaSqlitePersistenceProfile('desktop-app-data', true);
+
 const migrated: VaultStorageMigrationResult = {
   status: 'migrated',
   sourceBackend: 'opfs',
@@ -34,13 +37,18 @@ const migrated: VaultStorageMigrationResult = {
   issues: [],
 };
 
+const migratedCandidate: WaSqlitePersistentMigrationCandidateResult = {
+  migrationResult: migrated,
+  persistenceProfile: persistentProfile,
+};
+
 describe('wa-sqlite promotion readiness', () => {
   it('reports ready only when persistent VFS, smoke, dry-run, and migration all passed', () => {
     expect(evaluateWaSqlitePromotionReadiness({
-      persistenceProfile: createWaSqlitePersistenceProfile('desktop-app-data', true),
+      persistenceProfile: persistentProfile,
       smokeResult: passedSmoke,
       dryRunResult: readyDryRun,
-      migrationResult: migrated,
+      persistentMigrationCandidateResult: migratedCandidate,
     })).toEqual({
       status: 'ready',
       issues: [],
@@ -55,6 +63,7 @@ describe('wa-sqlite promotion readiness', () => {
       issues: [
         'wa-sqlite-promotion-smoke-not-run',
         'wa-sqlite-promotion-dry-run-not-run',
+        'wa-sqlite-promotion-persistent-migration-candidate-not-run',
         'wa-sqlite-promotion-migration-not-run',
       ],
     });
@@ -70,7 +79,7 @@ describe('wa-sqlite promotion readiness', () => {
         issue: 'wa-sqlite-persistent-vfs-unavailable',
       },
       dryRunResult: readyDryRun,
-      migrationResult: migrated,
+      persistentMigrationCandidateResult: migratedCandidate,
     })).toEqual({
       status: 'blocked',
       issues: [
@@ -89,10 +98,13 @@ describe('wa-sqlite promotion readiness', () => {
         status: 'blocked',
         issues: ['vault-storage-dry-run-target-count-mismatch'],
       },
-      migrationResult: {
-        ...migrated,
-        status: 'rolled-back',
-        issues: ['vault-storage-migration-target-content-mismatch'],
+      persistentMigrationCandidateResult: {
+        migrationResult: {
+          ...migrated,
+          status: 'rolled-back',
+          issues: ['vault-storage-migration-target-content-mismatch'],
+        },
+        persistenceProfile: createWaSqlitePersistenceProfile('android-app-private', true),
       },
     })).toEqual({
       status: 'blocked',
@@ -104,6 +116,37 @@ describe('wa-sqlite promotion readiness', () => {
       ],
     });
   });
+  it('blocks promotion when only legacy migration evidence is provided without a persistent candidate', () => {
+    expect(evaluateWaSqlitePromotionReadiness({
+      persistenceProfile: persistentProfile,
+      smokeResult: passedSmoke,
+      dryRunResult: readyDryRun,
+      migrationResult: migrated,
+    })).toEqual({
+      status: 'blocked',
+      issues: ['wa-sqlite-promotion-persistent-migration-candidate-not-run'],
+    });
+  });
+
+  it('blocks promotion when the persistent candidate was created for a different storage profile', () => {
+    expect(evaluateWaSqlitePromotionReadiness({
+      persistenceProfile: persistentProfile,
+      smokeResult: passedSmoke,
+      dryRunResult: readyDryRun,
+      persistentMigrationCandidateResult: {
+        migrationResult: migrated,
+        persistenceProfile: createWaSqlitePersistenceProfile('android-app-private', true),
+      },
+    })).toEqual({
+      status: 'blocked',
+      issues: [
+        'wa-sqlite-promotion-candidate-database-mismatch',
+        'wa-sqlite-promotion-candidate-storage-scope-mismatch',
+        'wa-sqlite-promotion-candidate-vfs-mismatch',
+      ],
+    });
+  });
+
   it('blocks promotion when dry-run or migration results point at the wrong backend', () => {
     expect(evaluateWaSqlitePromotionReadiness({
       persistenceProfile: createWaSqlitePersistenceProfile('desktop-app-data', true),
@@ -112,10 +155,13 @@ describe('wa-sqlite promotion readiness', () => {
         ...readyDryRun,
         targetBackend: null,
       },
-      migrationResult: {
-        ...migrated,
-        sourceBackend: 'wa-sqlite',
-        targetBackend: 'opfs',
+      persistentMigrationCandidateResult: {
+        migrationResult: {
+          ...migrated,
+          sourceBackend: 'wa-sqlite',
+          targetBackend: 'opfs',
+        },
+        persistenceProfile: persistentProfile,
       },
     })).toEqual({
       status: 'blocked',
@@ -136,10 +182,13 @@ describe('wa-sqlite promotion readiness', () => {
         itemCount: 3,
         targetItemCount: 3,
       },
-      migrationResult: {
-        ...migrated,
-        itemCount: 2,
-        targetItemCount: 1,
+      persistentMigrationCandidateResult: {
+        migrationResult: {
+          ...migrated,
+          itemCount: 2,
+          targetItemCount: 1,
+        },
+        persistenceProfile: persistentProfile,
       },
     })).toEqual({
       status: 'blocked',
