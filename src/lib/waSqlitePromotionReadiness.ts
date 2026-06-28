@@ -6,7 +6,10 @@
 import type { VaultStorageMigrationResult } from './vaultStorageMigration';
 import type { WaSqlitePersistentMigrationCandidateResult } from './vaultStorageMigrationCandidate';
 import type { VaultStorageMigrationDryRunResult } from './vaultStorageMigrationDryRun';
-import type { WaSqlitePersistenceProfile } from './waSqlitePersistence';
+import {
+  markWaSqlitePersistenceReadyForActiveBackend,
+  type WaSqlitePersistenceProfile,
+} from './waSqlitePersistence';
 import type { WaSqlitePersistenceSmokeResult } from './waSqlitePersistenceSmoke';
 
 export type WaSqlitePromotionReadinessStatus = 'ready' | 'blocked';
@@ -14,6 +17,13 @@ export type WaSqlitePromotionReadinessStatus = 'ready' | 'blocked';
 export interface WaSqlitePromotionReadinessReport {
   status: WaSqlitePromotionReadinessStatus;
   issues: string[];
+}
+
+export class WaSqlitePromotionReadinessError extends Error {
+  constructor(public readonly issues: string[]) {
+    super('wa-sqlite-promotion-not-ready');
+    this.name = 'WaSqlitePromotionReadinessError';
+  }
 }
 
 export interface WaSqlitePromotionReadinessInput {
@@ -56,7 +66,11 @@ export function evaluateWaSqlitePromotionReadiness(
   if (!persistentMigrationCandidateResult) {
     issues.push('wa-sqlite-promotion-persistent-migration-candidate-not-run');
   } else if (persistenceProfile.persistentVfsReady) {
-    validatePersistentMigrationCandidateProfile(persistenceProfile, persistentMigrationCandidateResult.persistenceProfile, issues);
+    validatePersistentMigrationCandidateProfile(
+      persistenceProfile,
+      persistentMigrationCandidateResult.persistenceProfile,
+      issues,
+    );
   }
 
   if (!migrationResult) {
@@ -76,6 +90,19 @@ export function evaluateWaSqlitePromotionReadiness(
     status: issues.length === 0 ? 'ready' : 'blocked',
     issues: Array.from(new Set(issues)),
   };
+}
+
+export function createWaSqliteActivePersistenceProfileFromReadiness(
+  input: WaSqlitePromotionReadinessInput,
+): WaSqlitePersistenceProfile {
+  const report = evaluateWaSqlitePromotionReadiness(input);
+  if (report.status !== 'ready') {
+    throw new WaSqlitePromotionReadinessError(report.issues);
+  }
+
+  const promotedProfile = input.persistentMigrationCandidateResult?.persistenceProfile
+    ?? input.persistenceProfile;
+  return markWaSqlitePersistenceReadyForActiveBackend(promotedProfile);
 }
 
 function validatePersistentMigrationCandidateProfile(

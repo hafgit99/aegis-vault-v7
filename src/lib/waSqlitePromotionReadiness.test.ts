@@ -4,7 +4,11 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { evaluateWaSqlitePromotionReadiness } from './waSqlitePromotionReadiness';
+import {
+  createWaSqliteActivePersistenceProfileFromReadiness,
+  evaluateWaSqlitePromotionReadiness,
+  WaSqlitePromotionReadinessError,
+} from './waSqlitePromotionReadiness';
 import { createWaSqlitePersistenceProfile } from './waSqlitePersistence';
 import type { VaultStorageMigrationResult } from './vaultStorageMigration';
 import type { WaSqlitePersistentMigrationCandidateResult } from './vaultStorageMigrationCandidate';
@@ -43,6 +47,44 @@ const migratedCandidate: WaSqlitePersistentMigrationCandidateResult = {
 };
 
 describe('wa-sqlite promotion readiness', () => {
+  it('promotes only the verified persistent migration candidate profile for active backend use', () => {
+    const activeProfile = createWaSqliteActivePersistenceProfileFromReadiness({
+      persistenceProfile: persistentProfile,
+      smokeResult: passedSmoke,
+      dryRunResult: readyDryRun,
+      persistentMigrationCandidateResult: migratedCandidate,
+    });
+
+    expect(activeProfile).toEqual({
+      ...persistentProfile,
+      activeBackendReady: true,
+      blocker: '',
+    });
+  });
+
+  it('refuses to create an active wa-sqlite profile while readiness is blocked', () => {
+    expect(() => createWaSqliteActivePersistenceProfileFromReadiness({
+      persistenceProfile: persistentProfile,
+      smokeResult: passedSmoke,
+      dryRunResult: readyDryRun,
+      migrationResult: migrated,
+    })).toThrow(WaSqlitePromotionReadinessError);
+
+    try {
+      createWaSqliteActivePersistenceProfileFromReadiness({
+        persistenceProfile: persistentProfile,
+        smokeResult: passedSmoke,
+        dryRunResult: readyDryRun,
+        migrationResult: migrated,
+      });
+      throw new Error('expected active profile promotion to fail');
+    } catch (error) {
+      expect((error as WaSqlitePromotionReadinessError).issues).toEqual([
+        'wa-sqlite-promotion-persistent-migration-candidate-not-run',
+      ]);
+    }
+  });
+
   it('reports ready only when persistent VFS, smoke, dry-run, and migration all passed', () => {
     expect(evaluateWaSqlitePromotionReadiness({
       persistenceProfile: persistentProfile,
@@ -116,6 +158,7 @@ describe('wa-sqlite promotion readiness', () => {
       ],
     });
   });
+
   it('blocks promotion when only legacy migration evidence is provided without a persistent candidate', () => {
     expect(evaluateWaSqlitePromotionReadiness({
       persistenceProfile: persistentProfile,
