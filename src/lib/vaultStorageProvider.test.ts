@@ -6,7 +6,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { sqliteOPFSInstance } from './sqlite_opfs';
-import { createVaultStorageMigrationWriteTargetRepository, createVaultStorageRepositoryForSelection, getActiveVaultStorageBackendSelection, getVaultStorageMigrationTargetRepository, getVaultStorageRepository, setVaultStorageRepositoryForTesting } from './vaultStorageProvider';
+import { createVaultStorageMigrationRepositoryPair, createVaultStorageMigrationWriteTargetRepository, createVaultStorageRepositoryForSelection, getActiveVaultStorageBackendSelection, getVaultStorageMigrationTargetRepository, getVaultStorageRepository, setVaultStorageRepositoryForTesting } from './vaultStorageProvider';
 import type { VaultStorageRepository } from './vaultStorageRepository';
 import { createWaSqlitePersistenceProfile, markWaSqlitePersistenceReadyForActiveBackend, WA_SQLITE_ACTIVE_BACKEND_BLOCKER, WA_SQLITE_PERSISTENT_VFS_UNAVAILABLE } from './waSqlitePersistence';
 
@@ -131,6 +131,36 @@ describe('vault storage provider', () => {
     expect(() => createVaultStorageMigrationWriteTargetRepository('wa-sqlite', {
       persistenceProfile: createWaSqlitePersistenceProfile('desktop-app-data', false),
     })).toThrow(WA_SQLITE_PERSISTENT_VFS_UNAVAILABLE);
+  });
+
+  it('creates a wa-sqlite migration repository pair that reopens the same persistent profile', () => {
+    const persistenceProfile = createWaSqlitePersistenceProfile('android-app-private', true);
+    const pair = createVaultStorageMigrationRepositoryPair('wa-sqlite', { persistenceProfile });
+    const reopenedRepository = pair.reopenTargetRepository();
+
+    expect(pair.persistenceProfile).toBe(persistenceProfile);
+    expect(pair.targetRepository).toMatchObject({
+      hydrate: expect.any(Function),
+      setupMaster: expect.any(Function),
+      saveVaultItems: expect.any(Function),
+      getVaultItems: expect.any(Function),
+      resetAll: expect.any(Function),
+    });
+    expect(reopenedRepository).toMatchObject({
+      hydrate: expect.any(Function),
+      verifyPassword: expect.any(Function),
+      getVaultItems: expect.any(Function),
+    });
+    expect(reopenedRepository).not.toBe(pair.targetRepository);
+  });
+
+  it('blocks wa-sqlite migration repository pairs when persistent storage is unavailable', () => {
+    expect(() => createVaultStorageMigrationRepositoryPair('wa-sqlite', {
+      persistenceProfile: createWaSqlitePersistenceProfile('desktop-app-data', false),
+    })).toThrow(WA_SQLITE_PERSISTENT_VFS_UNAVAILABLE);
+    expect(() => createVaultStorageMigrationRepositoryPair(null)).toThrow(
+      'vault-storage-migration-target-unsupported',
+    );
   });
 
   it('can temporarily swap the active repository for migration tests', () => {

@@ -58,6 +58,12 @@ export interface VaultStorageMigrationWriteTargetRepositoryOptions {
   persistenceProfile?: WaSqlitePersistenceProfile;
 }
 
+export interface VaultStorageMigrationRepositoryPair {
+  targetRepository: VaultStorageRepository;
+  reopenTargetRepository: () => VaultStorageRepository;
+  persistenceProfile: WaSqlitePersistenceProfile;
+}
+
 export function createVaultStorageMigrationWriteTargetRepository(
   targetBackend: VaultStorageBackendSelection['target'] = 'wa-sqlite',
   options: VaultStorageMigrationWriteTargetRepositoryOptions = {},
@@ -72,6 +78,28 @@ export function createVaultStorageMigrationWriteTargetRepository(
   return createWaSqliteVaultStorageRepository({
     engine: createWaSqliteEngine({ persistenceProfile }),
   });
+}
+
+export function createVaultStorageMigrationRepositoryPair(
+  targetBackend: VaultStorageBackendSelection['target'] = 'wa-sqlite',
+  options: VaultStorageMigrationWriteTargetRepositoryOptions = {},
+): VaultStorageMigrationRepositoryPair {
+  if (targetBackend !== 'wa-sqlite') {
+    throw new Error('vault-storage-migration-target-unsupported');
+  }
+
+  const persistenceProfile = options.persistenceProfile ?? createWaSqlitePersistenceProfile();
+  assertWaSqlitePersistenceReadyForMigrationTarget(persistenceProfile);
+
+  const createRepository = () => createWaSqliteVaultStorageRepository({
+    engine: createWaSqliteEngine({ persistenceProfile }),
+  });
+
+  return {
+    targetRepository: createRepository(),
+    reopenTargetRepository: createRepository,
+    persistenceProfile,
+  };
 }
 
 export function setVaultStorageRepositoryForTesting(repository: VaultStorageRepository): () => void {
