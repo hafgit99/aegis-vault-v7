@@ -5,6 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  createWaSqliteActiveBackendPromotionPlan,
   createWaSqliteActivePersistenceProfileFromReadiness,
   evaluateWaSqlitePromotionReadiness,
   WaSqlitePromotionReadinessError,
@@ -47,6 +48,41 @@ const migratedCandidate: WaSqlitePersistentMigrationCandidateResult = {
 };
 
 describe('wa-sqlite promotion readiness', () => {
+  it('creates an active backend promotion plan only after every wa-sqlite gate is ready', () => {
+    const plan = createWaSqliteActiveBackendPromotionPlan({
+      persistenceProfile: persistentProfile,
+      smokeResult: passedSmoke,
+      dryRunResult: readyDryRun,
+      persistentMigrationCandidateResult: migratedCandidate,
+    });
+
+    expect(plan).toEqual({
+      selection: {
+        active: 'wa-sqlite',
+        target: null,
+        mode: 'active',
+      },
+      persistenceProfile: {
+        ...persistentProfile,
+        activeBackendReady: true,
+        blocker: '',
+      },
+      readinessReport: {
+        status: 'ready',
+        issues: [],
+      },
+    });
+  });
+
+  it('does not create an active backend promotion plan for blocked readiness evidence', () => {
+    expect(() => createWaSqliteActiveBackendPromotionPlan({
+      persistenceProfile: persistentProfile,
+      smokeResult: passedSmoke,
+      dryRunResult: readyDryRun,
+      migrationResult: migrated,
+    })).toThrow(WaSqlitePromotionReadinessError);
+  });
+
   it('promotes only the verified persistent migration candidate profile for active backend use', () => {
     const activeProfile = createWaSqliteActivePersistenceProfileFromReadiness({
       persistenceProfile: persistentProfile,

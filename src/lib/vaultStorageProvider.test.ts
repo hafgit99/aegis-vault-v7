@@ -6,9 +6,23 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { sqliteOPFSInstance } from './sqlite_opfs';
-import { createVaultStorageMigrationRepositoryPair, createVaultStorageMigrationWriteTargetRepository, createVaultStorageRepositoryForSelection, getActiveVaultStorageBackendSelection, getVaultStorageMigrationTargetRepository, getVaultStorageRepository, setVaultStorageRepositoryForTesting } from './vaultStorageProvider';
+import {
+  createVaultStorageMigrationRepositoryPair,
+  createVaultStorageMigrationWriteTargetRepository,
+  createVaultStorageRepositoryForPromotionPlan,
+  createVaultStorageRepositoryForSelection,
+  getActiveVaultStorageBackendSelection,
+  getVaultStorageMigrationTargetRepository,
+  getVaultStorageRepository,
+  setVaultStorageRepositoryForTesting,
+} from './vaultStorageProvider';
 import type { VaultStorageRepository } from './vaultStorageRepository';
-import { createWaSqlitePersistenceProfile, markWaSqlitePersistenceReadyForActiveBackend, WA_SQLITE_ACTIVE_BACKEND_BLOCKER, WA_SQLITE_PERSISTENT_VFS_UNAVAILABLE } from './waSqlitePersistence';
+import {
+  createWaSqlitePersistenceProfile,
+  markWaSqlitePersistenceReadyForActiveBackend,
+  WA_SQLITE_ACTIVE_BACKEND_BLOCKER,
+  WA_SQLITE_PERSISTENT_VFS_UNAVAILABLE,
+} from './waSqlitePersistence';
 
 function createRepositoryStub(): VaultStorageRepository {
   return {
@@ -83,6 +97,63 @@ describe('vault storage provider', () => {
       saveVaultItems: expect.any(Function),
       resetAll: expect.any(Function),
     });
+  });
+
+  it('creates an active wa-sqlite repository from a verified promotion plan', () => {
+    const persistenceProfile = markWaSqlitePersistenceReadyForActiveBackend(
+      createWaSqlitePersistenceProfile('desktop-app-data', true),
+    );
+    const repository = createVaultStorageRepositoryForPromotionPlan({
+      selection: {
+        active: 'wa-sqlite',
+        target: null,
+        mode: 'active',
+      },
+      persistenceProfile,
+      readinessReport: {
+        status: 'ready',
+        issues: [],
+      },
+    });
+
+    expect(repository).toMatchObject({
+      hydrate: expect.any(Function),
+      verifyPassword: expect.any(Function),
+      saveVaultItems: expect.any(Function),
+    });
+  });
+
+
+  it('rejects forged or blocked wa-sqlite promotion plans before repository creation', () => {
+    const persistenceProfile = markWaSqlitePersistenceReadyForActiveBackend(
+      createWaSqlitePersistenceProfile('desktop-app-data', true),
+    );
+
+    expect(() => createVaultStorageRepositoryForPromotionPlan({
+      selection: {
+        active: 'wa-sqlite',
+        target: null,
+        mode: 'active',
+      },
+      persistenceProfile,
+      readinessReport: {
+        status: 'blocked',
+        issues: ['wa-sqlite-promotion-smoke-not-run'],
+      },
+    })).toThrow('vault-storage-promotion-plan-not-ready');
+
+    expect(() => createVaultStorageRepositoryForPromotionPlan({
+      selection: {
+        active: 'opfs',
+        target: null,
+        mode: 'active',
+      },
+      persistenceProfile,
+      readinessReport: {
+        status: 'ready',
+        issues: [],
+      },
+    })).toThrow('vault-storage-promotion-plan-active-wa-sqlite-required');
   });
 
   it('does not expose a migration target unless dry-run is enabled', () => {

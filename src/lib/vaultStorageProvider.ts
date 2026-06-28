@@ -4,11 +4,20 @@
  */
 
 import { sqliteOPFSInstance } from './sqlite_opfs';
-import { getVaultStorageBackendSelection, type VaultStorageBackendSelection } from './vaultStorageBackend';
+import {
+  getVaultStorageBackendSelection,
+  type VaultStorageBackendSelection,
+} from './vaultStorageBackend';
 import { createReadOnlyWaSqliteVaultStorageAdapter } from './vaultStorageWaSqliteAdapter';
+import type { WaSqliteActiveBackendPromotionPlan } from './waSqlitePromotionReadiness';
 import type { VaultStorageRepository } from './vaultStorageRepository';
 import { createWaSqliteEngine } from './waSqliteEngine';
-import { assertWaSqlitePersistenceReadyForActiveBackend, assertWaSqlitePersistenceReadyForMigrationTarget, createWaSqlitePersistenceProfile, type WaSqlitePersistenceProfile } from './waSqlitePersistence';
+import {
+  assertWaSqlitePersistenceReadyForActiveBackend,
+  assertWaSqlitePersistenceReadyForMigrationTarget,
+  createWaSqlitePersistenceProfile,
+  type WaSqlitePersistenceProfile,
+} from './waSqlitePersistence';
 import { createWaSqliteVaultStorageRepository } from './waSqliteVaultStorageRepository';
 
 let activeVaultStorageRepository: VaultStorageRepository = sqliteOPFSInstance;
@@ -23,6 +32,25 @@ export function getActiveVaultStorageBackendSelection() {
 
 export interface VaultStorageActiveRepositoryOptions {
   persistenceProfile?: WaSqlitePersistenceProfile;
+}
+
+export function createVaultStorageRepositoryForPromotionPlan(
+  plan: WaSqliteActiveBackendPromotionPlan,
+): VaultStorageRepository {
+  if (plan.readinessReport.status !== 'ready') {
+    throw new Error('vault-storage-promotion-plan-not-ready');
+  }
+  if (
+    plan.selection.active !== 'wa-sqlite'
+    || plan.selection.mode !== 'active'
+    || plan.selection.target !== null
+  ) {
+    throw new Error('vault-storage-promotion-plan-active-wa-sqlite-required');
+  }
+
+  return createVaultStorageRepositoryForSelection(plan.selection, {
+    persistenceProfile: plan.persistenceProfile,
+  });
 }
 
 export function createVaultStorageRepositoryForSelection(

@@ -3,6 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import {
+  parseVaultStorageBackendSelection,
+  type VaultStorageBackendSelection,
+} from './vaultStorageBackend';
 import type { VaultStorageMigrationResult } from './vaultStorageMigration';
 import type { WaSqlitePersistentMigrationCandidateResult } from './vaultStorageMigrationCandidate';
 import type { VaultStorageMigrationDryRunResult } from './vaultStorageMigrationDryRun';
@@ -32,6 +36,12 @@ export interface WaSqlitePromotionReadinessInput {
   dryRunResult?: VaultStorageMigrationDryRunResult | null;
   migrationResult?: VaultStorageMigrationResult | null;
   persistentMigrationCandidateResult?: WaSqlitePersistentMigrationCandidateResult | null;
+}
+
+export interface WaSqliteActiveBackendPromotionPlan {
+  selection: VaultStorageBackendSelection;
+  persistenceProfile: WaSqlitePersistenceProfile;
+  readinessReport: WaSqlitePromotionReadinessReport;
 }
 
 export function evaluateWaSqlitePromotionReadiness(
@@ -105,6 +115,27 @@ export function createWaSqliteActivePersistenceProfileFromReadiness(
   return markWaSqlitePersistenceReadyForActiveBackend(promotedProfile);
 }
 
+export function createWaSqliteActiveBackendPromotionPlan(
+  input: WaSqlitePromotionReadinessInput,
+): WaSqliteActiveBackendPromotionPlan {
+  const readinessReport = evaluateWaSqlitePromotionReadiness(input);
+  if (readinessReport.status !== 'ready') {
+    throw new WaSqlitePromotionReadinessError(readinessReport.issues);
+  }
+
+  const persistenceProfile = createWaSqliteActivePersistenceProfileFromReadiness(input);
+  const selection = parseVaultStorageBackendSelection('wa-sqlite', {
+    waSqlitePromotionReadiness: readinessReport,
+    activeWaSqliteProviderEnabled: true,
+  });
+
+  return {
+    selection,
+    persistenceProfile,
+    readinessReport,
+  };
+}
+
 function validatePersistentMigrationCandidateProfile(
   expectedProfile: WaSqlitePersistenceProfile,
   candidateProfile: WaSqlitePersistenceProfile,
@@ -120,6 +151,7 @@ function validatePersistentMigrationCandidateProfile(
     issues.push('wa-sqlite-promotion-candidate-vfs-mismatch');
   }
 }
+
 function validateDryRunResult(result: VaultStorageMigrationDryRunResult, issues: string[]): void {
   if (result.sourceBackend !== 'opfs') {
     issues.push('wa-sqlite-promotion-dry-run-source-backend-mismatch');
