@@ -399,21 +399,30 @@ describe('wa-sqlite vault storage repository', () => {
     const engine = createEngineStub();
     const repository = createWaSqliteVaultStorageRepository({ engine });
     await repository.setupMaster('valid-master');
-    await repository.saveVaultItem(createVaultItem(), 'valid-master');
-    const oldCiphertext = String(engine.vaultRows[0].enc_metadata);
+    await repository.saveVaultItems([
+      createVaultItem(),
+      createVaultItem({ id: 'item-2', title: 'Second Login', username: 'bob', password: 'Second-Secret-456!' }),
+    ], 'valid-master');
+    const oldCiphertexts = engine.vaultRows.map((row) => String(row.enc_metadata));
     const oldSalt = engine.metadata.get('vault_encryption_salt');
 
     await repository.changeMasterPassword('valid-master', 'new-master');
 
     expect(engine.userSecretHash).toBe('$argon2id$fixedsalt$new-master');
     expect(engine.metadata.get('vault_encryption_salt')).not.toBe(oldSalt);
-    expect(String(engine.vaultRows[0].enc_metadata)).not.toBe(oldCiphertext);
+    expect(engine.vaultRows.map((row) => String(row.enc_metadata))).not.toEqual(oldCiphertexts);
     await expect(repository.verifyPassword('valid-master')).resolves.toBe(false);
+    await expect(repository.getVaultItems('valid-master')).rejects.toThrow(WA_SQLITE_INVALID_MASTER_PASSWORD_ERROR);
     await expect(repository.getVaultItems('new-master')).resolves.toEqual([
       expect.objectContaining({
         id: 'item-1',
         username: 'alice',
         password: 'Secret-123!',
+      }),
+      expect.objectContaining({
+        id: 'item-2',
+        username: 'bob',
+        password: 'Second-Secret-456!',
       }),
     ]);
   });

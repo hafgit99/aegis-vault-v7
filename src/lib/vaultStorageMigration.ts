@@ -100,6 +100,7 @@ export async function runVaultStorageMigration(
 
     if (issues.length > 0) {
       await rollbackTarget(targetRepository, issues);
+      await verifySourceRepositoryAfterRollback(sourceRepository, masterPasswordPlain, sourceItems, sourceIds, issues);
       return {
         status: 'rolled-back',
         sourceBackend,
@@ -121,6 +122,7 @@ export async function runVaultStorageMigration(
   } catch (error) {
     issues.push(migrationIssueFromError(error, 'vault-storage-migration-target-write-failed'));
     await rollbackTarget(targetRepository, issues);
+    await verifySourceRepositoryAfterRollback(sourceRepository, masterPasswordPlain, sourceItems, sourceIds, issues);
     return {
       status: 'rolled-back',
       sourceBackend,
@@ -156,6 +158,70 @@ async function verifyReopenedTargetRepository(
     issues.push(migrationIssueFromError(error, 'vault-storage-migration-persistent-target-reopen-failed'));
     return null;
   }
+}
+
+async function verifySourceRepositoryAfterRollback(
+  sourceRepository: VaultStorageRepository,
+  masterPasswordPlain: string,
+  sourceItems: VaultItem[],
+  sourceIds: Set<string>,
+  issues: string[],
+): Promise<void> {
+  try {
+    const passwordValid = await sourceRepository.verifyPassword(masterPasswordPlain);
+    if (!passwordValid) {
+      issues.push('vault-storage-migration-source-password-invalid-after-rollback');
+      return;
+    }
+
+    const postRollbackSourceItems = await sourceRepository.getVaultItems(masterPasswordPlain);
+    const sourceIntegrityIssues = validateSourceItemsUnchangedAfterRollback(
+      sourceItems,
+      sourceIds,
+      postRollbackSourceItems,
+    );
+    if (sourceIntegrityIssues.length > 0) {
+      issues.push('vault-storage-migration-source-drift-after-rollback', ...sourceIntegrityIssues);
+    }
+  } catch (error) {
+    issues.push(migrationIssueFromError(error, 'vault-storage-migration-source-check-failed-after-rollback'));
+  }
+}
+
+function validateSourceItemsUnchangedAfterRollback(
+  originalItems: VaultItem[],
+  originalIds: Set<string>,
+  postRollbackItems: VaultItem[],
+): string[] {
+  const issues: string[] = [];
+  if (postRollbackItems.length !== originalItems.length) {
+    issues.push('vault-storage-migration-source-count-mismatch-after-rollback');
+  }
+
+  const postRollbackIds = collectUniqueItemIds(postRollbackItems, [], 'source');
+  const originalById = new Map(originalItems.map((item) => [item.id, item]));
+  const postRollbackById = new Map(postRollbackItems.map((item) => [item.id, item]));
+
+  for (const originalId of originalIds) {
+    if (!postRollbackIds.has(originalId)) {
+      issues.push('vault-storage-migration-source-missing-id-after-rollback');
+      continue;
+    }
+
+    const originalItem = originalById.get(originalId);
+    const postRollbackItem = postRollbackById.get(originalId);
+    if (originalItem && postRollbackItem && !areVaultItemsEquivalent(originalItem, postRollbackItem)) {
+      issues.push('vault-storage-migration-source-content-mismatch-after-rollback');
+    }
+  }
+
+  for (const postRollbackId of postRollbackIds) {
+    if (!originalIds.has(postRollbackId)) {
+      issues.push('vault-storage-migration-source-extra-id-after-rollback');
+    }
+  }
+
+  return Array.from(new Set(issues));
 }
 
 function blocked(

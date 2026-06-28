@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 94.06% |
-| Statements | 94.06% |
-| Functions | 91.91% |
-| Branches | 87.80% |
+| Lines | 94.00% |
+| Statements | 94.00% |
+| Functions | 91.93% |
+| Branches | 87.70% |
 
 Coverage thresholds now act as a release-quality regression gate while staying slightly below the current baseline:
 
@@ -353,6 +353,7 @@ Recently improved:
 - wa-sqlite active migration dry-run fail-closed path: active backend orchestration now converts unexpected post-migration dry-run exceptions into sanitized blocked readiness evidence, and tests verify promotion and active marker persistence are skipped.
 - wa-sqlite active migration pair creation failure: active backend orchestration now converts repository-pair creation exceptions into sanitized blocked readiness evidence before smoke, migration, promotion, or marker persistence can run.
 - wa-sqlite active marker profile validation: persisted active backend markers now reject unsupported storage scopes, missing IndexedDB VFS names, and database/VFS names that do not exactly match the selected storage scope, with tests proving forged markers are cleared without replacing OPFS.
+- wa-sqlite migration rollback source integrity gate: target rollback paths now re-verify that the OPFS/source vault still unlocks and matches the pre-migration item set, adding explicit source-drift blocker codes if rollback safety ever detects source-side mutation.
 
 ## Next Gates
 

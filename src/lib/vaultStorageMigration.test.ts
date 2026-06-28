@@ -279,6 +279,34 @@ describe('vault storage migration', () => {
     expect(targetRepository.resetAll).toHaveBeenCalledTimes(2);
   });
 
+  it('verifies the source vault remains unchanged after target rollback', async () => {
+    const sourceRepository = repositoryStub([item()]);
+    const targetRepository = repositoryStub([]);
+    vi.mocked(sourceRepository.getVaultItems)
+      .mockResolvedValueOnce([item()])
+      .mockResolvedValueOnce([item({ password: 'source tampered after rollback' })]);
+    vi.mocked(targetRepository.saveVaultItems).mockRejectedValueOnce(new Error('target write failed'));
+
+    await expect(runVaultStorageMigration(sourceRepository, targetRepository, 'master-pass', 'opfs', 'wa-sqlite', {
+      verifyPersistentTarget: passingSmoke(),
+    })).resolves.toEqual({
+      status: 'rolled-back',
+      sourceBackend: 'opfs',
+      targetBackend: 'wa-sqlite',
+      itemCount: 1,
+      targetItemCount: 0,
+      issues: [
+        'target write failed',
+        'vault-storage-migration-source-drift-after-rollback',
+        'vault-storage-migration-source-content-mismatch-after-rollback',
+      ],
+    });
+
+    expect(sourceRepository.verifyPassword).toHaveBeenCalledTimes(2);
+    expect(sourceRepository.getVaultItems).toHaveBeenCalledTimes(2);
+    expect(targetRepository.resetAll).toHaveBeenCalledTimes(2);
+  });
+
   it('rolls back the target when post-migration integrity checks fail', async () => {
     const sourceRepository = repositoryStub([item()]);
     const targetRepository = repositoryStub([]);
