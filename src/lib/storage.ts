@@ -11,6 +11,10 @@ import {
   normalizeAccountSecretKey,
 } from './secretKey';
 import { getVaultStorageRepository } from './vaultStorageProvider';
+import {
+  runWaSqliteActiveBackendMigration,
+  type WaSqliteActiveBackendMigrationResult,
+} from './vaultStorageActiveMigration';
 import { logSecurityEvent, securityEventCodes } from './securityEvents';
 import { closeVaultSession, getActiveBackupPassword, getActiveMasterPassword, openVaultSession } from './vaultSession';
 import { disableBiometric, hydrateBiometric } from './biometric';
@@ -259,6 +263,19 @@ export async function resetSystem(): Promise<void> {
   localStorage.removeItem('aegis_sqlite_fallback');
   localStorage.removeItem(STORAGE_KEYS.SECRET_PROFILE);
   localStorage.removeItem(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
+}
+
+export async function migrateActiveVaultStorageToWaSqlite(): Promise<WaSqliteActiveBackendMigrationResult> {
+  const password = getSessionMasterPassword();
+  if (!password) {
+    throw new Error('vault-storage-active-migration-session-required');
+  }
+
+  const result = await runWaSqliteActiveBackendMigration(password);
+  if (result.status === 'promoted') {
+    localStorage.setItem(STORAGE_KEYS.IS_SET_UP, 'true');
+  }
+  return result;
 }
 
 function getSessionMasterPassword(): string | null {

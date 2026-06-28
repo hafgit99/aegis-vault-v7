@@ -22,6 +22,7 @@ const migrateLegacyAttachmentsToAesGcm = vi.hoisted(() => vi.fn(async () => 0));
 const reencryptAttachmentsForMasterPasswordChange = vi.hoisted(() => vi.fn(async () => 0));
 const disableBiometric = vi.hoisted(() => vi.fn());
 const hydrateBiometric = vi.hoisted(() => vi.fn(async () => undefined));
+const runWaSqliteActiveBackendMigration = vi.hoisted(() => vi.fn());
 
 vi.mock('./sqlite_opfs', () => ({
   sqliteOPFSInstance,
@@ -35,6 +36,10 @@ vi.mock('./attachments', () => ({
 vi.mock('./biometric', () => ({
   disableBiometric,
   hydrateBiometric,
+}));
+
+vi.mock('./vaultStorageActiveMigration', () => ({
+  runWaSqliteActiveBackendMigration,
 }));
 
 import {
@@ -56,6 +61,7 @@ import {
   setupMasterPasswordWithSecretKey,
   verifyMasterPassword,
   initializeStorage,
+  migrateActiveVaultStorageToWaSqlite,
   rememberAccountSecretKey,
   forgetRememberedAccountSecretKey,
 } from './storage';
@@ -360,6 +366,69 @@ describe('vault session storage', () => {
     await resetSystem();
 
     expect(getActiveMasterPassword()).toBeNull();
+  });
+  it('requires an active session before running wa-sqlite active backend migration', async () => {
+    await expect(migrateActiveVaultStorageToWaSqlite()).rejects.toThrow(
+      'vault-storage-active-migration-session-required',
+    );
+
+    expect(runWaSqliteActiveBackendMigration).not.toHaveBeenCalled();
+  });
+
+  it('runs wa-sqlite active backend migration with the active session credential', async () => {
+    runWaSqliteActiveBackendMigration.mockResolvedValueOnce({
+      status: 'promoted',
+      issues: [],
+      readinessReport: { status: 'ready', issues: [] },
+      smokeResult: {
+        status: 'passed',
+        databaseName: '/aegis-wa-sqlite.desktop.db',
+        vfsName: 'aegis-wa-sqlite-desktop-idb',
+      },
+      dryRunResult: null,
+      persistentMigrationCandidateResult: null,
+      promotionResult: null,
+    });
+    localStorage.removeItem('aegis_is_setup');
+    openVaultSession('master-pass');
+
+    await expect(migrateActiveVaultStorageToWaSqlite()).resolves.toMatchObject({
+      status: 'promoted',
+      issues: [],
+    });
+
+    expect(runWaSqliteActiveBackendMigration).toHaveBeenCalledWith('master-pass');
+    expect(localStorage.getItem('aegis_is_setup')).toBe('true');
+  });
+
+  it('preserves secret-key combined credentials during wa-sqlite active backend migration', async () => {
+    const combinedCredential = 'aegis-vault-v7:master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567';
+    runWaSqliteActiveBackendMigration.mockResolvedValueOnce({
+      status: 'blocked',
+      issues: ['wa-sqlite-promotion-dry-run-not-run'],
+      readinessReport: {
+        status: 'blocked',
+        issues: ['wa-sqlite-promotion-dry-run-not-run'],
+      },
+      smokeResult: {
+        status: 'passed',
+        databaseName: '/aegis-wa-sqlite.desktop.db',
+        vfsName: 'aegis-wa-sqlite-desktop-idb',
+      },
+      dryRunResult: null,
+      persistentMigrationCandidateResult: null,
+      promotionResult: null,
+    });
+    localStorage.removeItem('aegis_is_setup');
+    openVaultSession(combinedCredential, 'master-pass');
+
+    await expect(migrateActiveVaultStorageToWaSqlite()).resolves.toMatchObject({
+      status: 'blocked',
+      issues: ['wa-sqlite-promotion-dry-run-not-run'],
+    });
+
+    expect(runWaSqliteActiveBackendMigration).toHaveBeenCalledWith(combinedCredential);
+    expect(localStorage.getItem('aegis_is_setup')).toBeNull();
   });
 
   it('detects setup from the versioned sqlite fallback before using the legacy setup flag', () => {
