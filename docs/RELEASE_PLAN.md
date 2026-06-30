@@ -49,6 +49,8 @@ For each release, collect:
 - `src-tauri/target/release/bundle/msi/Aegis Vault 7_<version>_x64_en-US.msi`
 - `src-tauri/target/release/aegis-vault-v7.exe`
 - SHA-256 checksums for each artifact.
+- `release-local/<platform>/metadata.json` with version, commit, dirty status, artifact sizes, and hashes.
+- `release-local/<platform>/README.md` as the human-readable release evidence summary.
 - Git commit SHA used for the build.
 - Git tag used for the release.
 - CI run URL for the passing build.
@@ -93,7 +95,8 @@ Manual signing fallback:
 3. Sign `.exe` and `.msi` files with `signtool`.
 4. Verify signatures with `signtool verify /pa`.
 5. Generate new checksums for signed artifacts.
-6. Upload only signed artifacts to the public GitHub release.
+6. Refresh `release-local/<platform>/metadata.json` and `README.md` after replacing unsigned artifacts with signed ones.
+7. Upload only signed artifacts to the public GitHub release.
 
 ## Release Notes Checklist
 
@@ -107,6 +110,7 @@ Release notes must include:
 - Backup and recovery reminder.
 - Whether artifacts are signed or unsigned.
 - Checksums for all published artifacts.
+- Whether the release evidence `metadata.json` reports a clean working tree.
 
 Required user-facing warnings:
 

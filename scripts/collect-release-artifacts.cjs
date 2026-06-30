@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { execFileSync } = require('child_process');
 
 const rootDir = path.resolve(__dirname, '..');
 const targetDir = path.join(rootDir, 'src-tauri', 'target');
@@ -150,16 +151,100 @@ function copyBrowserExtensions() {
   return artifacts;
 }
 
+function sha256(file) {
+  return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+}
+
+function directoryStats(dir) {
+  const files = walk(dir).filter(file => fs.existsSync(file) && fs.statSync(file).isFile());
+  return {
+    fileCount: files.length,
+    sizeBytes: files.reduce((total, file) => total + fs.statSync(file).size, 0),
+  };
+}
+
+function gitValue(args, fallback = '<unknown>') {
+  try {
+    return execFileSync('git', args, { cwd: rootDir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function describeArtifact(file) {
+  const stats = fs.statSync(file);
+  const isDirectory = stats.isDirectory();
+  const dirStats = isDirectory ? directoryStats(file) : null;
+
+  return {
+    name: path.basename(file),
+    path: path.relative(rootDir, file),
+    type: isDirectory ? 'directory' : 'file',
+    sizeBytes: isDirectory ? dirStats.sizeBytes : stats.size,
+    fileCount: isDirectory ? dirStats.fileCount : 1,
+    sha256: isDirectory ? null : sha256(file),
+    modifiedAt: stats.mtime.toISOString(),
+  };
+}
+
 function writeChecksums(artifacts) {
   const lines = artifacts
     .filter(file => fs.existsSync(file) && fs.statSync(file).isFile())
     .map(file => {
-      const hash = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
-      return `${hash}  ${path.basename(file)}`;
+      return `${sha256(file)}  ${path.basename(file)}`;
     })
     .sort();
 
   fs.writeFileSync(path.join(outputDir, 'SHA256SUMS.txt'), `${lines.join('\n')}\n`, 'utf8');
+}
+
+function writeReleaseMetadata(artifacts) {
+  const dirtyStatus = gitValue(['status', '--short'], '');
+  const metadata = {
+    createdAt: new Date().toISOString(),
+    packageName: packageJson.name,
+    version,
+    platform,
+    hostPlatform: process.platform,
+    node: process.version,
+    commit: gitValue(['rev-parse', 'HEAD']),
+    branch: gitValue(['branch', '--show-current']),
+    dirty: Boolean(dirtyStatus),
+    dirtyStatus,
+    artifacts: artifacts.map(describeArtifact),
+  };
+
+  fs.writeFileSync(path.join(outputDir, 'metadata.json'), JSON.stringify(metadata, null, 2) + '\n', 'utf8');
+  const artifactLines = metadata.artifacts.map((artifact) => {
+    const hash = artifact.sha256 ? ', sha256 ' + artifact.sha256 : '';
+    return '- `' + artifact.name + '` (' + artifact.type + ', ' + artifact.sizeBytes + ' bytes' + hash + ')';
+  });
+
+  fs.writeFileSync(
+    path.join(outputDir, 'README.md'),
+    [
+      '# Aegis Vault 7 Desktop Release Evidence',
+      '',
+      'Created: ' + metadata.createdAt,
+      'Version: ' + metadata.version,
+      'Platform: ' + metadata.platform,
+      'Commit: ' + metadata.commit,
+      'Branch: ' + metadata.branch,
+      'Dirty working tree: ' + (metadata.dirty ? 'yes' : 'no'),
+      '',
+      '## Files',
+      '',
+      '- `metadata.json`: machine-readable release evidence.',
+      '- `SHA256SUMS.txt`: SHA-256 checksums for file artifacts.',
+      '- Copied installers/packages and browser extension assets for this platform.',
+      '',
+      '## Artifacts',
+      '',
+      ...artifactLines,
+      '',
+    ].join('\n'),
+    'utf8',
+  );
 }
 
 ensureCleanDir(outputDir);
@@ -177,6 +262,7 @@ if (platform === 'windows') {
 
 artifacts = artifacts.concat(copyBrowserExtensions());
 writeChecksums(artifacts);
+writeReleaseMetadata(artifacts);
 
 if (artifacts.length === 0) {
   console.warn(`No ${platform} release artifacts were found under ${targetDir}`);
