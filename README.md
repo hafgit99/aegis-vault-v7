@@ -215,6 +215,7 @@ Local release helper commands are available:
 npm run desktop:release:gate
 npm run desktop:release:gate -- --skip-desktop-build
 npm run desktop:release:gate:dry
+npm run desktop:release:version:check
 npm run desktop:release:evidence
 npm run desktop:release:notes
 npm run release:local
@@ -223,7 +224,7 @@ npm run release:linux
 npm run release:macos
 ```
 
-The desktop release gate runs lint, unit tests, web build, extension build, Tauri desktop build, release evidence collection, release notes generation, and evidence verification for the current host platform. Use `--skip-desktop-build` only when artifacts were produced by another trusted machine or workflow and you want to collect/check existing output. Linux and macOS artifacts can also be produced from the private build repository workflow when available.
+The desktop release gate runs lint, version consistency checks, unit tests, web build, extension build, Tauri desktop build, release evidence collection, release notes generation, and evidence verification for the current host platform. Use `--skip-desktop-build` only when artifacts were produced by another trusted machine or workflow and you want to collect/check existing output. Linux and macOS artifacts can also be produced from the private build repository workflow when available.
 
 ## Android Builds
 

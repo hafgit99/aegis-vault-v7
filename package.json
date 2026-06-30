@@ -63,7 +63,8 @@
     "desktop:release:gate": "node scripts/desktop-release-gate.cjs",
     "desktop:release:gate:dry": "node scripts/desktop-release-gate.cjs --dry-run",
     "desktop:release:evidence": "node scripts/desktop-release-evidence.cjs",
-    "desktop:release:notes": "node scripts/desktop-release-notes.cjs"
+    "desktop:release:notes": "node scripts/desktop-release-notes.cjs",
+    "desktop:release:version:check": "node scripts/desktop-version-check.cjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",

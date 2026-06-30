@@ -7,6 +7,7 @@ const isWindows = process.platform === 'win32';
 
 const platform = getArgValue('--platform') || detectPlatform();
 const dryRun = hasFlag('--dry-run');
+const skipVersionCheck = hasFlag('--skip-version-check');
 const skipUnit = hasFlag('--skip-unit');
 const skipWebBuild = hasFlag('--skip-web-build');
 const skipExtension = hasFlag('--skip-extension');
@@ -46,6 +47,7 @@ function usage() {
     '  --platform <windows|linux|macos>  Collect evidence for a specific platform.',
     '  --mac-universal                  Build macOS universal artifacts on macOS.',
     '  --dry-run                        Print the gate plan without executing commands.',
+    '  --skip-version-check             Skip desktop version consistency check.',
     '  --skip-unit                      Skip unit tests.',
     '  --skip-web-build                 Skip Vite web build.',
     '  --skip-extension                 Skip browser extension build.',
@@ -122,6 +124,10 @@ assertHostCanBuild(platform);
 const steps = [
   { command: 'npm', args: ['run', 'lint'] },
 ];
+
+if (!skipVersionCheck) {
+  steps.push({ command: 'npm', args: ['run', 'desktop:release:version:check'] });
+}
 
 if (!skipUnit) {
   steps.push({ command: 'npm', args: ['run', 'test:unit'] });

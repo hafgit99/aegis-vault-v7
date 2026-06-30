@@ -29,6 +29,7 @@ Every release candidate must pass:
 The desktop release gate runs:
 
 - `npm run lint`
+- `npm run desktop:release:version:check`
 - `npm run test:unit`
 - `npm run build`
 - `npm run build:extension`
@@ -73,7 +74,7 @@ Before building a release:
 
 1. Update `package.json` version.
 2. Update `src-tauri/tauri.conf.json` version.
-3. Confirm both versions match.
+3. Confirm `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and `src-tauri/Cargo.lock` versions match with `npm run desktop:release:version:check`.
 4. Commit the version update.
 5. Create an annotated tag such as `v0.1.0`.
 6. Build only from the tagged commit.
