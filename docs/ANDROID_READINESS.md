@@ -37,6 +37,7 @@ npm run android:build:apk:aarch64
 npm run android:release:gate
 npm run android:release:evidence
 npm run android:release:evidence:verify
+npm run android:release:evidence:summary
 npm run android:release:version:check
 npm run android:release:signing:check
 npm run android:release:report
@@ -62,7 +63,7 @@ Use `npm run android:release:gate` for the normal internal release candidate gat
 
 Shareable evidence requires a clean working tree. For local experiments only, `npm run android:release:gate -- --evidence --allow-dirty` records dirty status in `metadata.json` and still writes the evidence folder. Evidence metadata also records whether the candidate was tested with `--fresh-install`.
 
-Every evidence folder includes only the latest candidate APK/AAB for the active build type plus a candidate-prefilled copy of `docs/ANDROID_MANUAL_SMOKE_CHECKLIST.md`. Complete that copy for backup/import, attachment, biometric, Autofill, safe-area, and mobile UI release checks. To audit an existing evidence folder later, run `npm run android:release:evidence:verify -- --dir release-local/android/<timestamp>` and add `--require-device`, `--require-fresh-install`, `--require-signed`, or `--require-completed-checklist` when reviewing final candidate evidence.
+Every evidence folder includes only the latest candidate APK/AAB for the active build type plus a candidate-prefilled copy of `docs/ANDROID_MANUAL_SMOKE_CHECKLIST.md`. Complete that copy for backup/import, attachment, biometric, Autofill, safe-area, and mobile UI release checks. To audit an existing evidence folder later, run `npm run android:release:evidence:verify -- --dir release-local/android/<timestamp>` and add `--require-device`, `--require-fresh-install`, `--require-signed`, or `--require-completed-checklist` when reviewing final candidate evidence. Use `npm run android:release:evidence:summary -- --dir release-local/android/<timestamp>` for a human-readable PASS/BLOCKED release summary, and add `--final` to require signed, device, fresh-install, and completed-checklist evidence together.
 
 Use `npm run android:release:signing:check` before public release builds. Release signing is configured from environment variables so private keys and passwords never need to be committed:
 
