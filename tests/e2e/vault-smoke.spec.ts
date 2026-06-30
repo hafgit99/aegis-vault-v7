@@ -249,6 +249,24 @@ test('renders the crypto donation page with wallet QR codes', async ({ page }) =
   await expect(page.getByTestId('copy-toast-notification')).toBeVisible();
 });
 
+test('downloads an emergency kit from settings after unlock', async ({ page }) => {
+  await setupVault(page);
+  await openSettings(page);
+
+  await expect(page.getByTestId('settings-emergency-kit-card')).toBeVisible();
+  await expect(page.getByTestId('settings-emergency-secret-key-input')).toBeVisible();
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByTestId('settings-emergency-kit-download-button').click();
+  const download = await downloadPromise;
+  const downloadPath = await download.path();
+
+  expect(download.suggestedFilename()).toBe('aegis-vault-emergency-kit.txt');
+  expect(downloadPath).toBeTruthy();
+  await expect(page.getByTestId('settings-emergency-kit-success')).toBeVisible();
+  await expect(page.getByTestId('settings-emergency-kit-error')).toBeHidden();
+});
+
 test('exports an encrypted backup download', async ({ page }) => {
   await setupVault(page);
   await createLoginItem(page, 'E2E Export Backup');
