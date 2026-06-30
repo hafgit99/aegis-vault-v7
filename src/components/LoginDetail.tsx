@@ -34,8 +34,9 @@ export default function LoginDetail({
           {t('loginDetail.username')}
         </label>
         <div className="flex items-center justify-between">
-          <span className="font-bold text-base text-on-surface break-all">{item.username}</span>
+          <span data-testid="login-username-value" className="font-bold text-base text-on-surface break-all">{item.username}</span>
           <button
+            data-testid="login-username-copy-button"
             onClick={() => onCopyText(item.username, 'username')}
             className="text-on-surface-variant hover:text-brand-primary transition-colors focus:outline-none p-1.5 hover:bg-[#1a1c1a]/50 rounded-lg cursor-pointer shrink-0 ml-2"
             title={t('loginDetail.copy')}
@@ -54,11 +55,12 @@ export default function LoginDetail({
           {t('loginDetail.password')}
         </label>
         <div className="flex items-center justify-between">
-          <span className="font-mono text-base tracking-wider break-all text-on-surface select-all">
+          <span data-testid="login-password-value" className="font-mono text-base tracking-wider break-all text-on-surface select-all">
             {isPasswordRevealed ? item.password || t('loginDetail.emptyPassword') : '••••••••••••••••'}
           </span>
           <div className="flex items-center gap-2 shrink-0 ml-2">
             <button
+              data-testid="login-password-reveal-button"
               onClick={onTogglePasswordReveal}
               className="text-on-surface-variant hover:text-brand-primary transition-colors focus:outline-none p-1.5 hover:bg-[#1a1c1a]/50 rounded-lg cursor-pointer"
               title={isPasswordRevealed ? t('loginDetail.hide') : t('loginDetail.show')}
@@ -66,6 +68,7 @@ export default function LoginDetail({
               {isPasswordRevealed ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
             <button
+              data-testid="login-password-copy-button"
               onClick={() => onCopyText(item.password || '', 'password')}
               className="text-on-surface-variant hover:text-brand-primary transition-colors focus:outline-none p-1.5 hover:bg-[#1a1c1a]/50 rounded-lg cursor-pointer"
               title={t('loginDetail.copy')}

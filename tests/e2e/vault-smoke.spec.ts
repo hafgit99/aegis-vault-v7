@@ -81,6 +81,25 @@ test('sets up, stores, locks, and unlocks a vault item', async ({ page }) => {
   await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E GitHub' })).toBeVisible();
 });
 
+test('reveals and copies login detail fields', async ({ page }) => {
+  await setupVault(page);
+
+  const savedItem = await createLoginItem(page, 'E2E Detail Actions');
+  await savedItem.click();
+
+  await expect(page.getByTestId('login-username-value')).toContainText('ada-e2e');
+  await expect(page.getByTestId('login-password-value')).not.toContainText('CorrectHorseBatteryStaple!42');
+
+  await page.getByTestId('login-password-reveal-button').click();
+  await expect(page.getByTestId('login-password-value')).toContainText('CorrectHorseBatteryStaple!42');
+
+  await page.getByTestId('login-username-copy-button').click();
+  await expect(page.getByTestId('copy-toast-notification')).toBeVisible();
+
+  await page.getByTestId('login-password-copy-button').click();
+  await expect(page.getByTestId('copy-toast-notification')).toBeVisible();
+});
+
 test('moves a vault item to trash and restores it', async ({ page }) => {
   await setupVault(page);
 
