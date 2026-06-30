@@ -38,6 +38,7 @@ npm run android:release:gate
 npm run android:release:evidence
 npm run android:release:evidence:verify
 npm run android:release:evidence:summary
+npm run android:release:notes
 npm run android:release:version:check
 npm run android:release:signing:check
 npm run android:release:report
@@ -63,7 +64,7 @@ Use `npm run android:release:gate` for the normal internal release candidate gat
 
 Shareable evidence requires a clean working tree. For local experiments only, `npm run android:release:gate -- --evidence --allow-dirty` records dirty status in `metadata.json` and still writes the evidence folder. Evidence metadata also records whether the candidate was tested with `--fresh-install`.
 
-Every evidence folder includes only the latest candidate APK/AAB for the active build type plus a candidate-prefilled copy of `docs/ANDROID_MANUAL_SMOKE_CHECKLIST.md`. Complete that copy for backup/import, attachment, biometric, Autofill, safe-area, and mobile UI release checks. To audit an existing evidence folder later, run `npm run android:release:evidence:verify -- --dir release-local/android/<timestamp>` and add `--require-device`, `--require-fresh-install`, `--require-signed`, or `--require-completed-checklist` when reviewing final candidate evidence. Use `npm run android:release:evidence:summary -- --dir release-local/android/<timestamp>` for a human-readable PASS/BLOCKED release summary, and add `--final` to require signed, device, fresh-install, and completed-checklist evidence together.
+Every evidence folder includes only the latest candidate APK/AAB for the active build type plus a candidate-prefilled copy of `docs/ANDROID_MANUAL_SMOKE_CHECKLIST.md`. Complete that copy for backup/import, attachment, biometric, Autofill, safe-area, and mobile UI release checks. To audit an existing evidence folder later, run `npm run android:release:evidence:verify -- --dir release-local/android/<timestamp>` and add `--require-device`, `--require-fresh-install`, `--require-signed`, or `--require-completed-checklist` when reviewing final candidate evidence. Use `npm run android:release:evidence:summary -- --dir release-local/android/<timestamp>` for a human-readable PASS/BLOCKED release summary, and add `--final` to require signed, device, fresh-install, and completed-checklist evidence together. Use `npm run android:release:notes -- --dir release-local/android/<timestamp> --signed --final` to generate `ANDROID_RELEASE_NOTES.md` after final evidence passes.
 
 Use `npm run android:release:signing:check` before public release builds. Release signing is configured from environment variables so private keys and passwords never need to be committed:
 
@@ -153,6 +154,7 @@ Run this checklist before every APK/AAB candidate that may be shared outside loc
 - Run the internal gate: `npm run android:release:gate`.
 - For shareable candidates, run `npm run android:release:gate -- --evidence`; the gate verifies the generated evidence folder before it can complete, then archive `release-local/android/<timestamp>/`.
 - Before publishing or sending a final APK outside trusted testing, complete the copied checklist and run `npm run android:release:evidence:verify -- --dir release-local/android/<timestamp> --require-device --require-fresh-install --require-signed --require-completed-checklist`.
+- Generate `ANDROID_RELEASE_NOTES.md` with `npm run android:release:notes -- --dir release-local/android/<timestamp> --signed --final` and keep it in the evidence folder.
 - Confirm `metadata.json` reports `"dirty": false` before sharing any APK/AAB outside local development.
 - Run `npm run android:release:signing:check` before building a signed release candidate.
 - Build release APK/AAB with signing configuration when release keys are ready. Use `npm run android:release:gate -- --signed --evidence` for artifact evidence, and add `--device` only when a physical device should install/test the signed release package `com.hafgit99.aegisvault7`. Add `--fresh-install` for the final clean-install smoke pass.

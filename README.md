@@ -257,6 +257,7 @@ npm run android:release:gate
 npm run android:release:gate -- --signed --evidence
 npm run android:release:evidence:verify
 npm run android:release:evidence:summary
+npm run android:release:notes
 npm run android:release:evidence:verify -- --dir release-local/android/<timestamp> --require-device --require-fresh-install --require-signed --require-completed-checklist
 npm run android:release:report -- --strict
 ```
