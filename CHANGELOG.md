@@ -1,0 +1,69 @@
+# Changelog
+
+All notable Aegis Vault 7 changes are tracked here. The project follows a security-first release style: release notes summarize user-facing changes, while this changelog also records release-gate and validation work.
+
+## 7.0.1.0 - Release Candidate Hardening
+
+### Added
+
+- Desktop release gate with lint, version consistency checks, unit tests, web build, extension build, Tauri build, artifact collection, signing report generation, release notes generation, and evidence verification.
+- Desktop release evidence files: `metadata.json`, `SHA256SUMS.txt`, `DESKTOP_MANUAL_SMOKE_CHECKLIST.md`, `DESKTOP_SIGNATURES.md`, `RELEASE_NOTES.md`, and release evidence `README.md`.
+- Desktop signing report support for Windows Authenticode, macOS codesign/spctl checks, and Linux artifact signing policy notes.
+- Desktop version consistency gate across `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and `src-tauri/Cargo.lock`.
+- wa-sqlite migration UI smoke coverage and active-backend migration safety gates.
+- Android release gate evidence for signed APK candidates, fresh install checks, artifact metadata, SHA-256 hashes, ABI checks, signing checks, and device smoke reports.
+- Android Autofill provider flow with diagnostics, domain/package validation, stale-request protection, and browser compatibility notes.
+- Android document picker flows for encrypted backup export, plain JSON export, encrypted import, attachment download, and Emergency Kit saving.
+- Emergency Kit generation during first-run setup and from Settings after unlock.
+- Crypto donation page with wallet addresses, QR codes, copy actions, and Turkish/English/Chinese UI support.
+- Playwright smoke coverage for setup, unlock, create item, lock/unlock, Settings import/export, wa-sqlite migration UI, Emergency Kit download, donation page visibility, and TR/EN/ZH language switching.
+
+### Changed
+
+- Strengthened desktop release documentation with local build, evidence, signing, and release notes procedures.
+- Expanded Android readiness documentation for signed APKs, physical-device smoke testing, safe-area behavior, backup/import flows, Autofill validation, and biometric release checks.
+- Improved Android UI safe-area handling across lock screen, dashboard, navigation, Settings, item detail, and modal surfaces.
+- Refined dashboard, item detail, Security Analysis, Password Manager, Donation, Trash, and Settings layouts for mobile usability.
+- Reworked backup/export/import flows to prefer explicit native save/open paths on desktop and Android.
+- Updated release candidate process so generated artifacts are not considered publishable unless evidence metadata, checksums, signing report, manual checklist, and release notes are coherent.
+
+### Security
+
+- Removed insecure random fallback behavior; cryptographic randomness requires WebCrypto CSPRNG.
+- Replaced non-standard TOTP generation with RFC 6238-compatible behavior.
+- Reworked master session handling away from plaintext string persistence and toward zeroizable byte/session handling where JavaScript constraints allow.
+- Added brute-force protection, stronger password minimums, and safer master password rotation messaging.
+- Replaced static vault item KDF salt behavior with per-vault salt handling.
+- Rejected legacy XOR attachment records and migrated secure legacy attachment formats through authenticated encryption paths.
+- Added air-gap style network policy enforcement around allowed HIBP range checks.
+- Added structured security error taxonomy and security event logging patterns.
+- Added Android FLAG_SECURE protection for sensitive screens.
+- Added HIBP k-anonymity checks for breach-risk signals where enabled.
+
+### Fixed
+
+- Fixed broken top-right refresh behavior after unlock.
+- Made the large add-item action consistently visible.
+- Removed personal email example text from the new password item form.
+- Fixed attachment download/save behavior while preserving delete behavior.
+- Fixed Android backup export/import file picker flows and clarified user-selected destinations.
+- Fixed dashboard control panel navigation behavior.
+- Fixed Android Autofill flow so selected credentials return to the target app and fill supported browser fields.
+- Fixed mobile lock button visibility in the dashboard header.
+- Fixed Settings master password change warning so users understand re-encryption impact before proceeding.
+
+### Validation
+
+- Unit suite baseline: 108 test files and 837 tests passed in the latest recorded full unit run during release-gate work.
+- E2E smoke suite includes 15 Chromium smoke scenarios after wa-sqlite migration UI coverage was added.
+- Coverage and mutation thresholds are documented in `docs/QUALITY_GATES.md`.
+- Android release and desktop release evidence workflows are documented in `docs/ANDROID_READINESS.md` and `docs/RELEASE_PLAN.md`.
+
+### Known Limitations
+
+- wa-sqlite is still behind explicit migration/promotion gates; making it the default backend remains a separate release decision.
+- Public desktop release artifacts should be signed before distribution. Unsigned artifacts are suitable only for internal diagnostics.
+- Android biometric behavior still requires final validation on supported physical devices before public release claims.
+- Browser Autofill behavior depends on Android/browser provider support and user Autofill provider selection; Chrome may require disabling Google Password Manager Autofill or selecting Aegis as the active provider.
+- Sync/WebDAV is not yet treated as a final public release feature.
+- Lost master passwords, lost Account Secret Keys, and lost backup passwords cannot be recovered by the app.
