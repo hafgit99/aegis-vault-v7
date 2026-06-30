@@ -11,6 +11,7 @@ const allowDirty = hasFlag('--allow-dirty');
 const requireDevice = hasFlag('--require-device');
 const requireFreshInstall = hasFlag('--require-fresh-install');
 const requireSigned = hasFlag('--require-signed');
+const requireCompletedChecklist = hasFlag('--require-completed-checklist');
 
 function hasFlag(flag) {
   return args.includes(flag);
@@ -34,6 +35,8 @@ function usage() {
     '  --require-device          Fail unless device evidence files are present.',
     '  --require-fresh-install   Fail unless metadata records freshInstall=true.',
     '  --require-signed          Fail unless metadata records signed=true.',
+    '  --require-completed-checklist',
+    '                            Fail unless the manual smoke checklist is completed.',
     '  --help                    Show this help.',
   ].join('\n');
 }
@@ -100,6 +103,37 @@ function verifyChecklist(file, metadata) {
     if (!contents.includes(expected)) {
       fail('ANDROID_MANUAL_SMOKE_CHECKLIST.md is not prefilled with: ' + expected);
     }
+  }
+}
+
+function verifyCompletedChecklist(file) {
+  const contents = fs.readFileSync(file, 'utf8');
+  const requiredFields = [
+    '- Version:',
+    '- Commit:',
+    '- Device model:',
+    '- Android version / SDK:',
+    '- Build type:',
+    '- Fresh install used:',
+    '- Tester:',
+    '- Date:',
+  ];
+
+  for (const label of requiredFields) {
+    const line = contents.split(/\r?\n/).find((candidate) => candidate.startsWith(label));
+    if (!line || line.slice(label.length).trim().length === 0) {
+      fail('ANDROID_MANUAL_SMOKE_CHECKLIST.md is missing a completed candidate field: ' + label);
+    }
+  }
+
+  const unchecked = contents.split(/\r?\n/).filter((line) => /^- \[ \]/.test(line));
+  if (unchecked.length > 0) {
+    fail('ANDROID_MANUAL_SMOKE_CHECKLIST.md has unchecked release items: ' + unchecked.slice(0, 5).join(' | '));
+  }
+
+  const checkedCount = contents.split(/\r?\n/).filter((line) => /^- \[x\]/i.test(line)).length;
+  if (checkedCount === 0) {
+    fail('ANDROID_MANUAL_SMOKE_CHECKLIST.md does not contain any completed checklist items.');
   }
 }
 
@@ -184,6 +218,7 @@ function verifyEvidence() {
 
   verifyReport(reportPath, metadata);
   verifyChecklist(checklistPath, metadata);
+  if (requireCompletedChecklist) verifyCompletedChecklist(checklistPath);
   verifyDeviceEvidence(metadata);
 
   console.log('Android release evidence verified: ' + path.relative(repoRoot, evidenceDir));
@@ -191,6 +226,7 @@ function verifyEvidence() {
   console.log('Device evidence: ' + (metadata.deviceEvidence ? 'yes' : 'no'));
   console.log('Fresh install: ' + (metadata.freshInstall ? 'yes' : 'no'));
   console.log('Signed: ' + (metadata.signed ? 'yes' : 'no'));
+  console.log('Completed checklist required: ' + (requireCompletedChecklist ? 'yes' : 'no'));
 }
 
 verifyEvidence();

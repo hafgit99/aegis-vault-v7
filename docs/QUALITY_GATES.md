@@ -365,6 +365,7 @@ Recently improved:
   - `npm run android:release:version:check`
   - `npm run android:release:gate`
   - `npm run android:release:gate -- --evidence` for shareable internal candidates; evidence mode also runs `npm run android:release:evidence:verify`
+  - `npm run android:release:evidence:verify -- --dir release-local/android/<timestamp> --require-device --require-fresh-install --require-signed --require-completed-checklist` before final signed APK distribution
   - `npm run android:device:doctor` before connected-device candidates
   - `npm run android:release:gate -- --device` for connected-device candidates
   - `npm run android:release:signing:check` before signed release candidates
