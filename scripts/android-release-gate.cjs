@@ -2,6 +2,7 @@ const { spawnSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { loadAndroidSigningEnv } = require('./android-signing-env.cjs');
 
 const repoRoot = path.resolve(__dirname, '..');
 const args = new Set(process.argv.slice(2));
@@ -94,6 +95,11 @@ function run(command, commandArgs, options = {}) {
   if (result.status !== 0) {
     process.exit(result.status || 1);
   }
+}
+
+const signingEnv = loadAndroidSigningEnv();
+if (signed && signingEnv.exists) {
+  console.log(`Loaded local signing env: ${path.relative(repoRoot, signingEnv.file)}`);
 }
 
 console.log(signed

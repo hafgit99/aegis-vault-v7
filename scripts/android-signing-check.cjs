@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { loadAndroidSigningEnv } = require('./android-signing-env.cjs');
 
 const repoRoot = path.resolve(__dirname, '..');
 const required = [
@@ -26,7 +27,16 @@ function warn(message) {
   console.log(`WARN ${message}`);
 }
 
+const signingEnv = loadAndroidSigningEnv();
+
 console.log('Android release signing readiness');
+if (signingEnv.exists) {
+  console.log(`Loaded local signing env: ${path.relative(repoRoot, signingEnv.file)}`);
+  if (signingEnv.loaded.length > 0) console.log(`Loaded variables: ${signingEnv.loaded.join(', ')}`);
+  if (signingEnv.skipped.length > 0) console.log(`Kept existing shell variables: ${signingEnv.skipped.join(', ')}`);
+} else {
+  console.log(`Local signing env not found: ${path.relative(repoRoot, signingEnv.file)}`);
+}
 
 for (const name of required) {
   if (env(name)) {
