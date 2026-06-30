@@ -2,6 +2,7 @@ const { execFileSync } = require('child_process');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { findLatestAndroidApk } = require('./android-artifact-utils.cjs');
 
 const repoRoot = path.resolve(__dirname, '..');
 const args = new Set(process.argv.slice(2));
@@ -10,19 +11,7 @@ const releaseMode = args.has('--release');
 const buildType = releaseMode ? 'release' : 'debug';
 const sdkRoot = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || '';
 const adb = sdkRoot ? path.join(sdkRoot, 'platform-tools', process.platform === 'win32' ? 'adb.exe' : 'adb') : 'adb';
-const apk = path.join(
-  repoRoot,
-  'src-tauri',
-  'gen',
-  'android',
-  'app',
-  'build',
-  'outputs',
-  'apk',
-  'universal',
-  buildType,
-  'app-universal-' + buildType + '.apk',
-);
+const apk = findLatestAndroidApk(repoRoot, { buildType });
 const packageName = releaseMode ? 'com.hafgit99.aegisvault7' : 'com.hafgit99.aegisvault7.debug';
 const debugAutofillServiceName = `${packageName}/com.hafgit99.aegisvault7.AegisAutofillService`;
 const autofillServiceNames = [
@@ -96,13 +85,13 @@ if (fs.existsSync(adb) || adb === 'adb') {
   fail(`adb not found: ${adb}`);
 }
 
-if (fs.existsSync(apk)) {
+if (apk && fs.existsSync(apk)) {
   const stats = fs.statSync(apk);
   pass(buildType + ' APK exists: ' + path.relative(repoRoot, apk));
   console.log(`INFO apk-size ${(stats.size / 1024 / 1024).toFixed(2)} MiB`);
   console.log(`INFO apk-sha256 ${sha256(apk)}`);
 } else {
-  fail(buildType + ' APK not found: ' + path.relative(repoRoot, apk));
+  fail(buildType + ' APK not found under src-tauri/gen/android/app/build/outputs');
 }
 
 const devicesOutput = tryRun(['devices', '-l']);

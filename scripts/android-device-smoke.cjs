@@ -1,6 +1,7 @@
 const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { findLatestAndroidApk } = require('./android-artifact-utils.cjs');
 
 const repoRoot = path.resolve(__dirname, '..');
 const rawArgs = process.argv.slice(2);
@@ -9,19 +10,7 @@ const command = rawArgs.find((arg) => !arg.startsWith('--')) || 'smoke';
 const buildType = releaseMode ? 'release' : 'debug';
 const sdkRoot = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT;
 const adb = sdkRoot ? path.join(sdkRoot, 'platform-tools', process.platform === 'win32' ? 'adb.exe' : 'adb') : 'adb';
-const apk = path.join(
-  repoRoot,
-  'src-tauri',
-  'gen',
-  'android',
-  'app',
-  'build',
-  'outputs',
-  'apk',
-  'universal',
-  buildType,
-  `app-universal-${buildType}.apk`,
-);
+const apk = findLatestAndroidApk(repoRoot, { buildType });
 const packageName = releaseMode ? 'com.hafgit99.aegisvault7' : 'com.hafgit99.aegisvault7.debug';
 const processWaitTimeoutMs = 15000;
 const processPollIntervalMs = 500;
@@ -70,8 +59,8 @@ function ensureReadyDevice() {
 }
 
 function install() {
-  if (!fs.existsSync(apk)) {
-    throw new Error(`APK not found: ${path.relative(repoRoot, apk)}`);
+  if (!apk || !fs.existsSync(apk)) {
+    throw new Error(`${buildType} APK not found under src-tauri/gen/android/app/build/outputs`);
   }
   console.log(`Installing ${path.relative(repoRoot, apk)}`);
   run(['install', '-r', apk], { stdio: 'inherit' });

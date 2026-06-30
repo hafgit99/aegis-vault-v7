@@ -2,40 +2,23 @@ const { execFileSync } = require('child_process');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { findLatestAndroidCandidateArtifacts } = require('./android-artifact-utils.cjs');
 
 const repoRoot = path.resolve(__dirname, '..');
 const args = new Set(process.argv.slice(2));
 const strict = args.has('--strict');
 const signedOnly = args.has('--signed');
 const androidRoot = path.join(repoRoot, 'src-tauri', 'gen', 'android');
-const outputsRoot = path.join(androidRoot, 'app', 'build', 'outputs');
 const sourceManifestPath = path.join(androidRoot, 'app', 'src', 'main', 'AndroidManifest.xml');
 const appGradlePath = path.join(androidRoot, 'app', 'build.gradle.kts');
 const tauriPropertiesPath = path.join(androidRoot, 'app', 'tauri.properties');
 const sdkRoot = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || '';
 const sizeWarnMiB = 250;
+const buildType = signedOnly ? 'release' : 'debug';
 let warningCount = 0;
 
-function walk(dir, files = []) {
-  if (!fs.existsSync(dir)) return files;
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      walk(fullPath, files);
-    } else {
-      files.push(fullPath);
-    }
-  }
-  return files;
-}
-
 function findArtifacts() {
-  const artifacts = walk(outputsRoot)
-    .filter((file) => ['.apk', '.aab'].includes(path.extname(file).toLowerCase()))
-    .filter((file) => !signedOnly || file.split(path.sep).includes('release'))
-    .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
-
-  return artifacts;
+  return findLatestAndroidCandidateArtifacts(repoRoot, { buildType });
 }
 
 function sha256(file) {
@@ -307,12 +290,12 @@ function reportArtifact(file) {
 
 const artifacts = findArtifacts();
 if (artifacts.length === 0) {
-  console.log(`No Android APK/AAB artifacts found under ${path.relative(repoRoot, outputsRoot)}.`);
+  console.log(`No Android ${buildType} APK/AAB artifacts found under src-tauri/gen/android/app/build/outputs.`);
   process.exit(0);
 }
 
 console.log('Android release artifact report');
-if (signedOnly) console.log('Mode: signed release artifacts only');
+console.log(`Mode: ${buildType} candidate artifacts only`);
 console.log(`SDK: ${sdkRoot || 'not configured'}`);
 artifacts.forEach(reportArtifact);
 

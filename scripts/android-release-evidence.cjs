@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { findLatestAndroidCandidateArtifacts } = require('./android-artifact-utils.cjs');
 
 const repoRoot = path.resolve(__dirname, '..');
 const args = new Set(process.argv.slice(2));
@@ -11,25 +12,12 @@ const includeDeviceEvidence = args.has('--device');
 const enableAutofill = args.has('--enable-autofill');
 const signed = args.has('--signed');
 const deviceModeArgs = signed ? ['--release'] : [];
-const androidOutputsRoot = path.join(repoRoot, 'src-tauri', 'gen', 'android', 'app', 'build', 'outputs');
+const buildType = signed ? 'release' : 'debug';
 const manualSmokeChecklistPath = path.join(repoRoot, 'docs', 'ANDROID_MANUAL_SMOKE_CHECKLIST.md');
 const releaseRoot = path.join(repoRoot, 'release-local', 'android');
 const startedAt = new Date();
 const stamp = startedAt.toISOString().replace(/[:.]/g, '-');
 const outDir = path.join(releaseRoot, stamp);
-
-function walk(dir, files = []) {
-  if (!fs.existsSync(dir)) return files;
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      walk(fullPath, files);
-    } else {
-      files.push(fullPath);
-    }
-  }
-  return files;
-}
 
 function run(command, args, options = {}) {
   try {
@@ -120,10 +108,7 @@ function completedManualChecklist(contents, metadata, report, deviceDoctorReport
 }
 
 function findArtifacts() {
-  return walk(androidOutputsRoot)
-    .filter((file) => ['.apk', '.aab'].includes(path.extname(file).toLowerCase()))
-    .filter((file) => !signed || file.split(path.sep).includes('release'))
-    .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+  return findLatestAndroidCandidateArtifacts(repoRoot, { buildType });
 }
 
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
