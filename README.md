@@ -50,7 +50,7 @@ Important Android work already in place:
 - Real app icon applied to Android builds.
 - Safe-area layout fixes for lock screen, dashboard, menu, Settings, item detail, and modal screens.
 - Signed APK build path verified locally.
-- APK artifact reporting, SHA-256 evidence, ABI checks, and signing checks.
+- APK artifact reporting, SHA-256 evidence verification, ABI checks, and signing checks.
 - Physical-device smoke scripts for install, launch, package status, private data directory, and runtime security checks.
 - Android Autofill diagnostics and browser-specific validation notes.
 - Document picker save/open bridge with timeout, cancellation, and native-error handling.
@@ -255,6 +255,7 @@ Release gate and evidence collection:
 ```bash
 npm run android:release:gate
 npm run android:release:gate -- --signed --evidence
+npm run android:release:evidence:verify
 npm run android:release:report -- --strict
 ```
 

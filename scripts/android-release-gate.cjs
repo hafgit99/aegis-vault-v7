@@ -141,6 +141,16 @@ if (evidence) {
     ...(freshInstall ? ['--fresh-install'] : []),
     ...(signed ? ['--signed'] : []),
   ]);
+
+  run('npm', [
+    'run',
+    'android:release:evidence:verify',
+    '--',
+    ...(allowDirty ? ['--allow-dirty'] : []),
+    ...(!skipDevice ? ['--require-device'] : []),
+    ...(freshInstall ? ['--require-fresh-install'] : []),
+    ...(signed ? ['--require-signed'] : []),
+  ]);
 }
 
 console.log('\nAndroid release gate completed.');
