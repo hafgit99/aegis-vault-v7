@@ -12,6 +12,9 @@ const skipWebBuild = hasFlag('--skip-web-build');
 const skipExtension = hasFlag('--skip-extension');
 const skipDesktopBuild = hasFlag('--skip-desktop-build');
 const skipCollect = hasFlag('--skip-collect');
+const skipEvidenceVerify = hasFlag('--skip-evidence-verify');
+const allowDirtyEvidence = hasFlag('--allow-dirty-evidence');
+const allowEmptyEvidence = hasFlag('--allow-empty-evidence');
 const macUniversal = hasFlag('--mac-universal');
 
 function hasFlag(flag) {
@@ -45,6 +48,9 @@ function usage() {
     '  --skip-extension                 Skip browser extension build.',
     '  --skip-desktop-build             Skip Tauri desktop build and only collect existing artifacts.',
     '  --skip-collect                   Skip release-local evidence collection.',
+    '  --skip-evidence-verify           Skip release-local evidence verification.',
+    '  --allow-dirty-evidence           Permit dirty metadata during evidence verification.',
+    '  --allow-empty-evidence           Permit empty artifact metadata during diagnostics.',
     '  --help                           Show this help.',
   ].join('\n');
 }
@@ -133,6 +139,13 @@ if (!skipDesktopBuild) {
 
 if (!skipCollect) {
   steps.push({ command: 'node', args: ['scripts/collect-release-artifacts.cjs', '--platform', platform] });
+}
+
+if (!skipCollect && !skipEvidenceVerify) {
+  const evidenceArgs = ['scripts/desktop-release-evidence.cjs', '--platform', platform];
+  if (allowDirtyEvidence) evidenceArgs.push('--allow-dirty');
+  if (allowEmptyEvidence) evidenceArgs.push('--allow-empty');
+  steps.push({ command: 'node', args: evidenceArgs });
 }
 
 printPlan(steps);

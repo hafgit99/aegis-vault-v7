@@ -61,7 +61,8 @@
     "test:mutation:importer:helpers": "stryker run stryker.importer-helpers.conf.mjs",
     "test:mutation:importer:helpers:dry": "stryker run stryker.importer-helpers.conf.mjs --dryRunOnly",
     "desktop:release:gate": "node scripts/desktop-release-gate.cjs",
-    "desktop:release:gate:dry": "node scripts/desktop-release-gate.cjs --dry-run"
+    "desktop:release:gate:dry": "node scripts/desktop-release-gate.cjs --dry-run",
+    "desktop:release:evidence": "node scripts/desktop-release-evidence.cjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",
