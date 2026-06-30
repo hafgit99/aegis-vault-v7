@@ -6,6 +6,7 @@ const { findLatestAndroidApk } = require('./android-artifact-utils.cjs');
 const repoRoot = path.resolve(__dirname, '..');
 const rawArgs = process.argv.slice(2);
 const releaseMode = rawArgs.includes('--release');
+const freshInstall = rawArgs.includes('--fresh-install');
 const command = rawArgs.find((arg) => !arg.startsWith('--')) || 'smoke';
 const buildType = releaseMode ? 'release' : 'debug';
 const sdkRoot = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT;
@@ -62,8 +63,14 @@ function install() {
   if (!apk || !fs.existsSync(apk)) {
     throw new Error(`${buildType} APK not found under src-tauri/gen/android/app/build/outputs`);
   }
+
+  if (freshInstall) {
+    console.log(`Fresh install requested; uninstalling ${packageName} first.`);
+    tryRun(['uninstall', packageName]);
+  }
+
   console.log(`Installing ${path.relative(repoRoot, apk)}`);
-  run(['install', '-r', apk], { stdio: 'inherit' });
+  run(freshInstall ? ['install', apk] : ['install', '-r', apk], { stdio: 'inherit' });
   tryRun(['shell', 'cmd', 'package', 'install-existing', '--user', '0', packageName]);
 }
 
@@ -147,7 +154,7 @@ function printRecentCrashLog() {
 }
 
 ensureReadyDevice();
-console.log(`Android device smoke mode: ${buildType} (${packageName})`);
+console.log(`Android device smoke mode: ${buildType} (${packageName})${freshInstall ? ' [fresh install]' : ''}`);
 
 if (command === 'install') {
   install();

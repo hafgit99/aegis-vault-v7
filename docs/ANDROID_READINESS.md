@@ -57,9 +57,9 @@ Use `npm run android:release:report` after APK/AAB builds to record artifact siz
 
 Use `npm run android:device:doctor` before device testing to diagnose SDK/ADB setup, authorized USB devices, APK presence, installed package state, app-private data directory, and active Autofill provider status. Add `-- --enable-autofill` on a local debug device when the test reinstall resets the active Android Autofill provider; some OEM Android builds reject shell activation and still require manual provider selection.
 
-Use `npm run android:release:gate` for the normal internal release candidate gate. It runs lint, version consistency checks, web build, target-specific Android debug APK build, and strict artifact reporting against the latest candidate artifact. Add `-- --device` when a USB-debugging device is connected and the candidate should also be diagnosed, installed, launched, smoke-tested, and checked with the Android device security doctor. Add `-- --evidence` to copy APK/AAB artifacts, SHA-256 sums, metadata, and the strict report under `release-local/android/<timestamp>/`. When `--device --evidence` are used together, the evidence folder also includes `android-device-doctor.txt` and `android-device-security.txt` after the install/launch smoke step. Add `-- --device --evidence --enable-autofill` for local Autofill regression passes; if Android rejects shell activation, manually select Aegis as the Autofill provider after install and rerun `npm run android:device:doctor`.
+Use `npm run android:release:gate` for the normal internal release candidate gate. It runs lint, version consistency checks, web build, target-specific Android debug APK build, and strict artifact reporting against the latest candidate artifact. Add `-- --device` when a USB-debugging device is connected and the candidate should also be diagnosed, installed, launched, smoke-tested, and checked with the Android device security doctor. Add `-- --device --fresh-install` when the candidate must first uninstall the selected package and prove the first-run setup flow from a clean app-data state. Add `-- --evidence` to copy APK/AAB artifacts, SHA-256 sums, metadata, and the strict report under `release-local/android/<timestamp>/`. When `--device --evidence` are used together, the evidence folder also includes `android-device-doctor.txt` and `android-device-security.txt` after the install/launch smoke step. Add `-- --device --evidence --enable-autofill` for local Autofill regression passes; if Android rejects shell activation, manually select Aegis as the Autofill provider after install and rerun `npm run android:device:doctor`.
 
-Shareable evidence requires a clean working tree. For local experiments only, `npm run android:release:gate -- --evidence --allow-dirty` records dirty status in `metadata.json` and still writes the evidence folder.
+Shareable evidence requires a clean working tree. For local experiments only, `npm run android:release:gate -- --evidence --allow-dirty` records dirty status in `metadata.json` and still writes the evidence folder. Evidence metadata also records whether the candidate was tested with `--fresh-install`.
 
 Every evidence folder includes only the latest candidate APK/AAB for the active build type plus a candidate-prefilled copy of `docs/ANDROID_MANUAL_SMOKE_CHECKLIST.md`. Complete that copy for backup/import, attachment, biometric, Autofill, safe-area, and mobile UI release checks.
 
@@ -116,11 +116,12 @@ Before treating Android as a product target, verify:
 - `npm run android:release:gate`
 - `npm run android:device:doctor` before connected-device testing
 - `npm run android:release:gate -- --device` when a physical device is connected
+- `npm run android:release:gate -- --device --fresh-install` before sharing a release candidate that must prove first-run setup
 - `npm run android:release:gate -- --device --evidence --enable-autofill` for local Autofill evidence after reinstall
 - `npm run android:device:security -- --launch` to capture foreground, app-private storage, `FLAG_SECURE`, and crash-log evidence
 - Optional compatibility check: `npm run android:build:apk:debug`
 
-The device smoke gate installs the latest debug or release APK for the selected mode, launches the expected package (`com.hafgit99.aegisvault7.debug` for debug or `com.hafgit99.aegisvault7` for release), waits for the process to become visible, and fails if Android reports a non-private app data directory.
+The device smoke gate installs the latest debug or release APK for the selected mode, optionally uninstalls the selected package first with `--fresh-install`, launches the expected package (`com.hafgit99.aegisvault7.debug` for debug or `com.hafgit99.aegisvault7` for release), waits for the process to become visible, and fails if Android reports a non-private app data directory.
 
 Manual smoke checklist for the first debug APK:
 
@@ -151,7 +152,7 @@ Run this checklist before every APK/AAB candidate that may be shared outside loc
 - For shareable candidates, run `npm run android:release:gate -- --evidence` and archive the generated `release-local/android/<timestamp>/` folder.
 - Confirm `metadata.json` reports `"dirty": false` before sharing any APK/AAB outside local development.
 - Run `npm run android:release:signing:check` before building a signed release candidate.
-- Build release APK/AAB with signing configuration when release keys are ready. Use `npm run android:release:gate -- --signed --evidence` for artifact evidence, and add `--device` only when a physical device should install/test the signed release package `com.hafgit99.aegisvault7`.
+- Build release APK/AAB with signing configuration when release keys are ready. Use `npm run android:release:gate -- --signed --evidence` for artifact evidence, and add `--device` only when a physical device should install/test the signed release package `com.hafgit99.aegisvault7`. Add `--fresh-install` for the final clean-install smoke pass.
 - Run `npm run android:release:report -- --strict` and store the output with the release candidate notes; for signed release candidates use `npm run android:release:report -- --strict --signed`.
 - Confirm the release artifact does not contain stale multi-ABI debug libraries; `android:release:report -- --strict` now reports and gates native ABI count.
 - Record artifact sizes:

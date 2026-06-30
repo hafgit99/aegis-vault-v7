@@ -9,12 +9,14 @@ Candidate:
 - Device model:
 - Android version / SDK:
 - Build type:
+- Fresh install used:
 - Tester:
 - Date:
 
 ## Setup And Unlock
 
 - [ ] Fresh install opens the master password setup flow.
+- [ ] Fresh install was performed with `npm run android:release:gate -- --device --fresh-install` or an equivalent signed-release command.
 - [ ] New vault setup creates a master password and Secret Key.
 - [ ] Emergency kit opens Android document picker and saves to the selected destination.
 - [ ] Unlock succeeds with the correct master password and Secret Key.

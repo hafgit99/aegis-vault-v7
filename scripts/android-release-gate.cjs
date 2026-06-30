@@ -13,6 +13,7 @@ const skipDevice = args.has('--skip-device') || !device;
 const evidence = args.has('--evidence');
 const enableAutofill = args.has('--enable-autofill');
 const allowDirty = args.has('--allow-dirty');
+const freshInstall = args.has('--fresh-install');
 
 function printHelp() {
   console.log(`Android release gate
@@ -28,6 +29,7 @@ Options:
   --skip-device         Skip device smoke even when --device is present.
   --evidence            Copy APK/AAB artifacts and release report under release-local/android.
   --enable-autofill     Try to re-enable Aegis as Android Autofill provider after APK install.
+  --fresh-install       Uninstall the selected Android package before device smoke install.
   --allow-dirty         Allow evidence export from a dirty working tree.
   --help                Show this help.
 `);
@@ -115,12 +117,16 @@ if (!skipAndroidBuild) {
 run('npm', ['run', 'android:release:report', '--', '--strict', ...(signed ? ['--signed'] : [])]);
 
 if (!skipDevice) {
-  const deviceModeArgs = signed ? ['--release'] : [];
-  run('npm', ['run', 'android:device:doctor', '--', ...deviceModeArgs]);
+  const deviceModeArgs = [
+    ...(signed ? ['--release'] : []),
+    ...(freshInstall ? ['--fresh-install'] : []),
+  ];
+  const deviceDoctorArgs = signed ? ['--release'] : [];
+  run('npm', ['run', 'android:device:doctor', '--', ...deviceDoctorArgs]);
   run('npm', ['run', 'android:device:smoke', '--', ...deviceModeArgs]);
-  run('npm', ['run', 'android:device:security', '--', '--launch', ...deviceModeArgs]);
+  run('npm', ['run', 'android:device:security', '--', '--launch', ...deviceDoctorArgs]);
   if (enableAutofill) {
-    run('npm', ['run', 'android:device:doctor', '--', '--enable-autofill', ...deviceModeArgs]);
+    run('npm', ['run', 'android:device:doctor', '--', '--enable-autofill', ...deviceDoctorArgs]);
   }
 }
 
@@ -132,6 +138,7 @@ if (evidence) {
     ...(allowDirty ? ['--allow-dirty'] : []),
     ...(!skipDevice ? ['--device'] : []),
     ...(enableAutofill ? ['--enable-autofill'] : []),
+    ...(freshInstall ? ['--fresh-install'] : []),
     ...(signed ? ['--signed'] : []),
   ]);
 }

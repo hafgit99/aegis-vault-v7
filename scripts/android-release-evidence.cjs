@@ -11,6 +11,7 @@ const allowDirty = args.has('--allow-dirty');
 const includeDeviceEvidence = args.has('--device');
 const enableAutofill = args.has('--enable-autofill');
 const signed = args.has('--signed');
+const freshInstall = args.has('--fresh-install');
 const deviceModeArgs = signed ? ['--release'] : [];
 const buildType = signed ? 'release' : 'debug';
 const manualSmokeChecklistPath = path.join(repoRoot, 'docs', 'ANDROID_MANUAL_SMOKE_CHECKLIST.md');
@@ -160,6 +161,7 @@ const metadata = {
   deviceEvidence: includeDeviceEvidence,
   enableAutofill,
   signed,
+  freshInstall,
   androidHome: process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || '',
   artifacts: copiedArtifacts,
 };
