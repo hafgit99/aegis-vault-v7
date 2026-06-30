@@ -87,8 +87,12 @@ if (signingEnv.exists) {
 }
 
 for (const name of required) {
-  if (env(name)) {
+  const value = env(name);
+  if (value) {
     pass(`${name} is set`);
+    if (name.includes('PASSWORD') && /^<[^>]+>$/.test(value)) {
+      warn(`${name} looks like an unedited template placeholder; remove angle brackets unless they are part of the real password`);
+    }
   } else {
     fail(`${name} is missing`);
   }

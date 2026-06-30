@@ -75,8 +75,8 @@ Manual shell setup is still supported:
 ```powershell
 $env:AEGIS_ANDROID_KEYSTORE_PATH='C:\secure\aegis-vault-release.jks'
 $env:AEGIS_ANDROID_KEY_ALIAS='aegis-vault'
-$env:AEGIS_ANDROID_KEYSTORE_PASSWORD='<secret>'
-$env:AEGIS_ANDROID_KEY_PASSWORD='<secret>'
+$env:AEGIS_ANDROID_KEYSTORE_PASSWORD='REPLACE_WITH_KEYSTORE_PASSWORD'
+$env:AEGIS_ANDROID_KEY_PASSWORD='REPLACE_WITH_KEY_PASSWORD'
 ```
 
 The keystore file should preferably live outside the repository. If you keep it in a local `.secrets/` folder for convenience, keep that folder ignored, never stage it, and back it up separately in a password manager or offline storage. The repository ignores `.secrets/` and common Android signing files such as `.jks`, `.keystore`, `.p12`, `.pfx`, `keystore.properties`, and `key.properties`.
