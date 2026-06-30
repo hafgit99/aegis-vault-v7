@@ -168,7 +168,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
             <AlertCircle className="w-5 h-5 text-brand-error" />
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold font-sans text-brand-error">{weakItems.length}</span>
+            <span data-testid="security-audit-weak-count" className="text-3xl font-bold font-sans text-brand-error">{weakItems.length}</span>
             <span className="text-xs text-on-surface-variant">{t('securityAudit.insufficientCharacters')}</span>
           </div>
         </div>
@@ -179,7 +179,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
             <AlertTriangle className="w-5 h-5 text-amber-400" />
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold font-sans text-amber-400">{reusedItems.length}</span>
+            <span data-testid="security-audit-reused-count" className="text-3xl font-bold font-sans text-amber-400">{reusedItems.length}</span>
             <span className="text-xs text-on-surface-variant">{t('securityAudit.reducesSecurity')}</span>
           </div>
         </div>
@@ -190,7 +190,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
             <Sparkles className="w-5 h-5 text-brand-tertiary" />
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold font-sans text-brand-tertiary">{secureItems.length}</span>
+            <span data-testid="security-audit-secure-count" className="text-3xl font-bold font-sans text-brand-tertiary">{secureItems.length}</span>
             <span className="text-xs text-on-surface-variant">{t('securityAudit.militaryProtection')}</span>
           </div>
         </div>
@@ -205,7 +205,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
             )}
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold font-sans text-red-300">{pwnedItems.length}</span>
+            <span data-testid="security-audit-pwned-count" className="text-3xl font-bold font-sans text-red-300">{pwnedItems.length}</span>
             <span className="text-xs text-on-surface-variant">
               {hibpStatus === 'checking'
                 ? t('securityAudit.pwnedChecking')
@@ -235,6 +235,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
               weakItems.map((item) => (
                 <div
                   key={item.id}
+                  data-testid="security-audit-weak-item"
                   onClick={() => onSelectItem(item)}
                   className="flex items-center justify-between gap-3 p-3 sm:p-4 bg-[#181212]/80 hover:bg-[#201515] border border-brand-error/15 rounded-xl cursor-pointer transition-all group"
                 >
@@ -273,6 +274,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
               reusedItems.map((item) => (
                 <div
                   key={item.id}
+                  data-testid="security-audit-reused-item"
                   onClick={() => onSelectItem(item)}
                   className="flex items-center justify-between gap-3 p-3 sm:p-4 bg-[#181612]/80 hover:bg-[#221e15] border border-amber-500/10 rounded-xl cursor-pointer transition-all group"
                 >
@@ -309,6 +311,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
               return (
                 <div
                   key={item.id}
+                  data-testid="security-audit-pwned-item"
                   onClick={() => onSelectItem(item)}
                   className="flex items-center justify-between gap-3 p-3 sm:p-4 bg-[#1d1212]/80 hover:bg-[#261616] border border-red-400/15 rounded-xl cursor-pointer transition-all group"
                 >

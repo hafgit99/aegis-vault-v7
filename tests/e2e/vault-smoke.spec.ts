@@ -18,18 +18,19 @@ async function setupVault(page: Page) {
 async function createLoginItem(
   page: Page,
   title: string,
+  options: { username?: string; password?: string; url?: string; notes?: string } = {},
 ) {
   await page.getByTestId('new-vault-item-button').click();
   await page.getByTestId('vault-item-title-input').fill(title);
-  await page.getByTestId('vault-item-url-input').fill('https://github.com');
-  await page.getByTestId('vault-item-username-input').fill('ada-e2e');
-  await page.getByTestId('vault-item-password-input').fill('CorrectHorseBatteryStaple!42');
-  await page.getByTestId('vault-item-notes-input').fill('Created by the Playwright smoke suite.');
+  await page.getByTestId('vault-item-url-input').fill(options.url ?? 'https://github.com');
+  await page.getByTestId('vault-item-username-input').fill(options.username ?? 'ada-e2e');
+  await page.getByTestId('vault-item-password-input').fill(options.password ?? 'CorrectHorseBatteryStaple!42');
+  await page.getByTestId('vault-item-notes-input').fill(options.notes ?? 'Created by the Playwright smoke suite.');
   await page.getByTestId('vault-item-save-button').click();
 
   const savedItem = page.getByTestId('vault-list-item').filter({ hasText: title });
   await expect(savedItem).toBeVisible();
-  await expect(savedItem).toContainText('ada-e2e');
+  await expect(savedItem).toContainText(options.username ?? 'ada-e2e');
 
   return savedItem;
 }
@@ -167,6 +168,28 @@ test('shows an empty state when search has no matches', async ({ page }) => {
   await page.getByTestId('vault-search-input').fill('');
   await expect(page.getByTestId('vault-empty-state')).toBeHidden();
   await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Empty State Anchor' })).toBeVisible();
+});
+
+test('reports weak and reused passwords in the security audit', async ({ page }) => {
+  await page.route('https://api.pwnedpasswords.com/range/**', async (route) => {
+    await route.fulfill({ status: 503, body: '' });
+  });
+
+  await setupVault(page);
+  await createLoginItem(page, 'E2E Weak Audit Item', { username: 'weak-user', password: '12345' });
+  await createLoginItem(page, 'E2E Reused Audit One', { username: 'reuse-one', password: 'SharedAuditPass!42' });
+  await createLoginItem(page, 'E2E Reused Audit Two', { username: 'reuse-two', password: 'SharedAuditPass!42' });
+
+  await page.getByTestId('nav-audit-button').click();
+  await expect(page.getByTestId('audit-workspace')).toBeVisible();
+  await expect(page.getByTestId('security-audit-weak-count')).toHaveText('1');
+  await expect(page.getByTestId('security-audit-reused-count')).toHaveText('2');
+  await expect(page.getByTestId('security-audit-weak-item').filter({ hasText: 'E2E Weak Audit Item' })).toBeVisible();
+  await expect(page.getByTestId('security-audit-reused-item').filter({ hasText: 'E2E Reused Audit One' })).toBeVisible();
+  await expect(page.getByTestId('security-audit-reused-item').filter({ hasText: 'E2E Reused Audit Two' })).toBeVisible();
+
+  await page.getByTestId('security-audit-weak-item').filter({ hasText: 'E2E Weak Audit Item' }).click();
+  await expect(page.getByTestId('login-username-value')).toContainText('weak-user');
 });
 
 test('navigates across primary workspaces and returns to the vault', async ({ page }) => {
