@@ -59,7 +59,9 @@
     "test:mutation:storage:orchestration": "stryker run stryker.storage-orchestration.conf.mjs",
     "test:mutation:storage:orchestration:dry": "stryker run stryker.storage-orchestration.conf.mjs --dryRunOnly",
     "test:mutation:importer:helpers": "stryker run stryker.importer-helpers.conf.mjs",
-    "test:mutation:importer:helpers:dry": "stryker run stryker.importer-helpers.conf.mjs --dryRunOnly"
+    "test:mutation:importer:helpers:dry": "stryker run stryker.importer-helpers.conf.mjs --dryRunOnly",
+    "desktop:release:gate": "node scripts/desktop-release-gate.cjs",
+    "desktop:release:gate:dry": "node scripts/desktop-release-gate.cjs --dry-run"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",

@@ -23,11 +23,17 @@ Not in initial release scope:
 Every release candidate must pass:
 
 - `npm ci`
-- `npm run typecheck`
+- `npm run desktop:release:gate` on the matching host OS, or `npm run desktop:release:gate -- --skip-desktop-build` when collecting trusted externally built artifacts.
+- GitHub Actions `Windows Desktop CI` when available.
+
+The desktop release gate runs:
+
+- `npm run lint`
 - `npm run test:unit`
 - `npm run build`
-- `npm run desktop:build`
-- GitHub Actions `Windows Desktop CI`
+- `npm run build:extension`
+- `npx tauri build`
+- `node scripts/collect-release-artifacts.cjs --platform <platform>`
 
 The release owner must also verify:
 
@@ -41,7 +47,7 @@ The release owner must also verify:
 - Copied secrets are cleared from the clipboard when unchanged.
 - Reset clears vault state and requires a fresh setup.
 
-The same checks are mirrored in `docs/DESKTOP_MANUAL_SMOKE_CHECKLIST.md`; `npm run release:collect` copies a prefilled version into `release-local/<platform>/`.
+The same checks are mirrored in `docs/DESKTOP_MANUAL_SMOKE_CHECKLIST.md`; `npm run desktop:release:gate` runs the automated gate and copies a prefilled checklist into `release-local/<platform>/`. Use `npm run desktop:release:gate:dry` to review the exact command sequence without building.
 
 ## Artifact Checklist
 

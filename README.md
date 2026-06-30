@@ -212,13 +212,16 @@ npm run desktop:build
 Local release helper commands are available:
 
 ```bash
+npm run desktop:release:gate
+npm run desktop:release:gate -- --skip-desktop-build
+npm run desktop:release:gate:dry
 npm run release:local
 npm run release:windows
 npm run release:linux
 npm run release:macos
 ```
 
-Linux and macOS artifacts can also be produced from the private build repository workflow when available.
+The desktop release gate runs lint, unit tests, web build, extension build, Tauri desktop build, and release evidence collection for the current host platform. Use `--skip-desktop-build` only when artifacts were produced by another trusted machine or workflow and you want to collect/check existing output. Linux and macOS artifacts can also be produced from the private build repository workflow when available.
 
 ## Android Builds
 
@@ -262,12 +265,12 @@ See `FIREFOX_XPI.md` for AMO signing notes.
 
 Release candidate evidence is written under `release-local/` and normally includes:
 
-- Android release report
+- Android release report or desktop release metadata
 - metadata and dirty-tree status
 - SHA-256 checksums
-- copied APK/AAB artifacts
+- copied APK/AAB or desktop installer artifacts
 - optional device doctor/security output
-- manual Android smoke checklist copy
+- manual Android or desktop smoke checklist copy
 
 Do not publish a release candidate if the evidence metadata reports a dirty working tree unless it is an intentional internal-only diagnostic build.
 
