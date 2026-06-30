@@ -66,6 +66,7 @@
     "desktop:release:gate": "node scripts/desktop-release-gate.cjs",
     "desktop:release:gate:dry": "node scripts/desktop-release-gate.cjs --dry-run",
     "desktop:release:evidence": "node scripts/desktop-release-evidence.cjs",
+    "desktop:release:evidence:summary": "node scripts/desktop-release-evidence-summary.cjs",
     "desktop:release:notes": "node scripts/desktop-release-notes.cjs",
     "desktop:release:version:check": "node scripts/desktop-version-check.cjs",
     "desktop:release:signing:report": "node scripts/desktop-signing-report.cjs",

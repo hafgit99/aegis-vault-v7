@@ -51,7 +51,7 @@ The release owner must also verify:
 - Copied secrets are cleared from the clipboard when unchanged.
 - Reset clears vault state and requires a fresh setup.
 
-The same checks are mirrored in `docs/DESKTOP_MANUAL_SMOKE_CHECKLIST.md`; `npm run desktop:release:gate` runs the automated gate and copies a prefilled checklist into `release-local/<platform>/`. Use `npm run desktop:release:gate:dry` to review the exact command sequence without building, and `npm run desktop:release:evidence` to re-check an existing `release-local/<platform>/` folder before publishing. After the copied checklist is completed, run `npm run desktop:release:evidence -- --require-completed-checklist` so final evidence cannot pass with unchecked release items or missing candidate fields.
+The same checks are mirrored in `docs/DESKTOP_MANUAL_SMOKE_CHECKLIST.md`; `npm run desktop:release:gate` runs the automated gate and copies a prefilled checklist into `release-local/<platform>/`. Use `npm run desktop:release:gate:dry` to review the exact command sequence without building, and `npm run desktop:release:evidence` to re-check an existing `release-local/<platform>/` folder before publishing. After the copied checklist is completed, run `npm run desktop:release:evidence -- --require-completed-checklist` so final evidence cannot pass with unchecked release items or missing candidate fields. Use `npm run desktop:release:evidence:summary -- --platform <windows|linux|macos> --final` to print the final PASS/BLOCKED artifact, checklist, and signing summary before publishing.
 
 ## Artifact Checklist
 

@@ -226,6 +226,7 @@ npm run desktop:release:version:check
 npm run desktop:release:signing:report
 npm run desktop:release:evidence
 npm run desktop:release:evidence -- --require-completed-checklist
+npm run desktop:release:evidence:summary -- --final
 npm run desktop:release:notes
 npm run release:local
 npm run release:windows
