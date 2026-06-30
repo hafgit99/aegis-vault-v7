@@ -1,3 +1,4 @@
+const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { loadAndroidSigningEnv } = require('./android-signing-env.cjs');
@@ -27,6 +28,53 @@ function warn(message) {
   console.log(`WARN ${message}`);
 }
 
+function keytoolExecutable() {
+  const javaHome = process.env.JAVA_HOME || '';
+  const fromJavaHome = javaHome ? path.join(javaHome, 'bin', process.platform === 'win32' ? 'keytool.exe' : 'keytool') : '';
+  if (fromJavaHome && fs.existsSync(fromJavaHome)) return fromJavaHome;
+
+  const androidStudioJbr = process.platform === 'win32'
+    ? path.join('C:\\', 'Program Files', 'Android', 'Android Studio', 'jbr', 'bin', 'keytool.exe')
+    : '';
+  if (androidStudioJbr && fs.existsSync(androidStudioJbr)) return androidStudioJbr;
+
+  return process.platform === 'win32' ? 'keytool.exe' : 'keytool';
+}
+
+function detectStoreType(file) {
+  const ext = path.extname(file).toLowerCase();
+  return ext === '.p12' || ext === '.pfx' ? 'PKCS12' : undefined;
+}
+
+function validateKeystore(resolved) {
+  const alias = env('AEGIS_ANDROID_KEY_ALIAS');
+  const storePassword = env('AEGIS_ANDROID_KEYSTORE_PASSWORD');
+  if (!alias || !storePassword || !fs.existsSync(resolved)) return;
+
+  const args = ['-list', '-keystore', resolved, '-storepass', storePassword, '-alias', alias];
+  const storeType = detectStoreType(resolved);
+  if (storeType) args.push('-storetype', storeType);
+
+  try {
+    execFileSync(keytoolExecutable(), args, {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      maxBuffer: 1024 * 1024,
+    });
+    pass('keystore password opens the store and alias is present');
+  } catch (error) {
+    const output = String(error.stderr || error.stdout || error.message || '');
+    if (/password was incorrect|Keystore was tampered|Password verification failed|keystore password was incorrect/i.test(output)) {
+      fail('keystore password could not open the signing store; update AEGIS_ANDROID_KEYSTORE_PASSWORD');
+    } else if (/Alias .* does not exist|Cannot find alias/i.test(output)) {
+      fail(`key alias was not found in the keystore: ${alias}`);
+    } else {
+      fail('keytool could not validate the signing keystore; run with the same Java/JDK used by Android Studio');
+    }
+  }
+}
+
 const signingEnv = loadAndroidSigningEnv();
 
 console.log('Android release signing readiness');
@@ -51,6 +99,7 @@ if (keystorePath) {
   const resolved = path.resolve(keystorePath);
   if (fs.existsSync(resolved)) {
     pass('keystore file exists');
+    validateKeystore(resolved);
   } else {
     fail(`keystore file does not exist: ${resolved}`);
   }

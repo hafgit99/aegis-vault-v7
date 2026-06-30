@@ -68,6 +68,8 @@ Every evidence folder includes only the latest candidate APK/AAB for the active 
 
 Use `npm run android:release:signing:check` before public release builds. Release signing is configured from environment variables so private keys and passwords never need to be committed. For repeatable local builds, run `npm run android:release:signing:init` or copy `docs/android-signing.env.example` to `.secrets/android-signing.env`, then fill it locally; `android:release:signing:check` and `android:release:gate -- --signed` load that file automatically without overriding variables already set in the shell.
 
+The signing check also opens the configured keystore with `keytool` and verifies that the configured alias is present, so incorrect store passwords or alias typos fail before the slower Gradle package step.
+
 Manual shell setup is still supported:
 
 ```powershell
