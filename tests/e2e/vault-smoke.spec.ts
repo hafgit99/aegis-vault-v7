@@ -170,6 +170,34 @@ test('navigates across primary workspaces and returns to the vault', async ({ pa
   await expect(page.getByTestId('new-vault-item-button')).toBeVisible();
 });
 
+test('runs the wa-sqlite migration UI safety gate', async ({ page }) => {
+  await setupVault(page);
+  await createLoginItem(page, 'E2E SQLite Migration Guard');
+  await openSettings(page);
+
+  const migrationButton = page.getByTestId('wa-sqlite-migration-button');
+  await expect(migrationButton).toBeVisible();
+  await expect(migrationButton).toBeEnabled();
+
+  page.once('dialog', async (dialog) => {
+    expect(dialog.message()).toContain('wa-sqlite');
+    await dialog.accept();
+  });
+
+  await migrationButton.click();
+
+  const migrationMessage = page.getByTestId('wa-sqlite-migration-message');
+  await expect(migrationMessage).toBeVisible({ timeout: 20000 });
+  await expect(migrationMessage).toContainText(/wa-sqlite/i);
+  await expect(migrationButton).toBeEnabled();
+
+  await page.getByTestId('confirm-modal-confirm-button').click();
+  await expect(page.getByTestId('confirm-modal-confirm-button')).toBeHidden();
+
+  await page.getByTestId('nav-vault-button').click();
+  await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E SQLite Migration Guard' })).toBeVisible();
+});
+
 test('switches the interface language between English and Chinese', async ({ page }) => {
   await setupVault(page);
   await openSettings(page);
