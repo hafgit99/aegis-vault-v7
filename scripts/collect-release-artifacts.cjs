@@ -13,6 +13,7 @@ const explicitPlatform = getArgValue('--platform');
 const platform = explicitPlatform || detectPlatform();
 const version = packageJson.version;
 const outputDir = path.join(releaseLocalDir, platform);
+const manualSmokeChecklistPath = path.join(rootDir, 'docs', 'DESKTOP_MANUAL_SMOKE_CHECKLIST.md');
 
 function getArgValue(name) {
   const index = args.indexOf(name);
@@ -198,6 +199,25 @@ function writeChecksums(artifacts) {
   fs.writeFileSync(path.join(outputDir, 'SHA256SUMS.txt'), `${lines.join('\n')}\n`, 'utf8');
 }
 
+function completedManualChecklist(contents, metadata) {
+  const buildType = metadata.artifacts.some((artifact) => artifact.name.toLowerCase().includes('setup') || artifact.name.toLowerCase().endsWith('.msi'))
+    ? 'installer/package'
+    : 'portable/package';
+  const replacements = new Map([
+    ['- Version:', '- Version: ' + metadata.version],
+    ['- Commit:', '- Commit: ' + metadata.commit],
+    ['- Platform:', '- Platform: ' + metadata.platform],
+    ['- Build type:', '- Build type: ' + buildType],
+    ['- Signed artifacts:', '- Signed artifacts: not verified by collect script'],
+    ['- Date:', '- Date: ' + metadata.createdAt],
+  ]);
+
+  return contents
+    .split(/\r?\n/)
+    .map((line) => replacements.get(line) || line)
+    .join('\n') + '\n';
+}
+
 function writeReleaseMetadata(artifacts) {
   const dirtyStatus = gitValue(['status', '--short'], '');
   const metadata = {
@@ -220,6 +240,14 @@ function writeReleaseMetadata(artifacts) {
     return '- `' + artifact.name + '` (' + artifact.type + ', ' + artifact.sizeBytes + ' bytes' + hash + ')';
   });
 
+  if (fs.existsSync(manualSmokeChecklistPath)) {
+    fs.writeFileSync(
+      path.join(outputDir, 'DESKTOP_MANUAL_SMOKE_CHECKLIST.md'),
+      completedManualChecklist(fs.readFileSync(manualSmokeChecklistPath, 'utf8'), metadata),
+      'utf8',
+    );
+  }
+
   fs.writeFileSync(
     path.join(outputDir, 'README.md'),
     [
@@ -236,6 +264,7 @@ function writeReleaseMetadata(artifacts) {
       '',
       '- `metadata.json`: machine-readable release evidence.',
       '- `SHA256SUMS.txt`: SHA-256 checksums for file artifacts.',
+      '- `DESKTOP_MANUAL_SMOKE_CHECKLIST.md`: manual QA checklist for this candidate.',
       '- Copied installers/packages and browser extension assets for this platform.',
       '',
       '## Artifacts',

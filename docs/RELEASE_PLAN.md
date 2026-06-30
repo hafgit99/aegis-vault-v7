@@ -41,6 +41,8 @@ The release owner must also verify:
 - Copied secrets are cleared from the clipboard when unchanged.
 - Reset clears vault state and requires a fresh setup.
 
+The same checks are mirrored in `docs/DESKTOP_MANUAL_SMOKE_CHECKLIST.md`; `npm run release:collect` copies a prefilled version into `release-local/<platform>/`.
+
 ## Artifact Checklist
 
 For each release, collect:
@@ -51,6 +53,7 @@ For each release, collect:
 - SHA-256 checksums for each artifact.
 - `release-local/<platform>/metadata.json` with version, commit, dirty status, artifact sizes, and hashes.
 - `release-local/<platform>/README.md` as the human-readable release evidence summary.
+- `release-local/<platform>/DESKTOP_MANUAL_SMOKE_CHECKLIST.md` completed for the candidate platform.
 - Git commit SHA used for the build.
 - Git tag used for the release.
 - CI run URL for the passing build.
