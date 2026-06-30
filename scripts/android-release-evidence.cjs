@@ -99,6 +99,7 @@ function completedManualChecklist(contents, metadata, report, deviceDoctorReport
     ['- Device model:', '- Device model: ' + deviceModel],
     ['- Android version / SDK:', '- Android version / SDK: SDK ' + deviceSdk],
     ['- Build type:', '- Build type: ' + buildType],
+    ['- Fresh install used:', '- Fresh install used: ' + (metadata.freshInstall ? 'yes' : 'no')],
     ['- Date:', '- Date: ' + metadata.createdAt],
   ]);
 
@@ -185,6 +186,9 @@ fs.writeFileSync(
     `Commit: ${metadata.commit}`,
     `Branch: ${metadata.branch}`,
     `Dirty working tree: ${metadata.dirty ? 'yes' : 'no'}`,
+    `Signed candidate: ${metadata.signed ? 'yes' : 'no'}`,
+    `Fresh install smoke: ${metadata.freshInstall ? 'yes' : 'no'}`,
+    `Device evidence: ${metadata.deviceEvidence ? 'yes' : 'no'}`,
     '',
     '## Files',
     '',
