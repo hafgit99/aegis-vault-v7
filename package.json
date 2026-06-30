@@ -33,6 +33,7 @@
     "android:release:notes": "node scripts/android-release-notes.cjs",
     "android:release:version:check": "node scripts/android-version-check.cjs",
     "android:release:signing:check": "node scripts/android-signing-check.cjs",
+    "android:release:signing:init": "node scripts/android-signing-init.cjs",
     "android:release:report": "node scripts/android-release-report.cjs",
     "android:device:doctor": "node scripts/android-device-doctor.cjs",
     "android:device:install": "node scripts/android-device-smoke.cjs install",
