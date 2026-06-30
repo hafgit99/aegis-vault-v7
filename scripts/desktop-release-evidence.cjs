@@ -13,6 +13,7 @@ const explicitDir = getArgValue('--dir');
 const evidenceDir = explicitDir ? path.resolve(rootDir, explicitDir) : path.join(releaseLocalDir, platform);
 const allowDirty = hasFlag('--allow-dirty');
 const allowEmpty = hasFlag('--allow-empty');
+const requireCompletedChecklist = hasFlag('--require-completed-checklist');
 
 function hasFlag(flag) {
   return args.includes(flag);
@@ -41,6 +42,7 @@ function usage() {
     '  --dir <path>                       Evidence directory. Defaults to release-local/<platform>.',
     '  --allow-dirty                    Permit metadata.json dirty=true for internal diagnostics.',
     '  --allow-empty                    Permit evidence with no copied file artifacts.',
+    '  --require-completed-checklist    Fail unless the manual smoke checklist is completed.',
     '  --help                           Show this help.',
   ].join('\n');
 }
@@ -133,6 +135,36 @@ function verifyChecklist(file, metadata) {
     if (!contents.includes(expected)) {
       fail('Desktop manual smoke checklist is not prefilled with: ' + expected);
     }
+  }
+}
+
+function verifyCompletedChecklist(file) {
+  const contents = fs.readFileSync(file, 'utf8');
+  const requiredFields = [
+    '- Version:',
+    '- Commit:',
+    '- Platform:',
+    '- Build type:',
+    '- Signed artifacts:',
+    '- Tester:',
+    '- Date:',
+  ];
+
+  for (const label of requiredFields) {
+    const line = contents.split(/\r?\n/).find((candidate) => candidate.startsWith(label));
+    if (!line || line.slice(label.length).trim().length === 0) {
+      fail('DESKTOP_MANUAL_SMOKE_CHECKLIST.md is missing a completed candidate field: ' + label);
+    }
+  }
+
+  const unchecked = contents.split(/\r?\n/).filter((line) => /^- \[ \]/.test(line));
+  if (unchecked.length > 0) {
+    fail('DESKTOP_MANUAL_SMOKE_CHECKLIST.md has unchecked release items: ' + unchecked.slice(0, 5).join(' | '));
+  }
+
+  const checkedCount = contents.split(/\r?\n/).filter((line) => /^- \[x\]/i.test(line)).length;
+  if (checkedCount === 0) {
+    fail('DESKTOP_MANUAL_SMOKE_CHECKLIST.md does not contain any completed checklist items.');
   }
 }
 
@@ -258,10 +290,12 @@ function verifyEvidence() {
   }
 
   verifyChecklist(checklistPath, metadata);
+  if (requireCompletedChecklist) verifyCompletedChecklist(checklistPath);
   verifyReleaseNotes(releaseNotesPath, metadata);
   verifySigningReport(signaturesPath, metadata);
   console.log('Desktop release evidence verified: ' + path.relative(rootDir, evidenceDir));
   console.log('Artifacts: ' + artifacts.length);
+  console.log('Completed checklist required: ' + (requireCompletedChecklist ? 'yes' : 'no'));
 }
 
 if (hasFlag('--help')) {

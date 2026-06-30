@@ -374,6 +374,9 @@ Recently improved:
   - `npm run android:release:report -- --strict`
   - `npm run android:device:smoke`
   - Manual Android release candidate checklist from `docs/ANDROID_READINESS.md`.
+
+- Add desktop final checklist evidence gate:
+  - `npm run desktop:release:evidence -- --require-completed-checklist` before publishing desktop artifacts after the copied manual smoke checklist is completed.
 - Expand smoke E2E coverage for detail actions, broader translated screens, desktop persistence, and mobile smoke viewports.
 - Push importer helper and storage orchestration mutation scores toward the 90% high threshold, then expand mutation testing into SQLite migration modules.
 - Keep global coverage thresholds at or above 90% lines/statements, 85% functions, and 80% branches; raise them again after the current priority targets improve.

@@ -21,6 +21,7 @@ const signedReleaseNotes = hasFlag('--signed-release-notes');
 const releaseChannel = getArgValue('--channel');
 const allowDirtyEvidence = hasFlag('--allow-dirty-evidence');
 const allowEmptyEvidence = hasFlag('--allow-empty-evidence');
+const requireCompletedChecklist = hasFlag('--require-completed-checklist');
 const macUniversal = hasFlag('--mac-universal');
 
 function hasFlag(flag) {
@@ -63,6 +64,7 @@ function usage() {
     '  --signed-release-notes            Mark generated release notes as signed.',
     '  --allow-dirty-evidence           Permit dirty metadata during evidence verification.',
     '  --allow-empty-evidence           Permit empty artifact metadata during diagnostics.',
+    '  --require-completed-checklist     Require completed manual smoke checklist during evidence verification.',
     '  --help                           Show this help.',
   ].join('\n');
 }
@@ -174,6 +176,7 @@ if (!skipCollect && !skipEvidenceVerify) {
   const evidenceArgs = ['scripts/desktop-release-evidence.cjs', '--platform', platform];
   if (allowDirtyEvidence) evidenceArgs.push('--allow-dirty');
   if (allowEmptyEvidence) evidenceArgs.push('--allow-empty');
+  if (requireCompletedChecklist) evidenceArgs.push('--require-completed-checklist');
   steps.push({ command: 'node', args: evidenceArgs });
 }
 
