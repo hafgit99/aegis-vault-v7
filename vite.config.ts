@@ -9,6 +9,7 @@ export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
     clearScreen: false,
+    cacheDir: process.env.VITE_CACHE_DIR || path.resolve(__dirname, '.vite'),
     envPrefix: ['VITE_', 'TAURI_ENV_*'],
     resolve: {
       alias: {

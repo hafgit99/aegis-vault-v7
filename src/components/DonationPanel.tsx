@@ -106,7 +106,10 @@ export default function DonationPanel({ copiedField, onCopyText }: DonationPanel
   }, []);
 
   return (
-    <section className="mx-auto w-full max-w-6xl space-y-4 sm:space-y-6 pb-6">
+    <section
+      data-testid="donation-panel"
+      className="mx-auto w-full max-w-6xl space-y-4 sm:space-y-6 pb-6"
+    >
       <div className="surface-panel p-4 sm:p-6 lg:p-7">
         <div className="flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex max-w-3xl items-start gap-4">
@@ -148,6 +151,7 @@ export default function DonationPanel({ copiedField, onCopyText }: DonationPanel
           return (
             <article
               key={wallet.id}
+              data-testid={`donation-wallet-${wallet.id}`}
               className="surface-card surface-card-hover rounded-lg p-3 sm:p-4"
             >
               <div className="flex items-start justify-between gap-3">
@@ -169,6 +173,7 @@ export default function DonationPanel({ copiedField, onCopyText }: DonationPanel
                     <img
                       src={qrCodes[wallet.id]}
                       alt={`${wallet.symbol} ${t('donate.qrAlt')}`}
+                      data-testid={`donation-qr-${wallet.id}`}
                       className="h-full w-full"
                     />
                   ) : (
@@ -180,7 +185,10 @@ export default function DonationPanel({ copiedField, onCopyText }: DonationPanel
                   <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
                     {t('donate.addressLabel')}
                   </p>
-                  <p className="break-all font-mono text-[11px] sm:text-xs leading-5 text-on-surface">
+                  <p
+                    data-testid={`donation-address-${wallet.id}`}
+                    className="break-all font-mono text-[11px] sm:text-xs leading-5 text-on-surface"
+                  >
                     {wallet.address}
                   </p>
                 </div>
@@ -188,6 +196,7 @@ export default function DonationPanel({ copiedField, onCopyText }: DonationPanel
 
               <button
                 type="button"
+                data-testid={`donation-copy-${wallet.id}`}
                 onClick={() => onCopyText(wallet.address, copyField)}
                 className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-outline-variant/20 bg-surface-low text-xs font-bold text-on-surface transition-all hover:border-brand-primary/35 hover:bg-surface-high focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
               >

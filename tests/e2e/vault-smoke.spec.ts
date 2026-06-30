@@ -51,6 +51,22 @@ async function exportEncryptedBackup(page: Page) {
   return downloadPath!;
 }
 
+test('downloads an emergency kit during first-run setup', async ({ page }) => {
+  await page.goto('/');
+
+  await page.getByTestId('lock-password-input').fill(masterPassword);
+  await page.getByTestId('lock-confirm-password-input').fill(masterPassword);
+  await expect(page.getByTestId('lock-secret-key-input')).toHaveValue(/^A3-/);
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByTestId('lock-emergency-kit-button').click();
+  const download = await downloadPromise;
+  const downloadPath = await download.path();
+
+  expect(download.suggestedFilename()).toBe('aegis-vault-emergency-kit.txt');
+  expect(downloadPath).toBeTruthy();
+});
+
 test('sets up, stores, locks, and unlocks a vault item', async ({ page }) => {
   await setupVault(page);
 
@@ -167,6 +183,23 @@ test('switches the interface language between English and Chinese', async ({ pag
   await expect(page.getByTestId('language-settings-card')).toContainText('语言和地区');
   await expect(page.getByTestId('nav-vault-button')).toContainText('保险库');
   await expect(page.getByTestId('nav-settings-button')).toContainText('设置');
+});
+
+test('renders the crypto donation page with wallet QR codes', async ({ page }) => {
+  await setupVault(page);
+
+  await page.getByTestId('nav-donate-button').click();
+  await expect(page.getByTestId('donate-workspace')).toBeVisible();
+  await expect(page.getByTestId('donation-panel')).toBeVisible();
+
+  const btcWallet = page.getByTestId('donation-wallet-btc');
+  await expect(btcWallet).toBeVisible();
+  await expect(page.getByTestId('donation-address-btc')).toContainText('bc1qqsuljwzs32ckkqdrsdus7wgqzuetty3g0x47l7');
+  await expect(page.getByTestId('donation-qr-btc')).toBeVisible();
+  await expect(page.getByTestId('donation-wallet-eth')).toContainText('Ethereum');
+
+  await page.getByTestId('donation-copy-btc').click();
+  await expect(page.getByTestId('copy-toast-notification')).toBeVisible();
 });
 
 test('exports an encrypted backup download', async ({ page }) => {
