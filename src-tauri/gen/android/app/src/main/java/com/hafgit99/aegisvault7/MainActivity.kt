@@ -51,12 +51,20 @@ class MainActivity : TauriActivity() {
     notifyAutofillIntent()
   }
 
+  override fun onResume() {
+    super.onResume()
+    notifyAutofillIntent()
+  }
+
   override fun onWebViewCreate(webView: WebView) {
     super.onWebViewCreate(webView)
     webViewRef = webView
     webView.addJavascriptInterface(AndroidFileBridge(), "AegisAndroidFiles")
     webView.addJavascriptInterface(AndroidSecureStorageBridge(), "AegisAndroidSecureStorage")
     webView.addJavascriptInterface(AndroidAutofillBridge(), "AegisAndroidAutofill")
+    webView.post { notifyAutofillIntent() }
+    webView.postDelayed({ notifyAutofillIntent() }, 250)
+    webView.postDelayed({ notifyAutofillIntent() }, 1000)
   }
 
   override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
