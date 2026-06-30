@@ -57,10 +57,14 @@ export function evaluateWaSqlitePromotionReadiness(
 
   if (!smokeResult) {
     issues.push('wa-sqlite-promotion-smoke-not-run');
-  } else if (smokeResult.status !== 'passed') {
-    issues.push('wa-sqlite-promotion-smoke-failed');
-    if (smokeResult.issue) {
-      issues.push(smokeResult.issue);
+  } else {
+    if (smokeResult.status !== 'passed') {
+      issues.push('wa-sqlite-promotion-smoke-failed');
+      if (smokeResult.issue) {
+        issues.push(smokeResult.issue);
+      }
+    } else {
+      validateSmokeResultProfile(persistenceProfile, smokeResult, issues);
     }
   }
 
@@ -134,6 +138,19 @@ export function createWaSqliteActiveBackendPromotionPlan(
     persistenceProfile,
     readinessReport,
   };
+}
+
+function validateSmokeResultProfile(
+  expectedProfile: WaSqlitePersistenceProfile,
+  smokeResult: WaSqlitePersistenceSmokeResult,
+  issues: string[],
+): void {
+  if (smokeResult.databaseName !== expectedProfile.databaseName) {
+    issues.push('wa-sqlite-promotion-smoke-database-mismatch');
+  }
+  if (smokeResult.vfsName !== expectedProfile.vfsName) {
+    issues.push('wa-sqlite-promotion-smoke-vfs-mismatch');
+  }
 }
 
 function validatePersistentMigrationCandidateProfile(

@@ -14,10 +14,10 @@ Current measured baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 94.00% |
-| Statements | 94.00% |
-| Functions | 91.93% |
-| Branches | 87.70% |
+| Lines | 94.01% |
+| Statements | 94.01% |
+| Functions | 91.94% |
+| Branches | 87.73% |
 
 Coverage thresholds now act as a release-quality regression gate while staying slightly below the current baseline:
 
@@ -354,6 +354,7 @@ Recently improved:
 - wa-sqlite active migration pair creation failure: active backend orchestration now converts repository-pair creation exceptions into sanitized blocked readiness evidence before smoke, migration, promotion, or marker persistence can run.
 - wa-sqlite active marker profile validation: persisted active backend markers now reject unsupported storage scopes, missing IndexedDB VFS names, and database/VFS names that do not exactly match the selected storage scope, with tests proving forged markers are cleared without replacing OPFS.
 - wa-sqlite migration rollback source integrity gate: target rollback paths now re-verify that the OPFS/source vault still unlocks and matches the pre-migration item set, adding explicit source-drift blocker codes if rollback safety ever detects source-side mutation.
+- wa-sqlite promotion smoke profile parity: active backend readiness now requires a passing smoke test to report the exact database name and IndexedDB VFS name for the candidate persistence profile, so a smoke pass from another desktop/Android/browser scope cannot promote the backend.
 
 ## Next Gates
 

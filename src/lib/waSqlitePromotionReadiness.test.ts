@@ -16,10 +16,12 @@ import type { WaSqlitePersistentMigrationCandidateResult } from './vaultStorageM
 import type { VaultStorageMigrationDryRunResult } from './vaultStorageMigrationDryRun';
 import type { WaSqlitePersistenceSmokeResult } from './waSqlitePersistenceSmoke';
 
+const persistentProfile = createWaSqlitePersistenceProfile('desktop-app-data', true);
+
 const passedSmoke: WaSqlitePersistenceSmokeResult = {
   status: 'passed',
-  databaseName: '/aegis-wa-sqlite.test.db',
-  vfsName: 'aegis-wa-sqlite-test-idb',
+  databaseName: persistentProfile.databaseName,
+  vfsName: persistentProfile.vfsName,
 };
 
 const readyDryRun: VaultStorageMigrationDryRunResult = {
@@ -30,8 +32,6 @@ const readyDryRun: VaultStorageMigrationDryRunResult = {
   targetItemCount: 2,
   issues: [],
 };
-
-const persistentProfile = createWaSqlitePersistenceProfile('desktop-app-data', true);
 
 const migrated: VaultStorageMigrationResult = {
   status: 'migrated',
@@ -168,9 +168,14 @@ describe('wa-sqlite promotion readiness', () => {
   });
 
   it('carries dry-run and migration blocker details into the report', () => {
+    const androidProfile = createWaSqlitePersistenceProfile('android-app-private', true);
     expect(evaluateWaSqlitePromotionReadiness({
-      persistenceProfile: createWaSqlitePersistenceProfile('android-app-private', true),
-      smokeResult: passedSmoke,
+      persistenceProfile: androidProfile,
+      smokeResult: {
+        status: 'passed',
+        databaseName: androidProfile.databaseName,
+        vfsName: androidProfile.vfsName,
+      },
       dryRunResult: {
         ...readyDryRun,
         status: 'blocked',
@@ -182,7 +187,7 @@ describe('wa-sqlite promotion readiness', () => {
           status: 'rolled-back',
           issues: ['vault-storage-migration-target-content-mismatch'],
         },
-        persistenceProfile: createWaSqlitePersistenceProfile('android-app-private', true),
+        persistenceProfile: androidProfile,
       },
     })).toEqual({
       status: 'blocked',
@@ -191,6 +196,25 @@ describe('wa-sqlite promotion readiness', () => {
         'vault-storage-dry-run-target-count-mismatch',
         'wa-sqlite-promotion-migration-not-migrated',
         'vault-storage-migration-target-content-mismatch',
+      ],
+    });
+  });
+
+  it('blocks promotion when the persistent smoke result was produced for a different database or VFS', () => {
+    expect(evaluateWaSqlitePromotionReadiness({
+      persistenceProfile: persistentProfile,
+      smokeResult: {
+        status: 'passed',
+        databaseName: '/aegis-wa-sqlite.android.db',
+        vfsName: 'aegis-wa-sqlite-android-idb',
+      },
+      dryRunResult: readyDryRun,
+      persistentMigrationCandidateResult: migratedCandidate,
+    })).toEqual({
+      status: 'blocked',
+      issues: [
+        'wa-sqlite-promotion-smoke-database-mismatch',
+        'wa-sqlite-promotion-smoke-vfs-mismatch',
       ],
     });
   });

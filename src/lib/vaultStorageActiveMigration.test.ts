@@ -116,10 +116,11 @@ function createRepositoryStub(options: {
 }
 
 function passedSmoke(): WaSqlitePersistenceSmokeResult {
+  const profile = createWaSqlitePersistenceProfile('desktop-app-data', true);
   return {
     status: 'passed',
-    databaseName: '/aegis-wa-sqlite.test.db',
-    vfsName: 'aegis-wa-sqlite-test-idb',
+    databaseName: profile.databaseName,
+    vfsName: profile.vfsName,
   };
 }
 
