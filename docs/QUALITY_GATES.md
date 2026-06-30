@@ -374,3 +374,7 @@ Recently improved:
 - Expand smoke E2E coverage for detail actions, broader translated screens, desktop persistence, and mobile smoke viewports.
 - Push importer helper and storage orchestration mutation scores toward the 90% high threshold, then expand mutation testing into SQLite migration modules.
 - Keep global coverage thresholds at or above 90% lines/statements, 85% functions, and 80% branches; raise them again after the current priority targets improve.
+
+## wa-sqlite Final Gate
+
+Use `npm run wa-sqlite:final:gate` before deciding whether wa-sqlite is ready for default active-backend promotion. Use `npm run wa-sqlite:final:gate:unit` for the faster focused unit/integration pass and `npm run wa-sqlite:final:gate:dry` to inspect the command plan. Details live in `docs/WA_SQLITE_FINAL_GATE.md`.

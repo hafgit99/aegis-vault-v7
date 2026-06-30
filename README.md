@@ -163,6 +163,13 @@ Run Playwright smoke tests when the browser test environment is prepared:
 npm run test:e2e
 ```
 
+Run the focused wa-sqlite final promotion gate:
+
+```bash
+npm run wa-sqlite:final:gate
+npm run wa-sqlite:final:gate:unit
+```
+
 Latest local verification before this README update:
 
 - `npm run lint` passed.
