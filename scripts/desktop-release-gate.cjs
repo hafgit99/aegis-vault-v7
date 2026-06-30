@@ -15,6 +15,8 @@ const skipDesktopBuild = hasFlag('--skip-desktop-build');
 const skipCollect = hasFlag('--skip-collect');
 const skipEvidenceVerify = hasFlag('--skip-evidence-verify');
 const skipReleaseNotes = hasFlag('--skip-release-notes');
+const skipSigningReport = hasFlag('--skip-signing-report');
+const requireSignedArtifacts = hasFlag('--require-signed-artifacts');
 const signedReleaseNotes = hasFlag('--signed-release-notes');
 const releaseChannel = getArgValue('--channel');
 const allowDirtyEvidence = hasFlag('--allow-dirty-evidence');
@@ -55,6 +57,8 @@ function usage() {
     '  --skip-collect                   Skip release-local evidence collection.',
     '  --skip-evidence-verify           Skip release-local evidence verification.',
     '  --skip-release-notes              Skip RELEASE_NOTES.md generation.',
+    '  --skip-signing-report             Skip DESKTOP_SIGNATURES.md generation.',
+    '  --require-signed-artifacts        Fail if signable artifacts are not verified as signed.',
     '  --channel <name>                  Release notes channel label.',
     '  --signed-release-notes            Mark generated release notes as signed.',
     '  --allow-dirty-evidence           Permit dirty metadata during evidence verification.',
@@ -151,6 +155,12 @@ if (!skipDesktopBuild) {
 
 if (!skipCollect) {
   steps.push({ command: 'node', args: ['scripts/collect-release-artifacts.cjs', '--platform', platform] });
+}
+
+if (!skipCollect && !skipSigningReport) {
+  const signingArgs = ['scripts/desktop-signing-report.cjs', '--platform', platform];
+  if (requireSignedArtifacts) signingArgs.push('--require-signed');
+  steps.push({ command: 'node', args: signingArgs });
 }
 
 if (!skipCollect && !skipReleaseNotes) {

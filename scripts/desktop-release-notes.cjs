@@ -136,7 +136,7 @@ function generateReleaseNotes() {
     '',
     '- Local-first encrypted vault for desktop use.',
     '- Release candidate produced through the desktop release gate.',
-    '- Evidence folder includes metadata, SHA-256 checksums, and the manual smoke checklist.',
+    '- Evidence folder includes metadata, SHA-256 checksums, signing report, and the manual smoke checklist.',
     '',
     '## Artifacts',
     '',
@@ -166,6 +166,7 @@ function generateReleaseNotes() {
     '- `metadata.json`',
     '- `SHA256SUMS.txt`',
     '- `DESKTOP_MANUAL_SMOKE_CHECKLIST.md`',
+    '- `DESKTOP_SIGNATURES.md`',
     '- `README.md`',
     '',
   ].join('\n');

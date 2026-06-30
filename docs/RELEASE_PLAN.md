@@ -35,6 +35,7 @@ The desktop release gate runs:
 - `npm run build:extension`
 - `npx tauri build`
 - `node scripts/collect-release-artifacts.cjs --platform <platform>`
+- `node scripts/desktop-signing-report.cjs --platform <platform>`
 - `node scripts/desktop-release-notes.cjs --platform <platform>`
 - `node scripts/desktop-release-evidence.cjs --platform <platform>`
 
@@ -63,6 +64,7 @@ For each release, collect:
 - `release-local/<platform>/metadata.json` with version, commit, dirty status, artifact sizes, and hashes.
 - `release-local/<platform>/README.md` as the human-readable release evidence summary.
 - `release-local/<platform>/DESKTOP_MANUAL_SMOKE_CHECKLIST.md` completed for the candidate platform.
+- `release-local/<platform>/DESKTOP_SIGNATURES.md` generated from platform signing checks.
 - `release-local/<platform>/RELEASE_NOTES.md` generated from metadata and checksums.
 - Git commit SHA used for the build.
 - Git tag used for the release.
@@ -106,7 +108,7 @@ Manual signing fallback:
 1. Download CI-produced unsigned artifacts.
 2. Verify SHA-256 checksums against CI artifacts.
 3. Sign `.exe` and `.msi` files with `signtool`.
-4. Verify signatures with `signtool verify /pa`.
+4. Verify signatures with `signtool verify /pa` or `npm run desktop:release:signing:report -- --require-signed`.
 5. Generate new checksums for signed artifacts.
 6. Refresh `release-local/<platform>/metadata.json` and `README.md` after replacing unsigned artifacts with signed ones.
 7. Upload only signed artifacts to the public GitHub release.
