@@ -136,6 +136,21 @@ function verifyChecklist(file, metadata) {
   }
 }
 
+function verifyReleaseNotes(file, metadata) {
+  const contents = fs.readFileSync(file, 'utf8');
+  for (const expected of [
+    '# Aegis Vault 7 ' + metadata.version + ' Desktop Release Notes',
+    'Platform: ' + metadata.platform,
+    'Commit: ' + metadata.commit,
+    '## SHA-256 Checksums',
+    '## Recovery And Safety Notes',
+  ]) {
+    if (!contents.includes(expected)) {
+      fail('RELEASE_NOTES.md is missing expected release context: ' + expected);
+    }
+  }
+}
+
 function verifyEvidence() {
   assertPlatform(platform);
 
@@ -146,9 +161,10 @@ function verifyEvidence() {
   const metadataPath = path.join(evidenceDir, 'metadata.json');
   const checksumsPath = path.join(evidenceDir, 'SHA256SUMS.txt');
   const readmePath = path.join(evidenceDir, 'README.md');
+  const releaseNotesPath = path.join(evidenceDir, 'RELEASE_NOTES.md');
   const checklistPath = path.join(evidenceDir, 'DESKTOP_MANUAL_SMOKE_CHECKLIST.md');
 
-  for (const file of [metadataPath, checksumsPath, readmePath, checklistPath]) {
+  for (const file of [metadataPath, checksumsPath, readmePath, releaseNotesPath, checklistPath]) {
     if (!fs.existsSync(file)) {
       fail('Required release evidence file is missing: ' + path.relative(rootDir, file));
     }
@@ -226,6 +242,7 @@ function verifyEvidence() {
   }
 
   verifyChecklist(checklistPath, metadata);
+  verifyReleaseNotes(releaseNotesPath, metadata);
   console.log('Desktop release evidence verified: ' + path.relative(rootDir, evidenceDir));
   console.log('Artifacts: ' + artifacts.length);
 }

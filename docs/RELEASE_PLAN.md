@@ -34,6 +34,7 @@ The desktop release gate runs:
 - `npm run build:extension`
 - `npx tauri build`
 - `node scripts/collect-release-artifacts.cjs --platform <platform>`
+- `node scripts/desktop-release-notes.cjs --platform <platform>`
 - `node scripts/desktop-release-evidence.cjs --platform <platform>`
 
 The release owner must also verify:
@@ -61,6 +62,7 @@ For each release, collect:
 - `release-local/<platform>/metadata.json` with version, commit, dirty status, artifact sizes, and hashes.
 - `release-local/<platform>/README.md` as the human-readable release evidence summary.
 - `release-local/<platform>/DESKTOP_MANUAL_SMOKE_CHECKLIST.md` completed for the candidate platform.
+- `release-local/<platform>/RELEASE_NOTES.md` generated from metadata and checksums.
 - Git commit SHA used for the build.
 - Git tag used for the release.
 - CI run URL for the passing build.
@@ -110,7 +112,7 @@ Manual signing fallback:
 
 ## Release Notes Checklist
 
-Release notes must include:
+`npm run desktop:release:notes` generates `release-local/<platform>/RELEASE_NOTES.md` from `metadata.json`. Release notes must include:
 
 - Version number.
 - Supported platform.
