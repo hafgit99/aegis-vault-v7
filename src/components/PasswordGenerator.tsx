@@ -218,7 +218,10 @@ export default function PasswordGenerator({ onCopyText, copiedField }: PasswordG
       <div className="glass-panel p-4 sm:p-6 rounded-2xl relative overflow-hidden" id="password-display-card">
         <div className="absolute top-0 left-0 w-1 h-full bg-brand-primary"></div>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
-          <div className="font-mono text-xs sm:text-sm md:text-lg break-all tracking-wide text-brand-primary select-all bg-[#0d0f0d]/40 p-3 sm:p-4 rounded-xl border border-outline-variant/10 flex-1 min-h-[52px] flex items-center">
+          <div
+            data-testid="password-generator-output"
+            className="font-mono text-xs sm:text-sm md:text-lg break-all tracking-wide text-brand-primary select-all bg-[#0d0f0d]/40 p-3 sm:p-4 rounded-xl border border-outline-variant/10 flex-1 min-h-[52px] flex items-center"
+          >
             {password || t('passwordGenerator.empty')}
           </div>
           <div className="flex gap-2">
@@ -227,6 +230,7 @@ export default function PasswordGenerator({ onCopyText, copiedField }: PasswordG
               className="p-3.5 rounded-xl bg-[#1e201e] hover:bg-[#292a28] text-on-surface transition-colors border border-outline-variant/10 flex items-center justify-center cursor-pointer"
               title={t('passwordGenerator.refresh')}
               id="refresh-password-btn"
+              data-testid="password-generator-refresh-button"
             >
               <RefreshCw className="w-5 h-5" />
             </button>
@@ -238,6 +242,7 @@ export default function PasswordGenerator({ onCopyText, copiedField }: PasswordG
                   : 'bg-brand-primary text-brand-on-primary shadow-lg shadow-brand-primary/10 hover:brightness-110'
               }`}
               id="copy-password-btn"
+              data-testid="password-generator-copy-button"
             >
               {copied ? (
                 <>

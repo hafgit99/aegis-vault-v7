@@ -189,6 +189,25 @@ test('navigates across primary workspaces and returns to the vault', async ({ pa
   await expect(page.getByTestId('new-vault-item-button')).toBeVisible();
 });
 
+test('generates and copies a password from the generator workspace', async ({ page }) => {
+  await setupVault(page);
+
+  await page.getByTestId('nav-generator-button').click();
+  await expect(page.getByTestId('generator-workspace')).toBeVisible();
+
+  const output = page.getByTestId('password-generator-output');
+  await expect(output).toBeVisible();
+
+  const firstPassword = (await output.textContent())?.trim() ?? '';
+  expect(firstPassword.length).toBeGreaterThanOrEqual(12);
+
+  await page.getByTestId('password-generator-refresh-button').click();
+  await expect.poll(async () => (await output.textContent())?.trim() ?? '').not.toBe(firstPassword);
+
+  await page.getByTestId('password-generator-copy-button').click();
+  await expect(page.getByTestId('copy-toast-notification')).toBeVisible();
+});
+
 test('runs the wa-sqlite migration UI safety gate', async ({ page }) => {
   await setupVault(page);
   await createLoginItem(page, 'E2E SQLite Migration Guard');
