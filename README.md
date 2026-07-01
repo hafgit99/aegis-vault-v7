@@ -6,11 +6,21 @@ The project focuses on keeping sensitive data under the user's control: vault da
 
 ## Current Status
 
-- Desktop application: active development and local release builds through Tauri.
+- Desktop application: active development and local release builds through Tauri. Windows local release evidence is the primary desktop validation path; Linux and macOS artifacts can be produced through the private build workflow but remain internal candidates until runtime smoke is completed on target devices.
 - Android application: signed APK workflow is active, with physical-device smoke testing, safe-area fixes, Autofill support, document picker backup/import, FLAG_SECURE screenshot protection, and Emergency Kit save flow validated.
 - Browser extension: Firefox XPI packaging/signing flow is available for the desktop companion experience.
 - Internationalization: Turkish, English, and Chinese UI strings are maintained in the app.
 - CI note: GitHub Actions can be disabled when quota is unavailable; local release scripts and the private build repository path are documented for Windows, Linux, macOS, and Android candidates.
+
+## Release Candidate Boundaries
+
+| Target | Current release position | Public release blocker |
+| --- | --- | --- |
+| Windows desktop | Local release gate and manual evidence flow are active. | Public artifacts should be signed and final checklist evidence must pass. |
+| Linux desktop | Artifacts can be imported from the private build workflow. | Runtime smoke is deferred until a Linux target device or VM is available. |
+| macOS desktop | DMG/app artifacts can be imported from the private build workflow. | Runtime smoke plus code signing/notarization validation are still required. |
+| Android | Signed APK evidence and physical-device validation are active. | Final completed checklist and biometric/device-regression claims must stay current for each candidate. |
+| Firefox extension | Signed XPI flow is available. | Native messaging and desktop companion compatibility should be retested per release. |
 
 ## Core Features
 
@@ -173,9 +183,10 @@ npm run wa-sqlite:final:gate:unit
 Latest local verification before this README update:
 
 - `npm run lint` passed.
-- `npm run test:unit` passed: 107 test files, 835 tests.
+- `npm run test:unit` passed: 108 test files, 841 tests.
 - `npm run test:coverage` passed: 107 test files, 835 tests.
 - `npm run build` passed.
+- `npm run test:e2e:chromium` passed: 20 Chromium smoke scenarios.
 - `npm run test:mutation:core` passed: 460 mutants, 81.74% mutation score.
 - `npm run test:mutation:importer` passed: 682 mutants, 80.35% mutation score.
 - `npm run test:mutation:importer:helpers` passed: 288 mutants, 87.85% mutation score.
@@ -227,6 +238,7 @@ npm run desktop:release:signing:report
 npm run desktop:release:evidence
 npm run desktop:release:evidence -- --require-completed-checklist
 npm run desktop:release:evidence:summary -- --final
+npm run desktop:release:import -- --platform <linux|macos> --source <extracted-artifact-dir>
 npm run desktop:release:notes
 npm run release:local
 npm run release:windows
@@ -234,7 +246,7 @@ npm run release:linux
 npm run release:macos
 ```
 
-The desktop release gate runs lint, version consistency checks, unit tests, web build, extension build, Tauri desktop build, release evidence collection, signing report generation, release notes generation, and evidence verification for the current host platform. Use `--skip-desktop-build` only when artifacts were produced by another trusted machine or workflow and you want to collect/check existing output. Linux and macOS artifacts can also be produced from the private build repository workflow when available.
+The desktop release gate runs lint, version consistency checks, unit tests, web build, extension build, Tauri desktop build, release evidence collection, signing report generation, release notes generation, and evidence verification for the current host platform. Use `--skip-desktop-build` only when artifacts were produced by another trusted machine or workflow and you want to collect/check existing output. Linux and macOS artifacts can also be produced from the private build repository workflow when available; if target hardware is unavailable, mark runtime smoke as deferred and keep those artifacts internal-only.
 
 ## Android Builds
 
