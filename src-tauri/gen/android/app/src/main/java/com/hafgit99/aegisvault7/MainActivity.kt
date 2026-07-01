@@ -35,6 +35,7 @@ class MainActivity : TauriActivity() {
   private var pendingSave: PendingSave? = null
   private var pendingOpenRequestId: String? = null
   private var pendingAutofillRequest: AutofillLaunchRequest? = null
+  private var pendingAutofillSaveCandidate: AutofillSaveCandidate? = null
 
   override fun onCreate(savedInstanceState: Bundle?) {
     window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
@@ -49,11 +50,19 @@ class MainActivity : TauriActivity() {
     setIntent(intent)
     captureAutofillIntent(intent)
     notifyAutofillIntent()
+    notifyAutofillSaveCandidate()
+    dismissPrivacyShield()
   }
 
   override fun onResume() {
     super.onResume()
     notifyAutofillIntent()
+    notifyAutofillSaveCandidate()
+    // When coming back from the autofill flow, the WebView may not
+    // receive the native focus/visibility events needed to dismiss
+    // the privacy shield overlay. Force-dispatch them so the shield
+    // is lifted and the user sees the vault UI.
+    dismissPrivacyShield()
   }
 
   override fun onWebViewCreate(webView: WebView) {
@@ -63,8 +72,11 @@ class MainActivity : TauriActivity() {
     webView.addJavascriptInterface(AndroidSecureStorageBridge(), "AegisAndroidSecureStorage")
     webView.addJavascriptInterface(AndroidAutofillBridge(), "AegisAndroidAutofill")
     webView.post { notifyAutofillIntent() }
+    webView.post { notifyAutofillSaveCandidate() }
     webView.postDelayed({ notifyAutofillIntent() }, 250)
+    webView.postDelayed({ notifyAutofillSaveCandidate() }, 250)
     webView.postDelayed({ notifyAutofillIntent() }, 1000)
+    webView.postDelayed({ notifyAutofillSaveCandidate() }, 1000)
   }
 
   override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -172,6 +184,23 @@ class MainActivity : TauriActivity() {
   }
 
   private fun captureAutofillIntent(intent: Intent?) {
+    if (intent?.action == AegisAutofillService.ACTION_AUTOFILL_SAVE) {
+      val requestId = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_REQUEST_ID)
+        ?: "android-autofill-save-${System.currentTimeMillis()}"
+      val createdAt = intent.getLongExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_CREATED_AT, System.currentTimeMillis())
+      pendingAutofillSaveCandidate = AutofillSaveCandidate(
+        requestId = requestId,
+        createdAt = createdAt,
+        title = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_TITLE).orEmpty(),
+        username = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_USERNAME).orEmpty(),
+        password = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_PASSWORD).orEmpty(),
+        url = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_URL)?.takeIf { it.isNotBlank() },
+        appPackage = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_APP_PACKAGE)?.takeIf { it.isNotBlank() },
+        webDomain = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_WEB_DOMAIN)?.takeIf { it.isNotBlank() },
+      )
+      return
+    }
+
     if (intent?.action != AegisAutofillService.ACTION_AUTOFILL_AUTHENTICATE) return
 
     val requestId = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_REQUEST_ID)
@@ -193,8 +222,50 @@ class MainActivity : TauriActivity() {
     evaluateOnWebView(script)
   }
 
+  private fun notifyAutofillSaveCandidate() {
+    val payload = pendingAutofillSaveCandidate?.toJson()?.toString() ?: "null"
+    val script = "window.__aegisAndroidAutofill && window.__aegisAndroidAutofill.onSave($payload)"
+    evaluateOnWebView(script)
+  }
+
   private fun jsonStringOrNull(value: String?): String {
     return if (value == null) "null" else JSONObject.quote(value)
+  }
+
+  /**
+   * Force-dispatch focus and visibilitychange events to the WebView so
+   * the JavaScript privacy-shield overlay is dismissed after Activity
+   * lifecycle transitions (especially during autofill flows).
+   */
+  private fun dismissPrivacyShield() {
+    val webView = webViewRef ?: return
+    webView.postDelayed({
+      webView.evaluateJavascript(
+        """
+        (function() {
+          try {
+            window.dispatchEvent(new Event('focus'));
+            if (document.visibilityState !== 'hidden') {
+              document.dispatchEvent(new Event('visibilitychange'));
+            }
+          } catch(e) {}
+        })();
+        """.trimIndent(),
+        null
+      )
+    }, 150)
+    webView.postDelayed({
+      webView.evaluateJavascript(
+        """
+        (function() {
+          try {
+            window.dispatchEvent(new Event('focus'));
+          } catch(e) {}
+        })();
+        """.trimIndent(),
+        null
+      )
+    }, 500)
   }
 
   private fun Intent.autofillIdsExtra(name: String): ArrayList<AutofillId> {
@@ -348,6 +419,19 @@ class MainActivity : TauriActivity() {
     }
 
     @JavascriptInterface
+    fun getPendingSaveCandidate(): String? {
+      return pendingAutofillSaveCandidate?.toJson()?.toString()
+    }
+
+    @JavascriptInterface
+    fun clearPendingSaveCandidate(requestId: String): Boolean {
+      val current = pendingAutofillSaveCandidate ?: return true
+      if (current.requestId != requestId) return false
+      pendingAutofillSaveCandidate = null
+      return true
+    }
+
+    @JavascriptInterface
     fun completePendingRequest(requestId: String, username: String, password: String, label: String): Boolean {
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
 
@@ -459,6 +543,29 @@ class MainActivity : TauriActivity() {
 
   private data class PendingSave(val requestId: String, val bytes: ByteArray)
   private data class AndroidImportFile(val name: String, val contents: String)
+  private data class AutofillSaveCandidate(
+    val requestId: String,
+    val createdAt: Long,
+    val title: String,
+    val username: String,
+    val password: String,
+    val url: String?,
+    val appPackage: String?,
+    val webDomain: String?,
+  ) {
+    fun toJson(): JSONObject =
+      JSONObject()
+        .put("requestId", requestId)
+        .put("createdAt", createdAt)
+        .put("source", "android-autofill-save")
+        .put("title", title)
+        .put("username", username)
+        .put("password", password)
+        .put("url", url)
+        .put("appPackage", appPackage)
+        .put("webDomain", webDomain)
+  }
+
   private data class AutofillLaunchRequest(
     val requestId: String,
     val createdAt: Long,

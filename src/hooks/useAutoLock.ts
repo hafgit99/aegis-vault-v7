@@ -15,21 +15,39 @@ export function useAutoLock({ unlocked, durationSeconds, onLock }: UseAutoLockOp
 
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
+    const clearTimer = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = undefined;
+      }
+    };
+
     const resetTimer = () => {
-      if (timeoutId) clearTimeout(timeoutId);
+      clearTimer();
+      if (document.hidden) return;
       timeoutId = setTimeout(onLock, durationSeconds * 1000);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        clearTimer();
+      } else {
+        resetTimer();
+      }
     };
 
     resetTimer();
     ACTIVITY_EVENTS.forEach((eventName) => {
       window.addEventListener(eventName, resetTimer, { passive: true });
     });
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      if (timeoutId) clearTimeout(timeoutId);
+      clearTimer();
       ACTIVITY_EVENTS.forEach((eventName) => {
         window.removeEventListener(eventName, resetTimer);
       });
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [durationSeconds, onLock, unlocked]);
 }

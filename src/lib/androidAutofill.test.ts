@@ -7,17 +7,21 @@ import {
   ANDROID_AUTOFILL_REQUEST_MAX_AGE_MS,
   androidAutofillTargetLabel,
   clearPendingAndroidAutofillRequest,
+  clearPendingAndroidAutofillSaveCandidate,
   completePendingAndroidAutofillRequest,
   getPendingAndroidAutofillRequest,
+  getPendingAndroidAutofillSaveCandidate,
   isAndroidAutofillRequestFresh,
   isAndroidAutofillEnabled,
   isAndroidAutofillSupported,
   openAndroidAutofillSettings,
   subscribeAndroidAutofillRequests,
+  subscribeAndroidAutofillSaveCandidates,
 } from './androidAutofill';
 
 afterEach(() => {
   delete window.AegisAndroidAutofill;
+  delete window.__aegisAndroidAutofill;
   vi.restoreAllMocks();
 });
 
@@ -108,6 +112,44 @@ describe('android autofill bridge', () => {
     expect(completePendingRequest).toHaveBeenCalledWith('android-autofill-1', 'ada@example.com', 'secret', 'Aegis Mail');
   });
 
+  it('reads and clears a pending Android Autofill save candidate', () => {
+    const clearPendingSaveCandidate = vi.fn(() => true);
+    window.AegisAndroidAutofill = {
+      isSupported: () => true,
+      isEnabled: () => true,
+      openSettings: () => true,
+      getPendingRequest: () => null,
+      clearPendingRequest: () => true,
+      completePendingRequest: () => true,
+      getPendingSaveCandidate: () => JSON.stringify({
+        requestId: 'android-autofill-save-1',
+        createdAt: 12345,
+        source: 'android-autofill-save',
+        title: 'login.example.com',
+        username: 'ada@example.com',
+        password: 'secret',
+        url: 'https://login.example.com',
+        appPackage: 'com.android.chrome',
+        webDomain: 'login.example.com',
+      }),
+      clearPendingSaveCandidate,
+    };
+
+    expect(getPendingAndroidAutofillSaveCandidate()).toEqual({
+      requestId: 'android-autofill-save-1',
+      createdAt: 12345,
+      source: 'android-autofill-save',
+      title: 'login.example.com',
+      username: 'ada@example.com',
+      password: 'secret',
+      url: 'https://login.example.com',
+      appPackage: 'com.android.chrome',
+      webDomain: 'login.example.com',
+    });
+    expect(clearPendingAndroidAutofillSaveCandidate('android-autofill-save-1')).toBe(true);
+    expect(clearPendingSaveCandidate).toHaveBeenCalledWith('android-autofill-save-1');
+  });
+
   it('formats the best available Autofill target label', () => {
     expect(androidAutofillTargetLabel(null)).toBeNull();
     expect(androidAutofillTargetLabel({
@@ -156,6 +198,42 @@ describe('android autofill bridge', () => {
     };
 
     expect(getPendingAndroidAutofillRequest()).toBeNull();
+  });
+
+  it('notifies subscribers when native code reports an Autofill save candidate', () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribeAndroidAutofillSaveCandidates(listener);
+
+    window.__aegisAndroidAutofill?.onSave({
+      requestId: 'android-autofill-save-2',
+      createdAt: 67890,
+      source: 'android-autofill-save',
+      title: 'Example',
+      username: 'ada@example.com',
+      password: 'secret',
+    });
+    window.__aegisAndroidAutofill?.onSave(null);
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener).toHaveBeenCalledWith({
+      requestId: 'android-autofill-save-2',
+      createdAt: 67890,
+      source: 'android-autofill-save',
+      title: 'Example',
+      username: 'ada@example.com',
+      password: 'secret',
+    });
+
+    unsubscribe();
+    window.__aegisAndroidAutofill?.onSave({
+      requestId: 'android-autofill-save-3',
+      createdAt: 999,
+      source: 'android-autofill-save',
+      title: 'Example',
+      username: '',
+      password: 'secret',
+    });
+    expect(listener).toHaveBeenCalledTimes(1);
   });
 
   it('notifies subscribers when native code reports an Autofill request', () => {

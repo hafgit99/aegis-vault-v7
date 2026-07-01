@@ -8,6 +8,7 @@ interface UseRuntimeSecurityOptions {
   onLock: () => void;
   onSensitiveStateClear: () => void;
   backgroundLockDelayMs?: number;
+  isAutofillMode?: boolean;
 }
 
 export function useRuntimeSecurity({
@@ -15,6 +16,7 @@ export function useRuntimeSecurity({
   onLock,
   onSensitiveStateClear,
   backgroundLockDelayMs = 15_000,
+  isAutofillMode = false,
 }: UseRuntimeSecurityOptions) {
   const [privacyShieldVisible, setPrivacyShieldVisible] = useState(false);
   const [screenRecordingDetected, setScreenRecordingDetected] = useState(false);
@@ -53,6 +55,12 @@ export function useRuntimeSecurity({
       return;
     }
 
+    // When autofill mode activates, immediately dismiss any
+    // shield that was already raised before the request arrived.
+    if (isAutofillMode) {
+      setPrivacyShieldVisible(false);
+    }
+
     let lockTimer: ReturnType<typeof setTimeout> | null = null;
 
     const clearLockTimer = () => {
@@ -63,6 +71,10 @@ export function useRuntimeSecurity({
     };
 
     const shieldAndScheduleLock = () => {
+      // During autofill flow, the Activity is temporarily re-launched which
+      // causes blur/visibility-change events. Suppress the shield and lock
+      // timer so the user does not see a black screen.
+      if (isAutofillMode) return;
       setPrivacyShieldVisible(true);
       onSensitiveStateClear();
       clearLockTimer();
@@ -81,6 +93,9 @@ export function useRuntimeSecurity({
     };
 
     const handleBlur = () => {
+      // Suppress privacy shield when autofill is in progress – the
+      // autofill intent briefly steals focus from the WebView.
+      if (isAutofillMode) return;
       setPrivacyShieldVisible(true);
       onSensitiveStateClear();
     };
@@ -101,7 +116,7 @@ export function useRuntimeSecurity({
       window.removeEventListener('blur', handleBlur);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [backgroundLockDelayMs, onLock, onSensitiveStateClear, unlocked]);
+  }, [backgroundLockDelayMs, isAutofillMode, onLock, onSensitiveStateClear, unlocked]);
 
   return {
     privacyShieldVisible: privacyShieldVisible || screenRecordingDetected,

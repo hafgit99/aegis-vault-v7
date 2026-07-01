@@ -12,9 +12,12 @@ declare global {
       getPendingRequest(): string | null;
       clearPendingRequest(requestId: string): boolean;
       completePendingRequest(requestId: string, username: string, password: string, label: string): boolean;
+      getPendingSaveCandidate?(): string | null;
+      clearPendingSaveCandidate?(requestId: string): boolean;
     };
     __aegisAndroidAutofill?: {
       onRequest(request: AndroidAutofillRequest | null): void;
+      onSave(candidate: AndroidAutofillSaveCandidate | null): void;
     };
   }
 }
@@ -30,11 +33,25 @@ export interface AndroidAutofillRequest {
   fillableFieldCount?: number;
 }
 
+export interface AndroidAutofillSaveCandidate {
+  requestId: string;
+  createdAt: number;
+  source: 'android-autofill-save';
+  title: string;
+  username: string;
+  password: string;
+  url?: string | null;
+  appPackage?: string | null;
+  webDomain?: string | null;
+}
+
 type AndroidAutofillRequestListener = (request: AndroidAutofillRequest) => void;
+type AndroidAutofillSaveCandidateListener = (candidate: AndroidAutofillSaveCandidate) => void;
 
 export const ANDROID_AUTOFILL_REQUEST_MAX_AGE_MS = 5 * 60 * 1000;
 
 const listeners = new Set<AndroidAutofillRequestListener>();
+const saveCandidateListeners = new Set<AndroidAutofillSaveCandidateListener>();
 
 function androidAutofillBridge(): NonNullable<Window['AegisAndroidAutofill']> | null {
   if (typeof window === 'undefined') return null;
@@ -63,12 +80,41 @@ function isAndroidAutofillRequest(value: unknown): value is AndroidAutofillReque
     hasValidFillableFieldCount;
 }
 
+function isAndroidAutofillSaveCandidate(value: unknown): value is AndroidAutofillSaveCandidate {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Partial<AndroidAutofillSaveCandidate>;
+  const hasValidAppPackage = candidate.appPackage === undefined || candidate.appPackage === null || typeof candidate.appPackage === 'string';
+  const hasValidWebDomain = candidate.webDomain === undefined || candidate.webDomain === null || typeof candidate.webDomain === 'string';
+  const hasValidUrl = candidate.url === undefined || candidate.url === null || typeof candidate.url === 'string';
+
+  return typeof candidate.requestId === 'string' &&
+    typeof candidate.createdAt === 'number' &&
+    candidate.source === 'android-autofill-save' &&
+    typeof candidate.title === 'string' &&
+    typeof candidate.username === 'string' &&
+    typeof candidate.password === 'string' &&
+    hasValidUrl &&
+    hasValidAppPackage &&
+    hasValidWebDomain;
+}
+
 function parsePendingRequest(payload: string | null): AndroidAutofillRequest | null {
   if (!payload) return null;
 
   try {
     const parsed = JSON.parse(payload);
     return isAndroidAutofillRequest(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function parsePendingSaveCandidate(payload: string | null): AndroidAutofillSaveCandidate | null {
+  if (!payload) return null;
+
+  try {
+    const parsed = JSON.parse(payload);
+    return isAndroidAutofillSaveCandidate(parsed) ? parsed : null;
   } catch {
     return null;
   }
@@ -81,6 +127,10 @@ function ensureAndroidAutofillCallback(): void {
     onRequest(request) {
       if (!isAndroidAutofillRequest(request)) return;
       listeners.forEach((listener) => listener(request));
+    },
+    onSave(candidate) {
+      if (!isAndroidAutofillSaveCandidate(candidate)) return;
+      saveCandidateListeners.forEach((listener) => listener(candidate));
     },
   };
 }
@@ -129,12 +179,34 @@ export function getPendingAndroidAutofillRequest(): AndroidAutofillRequest | nul
   }
 }
 
+export function getPendingAndroidAutofillSaveCandidate(): AndroidAutofillSaveCandidate | null {
+  const bridge = androidAutofillBridge();
+  if (!bridge || !bridge.getPendingSaveCandidate) return null;
+
+  try {
+    return parsePendingSaveCandidate(bridge.getPendingSaveCandidate());
+  } catch {
+    return null;
+  }
+}
+
 export function clearPendingAndroidAutofillRequest(requestId: string): boolean {
   const bridge = androidAutofillBridge();
   if (!bridge) return false;
 
   try {
     return Boolean(bridge.clearPendingRequest(requestId));
+  } catch {
+    return false;
+  }
+}
+
+export function clearPendingAndroidAutofillSaveCandidate(requestId: string): boolean {
+  const bridge = androidAutofillBridge();
+  if (!bridge || !bridge.clearPendingSaveCandidate) return false;
+
+  try {
+    return Boolean(bridge.clearPendingSaveCandidate(requestId));
   } catch {
     return false;
   }
@@ -183,5 +255,14 @@ export function subscribeAndroidAutofillRequests(listener: AndroidAutofillReques
 
   return () => {
     listeners.delete(listener);
+  };
+}
+
+export function subscribeAndroidAutofillSaveCandidates(listener: AndroidAutofillSaveCandidateListener): () => void {
+  ensureAndroidAutofillCallback();
+  saveCandidateListeners.add(listener);
+
+  return () => {
+    saveCandidateListeners.delete(listener);
   };
 }

@@ -2,5 +2,8 @@
     <!-- Base application theme. -->
     <style name="Theme.aegis_vault_v7" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <!-- Customize your theme here. -->
+        <item name="android:windowBackground">@color/app_background</item>
+        <item name="android:navigationBarColor">@color/app_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
     </style>
 </resources>

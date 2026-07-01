@@ -114,6 +114,31 @@ describe('useRuntimeSecurity', () => {
     expect(onLock).not.toHaveBeenCalled();
   });
 
+  it('does not raise the privacy shield during Android Autofill mode', () => {
+    const onLock = vi.fn();
+    const onSensitiveStateClear = vi.fn();
+    const { result } = renderHook(() =>
+      useRuntimeSecurity({
+        unlocked: true,
+        onLock,
+        onSensitiveStateClear,
+        backgroundLockDelayMs: 5_000,
+        isAutofillMode: true,
+      }),
+    );
+
+    act(() => {
+      setDocumentHidden(true);
+      document.dispatchEvent(new Event('visibilitychange'));
+      window.dispatchEvent(new Event('blur'));
+      vi.advanceTimersByTime(5_000);
+    });
+
+    expect(result.current.privacyShieldVisible).toBe(false);
+    expect(onSensitiveStateClear).not.toHaveBeenCalled();
+    expect(onLock).not.toHaveBeenCalled();
+  });
+
   it('shields and clears sensitive state on window blur', () => {
     const onSensitiveStateClear = vi.fn();
     const { result } = renderHook(() =>

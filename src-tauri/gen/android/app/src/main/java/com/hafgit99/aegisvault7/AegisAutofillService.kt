@@ -3,11 +3,12 @@ package com.hafgit99.aegisvault7
 import android.app.PendingIntent
 import android.content.Intent
 import android.os.Build
-import android.service.autofill.FillResponse
 import android.service.autofill.AutofillService
 import android.service.autofill.FillCallback
 import android.service.autofill.FillRequest
+import android.service.autofill.FillResponse
 import android.service.autofill.SaveCallback
+import android.service.autofill.SaveInfo
 import android.service.autofill.SaveRequest
 import android.text.InputType
 import android.util.Log
@@ -52,12 +53,41 @@ class AegisAutofillService : AutofillService() {
     @Suppress("DEPRECATION")
     val response = FillResponse.Builder()
       .setAuthentication(authenticationIds, createAuthenticationIntent(loginFields).intentSender, createAuthenticationPresentation())
+      .setSaveInfo(createSaveInfo(loginFields))
       .build()
 
     callback.onSuccess(response)
   }
 
   override fun onSaveRequest(request: SaveRequest, callback: SaveCallback) {
+    val structure = request.fillContexts.lastOrNull()?.structure
+    val candidate = structure?.let { collectSaveCandidate(it) }
+
+    if (candidate == null || candidate.password.isBlank()) {
+      Log.i(AUTOFILL_LOG_TAG, "SaveRequest ignored; no password value was available")
+      callback.onSuccess()
+      return
+    }
+
+    try {
+      val intent = Intent(this, MainActivity::class.java).apply {
+        action = ACTION_AUTOFILL_SAVE
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        putExtra(EXTRA_AUTOFILL_SAVE_REQUEST_ID, "android-autofill-save-${System.currentTimeMillis()}")
+        putExtra(EXTRA_AUTOFILL_SAVE_CREATED_AT, System.currentTimeMillis())
+        putExtra(EXTRA_AUTOFILL_SAVE_TITLE, candidate.title())
+        putExtra(EXTRA_AUTOFILL_SAVE_USERNAME, candidate.username)
+        putExtra(EXTRA_AUTOFILL_SAVE_PASSWORD, candidate.password)
+        putExtra(EXTRA_AUTOFILL_SAVE_URL, candidate.url())
+        putExtra(EXTRA_AUTOFILL_APP_PACKAGE, candidate.appPackage)
+        putExtra(EXTRA_AUTOFILL_WEB_DOMAIN, candidate.webDomain)
+      }
+      startActivity(intent)
+      Log.i(AUTOFILL_LOG_TAG, "SaveRequest forwarded to Aegis package=${candidate.appPackage ?: "unknown"} domain=${candidate.webDomain ?: "unknown"}")
+    } catch (error: Exception) {
+      Log.w(AUTOFILL_LOG_TAG, "SaveRequest could not launch Aegis: ${error.message ?: "unknown"}")
+    }
+
     callback.onSuccess()
   }
 
@@ -69,6 +99,16 @@ class AegisAutofillService : AutofillService() {
     }
 
     return fields
+  }
+
+  private fun collectSaveCandidate(structure: AssistStructure): SaveCandidate {
+    val candidate = SaveCandidate(appPackage = structure.activityComponent?.packageName)
+
+    for (windowIndex in 0 until structure.windowNodeCount) {
+      traverseSaveNode(structure.getWindowNodeAt(windowIndex).rootViewNode, candidate)
+    }
+
+    return candidate
   }
 
   private fun traverseNode(node: AssistStructure.ViewNode, fields: LoginFields) {
@@ -87,6 +127,25 @@ class AegisAutofillService : AutofillService() {
 
     for (childIndex in 0 until node.childCount) {
       traverseNode(node.getChildAt(childIndex), fields)
+    }
+  }
+
+  private fun traverseSaveNode(node: AssistStructure.ViewNode, candidate: SaveCandidate) {
+    val domain = node.webDomain?.trim()
+    if (candidate.webDomain.isNullOrBlank() && !domain.isNullOrBlank()) {
+      candidate.webDomain = domain
+    }
+
+    val value = node.autofillValue?.takeIf { it.isText }?.textValue?.toString().orEmpty()
+    if (value.isNotBlank()) {
+      when {
+        isPasswordField(node) && candidate.password.isBlank() -> candidate.password = value
+        isUsernameField(node) && candidate.username.isBlank() -> candidate.username = value.trim()
+      }
+    }
+
+    for (childIndex in 0 until node.childCount) {
+      traverseSaveNode(node.getChildAt(childIndex), candidate)
     }
   }
 
@@ -146,6 +205,14 @@ class AegisAutofillService : AutofillService() {
     return PendingIntent.getActivity(this, requestId.hashCode(), intent, flags)
   }
 
+  private fun createSaveInfo(loginFields: LoginFields): SaveInfo {
+    val requiredIds = loginFields.passwordIds.distinct().toTypedArray()
+    val builder = SaveInfo.Builder(SaveInfo.SAVE_DATA_TYPE_PASSWORD, requiredIds)
+    val optionalIds = loginFields.usernameIds.distinct().toTypedArray()
+    if (optionalIds.isNotEmpty()) builder.setOptionalIds(optionalIds)
+    return builder.build()
+  }
+
   private fun createAuthenticationPresentation(): RemoteViews {
     return RemoteViews(packageName, android.R.layout.simple_list_item_1).apply {
       setTextViewText(android.R.id.text1, getString(R.string.autofill_unlock_prompt))
@@ -163,14 +230,31 @@ class AegisAutofillService : AutofillService() {
     fun allIds(): List<AutofillId> = (usernameIds + passwordIds).distinct()
   }
 
+  private data class SaveCandidate(
+    var username: String = "",
+    var password: String = "",
+    var appPackage: String? = null,
+    var webDomain: String? = null,
+  ) {
+    fun title(): String = webDomain ?: appPackage ?: "Aegis Login"
+    fun url(): String = webDomain?.let { if (it.startsWith("http")) it else "https://$it" }.orEmpty()
+  }
+
   companion object {
     private const val AUTOFILL_LOG_TAG = "AegisAutofill"
     const val ACTION_AUTOFILL_AUTHENTICATE = "com.hafgit99.aegisvault7.action.AUTOFILL_AUTHENTICATE"
+    const val ACTION_AUTOFILL_SAVE = "com.hafgit99.aegisvault7.action.AUTOFILL_SAVE"
     const val EXTRA_AUTOFILL_REQUEST_ID = "com.hafgit99.aegisvault7.extra.AUTOFILL_REQUEST_ID"
     const val EXTRA_AUTOFILL_CREATED_AT = "com.hafgit99.aegisvault7.extra.AUTOFILL_CREATED_AT"
     const val EXTRA_AUTOFILL_APP_PACKAGE = "com.hafgit99.aegisvault7.extra.AUTOFILL_APP_PACKAGE"
     const val EXTRA_AUTOFILL_WEB_DOMAIN = "com.hafgit99.aegisvault7.extra.AUTOFILL_WEB_DOMAIN"
     const val EXTRA_AUTOFILL_USERNAME_IDS = "com.hafgit99.aegisvault7.extra.AUTOFILL_USERNAME_IDS"
     const val EXTRA_AUTOFILL_PASSWORD_IDS = "com.hafgit99.aegisvault7.extra.AUTOFILL_PASSWORD_IDS"
+    const val EXTRA_AUTOFILL_SAVE_REQUEST_ID = "com.hafgit99.aegisvault7.extra.AUTOFILL_SAVE_REQUEST_ID"
+    const val EXTRA_AUTOFILL_SAVE_CREATED_AT = "com.hafgit99.aegisvault7.extra.AUTOFILL_SAVE_CREATED_AT"
+    const val EXTRA_AUTOFILL_SAVE_TITLE = "com.hafgit99.aegisvault7.extra.AUTOFILL_SAVE_TITLE"
+    const val EXTRA_AUTOFILL_SAVE_USERNAME = "com.hafgit99.aegisvault7.extra.AUTOFILL_SAVE_USERNAME"
+    const val EXTRA_AUTOFILL_SAVE_PASSWORD = "com.hafgit99.aegisvault7.extra.AUTOFILL_SAVE_PASSWORD"
+    const val EXTRA_AUTOFILL_SAVE_URL = "com.hafgit99.aegisvault7.extra.AUTOFILL_SAVE_URL"
   }
 }

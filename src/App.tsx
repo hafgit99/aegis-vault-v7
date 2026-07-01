@@ -37,11 +37,15 @@ import { useRuntimeSecurity } from './hooks/useRuntimeSecurity';
 import { useLanguage } from './i18n/LanguageContext';
 import {
   AndroidAutofillRequest,
+  AndroidAutofillSaveCandidate,
   clearPendingAndroidAutofillRequest,
   completePendingAndroidAutofillRequest,
   getPendingAndroidAutofillRequest,
+  getPendingAndroidAutofillSaveCandidate,
   isAndroidAutofillRequestFresh,
   subscribeAndroidAutofillRequests,
+  subscribeAndroidAutofillSaveCandidates,
+  clearPendingAndroidAutofillSaveCandidate,
 } from './lib/androidAutofill';
 import { logAndroidAutofillSecurityEvent } from './lib/androidAutofillSecurity';
 import { syncExtensionCredentials, clearExtensionCredentials } from './lib/desktopStorage';
@@ -63,7 +67,11 @@ export default function App() {
   const [pendingAutofillRequest, setPendingAutofillRequest] = useState<AndroidAutofillRequest | null>(() =>
     getPendingAndroidAutofillRequest(),
   );
+  const [pendingAutofillSaveCandidate, setPendingAutofillSaveCandidate] = useState<AndroidAutofillSaveCandidate | null>(() =>
+    getPendingAndroidAutofillSaveCandidate(),
+  );
   const notifiedAutofillRequestRef = useRef<string | null>(null);
+  const handledAutofillSaveRef = useRef<string | null>(null);
   const { copiedField, copyText: handleCopyText, clearCopiedField } = useClipboardFeedback();
   const { revealed, toggleReveal, resetReveals } = useSensitiveReveal();
   const isPasswordRevealed = revealed.password;
@@ -148,6 +156,7 @@ export default function App() {
       clearCopiedField();
     },
     backgroundLockDelayMs: backgroundLockDelayFromAutoLock(autoLockDuration),
+    isAutofillMode: Boolean(pendingAutofillRequest),
   });
 
   useEffect(() => {
@@ -237,6 +246,17 @@ export default function App() {
   }, [rejectStaleAutofillRequest]);
 
   useEffect(() => {
+    const pendingSave = getPendingAndroidAutofillSaveCandidate();
+    if (pendingSave) {
+      setPendingAutofillSaveCandidate(pendingSave);
+    }
+
+    return subscribeAndroidAutofillSaveCandidates((candidate) => {
+      setPendingAutofillSaveCandidate(candidate);
+    });
+  }, []);
+
+  useEffect(() => {
     if (!unlocked || !pendingAutofillRequest) return;
     if (rejectStaleAutofillRequest(pendingAutofillRequest)) return;
     if (notifiedAutofillRequestRef.current === pendingAutofillRequest.requestId) return;
@@ -250,6 +270,28 @@ export default function App() {
       type: 'info',
     });
   }, [pendingAutofillRequest, setActiveTab, showNotification, t, unlocked]);
+
+  useEffect(() => {
+    if (!unlocked || !pendingAutofillSaveCandidate) return;
+    if (handledAutofillSaveRef.current === pendingAutofillSaveCandidate.requestId) return;
+
+    handledAutofillSaveRef.current = pendingAutofillSaveCandidate.requestId;
+    clearPendingAndroidAutofillSaveCandidate(pendingAutofillSaveCandidate.requestId);
+    setActiveTab('vault');
+    handleTriggerNew({
+      title: pendingAutofillSaveCandidate.title || pendingAutofillSaveCandidate.webDomain || pendingAutofillSaveCandidate.appPackage || '',
+      username: pendingAutofillSaveCandidate.username || '',
+      password: pendingAutofillSaveCandidate.password || '',
+      url: pendingAutofillSaveCandidate.url || pendingAutofillSaveCandidate.webDomain || '',
+      category: 'login',
+    });
+    setPendingAutofillSaveCandidate(null);
+    showNotification({
+      title: t('autofill.saveCaptured.title'),
+      message: t('autofill.saveCaptured.message'),
+      type: 'info',
+    });
+  }, [handleTriggerNew, pendingAutofillSaveCandidate, setActiveTab, showNotification, t, unlocked]);
 
   const handleCancelAutofillRequest = useCallback(() => {
     if (pendingAutofillRequest) {
