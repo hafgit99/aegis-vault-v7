@@ -6,6 +6,7 @@ All notable Aegis Vault 7 changes are tracked here. The project follows a securi
 
 ### Added
 
+- Android Autofill save-candidate handling so Android can offer to save newly registered credentials and Aegis opens a prefilled new-login form after user approval.
 - Desktop release gate with lint, version consistency checks, unit tests, web build, extension build, Tauri build, artifact collection, signing report generation, release notes generation, and evidence verification.
 - Desktop release evidence files: `metadata.json`, `SHA256SUMS.txt`, `DESKTOP_MANUAL_SMOKE_CHECKLIST.md`, `DESKTOP_SIGNATURES.md`, `RELEASE_NOTES.md`, and release evidence `README.md`.
 - Desktop signing report support for Windows Authenticode, macOS codesign/spctl checks, and Linux artifact signing policy notes.
@@ -20,6 +21,7 @@ All notable Aegis Vault 7 changes are tracked here. The project follows a securi
 
 ### Changed
 
+- Refined Android background behavior so normal idle auto-lock pauses while the app is hidden, leaving background locking to the runtime security delay instead of immediately requiring master password re-entry.
 - Strengthened desktop release documentation with local build, evidence, signing, and release notes procedures.
 - Expanded Android readiness documentation for signed APKs, physical-device smoke testing, safe-area behavior, backup/import flows, Autofill validation, and biometric release checks.
 - Improved Android UI safe-area handling across lock screen, dashboard, navigation, Settings, item detail, and modal surfaces.
@@ -42,6 +44,7 @@ All notable Aegis Vault 7 changes are tracked here. The project follows a securi
 
 ### Fixed
 
+- Fixed Android Autofill return/save flows that could leave the app on a black privacy-shield screen after switching back from the browser.
 - Fixed broken top-right refresh behavior after unlock.
 - Made the large add-item action consistently visible.
 - Removed personal email example text from the new password item form.
@@ -54,6 +57,7 @@ All notable Aegis Vault 7 changes are tracked here. The project follows a securi
 
 ### Validation
 
+- Signed Android release gate passed with device, fresh-install, and evidence on commit `1df341ec15938da9dad2a8304181dc902013b242`; evidence folder: `release-local/android/2026-07-01T12-41-48-852Z`.
 - Unit suite baseline: 108 test files and 837 tests passed in the latest recorded full unit run during release-gate work.
 - E2E smoke suite includes 15 Chromium smoke scenarios after wa-sqlite migration UI coverage was added.
 - Coverage and mutation thresholds are documented in `docs/QUALITY_GATES.md`.

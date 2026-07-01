@@ -156,7 +156,7 @@ Before the first public release, decide:
 
 ## Android Internal Build Boundary
 
-Android builds are internal-only until the readiness checklist in `docs/ANDROID_READINESS.md` is complete. A public Android release additionally needs:
+Android builds are still treated as internal release candidates until the readiness checklist in `docs/ANDROID_READINESS.md` is complete. The latest signed physical-device fresh-install gate passed and should now be followed by completed final evidence review plus desktop release parity checks. A public Android release additionally needs:
 
 - APK/AAB signing procedure with `AEGIS_ANDROID_KEYSTORE_PATH`, `AEGIS_ANDROID_KEY_ALIAS`, `AEGIS_ANDROID_KEYSTORE_PASSWORD`, and `AEGIS_ANDROID_KEY_PASSWORD`.
 - Android storage and backup UX decision.

@@ -4,6 +4,8 @@ This document tracks the Android preparation path for Aegis Vault 7. Android is 
 
 ## Current Status
 
+- Android Autofill now covers both fill and save flows: fill requests still require vault unlock, domain/package review, and explicit approval; save requests open Aegis with a prefilled new-login form for review before storing anything.
+- Latest signed Android release gate evidence passed on a physical device with `--signed --device --fresh-install --evidence`; evidence folder: `release-local/android/2026-07-01T12-41-48-852Z`, commit `1df341ec15938da9dad2a8304181dc902013b242`, APK size 12.99 MiB, SHA-256 `d5ac727a75b13e8c88f08265d74a60f966fa2ad153c6188a51597e7e3395da9c`.
 - Tauri Android CLI is available through `@tauri-apps/cli`.
 - Android bundle metadata exists in `src-tauri/tauri.conf.json`.
 - Android launcher icons are present under `src-tauri/icons/android`.
@@ -179,6 +181,7 @@ Run this checklist before every APK/AAB candidate that may be shared outside loc
 
 ### Device Security
 
+- Confirmed regression target: backgrounding the app should shield sensitive content but should not immediately require master password re-entry when returning before the configured background lock delay.
 - Verify `FLAG_SECURE` blocks screenshots, screen recording, and task-switcher previews on the target device.
 - Send app to background and return:
   - Sensitive content should be shielded immediately.
@@ -204,6 +207,7 @@ Run this checklist before every APK/AAB candidate that may be shared outside loc
 
 ### Autofill
 
+- New-site registration save prompt: after Android asks to save a username/password, approving Aegis should open the vault new-login form with title, username, password, and URL prefilled for review.
 - Aegis Vault Autofill appears as a selectable Android Autofill provider.
 - Aloha/browser baseline: Aegis prompt appears, matching record is promoted, approval fills username/password.
 - Chrome baseline: if Google Password Manager has priority, switch Chrome to fill with another app; verify Aegis prompt then appears and fills.
