@@ -53,6 +53,8 @@ The release owner must also verify:
 
 When Linux or macOS artifacts are produced by the manual GitHub workflow and downloaded locally, extract the artifact zip and run `npm run desktop:release:import -- --platform <linux|macos> --source <extracted-artifact-dir>` before `npm run desktop:release:evidence:summary -- --platform <linux|macos> --final`.
 
+If Linux or macOS target hardware is not available, mark the runtime smoke checklist items as deferred instead of silently passing them. Standard artifact evidence may still be archived, but those Linux/macOS builds remain internal candidates only. Public Linux/macOS distribution requires platform runtime smoke, completed manual checklist evidence, and macOS signing/notarization where applicable.
+
 The same checks are mirrored in `docs/DESKTOP_MANUAL_SMOKE_CHECKLIST.md`; `npm run desktop:release:gate` runs the automated gate and copies a prefilled checklist into `release-local/<platform>/`. Use `npm run desktop:release:gate:dry` to review the exact command sequence without building, and `npm run desktop:release:evidence` to re-check an existing `release-local/<platform>/` folder before publishing. After the copied checklist is completed, run `npm run desktop:release:evidence -- --require-completed-checklist` so final evidence cannot pass with unchecked release items or missing candidate fields. Use `npm run desktop:release:evidence:summary -- --platform <windows|linux|macos> --final` to print the final PASS/BLOCKED artifact, checklist, and signing summary before publishing.
 
 ## Artifact Checklist

@@ -1,6 +1,6 @@
 # Desktop Manual Smoke Checklist
 
-Use this checklist for every Windows, Linux, or macOS desktop release candidate. Keep the completed copy with the release evidence folder.
+Use this checklist for every Windows, Linux, or macOS desktop release candidate. Keep the completed copy with the release evidence folder. If Linux or macOS hardware is unavailable, mark platform runtime checks as deferred in Notes and treat the artifact as an internal candidate only.
 
 Candidate:
 

@@ -1,3 +1,4 @@
+import fs from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
 
 const masterPassword = 'master-pass-e2e';
@@ -315,6 +316,40 @@ test('exports an encrypted backup download', async ({ page }) => {
   await openSettings(page);
 
   await exportEncryptedBackup(page);
+});
+
+test('exports a confirmed plain JSON backup download', async ({ page }) => {
+  await setupVault(page);
+  await createLoginItem(page, 'E2E Plain Export', {
+    username: 'plain-export-user',
+    password: 'PlainExportPass!42',
+    url: 'https://plain-export.example',
+  });
+  await openSettings(page);
+
+  await page.getByTestId('plain-export-button').click();
+  await expect(page.getByTestId('plain-export-warning')).toBeVisible();
+  await page.getByTestId('plain-export-confirm-input').fill('EXPORT');
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByTestId('plain-export-confirm-button').click();
+  const download = await downloadPromise;
+  const downloadPath = await download.path();
+
+  expect(download.suggestedFilename()).toMatch(/^aegis_acik_yedek_\d{4}-\d{2}-\d{2}\.json$/);
+  expect(downloadPath).toBeTruthy();
+
+  const exportedItems = JSON.parse(await fs.readFile(downloadPath!, 'utf8'));
+  expect(exportedItems).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        title: 'E2E Plain Export',
+        username: 'plain-export-user',
+        password: 'PlainExportPass!42',
+        url: 'https://plain-export.example',
+      }),
+    ]),
+  );
 });
 
 test('imports a plain JSON backup file', async ({ page }) => {
