@@ -54,13 +54,14 @@ All notable Aegis Vault 7 changes are tracked here. The project follows a securi
 - Fixed Android Autofill flow so selected credentials return to the target app and fill supported browser fields.
 - Fixed mobile lock button visibility in the dashboard header.
 - Fixed Settings master password change warning so users understand re-encryption impact before proceeding.
+- Fixed browser-fallback OPFS persistence so a fast reload after saving a vault item cannot restore stale pre-save data.
 
 ### Validation
 
 - Signed Android release gate passed with device, fresh-install, and evidence on commit `1df341ec15938da9dad2a8304181dc902013b242`; evidence folder: `release-local/android/2026-07-01T12-41-48-852Z`.
 - Linux and macOS desktop artifact evidence passed standard local verification on commit `30740c2c468aeb56640764fd4d19e05cf4866ef0`; runtime smoke is deferred because no target Linux/macOS devices are available in this workspace, so those artifacts remain internal candidates until platform testing is completed.
 - Unit suite baseline: 108 test files and 841 tests passed in the latest recorded full unit run during release-gate work.
-- E2E smoke suite includes 20 passing Chromium smoke scenarios, including setup/unlock, item lifecycle, wa-sqlite migration UI, Emergency Kit, donation, language switching, encrypted import/export, and confirmed plain JSON export coverage.
+- E2E smoke suite includes 21 passing Chromium smoke scenarios, including setup/unlock, item lifecycle, reload persistence, wa-sqlite migration UI, Emergency Kit, donation, language switching, encrypted import/export, and confirmed plain JSON export coverage.
 - Coverage and mutation thresholds are documented in `docs/QUALITY_GATES.md`.
 - Android release and desktop release evidence workflows are documented in `docs/ANDROID_READINESS.md` and `docs/RELEASE_PLAN.md`.
 

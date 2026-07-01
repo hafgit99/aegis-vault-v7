@@ -276,10 +276,10 @@ class SQLiteOPFS implements VaultStorageRepository {
       const savedToDesktop = await writeDesktopVaultDatabase(payloadStr);
       this.writeLocalFallbackMirror(payloadStr, savedToDesktop);
 
-      if (isTestEnv) {
+      if (isTestEnv || !savedToDesktop) {
         await this.writeToOPFSWithTimeout(payloadStr, 1000);
       } else {
-        // Execute OPFS write in background with a timeout to avoid freezing the UI on lock leaks.
+        // Native app-data writes are already durable; OPFS is only a secondary mirror there.
         void this.writeToOPFSWithTimeout(payloadStr, 1000);
       }
       return true;

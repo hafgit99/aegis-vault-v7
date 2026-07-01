@@ -83,6 +83,30 @@ test('sets up, stores, locks, and unlocks a vault item', async ({ page }) => {
   await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E GitHub' })).toBeVisible();
 });
 
+test('restores persisted vault data after an app reload and unlock', async ({ page }) => {
+  await setupVault(page);
+
+  await createLoginItem(page, 'E2E Persisted Login', {
+    username: 'persisted-user',
+    password: 'PersistedPass!42',
+    url: 'https://persist.example',
+  });
+
+  await page.reload();
+  await expect(page.getByTestId('lock-password-input')).toBeVisible();
+  await expect(page.getByTestId('lock-confirm-password-input')).toBeHidden();
+
+  await page.getByTestId('lock-password-input').fill(masterPassword);
+  await page.getByTestId('lock-submit-button').click();
+
+  const restoredItem = page.getByTestId('vault-list-item').filter({ hasText: 'E2E Persisted Login' });
+  await expect(restoredItem).toBeVisible();
+  await expect(restoredItem).toContainText('persisted-user');
+
+  await restoredItem.click();
+  await expect(page.getByTestId('login-username-value')).toContainText('persisted-user');
+});
+
 test('reveals and copies login detail fields', async ({ page }) => {
   await setupVault(page);
 

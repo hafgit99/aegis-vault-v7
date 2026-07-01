@@ -186,7 +186,7 @@ Latest local verification before this README update:
 - `npm run test:unit` passed: 108 test files, 841 tests.
 - `npm run test:coverage` passed: 107 test files, 835 tests.
 - `npm run build` passed.
-- `npm run test:e2e:chromium` passed: 20 Chromium smoke scenarios.
+- `npm run test:e2e:chromium` passed: 21 Chromium smoke scenarios.
 - `npm run test:mutation:core` passed: 460 mutants, 81.74% mutation score.
 - `npm run test:mutation:importer` passed: 682 mutants, 80.35% mutation score.
 - `npm run test:mutation:importer:helpers` passed: 288 mutants, 87.85% mutation score.
