@@ -119,7 +119,7 @@ function collectMacos() {
     artifacts.push(copyFile(dmg, normalizeName('universal', '.dmg')));
   }
   for (const app of apps) {
-    copyDirectory(app, normalizeName('universal', '.app'));
+    artifacts.push(copyDirectory(app, normalizeName('universal', '.app')));
   }
 
   return artifacts;
