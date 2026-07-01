@@ -63,7 +63,7 @@ function run(command, commandArgs) {
   const result = spawnSync(command, commandArgs, {
     cwd: rootDir,
     encoding: 'utf8',
-    shell: process.platform === 'win32',
+    shell: false,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   return {
