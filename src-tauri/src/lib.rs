@@ -42,7 +42,7 @@ fn apply_screen_capture_protection_to_window(
 fn apply_screen_capture_protection_to_window(
     window: &WebviewWindow,
 ) -> Result<bool, String> {
-    use objc2_app_kit::{NSWindow, NSWindowSharingNone};
+    use objc2_app_kit::{NSWindow, NSWindowSharingType};
 
     let ns_window_ptr = window
         .ns_window()
@@ -54,7 +54,7 @@ fn apply_screen_capture_protection_to_window(
 
     unsafe {
         let ns_window = &*ns_window_ptr;
-        ns_window.setSharingType(NSWindowSharingNone);
+        ns_window.setSharingType(NSWindowSharingType::None);
     }
 
     Ok(true)
