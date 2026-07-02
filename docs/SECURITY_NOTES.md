@@ -7,7 +7,7 @@ This project is a password vault, so security claims must stay conservative unti
 - Password generation now uses a centralized secure randomness helper; the browser extension generator also uses rejection-sampled CSPRNG indexes and CSPRNG Fisher-Yates shuffling instead of `Math.random`.
 - Diceware, biometric challenge generation, import IDs, attachment IDs, and simulated SQLite log IDs now use the same helper.
 - Master password verification now uses vetted Argon2id hashes; legacy simulated hash verification has been removed from the active unlock path.
-- Active vault unlock state now uses an in-memory session helper instead of storing the master password in browser `sessionStorage`, and production callers use scoped session-secret callbacks instead of broad master-password getters.
+- Active vault unlock state now uses an in-memory session helper instead of storing the master password in browser `sessionStorage`; normal vault item reads, writes, trash operations, and demo reseeds now use a scoped session vault encryption key instead of re-materializing the master password string.
 - New attachment writes use WebCrypto AES-GCM with per-attachment keys derived from the active vault session.
 - New biometric master-password wrapping uses WebCrypto PBKDF2-SHA256 at 600,000 iterations and AES-GCM.
 - New vault item metadata writes use WebCrypto AES-GCM with keys derived through the vetted Argon2id adapter.
@@ -48,7 +48,7 @@ This project is a password vault, so security claims must stay conservative unti
 
 - `src/lib/legacyCrypto.ts` no longer ships custom SHA/HMAC/HKDF/simulated-Argon2id/AES decrypt primitives. It remains only as a fail-closed error-code boundary for old UI mappings.
 - Legacy XOR attachment records are rejected; older secure legacy attachment formats are migration-only and are rewritten to current AES-GCM storage after successful unlock.
-- `src/lib/vaultSession.ts` stores active master/backup secrets as zeroized `Uint8Array` process-memory state during an unlocked session. Production app code now uses scoped session-secret callbacks, but the current JS storage repositories still require temporary immutable JavaScript strings inside those callbacks for KDF/decrypt calls; fully eliminating that requires moving vault storage/KDF/decrypt operations into native adapters.
+- `src/lib/vaultSession.ts` still keeps master/backup compatibility secrets as zeroized `Uint8Array` process-memory state during an unlocked session. Routine vault item storage no longer needs those strings after unlock, but strict no-JS-master-string handling still requires a native credential/unlock boundary and migration of remaining feature edges such as attachment rewrapping, sync/export, and biometric setup into native or key-only adapters.
 - `src/lib/sqlite_opfs.ts` is a simulated SQLite/OPFS layer backed by versioned serialized JSON state. The naming and implementation should be aligned with the actual persistence strategy.
 - `src/lib/otp.ts` supports the common RFC 6238 HMAC-SHA1 path plus SHA-256/SHA-512 algorithm variants and `otpauth://totp` URI parsing for issuer/account imports.
 - Product copy should continue to be reviewed before release so public claims stay aligned with the verified implementation.
@@ -60,8 +60,8 @@ This project is a password vault, so security claims must stay conservative unti
 ## Near-Term Security Plan
 
 1. Add repeatable Android regression coverage for secure storage migration, app-private vault persistence, backup/import/download flows, and corrupted payload failures.
-2. Decide the final vault session handling and whether native secret handling should move master-secret operations into Rust/mobile platform code.
+2. Move the remaining master-secret feature edges into key-only or native adapters so deprecated JS string getters can be removed entirely.
 3. Complete manual Android biometric wrapping release review on target devices.
 4. Validate TOTP interoperability against more real-world authenticator exports and service QR payloads.
-5. Move vault storage/KDF/decrypt operations into native adapters if the project requires a strict no-JS-master-string security boundary.
+5. Design the native credential/unlock adapter for a strict no-JS-master-string security boundary.
 6. Continue release-copy review as features move from beta to public release.

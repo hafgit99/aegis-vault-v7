@@ -186,8 +186,12 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
       throw new Error(WA_SQLITE_INVALID_MASTER_PASSWORD_ERROR);
     }
 
-    const rows = await this.readVaultItemRows();
     const key = await this.deriveEncryptionKey(masterPasswordPlain);
+    return this.getVaultItemsWithKey(key);
+  }
+
+  public async getVaultItemsWithKey(key: Uint8Array): Promise<VaultItem[]> {
+    const rows = await this.readVaultItemRows();
     const items: VaultItem[] = [];
 
     for (const row of rows) {
@@ -206,6 +210,10 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
     }
 
     const key = await this.deriveEncryptionKey(masterPasswordPlain);
+    return this.saveVaultItemWithKey(item, key);
+  }
+
+  public async saveVaultItemWithKey(item: VaultItem, key: Uint8Array): Promise<VaultItem[]> {
     const row = await this.createEncryptedRow(item, key);
 
     await this.runTransaction(async () => {
@@ -213,7 +221,7 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
     });
 
     this.logQuery(`INSERT OR REPLACE INTO vault_items (id, title, category, enc_metadata) VALUES (${this.sqlStringForLog(this.optionalString(row.id) || '')}, ${this.sqlStringForLog(this.optionalString(row.title) || 'Imported Record')}, ${this.sqlStringForLog(this.optionalString(row.category) || 'login')}, "[encrypted metadata]");`, 'SUCCESS', 1);
-    return this.getVaultItems(masterPasswordPlain);
+    return this.getVaultItemsWithKey(key);
   }
 
   public async saveVaultItems(
@@ -228,6 +236,14 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
     }
 
     const key = await this.deriveEncryptionKey(masterPasswordPlain);
+    return this.saveVaultItemsWithKey(items, key, onProgress);
+  }
+
+  public async saveVaultItemsWithKey(
+    items: VaultItem[],
+    key: Uint8Array,
+    onProgress?: (count: number) => void,
+  ): Promise<VaultItem[]> {
     const rows: WaSqliteVaultItemRow[] = [];
 
     for (const item of items) {
@@ -268,6 +284,10 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
     return this.deletePermanentlyBatch([id], passwordPlain);
   }
 
+  public async deletePermanentlyWithKey(id: string, vaultEncryptionKey: Uint8Array): Promise<VaultItem[]> {
+    return this.deletePermanentlyBatchWithKey([id], vaultEncryptionKey);
+  }
+
   public async deletePermanentlyBatch(ids: string[], passwordPlain: string): Promise<VaultItem[]> {
     if (ids.length === 0) {
       return this.getVaultItems(passwordPlain);
@@ -279,12 +299,21 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
       throw new Error(WA_SQLITE_INVALID_MASTER_PASSWORD_ERROR);
     }
 
+    const key = await this.deriveEncryptionKey(passwordPlain);
+    return this.deletePermanentlyBatchWithKey(ids, key);
+  }
+
+  public async deletePermanentlyBatchWithKey(ids: string[], key: Uint8Array): Promise<VaultItem[]> {
+    if (ids.length === 0) {
+      return this.getVaultItemsWithKey(key);
+    }
+
     await this.runTransaction(async () => {
       await this.executeRequired(`DELETE FROM vault_items WHERE id IN (${ids.map((id) => this.sqlString(id)).join(', ')});`);
     });
 
     this.logQuery(`DELETE FROM vault_items WHERE id IN (${ids.map((id) => this.sqlStringForLog(id)).join(', ')});`, 'SUCCESS', ids.length);
-    return this.getVaultItems(passwordPlain);
+    return this.getVaultItemsWithKey(key);
   }
 
   public async reseedDemo(passwordPlain: string, demoItems: VaultItem[]): Promise<VaultItem[]> {
@@ -295,6 +324,10 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
     }
 
     const key = await this.deriveEncryptionKey(passwordPlain);
+    return this.reseedDemoWithKey(key, demoItems);
+  }
+
+  public async reseedDemoWithKey(key: Uint8Array, demoItems: VaultItem[]): Promise<VaultItem[]> {
     const rows = await Promise.all(demoItems.map((item) => this.createEncryptedRow(item, key)));
 
     await this.runTransaction(async () => {
@@ -305,7 +338,7 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
     });
 
     this.logQuery(`RESEED: INSERT ${rows.length} rows into vault_items;`, 'SUCCESS', rows.length);
-    return this.getVaultItems(passwordPlain);
+    return this.getVaultItemsWithKey(key);
   }
 
   private async executeRequired(sql: string): Promise<void> {

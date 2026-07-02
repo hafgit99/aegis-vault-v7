@@ -45,7 +45,7 @@ All notable Aegis Vault 7 changes are tracked here. The project follows a securi
 - Hardened air-gap defense with stricter Tauri CSP directives and runtime WebRTC blocking.
 - Removed insecure random fallback behavior; cryptographic randomness requires WebCrypto CSPRNG.
 - Replaced non-standard TOTP generation with RFC 6238-compatible behavior.
-- Reworked master session handling away from plaintext string persistence and toward zeroizable byte/session handling where JavaScript constraints allow.
+- Reworked master session handling away from plaintext string persistence: routine vault item reads, writes, trash operations, and demo reseeds now use a scoped session vault encryption key, while remaining master-secret edges stay documented for the native adapter phase.
 - Added brute-force protection, stronger password minimums, and safer master password rotation messaging.
 - Replaced static vault item KDF salt behavior with per-vault salt handling.
 - Rejected legacy XOR attachment records and migrated secure legacy attachment formats through authenticated encryption paths.

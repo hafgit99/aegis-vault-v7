@@ -1,5 +1,6 @@
 let activeMasterPasswordBytes: Uint8Array | null = null;
 let activeBackupPasswordBytes: Uint8Array | null = null;
+let activeVaultKeyBytes: Uint8Array | null = null;
 
 function encodeSecret(value: string): Uint8Array {
   return new TextEncoder().encode(value);
@@ -8,6 +9,10 @@ function encodeSecret(value: string): Uint8Array {
 function decodeSecret(value: Uint8Array | null): string | null {
   if (!value) return null;
   return new TextDecoder().decode(value);
+}
+
+function cloneBytes(value: Uint8Array): Uint8Array {
+  return new Uint8Array(value);
 }
 
 function zeroizeSecret(value: Uint8Array | null): void {
@@ -20,17 +25,24 @@ export function registerOnCloseSession(cb: () => void): void {
   onCloseCallbacks.push(cb);
 }
 
-export function openVaultSession(masterPassword: string, backupPassword = masterPassword): void {
+export function openVaultSession(
+  masterPassword: string,
+  backupPassword = masterPassword,
+  vaultEncryptionKey?: Uint8Array,
+): void {
   closeVaultSession();
   activeMasterPasswordBytes = encodeSecret(masterPassword);
   activeBackupPasswordBytes = encodeSecret(backupPassword);
+  activeVaultKeyBytes = vaultEncryptionKey ? cloneBytes(vaultEncryptionKey) : null;
 }
 
 export function closeVaultSession(): void {
   zeroizeSecret(activeMasterPasswordBytes);
   zeroizeSecret(activeBackupPasswordBytes);
+  zeroizeSecret(activeVaultKeyBytes);
   activeMasterPasswordBytes = null;
   activeBackupPasswordBytes = null;
+  activeVaultKeyBytes = null;
   onCloseCallbacks.forEach(cb => {
     try {
       cb();
@@ -41,7 +53,12 @@ export function closeVaultSession(): void {
 }
 
 export function hasActiveVaultSession(): boolean {
-  return activeMasterPasswordBytes !== null;
+  return activeMasterPasswordBytes !== null || activeVaultKeyBytes !== null;
+}
+
+export function withActiveVaultEncryptionKey<T>(callback: (vaultEncryptionKey: Uint8Array) => T): T | null {
+  if (!activeVaultKeyBytes) return null;
+  return callback(cloneBytes(activeVaultKeyBytes));
 }
 
 export function withActiveMasterPassword<T>(callback: (masterPassword: string) => T): T | null {
@@ -67,8 +84,8 @@ export function withActiveSessionSecrets<T>(
 
 /**
  * @deprecated Prefer scoped/native secret operations. This getter must only be
- * used at boundaries that still require a JavaScript string until the vault
- * KDF/decrypt path is moved fully into the native backend.
+ * used by tests or compatibility boundaries while the final lock-screen native
+ * credential adapter is being introduced.
  */
 export function getActiveMasterPassword(): string | null {
   return decodeSecret(activeMasterPasswordBytes);

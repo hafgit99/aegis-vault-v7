@@ -16,7 +16,13 @@ import {
   type WaSqliteActiveBackendMigrationResult,
 } from './vaultStorageActiveMigration';
 import { logSecurityEvent, securityEventCodes } from './securityEvents';
-import { closeVaultSession, openVaultSession, withActiveMasterPassword, withActiveSessionSecrets } from './vaultSession';
+import {
+  closeVaultSession,
+  openVaultSession,
+  withActiveMasterPassword,
+  withActiveSessionSecrets,
+  withActiveVaultEncryptionKey,
+} from './vaultSession';
 import { disableBiometric, hydrateBiometric } from './biometric';
 import { INITIAL_DEMO_ITEMS } from './storageDemoItems';
 import {
@@ -145,6 +151,12 @@ function resolveCurrentVaultCredential(password: string): string {
 /**
  * Validates the master password against the SQLite Argon2id signature.
  */
+async function openDerivedVaultSession(credential: string, backupPassword: string): Promise<void> {
+  const vaultEncryptionKey = await getVaultStorageRepository().deriveEncryptionKey(credential);
+  openVaultSession(credential, backupPassword, vaultEncryptionKey);
+  vaultEncryptionKey.fill(0);
+}
+
 export async function verifyMasterPassword(password: string, secretKey?: string | null): Promise<boolean> {
   await initializeStorage();
   const credential = resolveVaultCredential(password, secretKey);
@@ -157,7 +169,7 @@ export async function verifyMasterPassword(password: string, secretKey?: string 
         rawMasterPassword = password.substring('aegis-vault-v7:'.length, newlineIndex);
       }
     }
-    openVaultSession(credential, rawMasterPassword);
+    await openDerivedVaultSession(credential, rawMasterPassword);
     try {
       await migrateLegacyAttachmentsToAesGcm();
     } catch (err) {
@@ -179,7 +191,7 @@ export async function setupMasterPassword(password: string): Promise<void> {
   await initializeStorage();
   const credential = resolveVaultCredential(password);
   await getVaultStorageRepository().setupMaster(credential);
-  openVaultSession(credential, password);
+  await openDerivedVaultSession(credential, password);
   try {
     await migrateLegacyAttachmentsToAesGcm();
   } catch (err) {
@@ -193,7 +205,12 @@ export async function setupMasterPassword(password: string): Promise<void> {
   localStorage.setItem(STORAGE_KEYS.IS_SET_UP, 'true');
 
   // Seed default items in SQLite
-  await getVaultStorageRepository().reseedDemo(credential, INITIAL_DEMO_ITEMS);
+  const seedKey = await getVaultStorageRepository().deriveEncryptionKey(credential);
+  try {
+    await getVaultStorageRepository().reseedDemoWithKey!(seedKey, INITIAL_DEMO_ITEMS);
+  } finally {
+    seedKey.fill(0);
+  }
 }
 
 export async function setupMasterPasswordWithSecretKey(
@@ -206,7 +223,7 @@ export async function setupMasterPasswordWithSecretKey(
 
   await initializeStorage();
   await getVaultStorageRepository().setupMaster(credential);
-  openVaultSession(credential, password);
+  await openDerivedVaultSession(credential, password);
   try {
     await migrateLegacyAttachmentsToAesGcm();
   } catch (err) {
@@ -229,7 +246,12 @@ export async function setupMasterPasswordWithSecretKey(
     forgetRememberedAccountSecretKey();
   }
 
-  await getVaultStorageRepository().reseedDemo(credential, INITIAL_DEMO_ITEMS);
+  const seedKey = await getVaultStorageRepository().deriveEncryptionKey(credential);
+  try {
+    await getVaultStorageRepository().reseedDemoWithKey!(seedKey, INITIAL_DEMO_ITEMS);
+  } finally {
+    seedKey.fill(0);
+  }
 }
 
 export async function changeMasterPassword(oldPassword: string, newPassword: string): Promise<void> {
@@ -250,7 +272,7 @@ export async function changeMasterPassword(oldPassword: string, newPassword: str
     }
     throw err;
   }
-  openVaultSession(newCredential, newPassword);
+  await openDerivedVaultSession(newCredential, newPassword);
   disableBiometric();
   localStorage.setItem(STORAGE_KEYS.IS_SET_UP, 'true');
 }
@@ -283,6 +305,20 @@ export async function migrateActiveVaultStorageToWaSqlite(): Promise<WaSqliteAct
   return result;
 }
 
+async function withSessionVaultKey<T>(fallback: T, action: (vaultEncryptionKey: Uint8Array) => Promise<T>): Promise<T> {
+  let keyCopy: Uint8Array | null = null;
+  const result = withActiveVaultEncryptionKey((vaultEncryptionKey) => {
+    keyCopy = vaultEncryptionKey;
+    return action(vaultEncryptionKey);
+  });
+  if (!result) return fallback;
+  try {
+    return await result;
+  } finally {
+    keyCopy?.fill(0);
+  }
+}
+
 async function withSessionMasterPassword<T>(fallback: T, action: (password: string) => Promise<T>): Promise<T> {
   const result = withActiveMasterPassword(action);
   return result ? await result : fallback;
@@ -292,8 +328,8 @@ async function withSessionMasterPassword<T>(fallback: T, action: (password: stri
  * Retrieves of clean vault items from database.
  */
 export async function getVaultItems(): Promise<VaultItem[]> {
-  return withSessionMasterPassword([], async (password) => {
-    const rawItems = await getVaultStorageRepository().getVaultItems(password);
+  return withSessionVaultKey([], async (vaultKey) => {
+    const rawItems = await getVaultStorageRepository().getVaultItemsWithKey!(vaultKey);
 
     let hasChanges = false;
     const expiredIds: string[] = [];
@@ -312,7 +348,7 @@ export async function getVaultItems(): Promise<VaultItem[]> {
     });
 
     if (hasChanges) {
-      return getVaultStorageRepository().deletePermanentlyBatch(expiredIds, password);
+      return getVaultStorageRepository().deletePermanentlyBatchWithKey!(expiredIds, vaultKey);
     }
     return cleanItems;
   });
@@ -322,15 +358,15 @@ export async function getVaultItems(): Promise<VaultItem[]> {
  * Saves or updates a vault item inside SQLite row.
  */
 export async function saveVaultItem(item: VaultItem): Promise<VaultItem[]> {
-  return withSessionMasterPassword([], (password) => getVaultStorageRepository().saveVaultItem(item, password));
+  return withSessionVaultKey([], (vaultKey) => getVaultStorageRepository().saveVaultItemWithKey!(item, vaultKey));
 }
 
 export async function saveVaultItems(items: VaultItem[], onProgress?: (count: number) => void): Promise<VaultItem[]> {
-  return withSessionMasterPassword([], (password) => {
+  return withSessionVaultKey([], (vaultKey) => {
     if (onProgress) {
-      return getVaultStorageRepository().saveVaultItems(items, password, onProgress);
+      return getVaultStorageRepository().saveVaultItemsWithKey!(items, vaultKey, onProgress);
     }
-    return getVaultStorageRepository().saveVaultItems(items, password);
+    return getVaultStorageRepository().saveVaultItemsWithKey!(items, vaultKey);
   });
 }
 
@@ -338,22 +374,22 @@ export async function saveVaultItems(items: VaultItem[], onProgress?: (count: nu
  * Deletes a vault item directly.
  */
 export async function deleteVaultItem(id: string): Promise<VaultItem[]> {
-  return withSessionMasterPassword([], (password) => getVaultStorageRepository().deletePermanently(id, password));
+  return withSessionVaultKey([], (vaultKey) => getVaultStorageRepository().deletePermanentlyWithKey!(id, vaultKey));
 }
 
 /**
  * Moves a vault item to trash in SQLite.
  */
 export async function moveToTrash(id: string): Promise<VaultItem[]> {
-  return withSessionMasterPassword([], async (password) => {
-    const items = await getVaultStorageRepository().getVaultItems(password);
+  return withSessionVaultKey([], async (vaultKey) => {
+    const items = await getVaultStorageRepository().getVaultItemsWithKey!(vaultKey);
     const found = items.find(x => x.id === id);
     if (found) {
       found.deleted = true;
       found.deletedAt = new Date().toISOString();
-      await getVaultStorageRepository().saveVaultItem(found, password);
+      await getVaultStorageRepository().saveVaultItemWithKey!(found, vaultKey);
     }
-    return getVaultStorageRepository().getVaultItems(password);
+    return getVaultStorageRepository().getVaultItemsWithKey!(vaultKey);
   });
 }
 
@@ -361,15 +397,15 @@ export async function moveToTrash(id: string): Promise<VaultItem[]> {
  * Restores a vault item from trash in SQLite.
  */
 export async function restoreFromTrash(id: string): Promise<VaultItem[]> {
-  return withSessionMasterPassword([], async (password) => {
-    const items = await getVaultStorageRepository().getVaultItems(password);
+  return withSessionVaultKey([], async (vaultKey) => {
+    const items = await getVaultStorageRepository().getVaultItemsWithKey!(vaultKey);
     const found = items.find(x => x.id === id);
     if (found) {
       found.deleted = false;
       delete found.deletedAt;
-      await getVaultStorageRepository().saveVaultItem(found, password);
+      await getVaultStorageRepository().saveVaultItemWithKey!(found, vaultKey);
     }
-    return getVaultStorageRepository().getVaultItems(password);
+    return getVaultStorageRepository().getVaultItemsWithKey!(vaultKey);
   });
 }
 
@@ -377,19 +413,19 @@ export async function restoreFromTrash(id: string): Promise<VaultItem[]> {
  * Permanently deletes a vault item from the database.
  */
 export async function deletePermanently(id: string): Promise<VaultItem[]> {
-  return withSessionMasterPassword([], (password) => getVaultStorageRepository().deletePermanently(id, password));
+  return withSessionVaultKey([], (vaultKey) => getVaultStorageRepository().deletePermanentlyWithKey!(id, vaultKey));
 }
 
 /**
  * Empties the trash completely in SQLite.
  */
 export async function emptyTrashComplete(): Promise<VaultItem[]> {
-  return withSessionMasterPassword([], async (password) => {
-    const items = await getVaultStorageRepository().getVaultItems(password);
+  return withSessionVaultKey([], async (vaultKey) => {
+    const items = await getVaultStorageRepository().getVaultItemsWithKey!(vaultKey);
     const deletedIds = items.filter(item => item.deleted).map(item => item.id);
 
     if (deletedIds.length > 0) {
-      return getVaultStorageRepository().deletePermanentlyBatch(deletedIds, password);
+      return getVaultStorageRepository().deletePermanentlyBatchWithKey!(deletedIds, vaultKey);
     }
     return items;
   });
@@ -399,5 +435,5 @@ export async function emptyTrashComplete(): Promise<VaultItem[]> {
  * Re-seeds the system with default demo items inside SQLite.
  */
 export async function reseedDemoData(): Promise<VaultItem[]> {
-  return withSessionMasterPassword([], (password) => getVaultStorageRepository().reseedDemo(password, INITIAL_DEMO_ITEMS));
+  return withSessionVaultKey([], (vaultKey) => getVaultStorageRepository().reseedDemoWithKey!(vaultKey, INITIAL_DEMO_ITEMS));
 }

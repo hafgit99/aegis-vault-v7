@@ -73,7 +73,7 @@ Not defended against:
 Master password and session:
 
 - Successful setup and unlock open an in-memory vault session.
-- The master password is no longer stored in `sessionStorage`, and production app code uses scoped session-secret callbacks instead of directly reading a global master-password getter.
+- The master password is no longer stored in `sessionStorage`; routine vault item reads/writes use a scoped session vault encryption key after unlock instead of passing the master password string through repository calls.
 - Manual lock and auto-lock close the in-memory vault session and zeroize the stored byte buffers.
 - Reset clears the active session and persisted vault setup state.
 
@@ -154,7 +154,7 @@ Required user-facing recovery rules:
 | Legacy custom cryptographic primitives in `legacyCrypto.ts` | Mitigated | Removed from production decrypt paths; keep fail-closed tests in place |
 | Simulated SQLite/OPFS persistence naming overstates implementation | Open | Decide final desktop storage adapter and align naming |
 | Legacy XOR attachment fallback | Mitigated | Rejected instead of decrypted |
-| Active master password lives in process memory while unlocked | Partially mitigated | Byte buffers are zeroized on lock and production callers use scoped access; move storage/KDF/decrypt operations into native adapters for a strict no-JS-string boundary |
+| Active master password lives in process memory while unlocked | Partially mitigated | Routine vault item storage uses a scoped session vault key and byte buffers are zeroized on lock; move the unlock/credential boundary and remaining feature edges into native/key-only adapters for a strict no-JS-string boundary |
 | Clipboard can keep copied secrets after OS capture or user clipboard changes | Partially mitigated | Safe clearing removes unchanged copied secrets; hostile OS clipboard capture remains out of scope |
 | TOTP follows RFC 6238 for HMAC-SHA1/SHA-256/SHA-512 and accepts `otpauth://totp` imports, but broad provider QR compatibility still needs manual verification | Mitigated with residual validation risk | Add fixture coverage from more authenticator exports before broad public release |
 | Plaintext export option can create unsafe files | Partially mitigated | Warning and typed confirmation are required; decide whether to remove it from final release builds |
@@ -183,6 +183,6 @@ Claims to avoid until fixed:
 
 1. Align the simulated SQLite naming with the finalized Tauri app data persistence strategy.
 2. Complete final Android biometric wrapping review on target devices.
-3. Move vault storage/KDF/decrypt operations into native adapters if strict no-JS-master-string handling becomes a release requirement.
+3. Move the remaining unlock/credential boundary and feature edges into native/key-only adapters, then remove deprecated JS master-password getters.
 4. Decide whether plaintext JSON export remains available in release builds.
 5. Review public release branding and installer identity before publishing signed artifacts.

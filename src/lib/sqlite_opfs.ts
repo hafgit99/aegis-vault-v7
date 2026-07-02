@@ -534,6 +534,36 @@ class SQLiteOPFS implements VaultStorageRepository {
    * Retrieves and decrypts SQLite relational items on-the-fly.
    */
   public async getVaultItems(masterPasswordPlain: string): Promise<VaultItem[]> {
+    const originalSalt = this.getCurrentVaultEncryptionSalt();
+    const derivedKey = await this.deriveEncryptionKey(masterPasswordPlain, originalSalt);
+    const shouldMigrateKdf = !this.state.kdfParams;
+    const shouldMigrateStaticSalt = !this.state.encryption_salt;
+    const migratedSalt = shouldMigrateStaticSalt ? this.createVaultEncryptionSalt() : this.state.encryption_salt;
+    const migrationKey = (shouldMigrateStaticSalt || shouldMigrateKdf)
+      ? await deriveVettedArgon2idKey(masterPasswordPlain, migratedSalt, NEW_VAULT_ITEM_KDF_PARAMS)
+      : derivedKey;
+
+    return this.getVaultItemsWithDerivedKey(derivedKey, {
+      migrationKey,
+      migratedSalt,
+      shouldMigrateKdf,
+      shouldMigrateStaticSalt,
+    });
+  }
+
+  public async getVaultItemsWithKey(derivedKey: Uint8Array): Promise<VaultItem[]> {
+    return this.getVaultItemsWithDerivedKey(derivedKey);
+  }
+
+  private async getVaultItemsWithDerivedKey(
+    derivedKey: Uint8Array,
+    migration?: {
+      migrationKey: Uint8Array;
+      migratedSalt: string;
+      shouldMigrateKdf: boolean;
+      shouldMigrateStaticSalt: boolean;
+    },
+  ): Promise<VaultItem[]> {
     const queryStr = 'SELECT id, title, category, favorite, deleted, username_db, enc_metadata FROM vault_items;';
 
     if (this.state.vault_items.length === 0) {
@@ -542,15 +572,10 @@ class SQLiteOPFS implements VaultStorageRepository {
     }
 
     try {
-      const originalSalt = this.getCurrentVaultEncryptionSalt();
-      const derivedKey = await this.deriveEncryptionKey(masterPasswordPlain, originalSalt);
-      const shouldMigrateKdf = !this.state.kdfParams;
-      const shouldMigrateStaticSalt = !this.state.encryption_salt;
-      const migratedSalt = shouldMigrateStaticSalt ? this.createVaultEncryptionSalt() : this.state.encryption_salt;
-
-      const migrationKey = (shouldMigrateStaticSalt || shouldMigrateKdf)
-        ? await deriveVettedArgon2idKey(masterPasswordPlain, migratedSalt, NEW_VAULT_ITEM_KDF_PARAMS)
-        : derivedKey;
+      const shouldMigrateKdf = migration?.shouldMigrateKdf ?? false;
+      const shouldMigrateStaticSalt = migration?.shouldMigrateStaticSalt ?? false;
+      const migratedSalt = migration?.migratedSalt ?? this.state.encryption_salt;
+      const migrationKey = migration?.migrationKey ?? derivedKey;
 
       if (shouldMigrateStaticSalt || shouldMigrateKdf) {
         logSecurityEvent(
@@ -658,7 +683,6 @@ class SQLiteOPFS implements VaultStorageRepository {
         if (this.cachedPasswordBytes) {
           this.cachedPasswordBytes.fill(0);
         }
-        this.cachedPasswordBytes = new TextEncoder().encode(masterPasswordPlain);
         this.cachedKeySalt = migratedSalt;
         this.cachedKeyBytes = migrationKey;
         await this.saveToPersistentStorage();
@@ -676,12 +700,16 @@ class SQLiteOPFS implements VaultStorageRepository {
    * Saves or updates a specific Item row inside SQLite and OPFS with separate fresh 12-byte GCM IV.
    */
   public async saveVaultItem(item: VaultItem, masterPasswordPlain: string): Promise<VaultItem[]> {
+    const derivedKey = await this.deriveEncryptionKey(masterPasswordPlain);
+    return this.saveVaultItemWithKey(item, derivedKey);
+  }
+
+  public async saveVaultItemWithKey(item: VaultItem, derivedKey: Uint8Array): Promise<VaultItem[]> {
     const previousState = this.cloneState();
     const previousDecryptedItemsCache = this.cloneDecryptedItemsCache();
 
     try {
       this.ensureVaultEncryptionSalt();
-      const derivedKey = await this.deriveEncryptionKey(masterPasswordPlain);
       const index = this.state.vault_items.findIndex(x => x.id === item.id);
 
       // Build fresh serialized payload
@@ -738,7 +766,7 @@ class SQLiteOPFS implements VaultStorageRepository {
       }
 
       this.logQuery(query, 'SUCCESS', 1);
-      return this.getVaultItems(masterPasswordPlain);
+      return this.getVaultItemsWithKey(derivedKey);
     } catch (err) {
       this.restoreTransactionalState(previousState, previousDecryptedItemsCache);
       this.logQuery('INSERT OR UPDATE vault_items rolled back because persistence failed;', 'ERROR', 0);
@@ -762,12 +790,20 @@ class SQLiteOPFS implements VaultStorageRepository {
     masterPasswordPlain: string,
     onProgress?: (count: number) => void
   ): Promise<VaultItem[]> {
+    const derivedKey = await this.deriveEncryptionKey(masterPasswordPlain);
+    return this.saveVaultItemsWithKey(items, derivedKey, onProgress);
+  }
+
+  public async saveVaultItemsWithKey(
+    items: VaultItem[],
+    derivedKey: Uint8Array,
+    onProgress?: (count: number) => void
+  ): Promise<VaultItem[]> {
     const previousState = this.cloneState();
     const previousDecryptedItemsCache = this.cloneDecryptedItemsCache();
 
     try {
       this.ensureVaultEncryptionSalt();
-      const derivedKey = await this.deriveEncryptionKey(masterPasswordPlain);
       const nowStr = new Date().toISOString().split('T')[0];
 
       const allRows: SQLiteRow[] = [];
@@ -987,6 +1023,11 @@ class SQLiteOPFS implements VaultStorageRepository {
    * Permanently purges an item
    */
   public async deletePermanently(id: string, passwordPlain: string): Promise<VaultItem[]> {
+    const derivedKey = await this.deriveEncryptionKey(passwordPlain);
+    return this.deletePermanentlyWithKey(id, derivedKey);
+  }
+
+  public async deletePermanentlyWithKey(id: string, derivedKey: Uint8Array): Promise<VaultItem[]> {
     const previousState = this.cloneState();
     const previousDecryptedItemsCache = this.cloneDecryptedItemsCache();
 
@@ -998,7 +1039,7 @@ class SQLiteOPFS implements VaultStorageRepository {
         throw new Error('vault-item-delete-persist-failed');
       }
       this.logQuery(`DELETE FROM vault_items WHERE id = "${this.sanitizeLogValue(id)}";`, 'SUCCESS', 1);
-      return this.getVaultItems(passwordPlain);
+      return this.getVaultItemsWithKey(derivedKey);
     } catch (err) {
       this.restoreTransactionalState(previousState, previousDecryptedItemsCache);
       this.logQuery(`DELETE FROM vault_items WHERE id = "${this.sanitizeLogValue(id)}" rolled back because persistence failed;`, 'ERROR', 0);
@@ -1013,7 +1054,12 @@ class SQLiteOPFS implements VaultStorageRepository {
    * Permanently purges multiple items in a batch transaction to prevent O(N) disk write iterations.
    */
   public async deletePermanentlyBatch(ids: string[], passwordPlain: string): Promise<VaultItem[]> {
-    if (ids.length === 0) return this.getVaultItems(passwordPlain);
+    const derivedKey = await this.deriveEncryptionKey(passwordPlain);
+    return this.deletePermanentlyBatchWithKey(ids, derivedKey);
+  }
+
+  public async deletePermanentlyBatchWithKey(ids: string[], derivedKey: Uint8Array): Promise<VaultItem[]> {
+    if (ids.length === 0) return this.getVaultItemsWithKey(derivedKey);
 
     const previousState = this.cloneState();
     const previousDecryptedItemsCache = this.cloneDecryptedItemsCache();
@@ -1029,7 +1075,7 @@ class SQLiteOPFS implements VaultStorageRepository {
         throw new Error('vault-items-delete-persist-failed');
       }
       this.logQuery(`DELETE FROM vault_items WHERE id IN (${ids.map(id => `"${this.sanitizeLogValue(id)}"`).join(', ')});`, 'SUCCESS', ids.length);
-      return this.getVaultItems(passwordPlain);
+      return this.getVaultItemsWithKey(derivedKey);
     } catch (err) {
       this.restoreTransactionalState(previousState, previousDecryptedItemsCache);
       this.logQuery(`DELETE FROM vault_items WHERE id IN (${ids.map(id => `"${this.sanitizeLogValue(id)}"`).join(', ')}) rolled back because persistence failed;`, 'ERROR', 0);
@@ -1044,13 +1090,17 @@ class SQLiteOPFS implements VaultStorageRepository {
    * Seeds demo data.
    */
   public async reseedDemo(passwordPlain: string, demoItems: VaultItem[]): Promise<VaultItem[]> {
+    const derivedKey = await this.deriveEncryptionKey(passwordPlain);
+    return this.reseedDemoWithKey(derivedKey, demoItems);
+  }
+
+  public async reseedDemoWithKey(derivedKey: Uint8Array, demoItems: VaultItem[]): Promise<VaultItem[]> {
     const previousState = this.cloneState();
     const previousDecryptedItemsCache = this.cloneDecryptedItemsCache();
 
     try {
       this.ensureVaultEncryptionSalt();
       this.decryptedItemsCache.clear();
-      const derivedKey = await this.deriveEncryptionKey(passwordPlain);
 
       this.state.vault_items = await Promise.all(demoItems.map(async (item) => {
         const sensitivePayload = JSON.stringify(item);
@@ -1079,7 +1129,7 @@ class SQLiteOPFS implements VaultStorageRepository {
         throw new Error('vault-reseed-persist-failed');
       }
       this.logQuery(`RESEED: INSERT ${demoItems.length} rows into 'vault_items'`, 'SUCCESS', demoItems.length);
-      return this.getVaultItems(passwordPlain);
+      return this.getVaultItemsWithKey(derivedKey);
     } catch (err) {
       this.restoreTransactionalState(previousState, previousDecryptedItemsCache);
       this.logQuery(`RESEED: INSERT ${demoItems.length} rows into 'vault_items' rolled back because persistence failed`, 'ERROR', 0);

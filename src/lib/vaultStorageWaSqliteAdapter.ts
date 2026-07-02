@@ -143,6 +143,20 @@ export class ReadOnlyWaSqliteVaultStorageAdapter implements VaultStorageReposito
     return items;
   }
 
+  public async getVaultItemsWithKey(vaultEncryptionKey: Uint8Array): Promise<VaultItem[]> {
+    const sourceItems = await this.sourceRepository.getVaultItemsWithKey(vaultEncryptionKey);
+    this.logQuery('WA_SQLITE_MIRROR SELECT vault_items FROM source session key;', 'SUCCESS', sourceItems.length);
+    return sourceItems.map((item) => ({ ...item }));
+  }
+
+  public async saveVaultItemWithKey(): Promise<VaultItem[]> {
+    this.rejectWrite('saveVaultItemWithKey');
+  }
+
+  public async saveVaultItemsWithKey(): Promise<VaultItem[]> {
+    this.rejectWrite('saveVaultItemsWithKey');
+  }
+
   public async saveVaultItem(): Promise<VaultItem[]> {
     this.rejectWrite('saveVaultItem');
   }
@@ -168,12 +182,24 @@ export class ReadOnlyWaSqliteVaultStorageAdapter implements VaultStorageReposito
     this.rejectWrite('deletePermanently');
   }
 
+  public async deletePermanentlyWithKey(): Promise<VaultItem[]> {
+    this.rejectWrite('deletePermanentlyWithKey');
+  }
+
   public async deletePermanentlyBatch(): Promise<VaultItem[]> {
     this.rejectWrite('deletePermanentlyBatch');
   }
 
+  public async deletePermanentlyBatchWithKey(): Promise<VaultItem[]> {
+    this.rejectWrite('deletePermanentlyBatchWithKey');
+  }
+
   public async reseedDemo(): Promise<VaultItem[]> {
     this.rejectWrite('reseedDemo');
+  }
+
+  public async reseedDemoWithKey(): Promise<VaultItem[]> {
+    this.rejectWrite('reseedDemoWithKey');
   }
 
   private rejectWrite(operation: string): never {

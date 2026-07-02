@@ -15,7 +15,7 @@ Aegis Vault 7, **local-first** (cihaz içi öncelikli) tasarım felsefesine sahi
 
 **Ancak**, denetimde **1 KRİTİK**, **2 YÜKSEK** ve birkaç **ORTA/DÜŞÜK** düzeyde bulgu tespit edilmiştir. En önemlisi, **tarayıcı eklentisinin şifre üreticisinin son karıştırma adımında kriptografik olarak güvensiz `Math.random()` kullanmasıdır**. Bu, ana uygulamanın doğru uyguladığı bir güvenlik standardının eklentide ihlal edilmesidir ve bir şifre yöneticisi için kabul edilemez.
 
-**Genel Güvenlik Puanı: 7.8 / 10** — Tek geliştiricili/yerel bir proje için güçlü; üçüncü taraf denetim, savaş testi (battle-testing) ve eklenti kripto tutarlılığı eksikliği puanı düşürmektedir.
+**Genel Güvenlik Puanı: 7.8 / 10** (ilk denetim) → **8.5 / 10** (düzeltme sonrası, bkz. *Ek A*). Tek geliştiricili/yerel bir proje için güçlü. İlk denetimde üçüncü taraf denetim, savaş testi (battle-testing) ve eklenti kripto tutarlılığı eksikliği puanı düşürmüştü; düzeltme commit'i (`d2d0dc4`) KRİTİK + 2 YÜKSEK bulguyu kapatmıştır.
 
 ---
 
@@ -110,7 +110,7 @@ Yeni biyometrik kayıtlar PBKDF2-SHA256 için **100.000** iterasyon kullanır; g
 
 #### B7 — Master parola hâlâ JS string olarak materialize oluyor
 **Dosya:** `src/lib/vaultSession.ts:73-82` (deprecated getter'lar)
-**Proje tarafından zaten belgelenmiş bir borçtur.** KDF/decrypt JS tarafında olduğu için master parola geçici olarak immutable JS string'ine dönüşür → zeroize edilemez → memory scraping'e açık. Tehdit modeli bunu "kısmen azaltılmış" işaretler. Çözüm: docs planına uygun olarak KDF/decrypt'i Rust/mobile native adapter'larına taşıyın.
+**Kismen kapatilmis mimari borctur.** Duzeltme sonrasi normal vault item okuma/yazma, cop kutusu ve demo reseed akislari master parola string'ini repository'lere tekrar gondermek yerine oturumda tutulan turetilmis vault encryption key kopyasiyla calisir. Buna ragmen ilk unlock/setup/change ekranlari ve bazi feature edge'leri hala JS credential sinirina dokunur. Son cozum: deprecated getter'lari kaldirmak icin unlock/credential boundary ve kalan attachment/sync/export/biometric edge'lerini native/key-only adapter'lara tasimak.
 
 ### 🟢 DÜŞÜK / Kod Kalitesi
 
@@ -249,4 +249,47 @@ B2 (IPC timing) ve B3 (PBKDF2 iterasyon) ile birlikte bu üç düzeltme, projeyi
 
 *Bu rapor 02.07.2026 tarihinde statik analiz ve kod incelemesi ile hazırlanmıştır. Dinamik penetrasyon testi veya fuzzing içermez; bulgular kaynak kod seviyesindedir. Üçüncü taraf denetim tavsiyesi korunur.*
 
+---
 
+## Ek A — Düzeltme Doğrulama (Denetim sonrası, commit `d2d0dc4`)
+
+Denetimde tespit edilen bulguların düzeltme commit'i `d2d0dc4 Harden audit-reported security paths` ile uygulanmıştır. Aşağıda her düzeltme kaynak kodundan bağımsız olarak **yeniden doğrulanmıştır**. TypeScript tip kontrolü (`tsc --noEmit`) düzeltme sonrasında da **0 hata** ile temizdir.
+
+### Doğrulama Tablosu
+
+| Bulgu | Seviye | Durum | Doğrulama Kanıtı (dosya:satır) |
+| --- | --- | --- | --- |
+| **B1** Eklenti `Math.random()` | 🔴 KRİTİK | ✅ **Düzeltildi** | `src-extension/content.ts:399-446` — `secureRandomIndex` (rejection sampling) + `secureShuffle` (Fisher-Yates) + `chooseSecureChar`; `Math.random()` tamamen kaldırıldı. Yeni test `content.security.test.ts:26-40` `Math.random` çağrılırsa **hata fırlatacak** mock ile koruma sağlıyor. |
+| **B2** IPC token timing | 🟠 YÜKSEK | ✅ **Düzeltildi** | `src-tauri/src/native_messaging.rs:81-84` — `is_pairing_token_valid` artık `subtle::ConstantTimeEq::ct_eq` (sabit-süreli) kullanıyor; `subtle = "2.6.1"` `Cargo.toml:30`'a eklendi. Token dosyası `write_pairing_token_file` (`:86-107`) Unix/macOS'ta `OpenOptions::mode(0o600)` ile yazılıyor. |
+| **B3** Biyometrik PBKDF2 | 🟠 YÜKSEK | ✅ **Düzeltildi** | `src/lib/biometric.ts:17` — `BIOMETRIC_PBKDF2_ITERATIONS = 600_000` (OWASP önerisine uyumlu). Hem V2 hem V3 kayıtlar bu sabiti kullanıyor (`:338, 349, 370, 381`). Geri-dönüşüm default'u `?? 10_000` yerine artık `?? BIOMETRIC_PBKDF2_ITERATIONS` (`:403, 439`) — 10.000'e düşme riski kalktı. |
+| **B4** WebDAV `unescape()` | 🟡 ORTA | ✅ **Düzeltildi** | `src/lib/sync/webdavProvider.ts:13-24` — `TextEncoder().encode()` + `bytesToBase64()` ile UTF-8 güvenli Basic Auth; `unescape()` kaldırıldı. |
+| **B5** RFC 1918 hizalaması | 🟡 ORTA | ✅ **Düzeltildi** | `src/lib/airgapNetworkPolicy.ts:18-29` — tek `isPrivateOrLoopbackHostname` yardımcısı (localhost + 127.0.0.1 + ::1 + 192.168. + 10. + 172.16-31); `webdavProvider.ts:57` bunu kullanıyor. Testler sınır koşullarını kapsıyor (`airgapNetworkPolicy.test.ts:158-169`: 172.16/172.31 true, 172.32/172.15 false). |
+| **B8** Cache off-by-one | 🟢 DÜŞÜK | ✅ **Düzeltildi** | `src/lib/webcrypto.ts:66` — `> 20` yerine `>= 20`; önbellek tam 20'de sınırlı. |
+| B6 Sessiz hata yutma | 🟡 ORTA | ⏳ Beklemede | İddia edilen düzeltmeler arasında değil; ileride ele alınabilir. |
+| B7 JS-string master parola | ORTA | Kismen duzeltildi | Routine vault item storage artik `withActiveVaultEncryptionKey` + `*WithKey` repository metotlariyla calisiyor; `vaultSession.ts` vault key'i zeroize ediyor. Kalan is: native unlock/credential adapter ve deprecated JS getter'larin tamamen kaldirilmasi. |
+| B9-B12 Düşük | 🟢 DÜŞÜK | ⏳ Beklemede | Kod kalitesi iyileştirmeleri; acil değil. |
+
+### Ek Notlar
+
+- **Windows token dosyası izinleri:** `write_pairing_token_file` Windows'ta (`#[cfg(not(unix))]`) düz `fs::write` kullanıyor çünkü Windows'ta dosya izinleri ACL tabanlıdır ve `0o600` Unix semantiği geçerli değildir. Kullanıcının profil dizini (`%APPDATA%`) varsayılan olarak kullanıcı-özelidir, bu nedenle pratik koruma sağlanır; ancak gelecekte Windows ACL'leriyle açıkça `SYSTEM`/kullanıcı-özeline kısıtlamak daha sertleştirir. Bu, B2'nin kalan küçük bir iyileştirme alanıdır.
+- **Yeni testler:** `content.security.test.ts` (54 satır), `airgapNetworkPolicy.test.ts` RFC 1918 vakaları, `webdavProvider.test.ts` 172.16/12 vakası, `webcrypto.test.ts` cache sınırı — düzeltmeler regresyon korumasıyla geldi.
+- **Dokümantasyon tutarlılığı:** `CHANGELOG.md:37-40`, `ROADMAP.md:137-139`, `SECURITY_NOTES.md:22-23` düzeltmeleri yansıtacak şekilde güncellenmiş.
+
+### Güncellenmiş Puanlama
+
+6 bulgu düzeltildi (1 KRİTİK + 2 YÜKSEK + 2 ORTA + 1 DÜŞÜK). Puanlar revize edildi:
+
+| Kriter | Önceki | Yeni | Değişim Nedeni |
+| --- | --- | --- | --- |
+| Kriptografi | 8.5 | **9.3** | B1 (eklenti rastgelelik) + B3 (PBKDF2 600K) düzeltildi |
+| Mimari | 8.0 | **8.7** | B2 (IPC constant-time + 0600) düzeltildi |
+| Güvenlik duruşu | 8.5 | **9.2** | B1/B2/B3 etkisi + regresyon testleri |
+| Kod kalitesi | 9.0 | **9.2** | B8 + yeni güvenlik testleri |
+| Olgunluk | 6.0 | 6.0 | (üçüncü taraf denetim hâlâ yok) |
+| Ekosistem | 7.0 | **7.5** | B4/B5 eklenti/senkronizasyon tutarlılığı |
+| Dokümantasyon | 9.0 | **9.3** | Düzeltmeler docs'ta tutarlı belgelendi |
+| Şeffaflık | 9.0 | 9.0 | (korundu) |
+
+**Güncellenmiş Ağırlıklı Genel Puan: 8.5 / 10** (önceki 7.8)
+
+> **Yorum:** KRITIK ve iki YUKSEK bulgunun duzeltilmesi, projeyi bir sifre yoneticisi olarak temel guvenlik standardina tasidi. Eklenti artik ana uygulamayla kriptografik olarak tutarli. Biyometrik sarma OWASP onerilen maliyet seviyesinde, IPC token dogrulamasi sabit-surelidir. B7 icin routine vault item storage master parola string bagimliligindan cikarildi; kalan en degerli ilerleme alanlari native unlock/credential adapter ve ucuncu taraf denetimdir.

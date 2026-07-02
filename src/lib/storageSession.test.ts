@@ -2,18 +2,27 @@
  * @vitest-environment jsdom
  */
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const testVaultKey = vi.hoisted(() => new Uint8Array(32).fill(7));
 
 const sqliteOPFSInstance = vi.hoisted(() => ({
   deletePermanently: vi.fn(),
+  deletePermanentlyWithKey: vi.fn(),
   deletePermanentlyBatch: vi.fn(),
+  deletePermanentlyBatchWithKey: vi.fn(),
+  deriveEncryptionKey: vi.fn(async () => testVaultKey),
   getVaultItems: vi.fn(() => []),
+  getVaultItemsWithKey: vi.fn(() => []),
   hydrate: vi.fn(async () => undefined),
   reseedDemo: vi.fn(),
+  reseedDemoWithKey: vi.fn(),
   resetAll: vi.fn(),
   changeMasterPassword: vi.fn(async () => undefined),
   saveVaultItem: vi.fn(),
+  saveVaultItemWithKey: vi.fn(),
   saveVaultItems: vi.fn(),
+  saveVaultItemsWithKey: vi.fn(),
   setupMaster: vi.fn(async () => undefined),
   verifyPassword: vi.fn(),
 }));
@@ -93,6 +102,15 @@ function sampleItem(overrides: Partial<VaultItem> = {}): VaultItem {
   };
 }
 
+beforeEach(() => {
+  sqliteOPFSInstance.getVaultItemsWithKey.mockImplementation(() => (sqliteOPFSInstance.getVaultItems as any)('session-key'));
+  sqliteOPFSInstance.saveVaultItemWithKey.mockImplementation((item: VaultItem) => sqliteOPFSInstance.saveVaultItem(item, 'session-key'));
+  sqliteOPFSInstance.saveVaultItemsWithKey.mockImplementation((items: VaultItem[], _key: Uint8Array, onProgress?: (count: number) => void) => sqliteOPFSInstance.saveVaultItems(items, 'session-key', onProgress));
+  sqliteOPFSInstance.deletePermanentlyWithKey.mockImplementation((id: string) => sqliteOPFSInstance.deletePermanently(id, 'session-key'));
+  sqliteOPFSInstance.deletePermanentlyBatchWithKey.mockImplementation((ids: string[]) => sqliteOPFSInstance.deletePermanentlyBatch(ids, 'session-key'));
+  sqliteOPFSInstance.reseedDemoWithKey.mockImplementation((_key: Uint8Array, items: VaultItem[]) => sqliteOPFSInstance.reseedDemo('session-key', items));
+});
+
 afterEach(() => {
   vi.useRealTimers();
   closeVaultSession();
@@ -162,9 +180,13 @@ describe('vault session storage', () => {
       ...sqliteOPFSInstance,
       hydrate: vi.fn(async () => undefined),
       verifyPassword: vi.fn(() => true),
+      deriveEncryptionKey: vi.fn(async () => testVaultKey),
       getVaultItems: vi.fn(() => [storedItem]),
+      getVaultItemsWithKey: vi.fn(() => [storedItem]),
       saveVaultItem: vi.fn(() => [storedItem, savedItem]),
+      saveVaultItemWithKey: vi.fn(() => [storedItem, savedItem]),
       saveVaultItems: vi.fn(() => [storedItem, importedItem]),
+      saveVaultItemsWithKey: vi.fn(() => [storedItem, importedItem]),
     };
     restorePersistedActiveVaultStorageBackend.mockImplementationOnce(async () => {
       getVaultStorageRepository.mockReturnValue(restoredRepository);
@@ -178,13 +200,20 @@ describe('vault session storage', () => {
 
     expect(restoredRepository.hydrate).toHaveBeenCalledTimes(1);
     expect(restoredRepository.verifyPassword).toHaveBeenCalledWith('master-pass');
-    expect(restoredRepository.getVaultItems).toHaveBeenCalledWith('master-pass');
-    expect(restoredRepository.saveVaultItem).toHaveBeenCalledWith(savedItem, 'master-pass');
-    expect(restoredRepository.saveVaultItems).toHaveBeenCalledWith([importedItem], 'master-pass');
+    expect(restoredRepository.deriveEncryptionKey).toHaveBeenCalledWith('master-pass');
+    expect(restoredRepository.getVaultItemsWithKey).toHaveBeenCalledWith(expect.any(Uint8Array));
+    expect(restoredRepository.saveVaultItemWithKey).toHaveBeenCalledWith(savedItem, expect.any(Uint8Array));
+    expect(restoredRepository.saveVaultItemsWithKey).toHaveBeenCalledWith([importedItem], expect.any(Uint8Array));
+    expect(restoredRepository.getVaultItems).not.toHaveBeenCalled();
+    expect(restoredRepository.saveVaultItem).not.toHaveBeenCalled();
+    expect(restoredRepository.saveVaultItems).not.toHaveBeenCalled();
     expect(sqliteOPFSInstance.verifyPassword).not.toHaveBeenCalled();
     expect(sqliteOPFSInstance.getVaultItems).not.toHaveBeenCalled();
+    expect(sqliteOPFSInstance.getVaultItemsWithKey).not.toHaveBeenCalled();
     expect(sqliteOPFSInstance.saveVaultItem).not.toHaveBeenCalled();
+    expect(sqliteOPFSInstance.saveVaultItemWithKey).not.toHaveBeenCalled();
     expect(sqliteOPFSInstance.saveVaultItems).not.toHaveBeenCalled();
+    expect(sqliteOPFSInstance.saveVaultItemsWithKey).not.toHaveBeenCalled();
   });
 
   it('opens an in-memory session during setup without writing the master password to sessionStorage', async () => {
@@ -194,8 +223,8 @@ describe('vault session storage', () => {
     expect(getActiveMasterPassword()).toBe('master-pass');
     expect(sessionStorage.getItem('aegis_session_master_pass')).toBeNull();
     expect(localStorage.getItem('aegis_is_setup')).toBe('true');
-    expect(sqliteOPFSInstance.reseedDemo).toHaveBeenCalledWith(
-      'master-pass',
+    expect(sqliteOPFSInstance.reseedDemoWithKey).toHaveBeenCalledWith(
+      expect.any(Uint8Array),
       expect.arrayContaining([expect.objectContaining({ id: '1', title: 'Demo Developer Portal' })]),
     );
   });
@@ -217,8 +246,8 @@ describe('vault session storage', () => {
     );
     expect(getActiveBackupPassword()).toBe('master-pass');
     expect(localStorage.getItem('aegis_is_setup')).toBe('true');
-    expect(sqliteOPFSInstance.reseedDemo).toHaveBeenCalledWith(
-      'aegis-vault-v7:master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
+    expect(sqliteOPFSInstance.reseedDemoWithKey).toHaveBeenCalledWith(
+      expect.any(Uint8Array),
       expect.arrayContaining([expect.objectContaining({ id: '1', title: 'Demo Developer Portal' })]),
     );
   });
@@ -425,15 +454,16 @@ describe('vault session storage', () => {
   });
 
   it('uses the active in-memory session for vault reads', () => {
-    openVaultSession('master-pass');
+    openVaultSession('master-pass', 'master-pass', testVaultKey);
 
     getVaultItems();
 
-    expect(sqliteOPFSInstance.getVaultItems).toHaveBeenCalledWith('master-pass');
+    expect(sqliteOPFSInstance.getVaultItemsWithKey).toHaveBeenCalledWith(expect.any(Uint8Array));
+    expect(sqliteOPFSInstance.getVaultItems).toHaveBeenCalledWith('session-key');
   });
 
   it('clears the in-memory session when the system is reset', async () => {
-    openVaultSession('master-pass');
+    openVaultSession('master-pass', 'master-pass', testVaultKey);
     localStorage.setItem('aegis_vault_storage_active_backend', JSON.stringify({ backend: 'wa-sqlite' }));
 
     await resetSystem();
@@ -465,7 +495,7 @@ describe('vault session storage', () => {
       promotionResult: null,
     });
     localStorage.removeItem('aegis_is_setup');
-    openVaultSession('master-pass');
+    openVaultSession('master-pass', 'master-pass', testVaultKey);
 
     await expect(migrateActiveVaultStorageToWaSqlite()).resolves.toMatchObject({
       status: 'promoted',
@@ -549,22 +579,22 @@ describe('vault session storage', () => {
     expect(sqliteOPFSInstance.reseedDemo).not.toHaveBeenCalled();
   });
 
-  it('passes the active session password to save, delete, and reseed wrappers', async () => {
+  it('passes the active session vault key to save, delete, and reseed wrappers', async () => {
     const item = sampleItem();
     sqliteOPFSInstance.saveVaultItem.mockResolvedValue([item]);
     sqliteOPFSInstance.deletePermanently.mockResolvedValue([]);
     sqliteOPFSInstance.reseedDemo.mockResolvedValue([item]);
-    openVaultSession('master-pass');
+    openVaultSession('master-pass', 'master-pass', testVaultKey);
 
     await expect(saveVaultItem(item)).resolves.toEqual([item]);
     await expect(deleteVaultItem('item-1')).resolves.toEqual([]);
     await expect(deletePermanently('item-1')).resolves.toEqual([]);
     await expect(reseedDemoData()).resolves.toEqual([item]);
 
-    expect(sqliteOPFSInstance.saveVaultItem).toHaveBeenCalledWith(item, 'master-pass');
-    expect(sqliteOPFSInstance.deletePermanently).toHaveBeenNthCalledWith(1, 'item-1', 'master-pass');
-    expect(sqliteOPFSInstance.deletePermanently).toHaveBeenNthCalledWith(2, 'item-1', 'master-pass');
-    expect(sqliteOPFSInstance.reseedDemo).toHaveBeenCalledWith('master-pass', expect.arrayContaining([
+    expect(sqliteOPFSInstance.saveVaultItemWithKey).toHaveBeenCalledWith(item, expect.any(Uint8Array));
+    expect(sqliteOPFSInstance.deletePermanentlyWithKey).toHaveBeenNthCalledWith(1, 'item-1', expect.any(Uint8Array));
+    expect(sqliteOPFSInstance.deletePermanentlyWithKey).toHaveBeenNthCalledWith(2, 'item-1', expect.any(Uint8Array));
+    expect(sqliteOPFSInstance.reseedDemoWithKey).toHaveBeenCalledWith(expect.any(Uint8Array), expect.arrayContaining([
       expect.objectContaining({ id: '1', title: 'Demo Developer Portal' }),
     ]));
   });
@@ -573,17 +603,17 @@ describe('vault session storage', () => {
     const activeItem = sampleItem();
     sqliteOPFSInstance.getVaultItems.mockResolvedValue([activeItem]);
     sqliteOPFSInstance.saveVaultItem.mockResolvedValue([activeItem]);
-    openVaultSession('master-pass');
+    openVaultSession('master-pass', 'master-pass', testVaultKey);
 
     await moveToTrash('item-1');
 
-    expect(sqliteOPFSInstance.saveVaultItem).toHaveBeenCalledWith(
+    expect(sqliteOPFSInstance.saveVaultItemWithKey).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'item-1',
         deleted: true,
         deletedAt: expect.any(String),
       }),
-      'master-pass',
+      expect.any(Uint8Array),
     );
 
     const trashedItem = sampleItem({ deleted: true, deletedAt: '2026-01-10T00:00:00.000Z' });
@@ -591,19 +621,19 @@ describe('vault session storage', () => {
 
     await restoreFromTrash('item-1');
 
-    expect(sqliteOPFSInstance.saveVaultItem).toHaveBeenLastCalledWith(
+    expect(sqliteOPFSInstance.saveVaultItemWithKey).toHaveBeenLastCalledWith(
       expect.not.objectContaining({ deletedAt: expect.anything() }),
-      'master-pass',
+      expect.any(Uint8Array),
     );
-    expect(sqliteOPFSInstance.saveVaultItem).toHaveBeenLastCalledWith(
+    expect(sqliteOPFSInstance.saveVaultItemWithKey).toHaveBeenLastCalledWith(
       expect.objectContaining({ id: 'item-1', deleted: false }),
-      'master-pass',
+      expect.any(Uint8Array),
     );
   });
 
   it('leaves trash wrappers as read-only when the target item is missing', async () => {
     sqliteOPFSInstance.getVaultItems.mockResolvedValue([sampleItem({ id: 'other-item' })]);
-    openVaultSession('master-pass');
+    openVaultSession('master-pass', 'master-pass', testVaultKey);
 
     await moveToTrash('missing-item');
     await restoreFromTrash('missing-item');
@@ -628,11 +658,11 @@ describe('vault session storage', () => {
     });
     sqliteOPFSInstance.getVaultItems.mockResolvedValueOnce([activeItem, recentTrash, expiredTrash]);
     sqliteOPFSInstance.deletePermanentlyBatch.mockResolvedValueOnce([activeItem, recentTrash]);
-    openVaultSession('master-pass');
+    openVaultSession('master-pass', 'master-pass', testVaultKey);
 
     await expect(getVaultItems()).resolves.toEqual([activeItem, recentTrash]);
 
-    expect(sqliteOPFSInstance.deletePermanentlyBatch).toHaveBeenCalledWith(['expired-trash'], 'master-pass');
+    expect(sqliteOPFSInstance.deletePermanentlyBatchWithKey).toHaveBeenCalledWith(['expired-trash'], expect.any(Uint8Array));
     expect(sqliteOPFSInstance.getVaultItems).toHaveBeenCalledTimes(1);
   });
 
@@ -643,21 +673,21 @@ describe('vault session storage', () => {
       sampleItem({ id: 'trash-2', deleted: true }),
     ]);
     sqliteOPFSInstance.deletePermanentlyBatch.mockResolvedValueOnce([sampleItem({ id: 'active-item' })]);
-    openVaultSession('master-pass');
+    openVaultSession('master-pass', 'master-pass', testVaultKey);
 
     await expect(emptyTrashComplete()).resolves.toEqual([sampleItem({ id: 'active-item' })]);
 
-    expect(sqliteOPFSInstance.deletePermanentlyBatch).toHaveBeenCalledWith(['trash-1', 'trash-2'], 'master-pass');
+    expect(sqliteOPFSInstance.deletePermanentlyBatchWithKey).toHaveBeenCalledWith(['trash-1', 'trash-2'], expect.any(Uint8Array));
   });
 
-  it('passes the active session password to saveVaultItems bulk save wrapper', async () => {
+  it('passes the active session vault key to saveVaultItems bulk save wrapper', async () => {
     const item = sampleItem();
     sqliteOPFSInstance.saveVaultItems.mockResolvedValue([item]);
-    openVaultSession('master-pass');
+    openVaultSession('master-pass', 'master-pass', testVaultKey);
 
     await expect(saveVaultItems([item])).resolves.toEqual([item]);
 
-    expect(sqliteOPFSInstance.saveVaultItems).toHaveBeenCalledWith([item], 'master-pass');
+    expect(sqliteOPFSInstance.saveVaultItemsWithKey).toHaveBeenCalledWith([item], expect.any(Uint8Array));
   });
 
   it('returns database-normalized records from the bulk save wrapper', async () => {
@@ -669,11 +699,11 @@ describe('vault session storage', () => {
       updatedAt: '2026-06-26',
     });
     sqliteOPFSInstance.saveVaultItems.mockResolvedValueOnce([normalizedItem]);
-    openVaultSession('master-pass');
+    openVaultSession('master-pass', 'master-pass', testVaultKey);
 
     await expect(saveVaultItems([importedItem])).resolves.toEqual([normalizedItem]);
 
-    expect(sqliteOPFSInstance.saveVaultItems).toHaveBeenCalledWith([importedItem], 'master-pass');
+    expect(sqliteOPFSInstance.saveVaultItemsWithKey).toHaveBeenCalledWith([importedItem], expect.any(Uint8Array));
   });
 
   it('ignores missing, disabled, or malformed account secret-key profiles', () => {
@@ -806,7 +836,7 @@ describe('vault session storage', () => {
     localStorage.setItem('aegis_sqlite_fallback', '{"user_secrets":[{}]}');
     localStorage.setItem('aegis_account_secret_profile', '{"enabled":true}');
     localStorage.setItem('aegis_account_secret_key_remembered', 'A3-OLD-SECRET');
-    openVaultSession('master-pass');
+    openVaultSession('master-pass', 'master-pass', testVaultKey);
 
     await resetSystem();
 
@@ -827,7 +857,7 @@ describe('vault session storage', () => {
   it('returns active vault items unchanged when no trash cleanup is needed', async () => {
     const activeItem = sampleItem({ id: 'active-item' });
     sqliteOPFSInstance.getVaultItems.mockResolvedValueOnce([activeItem]);
-    openVaultSession('master-pass');
+    openVaultSession('master-pass', 'master-pass', testVaultKey);
 
     await expect(getVaultItems()).resolves.toEqual([activeItem]);
 
@@ -844,11 +874,11 @@ describe('vault session storage', () => {
     });
     sqliteOPFSInstance.getVaultItems.mockResolvedValueOnce([boundaryTrash]);
     sqliteOPFSInstance.deletePermanentlyBatch.mockResolvedValueOnce([]);
-    openVaultSession('master-pass');
+    openVaultSession('master-pass', 'master-pass', testVaultKey);
 
     await expect(getVaultItems()).resolves.toEqual([]);
 
-    expect(sqliteOPFSInstance.deletePermanentlyBatch).toHaveBeenCalledWith(['boundary-trash'], 'master-pass');
+    expect(sqliteOPFSInstance.deletePermanentlyBatchWithKey).toHaveBeenCalledWith(['boundary-trash'], expect.any(Uint8Array));
   });
 
   it('keeps trash items younger than the retention window', async () => {
@@ -860,7 +890,7 @@ describe('vault session storage', () => {
       deletedAt: '2026-01-17T00:01:00.000Z',
     });
     sqliteOPFSInstance.getVaultItems.mockResolvedValueOnce([recentTrash]);
-    openVaultSession('master-pass');
+    openVaultSession('master-pass', 'master-pass', testVaultKey);
 
     await expect(getVaultItems()).resolves.toEqual([recentTrash]);
 
@@ -871,17 +901,17 @@ describe('vault session storage', () => {
     const item = sampleItem();
     const onProgress = vi.fn();
     sqliteOPFSInstance.saveVaultItems.mockResolvedValueOnce([item]);
-    openVaultSession('master-pass');
+    openVaultSession('master-pass', 'master-pass', testVaultKey);
 
     await expect(saveVaultItems([item], onProgress)).resolves.toEqual([item]);
 
-    expect(sqliteOPFSInstance.saveVaultItems).toHaveBeenCalledWith([item], 'master-pass', onProgress);
+    expect(sqliteOPFSInstance.saveVaultItemsWithKey).toHaveBeenCalledWith([item], expect.any(Uint8Array), onProgress);
   });
 
   it('returns existing items when empty trash has no deleted entries', async () => {
     const activeItem = sampleItem({ id: 'active-item' });
     sqliteOPFSInstance.getVaultItems.mockResolvedValueOnce([activeItem]);
-    openVaultSession('master-pass');
+    openVaultSession('master-pass', 'master-pass', testVaultKey);
 
     await expect(emptyTrashComplete()).resolves.toEqual([activeItem]);
 
