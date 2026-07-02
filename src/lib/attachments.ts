@@ -365,64 +365,6 @@ export async function migrateLegacyAttachmentsToAesGcm(): Promise<number> {
   }
 }
 
-export async function reencryptAttachmentsForMasterPasswordChange(
-  oldMasterPassword: string,
-  newMasterPassword: string,
-): Promise<number> {
-  if (typeof indexedDB === 'undefined') {
-    return 0;
-  }
-
-  const db = await initDB();
-  try {
-    const records = await new Promise<AttachmentRecord[]>((resolve, reject) => {
-      const transaction = db.transaction(STORE_NAME, 'readonly');
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.getAll();
-
-      request.onsuccess = () => resolve(request.result as AttachmentRecord[]);
-      request.onerror = () => reject(request.error);
-      transaction.onerror = () => reject(transaction.error);
-    });
-
-    if (records.length === 0) {
-      return 0;
-    }
-
-    const migratedRecords = await Promise.all(records.map(async (record) => {
-      if (record.algorithm !== 'AES-256-GCM') {
-        rejectLegacyXorRecord();
-      }
-      const rawBuffer = await decryptAttachmentDataWithMasterPassword(record, oldMasterPassword);
-      const encryptedAttachment = await encryptAttachmentDataWithMasterPassword(
-        newMasterPassword,
-        record.id,
-        rawBuffer,
-      );
-
-      return {
-        ...record,
-        ...encryptedAttachment,
-      };
-    }));
-
-    await new Promise<void>((resolve, reject) => {
-      const transaction = db.transaction(STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-
-      migratedRecords.forEach((record) => {
-        store.put(record);
-      });
-
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-    });
-
-    return migratedRecords.length;
-  } finally {
-    db.close();
-  }
-}
 
 /**
  * Key-only re-encryption for a master password rotation. The active session

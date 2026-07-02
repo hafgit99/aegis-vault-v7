@@ -357,10 +357,6 @@ async function withSessionVaultKey<T>(fallback: T, action: (vaultEncryptionKey: 
   }
 }
 
-async function withSessionMasterPassword<T>(fallback: T, action: (password: string) => Promise<T>): Promise<T> {
-  const result = withActiveMasterPassword(action);
-  return result ? await result : fallback;
-}
 
 /**
  * Retrieves of clean vault items from database.

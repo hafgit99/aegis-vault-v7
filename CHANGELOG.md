@@ -6,6 +6,7 @@ All notable Aegis Vault 7 changes are tracked here. The project follows a securi
 
 ### Added
 
+- Automated "No-JS-Master-String final gate" script to scan source code for forbidden master-password plain string patterns, enforcing a strict count-based allowlist across authorized files.
 - Android evidence-boundary documentation that separates automated release-gate proof from manual device-only claims for Autofill, biometric, document picker, FLAG_SECURE, and mobile UI behavior.
 - Android Autofill save-candidate handling so Android can offer to save newly registered credentials and Aegis opens a prefilled new-login form after user approval.
 - Desktop release gate with lint, version consistency checks, unit tests, web build, extension build, Tauri build, artifact collection, signing report generation, release notes generation, and evidence verification.
@@ -33,6 +34,7 @@ All notable Aegis Vault 7 changes are tracked here. The project follows a securi
 
 ### Security
 
+- Enforced no-JS-master-string memory safety bounds using an automated final gate, eliminating unused helpers like `withSessionMasterPassword` and legacy attachment rotation code, and gating all remaining occurrences under strict baseline counts.
 - Hardened browser extension password generation by removing `Math.random`, replacing modulo selection with rejection-sampled CSPRNG indexes, and using CSPRNG Fisher-Yates shuffling.
 - Raised biometric PBKDF2-SHA256 wrapping cost for new WebAuthn and Android native biometric bundles to 600,000 iterations.
 - Hardened extension IPC pairing token validation with constant-time comparison and Unix/macOS `0600` token-file writes.
@@ -70,6 +72,7 @@ All notable Aegis Vault 7 changes are tracked here. The project follows a securi
 
 ### Validation
 
+- No-JS-Master-String final gate scan and unit test suite successfully verified; integrated as a blocking step in the unit test lifecycle.
 - Signed Android release gate passed with device, fresh-install, and evidence on commit `1df341ec15938da9dad2a8304181dc902013b242`; evidence folder: `release-local/android/2026-07-01T12-41-48-852Z`.
 - Linux and macOS desktop artifact evidence passed standard local verification on commit `30740c2c468aeb56640764fd4d19e05cf4866ef0`; runtime smoke is deferred because no target Linux/macOS devices are available in this workspace, so those artifacts remain internal candidates until platform testing is completed.
 - Unit suite baseline: 108 test files and 841 tests passed in the latest recorded full unit run during release-gate work.
