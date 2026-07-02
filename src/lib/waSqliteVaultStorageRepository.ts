@@ -417,7 +417,7 @@ FROM vault_items;
     const nowStr = new Date().toISOString().split('T')[0];
     const id = item.id || secureRandomToken(9);
     const createdAt = item.createdAt || nowStr;
-    const updatedAt = nowStr;
+    const updatedAt = item.updatedAt || nowStr;
     const category = this.normalizeCategory(item.category, 'login');
     const itemToEncrypt: VaultItem = {
       ...item,

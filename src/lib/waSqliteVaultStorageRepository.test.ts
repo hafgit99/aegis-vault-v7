@@ -395,6 +395,28 @@ describe('wa-sqlite vault storage repository', () => {
     expect(engine.vaultRows).toHaveLength(1);
   });
 
+  it('preserves source timestamps during batch migration saves', async () => {
+    const engine = createEngineStub();
+    const repository = createWaSqliteVaultStorageRepository({ engine });
+    await repository.setupMaster('valid-master');
+
+    await repository.saveVaultItems([
+      createVaultItem({
+        id: 'legacy-item',
+        createdAt: '2024-04-12T10:11:12.000Z',
+        updatedAt: '2024-05-13T14:15:16.000Z',
+      }),
+    ], 'valid-master');
+
+    await expect(repository.getVaultItems('valid-master')).resolves.toEqual([
+      expect.objectContaining({
+        id: 'legacy-item',
+        createdAt: '2024-04-12T10:11:12.000Z',
+        updatedAt: '2024-05-13T14:15:16.000Z',
+      }),
+    ]);
+  });
+
   it('rotates the master password and re-encrypts existing vault rows', async () => {
     const engine = createEngineStub();
     const repository = createWaSqliteVaultStorageRepository({ engine });
