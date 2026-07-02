@@ -32,3 +32,6 @@ reports/
 
 # Local signing secrets
 .secrets/
+
+# Local security audit report (private, not published to the remote)
+docs/GUVENLIK_DENETIM_RAPORU.md
