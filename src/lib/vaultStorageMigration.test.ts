@@ -144,7 +144,8 @@ describe('vault storage migration', () => {
       issues: ['vault-storage-migration-persistent-target-reopen-password-invalid'],
     });
 
-    expect(targetRepository.resetAll).toHaveBeenCalledTimes(2);
+    expect(targetRepository.resetAll).toHaveBeenCalledTimes(1);
+    expect(reopenedRepository.resetAll).toHaveBeenCalledTimes(1);
   });
 
   it('rolls back when reopened persistent target content does not match the source', async () => {
@@ -164,14 +165,15 @@ describe('vault storage migration', () => {
       issues: ['vault-storage-migration-target-content-mismatch'],
     });
 
-    expect(targetRepository.resetAll).toHaveBeenCalledTimes(2);
+    expect(targetRepository.resetAll).toHaveBeenCalledTimes(1);
+    expect(reopenedRepository.resetAll).toHaveBeenCalledTimes(1);
   });
 
   it('rolls back when reopened persistent target hydration fails', async () => {
     const sourceRepository = repositoryStub([item()]);
     const targetRepository = repositoryStub([]);
     const reopenedRepository = repositoryStub([item()]);
-    vi.mocked(reopenedRepository.hydrate).mockRejectedValueOnce(new Error('reopen failed\n<script>secret</script>'));
+    vi.mocked(reopenedRepository.hydrate).mockRejectedValue(new Error('reopen failed\n<script>secret</script>'));
 
     await expect(runVaultStorageMigration(sourceRepository, targetRepository, 'master-pass', 'opfs', 'wa-sqlite', {
       verifyPersistentTarget: passingSmoke(),

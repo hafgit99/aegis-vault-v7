@@ -53,4 +53,5 @@ export interface VaultStorageRepository {
   deletePermanentlyBatchWithKey?(ids: string[], vaultEncryptionKey: Uint8Array): Promise<VaultItem[]>;
   reseedDemo(passwordPlain: string, demoItems: VaultItem[]): Promise<VaultItem[]>;
   reseedDemoWithKey?(vaultEncryptionKey: Uint8Array, demoItems: VaultItem[]): Promise<VaultItem[]>;
+  close?(): Promise<void>;
 }

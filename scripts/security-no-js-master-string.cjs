@@ -27,7 +27,7 @@ const baseline = {
     'getActiveMasterPassword': 0,
     'masterPasswordPlain': 0,
     'passwordPlain': 0,
-    'deriveEncryptionKey': 4  // setup, setupWithSecretKey, change, openDerivedVaultSession
+    'deriveEncryptionKey': 5  // setup, setupWithSecretKey, change, openDerivedVaultSession, migrateActiveVaultStorageToWaSqlite
   },
   'src/lib/attachments.ts': {
     'withActiveMasterPassword': 2, // import, getRequiredMasterPassword

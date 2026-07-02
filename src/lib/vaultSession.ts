@@ -36,6 +36,13 @@ export function openVaultSession(
   activeVaultKeyBytes = vaultEncryptionKey ? cloneBytes(vaultEncryptionKey) : null;
 }
 
+export function updateActiveVaultEncryptionKey(vaultEncryptionKey: Uint8Array): void {
+  if (activeVaultKeyBytes) {
+    zeroizeSecret(activeVaultKeyBytes);
+  }
+  activeVaultKeyBytes = cloneBytes(vaultEncryptionKey);
+}
+
 export function closeVaultSession(): void {
   zeroizeSecret(activeMasterPasswordBytes);
   zeroizeSecret(activeBackupPasswordBytes);

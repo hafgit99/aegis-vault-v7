@@ -85,6 +85,9 @@ export async function runVaultStorageMigration(
     validateMigratedItems(sourceItems, sourceIds, targetItems, issues);
 
     if (issues.length === 0 && options.reopenTargetRepository) {
+      if (typeof targetRepository.close === 'function') {
+        await targetRepository.close();
+      }
       const reopenedTargetItems = await verifyReopenedTargetRepository(
         options.reopenTargetRepository,
         masterPasswordPlain,
@@ -99,7 +102,20 @@ export async function runVaultStorageMigration(
     }
 
     if (issues.length > 0) {
-      await rollbackTarget(targetRepository, issues);
+      let rollbackTargetRepo = targetRepository;
+      if (options.reopenTargetRepository) {
+        try {
+          const repo = await options.reopenTargetRepository();
+          await repo.hydrate();
+          rollbackTargetRepo = repo;
+        } catch {
+          // ignore
+        }
+      }
+      await rollbackTarget(rollbackTargetRepo, issues);
+      if (typeof rollbackTargetRepo.close === 'function') {
+        await rollbackTargetRepo.close();
+      }
       await verifySourceRepositoryAfterRollback(sourceRepository, masterPasswordPlain, sourceItems, sourceIds, issues);
       return {
         status: 'rolled-back',
@@ -109,6 +125,10 @@ export async function runVaultStorageMigration(
         targetItemCount: targetItems.length,
         issues,
       };
+    }
+
+    if (typeof targetRepository.close === 'function') {
+      await targetRepository.close();
     }
 
     return {
@@ -121,7 +141,20 @@ export async function runVaultStorageMigration(
     };
   } catch (error) {
     issues.push(migrationIssueFromError(error, 'vault-storage-migration-target-write-failed'));
-    await rollbackTarget(targetRepository, issues);
+    let rollbackTargetRepo = targetRepository;
+    if (options.reopenTargetRepository) {
+      try {
+        const repo = await options.reopenTargetRepository();
+        await repo.hydrate();
+        rollbackTargetRepo = repo;
+      } catch {
+        // ignore
+      }
+    }
+    await rollbackTarget(rollbackTargetRepo, issues);
+    if (typeof rollbackTargetRepo.close === 'function') {
+      await rollbackTargetRepo.close();
+    }
     await verifySourceRepositoryAfterRollback(sourceRepository, masterPasswordPlain, sourceItems, sourceIds, issues);
     return {
       status: 'rolled-back',
@@ -141,8 +174,9 @@ async function verifyReopenedTargetRepository(
   sourceIds: Set<string>,
   issues: string[],
 ): Promise<VaultItem[] | null> {
+  let reopenedRepository: VaultStorageRepository | null = null;
   try {
-    const reopenedRepository = await createRepository();
+    reopenedRepository = await createRepository();
     await reopenedRepository.hydrate();
 
     const passwordValid = await reopenedRepository.verifyPassword(masterPasswordPlain);
@@ -157,6 +191,10 @@ async function verifyReopenedTargetRepository(
   } catch (error) {
     issues.push(migrationIssueFromError(error, 'vault-storage-migration-persistent-target-reopen-failed'));
     return null;
+  } finally {
+    if (reopenedRepository && typeof reopenedRepository.close === 'function') {
+      await reopenedRepository.close();
+    }
   }
 }
 

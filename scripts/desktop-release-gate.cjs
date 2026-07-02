@@ -129,6 +129,7 @@ assertHostCanBuild(platform);
 
 const steps = [
   { command: 'npm', args: ['run', 'lint'] },
+  { command: 'npm', args: ['run', 'security:no-js-master-string'] },
 ];
 
 if (!skipVersionCheck) {

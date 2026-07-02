@@ -19,6 +19,7 @@ import { logSecurityEvent, securityEventCodes } from './securityEvents';
 import {
   closeVaultSession,
   openVaultSession,
+  updateActiveVaultEncryptionKey,
   withActiveMasterPassword,
   withActiveSessionSecrets,
   withActiveVaultEncryptionKey,
@@ -333,6 +334,9 @@ export async function migrateActiveVaultStorageToWaSqlite(): Promise<WaSqliteAct
     const migrationResult = await runWaSqliteActiveBackendMigration(password);
     if (migrationResult.status === 'promoted') {
       localStorage.setItem(STORAGE_KEYS.IS_SET_UP, 'true');
+      const newKey = await getVaultStorageRepository().deriveEncryptionKey(password);
+      updateActiveVaultEncryptionKey(newKey);
+      newKey.fill(0);
     }
     return migrationResult;
   });

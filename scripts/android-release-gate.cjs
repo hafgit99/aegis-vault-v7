@@ -108,6 +108,7 @@ console.log(signed
 
 if (!skipBuild) {
   run('npm', ['run', 'lint']);
+  run('npm', ['run', 'security:no-js-master-string']);
   run('npm', ['run', 'android:release:version:check']);
   run('npm', ['run', 'build']);
 }

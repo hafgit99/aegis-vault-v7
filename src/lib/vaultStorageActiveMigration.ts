@@ -108,8 +108,9 @@ export async function runWaSqliteActiveBackendMigration(
     });
 
     if (persistentMigrationCandidateResult.migrationResult.status === 'migrated') {
+      let reopenedTargetRepository: VaultStorageRepository | null = null;
       try {
-        const reopenedTargetRepository = migrationPair.reopenTargetRepository();
+        reopenedTargetRepository = migrationPair.reopenTargetRepository();
         dryRunResult = await runVaultStorageMigrationDryRun(
           sourceRepository,
           {
@@ -129,6 +130,10 @@ export async function runWaSqliteActiveBackendMigration(
           targetItemCount: persistentMigrationCandidateResult.migrationResult.targetItemCount,
           issues: [activeMigrationIssueFromError(error, 'wa-sqlite-promotion-dry-run-failed')],
         };
+      } finally {
+        if (reopenedTargetRepository && typeof reopenedTargetRepository.close === 'function') {
+          await reopenedTargetRepository.close();
+        }
       }
     }
   }

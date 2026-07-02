@@ -257,6 +257,7 @@ test('generates and copies a password from the generator workspace', async ({ pa
 });
 
 test('runs the wa-sqlite migration UI safety gate', async ({ page }) => {
+  test.setTimeout(180000); // Allow up to 3 minutes for multiple WASM KDF rounds
   await setupVault(page);
   await createLoginItem(page, 'E2E SQLite Migration Guard');
   await openSettings(page);

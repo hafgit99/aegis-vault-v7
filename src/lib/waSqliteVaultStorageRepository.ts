@@ -581,6 +581,10 @@ FROM vault_items;
   private errorMessage(error: unknown): string {
     return error instanceof Error ? this.sanitizeLogValue(error.message) : this.sanitizeLogValue(String(error));
   }
+
+  public async close(): Promise<void> {
+    await this.engine.close();
+  }
 }
 
 export function createWaSqliteVaultStorageRepository(
