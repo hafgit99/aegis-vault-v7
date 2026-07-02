@@ -28,7 +28,7 @@ const sqliteOPFSInstance = vi.hoisted(() => ({
 }));
 
 const migrateLegacyAttachmentsToAesGcm = vi.hoisted(() => vi.fn(async () => 0));
-const reencryptAttachmentsForMasterPasswordChange = vi.hoisted(() => vi.fn(async () => 0));
+const reencryptAttachmentsForVaultKeyChange = vi.hoisted(() => vi.fn(async () => 0));
 const disableBiometric = vi.hoisted(() => vi.fn());
 const hydrateBiometric = vi.hoisted(() => vi.fn(async () => undefined));
 const runWaSqliteActiveBackendMigration = vi.hoisted(() => vi.fn());
@@ -44,7 +44,7 @@ vi.mock('./sqlite_opfs', () => ({
 
 vi.mock('./attachments', () => ({
   migrateLegacyAttachmentsToAesGcm,
-  reencryptAttachmentsForMasterPasswordChange,
+  reencryptAttachmentsForVaultKeyChange,
 }));
 
 vi.mock('./biometric', () => ({
@@ -85,7 +85,7 @@ import {
   rememberAccountSecretKey,
   forgetRememberedAccountSecretKey,
 } from './storage';
-import { closeVaultSession, getActiveBackupPassword, getActiveMasterPassword, openVaultSession } from './vaultSession';
+import { closeVaultSession, hasActiveBackupPassword, hasActiveMasterPassword, openVaultSession } from './vaultSession';
 import type { VaultItem } from '../types';
 
 function sampleItem(overrides: Partial<VaultItem> = {}): VaultItem {
@@ -220,7 +220,7 @@ describe('vault session storage', () => {
     await setupMasterPassword('master-pass');
 
     expect(sqliteOPFSInstance.setupMaster).toHaveBeenCalledWith('master-pass');
-    expect(getActiveMasterPassword()).toBe('master-pass');
+    expect(hasActiveMasterPassword()).toBe(true);
     expect(sessionStorage.getItem('aegis_session_master_pass')).toBeNull();
     expect(localStorage.getItem('aegis_is_setup')).toBe('true');
     expect(sqliteOPFSInstance.reseedDemoWithKey).toHaveBeenCalledWith(
@@ -241,10 +241,8 @@ describe('vault session storage', () => {
     );
     expect(isAccountSecretKeyRequired()).toBe(true);
     expect(getRememberedAccountSecretKey()).toBe('A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567');
-    expect(getActiveMasterPassword()).toBe(
-      'aegis-vault-v7:master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
-    );
-    expect(getActiveBackupPassword()).toBe('master-pass');
+    expect(hasActiveMasterPassword()).toBe(true);
+    expect(hasActiveBackupPassword()).toBe(true);
     expect(localStorage.getItem('aegis_is_setup')).toBe('true');
     expect(sqliteOPFSInstance.reseedDemoWithKey).toHaveBeenCalledWith(
       expect.any(Uint8Array),
@@ -348,7 +346,7 @@ describe('vault session storage', () => {
 
     await expect(verifyMasterPassword('master-pass')).resolves.toBe(true);
 
-    expect(getActiveMasterPassword()).toBe('master-pass');
+    expect(hasActiveMasterPassword()).toBe(true);
     expect(migrateLegacyAttachmentsToAesGcm).toHaveBeenCalledTimes(1);
     expect(sessionStorage.getItem('aegis_session_master_pass')).toBeNull();
   });
@@ -368,28 +366,28 @@ describe('vault session storage', () => {
     expect(sqliteOPFSInstance.verifyPassword).toHaveBeenCalledWith(
       'aegis-vault-v7:master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
     );
-    expect(getActiveMasterPassword()).toBe(
-      'aegis-vault-v7:master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
-    );
-    expect(getActiveBackupPassword()).toBe('master-pass');
+    expect(hasActiveMasterPassword()).toBe(true);
+    expect(hasActiveBackupPassword()).toBe(true);
   });
 
   it('rotates the master password without reseeding or wiping vault items', async () => {
     sqliteOPFSInstance.verifyPassword.mockResolvedValueOnce(true);
+    openVaultSession('old-master-pass', 'old-master-pass', testVaultKey);
 
     await changeMasterPassword('old-master-pass', 'new-master-pass-12');
 
-    expect(reencryptAttachmentsForMasterPasswordChange).toHaveBeenCalledWith(
+    expect(reencryptAttachmentsForVaultKeyChange).toHaveBeenCalledWith(
+      expect.any(Uint8Array),
+      expect.any(Uint8Array),
       'old-master-pass',
-      'new-master-pass-12',
     );
     expect(sqliteOPFSInstance.changeMasterPassword).toHaveBeenCalledWith(
       'old-master-pass',
       'new-master-pass-12',
     );
     expect(sqliteOPFSInstance.reseedDemo).not.toHaveBeenCalled();
-    expect(getActiveMasterPassword()).toBe('new-master-pass-12');
-    expect(getActiveBackupPassword()).toBe('new-master-pass-12');
+    expect(hasActiveMasterPassword()).toBe(true);
+    expect(hasActiveBackupPassword()).toBe(true);
   });
 
   it('rotates only the master password portion for secret-key protected vaults', async () => {
@@ -398,10 +396,7 @@ describe('vault session storage', () => {
       fingerprint: '3456-7',
     }));
     sqliteOPFSInstance.verifyPassword.mockResolvedValueOnce(true);
-    openVaultSession(
-      'aegis-vault-v7:old-master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
-      'old-master-pass',
-    );
+    openVaultSession('aegis-vault-v7:old-master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567', 'old-master-pass', testVaultKey);
 
     await changeMasterPassword('old-master-pass', 'new-master-pass-12');
 
@@ -410,26 +405,29 @@ describe('vault session storage', () => {
       'aegis-vault-v7:old-master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
       newCredential,
     );
-    expect(getActiveMasterPassword()).toBe(newCredential);
-    expect(getActiveBackupPassword()).toBe('new-master-pass-12');
+    expect(hasActiveMasterPassword()).toBe(true);
+    expect(hasActiveBackupPassword()).toBe(true);
   });
 
   it('rolls attachment encryption back when vault password rotation fails', async () => {
     sqliteOPFSInstance.verifyPassword.mockResolvedValueOnce(true);
     sqliteOPFSInstance.changeMasterPassword.mockRejectedValueOnce(new Error('db failed'));
-    reencryptAttachmentsForMasterPasswordChange.mockResolvedValueOnce(2).mockResolvedValueOnce(2);
+    reencryptAttachmentsForVaultKeyChange.mockResolvedValueOnce(2).mockResolvedValueOnce(2);
+    openVaultSession('old-master-pass', 'old-master-pass', testVaultKey);
 
     await expect(changeMasterPassword('old-master-pass', 'new-master-pass-12')).rejects.toThrow('db failed');
 
-    expect(reencryptAttachmentsForMasterPasswordChange).toHaveBeenNthCalledWith(
+    expect(reencryptAttachmentsForVaultKeyChange).toHaveBeenNthCalledWith(
       1,
+      expect.any(Uint8Array),
+      expect.any(Uint8Array),
       'old-master-pass',
-      'new-master-pass-12',
     );
-    expect(reencryptAttachmentsForMasterPasswordChange).toHaveBeenNthCalledWith(
+    expect(reencryptAttachmentsForVaultKeyChange).toHaveBeenNthCalledWith(
       2,
+      expect.any(Uint8Array),
+      expect.any(Uint8Array),
       'new-master-pass-12',
-      'old-master-pass',
     );
   });
 
@@ -441,7 +439,7 @@ describe('vault session storage', () => {
     try {
       await expect(verifyMasterPassword('master-pass')).resolves.toBe(true);
 
-      expect(getActiveMasterPassword()).toBe('master-pass');
+      expect(hasActiveMasterPassword()).toBe(true);
       expect(warnSpy).toHaveBeenCalledWith(expect.objectContaining({
         code: 'attachment.legacyMigration.failed',
         severity: 'warning',
@@ -468,7 +466,7 @@ describe('vault session storage', () => {
 
     await resetSystem();
 
-    expect(getActiveMasterPassword()).toBeNull();
+    expect(hasActiveMasterPassword()).toBe(false);
     expect(clearPersistedActiveVaultStorageBackend).toHaveBeenCalledTimes(1);
     expect(localStorage.getItem('aegis_vault_storage_active_backend')).toBeNull();
   });
@@ -726,7 +724,7 @@ describe('vault session storage', () => {
     await expect(verifyMasterPassword('master-pass')).resolves.toBe(true);
 
     expect(sqliteOPFSInstance.verifyPassword).toHaveBeenCalledWith('master-pass');
-    expect(getActiveMasterPassword()).toBe('master-pass');
+    expect(hasActiveMasterPassword()).toBe(true);
   });
 
   it('accepts already combined credentials while keeping the raw master password as backup', async () => {
@@ -736,8 +734,8 @@ describe('vault session storage', () => {
     await expect(verifyMasterPassword(combinedCredential)).resolves.toBe(true);
 
     expect(sqliteOPFSInstance.verifyPassword).toHaveBeenCalledWith(combinedCredential);
-    expect(getActiveMasterPassword()).toBe(combinedCredential);
-    expect(getActiveBackupPassword()).toBe('master-pass');
+    expect(hasActiveMasterPassword()).toBe(true);
+    expect(hasActiveBackupPassword()).toBe(true);
   });
 
   it('does not open a vault session after failed verification', async () => {
@@ -745,7 +743,7 @@ describe('vault session storage', () => {
 
     await expect(verifyMasterPassword('wrong-pass')).resolves.toBe(false);
 
-    expect(getActiveMasterPassword()).toBeNull();
+    expect(hasActiveMasterPassword()).toBe(false);
     expect(migrateLegacyAttachmentsToAesGcm).not.toHaveBeenCalled();
   });
 
@@ -813,21 +811,23 @@ describe('vault session storage', () => {
       'current-master-password-invalid',
     );
 
-    expect(reencryptAttachmentsForMasterPasswordChange).not.toHaveBeenCalled();
+    expect(reencryptAttachmentsForVaultKeyChange).not.toHaveBeenCalled();
     expect(sqliteOPFSInstance.changeMasterPassword).not.toHaveBeenCalled();
   });
 
   it('does not roll attachment encryption back when no attachments were rotated', async () => {
     sqliteOPFSInstance.verifyPassword.mockResolvedValueOnce(true);
-    reencryptAttachmentsForMasterPasswordChange.mockResolvedValueOnce(0);
+    reencryptAttachmentsForVaultKeyChange.mockResolvedValueOnce(0);
     sqliteOPFSInstance.changeMasterPassword.mockRejectedValueOnce(new Error('db failed'));
+    openVaultSession('old-master-pass', 'old-master-pass', testVaultKey);
 
     await expect(changeMasterPassword('old-master-pass', 'new-master-pass-12')).rejects.toThrow('db failed');
 
-    expect(reencryptAttachmentsForMasterPasswordChange).toHaveBeenCalledTimes(1);
-    expect(reencryptAttachmentsForMasterPasswordChange).toHaveBeenCalledWith(
+    expect(reencryptAttachmentsForVaultKeyChange).toHaveBeenCalledTimes(1);
+    expect(reencryptAttachmentsForVaultKeyChange).toHaveBeenCalledWith(
+      expect.any(Uint8Array),
+      expect.any(Uint8Array),
       'old-master-pass',
-      'new-master-pass-12',
     );
   });
 
@@ -841,7 +841,7 @@ describe('vault session storage', () => {
     await resetSystem();
 
     expect(sqliteOPFSInstance.resetAll).toHaveBeenCalledTimes(1);
-    expect(getActiveMasterPassword()).toBeNull();
+    expect(hasActiveMasterPassword()).toBe(false);
     expect(localStorage.getItem('aegis_is_setup')).toBeNull();
     expect(localStorage.getItem('aegis_sqlite_fallback')).toBeNull();
     expect(localStorage.getItem('aegis_account_secret_profile')).toBeNull();

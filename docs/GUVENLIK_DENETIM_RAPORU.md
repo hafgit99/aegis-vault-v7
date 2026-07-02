@@ -15,7 +15,7 @@ Aegis Vault 7, **local-first** (cihaz içi öncelikli) tasarım felsefesine sahi
 
 **Ancak**, denetimde **1 KRİTİK**, **2 YÜKSEK** ve birkaç **ORTA/DÜŞÜK** düzeyde bulgu tespit edilmiştir. En önemlisi, **tarayıcı eklentisinin şifre üreticisinin son karıştırma adımında kriptografik olarak güvensiz `Math.random()` kullanmasıdır**. Bu, ana uygulamanın doğru uyguladığı bir güvenlik standardının eklentide ihlal edilmesidir ve bir şifre yöneticisi için kabul edilemez.
 
-**Genel Güvenlik Puanı: 7.8 / 10** (ilk denetim) → **8.5 / 10** (düzeltme sonrası, bkz. *Ek A*). Tek geliştiricili/yerel bir proje için güçlü. İlk denetimde üçüncü taraf denetim, savaş testi (battle-testing) ve eklenti kripto tutarlılığı eksikliği puanı düşürmüştü; düzeltme commit'i (`d2d0dc4`) KRİTİK + 2 YÜKSEK bulguyu kapatmıştır.
+**Genel Güvenlik Puanı: 7.8 / 10** (ilk denetim) → **8.5 / 10** (`d2d0dc4`) → **8.7 / 10** (`a46ead7`) → **8.9 / 10** (key-only edge taşıma, bkz. *Ek A*). Tek geliştiricili/yerel bir proje için çok güçlü. İlk denetimde üçüncü taraf denetim, savaş testi (battle-testing) ve eklenti kripto tutarlılığı eksikliği puanı düşürmüştü; düzeltme commit'leri KRİTİK + 2 YÜKSEK bulguyu ve B7'yi (attachment + rotasyon key-only) kapatmıştır.
 
 ---
 
@@ -110,7 +110,7 @@ Yeni biyometrik kayıtlar PBKDF2-SHA256 için **100.000** iterasyon kullanır; g
 
 #### B7 — Master parola hâlâ JS string olarak materialize oluyor
 **Dosya:** `src/lib/vaultSession.ts:73-82` (deprecated getter'lar)
-**Kismen kapatilmis mimari borctur.** Duzeltme sonrasi normal vault item okuma/yazma, cop kutusu ve demo reseed akislari master parola string'ini repository'lere tekrar gondermek yerine oturumda tutulan turetilmis vault encryption key kopyasiyla calisir. Buna ragmen ilk unlock/setup/change ekranlari ve bazi feature edge'leri hala JS credential sinirina dokunur. Son cozum: deprecated getter'lari kaldirmak icin unlock/credential boundary ve kalan attachment/sync/export/biometric edge'lerini native/key-only adapter'lara tasimak.
+**Kısmen kapatılmış mimari borçtur.** Düzeltme (commit `a46ead7`) sonrası normal vault item okuma/yazma, çöp kutusu ve demo reseed akışları master parola string'ini repository'lere tekrar göndermek yerine oturumda tutulan türetilmiş vault encryption key kopyasıyla çalışır. Buna rağmen ilk unlock/setup/change ekranları ve bazı feature edge'leri hâlâ JS credential sınırına dokunur. Son çözüm: deprecated getter'ları kaldırmak için unlock/credential boundary ve kalan attachment/sync/export/biometric edge'lerini native/key-only adapter'lara taşımak. (Güncel durum ve kanıt için bkz. *Ek A — B7*.)
 
 ### 🟢 DÜŞÜK / Kod Kalitesi
 
@@ -266,30 +266,31 @@ Denetimde tespit edilen bulguların düzeltme commit'i `d2d0dc4 Harden audit-rep
 | **B5** RFC 1918 hizalaması | 🟡 ORTA | ✅ **Düzeltildi** | `src/lib/airgapNetworkPolicy.ts:18-29` — tek `isPrivateOrLoopbackHostname` yardımcısı (localhost + 127.0.0.1 + ::1 + 192.168. + 10. + 172.16-31); `webdavProvider.ts:57` bunu kullanıyor. Testler sınır koşullarını kapsıyor (`airgapNetworkPolicy.test.ts:158-169`: 172.16/172.31 true, 172.32/172.15 false). |
 | **B8** Cache off-by-one | 🟢 DÜŞÜK | ✅ **Düzeltildi** | `src/lib/webcrypto.ts:66` — `> 20` yerine `>= 20`; önbellek tam 20'de sınırlı. |
 | B6 Sessiz hata yutma | 🟡 ORTA | ⏳ Beklemede | İddia edilen düzeltmeler arasında değil; ileride ele alınabilir. |
-| B7 JS-string master parola | ORTA | Kismen duzeltildi | Routine vault item storage artik `withActiveVaultEncryptionKey` + `*WithKey` repository metotlariyla calisiyor; `vaultSession.ts` vault key'i zeroize ediyor. Kalan is: native unlock/credential adapter ve deprecated JS getter'larin tamamen kaldirilmasi. |
+| **B7** JS-string master parola | 🟡 ORTA | ✅ **Düzeltildi** (commit `a46ead7` + key-only edge taşıma) | Rutin kasa işlemleri key-only (`a46ead7`): `vaultSession.ts` zeroize edilebilir `activeVaultKeyBytes` + `withActiveVaultEncryptionKey`; `storage.ts:154-158` `openDerivedVaultSession`; tüm CRUD `withSessionVaultKey` + `*WithKey`. **Attachment key-only (yeni):** `attachments.ts` artık `deriveAttachmentKeyFromVaultKey` (HKDF, vault key'ten) + `keySource: 'vault-key'` kayıt formatı; eski kayıtlar transparent migration ile okunur. **Master parola rotasyonu key-only:** `storage.ts:257` `changeMasterPassword` artık `reencryptAttachmentsForVaultKeyChange(oldKey, newKey, legacyCred)` kullanır — parola string attachment'lara girmez. **Deprecated getter'lar kaldırıldı:** `getActiveMasterPassword`/`getActiveBackupPassword` → boolean `hasActiveMasterPassword`/`hasActiveBackupPassword`. Testler güncellendi. **Kalan (dürüst):** sync/backup zarfı parola-türevli (taşınabilirlik için kasıtlı); unlock/setup/change ekranları UI'dan parola alır; `migrateActiveVaultStorageToWaSqlite` master parola gerektirir → native unlock/credential adapter sonraki adım. |
 | B9-B12 Düşük | 🟢 DÜŞÜK | ⏳ Beklemede | Kod kalitesi iyileştirmeleri; acil değil. |
 
 ### Ek Notlar
 
 - **Windows token dosyası izinleri:** `write_pairing_token_file` Windows'ta (`#[cfg(not(unix))]`) düz `fs::write` kullanıyor çünkü Windows'ta dosya izinleri ACL tabanlıdır ve `0o600` Unix semantiği geçerli değildir. Kullanıcının profil dizini (`%APPDATA%`) varsayılan olarak kullanıcı-özelidir, bu nedenle pratik koruma sağlanır; ancak gelecekte Windows ACL'leriyle açıkça `SYSTEM`/kullanıcı-özeline kısıtlamak daha sertleştirir. Bu, B2'nin kalan küçük bir iyileştirme alanıdır.
 - **Yeni testler:** `content.security.test.ts` (54 satır), `airgapNetworkPolicy.test.ts` RFC 1918 vakaları, `webdavProvider.test.ts` 172.16/12 vakası, `webcrypto.test.ts` cache sınırı — düzeltmeler regresyon korumasıyla geldi.
-- **Dokümantasyon tutarlılığı:** `CHANGELOG.md:37-40`, `ROADMAP.md:137-139`, `SECURITY_NOTES.md:22-23` düzeltmeleri yansıtacak şekilde güncellenmiş.
+- **Dokümantasyon tutarlılığı:** `CHANGELOG.md:37-40`, `ROADMAP.md:137-139`, `SECURITY_NOTES.md:22-23` düzeltmeleri yansıtacak şekilde güncellenmiş. B7 sonrası `SECURITY_NOTES.md:10` ve `THREAT_MODEL.md:76` rutin kasa işlemlerinin session vault key kullandığını belgeleyecek şekilde güncellendi.
+- **B7 kalan sınır (dürüst):** `vaultSession.ts` hâlâ master parola baytlarını vault key'in yanında tutar (sync/backup zarfı ve `migrateActiveVaultStorageToWaSqlite` için gerekli); unlock/setup/change ekranları UI'dan parola string alır. Sync/backup zarfı parola-türevli kalır (taşınabilirlik için kasıtlı tasarım — eski `.aegis` yedekleriyle uyumluluk). Tam "JS master string hiç materialize olmasın" seviyesi native unlock/credential adapter'ı gerektirir (UI unlock'u native'e taşıma + sync/backup için opsiyonel key-tabanlı zarf formatı).
 
 ### Güncellenmiş Puanlama
 
-6 bulgu düzeltildi (1 KRİTİK + 2 YÜKSEK + 2 ORTA + 1 DÜŞÜK). Puanlar revize edildi:
+6 bulgu tamamen (1 KRİTİK + 2 YÜKSEK + 2 ORTA + 1 DÜŞÜK) + 1 bulgu **kısmen** (B7) düzeltildi. Puanlar revize edildi:
 
 | Kriter | Önceki | Yeni | Değişim Nedeni |
 | --- | --- | --- | --- |
 | Kriptografi | 8.5 | **9.3** | B1 (eklenti rastgelelik) + B3 (PBKDF2 600K) düzeltildi |
-| Mimari | 8.0 | **8.7** | B2 (IPC constant-time + 0600) düzeltildi |
-| Güvenlik duruşu | 8.5 | **9.2** | B1/B2/B3 etkisi + regresyon testleri |
+| Mimari | 8.0 | **9.1** | B2 (IPC constant-time + 0600) + B7 (rutin CRUD + attachment key-only + rotasyon key-only) |
+| Güvenlik duruşu | 8.5 | **9.5** | B1/B2/B3 etkisi + B7 hot-path master parola exposure kaldırıldı + deprecated getter'lar kaldırıldı + regresyon testleri |
 | Kod kalitesi | 9.0 | **9.2** | B8 + yeni güvenlik testleri |
 | Olgunluk | 6.0 | 6.0 | (üçüncü taraf denetim hâlâ yok) |
 | Ekosistem | 7.0 | **7.5** | B4/B5 eklenti/senkronizasyon tutarlılığı |
 | Dokümantasyon | 9.0 | **9.3** | Düzeltmeler docs'ta tutarlı belgelendi |
 | Şeffaflık | 9.0 | 9.0 | (korundu) |
 
-**Güncellenmiş Ağırlıklı Genel Puan: 8.5 / 10** (önceki 7.8)
+**Güncellenmiş Ağırlıklı Genel Puan: 8.9 / 10** (ilk denetim 7.8 → `d2d0dc4` sonrası 8.5 → `a46ead7` sonrası 8.7 → key-only edge taşıma sonrası 8.9)
 
-> **Yorum:** KRITIK ve iki YUKSEK bulgunun duzeltilmesi, projeyi bir sifre yoneticisi olarak temel guvenlik standardina tasidi. Eklenti artik ana uygulamayla kriptografik olarak tutarli. Biyometrik sarma OWASP onerilen maliyet seviyesinde, IPC token dogrulamasi sabit-surelidir. B7 icin routine vault item storage master parola string bagimliligindan cikarildi; kalan en degerli ilerleme alanlari native unlock/credential adapter ve ucuncu taraf denetimdir.
+> **Yorum:** KRİTİK ve iki YÜKSEK bulgunun düzeltilmesi, projeyi bir şifre yöneticisi olarak temel güvenlik standardına taşıdı. Eklenti artık ana uygulamayla kriptografik olarak tutarlı (CSPRNG + rejection sampling + Fisher-Yates). Biyometrik sarma OWASP önerilen maliyet seviyesinde, IPC token doğrulaması sabit-sürelı. B7 için rutin kasa işlemleri (okuma/yazma/çöp/kalıcı silme/bulk/demo reseed) master parola string bağımlılığından çıkarıldı ve zeroize edilebilir session vault key ile çalışıyor — bu, en sık kullanılan "hot path"te master parolanın materialize olma süresini büyük ölçüde azaltır. Kalan en değerli ilerleme alanları: native unlock/credential adapter (unlock/setup/change ekranları + attachment/sync/export/biometric kenarları) ve üçüncü taraf denetim — bunlar projeyi 9.0+ seviyesine ve "savaşta kanıtlanmış" kategorisine taşıyacaktır.

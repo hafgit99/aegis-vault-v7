@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @vitest-environment jsdom
  */
 
@@ -15,7 +15,7 @@ import {
   getAttachmentBlob,
   migrateLegacyAttachmentsToAesGcm,
   migrateAttachmentRecordToAesGcm,
-  reencryptAttachmentsForMasterPasswordChange,
+  reencryptAttachmentsForVaultKeyChange,
   saveAttachment,
   type AttachmentRecord,
 } from './attachments';
@@ -24,6 +24,12 @@ import { webCryptoAesGcmEncryptBytes } from './webcrypto';
 
 const DB_NAME = 'aegis_attachments_db';
 const STORE_NAME = 'attachments';
+
+const TEST_VAULT_KEY = new Uint8Array(32).fill(7);
+
+function openTestVaultSession(masterPassword = 'master-pass'): void {
+  openVaultSession(masterPassword, masterPassword, TEST_VAULT_KEY);
+}
 
 function bytes(value: string): ArrayBuffer {
   return new TextEncoder().encode(value).buffer;
@@ -115,7 +121,7 @@ afterEach(async () => {
 
 describe('attachment encryption', () => {
   it('encrypts attachment bytes with AES-GCM metadata and decrypts them with the active vault session', async () => {
-    openVaultSession('master-pass');
+    openTestVaultSession();
 
     const encrypted = await encryptAttachmentData('attachment-1', bytes('private file'));
     const record: AttachmentRecord = {
@@ -134,7 +140,7 @@ describe('attachment encryption', () => {
   });
 
   it('rejects tampered AES-GCM attachment tags', async () => {
-    openVaultSession('master-pass');
+    openTestVaultSession();
 
     const encrypted = await encryptAttachmentData('attachment-1', bytes('private file'));
     const record: AttachmentRecord = {
@@ -149,11 +155,14 @@ describe('attachment encryption', () => {
     await expect(decryptAttachmentData(record)).rejects.toThrow();
   });
 
-  it('rejects AES-GCM attachments when opened with a different vault session', async () => {
-    openVaultSession('master-pass');
+  it('rejects AES-GCM attachments when opened with a different vault key', async () => {
+    openTestVaultSession();
     const encrypted = await encryptAttachmentData('attachment-1', bytes('private file'));
     closeVaultSession();
-    openVaultSession('other-master-pass');
+    // Re-open with a different vault key — the master password is irrelevant
+    // for vault-key records, so a distinct key must block decryption.
+    const OTHER_VAULT_KEY = new Uint8Array(32).fill(9);
+    openVaultSession('other-master-pass', 'other-master-pass', OTHER_VAULT_KEY);
     const record: AttachmentRecord = {
       id: 'attachment-1',
       name: 'secret.txt',
@@ -166,7 +175,7 @@ describe('attachment encryption', () => {
   });
 
   it('rejects AES-GCM attachment records with missing metadata', async () => {
-    openVaultSession('master-pass');
+    openTestVaultSession();
 
     await expect(decryptAttachmentData({
       id: 'broken-attachment',
@@ -213,7 +222,7 @@ describe('attachment encryption', () => {
   });
 
   it('rejects legacy XOR attachment records during single-record migration', async () => {
-    openVaultSession('master-pass');
+    openTestVaultSession();
     const legacyRecord: AttachmentRecord = {
       id: 'legacy-attachment',
       name: 'legacy.txt',
@@ -231,7 +240,7 @@ describe('attachment encryption', () => {
   });
 
   it('leaves AES-GCM attachment records unchanged during single-record migration', async () => {
-    openVaultSession('master-pass');
+    openTestVaultSession();
     const encrypted = await encryptAttachmentData('attachment-1', bytes('private file'));
     const record: AttachmentRecord = {
       id: 'attachment-1',
@@ -245,7 +254,7 @@ describe('attachment encryption', () => {
   });
 
   it('saves, retrieves, and deletes encrypted attachments through IndexedDB', async () => {
-    openVaultSession('master-pass');
+    openTestVaultSession();
     const progress: number[] = [];
     const file = new File([bytes('private file')], 'secret.txt', { type: 'text/plain' });
 
@@ -273,7 +282,7 @@ describe('attachment encryption', () => {
   });
 
   it('uses a binary MIME fallback when saved files omit a type', async () => {
-    openVaultSession('master-pass');
+    openTestVaultSession();
     const file = new File([bytes('private file')], 'secret.bin');
 
     await saveAttachment('attachment-1', file);
@@ -283,7 +292,7 @@ describe('attachment encryption', () => {
   });
 
   it('rejects save when FileReader returns unreadable content', async () => {
-    openVaultSession('master-pass');
+    openTestVaultSession();
     const originalFileReader = globalThis.FileReader;
 
     class StringResultFileReader {
@@ -309,7 +318,7 @@ describe('attachment encryption', () => {
   });
 
   it('rejects save when FileReader reports an error', async () => {
-    openVaultSession('master-pass');
+    openTestVaultSession();
     const originalFileReader = globalThis.FileReader;
     const readError = new Error('read failed');
 
@@ -335,7 +344,7 @@ describe('attachment encryption', () => {
   });
 
   it('rejects retrieval when stored AES-GCM attachment metadata is incomplete', async () => {
-    openVaultSession('master-pass');
+    openTestVaultSession();
     await putAttachmentRecord({
       id: 'broken-attachment',
       name: 'broken.txt',
@@ -358,7 +367,7 @@ describe('attachment encryption', () => {
   });
 
   it('rejects legacy XOR attachment records during bulk migration', async () => {
-    openVaultSession('master-pass');
+    openTestVaultSession();
     await putAttachmentRecord({
       id: 'legacy-attachment',
       name: 'legacy.txt',
@@ -376,7 +385,7 @@ describe('attachment encryption', () => {
   });
 
   it('returns zero when bulk migration finds no legacy records', async () => {
-    openVaultSession('master-pass');
+    openTestVaultSession();
     const encrypted = await encryptAttachmentData('attachment-1', bytes('private file'));
     await putAttachmentRecord({
       id: 'attachment-1',
@@ -408,7 +417,7 @@ describe('attachment encryption', () => {
   });
 
   it('decrypts old AES-GCM attachments using legacy SHA-256 key derivation', async () => {
-    openVaultSession('master-pass');
+    openTestVaultSession();
 
     // Manually construct an old record with SHA-256 KDF (no kdf property)
     const keyMaterial = new TextEncoder().encode(`aegis-vault-v7:attachment-key:attachment-old:master-pass`);
@@ -432,7 +441,7 @@ describe('attachment encryption', () => {
   });
 
   it('migrates old SHA-256 AES-GCM attachment records to HKDF-SHA-256 format during bulk migration', async () => {
-    openVaultSession('master-pass');
+    openTestVaultSession();
 
     // Manually construct an old record with SHA-256 KDF and save to IndexedDB
     const keyMaterial = new TextEncoder().encode(`aegis-vault-v7:attachment-key:attachment-old-bulk:master-pass`);
@@ -465,21 +474,29 @@ describe('attachment encryption', () => {
     await expect(blobText(result?.blob)).resolves.toBe('bulk migrate file');
   });
 
-  it('re-encrypts stored attachments when the vault master password changes', async () => {
-    openVaultSession('old-master-pass');
+  it('re-encrypts stored attachments when the vault key changes (key-only rotation)', async () => {
+    const OLD_VAULT_KEY = new Uint8Array(32).fill(7);
+    const NEW_VAULT_KEY = new Uint8Array(32).fill(11);
+    openVaultSession('old-master-pass', 'old-master-pass', OLD_VAULT_KEY);
     await saveAttachment('attachment-1', new File([bytes('private file')], 'secret.txt', { type: 'text/plain' }));
     const before = await getStoredAttachmentRecord('attachment-1');
 
-    await expect(reencryptAttachmentsForMasterPasswordChange('old-master-pass', 'new-master-pass')).resolves.toBe(1);
+    // Rotate from the old vault key to a new vault key without materializing
+    // the master password string inside the re-encryption routine.
+    await expect(reencryptAttachmentsForVaultKeyChange(OLD_VAULT_KEY, NEW_VAULT_KEY)).resolves.toBe(1);
     const after = await getStoredAttachmentRecord('attachment-1');
 
     expect(after?.iv).not.toBe(before?.iv);
+    expect(after?.keySource).toBe('vault-key');
+
+    // Old vault key can no longer decrypt the rotated record.
     closeVaultSession();
-    openVaultSession('old-master-pass');
+    openVaultSession('old-master-pass', 'old-master-pass', OLD_VAULT_KEY);
     await expect(getAttachmentBlob('attachment-1')).rejects.toBeTruthy();
 
+    // New vault key decrypts the rotated record successfully.
     closeVaultSession();
-    openVaultSession('new-master-pass');
+    openVaultSession('new-master-pass', 'new-master-pass', NEW_VAULT_KEY);
     const result = await getAttachmentBlob('attachment-1');
     await expect(blobText(result?.blob)).resolves.toBe('private file');
   });

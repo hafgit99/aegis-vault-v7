@@ -4,7 +4,7 @@
  */
 
 import { secureRandomBytes } from './random';
-import { withActiveMasterPassword } from './vaultSession';
+import { withActiveMasterPassword, withActiveVaultEncryptionKey } from './vaultSession';
 import { webCryptoAesGcmDecryptBytes, webCryptoAesGcmEncryptBytes, generateSafeIv } from './webcrypto';
 import { logSecurityEvent } from './securityEvents';
 
@@ -60,6 +60,16 @@ export interface AttachmentRecord {
   iv?: string;
   tag?: string;
   kdf?: 'SHA-256' | 'HKDF-SHA-256';
+  /**
+   * Identifies which root secret was used to derive the per-attachment key.
+   * - `'vault-key'` (new): the key is derived from the session vault encryption
+   *   key via HKDF. The master password string never materializes for this path.
+   * - `'master-password'` (legacy): the key is derived from the master password
+   *   string. New writes never use this source; it is preserved only so existing
+   *   records can be read and transparently migrated to `'vault-key'`.
+   * Omitted on the oldest records, which are treated as `'master-password'`.
+   */
+  keySource?: 'vault-key' | 'master-password';
 }
 
 /**
@@ -101,6 +111,85 @@ async function deriveAttachmentKeyHkdf(masterPassword: string, attachmentId: str
     256
   );
   return new Uint8Array(derivedBits);
+}
+
+/**
+ * Derives a per-attachment AES-256 key from the session vault encryption key
+ * via HKDF-SHA-256. This is the key-only path: the master password string
+ * never materializes for new attachment writes/reads. The vault key is the
+ * 32-byte Argon2id-derived encryption key held (zeroized on lock) in the
+ * active vault session.
+ */
+async function deriveAttachmentKeyFromVaultKey(vaultKey: Uint8Array, attachmentId: string): Promise<Uint8Array> {
+  const encoder = new TextEncoder();
+  const baseKey = await crypto.subtle.importKey(
+    'raw',
+    vaultKey,
+    { name: 'HKDF' },
+    false,
+    ['deriveBits']
+  );
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: 'HKDF',
+      hash: 'SHA-256',
+      salt: encoder.encode(ATTACHMENT_KEY_CONTEXT),
+      info: encoder.encode(attachmentId),
+    },
+    baseKey,
+    256
+  );
+  // Zeroize the imported view of the vault key copy we received.
+  vaultKey.fill(0);
+  return new Uint8Array(derivedBits);
+}
+
+function getRequiredVaultKey(): Uint8Array {
+  const key = withActiveVaultEncryptionKey((value) => value);
+  if (!key) {
+    throw new AttachmentError(attachmentErrorCodes.missingVaultSession);
+  }
+  return key;
+}
+
+async function encryptAttachmentDataWithVaultKey(
+  vaultKey: Uint8Array,
+  attachmentId: string,
+  rawBuffer: ArrayBuffer,
+): Promise<Pick<AttachmentRecord, 'algorithm' | 'data' | 'encrypted' | 'iv' | 'tag' | 'kdf' | 'keySource'>> {
+  const key = await deriveAttachmentKeyFromVaultKey(vaultKey, attachmentId);
+  const encrypted = await webCryptoAesGcmEncryptBytes(rawBuffer, key, generateSafeIv());
+
+  return {
+    algorithm: 'AES-256-GCM',
+    kdf: 'HKDF-SHA-256',
+    keySource: 'vault-key',
+    data: encrypted.ciphertext,
+    encrypted: true,
+    iv: encrypted.iv,
+    tag: encrypted.tag,
+  };
+}
+
+async function decryptAttachmentDataWithVaultKey(
+  record: AttachmentRecord,
+  vaultKey: Uint8Array,
+): Promise<ArrayBuffer> {
+  if (record.algorithm !== 'AES-256-GCM') {
+    throw new AttachmentError(attachmentErrorCodes.legacyEncryptionBlocked);
+  }
+  if (!record.iv || !record.tag) {
+    throw new AttachmentError(attachmentErrorCodes.missingEncryptionMetadata);
+  }
+  const key = await deriveAttachmentKeyFromVaultKey(vaultKey, record.id);
+  return webCryptoAesGcmDecryptBytes(
+    {
+      iv: record.iv,
+      tag: record.tag,
+      ciphertext: record.data,
+    },
+    key,
+  );
 }
 
 async function encryptAttachmentDataWithMasterPassword(
@@ -154,32 +243,67 @@ function getRequiredMasterPassword(): string {
   return masterPassword;
 }
 
+/**
+ * New attachment writes always prefer the vault-key path: the master password
+ * string is never materialized for encryption. A vault session with an
+ * encryption key is required.
+ */
 export async function encryptAttachmentData(
   attachmentId: string,
   rawBuffer: ArrayBuffer,
-): Promise<Pick<AttachmentRecord, 'algorithm' | 'data' | 'encrypted' | 'iv' | 'tag' | 'kdf'>> {
-  const masterPassword = getRequiredMasterPassword();
-  return encryptAttachmentDataWithMasterPassword(masterPassword, attachmentId, rawBuffer);
+): Promise<Pick<AttachmentRecord, 'algorithm' | 'data' | 'encrypted' | 'iv' | 'tag' | 'kdf' | 'keySource'>> {
+  const vaultKey = getRequiredVaultKey();
+  try {
+    return await encryptAttachmentDataWithVaultKey(vaultKey, attachmentId, rawBuffer);
+  } finally {
+    vaultKey.fill(0);
+  }
 }
 
+/**
+ * Decrypts an attachment. The key source is selected automatically:
+ * - Records written with `keySource: 'vault-key'` use the session vault key.
+ * - Legacy records (no `keySource`, or `keySource: 'master-password'`) fall
+ *   back to the master-password-derived key. This keeps existing attachments
+ *   readable until they are transparently migrated to the vault-key format.
+ */
 export async function decryptAttachmentData(record: AttachmentRecord): Promise<ArrayBuffer> {
   if (record.algorithm !== 'AES-256-GCM') {
     throw new AttachmentError(attachmentErrorCodes.legacyEncryptionBlocked);
   }
 
+  if (record.keySource === 'vault-key') {
+    const vaultKey = getRequiredVaultKey();
+    try {
+      return await decryptAttachmentDataWithVaultKey(record, vaultKey);
+    } finally {
+      vaultKey.fill(0);
+    }
+  }
+
+  // Legacy path: master-password-derived key (old SHA-256 or old HKDF records).
   const masterPassword = getRequiredMasterPassword();
   return decryptAttachmentDataWithMasterPassword(record, masterPassword);
 }
 
 export async function migrateAttachmentRecordToAesGcm(record: AttachmentRecord): Promise<AttachmentRecord> {
-  if (record.algorithm === 'AES-256-GCM' && record.kdf === 'HKDF-SHA-256') {
+  // Already on the current vault-key + HKDF-SHA-256 format — nothing to do.
+  if (record.algorithm === 'AES-256-GCM' && record.kdf === 'HKDF-SHA-256' && record.keySource === 'vault-key') {
     return record;
+  }
+
+  // Already on HKDF-SHA-256 but still master-password-keyed — re-key to vault-key.
+  if (record.algorithm === 'AES-256-GCM' && record.kdf === 'HKDF-SHA-256' && record.keySource === 'master-password') {
+    const rawBuffer = await decryptAttachmentData(record);
+    const encryptedAttachment = await encryptAttachmentData(record.id, rawBuffer);
+    return { ...record, ...encryptedAttachment };
   }
 
   if (record.algorithm !== 'AES-256-GCM') {
     rejectLegacyXorRecord();
   }
 
+  // Oldest records (no kdf / SHA-256) — decrypt with legacy path, re-encrypt vault-key.
   const rawBuffer = await decryptAttachmentData(record);
   const encryptedAttachment = await encryptAttachmentData(record.id, rawBuffer);
 
@@ -280,6 +404,91 @@ export async function reencryptAttachmentsForMasterPasswordChange(
         ...record,
         ...encryptedAttachment,
       };
+    }));
+
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+
+      migratedRecords.forEach((record) => {
+        store.put(record);
+      });
+
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+
+    return migratedRecords.length;
+  } finally {
+    db.close();
+  }
+}
+
+/**
+ * Key-only re-encryption for a master password rotation. The active session
+ * must already hold the *old* vault key; the caller supplies the *new* vault
+ * key derived from the rotated master password. Records are decrypted with the
+ * old vault key (or the legacy master-password path for old records) and
+ * re-encrypted onto the new vault key. The master password string never
+ * materializes inside this routine for vault-key records; the optional
+ * `legacyMasterPassword` is only consulted for pre-vault-key records.
+ *
+ * Returns the number of re-encrypted records.
+ */
+export async function reencryptAttachmentsForVaultKeyChange(
+  oldVaultKey: Uint8Array,
+  newVaultKey: Uint8Array,
+  legacyMasterPassword?: string,
+): Promise<number> {
+  if (typeof indexedDB === 'undefined') {
+    oldVaultKey.fill(0);
+    newVaultKey.fill(0);
+    return 0;
+  }
+
+  const db = await initDB();
+  try {
+    const records = await new Promise<AttachmentRecord[]>((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.getAll();
+
+      request.onsuccess = () => resolve(request.result as AttachmentRecord[]);
+      request.onerror = () => reject(request.error);
+      transaction.onerror = () => reject(transaction.error);
+    });
+
+    if (records.length === 0) {
+      return 0;
+    }
+
+    const migratedRecords = await Promise.all(records.map(async (record) => {
+      if (record.algorithm !== 'AES-256-GCM') {
+        rejectLegacyXorRecord();
+      }
+
+      // Decrypt with old vault key (vault-key records) or legacy master path.
+      let rawBuffer: ArrayBuffer;
+      if (record.keySource === 'vault-key') {
+        const oldKeyCopy = new Uint8Array(oldVaultKey);
+        try {
+          rawBuffer = await decryptAttachmentDataWithVaultKey(record, oldKeyCopy);
+        } finally {
+          oldKeyCopy.fill(0);
+        }
+      } else if (legacyMasterPassword) {
+        rawBuffer = await decryptAttachmentDataWithMasterPassword(record, legacyMasterPassword);
+      } else {
+        throw new AttachmentError(attachmentErrorCodes.missingVaultSession);
+      }
+
+      const newKeyCopy = new Uint8Array(newVaultKey);
+      try {
+        const encryptedAttachment = await encryptAttachmentDataWithVaultKey(newKeyCopy, record.id, rawBuffer);
+        return { ...record, ...encryptedAttachment };
+      } finally {
+        newKeyCopy.fill(0);
+      }
     }));
 
     await new Promise<void>((resolve, reject) => {

@@ -56,6 +56,20 @@ export function hasActiveVaultSession(): boolean {
   return activeMasterPasswordBytes !== null || activeVaultKeyBytes !== null;
 }
 
+/**
+ * Presence-only probes. These deliberately return a boolean instead of
+ * materializing the secret into a JavaScript string. Use these (or the scoped
+ * `withActive*` callbacks) when code only needs to know whether a credential is
+ * available — never use them to obtain the credential itself.
+ */
+export function hasActiveMasterPassword(): boolean {
+  return activeMasterPasswordBytes !== null;
+}
+
+export function hasActiveBackupPassword(): boolean {
+  return activeBackupPasswordBytes !== null;
+}
+
 export function withActiveVaultEncryptionKey<T>(callback: (vaultEncryptionKey: Uint8Array) => T): T | null {
   if (!activeVaultKeyBytes) return null;
   return callback(cloneBytes(activeVaultKeyBytes));
@@ -80,21 +94,4 @@ export function withActiveSessionSecrets<T>(
   const backupPassword = decodeSecret(activeBackupPasswordBytes);
   if (!masterPassword || !backupPassword) return null;
   return callback(masterPassword, backupPassword);
-}
-
-/**
- * @deprecated Prefer scoped/native secret operations. This getter must only be
- * used by tests or compatibility boundaries while the final lock-screen native
- * credential adapter is being introduced.
- */
-export function getActiveMasterPassword(): string | null {
-  return decodeSecret(activeMasterPasswordBytes);
-}
-
-/**
- * @deprecated Prefer scoped/native secret operations. This getter materializes
- * a temporary JavaScript string and should not be used by new storage paths.
- */
-export function getActiveBackupPassword(): string | null {
-  return decodeSecret(activeBackupPasswordBytes);
 }

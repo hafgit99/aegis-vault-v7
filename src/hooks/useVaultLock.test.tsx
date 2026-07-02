@@ -5,7 +5,7 @@
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { closeVaultSession, getActiveMasterPassword, openVaultSession } from '../lib/vaultSession';
+import { closeVaultSession, hasActiveMasterPassword, openVaultSession } from '../lib/vaultSession';
 import { useVaultLock } from './useVaultLock';
 
 afterEach(() => {
@@ -47,7 +47,7 @@ describe('useVaultLock', () => {
     act(() => result.current.lock());
 
     expect(result.current.unlocked).toBe(false);
-    expect(getActiveMasterPassword()).toBeNull();
+    expect(hasActiveMasterPassword()).toBe(false);
     expect(resetReveals).toHaveBeenCalledTimes(1);
     expect(clearCopiedField).toHaveBeenCalledTimes(1);
   });
@@ -69,7 +69,7 @@ describe('useVaultLock', () => {
     act(() => vi.advanceTimersByTime(5_000));
 
     expect(result.current.unlocked).toBe(false);
-    expect(getActiveMasterPassword()).toBeNull();
+    expect(hasActiveMasterPassword()).toBe(false);
     expect(resetReveals).toHaveBeenCalledTimes(1);
     expect(clearCopiedField).toHaveBeenCalledTimes(1);
   });

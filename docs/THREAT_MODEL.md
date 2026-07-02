@@ -73,7 +73,7 @@ Not defended against:
 Master password and session:
 
 - Successful setup and unlock open an in-memory vault session.
-- The master password is no longer stored in `sessionStorage`; routine vault item reads/writes use a scoped session vault encryption key after unlock instead of passing the master password string through repository calls.
+- The master password is no longer stored in `sessionStorage`; routine vault item reads/writes use a scoped session vault encryption key after unlock instead of passing the master password string through repository calls. Attachment key derivation and master-password rotation also use the session vault key (HKDF-SHA-256) rather than the master password string; the deprecated string-returning session getters were removed.
 - Manual lock and auto-lock close the in-memory vault session and zeroize the stored byte buffers.
 - Reset clears the active session and persisted vault setup state.
 

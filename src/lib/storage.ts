@@ -4,7 +4,7 @@
  */
 
 import { VaultItem } from '../types';
-import { migrateLegacyAttachmentsToAesGcm, reencryptAttachmentsForMasterPasswordChange } from './attachments';
+import { migrateLegacyAttachmentsToAesGcm, reencryptAttachmentsForVaultKeyChange } from './attachments';
 import {
   combineMasterPasswordAndSecretKey,
   getSecretKeyFingerprint,
@@ -263,15 +263,53 @@ export async function changeMasterPassword(oldPassword: string, newPassword: str
   }
 
   const newCredential = resolveRotatedVaultCredential(newPassword);
-  const rotatedAttachmentCount = await reencryptAttachmentsForMasterPasswordChange(oldCredential, newCredential);
+
+  // Derive the old and new vault encryption keys up front so attachment
+  // re-encryption can run through the key-only path instead of materializing
+  // the master password string. The old key is read from the active session
+  // (already derived at unlock); the new key is derived from the rotated
+  // credential. Both copies are zeroized once the rotation completes.
+  const oldVaultKey = await withActiveVaultEncryptionKey(async (key) => new Uint8Array(key));
+  if (!oldVaultKey) {
+    throw new Error('vault-storage-active-migration-session-required');
+  }
+
+  let newVaultKey: Uint8Array;
+  try {
+    newVaultKey = await getVaultStorageRepository().deriveEncryptionKey(newCredential);
+  } catch (err) {
+    oldVaultKey.fill(0);
+    throw err;
+  }
+
+  let rotatedAttachmentCount = 0;
+  try {
+    rotatedAttachmentCount = await reencryptAttachmentsForVaultKeyChange(
+      oldVaultKey,
+      newVaultKey,
+      oldCredential, // legacy master-password fallback for pre-vault-key records
+    );
+  } catch (err) {
+    oldVaultKey.fill(0);
+    newVaultKey.fill(0);
+    throw err;
+  }
+
   try {
     await getVaultStorageRepository().changeMasterPassword(oldCredential, newCredential);
   } catch (err) {
     if (rotatedAttachmentCount > 0) {
-      await reencryptAttachmentsForMasterPasswordChange(newCredential, oldCredential);
+      // Rollback: re-encrypt attachments back onto the old vault key.
+      await reencryptAttachmentsForVaultKeyChange(newVaultKey, oldVaultKey, newCredential).catch(() => {});
     }
+    oldVaultKey.fill(0);
+    newVaultKey.fill(0);
     throw err;
   }
+
+  oldVaultKey.fill(0);
+  newVaultKey.fill(0);
+
   await openDerivedVaultSession(newCredential, newPassword);
   disableBiometric();
   localStorage.setItem(STORAGE_KEYS.IS_SET_UP, 'true');
