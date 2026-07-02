@@ -73,7 +73,7 @@ Not defended against:
 Master password and session:
 
 - Successful setup and unlock open an in-memory vault session.
-- The master password is no longer stored in `sessionStorage`.
+- The master password is no longer stored in `sessionStorage`, and production app code uses scoped session-secret callbacks instead of directly reading a global master-password getter.
 - Manual lock and auto-lock close the in-memory vault session and zeroize the stored byte buffers.
 - Reset clears the active session and persisted vault setup state.
 
@@ -154,7 +154,7 @@ Required user-facing recovery rules:
 | Legacy custom cryptographic primitives in `legacyCrypto.ts` | Mitigated | Removed from production decrypt paths; keep fail-closed tests in place |
 | Simulated SQLite/OPFS persistence naming overstates implementation | Open | Decide final desktop storage adapter and align naming |
 | Legacy XOR attachment fallback | Mitigated | Rejected instead of decrypted |
-| Active master password lives in process memory while unlocked | Partially mitigated | Byte buffers are zeroized on lock; move secret operations into native adapters where practical |
+| Active master password lives in process memory while unlocked | Partially mitigated | Byte buffers are zeroized on lock and production callers use scoped access; move storage/KDF/decrypt operations into native adapters for a strict no-JS-string boundary |
 | Clipboard can keep copied secrets after OS capture or user clipboard changes | Partially mitigated | Safe clearing removes unchanged copied secrets; hostile OS clipboard capture remains out of scope |
 | TOTP follows RFC 6238 for HMAC-SHA1/SHA-256/SHA-512 and accepts `otpauth://totp` imports, but broad provider QR compatibility still needs manual verification | Mitigated with residual validation risk | Add fixture coverage from more authenticator exports before broad public release |
 | Plaintext export option can create unsafe files | Partially mitigated | Warning and typed confirmation are required; decide whether to remove it from final release builds |

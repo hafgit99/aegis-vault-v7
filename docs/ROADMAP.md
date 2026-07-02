@@ -131,7 +131,7 @@
   - [x] Legacy backup encryption writer and decrypt fallback removed.
   - [x] `legacyCrypto.ts` reduced to a fail-closed error boundary with no custom decrypt primitives.
   - [x] Legacy XOR attachment migration runs automatically after successful unlock.
-- [x] Remove base64 master password storage from `sessionStorage`.
+- [x] Remove base64 master password storage from `sessionStorage` and route production session-secret reads through scoped callbacks.
 - [x] Replace attachment XOR encryption with authenticated encryption.
 - [x] Introduce a versioned vault database format and migration tests.
 - [x] Define the desktop threat model and recovery model.

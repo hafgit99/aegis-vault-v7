@@ -7,7 +7,7 @@ This project is a password vault, so security claims must stay conservative unti
 - Password generation now uses a centralized secure randomness helper.
 - Diceware, biometric challenge generation, import IDs, attachment IDs, and simulated SQLite log IDs now use the same helper.
 - Master password verification now uses vetted Argon2id hashes; legacy simulated hash verification has been removed from the active unlock path.
-- Active vault unlock state now uses an in-memory session helper instead of storing the master password in browser `sessionStorage`.
+- Active vault unlock state now uses an in-memory session helper instead of storing the master password in browser `sessionStorage`, and production callers use scoped session-secret callbacks instead of broad master-password getters.
 - New attachment writes use WebCrypto AES-GCM with per-attachment keys derived from the active vault session.
 - New biometric master-password wrapping uses WebCrypto PBKDF2-SHA256 and AES-GCM.
 - New vault item metadata writes use WebCrypto AES-GCM with keys derived through the vetted Argon2id adapter.
@@ -46,7 +46,7 @@ This project is a password vault, so security claims must stay conservative unti
 
 - `src/lib/legacyCrypto.ts` no longer ships custom SHA/HMAC/HKDF/simulated-Argon2id/AES decrypt primitives. It remains only as a fail-closed error-code boundary for old UI mappings.
 - Legacy XOR attachment records are rejected; older secure legacy attachment formats are migration-only and are rewritten to current AES-GCM storage after successful unlock.
-- `src/lib/vaultSession.ts` stores active master/backup secrets as zeroized `Uint8Array` process-memory state during an unlocked session. Existing JS storage repositories still require temporary immutable JavaScript strings for KDF/decrypt calls; fully eliminating that requires moving vault storage/KDF/decrypt operations into native adapters.
+- `src/lib/vaultSession.ts` stores active master/backup secrets as zeroized `Uint8Array` process-memory state during an unlocked session. Production app code now uses scoped session-secret callbacks, but the current JS storage repositories still require temporary immutable JavaScript strings inside those callbacks for KDF/decrypt calls; fully eliminating that requires moving vault storage/KDF/decrypt operations into native adapters.
 - `src/lib/sqlite_opfs.ts` is a simulated SQLite/OPFS layer backed by versioned serialized JSON state. The naming and implementation should be aligned with the actual persistence strategy.
 - `src/lib/otp.ts` supports the common RFC 6238 HMAC-SHA1 path plus SHA-256/SHA-512 algorithm variants and `otpauth://totp` URI parsing for issuer/account imports.
 - Product copy should continue to be reviewed before release so public claims stay aligned with the verified implementation.

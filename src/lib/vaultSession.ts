@@ -40,6 +40,31 @@ export function closeVaultSession(): void {
   });
 }
 
+export function hasActiveVaultSession(): boolean {
+  return activeMasterPasswordBytes !== null;
+}
+
+export function withActiveMasterPassword<T>(callback: (masterPassword: string) => T): T | null {
+  const masterPassword = decodeSecret(activeMasterPasswordBytes);
+  if (!masterPassword) return null;
+  return callback(masterPassword);
+}
+
+export function withActiveBackupPassword<T>(callback: (backupPassword: string) => T): T | null {
+  const backupPassword = decodeSecret(activeBackupPasswordBytes);
+  if (!backupPassword) return null;
+  return callback(backupPassword);
+}
+
+export function withActiveSessionSecrets<T>(
+  callback: (masterPassword: string, backupPassword: string) => T,
+): T | null {
+  const masterPassword = decodeSecret(activeMasterPasswordBytes);
+  const backupPassword = decodeSecret(activeBackupPasswordBytes);
+  if (!masterPassword || !backupPassword) return null;
+  return callback(masterPassword, backupPassword);
+}
+
 /**
  * @deprecated Prefer scoped/native secret operations. This getter must only be
  * used at boundaries that still require a JavaScript string until the vault

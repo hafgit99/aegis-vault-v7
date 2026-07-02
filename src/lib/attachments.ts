@@ -4,7 +4,7 @@
  */
 
 import { secureRandomBytes } from './random';
-import { getActiveMasterPassword } from './vaultSession';
+import { withActiveMasterPassword } from './vaultSession';
 import { webCryptoAesGcmDecryptBytes, webCryptoAesGcmEncryptBytes, generateSafeIv } from './webcrypto';
 import { logSecurityEvent } from './securityEvents';
 
@@ -147,7 +147,7 @@ async function decryptAttachmentDataWithMasterPassword(
 }
 
 function getRequiredMasterPassword(): string {
-  const masterPassword = getActiveMasterPassword();
+  const masterPassword = withActiveMasterPassword((value) => value);
   if (!masterPassword) {
     throw new AttachmentError(attachmentErrorCodes.missingVaultSession);
   }

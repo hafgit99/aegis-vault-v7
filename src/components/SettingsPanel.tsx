@@ -36,7 +36,7 @@ import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from '..
 import { parseUniversalImport, decodeFileBuffer } from '../lib/importer';
 import { secureRandomToken } from '../lib/random';
 import { registerBiometric, isBiometricEnabled, disableBiometric, isBiometricSupported, getBiometricType } from '../lib/biometric';
-import { getActiveBackupPassword, getActiveMasterPassword } from '../lib/vaultSession';
+import { withActiveBackupPassword, withActiveMasterPassword } from '../lib/vaultSession';
 import { isNativeFileDialogSupported, openDesktopImportFile, saveDesktopExportFile } from '../lib/desktopFiles';
 import { isAndroidAutofillEnabled, isAndroidAutofillSupported, openAndroidAutofillSettings } from '../lib/androidAutofill';
 import { saveEmergencyKit } from '../lib/emergencyKit';
@@ -179,13 +179,15 @@ export default function SettingsPanel({
 
   const handleSyncSave = async () => {
     const err = validateWebDavConfig({ url: syncUrl, username: syncUsername, password: syncPassword });
-    if (err) { setSyncMessage(`❌ ${err}`); return; }
-    const masterPw = getActiveMasterPassword();
-    if (!masterPw) return;
-    await saveSyncConfig({ type: 'webdav', url: syncUrl, username: syncUsername, password: syncPassword }, masterPw);
-    setSyncMessage(t('settings.sync.configure.save') + ' ✅');
+    if (err) { setSyncMessage(`Error: ${err}`); return; }
+    const saved = withActiveMasterPassword(async (masterPw) => {
+      await saveSyncConfig({ type: 'webdav', url: syncUrl, username: syncUsername, password: syncPassword }, masterPw);
+      return true;
+    });
+    if (!saved) return;
+    await saved;
+    setSyncMessage(t('settings.sync.configure.save'));
   };
-
   const handleSyncDisable = async () => {
     clearSyncConfig();
     setSyncProvider('disabled');
@@ -227,44 +229,46 @@ export default function SettingsPanel({
   };
 
   const handleSyncNow = async () => {
-    const masterPw = getActiveMasterPassword();
-    if (!masterPw) return;
-    setSyncLoading(true);
-    setSyncStatus('syncing');
-    setSyncMessage(null);
-    try {
-      const config = await loadSyncConfig(masterPw);
-      const provider = createSyncProvider(config);
-      if (!provider) { setSyncStatus('error'); setSyncMessage(t('settings.sync.error.connection')); return; }
-      const localItems = await getVaultItems();
-      const result = await performSync(provider, localItems, masterPw);
-      if (result.status === 'error') {
+    const syncRun = withActiveMasterPassword(async (masterPw) => {
+      setSyncLoading(true);
+      setSyncStatus('syncing');
+      setSyncMessage(null);
+      try {
+        const config = await loadSyncConfig(masterPw);
+        const provider = createSyncProvider(config);
+        if (!provider) { setSyncStatus('error'); setSyncMessage(t('settings.sync.error.connection')); return; }
+        const localItems = await getVaultItems();
+        const result = await performSync(provider, localItems, masterPw);
+        if (result.status === 'error') {
+          setSyncStatus('error');
+          const code = result.error?.code ?? '';
+          if (code.includes('auth')) setSyncMessage(t('settings.sync.error.auth'));
+          else if (code.includes('upload')) setSyncMessage(t('settings.sync.error.upload'));
+          else if (code.includes('download')) setSyncMessage(t('settings.sync.error.download'));
+          else if (code.includes('checksum')) setSyncMessage(t('settings.sync.error.checksum'));
+          else setSyncMessage(result.error?.message ?? t('settings.sync.error.connection'));
+        } else {
+          if (result.mergedItems && result.mergedItems.length > 0) {
+            await saveVaultItems(result.mergedItems);
+            await onDatabaseChanged();
+          }
+          const now = new Date().toISOString();
+          saveLastSyncTime(now);
+          setSyncLastAt(now);
+          setSyncStatus(result.conflicts && result.conflicts.length > 0 ? 'conflict' : 'success');
+          if (result.mergedCount && result.mergedCount > 0) {
+            setSyncMessage(`${result.mergedCount} ${t('settings.sync.mergedItems')}`);
+          }
+        }
+      } catch (e: any) {
         setSyncStatus('error');
-        const code = result.error?.code ?? '';
-        if (code.includes('auth')) setSyncMessage(t('settings.sync.error.auth'));
-        else if (code.includes('upload')) setSyncMessage(t('settings.sync.error.upload'));
-        else if (code.includes('download')) setSyncMessage(t('settings.sync.error.download'));
-        else if (code.includes('checksum')) setSyncMessage(t('settings.sync.error.checksum'));
-        else setSyncMessage(result.error?.message ?? t('settings.sync.error.connection'));
-      } else {
-        if (result.mergedItems && result.mergedItems.length > 0) {
-          await saveVaultItems(result.mergedItems);
-          await onDatabaseChanged();
-        }
-        const now = new Date().toISOString();
-        saveLastSyncTime(now);
-        setSyncLastAt(now);
-        setSyncStatus(result.conflicts && result.conflicts.length > 0 ? 'conflict' : 'success');
-        if (result.mergedCount && result.mergedCount > 0) {
-          setSyncMessage(`${result.mergedCount} ${t('settings.sync.mergedItems')}`);
-        }
+        setSyncMessage(e?.message ?? t('settings.sync.error.connection'));
+      } finally {
+        setSyncLoading(false);
       }
-    } catch (e: any) {
-      setSyncStatus('error');
-      setSyncMessage(e?.message ?? t('settings.sync.error.connection'));
-    } finally {
-      setSyncLoading(false);
-    }
+    });
+    if (!syncRun) return;
+    await syncRun;
   };
 
   // Auto-Lock Option Selectors
@@ -371,12 +375,12 @@ export default function SettingsPanel({
           throw new Error(t('settings.biometric.unsupportedError'));
         }
         
-        const masterPassword = getActiveMasterPassword();
-        if (!masterPassword) {
+        const registered = withActiveMasterPassword((masterPassword) => registerBiometric(masterPassword, type));
+        if (!registered) {
           throw new Error(t('settings.biometric.missingSessionError'));
         }
         
-        await registerBiometric(masterPassword, type);
+        await registered;
         setBiometricEnabled(true);
         setBiometricSuccess(t('settings.biometric.enabledSuccess'));
       } catch (err: any) {
@@ -514,27 +518,7 @@ export default function SettingsPanel({
     setBackupSuccess(null);
     setBackupError(null);
 
-    let passwordToUse = '';
-    if (useMasterForBackup) {
-      const masterPassword = getActiveBackupPassword();
-      if (!masterPassword) {
-        setBackupError(t('settings.export.missingMaster'));
-        return;
-      }
-      passwordToUse = masterPassword;
-    } else {
-      if (!customBackupPassword) {
-        setBackupError(t('settings.export.missingPassword'));
-        return;
-      }
-      if (customBackupPassword.length < 12) {
-        setBackupError(t('settings.export.passwordTooShort'));
-        return;
-      }
-      passwordToUse = customBackupPassword;
-    }
-
-    try {
+    const exportWithPassword = async (passwordToUse: string) => {
       const latestItems = await getVaultItems();
       setItems(latestItems);
       const encryptedJsonString = await encryptDataWithPasswordSecure(JSON.stringify(latestItems), passwordToUse);
@@ -548,6 +532,27 @@ export default function SettingsPanel({
       setBackupSuccess(t('settings.export.encryptedSuccess'));
       setCustomBackupPassword('');
       setTimeout(() => setBackupSuccess(null), 5000);
+    };
+
+    try {
+      if (useMasterForBackup) {
+        const exported = withActiveBackupPassword((masterPassword) => exportWithPassword(masterPassword));
+        if (!exported) {
+          setBackupError(t('settings.export.missingMaster'));
+          return;
+        }
+        await exported;
+      } else {
+        if (!customBackupPassword) {
+          setBackupError(t('settings.export.missingPassword'));
+          return;
+        }
+        if (customBackupPassword.length < 12) {
+          setBackupError(t('settings.export.passwordTooShort'));
+          return;
+        }
+        await exportWithPassword(customBackupPassword);
+      }
     } catch (err: any) {
       setBackupError(`${t('settings.export.encryptErrorPrefix')}: ${err?.message || t('settings.export.defaultSaveError')}`);
     }

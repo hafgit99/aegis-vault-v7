@@ -16,7 +16,7 @@ import {
   type WaSqliteActiveBackendMigrationResult,
 } from './vaultStorageActiveMigration';
 import { logSecurityEvent, securityEventCodes } from './securityEvents';
-import { closeVaultSession, getActiveBackupPassword, getActiveMasterPassword, openVaultSession } from './vaultSession';
+import { closeVaultSession, openVaultSession, withActiveMasterPassword, withActiveSessionSecrets } from './vaultSession';
 import { disableBiometric, hydrateBiometric } from './biometric';
 import { INITIAL_DEMO_ITEMS } from './storageDemoItems';
 import {
@@ -119,26 +119,27 @@ function resolveVaultCredential(password: string, secretKey?: string | null): st
 }
 
 function resolveRotatedVaultCredential(newPassword: string): string {
-  const activeCredential = getActiveMasterPassword();
-  if (activeCredential?.startsWith('aegis-vault-v7:')) {
-    const newlineIndex = activeCredential.indexOf('\n');
-    if (newlineIndex !== -1) {
-      const secretKey = activeCredential.substring(newlineIndex + 1);
-      return combineMasterPasswordAndSecretKey(newPassword, secretKey);
+  return withActiveMasterPassword((activeCredential) => {
+    if (activeCredential.startsWith('aegis-vault-v7:')) {
+      const newlineIndex = activeCredential.indexOf('\n');
+      if (newlineIndex !== -1) {
+        const secretKey = activeCredential.substring(newlineIndex + 1);
+        return combineMasterPasswordAndSecretKey(newPassword, secretKey);
+      }
     }
-  }
 
-  return resolveVaultCredential(newPassword);
+    return resolveVaultCredential(newPassword);
+  }) ?? resolveVaultCredential(newPassword);
 }
 
 function resolveCurrentVaultCredential(password: string): string {
-  const activeCredential = getActiveMasterPassword();
-  const activeBackupPassword = getActiveBackupPassword();
-  if (activeCredential?.startsWith('aegis-vault-v7:') && activeBackupPassword === password) {
-    return activeCredential;
-  }
+  return withActiveSessionSecrets((activeCredential, activeBackupPassword) => {
+    if (activeCredential.startsWith('aegis-vault-v7:') && activeBackupPassword === password) {
+      return activeCredential;
+    }
 
-  return resolveVaultCredential(password);
+    return resolveVaultCredential(password);
+  }) ?? resolveVaultCredential(password);
 }
 
 /**
@@ -268,145 +269,135 @@ export async function resetSystem(): Promise<void> {
 }
 
 export async function migrateActiveVaultStorageToWaSqlite(): Promise<WaSqliteActiveBackendMigrationResult> {
-  const password = getSessionMasterPassword();
-  if (!password) {
-    throw new Error('vault-storage-active-migration-session-required');
-  }
+  const result = withActiveMasterPassword(async (password) => {
+    const migrationResult = await runWaSqliteActiveBackendMigration(password);
+    if (migrationResult.status === 'promoted') {
+      localStorage.setItem(STORAGE_KEYS.IS_SET_UP, 'true');
+    }
+    return migrationResult;
+  });
 
-  const result = await runWaSqliteActiveBackendMigration(password);
-  if (result.status === 'promoted') {
-    localStorage.setItem(STORAGE_KEYS.IS_SET_UP, 'true');
+  if (!result) {
+    throw new Error('vault-storage-active-migration-session-required');
   }
   return result;
 }
 
-function getSessionMasterPassword(): string | null {
-  return getActiveMasterPassword();
+async function withSessionMasterPassword<T>(fallback: T, action: (password: string) => Promise<T>): Promise<T> {
+  const result = withActiveMasterPassword(action);
+  return result ? await result : fallback;
 }
 
 /**
  * Retrieves of clean vault items from database.
  */
 export async function getVaultItems(): Promise<VaultItem[]> {
-  const password = getSessionMasterPassword();
-  if (!password) return [];
-  
-  const rawItems = await getVaultStorageRepository().getVaultItems(password);
+  return withSessionMasterPassword([], async (password) => {
+    const rawItems = await getVaultStorageRepository().getVaultItems(password);
 
-  // Auto clean trash items older than 15 days
-  let hasChanges = false;
-  const expiredIds: string[] = [];
-  const now = new Date().getTime();
-  const cleanItems = rawItems.filter((item) => {
-    if (item.deleted && item.deletedAt) {
-      const deletedTime = new Date(item.deletedAt).getTime();
-      const diffDays = (now - deletedTime) / (1000 * 60 * 60 * 24);
-      if (diffDays >= 15) {
-        hasChanges = true;
-        expiredIds.push(item.id);
-        return false;
+    let hasChanges = false;
+    const expiredIds: string[] = [];
+    const now = new Date().getTime();
+    const cleanItems = rawItems.filter((item) => {
+      if (item.deleted && item.deletedAt) {
+        const deletedTime = new Date(item.deletedAt).getTime();
+        const diffDays = (now - deletedTime) / (1000 * 60 * 60 * 24);
+        if (diffDays >= 15) {
+          hasChanges = true;
+          expiredIds.push(item.id);
+          return false;
+        }
       }
-    }
-    return true;
-  });
+      return true;
+    });
 
-  if (hasChanges) {
-    return getVaultStorageRepository().deletePermanentlyBatch(expiredIds, password);
-  }
-  return cleanItems;
+    if (hasChanges) {
+      return getVaultStorageRepository().deletePermanentlyBatch(expiredIds, password);
+    }
+    return cleanItems;
+  });
 }
 
 /**
  * Saves or updates a vault item inside SQLite row.
  */
 export async function saveVaultItem(item: VaultItem): Promise<VaultItem[]> {
-  const password = getSessionMasterPassword();
-  if (!password) return [];
-  return getVaultStorageRepository().saveVaultItem(item, password);
+  return withSessionMasterPassword([], (password) => getVaultStorageRepository().saveVaultItem(item, password));
 }
 
 export async function saveVaultItems(items: VaultItem[], onProgress?: (count: number) => void): Promise<VaultItem[]> {
-  const password = getSessionMasterPassword();
-  if (!password) return [];
-  if (onProgress) {
-    return getVaultStorageRepository().saveVaultItems(items, password, onProgress);
-  }
-  return getVaultStorageRepository().saveVaultItems(items, password);
+  return withSessionMasterPassword([], (password) => {
+    if (onProgress) {
+      return getVaultStorageRepository().saveVaultItems(items, password, onProgress);
+    }
+    return getVaultStorageRepository().saveVaultItems(items, password);
+  });
 }
 
 /**
  * Deletes a vault item directly.
  */
 export async function deleteVaultItem(id: string): Promise<VaultItem[]> {
-  const password = getSessionMasterPassword();
-  if (!password) return [];
-  return getVaultStorageRepository().deletePermanently(id, password);
+  return withSessionMasterPassword([], (password) => getVaultStorageRepository().deletePermanently(id, password));
 }
 
 /**
  * Moves a vault item to trash in SQLite.
  */
 export async function moveToTrash(id: string): Promise<VaultItem[]> {
-  const password = getSessionMasterPassword();
-  if (!password) return [];
-  
-  const items = await getVaultStorageRepository().getVaultItems(password);
-  const found = items.find(x => x.id === id);
-  if (found) {
-    found.deleted = true;
-    found.deletedAt = new Date().toISOString();
-    await getVaultStorageRepository().saveVaultItem(found, password);
-  }
-  return getVaultStorageRepository().getVaultItems(password);
+  return withSessionMasterPassword([], async (password) => {
+    const items = await getVaultStorageRepository().getVaultItems(password);
+    const found = items.find(x => x.id === id);
+    if (found) {
+      found.deleted = true;
+      found.deletedAt = new Date().toISOString();
+      await getVaultStorageRepository().saveVaultItem(found, password);
+    }
+    return getVaultStorageRepository().getVaultItems(password);
+  });
 }
 
 /**
  * Restores a vault item from trash in SQLite.
  */
 export async function restoreFromTrash(id: string): Promise<VaultItem[]> {
-  const password = getSessionMasterPassword();
-  if (!password) return [];
-
-  const items = await getVaultStorageRepository().getVaultItems(password);
-  const found = items.find(x => x.id === id);
-  if (found) {
-    found.deleted = false;
-    delete found.deletedAt;
-    await getVaultStorageRepository().saveVaultItem(found, password);
-  }
-  return getVaultStorageRepository().getVaultItems(password);
+  return withSessionMasterPassword([], async (password) => {
+    const items = await getVaultStorageRepository().getVaultItems(password);
+    const found = items.find(x => x.id === id);
+    if (found) {
+      found.deleted = false;
+      delete found.deletedAt;
+      await getVaultStorageRepository().saveVaultItem(found, password);
+    }
+    return getVaultStorageRepository().getVaultItems(password);
+  });
 }
 
 /**
  * Permanently deletes a vault item from the database.
  */
 export async function deletePermanently(id: string): Promise<VaultItem[]> {
-  const password = getSessionMasterPassword();
-  if (!password) return [];
-  return getVaultStorageRepository().deletePermanently(id, password);
+  return withSessionMasterPassword([], (password) => getVaultStorageRepository().deletePermanently(id, password));
 }
 
 /**
  * Empties the trash completely in SQLite.
  */
 export async function emptyTrashComplete(): Promise<VaultItem[]> {
-  const password = getSessionMasterPassword();
-  if (!password) return [];
+  return withSessionMasterPassword([], async (password) => {
+    const items = await getVaultStorageRepository().getVaultItems(password);
+    const deletedIds = items.filter(item => item.deleted).map(item => item.id);
 
-  const items = await getVaultStorageRepository().getVaultItems(password);
-  const deletedIds = items.filter(item => item.deleted).map(item => item.id);
-  
-  if (deletedIds.length > 0) {
-    return getVaultStorageRepository().deletePermanentlyBatch(deletedIds, password);
-  }
-  return items;
+    if (deletedIds.length > 0) {
+      return getVaultStorageRepository().deletePermanentlyBatch(deletedIds, password);
+    }
+    return items;
+  });
 }
 
 /**
  * Re-seeds the system with default demo items inside SQLite.
  */
 export async function reseedDemoData(): Promise<VaultItem[]> {
-  const password = getSessionMasterPassword();
-  if (!password) return [];
-  return getVaultStorageRepository().reseedDemo(password, INITIAL_DEMO_ITEMS);
+  return withSessionMasterPassword([], (password) => getVaultStorageRepository().reseedDemo(password, INITIAL_DEMO_ITEMS));
 }
