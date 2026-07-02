@@ -154,15 +154,17 @@ describe('vault session storage', () => {
     expect(hydrateBiometric).toHaveBeenCalledTimes(1);
   });
 
-  it('routes unlock, reads, and writes through the restored wa-sqlite repository after restart', async () => {
+  it('routes unlock, backup reads, and import writes through the restored wa-sqlite repository after restart', async () => {
     const storedItem = sampleItem({ id: 'restored-item', title: 'Restored wa-sqlite Item' });
     const savedItem = sampleItem({ id: 'saved-item', title: 'Saved After Restore' });
+    const importedItem = sampleItem({ id: 'imported-item', title: 'Imported After Restore' });
     const restoredRepository = {
       ...sqliteOPFSInstance,
       hydrate: vi.fn(async () => undefined),
       verifyPassword: vi.fn(() => true),
       getVaultItems: vi.fn(() => [storedItem]),
       saveVaultItem: vi.fn(() => [storedItem, savedItem]),
+      saveVaultItems: vi.fn(() => [storedItem, importedItem]),
     };
     restorePersistedActiveVaultStorageBackend.mockImplementationOnce(async () => {
       getVaultStorageRepository.mockReturnValue(restoredRepository);
@@ -172,14 +174,17 @@ describe('vault session storage', () => {
     await expect(verifyMasterPassword('master-pass')).resolves.toBe(true);
     await expect(getVaultItems()).resolves.toEqual([storedItem]);
     await expect(saveVaultItem(savedItem)).resolves.toEqual([storedItem, savedItem]);
+    await expect(saveVaultItems([importedItem])).resolves.toEqual([storedItem, importedItem]);
 
     expect(restoredRepository.hydrate).toHaveBeenCalledTimes(1);
     expect(restoredRepository.verifyPassword).toHaveBeenCalledWith('master-pass');
     expect(restoredRepository.getVaultItems).toHaveBeenCalledWith('master-pass');
     expect(restoredRepository.saveVaultItem).toHaveBeenCalledWith(savedItem, 'master-pass');
+    expect(restoredRepository.saveVaultItems).toHaveBeenCalledWith([importedItem], 'master-pass');
     expect(sqliteOPFSInstance.verifyPassword).not.toHaveBeenCalled();
     expect(sqliteOPFSInstance.getVaultItems).not.toHaveBeenCalled();
     expect(sqliteOPFSInstance.saveVaultItem).not.toHaveBeenCalled();
+    expect(sqliteOPFSInstance.saveVaultItems).not.toHaveBeenCalled();
   });
 
   it('opens an in-memory session during setup without writing the master password to sessionStorage', async () => {

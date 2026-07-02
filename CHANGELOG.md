@@ -12,7 +12,7 @@ All notable Aegis Vault 7 changes are tracked here. The project follows a securi
 - Desktop signing report support for Windows Authenticode, macOS codesign/spctl checks, and Linux artifact signing policy notes.
 - Desktop version consistency gate across `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and `src-tauri/Cargo.lock`.
 - wa-sqlite migration UI smoke coverage and active-backend migration safety gates.
-- wa-sqlite restored-backend restart routing coverage so unlock, reads, and writes prove they use the promoted repository after app initialization.
+- wa-sqlite restored-backend restart routing coverage so unlock, backup reads, and import writes prove they use the promoted repository after app initialization.
 - Android release gate evidence for signed APK candidates, fresh install checks, artifact metadata, SHA-256 hashes, ABI checks, signing checks, and device smoke reports.
 - Android Autofill provider flow with diagnostics, domain/package validation, stale-request protection, and browser compatibility notes.
 - Android document picker flows for encrypted backup export, plain JSON export, encrypted import, attachment download, and Emergency Kit saving.
