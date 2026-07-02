@@ -64,8 +64,10 @@ function copyDirectory(source, dirName) {
   return destination;
 }
 
-function firstMatch(predicate) {
-  return walk(targetDir).find(predicate) || null;
+function newestMatch(predicate) {
+  return allMatches(predicate)
+    .filter(file => fs.existsSync(file))
+    .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs)[0] || null;
 }
 
 function allMatches(predicate) {
@@ -79,8 +81,8 @@ function normalizeName(kind, ext) {
 function collectWindows() {
   const artifacts = [];
   const releaseExe = path.join(targetDir, 'release', 'aegis-vault-v7.exe');
-  const msi = firstMatch(file => file.includes(`${path.sep}release${path.sep}bundle${path.sep}msi${path.sep}`) && file.toLowerCase().endsWith('.msi'));
-  const setup = firstMatch(file => file.includes(`${path.sep}release${path.sep}bundle${path.sep}nsis${path.sep}`) && file.toLowerCase().endsWith('.exe'));
+  const msi = newestMatch(file => file.includes(`${path.sep}release${path.sep}bundle${path.sep}msi${path.sep}`) && file.toLowerCase().endsWith('.msi'));
+  const setup = newestMatch(file => file.includes(`${path.sep}release${path.sep}bundle${path.sep}nsis${path.sep}`) && file.toLowerCase().endsWith('.exe'));
 
   if (fs.existsSync(releaseExe)) {
     artifacts.push(copyFile(releaseExe, normalizeName('x64-portable', '.exe')));
