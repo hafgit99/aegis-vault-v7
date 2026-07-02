@@ -4,13 +4,6 @@
  */
 
 import { VaultItem } from '../types';
-import {
-  decryptLegacyAes256Gcm,
-  generateLegacyArgon2idHash,
-  generateLegacyArgon2idKey,
-  verifyLegacyArgon2idHash,
-  type EncryptedPayload,
-} from './legacyCrypto';
 import { secureRandomBytes, secureRandomToken } from './random';
 import {
   createEmptyVaultDatabaseState,
@@ -81,7 +74,6 @@ class SQLiteOPFS implements VaultStorageRepository {
   private cachedPasswordBytes: Uint8Array | null = null;
   private cachedKeySalt: string | null = null;
   private cachedKeyBytes: Uint8Array | null = null;
-  private cachedLegacyKeyBytes: Uint8Array | null = null;
 
   // Decrypted items cache Map: row.id -> { enc_metadata: string, item: VaultItem }
   private decryptedItemsCache = new Map<string, { enc_metadata: string; item: VaultItem }>();
@@ -112,16 +104,12 @@ class SQLiteOPFS implements VaultStorageRepository {
     if (this.cachedKeyBytes) {
       this.cachedKeyBytes.fill(0);
     }
-    if (this.cachedLegacyKeyBytes) {
-      this.cachedLegacyKeyBytes.fill(0);
-    }
     if (this.cachedPasswordBytes) {
       this.cachedPasswordBytes.fill(0);
     }
     this.cachedPasswordBytes = null;
     this.cachedKeySalt = null;
     this.cachedKeyBytes = null;
-    this.cachedLegacyKeyBytes = null;
     this.decryptedItemsCache.clear();
   }
 
@@ -362,7 +350,7 @@ class SQLiteOPFS implements VaultStorageRepository {
     if (isSetup && legacyPass && legacyItemsStr) {
       try {
         const passwordPlain = atob(legacyPass);
-        const argonHash = generateLegacyArgon2idHash(passwordPlain);
+        const argonHash = await createArgon2idHash(passwordPlain, secureRandomToken(16));
 
         this.state.user_secrets = [{
           username: 'owner',
@@ -425,13 +413,7 @@ class SQLiteOPFS implements VaultStorageRepository {
         return true;
       }
     }
-
-    const isLegacyMatch = verifyLegacyArgon2idHash(password, expectedHash);
-    if (isLegacyMatch) {
-      this.state.user_secrets[0].argon_hash = await createArgon2idHash(password, secureRandomToken(16));
-      await this.saveToPersistentStorage();
-    }
-    return isLegacyMatch;
+    return false;
   }
 
   /**
@@ -548,21 +530,6 @@ class SQLiteOPFS implements VaultStorageRepository {
     return key;
   }
 
-  private deriveLegacyEncryptionKey(password: string): Uint8Array {
-    const passwordBytes = new TextEncoder().encode(password);
-    if (this.areByteArraysEqual(this.cachedPasswordBytes, passwordBytes) && this.cachedLegacyKeyBytes) {
-      passwordBytes.fill(0);
-      return this.cachedLegacyKeyBytes;
-    }
-    const key = generateLegacyArgon2idKey(password, 'static_db_salt', 1024, 3, 2, 32);
-    if (this.cachedPasswordBytes) {
-      this.cachedPasswordBytes.fill(0);
-    }
-    this.cachedPasswordBytes = passwordBytes;
-    this.cachedLegacyKeyBytes = key;
-    return key;
-  }
-
   /**
    * Retrieves and decrypts SQLite relational items on-the-fly.
    */
@@ -577,7 +544,6 @@ class SQLiteOPFS implements VaultStorageRepository {
     try {
       const originalSalt = this.getCurrentVaultEncryptionSalt();
       const derivedKey = await this.deriveEncryptionKey(masterPasswordPlain, originalSalt);
-      const legacyDerivedKey = this.deriveLegacyEncryptionKey(masterPasswordPlain);
       const shouldMigrateKdf = !this.state.kdfParams;
       const shouldMigrateStaticSalt = !this.state.encryption_salt;
       const migratedSalt = shouldMigrateStaticSalt ? this.createVaultEncryptionSalt() : this.state.encryption_salt;
@@ -617,22 +583,21 @@ class SQLiteOPFS implements VaultStorageRepository {
             if (cachedEntry && cachedEntry.enc_metadata === row.enc_metadata) {
               decryptedJson = JSON.stringify(cachedEntry.item);
             } else {
-              const encryptedPayload: EncryptedPayload = JSON.parse(row.enc_metadata);
-              decryptedJson = isLegacyRow
-                ? decryptLegacyAes256Gcm(encryptedPayload, legacyDerivedKey)
-                : await webCryptoAesGcmDecrypt(encryptedPayload as WebCryptoAesGcmPayload, derivedKey);
+              if (isLegacyRow) {
+                logSecurityEvent(
+                  'security.legacyCryptoWarning' as any,
+                  'Legacy custom-crypto SQLite rows are no longer decrypted in this build. Re-export from an earlier migration build first.',
+                  'critical'
+                );
+                throw new Error('legacy-custom-crypto-row-unsupported');
+              }
+              const encryptedPayload: WebCryptoAesGcmPayload = JSON.parse(row.enc_metadata);
+              decryptedJson = await webCryptoAesGcmDecrypt(encryptedPayload, derivedKey);
             }
 
             const originalItem: VaultItem = JSON.parse(decryptedJson);
 
             if (isLegacyRow || shouldMigrateStaticSalt || shouldMigrateKdf) {
-              if (isLegacyRow && !migratedLegacyRows) {
-                logSecurityEvent(
-                  'security.legacyCryptoWarning' as any,
-                  'Legacy SQLite database rows with old KDF detected. Migrating rows to modern Argon2id AES-256-GCM format.',
-                  'warning'
-                );
-              }
               const encrypted = await webCryptoAesGcmEncrypt(decryptedJson, migrationKey, generateSafeIv());
               row.enc_metadata = JSON.stringify(encrypted);
               row.enc_kdf = VAULT_ITEM_KDF;

@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { decryptLegacyAes256Gcm, hmacSha256 } from './legacyCrypto';
 import { secureRandomBytes } from './random';
 import { APP_NAME, APP_SHORT_NAME } from './branding';
 import {
@@ -30,44 +29,6 @@ export class BiometricError extends Error {
     super(code);
     this.name = 'BiometricError';
   }
-}
-
-/**
- * PBKDF2-SHA256 Implementation using pure TS hmacSha256
- */
-export function pbkdf2Sha256(password: Uint8Array, salt: Uint8Array, iterations: number, keyLen: number): Uint8Array {
-  const hLen = 32; // SHA-256 length is 32 bytes
-  const l = Math.ceil(keyLen / hLen);
-  const dk = new Uint8Array(keyLen);
-  
-  for (let i = 1; i <= l; i++) {
-    // block number as big-endian 32-bit integer
-    const blockNum = new Uint8Array(4);
-    blockNum[0] = (i >>> 24) & 0xff;
-    blockNum[1] = (i >>> 16) & 0xff;
-    blockNum[2] = (i >>> 8) & 0xff;
-    blockNum[3] = i & 0xff;
-    
-    const salted = new Uint8Array(salt.length + blockNum.length);
-    salted.set(salt, 0);
-    salted.set(blockNum, salt.length);
-    
-    let u = hmacSha256(password, salted);
-    const t = new Uint8Array(u);
-    
-    for (let j = 2; j <= iterations; j++) {
-      u = hmacSha256(password, u);
-      for (let k = 0; k < hLen; k++) {
-        t[k] ^= u[k];
-      }
-    }
-    
-    const offset = (i - 1) * hLen;
-    const chunkLen = Math.min(hLen, keyLen - offset);
-    dk.set(t.subarray(0, chunkLen), offset);
-  }
-  
-  return dk;
 }
 
 async function deriveWebCryptoPbkdf2Key(password: Uint8Array, salt: Uint8Array, iterations: number, keyLen: number): Promise<Uint8Array> {
@@ -482,8 +443,7 @@ export async function authenticateBiometric(): Promise<string> {
       return webCryptoAesGcmDecrypt(biometricInfo.bundle, wrappingKey);
     }
 
-    const legacyWrappingKey = pbkdf2Sha256(rawIdBytes, saltBytes, 10000, 32);
-    return decryptLegacyAes256Gcm(biometricInfo.bundle, legacyWrappingKey);
+    throw new BiometricError(biometricErrorCodes.integrityMismatch);
   } catch (e) {
     throw new BiometricError(biometricErrorCodes.integrityMismatch);
   }

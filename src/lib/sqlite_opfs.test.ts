@@ -879,7 +879,7 @@ describe('SQLite OPFS persistence engine', () => {
     expect(mockedDerive).toHaveBeenCalledTimes(2);
   });
 
-  it('caches legacy encryption key and decrypted vault items to prevent redundant decryption/KDF steps', async () => {
+  it('caches decrypted vault items without retaining legacy crypto keys', async () => {
     const sqlite = await freshSqliteInstance();
     await sqlite.setupMaster('master-pass');
 
@@ -895,10 +895,7 @@ describe('SQLite OPFS persistence engine', () => {
     const cacheMap = (sqlite as any).decryptedItemsCache as Map<string, any>;
     expect(cacheMap.has('cache-perf-1')).toBe(true);
     expect(cacheMap.get('cache-perf-1')?.item.title).toBe(item.title);
-
-    // Legacy KDF key should be cached
-    const legacyKey = (sqlite as any).cachedLegacyKeyBytes;
-    expect(legacyKey).toBeInstanceOf(Uint8Array);
+    expect((sqlite as any).cachedLegacyKeyBytes).toBeUndefined();
 
     // Retrieve items again - should hit the cache
     const items2 = await sqlite.getVaultItems('master-pass');
@@ -907,7 +904,6 @@ describe('SQLite OPFS persistence engine', () => {
 
     // clearDerivedKeyCache should wipe both caches
     sqlite.clearDerivedKeyCache();
-    expect((sqlite as any).cachedLegacyKeyBytes).toBeNull();
     expect(cacheMap.size).toBe(0);
   });
 });

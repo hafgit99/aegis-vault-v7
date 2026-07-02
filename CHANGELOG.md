@@ -33,6 +33,7 @@ All notable Aegis Vault 7 changes are tracked here. The project follows a securi
 
 ### Security
 
+- Removed legacy custom crypto decrypt/KDF fallback primitives from production paths; old backup/database compatibility now fails closed instead of using pure-JS SHA/HMAC/HKDF/simulated-Argon2id/AES helpers.
 - Switched WebCrypto AES-GCM IV generation to fresh 12-byte CSPRNG nonces for every encryption operation.
 - Clear imported WebCrypto AES-GCM key references on vault session close.
 - Hardened air-gap defense with stricter Tauri CSP directives and runtime WebRTC blocking.

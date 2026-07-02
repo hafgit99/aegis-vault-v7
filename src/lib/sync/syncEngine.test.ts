@@ -19,9 +19,6 @@ vi.mock('../argon2id', () => ({
   }),
 }));
 
-vi.mock('../legacyCrypto', () => ({
-  decryptLegacyDataWithPassword: vi.fn(async () => '[]'),
-}));
 
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

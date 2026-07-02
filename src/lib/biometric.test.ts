@@ -20,7 +20,6 @@ import {
   disableBiometric,
   isBiometricEnabled,
   isBiometricSupported,
-  pbkdf2Sha256,
   registerBiometric,
   hydrateBiometric,
   resetBiometricCacheForTesting,
@@ -29,11 +28,6 @@ import {
 
 const rawId = new Uint8Array([1, 2, 3, 4]).buffer;
 const encoder = new TextEncoder();
-
-function bytesToHex(bytes: Uint8Array): string {
-  return Array.from(bytes).map((byte) => byte.toString(16).padStart(2, '0')).join('');
-}
-
 function bytesToBase64(bytes: Uint8Array): string {
   return btoa(String.fromCharCode(...bytes));
 }
@@ -120,16 +114,6 @@ afterEach(async () => {
 });
 
 describe('biometric master password wrapper', () => {
-  it('derives deterministic PBKDF2-SHA256 keys for legacy biometric bundles', () => {
-    const singleBlock = pbkdf2Sha256(encoder.encode('password'), encoder.encode('salt'), 1, 32);
-    const multiBlock = pbkdf2Sha256(encoder.encode('password'), encoder.encode('salt'), 2, 48);
-
-    expect(bytesToHex(singleBlock)).toBe('120fb6cffcf8b32c43e7225256c4f837a86548c92ccc35480805987cb70be17b');
-    expect(bytesToHex(multiBlock).slice(0, 64)).toBe(
-      'ae4d0c95af6b46d32d0adff928f06dd02a303f8ef3c251dfd6e2d85a95474c43',
-    );
-    expect(multiBlock).toHaveLength(48);
-  });
 
   it('reports support and disabled state before setup', () => {
     expect(isBiometricSupported()).toBe(true);
@@ -251,7 +235,7 @@ describe('biometric master password wrapper', () => {
     await expect(authenticateBiometric()).rejects.toThrow();
   });
 
-  it('rejects legacy biometric bundles that fail compatibility decrypt checks', async () => {
+  it('rejects removed legacy biometric bundles', async () => {
     await putStoredBiometricIntoDB({
       version: 1,
       credentialId: bytesToBase64(new Uint8Array(rawId)),

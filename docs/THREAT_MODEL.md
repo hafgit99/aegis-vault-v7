@@ -57,7 +57,7 @@ Defended against:
 Partially defended against:
 
 - Someone with local user-account access to application storage. Vault item payloads and new attachments are encrypted, but profile settings, UI preferences, and some metadata may remain readable.
-- Someone with access to legacy data written before current hardening. Legacy XOR attachment records are readable through a compatibility fallback until the AES-GCM migration is run and fallback support is removed.
+- Someone with access to legacy data written before current hardening. Legacy custom-crypto backup/database fallbacks are now rejected; older secure attachment migration remains limited to current authenticated formats.
 - Someone with a valid unlocked desktop session. Auto-lock and reveal reset reduce exposure, but unlocked state is still trusted state.
 
 Not defended against:
@@ -103,7 +103,7 @@ Attachments:
 - New attachment writes use WebCrypto AES-GCM.
 - Attachment keys are derived from the active vault session and attachment id.
 - AES-GCM tag verification rejects tampered attachment records.
-- Legacy XOR attachment records remain readable for migration compatibility and are rewritten to AES-GCM after successful unlock.
+- Legacy XOR attachment records are rejected. Older secure attachment records that still match supported authenticated formats are rewritten to AES-GCM after successful unlock.
 
 Biometric unlock:
 
@@ -121,7 +121,7 @@ Network:
 
 - Production builds install an air-gap policy around browser network primitives.
 - App-local/Tauri IPC URLs and exact five-character HIBP SHA-1 range checks are allowed.
-- Unexpected outbound `fetch`, XHR, WebSocket, `sendBeacon`, and EventSource destinations are blocked and logged as security events.
+- Unexpected outbound `fetch`, XHR, WebSocket, `sendBeacon`, EventSource, and WebRTC destinations are blocked and logged as security events.
 - HIBP password checks use the range API: the app computes SHA-1 locally and sends only the first five hash characters. Full password hashes and plaintext passwords are not sent.
 
 ## Recovery Model
@@ -151,9 +151,9 @@ Required user-facing recovery rules:
 
 | Risk | Current status | Planned mitigation |
 | --- | --- | --- |
-| Custom cryptographic primitives are isolated in read-only legacy backup and compatibility paths | Open | Replace or remove remaining custom AES/GCM simulation fallbacks |
+| Legacy custom cryptographic primitives in `legacyCrypto.ts` | Mitigated | Removed from production decrypt paths; keep fail-closed tests in place |
 | Simulated SQLite/OPFS persistence naming overstates implementation | Open | Decide final desktop storage adapter and align naming |
-| Legacy XOR attachment fallback remains readable | Partially mitigated | Remove fallback after migrated installs have aged out |
+| Legacy XOR attachment fallback | Mitigated | Rejected instead of decrypted |
 | Active master password lives in process memory while unlocked | Partially mitigated | Byte buffers are zeroized on lock; move secret operations into native adapters where practical |
 | Clipboard can keep copied secrets after OS capture or user clipboard changes | Partially mitigated | Safe clearing removes unchanged copied secrets; hostile OS clipboard capture remains out of scope |
 | TOTP follows RFC 6238 for HMAC-SHA1/SHA-256/SHA-512 and accepts `otpauth://totp` imports, but broad provider QR compatibility still needs manual verification | Mitigated with residual validation risk | Add fixture coverage from more authenticator exports before broad public release |
@@ -183,6 +183,6 @@ Claims to avoid until fixed:
 
 1. Align the simulated SQLite naming with the finalized Tauri app data persistence strategy.
 2. Complete final Android biometric wrapping review on target devices.
-3. Replace remaining legacy custom AES/GCM simulation fallbacks.
+3. Move vault storage/KDF/decrypt operations into native adapters if strict no-JS-master-string handling becomes a release requirement.
 4. Decide whether plaintext JSON export remains available in release builds.
 5. Review public release branding and installer identity before publishing signed artifacts.

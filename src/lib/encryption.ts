@@ -6,13 +6,13 @@
 import { secureRandomBytes } from './random';
 import { deriveArgon2idKey } from './argon2id';
 import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, generateSafeIv } from './webcrypto';
-import { decryptLegacyDataWithPassword } from './legacyCrypto';
 
 export const secureBackupErrorCodes = {
   invalidJson: 'secureBackup.invalidJson',
   missingFields: 'secureBackup.missingFields',
   checksumMismatch: 'secureBackup.checksumMismatch',
   weakKdfParams: 'secureBackup.weakKdfParams',
+  unsupportedLegacyEnvelope: 'secureBackup.unsupportedLegacyEnvelope',
 } as const;
 
 export type SecureBackupErrorCode = (typeof secureBackupErrorCodes)[keyof typeof secureBackupErrorCodes];
@@ -74,7 +74,7 @@ export async function decryptDataWithPasswordSecure(envelopeJsonStr: string, pas
   }
 
   if (parsed.kdfImplementation !== 'argon2-browser') {
-    return decryptLegacyDataWithPassword(envelopeJsonStr, password);
+    throw new SecureBackupError(secureBackupErrorCodes.unsupportedLegacyEnvelope);
   }
 
   if (!parsed.salt || !parsed.iv || !parsed.tag || !parsed.payload || !parsed.checksum) {

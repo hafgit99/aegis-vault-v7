@@ -6,7 +6,7 @@ This project is a password vault, so security claims must stay conservative unti
 
 - Password generation now uses a centralized secure randomness helper.
 - Diceware, biometric challenge generation, import IDs, attachment IDs, and simulated SQLite log IDs now use the same helper.
-- Master password verification now uses vetted Argon2id hashes and upgrades legacy simulated hashes after successful unlock.
+- Master password verification now uses vetted Argon2id hashes; legacy simulated hash verification has been removed from the active unlock path.
 - Active vault unlock state now uses an in-memory session helper instead of storing the master password in browser `sessionStorage`.
 - New attachment writes use WebCrypto AES-GCM with per-attachment keys derived from the active vault session.
 - New biometric master-password wrapping uses WebCrypto PBKDF2-SHA256 and AES-GCM.
@@ -14,7 +14,7 @@ This project is a password vault, so security claims must stay conservative unti
 - Tauri CSP now adds native defense-in-depth restrictions for frames, objects, forms, workers, media, and outbound connections; runtime air-gap guards also block WebRTC construction.
 - Imported WebCrypto AES-GCM key references are cleared automatically when the vault session closes.
 - WebCrypto AES-GCM IV generation now uses a fresh 12-byte CSPRNG nonce for every encryption operation instead of process-local counter state.
-- Legacy backup encryption writer paths have been removed from the public API.
+- Legacy backup encryption writer and decrypt fallback paths have been removed from the public API.
 - Vault database payloads now include a versioned schema envelope with migration tests for legacy unversioned state.
 - Desktop vault persistence now mirrors database state through the Tauri app data directory.
 - Desktop import/export now uses controlled native Windows file dialogs.
@@ -44,9 +44,9 @@ This project is a password vault, so security claims must stay conservative unti
 
 ## Known Security Debt
 
-- `src/lib/legacyCrypto.ts` is quarantined as compatibility-only technical debt. It still contains pure-JS SHA-256/HMAC/HKDF/simulated-Argon2id/AES code for legacy migration and must not be used for new encryption; the remaining decrypt fallbacks should be removed or moved to audited native code before a public production release.
+- `src/lib/legacyCrypto.ts` no longer ships custom SHA/HMAC/HKDF/simulated-Argon2id/AES decrypt primitives. It remains only as a fail-closed error-code boundary for old UI mappings.
 - Legacy XOR attachment records are rejected; older secure legacy attachment formats are migration-only and are rewritten to current AES-GCM storage after successful unlock.
-- `src/lib/vaultSession.ts` stores active master/backup secrets as zeroized `Uint8Array` process-memory state during an unlocked session. Existing JS storage boundaries can still temporarily materialize immutable JavaScript strings; new sensitive decrypt/KDF work should move toward scoped or native secret handling.
+- `src/lib/vaultSession.ts` stores active master/backup secrets as zeroized `Uint8Array` process-memory state during an unlocked session. Existing JS storage repositories still require temporary immutable JavaScript strings for KDF/decrypt calls; fully eliminating that requires moving vault storage/KDF/decrypt operations into native adapters.
 - `src/lib/sqlite_opfs.ts` is a simulated SQLite/OPFS layer backed by versioned serialized JSON state. The naming and implementation should be aligned with the actual persistence strategy.
 - `src/lib/otp.ts` supports the common RFC 6238 HMAC-SHA1 path plus SHA-256/SHA-512 algorithm variants and `otpauth://totp` URI parsing for issuer/account imports.
 - Product copy should continue to be reviewed before release so public claims stay aligned with the verified implementation.
@@ -61,5 +61,5 @@ This project is a password vault, so security claims must stay conservative unti
 2. Decide the final vault session handling and whether native secret handling should move master-secret operations into Rust/mobile platform code.
 3. Complete manual Android biometric wrapping release review on target devices.
 4. Validate TOTP interoperability against more real-world authenticator exports and service QR payloads.
-5. Remove or quarantine remaining legacy custom crypto fallbacks before public release.
+5. Move vault storage/KDF/decrypt operations into native adapters if the project requires a strict no-JS-master-string security boundary.
 6. Continue release-copy review as features move from beta to public release.

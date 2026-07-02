@@ -124,12 +124,12 @@
   - [x] Encrypted backup export/import uses vetted Argon2id adapter.
   - [x] Master password verification hashes use vetted Argon2id with legacy hash upgrade.
   - [x] Vault item encryption keys use the vetted Argon2id adapter with legacy row migration.
-- [ ] Replace custom AES/GCM simulation with WebCrypto AES-GCM or a vetted crypto library.
+- [x] Replace custom AES/GCM simulation with WebCrypto AES-GCM or fail-closed rejection.
   - [x] Encrypted backup export/import uses WebCrypto AES-GCM.
   - [x] Biometric master-password wrapping uses WebCrypto AES-GCM.
   - [x] New vault item metadata writes and localStorage migration writes use WebCrypto AES-GCM.
-  - [x] Legacy backup encryption writer removed; remaining custom AES is read-only compatibility fallback.
-  - [x] Read-only legacy crypto fallbacks isolated from the secure backup module.
+  - [x] Legacy backup encryption writer and decrypt fallback removed.
+  - [x] `legacyCrypto.ts` reduced to a fail-closed error boundary with no custom decrypt primitives.
   - [x] Legacy XOR attachment migration runs automatically after successful unlock.
 - [x] Remove base64 master password storage from `sessionStorage`.
 - [x] Replace attachment XOR encryption with authenticated encryption.
@@ -170,13 +170,13 @@
   - [x] Expand settings panel reset, drag-drop import, decrypt-error, and export-failure coverage.
   - [x] Expand vault form legacy edit fallback and attachment metadata coverage.
   - [x] Expand clipboard helper failure and unavailable-API coverage.
-  - [x] Expand secure backup envelope malformed JSON, legacy routing, and checksum tamper coverage.
+  - [x] Expand secure backup envelope malformed JSON, removed-legacy rejection, and checksum tamper coverage.
   - [x] Expand biometric WebAuthn support, cancellation, disable, and missing-bundle coverage.
   - [x] Expand random helper fallback, UUID formatting, unbiased-index retry, and empty-token coverage.
   - [x] Expand importer sparse JSON, Bitwarden type, CSV category, and fallback-default coverage.
-  - [x] Expand SQLite desktop payload, legacy migration, SQL projection, update/default, and missing-key guard coverage.
-  - [x] Expand legacy crypto hash, KDF, authenticated decrypt, tamper, stream fallback, and malformed-envelope coverage.
-  - [x] Expand biometric PBKDF2, WebAuthn option, request option, metadata, and legacy unwrap failure coverage.
+  - [x] Expand SQLite desktop payload, plaintext legacy localStorage migration to modern crypto, SQL projection, update/default, and missing-key guard coverage.
+  - [x] Replace legacy crypto primitive coverage with fail-closed removed-boundary coverage.
+  - [x] Expand biometric WebCrypto PBKDF2, WebAuthn option, request option, metadata, and removed-legacy unwrap failure coverage.
   - [x] Expand attachment AES-GCM metadata, MIME fallback, FileReader failure, and stored decrypt failure coverage.
   - [x] Expand SQLite OPFS file hydration, missing-file initialization, write-failure, and desktop-read fallback coverage.
   - [x] Add Playwright smoke E2E coverage for setup, create item, lock, unlock, and persistence.

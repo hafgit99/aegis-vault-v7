@@ -5,7 +5,6 @@ import {
   SecureBackupError,
   secureBackupErrorCodes,
 } from './encryption';
-import { decryptLegacyDataWithPassword } from './legacyCrypto';
 
 vi.mock('./argon2id', () => ({
   deriveArgon2idKey: vi.fn(async (password: string) => {
@@ -17,9 +16,6 @@ vi.mock('./argon2id', () => ({
   }),
 }));
 
-vi.mock('./legacyCrypto', () => ({
-  decryptLegacyDataWithPassword: vi.fn(async () => 'legacy decrypted export'),
-}));
 
 describe('encrypted backup envelope', () => {
   it('roundtrips encrypted backup data with the correct password', async () => {
@@ -56,17 +52,17 @@ describe('encrypted backup envelope', () => {
     });
   });
 
-  it('routes non-argon2-browser envelopes through the legacy decryptor', async () => {
+  it('rejects non-argon2-browser legacy envelopes instead of routing to custom crypto', async () => {
     const legacyEnvelope = JSON.stringify({
       version: '1.0',
       kdf: 'Legacy PBKDF',
       payload: 'legacy-ciphertext',
     });
 
-    await expect(decryptDataWithPasswordSecure(legacyEnvelope, 'legacy-password')).resolves.toBe(
-      'legacy decrypted export',
-    );
-    expect(decryptLegacyDataWithPassword).toHaveBeenCalledWith(legacyEnvelope, 'legacy-password');
+    await expect(decryptDataWithPasswordSecure(legacyEnvelope, 'legacy-password')).rejects.toMatchObject({
+      code: secureBackupErrorCodes.unsupportedLegacyEnvelope,
+      name: 'SecureBackupError',
+    });
   });
 
   it('rejects secure envelopes that are missing required security fields', async () => {
