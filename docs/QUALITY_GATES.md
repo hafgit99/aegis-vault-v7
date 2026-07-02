@@ -378,7 +378,7 @@ Recently improved:
 - Add desktop final checklist evidence gate:
   - `npm run desktop:release:evidence -- --require-completed-checklist` before publishing desktop artifacts after the copied manual smoke checklist is completed.
   - `npm run desktop:release:evidence:summary -- --platform <windows|linux|macos> --final` to print a desktop PASS/BLOCKED evidence summary.
-- Continue smoke E2E expansion beyond the current 21 Chromium scenarios, with next focus on mobile smoke viewports and wa-sqlite active-backend restart coverage.
+- Continue smoke E2E expansion beyond the current 24 Chromium scenarios, with next focus on wa-sqlite active-backend restart coverage and Android-specific manual parity checks.
 - Push importer helper and storage orchestration mutation scores toward the 90% high threshold, then expand mutation testing into SQLite migration modules.
 - Keep global coverage thresholds at or above 90% lines/statements, 85% functions, and 80% branches; raise them again after the current priority targets improve.
 

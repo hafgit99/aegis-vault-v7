@@ -393,9 +393,10 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
 
         {/* Tab Selection Row for 5 Distinct Categories */}
         <div className="px-3 sm:px-6 py-2 sm:py-3 border-b border-outline-variant/5 bg-[#090a09]/95 shrink-0 overflow-x-auto scrollbar-hide">
-          <div className="grid grid-cols-5 gap-1.5 sm:gap-2 min-w-[430px] sm:min-w-0">
+          <div data-testid="vault-item-category-tabs" className="grid grid-cols-5 gap-1.5 sm:gap-2 min-w-[430px] sm:min-w-0">
           
           <button
+            data-testid="vault-item-category-login"
             type="button"
             onClick={() => setCategory('login')}
             className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 border transition-all text-center cursor-pointer ${
@@ -409,6 +410,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
           </button>
 
           <button
+            data-testid="vault-item-category-card"
             type="button"
             onClick={() => setCategory('card')}
             className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 border transition-all text-center cursor-pointer ${
@@ -422,6 +424,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
           </button>
 
           <button
+            data-testid="vault-item-category-passkey"
             type="button"
             onClick={() => setCategory('passkey')}
             className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 border transition-all text-center cursor-pointer ${
@@ -435,6 +438,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
           </button>
 
           <button
+            data-testid="vault-item-category-identity"
             type="button"
             onClick={() => setCategory('identity')}
             className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 border transition-all text-center cursor-pointer ${
@@ -448,6 +452,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
           </button>
 
           <button
+            data-testid="vault-item-category-secure-note"
             type="button"
             onClick={() => setCategory('secure_note')}
             className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 border transition-all text-center cursor-pointer ${
