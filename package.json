@@ -75,7 +75,9 @@
     "wa-sqlite:final:gate:unit": "node scripts/wa-sqlite-final-gate.cjs --skip-e2e",
     "wa-sqlite:final:gate:dry": "node scripts/wa-sqlite-final-gate.cjs --dry-run",
     "desktop:release:import": "node scripts/desktop-release-import-artifacts.cjs",
-    "security:no-js-master-string": "node scripts/security-no-js-master-string.cjs"
+    "security:no-js-master-string": "node scripts/security-no-js-master-string.cjs",
+    "audit:checksums": "node scripts/generate-audit-package-checksums.cjs",
+    "audit:checksums:verify": "node scripts/generate-audit-package-checksums.cjs --verify"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",
