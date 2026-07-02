@@ -33,6 +33,9 @@ All notable Aegis Vault 7 changes are tracked here. The project follows a securi
 
 ### Security
 
+- Switched WebCrypto AES-GCM IV generation to fresh 12-byte CSPRNG nonces for every encryption operation.
+- Clear imported WebCrypto AES-GCM key references on vault session close.
+- Hardened air-gap defense with stricter Tauri CSP directives and runtime WebRTC blocking.
 - Removed insecure random fallback behavior; cryptographic randomness requires WebCrypto CSPRNG.
 - Replaced non-standard TOTP generation with RFC 6238-compatible behavior.
 - Reworked master session handling away from plaintext string persistence and toward zeroizable byte/session handling where JavaScript constraints allow.

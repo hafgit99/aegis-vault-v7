@@ -138,4 +138,20 @@ describe('air-gap network policy', () => {
       source: 'AegisSecurity',
     }));
   });
+
+  it('blocks RTCPeerConnection after policy installation', async () => {
+    const NativeRTCPeerConnection = vi.fn();
+    vi.stubGlobal('RTCPeerConnection', NativeRTCPeerConnection);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { installAirgapNetworkPolicy } = await import('./airgapNetworkPolicy');
+
+    installAirgapNetworkPolicy();
+
+    expect(() => new RTCPeerConnection()).toThrow('WebRTC is blocked');
+    expect(NativeRTCPeerConnection).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({
+      code: 'network.blocked',
+      source: 'AegisSecurity',
+    }));
+  });
 });

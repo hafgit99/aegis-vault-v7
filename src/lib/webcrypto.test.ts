@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
+import { closeVaultSession } from './vaultSession';
 import {
   webCryptoAesGcmDecrypt,
   webCryptoAesGcmDecryptBytes,
   webCryptoAesGcmEncrypt,
   webCryptoAesGcmEncryptBytes,
   generateSafeIv,
+  getImportedAesGcmKeyCacheSizeForTest,
 } from './webcrypto';
 
 describe('WebCrypto AES-GCM adapter', () => {
@@ -43,15 +45,22 @@ describe('WebCrypto AES-GCM adapter', () => {
     await expect(webCryptoAesGcmDecryptBytes(payload, key)).resolves.toEqual(input);
   });
 
-  it('generates unique, 12-byte counter-based safe nonces', () => {
+  it('generates independent 12-byte CSPRNG nonces', () => {
     const iv1 = generateSafeIv();
     const iv2 = generateSafeIv();
 
     expect(iv1).toHaveLength(12);
     expect(iv2).toHaveLength(12);
-    // Prefix (first 8 bytes) should be equal since they are generated in the same session
-    expect(iv1.slice(0, 8)).toEqual(iv2.slice(0, 8));
-    // Counters (last 4 bytes) should be different/incremented
-    expect(iv1[11] + 1).toBe(iv2[11]);
+    expect(iv1).not.toEqual(iv2);
+  });
+
+  it('clears imported AES-GCM key cache when the vault session closes', async () => {
+    const key = new Uint8Array(32).fill(5);
+
+    await webCryptoAesGcmEncrypt('cache me briefly', key, generateSafeIv());
+
+    expect(getImportedAesGcmKeyCacheSizeForTest()).toBeGreaterThan(0);
+    closeVaultSession();
+    expect(getImportedAesGcmKeyCacheSizeForTest()).toBe(0);
   });
 });

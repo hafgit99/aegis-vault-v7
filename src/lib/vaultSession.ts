@@ -40,10 +40,19 @@ export function closeVaultSession(): void {
   });
 }
 
+/**
+ * @deprecated Prefer scoped/native secret operations. This getter must only be
+ * used at boundaries that still require a JavaScript string until the vault
+ * KDF/decrypt path is moved fully into the native backend.
+ */
 export function getActiveMasterPassword(): string | null {
   return decodeSecret(activeMasterPasswordBytes);
 }
 
+/**
+ * @deprecated Prefer scoped/native secret operations. This getter materializes
+ * a temporary JavaScript string and should not be used by new storage paths.
+ */
 export function getActiveBackupPassword(): string | null {
   return decodeSecret(activeBackupPasswordBytes);
 }

@@ -161,4 +161,22 @@ export function installAirgapNetworkPolicy(): void {
     Object.assign(GuardedEventSource, NativeEventSource);
     globalThis.EventSource = GuardedEventSource;
   }
+
+  if (typeof RTCPeerConnection !== 'undefined') {
+    const GuardedRTCPeerConnection = function guardedRTCPeerConnection() {
+      logSecurityEvent(
+        securityEventCodes.networkBlocked,
+        'Blocked WebRTC connection by air-gap policy.',
+        'critical',
+        { url: 'webrtc:' },
+      );
+      throw new AegisSecurityError(
+        securityEventCodes.networkBlocked,
+        'WebRTC is blocked by Aegis Vault air-gap policy.',
+        'critical',
+      );
+    } as unknown as typeof RTCPeerConnection;
+
+    globalThis.RTCPeerConnection = GuardedRTCPeerConnection;
+  }
 }
