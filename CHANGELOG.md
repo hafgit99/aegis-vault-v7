@@ -33,6 +33,11 @@ All notable Aegis Vault 7 changes are tracked here. The project follows a securi
 
 ### Security
 
+- Hardened browser extension password generation by removing `Math.random`, replacing modulo selection with rejection-sampled CSPRNG indexes, and using CSPRNG Fisher-Yates shuffling.
+- Raised biometric PBKDF2-SHA256 wrapping cost for new WebAuthn and Android native biometric bundles to 600,000 iterations.
+- Hardened extension IPC pairing token validation with constant-time comparison and Unix/macOS `0600` token-file writes.
+- Replaced deprecated WebDAV Basic Auth `unescape` encoding and aligned HTTP local-network exceptions with RFC 1918 loopback/private-host checks.
+- Bounded the imported WebCrypto AES-GCM key cache at twenty entries.
 - Replaced production master/backup session getter usage with scoped session-secret callbacks across storage, attachments, Settings, biometric setup, encrypted export, and sync flows.
 - Removed legacy custom crypto decrypt/KDF fallback primitives from production paths; old backup/database compatibility now fails closed instead of using pure-JS SHA/HMAC/HKDF/simulated-Argon2id/AES helpers.
 - Switched WebCrypto AES-GCM IV generation to fresh 12-byte CSPRNG nonces for every encryption operation.

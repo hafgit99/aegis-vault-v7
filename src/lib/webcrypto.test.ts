@@ -63,4 +63,14 @@ describe('WebCrypto AES-GCM adapter', () => {
     closeVaultSession();
     expect(getImportedAesGcmKeyCacheSizeForTest()).toBe(0);
   });
+
+  it('bounds the imported AES-GCM key cache at twenty entries', async () => {
+    for (let index = 0; index < 25; index++) {
+      const key = new Uint8Array(32).fill(index + 1);
+      await webCryptoAesGcmEncrypt('cache-' + index, key, generateSafeIv());
+    }
+
+    expect(getImportedAesGcmKeyCacheSizeForTest()).toBeLessThanOrEqual(20);
+    closeVaultSession();
+  });
 });

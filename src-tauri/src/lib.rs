@@ -757,7 +757,7 @@ pub fn run() {
             if let Some(app_data_dir) = native_messaging::get_app_data_dir() {
                 let _ = fs::create_dir_all(&app_data_dir);
                 let token_path = app_data_dir.join(native_messaging::TOKEN_FILENAME);
-                let _ = fs::write(&token_path, &token);
+                let _ = native_messaging::write_pairing_token_file(&token_path, &token);
             }
 
             // Start TCP server

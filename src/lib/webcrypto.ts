@@ -63,7 +63,7 @@ async function importAesGcmKey(rawKey: Uint8Array): Promise<CryptoKey> {
   const key = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
   
   // Bound cache size
-  if (importedKeysCache.size > 20) {
+  if (importedKeysCache.size >= 20) {
     const firstKey = importedKeysCache.keys().next().value;
     if (firstKey !== undefined) importedKeysCache.delete(firstKey);
   }

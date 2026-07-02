@@ -11,6 +11,7 @@ import { addSyncAllowedOrigin } from '../airgapNetworkPolicy';
 // Allow test origins through the air-gap policy
 addSyncAllowedOrigin('https://nc.test.local');
 addSyncAllowedOrigin('http://localhost:8080');
+addSyncAllowedOrigin('http://172.16.0.2:8080');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -47,8 +48,13 @@ describe('WebDavSyncProvider constructor', () => {
     expect(() => new WebDavSyncProvider('http://localhost:8080/', 'u', 'p')).not.toThrow();
   });
 
+  it('accepts RFC 1918 172.16/12 URLs for local WebDAV testing', () => {
+    expect(() => new WebDavSyncProvider('http://172.16.0.2:8080/', 'u', 'p')).not.toThrow();
+  });
+
   it('rejects plain HTTP non-local URLs', () => {
     expect(() => new WebDavSyncProvider('http://remote.example.com/', 'u', 'p')).toThrow(SyncError);
+    expect(() => new WebDavSyncProvider('http://172.32.0.2:8080/', 'u', 'p')).toThrow(SyncError);
   });
 
   it('normalises URLs without trailing slash', () => {
@@ -199,11 +205,11 @@ describe('WebDavSyncProvider auth header', () => {
       return makeResponse(207);
     });
 
-    await new WebDavSyncProvider('https://nc.test.local/', 'alice', 'my-password').testConnection();
+    await new WebDavSyncProvider('https://nc.test.local/', 'alice', 'sifre-unicode').testConnection();
 
     const auth = (capturedHeaders as Record<string, string>)?.Authorization;
     expect(auth).toMatch(/^Basic /);
     const decoded = atob(auth.replace('Basic ', ''));
-    expect(decoded).toBe('alice:my-password');
+    expect(new TextDecoder().decode(Uint8Array.from(decoded, (char) => char.charCodeAt(0)))).toBe('alice:sifre-unicode');
   });
 });

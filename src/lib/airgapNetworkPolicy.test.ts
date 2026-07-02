@@ -154,4 +154,18 @@ describe('air-gap network policy', () => {
       source: 'AegisSecurity',
     }));
   });
+
+  it('classifies only loopback and RFC 1918 hosts as local sync exceptions', async () => {
+    const { isPrivateOrLoopbackHostname } = await import('./airgapNetworkPolicy');
+
+    expect(isPrivateOrLoopbackHostname('localhost')).toBe(true);
+    expect(isPrivateOrLoopbackHostname('127.0.0.1')).toBe(true);
+    expect(isPrivateOrLoopbackHostname('192.168.1.10')).toBe(true);
+    expect(isPrivateOrLoopbackHostname('10.0.0.25')).toBe(true);
+    expect(isPrivateOrLoopbackHostname('172.16.0.1')).toBe(true);
+    expect(isPrivateOrLoopbackHostname('172.31.255.254')).toBe(true);
+    expect(isPrivateOrLoopbackHostname('172.32.0.1')).toBe(false);
+    expect(isPrivateOrLoopbackHostname('172.15.255.255')).toBe(false);
+    expect(isPrivateOrLoopbackHostname('example.com')).toBe(false);
+  });
 });

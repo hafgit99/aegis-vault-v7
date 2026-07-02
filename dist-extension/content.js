@@ -415,23 +415,44 @@
       }
     });
   }
+  function secureRandomIndex(maxExclusive) {
+    if (!Number.isSafeInteger(maxExclusive) || maxExclusive <= 0) {
+      throw new Error("Invalid secure random range");
+    }
+    const limit = Math.floor(4294967296 / maxExclusive) * maxExclusive;
+    const sample = new Uint32Array(1);
+    do {
+      crypto.getRandomValues(sample);
+    } while (sample[0] >= limit);
+    return sample[0] % maxExclusive;
+  }
+  function chooseSecureChar(charset) {
+    return charset[secureRandomIndex(charset.length)];
+  }
+  function secureShuffle(chars) {
+    for (let index = chars.length - 1; index > 0; index--) {
+      const swapIndex = secureRandomIndex(index + 1);
+      [chars[index], chars[swapIndex]] = [chars[swapIndex], chars[index]];
+    }
+    return chars;
+  }
   function generateSecurePassword(length = 16) {
+    const safeLength = Math.max(4, Math.floor(length));
     const lowercase = "abcdefghijklmnopqrstuvwxyz";
     const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const numbers = "0123456789";
     const symbols = "!@#$%^&*()-_=+[]{}|;:,.<>?";
     const allChars = lowercase + uppercase + numbers + symbols;
-    let password = "";
-    const randomBytes = new Uint32Array(length);
-    crypto.getRandomValues(randomBytes);
-    password += lowercase[randomBytes[0] % lowercase.length];
-    password += uppercase[randomBytes[1] % uppercase.length];
-    password += numbers[randomBytes[2] % numbers.length];
-    password += symbols[randomBytes[3] % symbols.length];
-    for (let i = 4; i < length; i++) {
-      password += allChars[randomBytes[i] % allChars.length];
+    const passwordChars = [
+      chooseSecureChar(lowercase),
+      chooseSecureChar(uppercase),
+      chooseSecureChar(numbers),
+      chooseSecureChar(symbols)
+    ];
+    for (let index = passwordChars.length; index < safeLength; index++) {
+      passwordChars.push(chooseSecureChar(allChars));
     }
-    return password.split("").sort(() => 0.5 - Math.random()).join("");
+    return secureShuffle(passwordChars).join("");
   }
   function showSavePromptBanner(cred) {
     if (document.querySelector(".aegis-banner")) return;

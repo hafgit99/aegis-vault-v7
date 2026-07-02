@@ -20,6 +20,7 @@ dependencies = [
  "rand",
  "serde",
  "serde_json",
+ "subtle",
  "tauri",
  "tauri-build",
  "tauri-plugin-biometric",

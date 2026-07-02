@@ -3,15 +3,24 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { addSyncAllowedOrigin, removeSyncAllowedOrigin } from '../airgapNetworkPolicy';
+import { addSyncAllowedOrigin, isPrivateOrLoopbackHostname, removeSyncAllowedOrigin } from '../airgapNetworkPolicy';
 import { SyncProvider, SyncMetadata, SyncError, syncErrorCodes } from './syncTypes';
 
 const VAULT_FILE = 'vault.aegis';
 const METADATA_FILE = 'metadata.json';
 const AEGIS_DIR = 'AegisVault';
 
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary);
+}
+
 function buildBasicAuthHeader(username: string, password: string): string {
-  return 'Basic ' + btoa(unescape(encodeURIComponent(`${username}:${password}`)));
+  const credentialBytes = new TextEncoder().encode(`${username}:${password}`);
+  return 'Basic ' + bytesToBase64(credentialBytes);
 }
 
 function ensureTrailingSlash(url: string): string {
@@ -38,14 +47,20 @@ export class WebDavSyncProvider implements SyncProvider {
   private readonly origin: string;
 
   constructor(url: string, username: string, password: string) {
-    // Validate HTTPS requirement
-    if (!url.startsWith('https://') && !url.startsWith('http://localhost') && !url.startsWith('http://192.168.') && !url.startsWith('http://10.')) {
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(url);
+    } catch {
+      throw new SyncError(syncErrorCodes.connectionFailed, 'WebDAV URL is invalid.');
+    }
+
+    if (parsedUrl.protocol !== 'https:' && !(parsedUrl.protocol === 'http:' && isPrivateOrLoopbackHostname(parsedUrl.hostname))) {
       throw new SyncError(
         syncErrorCodes.connectionFailed,
-        'WebDAV URL must use HTTPS for security. Local network addresses (localhost, 192.168.x, 10.x) are exempt.',
+        'WebDAV URL must use HTTPS for security. Loopback and RFC 1918 local network addresses are exempt.',
       );
     }
-    this.baseUrl = ensureTrailingSlash(url);
+    this.baseUrl = ensureTrailingSlash(parsedUrl.toString());
     this.authHeader = buildBasicAuthHeader(username, password);
     this.origin = new URL(this.baseUrl).origin;
 

@@ -2,6 +2,7 @@ use std::fs;
 use std::io::{self, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
+use subtle::ConstantTimeEq;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -75,6 +76,34 @@ pub fn generate_token() -> String {
     let mut token = [0u8; 32];
     OsRng.fill_bytes(&mut token);
     token.iter().map(|byte| format!("{:02x}", byte)).collect()
+}
+
+fn is_pairing_token_valid(received_token: &str, pairing_token: &str) -> bool {
+    received_token.len() == pairing_token.len()
+        && received_token.as_bytes().ct_eq(pairing_token.as_bytes()).into()
+}
+
+pub fn write_pairing_token_file(path: &PathBuf, token: &str) -> io::Result<()> {
+    #[cfg(unix)]
+    {
+        use std::fs::OpenOptions;
+        use std::os::unix::fs::OpenOptionsExt;
+
+        let mut file = OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .mode(0o600)
+            .open(path)?;
+        file.write_all(token.as_bytes())?;
+        file.flush()?;
+        return Ok(());
+    }
+
+    #[cfg(not(unix))]
+    {
+        fs::write(path, token)
+    }
 }
 
 pub fn credential_lease_expires_at(ttl_ms: u64) -> u64 {
@@ -180,7 +209,7 @@ fn handle_client(
     stream.read_exact(&mut token_buf)?;
     let received_token = String::from_utf8(token_buf)?;
 
-    if received_token != pairing_token {
+    if !is_pairing_token_valid(&received_token, pairing_token) {
         stream.write_all(b"UNAUTHORIZED")?;
         stream.flush()?;
         return Err("Unauthorized client connected".into());

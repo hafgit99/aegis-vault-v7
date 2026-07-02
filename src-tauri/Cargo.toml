@@ -27,6 +27,7 @@ tauri-plugin-biometric = "2.3.2"
 base64 = "0.22"
 rand = "0.8.6"
 argon2 = "0.5.3"
+subtle = "2.6.1"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows-sys = { version = "0.61.2", features = [

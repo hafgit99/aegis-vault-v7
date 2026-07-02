@@ -4,12 +4,12 @@ This project is a password vault, so security claims must stay conservative unti
 
 ## Current Verified Improvements
 
-- Password generation now uses a centralized secure randomness helper.
+- Password generation now uses a centralized secure randomness helper; the browser extension generator also uses rejection-sampled CSPRNG indexes and CSPRNG Fisher-Yates shuffling instead of `Math.random`.
 - Diceware, biometric challenge generation, import IDs, attachment IDs, and simulated SQLite log IDs now use the same helper.
 - Master password verification now uses vetted Argon2id hashes; legacy simulated hash verification has been removed from the active unlock path.
 - Active vault unlock state now uses an in-memory session helper instead of storing the master password in browser `sessionStorage`, and production callers use scoped session-secret callbacks instead of broad master-password getters.
 - New attachment writes use WebCrypto AES-GCM with per-attachment keys derived from the active vault session.
-- New biometric master-password wrapping uses WebCrypto PBKDF2-SHA256 and AES-GCM.
+- New biometric master-password wrapping uses WebCrypto PBKDF2-SHA256 at 600,000 iterations and AES-GCM.
 - New vault item metadata writes use WebCrypto AES-GCM with keys derived through the vetted Argon2id adapter.
 - Tauri CSP now adds native defense-in-depth restrictions for frames, objects, forms, workers, media, and outbound connections; runtime air-gap guards also block WebRTC construction.
 - Imported WebCrypto AES-GCM key references are cleared automatically when the vault session closes.
@@ -19,6 +19,8 @@ This project is a password vault, so security claims must stay conservative unti
 - Desktop vault persistence now mirrors database state through the Tauri app data directory.
 - Desktop import/export now uses controlled native Windows file dialogs.
 - Clipboard clearing now removes copied secrets after the safety delay when the clipboard remains unchanged.
+- Browser extension IPC pairing token checks use constant-time comparison, and Unix/macOS token files are written with owner-only permissions.
+- WebDAV Basic Auth encoding avoids deprecated `unescape`, and sync local-network exceptions are limited to loopback plus RFC 1918 private address ranges.
 - Production builds install an air-gap network policy that blocks unexpected outbound `fetch`, XHR, WebSocket, `sendBeacon`, EventSource, and WebRTC connections while allowing app-local/Tauri IPC URLs and exact five-character HIBP SHA-1 range checks.
 - Security Audit can check passwords against Have I Been Pwned using the k-anonymity range API: only the first five SHA-1 hash characters are sent, full hashes and plaintext passwords stay local.
 - TOTP generation now follows the RFC 6238 flow for Base32 secrets, HMAC-SHA1/SHA-256/SHA-512, 8-byte counters, dynamic truncation, and `otpauth://totp` URI parsing.

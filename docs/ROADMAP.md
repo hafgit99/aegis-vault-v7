@@ -133,6 +133,10 @@
   - [x] Legacy XOR attachment migration runs automatically after successful unlock.
 - [x] Remove base64 master password storage from `sessionStorage` and route production session-secret reads through scoped callbacks.
 - [x] Replace attachment XOR encryption with authenticated encryption.
+- [x] Harden browser extension password generation against insecure randomness and biased shuffling.
+- [x] Raise biometric PBKDF2 wrapping cost to the OWASP-aligned 600,000-iteration floor for new bundles.
+- [x] Harden extension IPC token comparison and token-file permissions.
+- [x] Align WebDAV local-network validation with air-gap RFC 1918 helper logic.
 - [x] Introduce a versioned vault database format and migration tests.
 - [x] Define the desktop threat model and recovery model.
 - [x] Add security regression tests for import/export, attachments, and lock/unlock flows.

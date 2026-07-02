@@ -15,6 +15,19 @@ const HIBP_RANGE_PATH_PATTERN = /^\/range\/[0-9A-Fa-f]{5}$/;
  */
 const syncAllowedOrigins = new Set<string>();
 
+export function isPrivateOrLoopbackHostname(hostname: string): boolean {
+  const normalized = hostname.toLowerCase();
+  if (normalized === 'localhost' || normalized === '127.0.0.1' || normalized === '::1') return true;
+  if (normalized.startsWith('192.168.') || normalized.startsWith('10.')) return true;
+
+  const octets = normalized.split('.').map((part) => Number(part));
+  return octets.length === 4
+    && octets.every((part) => Number.isInteger(part) && part >= 0 && part <= 255)
+    && octets[0] === 172
+    && octets[1] >= 16
+    && octets[1] <= 31;
+}
+
 /**
  * Register a sync provider origin in the air-gap whitelist.
  * Only HTTPS origins (or localhost / LAN) are accepted.
@@ -22,11 +35,7 @@ const syncAllowedOrigins = new Set<string>();
 export function addSyncAllowedOrigin(origin: string): void {
   try {
     const parsed = new URL(origin);
-    const isLocal =
-      parsed.hostname === 'localhost' ||
-      parsed.hostname.startsWith('192.168.') ||
-      parsed.hostname.startsWith('10.') ||
-      parsed.hostname.startsWith('172.');
+    const isLocal = isPrivateOrLoopbackHostname(parsed.hostname);
     if (parsed.protocol !== 'https:' && !isLocal) {
       console.warn('[AegisAirGap] Refused to whitelist non-HTTPS sync origin:', origin);
       return;

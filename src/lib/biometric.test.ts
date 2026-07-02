@@ -15,6 +15,7 @@ vi.mock('@tauri-apps/plugin-biometric', () => ({
 
 import {
   authenticateBiometric,
+  BIOMETRIC_PBKDF2_ITERATIONS,
   BiometricError,
   biometricErrorCodes,
   disableBiometric,
@@ -155,6 +156,7 @@ describe('biometric master password wrapper', () => {
     );
     expect(stored.bundle.ciphertext).not.toContain('master-pass');
     expect(stored.credentialId).toBe(bytesToBase64(new Uint8Array(rawId)));
+    expect(stored.pbkdf2Iterations).toBe(BIOMETRIC_PBKDF2_ITERATIONS);
     expect(creationOptions.publicKey).toMatchObject({
       rp: { name: 'Aegis Vault 7' },
       authenticatorSelection: {
@@ -312,6 +314,7 @@ describe('biometric master password wrapper', () => {
       version: 3,
       provider: 'Tauri Native Biometric',
       wrappingSecret: expect.any(String),
+      pbkdf2Iterations: BIOMETRIC_PBKDF2_ITERATIONS,
     });
     expect(isBiometricEnabled()).toBe(true);
   });
