@@ -4,14 +4,35 @@ Use this checklist for every Android release candidate that may be shared outsid
 
 Candidate:
 
+- Evidence folder:
 - Version:
 - Commit:
+- APK file:
+- APK SHA-256:
 - Device model:
 - Android version / SDK:
 - Build type:
 - Fresh install used:
+- Active Autofill provider:
 - Tester:
 - Date:
+
+Evidence boundary:
+
+- Complete the checklist copy generated inside `release-local/android/<timestamp>/` for the exact APK under review.
+- Mark `N/A` only when hardware or OS support is unavailable, and record the reason in Notes.
+- Final shareable candidates should pass `npm run android:release:evidence:verify -- --dir release-local/android/<timestamp> --require-device --require-fresh-install --require-signed --require-completed-checklist`.
+
+## Evidence Files
+
+- [ ] Evidence folder contains the signed APK/AAB candidate.
+- [ ] Evidence folder contains `metadata.json`.
+- [ ] Evidence folder contains `SHA256SUMS.txt`.
+- [ ] Evidence folder contains the strict Android release report.
+- [ ] Evidence folder contains `android-device-doctor.txt` for device-tested candidates.
+- [ ] Evidence folder contains `android-device-security.txt` for device-tested candidates.
+- [ ] APK SHA-256 recorded above matches the evidence checksum.
+- [ ] Working tree was clean when evidence was generated, or dirty status is explicitly accepted for local-only testing.
 
 ## Setup And Unlock
 
@@ -82,6 +103,9 @@ Candidate:
 - [ ] Mismatched record requires second confirmation.
 - [ ] Approved fill writes username and password into the target form.
 - [ ] Stale Autofill request does not fill credentials.
+- [ ] New-site registration save prompt opens Aegis with title, username, password, and URL prefilled for review.
+- [ ] If Chrome does not show Aegis, Chrome/Android password manager priority was changed and the result is recorded in Notes.
+- [ ] Vivaldi behavior is recorded as PASS, FAIL, or N/A with reason.
 
 ## Mobile UI
 
@@ -97,4 +121,7 @@ Candidate:
 
 - Blocking issues:
 - Non-blocking issues:
+- N/A reasons:
+- Browser Autofill notes:
+- Biometric device notes:
 - Follow-up screenshots/videos:

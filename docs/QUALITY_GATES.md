@@ -207,6 +207,16 @@ Current measured storage orchestration mutation baseline:
 | Survived | 28 |
 | No coverage | 0 |
 
+## Android Release Evidence Boundary
+
+Android release quality gates intentionally separate automated script evidence from device-only manual claims. Automated gates can validate artifact integrity, signing metadata, install/launch health, app-private storage, declared Autofill services, and selected security-report output. Final Android release candidates still require the completed checklist copy in `release-local/android/<timestamp>/` for document picker destinations, browser Autofill behavior, biometric flows, FLAG_SECURE behavior on the target phone, and safe-area/mobile UI checks.
+
+For final candidate review, run:
+
+```bash
+npm run android:release:evidence:verify -- --dir release-local/android/<timestamp> --require-device --require-fresh-install --require-signed --require-completed-checklist
+```
+
 ## Current E2E Smoke Gate
 
 The first Playwright smoke gate runs with:

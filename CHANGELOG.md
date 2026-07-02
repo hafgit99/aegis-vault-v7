@@ -6,6 +6,7 @@ All notable Aegis Vault 7 changes are tracked here. The project follows a securi
 
 ### Added
 
+- Android evidence-boundary documentation that separates automated release-gate proof from manual device-only claims for Autofill, biometric, document picker, FLAG_SECURE, and mobile UI behavior.
 - Android Autofill save-candidate handling so Android can offer to save newly registered credentials and Aegis opens a prefilled new-login form after user approval.
 - Desktop release gate with lint, version consistency checks, unit tests, web build, extension build, Tauri build, artifact collection, signing report generation, release notes generation, and evidence verification.
 - Desktop release evidence files: `metadata.json`, `SHA256SUMS.txt`, `DESKTOP_MANUAL_SMOKE_CHECKLIST.md`, `DESKTOP_SIGNATURES.md`, `RELEASE_NOTES.md`, and release evidence `README.md`.

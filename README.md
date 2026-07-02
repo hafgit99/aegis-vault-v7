@@ -65,6 +65,7 @@ Important Android work already in place:
 - Android Autofill diagnostics and browser-specific validation notes.
 - Document picker save/open bridge with timeout, cancellation, and native-error handling.
 - Emergency Kit save path validated on device.
+- Android release evidence now separates automated checks from device-only manual claims; final public claims require a completed per-candidate checklist from `release-local/android/<timestamp>/`.
 
 Primary docs:
 

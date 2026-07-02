@@ -24,6 +24,23 @@ This document tracks the Android preparation path for Aegis Vault 7. Android is 
 - Browser/mobile web storage still relies on IndexedDB/localStorage/OPFS-style APIs.
 - Native file dialogs are implemented for Windows desktop, while Android uses its generated project bridge and Android document intents.
 
+## Android Evidence Boundary
+
+Android release decisions use two kinds of evidence:
+
+- Automated evidence: scripts can prove build integrity, package metadata, APK hashes, signing state, app-private storage, declared services, install/launch health, and selected device security checks.
+- Manual device evidence: a human must still verify OS-mediated behavior such as document picker destinations, screenshot blocking on the exact device, biometric enrollment/cancel paths, browser Autofill behavior, and mobile UI ergonomics.
+
+| Area | Automated evidence | Manual device evidence | Release claim |
+| --- | --- | --- | --- |
+| Signed APK integrity | `android:release:gate -- --signed --evidence`, artifact hashes, metadata, strict report | Install the exact APK from the evidence folder on a target phone | Candidate artifact is reproducible and internally shareable |
+| Fresh install and app-private storage | `--device --fresh-install`, `android:device:doctor`, package data-dir checks | Complete first-run setup and restart/unlock on device | Vault state survives restart without using public/shared storage |
+| Backup, import, attachments, Emergency Kit | Unit coverage plus Android bridge/report checks | Choose real save/open destinations and confirm created files are visible/readable | File flows are valid only for candidates with a completed checklist |
+| Autofill fill/save | Service declaration, active-provider doctor check, bridge/unit coverage | Chrome, Aloha, and Vivaldi/login-site behavior with Aegis as active provider | Browser support is device/browser dependent and must be recorded per candidate |
+| FLAG_SECURE and privacy shield | Native activity configuration and `android:device:security` output | Screenshot, screen recording, and task-switcher preview checks on target device | Supported Android surfaces block sensitive previews |
+| Biometric and secure storage | Keystore bridge checks and unsupported-path tests | Supported biometric device enrollment, unlock, cancel, and disable checks | Public biometric claims require current supported-device evidence |
+| Safe-area and mobile UI | Playwright mobile viewport smoke tests | Real phone status/navigation bar checks across core screens | Mobile UI is release-ready only with current manual checklist evidence |
+
 ## NPM Commands
 
 ```bash
