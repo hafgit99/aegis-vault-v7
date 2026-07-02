@@ -25,7 +25,7 @@ npm run wa-sqlite:final:gate:dry
 The gate covers these release-decision questions:
 
 - Promotion writes and restores the active wa-sqlite backend marker only after verified readiness.
-- App initialization restores a persisted wa-sqlite backend before hydrating normal storage.
+- App initialization restores a persisted wa-sqlite backend before hydrating normal storage. Storage-session coverage now proves unlock, reads, and writes continue through the restored repository after initialization.
 - Forged, malformed, or scope-mismatched backend markers are cleared and fall back to OPFS.
 - Desktop, Android, and browser fallback persistence profiles keep separate database and VFS names.
 - OPFS-to-wa-sqlite migration validates source unlock, item identity, target writes, parity, rollback, and persistent reopen checks.
