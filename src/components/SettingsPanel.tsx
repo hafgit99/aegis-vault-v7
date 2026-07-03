@@ -1151,21 +1151,21 @@ export default function SettingsPanel({
       </div>
 
       {/* Biometric Lock Settings Card */}
-      <div className="glass-panel p-4 sm:p-6 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 items-center border border-outline-variant/10" id="biometric-settings-card">
-        <div className="md:col-span-1 space-y-1.5">
-          <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2">
-            <Fingerprint className="w-5 h-5 text-brand-primary animate-pulse" />
-            <span>{t('settings.biometric.title')}</span>
+      <div className="glass-panel p-4 sm:p-6 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 items-center border border-outline-variant/10 overflow-hidden" id="biometric-settings-card">
+        <div className="md:col-span-1 space-y-1.5 min-w-0">
+          <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-start gap-2 min-w-0">
+            <Fingerprint className="w-5 h-5 text-brand-primary animate-pulse shrink-0" />
+            <span className="min-w-0 leading-snug break-words">{t('settings.biometric.title')}</span>
           </h3>
-          <p className="hidden sm:block text-xs text-on-surface-variant leading-relaxed">
+          <p className="hidden sm:block text-xs text-on-surface-variant leading-relaxed break-words">
             {t('settings.biometric.descriptionPrefix')} <b>PBKDF2-SHA256</b> + <b>AES-GCM</b> {t('settings.biometric.descriptionSuffix')}
           </p>
         </div>
         
-        <div className="md:col-span-2 space-y-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 justify-between bg-[#141614] p-3 sm:p-4 rounded-xl border border-outline-variant/10">
-            <div>
-              <span className="text-xs font-bold text-on-surface block uppercase">
+        <div className="md:col-span-2 space-y-4 min-w-0">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center gap-3 sm:gap-4 justify-between bg-[#141614] p-3 sm:p-4 rounded-xl border border-outline-variant/10 min-w-0 overflow-hidden">
+            <div className="min-w-0">
+              <span className="text-xs font-bold text-on-surface block uppercase leading-snug break-words">
                 {t('settings.biometric.statusLabel')}:{' '}
                 {biometricEnabled
                   ? getBiometricType() === 'cross-platform'
@@ -1173,7 +1173,7 @@ export default function SettingsPanel({
                     : t('settings.biometric.statusActivePlatform')
                   : t('settings.biometric.statusPassive')}
               </span>
-              <p className="text-[11px] text-on-surface-variant mt-1 leading-relaxed">
+              <p className="text-[11px] text-on-surface-variant mt-1 leading-relaxed break-words">
                 {biometricEnabled
                   ? getBiometricType() === 'cross-platform'
                     ? t('settings.biometric.activeDescriptionFido2')
@@ -1191,24 +1191,24 @@ export default function SettingsPanel({
                 {biometricLoading ? <span>{t('settings.biometric.loading')}</span> : <span>{t('settings.biometric.disable')}</span>}
               </button>
             ) : (
-              <div className="flex flex-col sm:flex-row gap-2 shrink-0 w-full sm:w-auto">
+              <div className="flex flex-col xl:flex-row gap-2 shrink-0 w-full xl:w-auto min-w-0">
                 <button
                   type="button"
                   disabled={biometricLoading}
                   onClick={() => handleToggleBiometric('platform')}
-                  className="px-4 py-2.5 rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 bg-brand-primary text-brand-on-primary hover:brightness-110 shadow-md shadow-brand-primary/10"
+                  className="w-full xl:w-auto px-4 py-2.5 rounded-lg text-xs font-bold leading-snug transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 bg-brand-primary text-brand-on-primary hover:brightness-110 shadow-md shadow-brand-primary/10 whitespace-normal text-center min-w-0"
                 >
-                  <Fingerprint className="w-4 h-4" />
-                  <span>{t('settings.biometric.enablePlatform')}</span>
+                  <Fingerprint className="w-4 h-4 shrink-0" />
+                  <span className="min-w-0 break-words">{t('settings.biometric.enablePlatform')}</span>
                 </button>
                 <button
                   type="button"
                   disabled={biometricLoading}
                   onClick={() => handleToggleBiometric('cross-platform')}
-                  className="px-4 py-2.5 rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 bg-brand-primary/10 border border-brand-primary/30 text-brand-primary hover:bg-brand-primary/20"
+                  className="w-full xl:w-auto px-4 py-2.5 rounded-lg text-xs font-bold leading-snug transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 bg-brand-primary/10 border border-brand-primary/30 text-brand-primary hover:bg-brand-primary/20 whitespace-normal text-center min-w-0"
                 >
-                  <Key className="w-4 h-4" />
-                  <span>{t('settings.biometric.enableFido2')}</span>
+                  <Key className="w-4 h-4 shrink-0" />
+                  <span className="min-w-0 break-words">{t('settings.biometric.enableFido2')}</span>
                 </button>
               </div>
             )}

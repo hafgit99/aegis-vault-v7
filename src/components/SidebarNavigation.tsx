@@ -3,7 +3,7 @@ import { Clock, HeartHandshake, KeyRound, Lock, Settings, ShieldCheck, Trash2 } 
 import { useLanguage } from '../i18n/LanguageContext';
 import { APP_NAME } from '../lib/branding';
 import { ActiveTab } from '../types';
-import aegisLogo from '../../assets/aegis-app-icon.png';
+import aegisLogo from '../../src-tauri/icons/icon.png';
 
 interface SidebarNavigationProps {
   activeTab: ActiveTab;
@@ -32,12 +32,12 @@ export default function SidebarNavigation({
 
   return (
     <aside
-      className={`fixed left-0 top-0 h-full w-[280px] bg-surface-lowest border-r border-outline-variant/15 flex flex-col p-4 safe-bottom z-50 transition-transform duration-300 ${
+      className={`fixed left-0 top-0 h-full w-[280px] bg-surface-lowest border-r border-outline-variant/15 flex flex-col px-4 pb-4 safe-sidebar safe-bottom z-50 transition-transform duration-300 ${
         isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       }`}
     >
       <div className="mb-5 sm:mb-7 px-1.5 flex items-center gap-3 shrink-0">
-        <div className="w-9 h-9 rounded-lg bg-brand-primary/5 border border-brand-primary/10 flex items-center justify-center shadow-inner overflow-hidden">
+        <div className="w-9 h-9 rounded-lg bg-brand-primary/5 border border-brand-primary/10 flex items-center justify-center shadow-inner overflow-hidden shrink-0">
           <img src={aegisLogo} alt="Aegis Logo" className="w-7 h-7 object-contain" />
         </div>
         <div>

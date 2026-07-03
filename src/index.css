@@ -41,6 +41,10 @@
     padding-bottom: max(env(safe-area-inset-bottom), 0px);
   }
 
+  .safe-sidebar {
+    padding-top: calc(max(env(safe-area-inset-top), 0px) + 1rem);
+  }
+
   .safe-modal {
     padding-top: max(env(safe-area-inset-top), 12px);
     padding-right: max(env(safe-area-inset-right), 12px);
