@@ -643,6 +643,49 @@ describe('SQLite OPFS persistence engine', () => {
     );
   });
 
+  it('rotates the master password and decrypts rows after caches are cleared', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    await sqlite.saveVaultItem(sampleItem({ id: 'rotated-row', title: 'Rotated Row' }), 'master-pass');
+
+    await sqlite.changeMasterPassword('master-pass', 'new-master-pass');
+    sqlite.clearDerivedKeyCache();
+
+    await expect(sqlite.verifyPassword('master-pass')).resolves.toBe(false);
+    await expect(sqlite.verifyPassword('new-master-pass')).resolves.toBe(true);
+    await expect(sqlite.getVaultItems('new-master-pass')).resolves.toEqual([
+      expect.objectContaining({
+        id: 'rotated-row',
+        title: 'Rotated Row',
+        username: 'ada',
+        password: 'secret-password',
+        notes: 'private note',
+      }),
+    ]);
+  });
+
+  it('rotates secret-key combined credentials and decrypts rows after caches are cleared', async () => {
+    const oldCredential = 'aegis-vault-v7:master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567';
+    const newCredential = 'aegis-vault-v7:new-master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567';
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster(oldCredential);
+    await sqlite.saveVaultItem(sampleItem({ id: 'secret-rotated-row', title: 'Secret Rotated Row' }), oldCredential);
+
+    await sqlite.changeMasterPassword(oldCredential, newCredential);
+    sqlite.clearDerivedKeyCache();
+
+    await expect(sqlite.verifyPassword(oldCredential)).resolves.toBe(false);
+    await expect(sqlite.verifyPassword(newCredential)).resolves.toBe(true);
+    await expect(sqlite.getVaultItems(newCredential)).resolves.toEqual([
+      expect.objectContaining({
+        id: 'secret-rotated-row',
+        title: 'Secret Rotated Row',
+        username: 'ada',
+        password: 'secret-password',
+      }),
+    ]);
+  });
+
   it('rolls back master password rotation when persistence cannot be written', async () => {
     const sqlite = await freshSqliteInstance();
     await sqlite.setupMaster('master-pass');

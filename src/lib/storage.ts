@@ -154,8 +154,13 @@ function resolveCurrentVaultCredential(password: string): string {
  */
 async function openDerivedVaultSession(credential: string, backupPassword: string): Promise<void> {
   const vaultEncryptionKey = await getVaultStorageRepository().deriveEncryptionKey(credential);
-  openVaultSession(credential, backupPassword, vaultEncryptionKey);
-  vaultEncryptionKey.fill(0);
+  const sessionVaultEncryptionKey = new Uint8Array(vaultEncryptionKey);
+  try {
+    openVaultSession(credential, backupPassword, sessionVaultEncryptionKey);
+  } finally {
+    vaultEncryptionKey.fill(0);
+    sessionVaultEncryptionKey.fill(0);
+  }
 }
 
 export async function verifyMasterPassword(password: string, secretKey?: string | null): Promise<boolean> {

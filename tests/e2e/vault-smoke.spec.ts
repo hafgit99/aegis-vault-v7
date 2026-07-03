@@ -335,6 +335,54 @@ test('downloads an emergency kit from settings after unlock', async ({ page }) =
   await expect(page.getByTestId('settings-emergency-kit-error')).toBeHidden();
 });
 
+test('changes the master password, preserves data, and exports with the new session', async ({ page }) => {
+  test.setTimeout(120000);
+  const newMasterPassword = 'NewMasterPass!42';
+  await setupVault(page);
+  await createLoginItem(page, 'E2E Master Rotation', {
+    username: 'rotated-user',
+    password: 'RotatedVaultPass!42',
+    url: 'https://rotation.example',
+  });
+  await openSettings(page);
+
+  const passwordInputs = page.locator('#pass-change-form input[type="password"]');
+  await passwordInputs.nth(0).fill(masterPassword);
+  await passwordInputs.nth(1).fill(newMasterPassword);
+  await passwordInputs.nth(2).fill(newMasterPassword);
+
+  page.once('dialog', async (dialog) => {
+    await dialog.accept();
+  });
+
+  await page.locator('#pass-change-form button[type="submit"]').click();
+  await expect(passwordInputs.nth(0)).toHaveValue('');
+  await expect(passwordInputs.nth(1)).toHaveValue('');
+  await expect(passwordInputs.nth(2)).toHaveValue('');
+
+  await page.getByTestId('lock-vault-button').click();
+  await expect(page.getByTestId('lock-password-input')).toBeVisible();
+  await page.getByTestId('lock-password-input').fill(newMasterPassword);
+  await page.getByTestId('lock-submit-button').click();
+
+  await page.getByTestId('nav-vault-button').click();
+  const restoredItem = page.getByTestId('vault-list-item').filter({ hasText: 'E2E Master Rotation' });
+  await expect(restoredItem).toBeVisible();
+  await restoredItem.click();
+  await expect(page.getByTestId('login-username-value')).toContainText('rotated-user');
+
+  await openSettings(page);
+  await exportEncryptedBackup(page);
+
+  await page.reload();
+  await expect(page.getByTestId('lock-password-input')).toBeVisible();
+  await page.getByTestId('lock-password-input').fill(newMasterPassword);
+  await page.getByTestId('lock-submit-button').click();
+
+  await page.getByTestId('nav-vault-button').click();
+  await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Master Rotation' })).toBeVisible();
+});
+
 test('exports an encrypted backup download', async ({ page }) => {
   await setupVault(page);
   await createLoginItem(page, 'E2E Export Backup');
