@@ -352,16 +352,16 @@ Production build'lerde:
 
 ### 10.3 Orta Seviye (Orta Vadede Ele Alınmalı)
 
-| # | Bulgu | Öneri |
-|---|---|---|
-| **R11** | `webcrypto.ts` `importedKeysCache` 20 anahtarla sınırlı, ama cache invalidation stratejisi yok | Vault oturumu değiştiğinde `clearImportedAesGcmKeyCache()` çağrıldığını doğrulayan test ekleyin |
-| **R12** | `diceware.ts` kelime listesi statik; dosya büyüklüğü build'e yük | Lazy load veya compressed embedding |
-| **R13** | `airgapNetworkPolicy.ts` WebSocket guard'ı `new WebSocket()` constructor'ı ile sarmalıyor, ancak `WebSocket.prototype` üzerinden yapılan çağrıları yakalamıyor olabilir | Test ekleyin; prototype'ın da sarmalandığından emin olun |
-| **R14** | `useRuntimeSecurity` hook'u screen recording tespit ettiğinde overlay gösteriyor, ancak overlay **auto-lock tetiklemiyor** | Tespit anında vault oturumunu otomatik kilitleyin |
-| **R15** | `emergencyKit.ts` plain text olarak indirilebiliyor | PDF formatında (Aegis logo, talimatlar) export seçeneği ekleyin |
-| **R16** | `sensitiveReveal` hook'unda timer bazlı otomatik gizleme var mı kontrol edin | 15 sn sonra otomatik gizleme zorunlu kılın |
-| **R17** | CSP'de `https://lh3.googleusercontent.com` allowlist edilmiş (profil avatarı için) | Bu, gizlilik açısından Google'a istek anlamına gelebilir; fallback'i base64 inline data URI yapın |
-| **R18** | `nativeMessaging` RSA token formatında değil, 256-bit hex. Güzel ama rotate edilebilir mi? | İlk kurulum + elle rotate fonksiyonu ekleyin |
+| # | Bulgu | Dosya / Konum | Etki | Önerilen Çözüm |
+|---|---|---|:---:|---|
+| **R11** ✅ | `webcrypto.ts` `importedKeysCache` 20 anahtarla sınırlı, cache invalidation stratejisi yok | `src/lib/webcrypto.test.ts` | Orta | ✅ **Düzeltildi:** Vault oturumu değiştiğinde `clearImportedAesGcmKeyCache()` çağrıldığını doğrulayan birim test eklendi. `openVaultSession` sonrası cache boyutunun 0 olduğu kontrol edildi. |
+| **R12** ✅ | `diceware.ts` kelime listesi statik; dosya büyüklüğü build'e yük | `src/lib/dicewareWords.ts` | Düşük | ✅ **Düzeltildi:** 300'er kelimelik TR/EN dizileri virgülle ayrılmış tek string literal + `split(',')` pattern'ine dönüştürüldü. AST parsing/bundle yükü minimize edildi. |
+| **R13** ✅ | `airgapNetworkPolicy.ts` WebSocket guard'ı prototype üzerinden yapılan çağrıları yakalamıyor olabilir | `src/lib/airgapNetworkPolicy.test.ts` | Orta | ✅ **Düzeltildi:** `WebSocket.prototype === NativeWebSocket.prototype` assertion'ı eklenerek guard'ın prototype zincirini bozmadığı doğrulandı. |
+| **R14** ✅ | `useRuntimeSecurity` hook'u screen recording tespit ettiğinde overlay gösteriyor, ancak **auto-lock tetiklemiyor** | `src/hooks/useRuntimeSecurity.ts` | Yüksek | ✅ **Düzeltildi:** Ekran kaydı tespitinde `onLock()` çağrısı eklendi. Vault oturumu anında otomatik kilitleniyor. Test güncellendi. |
+| **R15** ✅ | `emergencyKit.ts` plain text olarak indirilebiliyor | `src/lib/emergencyKit.ts` | Orta | ✅ **Düzeltildi:** Bağımlılıksız pure PDF motoru (`buildEmergencyKitPdfBytes`) eklendi. `saveEmergencyKitPdf` fonksiyonu hem native dialog hem browser fallback ile çalışıyor. 3 yeni test eklendi. |
+| **R16** ✅ | `sensitiveReveal` hook'unda timer bazlı otomatik gizleme yok | `src/hooks/useSensitiveReveal.ts` | Orta | ✅ **Düzeltildi:** Ref tabanlı timer yönetimi eklendi. Görünür kılınan alan 15 saniye sonra otomatik gizleniyor. `resetReveals` ve unmount cleanup dahil. Fake timer testi eklendi. |
+| **R17** ✅ | CSP'de `https://lh3.googleusercontent.com` allowlist edilmiş | `src/lib/display.ts`, `src/hooks/useProfileSettings.ts`, `tauri.conf.json` | Orta | ✅ **Düzeltildi:** Tüm platform logoları ve default profil avatarı local base64 SVG data URI'lerine dönüştürüldü. CSP'den Google domain kaldırıldı. CSP gate'e regresyon kontrolü eklendi. 5 test dosyası güncellendi. |
+| **R18** ✅ | `nativeMessaging` token rotate edilemiyor | `src-tauri/src/lib.rs`, `native_messaging.rs`, `SettingsPanel.tsx` | Orta | ✅ **Düzeltildi:** `rotate_pairing_token` Tauri komutu eklendi. Token `Arc<Mutex<String>>` ile in-memory yönetiliyor. TCP sunucusu her bağlantıda güncel token'ı lock altında okuyor. Settings'e "Rotate Extension Token" butonu eklendi. |
 
 ### 10.4 Düşük Seviye (İyileştirme)
 
