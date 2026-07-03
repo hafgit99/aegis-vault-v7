@@ -268,6 +268,7 @@ describe('biometric master password wrapper', () => {
     });
     window.__TAURI_INTERNALS__ = {};
 
+    expect(isBiometricSupported()).toBe(false);
     await expect(registerBiometric('master-pass')).rejects.toMatchObject({
       code: biometricErrorCodes.unsupported,
       name: 'BiometricError',

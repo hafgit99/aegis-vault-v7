@@ -76,6 +76,7 @@
     "wa-sqlite:final:gate:dry": "node scripts/wa-sqlite-final-gate.cjs --dry-run",
     "desktop:release:import": "node scripts/desktop-release-import-artifacts.cjs",
     "security:no-js-master-string": "node scripts/security-no-js-master-string.cjs",
+    "security:session-gates": "node scripts/security-session-gates.cjs",
     "audit:checksums": "node scripts/generate-audit-package-checksums.cjs",
     "audit:checksums:verify": "node scripts/generate-audit-package-checksums.cjs --verify",
     "security:csp": "node scripts/security-csp-no-unsafe-inline.cjs"

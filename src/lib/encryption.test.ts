@@ -151,4 +151,17 @@ describe('encrypted backup envelope', () => {
       name: 'SecureBackupError',
     });
   });
+
+  it('guarantees salt uniqueness across multiple encryption operations', async () => {
+    const salts = new Set<string>();
+    const count = 100;
+
+    for (let i = 0; i < count; i++) {
+      const envelope = await encryptDataWithPasswordSecure('test data', 'password');
+      const parsed = JSON.parse(envelope);
+      salts.add(parsed.salt);
+    }
+
+    expect(salts.size).toBe(count);
+  });
 });

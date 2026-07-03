@@ -257,6 +257,9 @@ async function authenticateNativeBiometric(): Promise<void> {
 }
 
 export function isBiometricSupported(): boolean {
+  if (isTauriAndroidRuntime() && !isSecureStorageAvailable()) {
+    return false;
+  }
   return hasWebAuthnSupport() || isTauriAndroidRuntime();
 }
 
@@ -277,6 +280,10 @@ export function disableBiometric(): void {
 }
 
 export async function registerBiometric(masterPassword: string, type: 'platform' | 'cross-platform' = 'platform'): Promise<void> {
+  if (isTauriAndroidRuntime() && !isSecureStorageAvailable()) {
+    throw new BiometricError(biometricErrorCodes.unsupported);
+  }
+
   if (hasWebAuthnSupport()) {
     await registerWebAuthnBiometric(masterPassword, type);
     return;

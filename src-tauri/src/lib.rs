@@ -94,6 +94,8 @@ fn check_running_recorders_proc() -> bool {
         "gnome-screenshot",
         "flameshot",
         "screencast",
+        "pw-screen-recorder",
+        "pw-record",
     ];
 
     if let Ok(entries) = std::fs::read_dir("/proc") {
@@ -163,6 +165,15 @@ fn check_dbus_screencast_sessions() -> bool {
         if output.status.success() {
             if let Ok(stdout_str) = std::str::from_utf8(&output.stdout) {
                 if stdout_str.contains("/org/freedesktop/portal/desktop/session/") {
+                    return true;
+                }
+            }
+        }
+    }
+    if let Ok(output) = Command::new("busctl").args(&["--user", "tree", "org.freedesktop.portal.ScreenCast"]).output() {
+        if output.status.success() {
+            if let Ok(stdout_str) = std::str::from_utf8(&output.stdout) {
+                if stdout_str.contains("/org/freedesktop/portal/desktop/session/") || stdout_str.contains("/session/") {
                     return true;
                 }
             }

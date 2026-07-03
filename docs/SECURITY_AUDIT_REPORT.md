@@ -293,13 +293,13 @@ Production build'lerde:
 
 ### 10.2 Yüksek Seviye (Kısa Vadede Ele Alınmalı)
 
-| # | Bulgu | Öneri |
-|---|---|---|
-| **R6** | `vaultSession.ts` içinde `withActiveAccountSecretKey` ve `withActiveBackupPassword` callback'leri şifreyi string olarak materialize ediyor | Bu callback'leri yalnızca "explicit setup/unlock/export" izinli dosyalarla sınırlandırın |
-| **R7** | Backup dosyalarında `payload` field base64 ciphertext olarak tutuluyor, checksum SHA-256 — bu güzel, ama **salt reuse** mümkün olabilir | Test ile salt uniqueness'i garanti edin; birim test ekleyin |
-| **R8** | Android için `secureStorage` sadece `window.AegisAndroidSecureStorage` köprüsü varsa çalışıyor. Bu köprü yoksa fallback olarak IndexedDB'ye düşüyor | Android tarafında Keystore köprüsü olmadan **biometric aktif olmasın** |
-| **R9** | Linux'ta screen-capture koruması `/proc` tarama ile sınırlı. PipeWire/Wayland için ek kontrol gerekli | `pw-screen-recorder` ve PipeWire session API entegrasyonu ekleyin |
-| **R10** | Tarayıcı eklentisi **native messaging** TCP 49155 portu açık. Firewall yoksa LAN'dan brute-force denemeler mümkün | Rate limiting + bağlantı sayısı sınırı ekleyin (saniyede max 5 bağlantı) |
+| # | Bulgu | Dosya / Konum | Etki | Önerilen Çözüm |
+|---|---|---|:---:|---|
+| **R6** | `vaultSession.ts` içinde `withActiveAccountSecretKey` ve `withActiveBackupPassword` callback'leri şifreyi string olarak materialize ediyor | `src/lib/vaultSession.ts` | Yüksek | ✅ **Düzeltildi:** Statik analiz scripti eklenerek yetkisiz dosyalardan hassas callback'lerin çağrılması engellendi, derleme sürecine gate olarak bağlandı. |
+| **R7** | Backup dosyalarında `payload` field base64 ciphertext olarak tutuluyor, checksum SHA-256 — bu güzel, ama **salt reuse** mümkün olabilir | `src/lib/encryption.ts` | Yüksek | ✅ **Düzeltildi:** Şifreleme işlemlerinde tuz (salt) benzersizliğini 100 ardışık işlem üzerinden doğrulayan otomatik birim test eklendi. |
+| **R8** | Android için `secureStorage` sadece `window.AegisAndroidSecureStorage` köprüsü varsa çalışıyor. Bu köprü yoksa fallback olarak IndexedDB'ye düşüyor | `src/lib/biometric.ts` | Yüksek | ✅ **Düzeltildi:** Android Keystore köprüsü (`AegisAndroidSecureStorage`) bulunmadığında biyometrik özelliğinin etkinleştirilmesi ve kullanılması tamamen engellendi. |
+| **R9** | Linux'ta screen-capture koruması `/proc` tarama ile sınırlı. PipeWire/Wayland için ek kontrol gerekli | `src-tauri/src/lib.rs` | Yüksek | ✅ **Düzeltildi:** `pw-screen-recorder` ve `pw-record` süreçleri listeye eklendi; `org.freedesktop.portal.ScreenCast` DBus session'ları üzerinden aktif Wayland ekran paylaşımları taranmaya başlandı. |
+| **R10** | Tarayıcı eklentisi **native messaging** TCP 49155 portu açık. Firewall yoksa LAN'dan brute-force denemeler mümkün | `src-tauri/src/native_messaging.rs` | Yüksek | ✅ **Düzeltildi:** TCP sunucusuna thread-safe `ConnectionRateLimiter` eklenerek LAN brute-force saldırılarına karşı saniyede maksimum 5 bağlantı sınırı getirildi. |
 
 ### 10.3 Orta Seviye (Orta Vadede Ele Alınmalı)
 

@@ -10,6 +10,38 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub const TCP_PORT: u16 = 49155;
 pub const TOKEN_FILENAME: &str = "aegis_ipc_token.bin";
 
+struct ConnectionRateLimiter {
+    connection_times: Mutex<std::collections::VecDeque<std::time::Instant>>,
+}
+
+impl ConnectionRateLimiter {
+    fn new() -> Self {
+        Self {
+            connection_times: Mutex::new(std::collections::VecDeque::new()),
+        }
+    }
+
+    fn check_and_record(&self) -> bool {
+        let mut times = self.connection_times.lock().unwrap();
+        let now = std::time::Instant::now();
+
+        while let Some(&time) = times.front() {
+            if now.duration_since(time) > std::time::Duration::from_secs(1) {
+                times.pop_front();
+            } else {
+                break;
+            }
+        }
+
+        if times.len() >= 5 {
+            false
+        } else {
+            times.push_back(now);
+            true
+        }
+    }
+}
+
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct ExtensionCredential {
     pub id: String,
@@ -130,9 +162,17 @@ pub fn start_tcp_server(
 
         log::info!("TCP IPC server bound to port {}", TCP_PORT);
 
+        let limiter = Arc::new(ConnectionRateLimiter::new());
+
         for stream in listener.incoming() {
             match stream {
                 Ok(mut stream) => {
+                    if !limiter.check_and_record() {
+                        log::warn!("Rate limit exceeded. Rejecting connection.");
+                        let _ = stream.write_all(b"RATE_LIMIT_EXCEEDED");
+                        let _ = stream.flush();
+                        continue;
+                    }
                     let credentials_clone = credentials.clone();
                     let token_clone = pairing_token.clone();
                     let app_clone = app_handle.clone();
