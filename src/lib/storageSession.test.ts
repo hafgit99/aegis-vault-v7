@@ -62,6 +62,20 @@ vi.mock('./vaultStorageProvider', () => ({
   restoreOrActivateDefaultVaultStorageBackend,
 }));
 
+vi.mock('./indexedDbStorage', () => ({
+  initializeIndexedDbStorage: vi.fn(async () => undefined),
+  getIndexedDbItemSync: vi.fn((key: string) => localStorage.getItem(key)),
+  setIndexedDbItemSync: vi.fn((key: string, value: string) => localStorage.setItem(key, value)),
+  removeIndexedDbItemSync: vi.fn((key: string) => localStorage.removeItem(key)),
+  clearAllSetupFlagsSync: vi.fn(() => {
+    localStorage.removeItem('aegis_is_setup');
+    localStorage.removeItem('aegis_sqlite_fallback');
+    localStorage.removeItem('aegis_account_secret_profile');
+    localStorage.removeItem('aegis_account_secret_key_remembered');
+    localStorage.removeItem('aegis_vault_storage_active_backend');
+  }),
+}));
+
 import {
   deletePermanently,
   deleteVaultItem,

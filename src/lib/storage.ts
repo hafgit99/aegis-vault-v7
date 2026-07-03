@@ -32,6 +32,13 @@ import {
   secureStorageKeys,
   setSecureStorageItem,
 } from './secureStorage';
+import {
+  initializeIndexedDbStorage,
+  getIndexedDbItemSync,
+  setIndexedDbItemSync,
+  removeIndexedDbItemSync,
+  clearAllSetupFlagsSync,
+} from './indexedDbStorage';
 
 const STORAGE_KEYS = {
   IS_SET_UP: 'aegis_is_setup',
@@ -45,6 +52,7 @@ interface AccountSecretProfile {
 }
 
 export async function initializeStorage(): Promise<void> {
+  await initializeIndexedDbStorage();
   await restoreOrActivateDefaultVaultStorageBackend({
     hasLegacyOpfsVaultData: isMasterPasswordSet,
   });
@@ -57,7 +65,7 @@ export async function initializeStorage(): Promise<void> {
  * Checks if a master password has already been set up in SQLite database.
  */
 export function isMasterPasswordSet(): boolean {
-  const fallback = localStorage.getItem('aegis_sqlite_fallback');
+  const fallback = getIndexedDbItemSync('aegis_sqlite_fallback');
   if (fallback) {
     try {
       const parsed = JSON.parse(fallback);
@@ -66,11 +74,11 @@ export function isMasterPasswordSet(): boolean {
       }
     } catch(e) {}
   }
-  return localStorage.getItem(STORAGE_KEYS.IS_SET_UP) === 'true';
+  return getIndexedDbItemSync(STORAGE_KEYS.IS_SET_UP) === 'true';
 }
 
 function readSecretProfile(): AccountSecretProfile | null {
-  const raw = localStorage.getItem(STORAGE_KEYS.SECRET_PROFILE);
+  const raw = getIndexedDbItemSync(STORAGE_KEYS.SECRET_PROFILE);
   if (!raw) return null;
 
   try {
@@ -87,30 +95,30 @@ export function isAccountSecretKeyRequired(): boolean {
 
 export function getRememberedAccountSecretKey(): string | null {
   return getSecureStorageItem(secureStorageKeys.rememberedSecretKey)
-    ?? localStorage.getItem(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
+    ?? getIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
 }
 
 export function rememberAccountSecretKey(secretKey: string): void {
   const normalizedSecretKey = normalizeAccountSecretKey(secretKey);
   if (setSecureStorageItem(secureStorageKeys.rememberedSecretKey, normalizedSecretKey)) {
-    localStorage.removeItem(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
+    removeIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
     return;
   }
 
-  localStorage.setItem(STORAGE_KEYS.REMEMBERED_SECRET_KEY, normalizedSecretKey);
+  setIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY, normalizedSecretKey);
 }
 
 export function forgetRememberedAccountSecretKey(): void {
   removeSecureStorageItem(secureStorageKeys.rememberedSecretKey);
-  localStorage.removeItem(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
+  removeIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
 }
 
 function migrateRememberedSecretKeyToSecureStorage(): void {
-  const legacySecretKey = localStorage.getItem(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
+  const legacySecretKey = getIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
   if (!legacySecretKey) return;
 
   if (setSecureStorageItem(secureStorageKeys.rememberedSecretKey, legacySecretKey)) {
-    localStorage.removeItem(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
+    removeIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
   }
 }
 
@@ -204,7 +212,7 @@ export async function setupMasterPassword(password: string): Promise<void> {
       { error: err instanceof Error ? err.message : String(err) },
     );
   }
-  localStorage.setItem(STORAGE_KEYS.IS_SET_UP, 'true');
+  setIndexedDbItemSync(STORAGE_KEYS.IS_SET_UP, 'true');
 
   // Seed default items in SQLite
   const seedKey = await getVaultStorageRepository().deriveEncryptionKey(credential);
@@ -236,8 +244,8 @@ export async function setupMasterPasswordWithSecretKey(
       { error: err instanceof Error ? err.message : String(err) },
     );
   }
-  localStorage.setItem(STORAGE_KEYS.IS_SET_UP, 'true');
-  localStorage.setItem(STORAGE_KEYS.SECRET_PROFILE, JSON.stringify({
+  setIndexedDbItemSync(STORAGE_KEYS.IS_SET_UP, 'true');
+  setIndexedDbItemSync(STORAGE_KEYS.SECRET_PROFILE, JSON.stringify({
     enabled: true,
     fingerprint: getSecretKeyFingerprint(normalizedSecretKey),
   }));
@@ -314,7 +322,7 @@ export async function changeMasterPassword(oldPassword: string, newPassword: str
 
   await openDerivedVaultSession(newCredential, newPassword);
   disableBiometric();
-  localStorage.setItem(STORAGE_KEYS.IS_SET_UP, 'true');
+  setIndexedDbItemSync(STORAGE_KEYS.IS_SET_UP, 'true');
 }
 
 /**
@@ -323,10 +331,7 @@ export async function changeMasterPassword(oldPassword: string, newPassword: str
 export async function resetSystem(): Promise<void> {
   await getVaultStorageRepository().resetAll();
   closeVaultSession();
-  localStorage.removeItem(STORAGE_KEYS.IS_SET_UP);
-  localStorage.removeItem('aegis_sqlite_fallback');
-  localStorage.removeItem(STORAGE_KEYS.SECRET_PROFILE);
-  localStorage.removeItem(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
+  clearAllSetupFlagsSync();
   clearPersistedActiveVaultStorageBackend();
 }
 
@@ -334,7 +339,7 @@ export async function migrateActiveVaultStorageToWaSqlite(): Promise<WaSqliteAct
   const result = withActiveSessionSecrets(async (credential) => {
     const migrationResult = await runWaSqliteActiveBackendMigration(credential);
     if (migrationResult.status === 'promoted') {
-      localStorage.setItem(STORAGE_KEYS.IS_SET_UP, 'true');
+      setIndexedDbItemSync(STORAGE_KEYS.IS_SET_UP, 'true');
       const newKey = await getVaultStorageRepository().deriveEncryptionKey(credential);
       updateActiveVaultEncryptionKey(newKey);
       newKey.fill(0);

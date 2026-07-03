@@ -23,6 +23,7 @@ import {
 } from './desktopStorage';
 import { logSecurityEvent, securityEventCodes } from './securityEvents';
 import { registerOnCloseSession } from './vaultSession';
+import { getIndexedDbItemSync, setIndexedDbItemSync, removeIndexedDbItemSync } from './indexedDbStorage';
 import type {
   SQLCommandLog,
   SQLCommandStatus,
@@ -171,7 +172,7 @@ class SQLiteOPFS implements VaultStorageRepository {
   }
 
   private writeLocalFallbackMirror(payloadStr: string, savedToDesktop: boolean): void {
-    localStorage.setItem(
+    setIndexedDbItemSync(
       LOCAL_FALLBACK_KEY,
       savedToDesktop ? this.createDesktopManagedSetupMarker() : payloadStr,
     );
@@ -216,7 +217,7 @@ class SQLiteOPFS implements VaultStorageRepository {
       const desktopPayload = await readDesktopVaultDatabase();
       if (desktopPayload) {
         this.state = parseVaultDatabaseState(desktopPayload);
-        localStorage.setItem(LOCAL_FALLBACK_KEY, this.createDesktopManagedSetupMarker());
+        setIndexedDbItemSync(LOCAL_FALLBACK_KEY, this.createDesktopManagedSetupMarker());
         this.logQuery(`sqlite3_open("${getNativeVaultStorageScope()}:///${DB_FILENAME}")`, 'SUCCESS', 1);
         return;
       }
@@ -330,7 +331,7 @@ class SQLiteOPFS implements VaultStorageRepository {
    * Migrate legacy plaintext vault items into relational SQLite rows with GCM encryption.
    */
   private async migrateLegacyLocalStorage() {
-    const fallback = localStorage.getItem(LOCAL_FALLBACK_KEY);
+    const fallback = getIndexedDbItemSync(LOCAL_FALLBACK_KEY);
     if (fallback) {
       try {
         const parsed = JSON.parse(fallback);
@@ -1010,7 +1011,7 @@ class SQLiteOPFS implements VaultStorageRepository {
       throw new Error('vault-reset-native-persist-failed');
     }
 
-    localStorage.removeItem(LOCAL_FALLBACK_KEY);
+    removeIndexedDbItemSync(LOCAL_FALLBACK_KEY);
     const persisted = await this.saveToPersistentStorage();
     if (!persisted) {
       this.logQuery('DROP TABLE user_secrets; DROP TABLE vault_items; -- reset persistence failed', 'ERROR', 0);

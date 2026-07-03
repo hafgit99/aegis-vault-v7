@@ -21,6 +21,22 @@ function zeroizeSecret(value: Uint8Array | null): void {
 }
 
 const onCloseCallbacks: (() => void)[] = [];
+const subscribers = new Set<() => void>();
+
+function notifySubscribers(): void {
+  subscribers.forEach(cb => cb());
+}
+
+export function subscribeToVaultSession(cb: () => void): () => void {
+  subscribers.add(cb);
+  return () => {
+    subscribers.delete(cb);
+  };
+}
+
+export function getVaultSessionSnapshot(): boolean {
+  return hasActiveVaultSession();
+}
 
 export function registerOnCloseSession(cb: () => void): void {
   onCloseCallbacks.push(cb);
@@ -39,6 +55,7 @@ export function openVaultSession(
     : null;
   activeBackupPasswordBytes = encodeSecret(backupPassword);
   activeVaultKeyBytes = vaultEncryptionKey ? cloneBytes(vaultEncryptionKey) : null;
+  notifySubscribers();
 }
 
 export function updateActiveVaultEncryptionKey(vaultEncryptionKey: Uint8Array): void {
@@ -46,6 +63,7 @@ export function updateActiveVaultEncryptionKey(vaultEncryptionKey: Uint8Array): 
     zeroizeSecret(activeVaultKeyBytes);
   }
   activeVaultKeyBytes = cloneBytes(vaultEncryptionKey);
+  notifySubscribers();
 }
 
 export function closeVaultSession(): void {
@@ -64,6 +82,7 @@ export function closeVaultSession(): void {
       console.error('Error during close session callback:', e);
     }
   });
+  notifySubscribers();
 }
 
 export function hasActiveVaultSession(): boolean {

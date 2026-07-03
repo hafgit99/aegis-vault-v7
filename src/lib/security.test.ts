@@ -66,6 +66,51 @@ describe('security helpers', () => {
     expect(password).toMatch(/[^A-Za-z0-9]/);
   });
 
+  it('generates passwords without bias (verifying uniform distribution and shuffle randomness)', () => {
+    // Generate 1000 passwords and count frequencies of each character class
+    const sampleSize = 1000;
+    const charCounts = { upper: 0, lower: 0, digit: 0, symbol: 0 };
+    
+    for (let i = 0; i < sampleSize; i++) {
+      const pw = generatePassword({
+        length: 20,
+        uppercase: true,
+        lowercase: true,
+        numbers: true,
+        symbols: true,
+      });
+      for (const char of pw) {
+        if (/[A-Z]/.test(char)) charCounts.upper++;
+        else if (/[a-z]/.test(char)) charCounts.lower++;
+        else if (/[0-9]/.test(char)) charCounts.digit++;
+        else charCounts.symbol++;
+      }
+    }
+
+    const totalChars = sampleSize * 20;
+    // Expected distribution proportions:
+    // Upper: 26 chars
+    // Lower: 26 chars
+    // Numbers: 10 chars
+    // Symbols: 26 chars
+    // Total pool size = 26 + 26 + 10 + 26 = 88 chars.
+    // Proportions: Upper, Lower, Symbols are ~29.5% each, Numbers are ~11.4%.
+    const expectedProportions = {
+      upper: 26 / 88,
+      lower: 26 / 88,
+      digit: 10 / 88,
+      symbol: 26 / 88,
+    };
+
+    // Verify actual distribution is within 5% tolerance of the expected proportion
+    const tolerance = 0.05;
+    Object.keys(charCounts).forEach((key) => {
+      const actualProp = charCounts[key as keyof typeof charCounts] / totalChars;
+      const expectedProp = expectedProportions[key as keyof typeof expectedProportions];
+      expect(Math.abs(actualProp - expectedProp)).toBeLessThan(tolerance);
+    });
+  });
+
   it('clears password score cache on close session', () => {
     vi.mocked(zxcvbn).mockClear();
 

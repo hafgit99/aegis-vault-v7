@@ -1,7 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 
 import { useAutoLock } from './useAutoLock';
-import { closeVaultSession } from '../lib/vaultSession';
+import { closeVaultSession, subscribeToVaultSession, getVaultSessionSnapshot, openVaultSession, hasActiveVaultSession } from '../lib/vaultSession';
 import { clearExtensionCredentials } from '../lib/desktopStorage';
 
 interface UseVaultLockOptions {
@@ -15,18 +15,19 @@ export function useVaultLock({
   resetReveals,
   clearCopiedField,
 }: UseVaultLockOptions) {
-  const [unlocked, setUnlocked] = useState(false);
+  const unlocked = useSyncExternalStore(subscribeToVaultSession, getVaultSessionSnapshot);
 
   const lock = useCallback(() => {
     closeVaultSession();
     clearExtensionCredentials();
-    setUnlocked(false);
     resetReveals();
     clearCopiedField();
   }, [clearCopiedField, resetReveals]);
 
   const unlock = useCallback(() => {
-    setUnlocked(true);
+    if (!hasActiveVaultSession()) {
+      openVaultSession('session-unlocked');
+    }
   }, []);
 
   useAutoLock({

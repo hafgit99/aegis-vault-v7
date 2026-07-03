@@ -20,6 +20,7 @@ import {
   type WaSqlitePersistenceProfile,
 } from './waSqlitePersistence';
 import { createWaSqliteVaultStorageRepository } from './waSqliteVaultStorageRepository';
+import { getIndexedDbItemSync, setIndexedDbItemSync, removeIndexedDbItemSync } from './indexedDbStorage';
 
 export const ACTIVE_VAULT_STORAGE_BACKEND_KEY = 'aegis_vault_storage_active_backend';
 
@@ -51,22 +52,13 @@ export function getActiveVaultStorageBackendSelection() {
   return { ...activeVaultStorageBackendSelection };
 }
 
-function getBrowserStorage(): Storage | null {
-  return typeof localStorage === 'undefined' ? null : localStorage;
-}
-
 export function clearPersistedActiveVaultStorageBackend(): void {
-  getBrowserStorage()?.removeItem(ACTIVE_VAULT_STORAGE_BACKEND_KEY);
+  removeIndexedDbItemSync(ACTIVE_VAULT_STORAGE_BACKEND_KEY);
 }
 
 export function persistWaSqliteActiveBackendPromotion(plan: WaSqliteActiveBackendPromotionPlan): void {
   assertVaultStoragePromotionPlanReady(plan);
   assertWaSqlitePersistenceReadyForActiveBackend(plan.persistenceProfile);
-
-  const storage = getBrowserStorage();
-  if (!storage) {
-    throw new Error('vault-storage-active-backend-marker-unavailable');
-  }
 
   const marker: PersistedActiveVaultStorageBackend = {
     version: 1,
@@ -74,11 +66,11 @@ export function persistWaSqliteActiveBackendPromotion(plan: WaSqliteActiveBacken
     persistenceProfile: plan.persistenceProfile,
     promotedAt: new Date().toISOString(),
   };
-  storage.setItem(ACTIVE_VAULT_STORAGE_BACKEND_KEY, JSON.stringify(marker));
+  setIndexedDbItemSync(ACTIVE_VAULT_STORAGE_BACKEND_KEY, JSON.stringify(marker));
 }
 
 export function readPersistedActiveVaultStorageBackend(): PersistedActiveVaultStorageBackend | null {
-  const raw = getBrowserStorage()?.getItem(ACTIVE_VAULT_STORAGE_BACKEND_KEY);
+  const raw = getIndexedDbItemSync(ACTIVE_VAULT_STORAGE_BACKEND_KEY);
   if (!raw) return null;
 
   try {
@@ -140,8 +132,6 @@ export async function restoreOrActivateDefaultVaultStorageBackend(
 
 function persistWaSqliteDefaultActiveBackend(profile: WaSqlitePersistenceProfile): void {
   assertWaSqlitePersistenceReadyForActiveBackend(profile);
-  const storage = getBrowserStorage();
-  if (!storage) return;
 
   const marker: PersistedActiveVaultStorageBackend = {
     version: 1,
@@ -149,15 +139,13 @@ function persistWaSqliteDefaultActiveBackend(profile: WaSqlitePersistenceProfile
     persistenceProfile: profile,
     promotedAt: new Date().toISOString(),
   };
-  storage.setItem(ACTIVE_VAULT_STORAGE_BACKEND_KEY, JSON.stringify(marker));
+  setIndexedDbItemSync(ACTIVE_VAULT_STORAGE_BACKEND_KEY, JSON.stringify(marker));
 }
 
 function hasLegacyOpfsVaultData(): boolean {
-  const storage = getBrowserStorage();
-  if (!storage) return false;
-  if (storage.getItem('aegis_is_setup') === 'true') return true;
+  if (getIndexedDbItemSync('aegis_is_setup') === 'true') return true;
 
-  const fallback = storage.getItem('aegis_sqlite_fallback');
+  const fallback = getIndexedDbItemSync('aegis_sqlite_fallback');
   if (!fallback) return false;
 
   try {

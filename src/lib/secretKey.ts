@@ -1,3 +1,19 @@
+/**
+ * @file secretKey.ts
+ * @description Provides utilities for generating, normalizing, validating, and fingerprinting account secret keys.
+ * 
+ * DESIGN PARAMETERS:
+ * - Entropy Source: 20 cryptographically secure random bytes (160 bits of entropy).
+ * - Representation: Base32 encoding (32 characters chosen from A-Z and 2-7).
+ * - Formatting: Grouped into 8 blocks of 4 characters separated by hyphens, prefixed with 'A3'.
+ *   Format: A3-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX
+ * - Fingerprint: The last 8 characters of the normalized secret key, divided into 2 groups of 4 (XXXX-XXXX).
+ *   This is safe to share/view for visual verification of the key without exposing the secret parts.
+ * 
+ * SECURITY STANDARDS:
+ * - 160 bits of entropy provides robust protection against brute-force attacks and matches standard authenticator app strengths.
+ */
+
 import { secureRandomBytes } from './random';
 
 const SECRET_KEY_PREFIX = 'A3';

@@ -53,11 +53,12 @@ for (const file of ['index.html', ...collectFiles('src', ['.tsx', '.ts', '.jsx',
     { name: 'React inline style prop', regex: /style\s*=\s*\{/g },
     { name: 'HTML style block', regex: /<style\b/gi },
     { name: 'HTML inline style attribute', regex: /\sstyle\s*=\s*['"]/gi },
+    { name: 'dangerouslySetInnerHTML', regex: /dangerouslySetInnerHTML/g },
   ];
   for (const pattern of patterns) {
     let match;
     while ((match = pattern.regex.exec(text))) {
-      findings.push(file + ':' + lineOf(text, match.index) + ': ' + pattern.name + ' is not allowed under strict CSP');
+      findings.push(file + ':' + lineOf(text, match.index) + ': ' + pattern.name + ' is not allowed under strict security guidelines');
     }
   }
 }
