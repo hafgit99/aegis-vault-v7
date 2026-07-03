@@ -514,6 +514,17 @@ test('imports a plain JSON backup file', async ({ page }) => {
   const importedItem = page.getByTestId('vault-list-item').filter({ hasText: 'E2E Imported Login' });
   await expect(importedItem).toBeVisible();
   await expect(importedItem).toContainText('imported-user');
+
+  await page.reload();
+  await expect(page.getByTestId('lock-password-input')).toBeVisible();
+  await page.getByTestId('lock-password-input').fill(masterPassword);
+  await page.getByTestId('lock-submit-button').click();
+
+  const restoredImport = page.getByTestId('vault-list-item').filter({ hasText: 'E2E Imported Login' });
+  await expect(restoredImport).toBeVisible();
+  await expect(restoredImport).toContainText('imported-user');
+  await restoredImport.click();
+  await expect(page.getByTestId('login-username-value')).toContainText('imported-user');
 });
 
 test('imports an encrypted aegis backup file', async ({ page }) => {
