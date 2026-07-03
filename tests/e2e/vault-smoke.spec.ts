@@ -206,6 +206,38 @@ test('moves a vault item to trash and restores it', async ({ page }) => {
   await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Trash Restore' })).toBeVisible();
 });
 
+test('permanently deletes a trashed vault item and keeps it deleted after reload', async ({ page }) => {
+  await setupVault(page);
+
+  const savedItem = await createLoginItem(page, 'E2E Permanent Delete', {
+    username: 'delete-forever-user',
+    password: 'DeleteForeverPass!42',
+    url: 'https://delete-forever.example',
+  });
+  await savedItem.click();
+
+  await page.getByTestId('delete-vault-item-button').click();
+  await page.getByTestId('confirm-modal-confirm-button').click();
+  await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Permanent Delete' })).toBeHidden();
+
+  await page.getByTestId('nav-trash-button').click();
+  const trashItem = page.getByTestId('trash-list-item').filter({ hasText: 'E2E Permanent Delete' });
+  await expect(trashItem).toBeVisible();
+
+  await trashItem.getByTestId('permanent-delete-trash-item-button').click();
+  await page.getByTestId('confirm-modal-confirm-button').click();
+  await expect(page.getByTestId('trash-list-item').filter({ hasText: 'E2E Permanent Delete' })).toBeHidden();
+
+  await page.reload();
+  await expect(page.getByTestId('lock-password-input')).toBeVisible();
+  await page.getByTestId('lock-password-input').fill(masterPassword);
+  await page.getByTestId('lock-submit-button').click();
+
+  await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Permanent Delete' })).toBeHidden();
+  await page.getByTestId('nav-trash-button').click();
+  await expect(page.getByTestId('trash-list-item').filter({ hasText: 'E2E Permanent Delete' })).toBeHidden();
+});
+
 test('filters favorite vault items', async ({ page }) => {
   await setupVault(page);
 
