@@ -349,6 +349,38 @@ test('reports weak and reused passwords in the security audit', async ({ page })
   await expect(page.getByTestId('login-username-value')).toContainText('weak-user');
 });
 
+test('reports pwned passwords from a mocked HIBP range response', async ({ page }) => {
+  await page.route('https://api.pwnedpasswords.com/range/**', async (route) => {
+    const url = route.request().url();
+    await route.fulfill({
+      status: 200,
+      contentType: 'text/plain',
+      body: url.endsWith('/840BB')
+        ? '536BF050C79BA8DCBBE8A47D2B180EEE0FF:42\r\n00000000000000000000000000000000000:1\r\n'
+        : '00000000000000000000000000000000000:1\r\n',
+    });
+  });
+
+  await setupVault(page);
+  await createLoginItem(page, 'E2E Pwned Audit Item', {
+    username: 'pwned-user',
+    password: 'PwnedPass123!',
+    url: 'https://pwned.example',
+  });
+
+  await page.getByTestId('nav-audit-button').click();
+  await expect(page.getByTestId('audit-workspace')).toBeVisible();
+  await expect(page.getByTestId('security-audit-pwned-count')).toHaveText('1', { timeout: 20000 });
+
+  const pwnedItem = page.getByTestId('security-audit-pwned-item').filter({ hasText: 'E2E Pwned Audit Item' });
+  await expect(pwnedItem).toBeVisible();
+  await expect(pwnedItem).toContainText('pwned-user');
+  await expect(pwnedItem).toContainText('42');
+
+  await pwnedItem.click();
+  await expect(page.getByTestId('login-username-value')).toContainText('pwned-user');
+});
+
 test('navigates across primary workspaces and returns to the vault', async ({ page }) => {
   await setupVault(page);
 
