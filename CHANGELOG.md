@@ -69,13 +69,17 @@ All notable Aegis Vault 7 changes are tracked here. The project follows a securi
 - Fixed mobile lock button visibility in the dashboard header.
 - Fixed Settings master password change warning so users understand re-encryption impact before proceeding.
 - Fixed browser-fallback OPFS persistence so a fast reload after saving a vault item cannot restore stale pre-save data.
+- Fixed wa-sqlite migration parity by preserving source item timestamps during promotion validation.
+- Fixed Windows backup export failure paths by requiring native Argon2id on desktop and surfacing file-save errors instead of silently falling back.
+- Fixed Windows biometric/FIDO settings layout so passive status text and activation buttons remain readable at intermediate desktop widths.
+- Aligned mobile sidebar branding with the launcher icon and improved safe-area spacing.
 
 ### Validation
 
 - No-JS-Master-String final gate scan and unit test suite successfully verified; integrated as a blocking step in the unit test lifecycle.
 - Signed Android release gate passed with device, fresh-install, and evidence on commit `1df341ec15938da9dad2a8304181dc902013b242`; evidence folder: `release-local/android/2026-07-01T12-41-48-852Z`.
 - Linux and macOS desktop artifact evidence passed standard local verification on commit `30740c2c468aeb56640764fd4d19e05cf4866ef0`; runtime smoke is deferred because no target Linux/macOS devices are available in this workspace, so those artifacts remain internal candidates until platform testing is completed.
-- Unit suite baseline: 108 test files and 841 tests passed in the latest recorded full unit run during release-gate work.
+- Unit suite baseline: 111 test files and 848 tests passed in the latest recorded full unit run during release-gate work.
 - E2E smoke suite includes 24 passing Chromium smoke scenarios, including setup/unlock, item lifecycle, reload persistence, mobile viewport smoke, wa-sqlite migration UI, Emergency Kit, donation, language switching, encrypted import/export, and confirmed plain JSON export coverage.
 - Coverage and mutation thresholds are documented in `docs/QUALITY_GATES.md`.
 - wa-sqlite final gate unit run passed: 9 focused files and 128 tests.
@@ -83,7 +87,7 @@ All notable Aegis Vault 7 changes are tracked here. The project follows a securi
 
 ### Known Limitations
 
-- wa-sqlite is still behind explicit migration/promotion gates; making it the default backend remains a separate release decision.
+- wa-sqlite can be promoted to the active backend after explicit migration and safety gates pass; fresh installs/default-backend policy remains a separate release decision.
 - Public desktop release artifacts should be signed before distribution. Unsigned artifacts are suitable only for internal diagnostics.
 - Android biometric behavior still requires final validation on supported physical devices before public release claims.
 - Browser Autofill behavior depends on Android/browser provider support and user Autofill provider selection; Chrome may require disabling Google Password Manager Autofill or selecting Aegis as the active provider.
