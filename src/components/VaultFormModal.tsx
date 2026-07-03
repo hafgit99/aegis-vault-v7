@@ -36,6 +36,8 @@ import { saveAttachment, getAttachmentBlob } from '../lib/attachments';
 import { secureRandomIndex, secureRandomToken } from '../lib/random';
 import { formatFileSize } from '../lib/display';
 import { useLanguage } from '../i18n/LanguageContext';
+import { VaultFormCategoryTabs, type VaultFormCategory } from './vault-form/VaultFormCategoryTabs';
+import { VaultFormGeneralFields } from './vault-form/VaultFormGeneralFields';
 
 interface VaultFormModalProps {
   isOpen: boolean;
@@ -49,7 +51,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
   const { t } = useLanguage();
 
   // Category Selector Strategy
-  const [category, setCategory] = useState<'login' | 'card' | 'passkey' | 'identity' | 'secure_note'>('login');
+  const [category, setCategory] = useState<VaultFormCategory>('login');
   
   // Basic & Login States
   const [title, setTitle] = useState('');
@@ -391,82 +393,11 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
           </button>
         </div>
 
-        {/* Tab Selection Row for 5 Distinct Categories */}
-        <div className="px-3 sm:px-6 py-2 sm:py-3 border-b border-outline-variant/5 bg-[#090a09]/95 shrink-0 overflow-x-auto scrollbar-hide">
-          <div data-testid="vault-item-category-tabs" className="grid grid-cols-5 gap-1.5 sm:gap-2 min-w-[430px] sm:min-w-0">
-          
-          <button
-            data-testid="vault-item-category-login"
-            type="button"
-            onClick={() => setCategory('login')}
-            className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 border transition-all text-center cursor-pointer ${
-              category === 'login'
-                ? 'bg-brand-primary/10 border-brand-primary/30 text-brand-primary text-xs font-bold'
-                : 'bg-transparent border-transparent text-on-surface-variant/70 hover:text-on-surface hover:bg-[#151715]/40 text-xs'
-            }`}
-          >
-            <KeyRound className="w-4 h-4" />
-            <span className="text-[9px] sm:text-[10px] font-sans">{t('vaultForm.category.login')}</span>
-          </button>
-
-          <button
-            data-testid="vault-item-category-card"
-            type="button"
-            onClick={() => setCategory('card')}
-            className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 border transition-all text-center cursor-pointer ${
-              category === 'card'
-                ? 'bg-brand-primary/10 border-brand-primary/30 text-brand-primary text-xs font-bold'
-                : 'bg-transparent border-transparent text-on-surface-variant/70 hover:text-on-surface hover:bg-[#151715]/40 text-xs'
-            }`}
-          >
-            <CreditCard className="w-4 h-4" />
-            <span className="text-[9px] sm:text-[10px] font-sans">{t('vaultForm.category.card')}</span>
-          </button>
-
-          <button
-            data-testid="vault-item-category-passkey"
-            type="button"
-            onClick={() => setCategory('passkey')}
-            className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 border transition-all text-center cursor-pointer ${
-              category === 'passkey'
-                ? 'bg-brand-primary/10 border-brand-primary/30 text-brand-primary text-xs font-bold'
-                : 'bg-transparent border-transparent text-on-surface-variant/70 hover:text-on-surface hover:bg-[#151715]/40 text-xs'
-            }`}
-          >
-            <Fingerprint className="w-4 h-4" />
-            <span className="text-[9px] sm:text-[10px] font-sans">{t('vaultForm.category.passkey')}</span>
-          </button>
-
-          <button
-            data-testid="vault-item-category-identity"
-            type="button"
-            onClick={() => setCategory('identity')}
-            className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 border transition-all text-center cursor-pointer ${
-              category === 'identity'
-                ? 'bg-brand-primary/10 border-brand-primary/30 text-brand-primary text-xs font-bold'
-                : 'bg-transparent border-transparent text-on-surface-variant/70 hover:text-on-surface hover:bg-[#151715]/40 text-xs'
-            }`}
-          >
-            <User className="w-4 h-4" />
-            <span className="text-[9px] sm:text-[10px] font-sans">{t('vaultForm.category.identity')}</span>
-          </button>
-
-          <button
-            data-testid="vault-item-category-secure-note"
-            type="button"
-            onClick={() => setCategory('secure_note')}
-            className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 border transition-all text-center cursor-pointer ${
-              category === 'secure_note'
-                ? 'bg-brand-primary/10 border-brand-primary/30 text-brand-primary text-xs font-bold'
-                : 'bg-transparent border-transparent text-on-surface-variant/70 hover:text-on-surface hover:bg-[#151715]/40 text-xs'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            <span className="text-[9px] sm:text-[10px] font-sans">{t('vaultForm.category.secureNote')}</span>
-          </button>
-
-        </div>
-        </div>
+        <VaultFormCategoryTabs
+          category={category}
+          onCategoryChange={setCategory}
+          t={t}
+        />
 
         {/* Global Error Banner */}
         {errorMessage && (
@@ -478,49 +409,13 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
 
         <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto scrollbar-hide p-4 sm:p-6 space-y-4 sm:space-y-6">
 
-          {/* COMMON GENERAL TITLE (REQUIRED FOR ALL TYPES) */}
-          <div className="bg-[#121412]/50 p-3 sm:p-4 rounded-xl border border-outline-variant/10 space-y-4">
-            <h4 className="text-[10px] font-bold text-brand-primary tracking-widest uppercase flex items-center gap-1.5">
-              <Sparkle className="w-3.5 h-3.5 fill-current" />
-              <span>{t('vaultForm.general.title')}</span>
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                  {t('vaultForm.field.title')}
-                </label>
-                <div className="relative">
-                  <Shield className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
-                  <input
-                    data-testid="vault-item-title-input"
-                    type="text"
-                    required
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-semibold"
-                    placeholder={t('vaultForm.placeholder.title')}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                  {t('vaultForm.field.url')}
-                </label>
-                <div className="relative">
-                  <Globe className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
-                  <input
-                    data-testid="vault-item-url-input"
-                    type="text"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                    className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
-                    placeholder={t('vaultForm.placeholder.url')}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
+          <VaultFormGeneralFields
+            title={title}
+            url={url}
+            onTitleChange={setTitle}
+            onUrlChange={setUrl}
+            t={t}
+          />
 
           {/* Dynamic view category 1: login credentials */}
           {category === 'login' && (

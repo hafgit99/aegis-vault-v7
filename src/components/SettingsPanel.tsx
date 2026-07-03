@@ -43,7 +43,10 @@ import { saveEmergencyKit } from '../lib/emergencyKit';
 import { isAccountSecretKeyFormatValid } from '../lib/secretKey';
 import { useLanguage } from '../i18n/LanguageContext';
 import { validateMasterPassword } from '../lib/security';
-import { languageLabels, supportedLanguages, type LanguageCode } from '../i18n/translations';
+import type { LanguageCode } from '../i18n/translations';
+import { SettingsLanguageCard } from './settings/SettingsLanguageCard';
+import { SettingsPasswordCard } from './settings/SettingsPasswordCard';
+import { SettingsStatsCard } from './settings/SettingsStatsCard';
 import {
   getLastSyncTime,
   hasSyncConfig,
@@ -916,152 +919,31 @@ export default function SettingsPanel({
         </div>
       </div>
 
-      <section
-        data-testid="language-settings-card"
-        className="glass-panel p-4 sm:p-6 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 items-center border border-outline-variant/10"
-      >
-        <div className="md:col-span-2 space-y-1.5">
-          <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2">
-            <Settings className="w-4 h-4 text-brand-primary" />
-            <span>{t('settings.language.title')}</span>
-          </h3>
-          <p className="hidden sm:block text-xs text-on-surface-variant leading-relaxed">
-            {t('settings.language.description')}
-          </p>
-        </div>
-
-        <label className="space-y-1.5">
-          <span className="block text-[10px] font-bold text-on-surface-variant/85 uppercase">
-            {t('settings.language.label')}
-          </span>
-          <select
-            data-testid="language-select"
-            value={language}
-            onChange={(event) => setLanguage(event.target.value as LanguageCode)}
-            className="w-full bg-[#141614] border border-outline-variant/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 text-on-surface"
-          >
-            {supportedLanguages.map((code) => (
-              <option key={code} value={code}>
-                {languageLabels[code]}
-              </option>
-            ))}
-          </select>
-        </label>
-      </section>
+      <SettingsLanguageCard
+        language={language}
+        onLanguageChange={setLanguage}
+        t={t}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6" id="settings-top-row">
-        {/* Statistics & Info */}
-        <div className="glass-panel p-4 sm:p-6 rounded-2xl md:col-span-1 space-y-4" id="stats-card">
-          <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2 border-b border-outline-variant/10 pb-2">
-            <Database className="w-4 h-4 text-brand-primary" />
-            <span>{t('settings.stats.title')}</span>
-          </h3>
-          <div className="space-y-3 pt-1">
-            <div className="flex justify-between items-center text-sm border-b border-outline-variant/10 pb-2">
-              <span className="text-on-surface-variant">{t('settings.stats.totalItems')}</span>
-              <span className="font-mono font-bold text-brand-primary">{items.length}</span>
-            </div>
-            <div className="flex justify-between items-center text-sm border-b border-outline-variant/10 pb-2">
-              <span className="text-on-surface-variant">{t('settings.stats.secureStructure')}</span>
-              <span className="text-[#10b981] font-bold text-xs flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5" /> AES-GCM
-              </span>
-            </div>
-            <div className="flex justify-between items-center text-sm border-b border-outline-variant/10 pb-2">
-              <span className="text-on-surface-variant">{t('settings.stats.dataLocation')}</span>
-              <span className="text-xs text-brand-tertiary">{t('settings.stats.browserMemory')}</span>
-            </div>
-          </div>
+        <SettingsStatsCard
+          itemCount={items.length}
+          onReseedDemo={triggerReseed}
+          t={t}
+        />
 
-          <div className="pt-2">
-            <button
-              onClick={triggerReseed}
-              className="w-full flex items-center justify-center gap-2 text-xs font-semibold bg-[#1a1c1a] border border-outline-variant/25 hover:bg-[#252825] py-3 rounded-lg text-on-surface-variant hover:text-on-surface transition-all cursor-pointer"
-              id="demo-reseed-btn"
-            >
-              <RefreshCw className="w-4 h-4" />
-              <span>{t('settings.stats.reseedDemo')}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Change Master Password Card */}
-        <div className="glass-panel p-4 sm:p-6 rounded-2xl md:col-span-2 space-y-4" id="change-pass-card">
-          <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2 border-b border-outline-variant/10 pb-2">
-            <Key className="w-4 h-4 text-brand-secondary" />
-            <span>{t('settings.password.title')}</span>
-          </h3>
-
-          <div className="hidden sm:flex p-3 bg-brand-primary/10 border border-brand-primary/20 rounded-xl text-xs text-on-surface-variant leading-relaxed items-start gap-2">
-            <ShieldCheck className="w-4 h-4 text-brand-primary shrink-0 mt-0.5" />
-            <span>{t('settings.password.rotationNotice')}</span>
-          </div>
-
-          <form onSubmit={handlePasswordChange} className="space-y-3 pt-1" id="pass-change-form">
-            {passwordError && (
-              <div className="p-3 bg-brand-error/10 border border-brand-error/20 rounded-lg text-brand-error text-xs flex gap-2 items-center">
-                <ShieldAlert className="w-4 h-4 shrink-0" />
-                <span>{passwordError}</span>
-              </div>
-            )}
-            {passwordSuccess && (
-              <div className="p-3 bg-brand-tertiary/10 border border-brand-tertiary/20 rounded-lg text-brand-tertiary text-xs flex gap-2 items-center animate-pulse">
-                <CheckCircle className="w-4 h-4 shrink-0" />
-                <span>{t('settings.password.success')}</span>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[10px] font-bold text-on-surface-variant/85 uppercase mb-1.5">
-                  {t('settings.password.current')}
-                </label>
-                <input
-                  type="password"
-                  value={oldPassword}
-                  onChange={(e) => setOldPassword(e.target.value)}
-                  className="w-full bg-[#141614] border border-outline-variant/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 text-on-surface"
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-on-surface-variant/85 uppercase mb-1.5">
-                  {t('settings.password.new')}
-                </label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full bg-[#141614] border border-outline-variant/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 text-on-surface"
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-bold text-on-surface-variant/85 uppercase mb-1.5">
-                {t('settings.password.confirm')}
-              </label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full bg-[#141614] border border-outline-variant/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 text-on-surface"
-                placeholder="••••••••"
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="px-5 py-2.5 bg-brand-primary text-brand-on-primary rounded-lg font-bold text-xs hover:brightness-110 active:scale-95 transition-all mt-1 cursor-pointer"
-            >
-              {t('settings.password.update')}
-            </button>
-          </form>
-        </div>
+        <SettingsPasswordCard
+          oldPassword={oldPassword}
+          newPassword={newPassword}
+          confirmPassword={confirmPassword}
+          passwordError={passwordError}
+          passwordSuccess={passwordSuccess}
+          onOldPasswordChange={setOldPassword}
+          onNewPasswordChange={setNewPassword}
+          onConfirmPasswordChange={setConfirmPassword}
+          onSubmit={handlePasswordChange}
+          t={t}
+        />
       </div>
 
       {/* Emergency Kit Card */}

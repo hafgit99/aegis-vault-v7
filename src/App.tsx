@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 import LockScreen from './components/LockScreen';
@@ -34,22 +34,9 @@ import { useUnlockedVaultRefresh } from './hooks/useUnlockedVaultRefresh';
 import { useSelectedItemScore } from './hooks/useSelectedItemScore';
 import { useVaultStatusAction } from './hooks/useVaultStatusAction';
 import { useRuntimeSecurity } from './hooks/useRuntimeSecurity';
+import { useAndroidAutofillCoordinator } from './hooks/useAndroidAutofillCoordinator';
 import { useLanguage } from './i18n/LanguageContext';
-import {
-  AndroidAutofillRequest,
-  AndroidAutofillSaveCandidate,
-  clearPendingAndroidAutofillRequest,
-  completePendingAndroidAutofillRequest,
-  getPendingAndroidAutofillRequest,
-  getPendingAndroidAutofillSaveCandidate,
-  isAndroidAutofillRequestFresh,
-  subscribeAndroidAutofillRequests,
-  subscribeAndroidAutofillSaveCandidates,
-  clearPendingAndroidAutofillSaveCandidate,
-} from './lib/androidAutofill';
-import { logAndroidAutofillSecurityEvent } from './lib/androidAutofillSecurity';
 import { syncExtensionCredentials, clearExtensionCredentials } from './lib/desktopStorage';
-import type { VaultItem } from './types';
 
 const MIN_BACKGROUND_LOCK_DELAY_MS = 60_000;
 const MAX_BACKGROUND_LOCK_DELAY_MS = 15 * 60_000;
@@ -64,14 +51,6 @@ function backgroundLockDelayFromAutoLock(autoLockDurationSeconds: number): numbe
 
 export default function App() {
   const { t } = useLanguage();
-  const [pendingAutofillRequest, setPendingAutofillRequest] = useState<AndroidAutofillRequest | null>(() =>
-    getPendingAndroidAutofillRequest(),
-  );
-  const [pendingAutofillSaveCandidate, setPendingAutofillSaveCandidate] = useState<AndroidAutofillSaveCandidate | null>(() =>
-    getPendingAndroidAutofillSaveCandidate(),
-  );
-  const notifiedAutofillRequestRef = useRef<string | null>(null);
-  const handledAutofillSaveRef = useRef<string | null>(null);
   const { copiedField, copyText: handleCopyText, clearCopiedField } = useClipboardFeedback();
   const { revealed, toggleReveal, resetReveals } = useSensitiveReveal();
   const isPasswordRevealed = revealed.password;
@@ -148,6 +127,17 @@ export default function App() {
     clearCopiedField,
   });
 
+  const {
+    pendingAutofillRequest,
+    cancelAutofillRequest: handleCancelAutofillRequest,
+    approveAutofillRequest: handleApproveAutofillRequest,
+  } = useAndroidAutofillCoordinator({
+    unlocked,
+    setActiveTab,
+    openNewItemForm: handleTriggerNew,
+    showNotification,
+  });
+
   const { privacyShieldVisible, screenRecordingDetected } = useRuntimeSecurity({
     unlocked,
     onLock: handleLock,
@@ -220,131 +210,6 @@ export default function App() {
     };
   }, [handleTriggerNew]);
 
-
-  const rejectStaleAutofillRequest = useCallback((request: AndroidAutofillRequest): boolean => {
-    if (isAndroidAutofillRequestFresh(request)) return false;
-
-    clearPendingAndroidAutofillRequest(request.requestId);
-    logAndroidAutofillSecurityEvent('failed', request);
-    if (notifiedAutofillRequestRef.current === request.requestId) {
-      notifiedAutofillRequestRef.current = null;
-    }
-    setPendingAutofillRequest(null);
-    return true;
-  }, []);
-
-  useEffect(() => {
-    const pending = getPendingAndroidAutofillRequest();
-    if (pending && !rejectStaleAutofillRequest(pending)) {
-      setPendingAutofillRequest(pending);
-    }
-
-    return subscribeAndroidAutofillRequests((request) => {
-      if (rejectStaleAutofillRequest(request)) return;
-      setPendingAutofillRequest(request);
-    });
-  }, [rejectStaleAutofillRequest]);
-
-  useEffect(() => {
-    const pendingSave = getPendingAndroidAutofillSaveCandidate();
-    if (pendingSave) {
-      setPendingAutofillSaveCandidate(pendingSave);
-    }
-
-    return subscribeAndroidAutofillSaveCandidates((candidate) => {
-      setPendingAutofillSaveCandidate(candidate);
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!unlocked || !pendingAutofillRequest) return;
-    if (rejectStaleAutofillRequest(pendingAutofillRequest)) return;
-    if (notifiedAutofillRequestRef.current === pendingAutofillRequest.requestId) return;
-
-    notifiedAutofillRequestRef.current = pendingAutofillRequest.requestId;
-    logAndroidAutofillSecurityEvent('requested', pendingAutofillRequest);
-    setActiveTab('vault');
-    showNotification({
-      title: t('autofill.notification.title'),
-      message: t('autofill.notification.message'),
-      type: 'info',
-    });
-  }, [pendingAutofillRequest, setActiveTab, showNotification, t, unlocked]);
-
-  useEffect(() => {
-    if (!unlocked || !pendingAutofillSaveCandidate) return;
-    if (handledAutofillSaveRef.current === pendingAutofillSaveCandidate.requestId) return;
-
-    handledAutofillSaveRef.current = pendingAutofillSaveCandidate.requestId;
-    clearPendingAndroidAutofillSaveCandidate(pendingAutofillSaveCandidate.requestId);
-    setActiveTab('vault');
-    handleTriggerNew({
-      title: pendingAutofillSaveCandidate.title || pendingAutofillSaveCandidate.webDomain || pendingAutofillSaveCandidate.appPackage || '',
-      username: pendingAutofillSaveCandidate.username || '',
-      password: pendingAutofillSaveCandidate.password || '',
-      url: pendingAutofillSaveCandidate.url || pendingAutofillSaveCandidate.webDomain || '',
-      category: 'login',
-    });
-    setPendingAutofillSaveCandidate(null);
-    showNotification({
-      title: t('autofill.saveCaptured.title'),
-      message: t('autofill.saveCaptured.message'),
-      type: 'info',
-    });
-  }, [handleTriggerNew, pendingAutofillSaveCandidate, setActiveTab, showNotification, t, unlocked]);
-
-  const handleCancelAutofillRequest = useCallback(() => {
-    if (pendingAutofillRequest) {
-      clearPendingAndroidAutofillRequest(pendingAutofillRequest.requestId);
-      logAndroidAutofillSecurityEvent('cancelled', pendingAutofillRequest);
-    }
-
-    notifiedAutofillRequestRef.current = null;
-    setPendingAutofillRequest(null);
-    showNotification({
-      title: t('autofill.cancelled.title'),
-      message: t('autofill.cancelled.message'),
-      type: 'info',
-    });
-  }, [pendingAutofillRequest, showNotification, t]);
-
-  const handleApproveAutofillRequest = useCallback((item: VaultItem) => {
-    if (!pendingAutofillRequest) return;
-    if (rejectStaleAutofillRequest(pendingAutofillRequest)) {
-      showNotification({
-        title: t('autofill.failed.title'),
-        message: t('autofill.failed.message'),
-        type: 'danger',
-      });
-      return;
-    }
-
-    const completed = completePendingAndroidAutofillRequest(
-      pendingAutofillRequest.requestId,
-      item.username ?? '',
-      item.password,
-      item.title || 'Aegis Vault',
-    );
-
-    if (!completed) {
-      logAndroidAutofillSecurityEvent('failed', pendingAutofillRequest, item);
-      showNotification({
-        title: t('autofill.failed.title'),
-        message: t('autofill.failed.message'),
-        type: 'danger',
-      });
-      return;
-    }
-
-    notifiedAutofillRequestRef.current = null;
-    setPendingAutofillRequest(null);
-    logAndroidAutofillSecurityEvent('completed', pendingAutofillRequest, item);
-    showNotification({
-      title: t('autofill.completed.title'),
-      message: t('autofill.completed.message'),
-      type: 'success',
-    });
-  }, [pendingAutofillRequest, rejectStaleAutofillRequest, showNotification, t]);
 
   const {
     openVaultStatus: handleOpenVaultStatus,
