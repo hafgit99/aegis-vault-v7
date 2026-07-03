@@ -36,6 +36,7 @@ import { saveAttachment, getAttachmentBlob } from '../lib/attachments';
 import { secureRandomIndex, secureRandomToken } from '../lib/random';
 import { formatFileSize } from '../lib/display';
 import { useLanguage } from '../i18n/LanguageContext';
+import { progressWidthClass } from '../lib/progressWidth';
 import { VaultFormCategoryTabs, type VaultFormCategory } from './vault-form/VaultFormCategoryTabs';
 import { VaultFormGeneralFields } from './vault-form/VaultFormGeneralFields';
 
@@ -810,10 +811,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                   <p className="text-[10px] text-on-surface-variant mt-1">{t('vaultForm.attachment.encryptingDescription')}</p>
                 </div>
                 <div className="w-48 bg-[#181a18] h-1.5 rounded-full overflow-hidden relative">
-                  <div 
-                    className="bg-brand-primary h-full transition-all duration-300"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
+                  <div className={`bg-brand-primary h-full transition-all duration-300 ${progressWidthClass(uploadProgress)}`} />
                 </div>
                 <span className="text-[10px] font-mono text-brand-primary">%{uploadProgress}</span>
               </div>

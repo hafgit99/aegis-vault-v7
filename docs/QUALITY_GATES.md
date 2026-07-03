@@ -34,6 +34,17 @@ These thresholds prevent meaningful regressions while leaving room to add tests 
 
 1. `src/components/SettingsPanel.tsx`: reduce remaining fallback-message and desktop-runtime branch gaps.
 
+## Security Gate Scripts
+
+Release candidates run dedicated security gates in addition to typecheck, unit tests, and builds:
+
+```bash
+npm run security:no-js-master-string
+npm run security:csp
+```
+
+The CSP gate fails if Tauri's production Content-Security-Policy reintroduces `style-src 'unsafe-inline'`, remote Google font origins, React inline `style={...}` props, HTML `style` attributes, or production `<style>` blocks. Desktop, Android, and wa-sqlite final gates call it automatically.
+
 ## Current Mutation Gate
 
 The first practical mutation gate runs against critical library helpers with:

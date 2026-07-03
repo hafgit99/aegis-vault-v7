@@ -77,7 +77,8 @@
     "desktop:release:import": "node scripts/desktop-release-import-artifacts.cjs",
     "security:no-js-master-string": "node scripts/security-no-js-master-string.cjs",
     "audit:checksums": "node scripts/generate-audit-package-checksums.cjs",
-    "audit:checksums:verify": "node scripts/generate-audit-package-checksums.cjs --verify"
+    "audit:checksums:verify": "node scripts/generate-audit-package-checksums.cjs --verify",
+    "security:csp": "node scripts/security-csp-no-unsafe-inline.cjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",

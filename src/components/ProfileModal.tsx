@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { X, Upload, User, Image as ImageIcon, Check } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
+import { AVATAR_GRADIENT_PRESETS, avatarClassNameForValue, isAvatarGradient } from '../lib/avatarStyles';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -11,19 +12,8 @@ interface ProfileModalProps {
   onSave: (name: string, avatar: string) => void;
 }
 
-// Some beautiful default gradient presets
-const PRESET_AVATARS = [
-  'linear-gradient(135deg, #10b981 0%, #059669 100%)', // Brand Emerald
-  'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', // Blue
-  'linear-gradient(135deg, #ec4899 0%, #be185d 100%)', // Pink
-  'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', // Amber
-  'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)', // Purple
-  'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)', // Red
-];
-
-// Helper to determine if an avatar string is a gradient or an image URL
 export function isGradient(avatar: string): boolean {
-  return avatar.startsWith('linear-gradient') || avatar.startsWith('gradient');
+  return isAvatarGradient(avatar);
 }
 
 export default function ProfileModal({
@@ -112,8 +102,7 @@ export default function ProfileModal({
             <div className="relative group">
               {isGradient(avatar) ? (
                 <div
-                  style={{ background: avatar }}
-                  className="w-24 h-24 rounded-full border-2 border-brand-primary flex items-center justify-center text-white text-3xl font-bold font-display shadow-lg select-none"
+                  className={`w-24 h-24 rounded-full border-2 border-brand-primary flex items-center justify-center text-white text-3xl font-bold font-display shadow-lg select-none ${avatarClassNameForValue(avatar)}`}
                 >
                   {name ? name.charAt(0).toUpperCase() : 'A'}
                 </div>
@@ -160,18 +149,18 @@ export default function ProfileModal({
               {t('profile.colorLabel')}
             </label>
             <div className="flex items-center gap-2 flex-wrap justify-center">
-              {PRESET_AVATARS.map((gradient, idx) => {
-                const isActive = avatar === gradient;
+              {AVATAR_GRADIENT_PRESETS.map((gradient, idx) => {
+                const isActive = avatar === gradient.value;
                 return (
                   <button
                     key={idx}
                     type="button"
+                    aria-label={`avatar-preset-${idx + 1}`}
                     onClick={() => {
                       setError(null);
-                      setAvatar(gradient);
+                      setAvatar(gradient.value);
                     }}
-                    style={{ background: gradient }}
-                    className={`w-10 h-10 rounded-full cursor-pointer hover:scale-110 transition-transform flex items-center justify-center border-2 ${
+                    className={`w-10 h-10 rounded-full cursor-pointer hover:scale-110 transition-transform flex items-center justify-center border-2 ${gradient.className} ${
                       isActive ? 'border-brand-primary scale-110' : 'border-transparent'
                     }`}
                   >

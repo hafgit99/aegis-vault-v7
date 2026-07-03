@@ -74,6 +74,7 @@ if (hasFlag('--help')) {
 const steps = [
   { command: 'npm', args: ['run', 'lint'] },
   { command: 'npm', args: ['run', 'security:no-js-master-string'] },
+  { command: 'npm', args: ['run', 'security:csp'] },
   { command: 'npx', args: ['vitest', 'run', ...focusedUnitFiles] },
 ];
 

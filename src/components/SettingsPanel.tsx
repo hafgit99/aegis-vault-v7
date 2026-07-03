@@ -42,6 +42,7 @@ import { isAndroidAutofillEnabled, isAndroidAutofillSupported, openAndroidAutofi
 import { saveEmergencyKit } from '../lib/emergencyKit';
 import { isAccountSecretKeyFormatValid } from '../lib/secretKey';
 import { useLanguage } from '../i18n/LanguageContext';
+import { progressWidthClass } from '../lib/progressWidth';
 import { validateMasterPassword } from '../lib/security';
 import type { LanguageCode } from '../i18n/translations';
 import { SettingsLanguageCard } from './settings/SettingsLanguageCard';
@@ -155,6 +156,7 @@ export default function SettingsPanel({
   const [syncTestResult, setSyncTestResult] = useState<string | null>(null);
   const [syncTestLoading, setSyncTestLoading] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
+  const syncTestSucceeded = syncTestResult === t('settings.sync.test.success');
 
   // Load last sync time and detect saved config on mount
   useEffect(() => {
@@ -1305,10 +1307,7 @@ export default function SettingsPanel({
                 </div>
                 <div className="w-full h-2 bg-[#0a0c0a] rounded-full overflow-hidden border border-brand-primary/20">
                   <div
-                    className="h-full bg-gradient-to-r from-brand-primary to-brand-primary/70 transition-all duration-300 ease-out"
-                    style={{
-                      width: `${importState.percent}%`
-                    }}
+                    className={`h-full bg-gradient-to-r from-brand-primary to-brand-primary/70 transition-all duration-300 ease-out ${progressWidthClass(importState.percent)}`}
                   />
                 </div>
                 <div className="text-[10px] text-on-surface-variant text-right font-mono">
@@ -1553,7 +1552,7 @@ export default function SettingsPanel({
               <span>{syncTestLoading ? '…' : t('settings.sync.configure.testConnection')}</span>
             </button>
             {syncTestResult && (
-              <p className="text-xs px-1" style={{ color: syncTestResult.startsWith('✅') ? '#4ade80' : '#f87171' }}>
+              <p className={`text-xs px-1 ${syncTestSucceeded ? 'text-green-400' : 'text-red-400'}`}>
                 {syncTestResult}
               </p>
             )}
@@ -1612,12 +1611,12 @@ export default function SettingsPanel({
               </div>
             </div>
             {syncStatus !== 'idle' && (
-              <p className="text-xs px-1" style={{
-                color: syncStatus === 'success' ? '#4ade80' :
-                       syncStatus === 'conflict' ? '#facc15' :
-                       syncStatus === 'error' ? '#f87171' :
-                       'var(--color-on-surface-variant)'
-              }}>
+              <p className={`text-xs px-1 ${
+                syncStatus === 'success' ? 'text-green-400' :
+                syncStatus === 'conflict' ? 'text-yellow-400' :
+                syncStatus === 'error' ? 'text-red-400' :
+                'text-on-surface-variant'
+              }`}>
                 {syncStatus === 'syncing' ? t('settings.sync.status.syncing') :
                  syncStatus === 'success' ? t('settings.sync.status.success') :
                  syncStatus === 'conflict' ? t('settings.sync.status.conflict') :

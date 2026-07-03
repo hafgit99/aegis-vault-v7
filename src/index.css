@@ -98,6 +98,115 @@
     color: var(--color-brand-primary);
   }
 
+  .avatar-gradient-emerald { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+  .avatar-gradient-blue { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
+  .avatar-gradient-pink { background: linear-gradient(135deg, #ec4899 0%, #be185d 100%); }
+  .avatar-gradient-amber { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+  .avatar-gradient-purple { background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); }
+  .avatar-gradient-red { background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); }
+
+  .progress-width-0 { width: 0%; }
+  .progress-width-1 { width: 1%; }
+  .progress-width-2 { width: 2%; }
+  .progress-width-3 { width: 3%; }
+  .progress-width-4 { width: 4%; }
+  .progress-width-5 { width: 5%; }
+  .progress-width-6 { width: 6%; }
+  .progress-width-7 { width: 7%; }
+  .progress-width-8 { width: 8%; }
+  .progress-width-9 { width: 9%; }
+  .progress-width-10 { width: 10%; }
+  .progress-width-11 { width: 11%; }
+  .progress-width-12 { width: 12%; }
+  .progress-width-13 { width: 13%; }
+  .progress-width-14 { width: 14%; }
+  .progress-width-15 { width: 15%; }
+  .progress-width-16 { width: 16%; }
+  .progress-width-17 { width: 17%; }
+  .progress-width-18 { width: 18%; }
+  .progress-width-19 { width: 19%; }
+  .progress-width-20 { width: 20%; }
+  .progress-width-21 { width: 21%; }
+  .progress-width-22 { width: 22%; }
+  .progress-width-23 { width: 23%; }
+  .progress-width-24 { width: 24%; }
+  .progress-width-25 { width: 25%; }
+  .progress-width-26 { width: 26%; }
+  .progress-width-27 { width: 27%; }
+  .progress-width-28 { width: 28%; }
+  .progress-width-29 { width: 29%; }
+  .progress-width-30 { width: 30%; }
+  .progress-width-31 { width: 31%; }
+  .progress-width-32 { width: 32%; }
+  .progress-width-33 { width: 33%; }
+  .progress-width-34 { width: 34%; }
+  .progress-width-35 { width: 35%; }
+  .progress-width-36 { width: 36%; }
+  .progress-width-37 { width: 37%; }
+  .progress-width-38 { width: 38%; }
+  .progress-width-39 { width: 39%; }
+  .progress-width-40 { width: 40%; }
+  .progress-width-41 { width: 41%; }
+  .progress-width-42 { width: 42%; }
+  .progress-width-43 { width: 43%; }
+  .progress-width-44 { width: 44%; }
+  .progress-width-45 { width: 45%; }
+  .progress-width-46 { width: 46%; }
+  .progress-width-47 { width: 47%; }
+  .progress-width-48 { width: 48%; }
+  .progress-width-49 { width: 49%; }
+  .progress-width-50 { width: 50%; }
+  .progress-width-51 { width: 51%; }
+  .progress-width-52 { width: 52%; }
+  .progress-width-53 { width: 53%; }
+  .progress-width-54 { width: 54%; }
+  .progress-width-55 { width: 55%; }
+  .progress-width-56 { width: 56%; }
+  .progress-width-57 { width: 57%; }
+  .progress-width-58 { width: 58%; }
+  .progress-width-59 { width: 59%; }
+  .progress-width-60 { width: 60%; }
+  .progress-width-61 { width: 61%; }
+  .progress-width-62 { width: 62%; }
+  .progress-width-63 { width: 63%; }
+  .progress-width-64 { width: 64%; }
+  .progress-width-65 { width: 65%; }
+  .progress-width-66 { width: 66%; }
+  .progress-width-67 { width: 67%; }
+  .progress-width-68 { width: 68%; }
+  .progress-width-69 { width: 69%; }
+  .progress-width-70 { width: 70%; }
+  .progress-width-71 { width: 71%; }
+  .progress-width-72 { width: 72%; }
+  .progress-width-73 { width: 73%; }
+  .progress-width-74 { width: 74%; }
+  .progress-width-75 { width: 75%; }
+  .progress-width-76 { width: 76%; }
+  .progress-width-77 { width: 77%; }
+  .progress-width-78 { width: 78%; }
+  .progress-width-79 { width: 79%; }
+  .progress-width-80 { width: 80%; }
+  .progress-width-81 { width: 81%; }
+  .progress-width-82 { width: 82%; }
+  .progress-width-83 { width: 83%; }
+  .progress-width-84 { width: 84%; }
+  .progress-width-85 { width: 85%; }
+  .progress-width-86 { width: 86%; }
+  .progress-width-87 { width: 87%; }
+  .progress-width-88 { width: 88%; }
+  .progress-width-89 { width: 89%; }
+  .progress-width-90 { width: 90%; }
+  .progress-width-91 { width: 91%; }
+  .progress-width-92 { width: 92%; }
+  .progress-width-93 { width: 93%; }
+  .progress-width-94 { width: 94%; }
+  .progress-width-95 { width: 95%; }
+  .progress-width-96 { width: 96%; }
+  .progress-width-97 { width: 97%; }
+  .progress-width-98 { width: 98%; }
+  .progress-width-99 { width: 99%; }
+  .progress-width-100 { width: 100%; }
+
   .icon-tile {
     width: 2.25rem;
     height: 2.25rem;

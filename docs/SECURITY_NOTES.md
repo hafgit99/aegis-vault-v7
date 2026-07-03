@@ -12,6 +12,7 @@ This project is a password vault, so security claims must stay conservative unti
 - New biometric master-password wrapping uses WebCrypto PBKDF2-SHA256 at 600,000 iterations and AES-GCM.
 - New vault item metadata writes use WebCrypto AES-GCM with keys derived through the vetted Argon2id adapter.
 - Tauri CSP now adds native defense-in-depth restrictions for frames, objects, forms, workers, media, and outbound connections; runtime air-gap guards also block WebRTC construction.
+- Tauri CSP now removes `style-src 'unsafe-inline'`; production React/HTML sources avoid inline style attributes and the release gates enforce this with `npm run security:csp`.
 - Imported WebCrypto AES-GCM key references are cleared automatically when the vault session closes.
 - WebCrypto AES-GCM IV generation now uses a fresh 12-byte CSPRNG nonce for every encryption operation instead of process-local counter state.
 - Legacy backup encryption writer and decrypt fallback paths have been removed from the public API.

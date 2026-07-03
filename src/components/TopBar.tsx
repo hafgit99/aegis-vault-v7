@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Bell, Lock, Menu, RefreshCw, Search } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
+import { avatarClassNameForValue } from '../lib/avatarStyles';
 import { APP_PROFILE_ALT } from '../lib/branding';
 import { ActiveTab } from '../types';
 import LocalStorageBadge from './LocalStorageBadge';
@@ -114,8 +115,7 @@ export default function TopBar({
           >
             {isGradient(profileAvatar) ? (
               <div
-                style={{ background: profileAvatar }}
-                className="w-full h-full text-white text-[11px] font-bold font-display flex items-center justify-center select-none"
+                className={`w-full h-full text-white text-[11px] font-bold font-display flex items-center justify-center select-none ${avatarClassNameForValue(profileAvatar)}`}
               >
                 {profileName.charAt(0).toUpperCase()}
               </div>

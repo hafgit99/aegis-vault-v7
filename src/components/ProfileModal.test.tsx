@@ -72,8 +72,7 @@ describe('ProfileModal', () => {
       />,
     );
 
-    const presetButtons = document.querySelectorAll<HTMLButtonElement>('button[style]');
-    fireEvent.click(presetButtons[1]);
+    fireEvent.click(screen.getByLabelText('avatar-preset-2'));
     fireEvent.change(screen.getByLabelText(/KULLANICI ADI/), {
       target: { value: '  Ada Vault  ' },
     });

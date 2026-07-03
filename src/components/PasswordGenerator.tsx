@@ -18,6 +18,7 @@ import {
   Lock
 } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
+import { progressWidthClass } from '../lib/progressWidth';
 import { GeneratorOptions } from '../types';
 import { generatePassword, calculatePasswordScore, getStrengthLabel } from '../lib/security';
 import { calculateDicewareEntropyBits, generateDiceware, DicewareOptions } from '../lib/diceware';
@@ -280,8 +281,7 @@ export default function PasswordGenerator({ onCopyText, copiedField }: PasswordG
                     : score >= 40
                     ? 'bg-amber-400 from-amber-500 to-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.3)]'
                     : 'bg-brand-error from-red-600 to-brand-error shadow-[0_0_8px_rgba(255,180,171,0.3)]'
-                }`}
-                style={{ width: `${score}%` }}
+                } ${progressWidthClass(score)}`}
               ></div>
             </div>
             <span className="text-xs font-mono font-bold text-on-surface-variant ml-2">% {score}</span>
