@@ -238,6 +238,48 @@ test('permanently deletes a trashed vault item and keeps it deleted after reload
   await expect(page.getByTestId('trash-list-item').filter({ hasText: 'E2E Permanent Delete' })).toBeHidden();
 });
 
+test('empties all trashed vault items and keeps the trash empty after reload', async ({ page }) => {
+  await setupVault(page);
+
+  const firstItem = await createLoginItem(page, 'E2E Empty Trash One', {
+    username: 'empty-trash-one',
+    password: 'EmptyTrashOne!42',
+    url: 'https://empty-trash-one.example',
+  });
+  await firstItem.click();
+  await page.getByTestId('delete-vault-item-button').click();
+  await page.getByTestId('confirm-modal-confirm-button').click();
+
+  await createLoginItem(page, 'E2E Empty Trash Two', {
+    username: 'empty-trash-two',
+    password: 'EmptyTrashTwo!42',
+    url: 'https://empty-trash-two.example',
+  });
+  await page.getByTestId('vault-list-item').filter({ hasText: 'E2E Empty Trash Two' }).click();
+  await page.getByTestId('delete-vault-item-button').click();
+  await page.getByTestId('confirm-modal-confirm-button').click();
+
+  await page.getByTestId('nav-trash-button').click();
+  await expect(page.getByTestId('trash-list-item').filter({ hasText: 'E2E Empty Trash One' })).toBeVisible();
+  await expect(page.getByTestId('trash-list-item').filter({ hasText: 'E2E Empty Trash Two' })).toBeVisible();
+
+  await page.getByTestId('empty-trash-button').click();
+  await page.getByTestId('confirm-modal-confirm-button').click();
+  await expect(page.getByTestId('trash-list-item').filter({ hasText: 'E2E Empty Trash One' })).toBeHidden();
+  await expect(page.getByTestId('trash-list-item').filter({ hasText: 'E2E Empty Trash Two' })).toBeHidden();
+
+  await page.reload();
+  await expect(page.getByTestId('lock-password-input')).toBeVisible();
+  await page.getByTestId('lock-password-input').fill(masterPassword);
+  await page.getByTestId('lock-submit-button').click();
+
+  await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Empty Trash One' })).toBeHidden();
+  await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Empty Trash Two' })).toBeHidden();
+  await page.getByTestId('nav-trash-button').click();
+  await expect(page.getByTestId('trash-list-item').filter({ hasText: 'E2E Empty Trash One' })).toBeHidden();
+  await expect(page.getByTestId('trash-list-item').filter({ hasText: 'E2E Empty Trash Two' })).toBeHidden();
+});
+
 test('filters favorite vault items', async ({ page }) => {
   await setupVault(page);
 

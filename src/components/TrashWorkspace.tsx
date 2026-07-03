@@ -43,6 +43,7 @@ export default function TrashWorkspace({
 
         {items.length > 0 && (
           <button
+            data-testid="empty-trash-button"
             onClick={onEmptyTrash}
             className="flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-xl font-bold text-xs transition-colors cursor-pointer"
           >
