@@ -380,6 +380,37 @@ fn vault_database_path(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(app_data_dir.join(VAULT_DATABASE_FILENAME))
 }
 
+#[cfg(target_os = "windows")]
+fn replace_file_atomically(tmp_path: &std::path::Path, target_path: &std::path::Path) -> Result<(), String> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Storage::FileSystem::{MoveFileExW, MOVEFILE_REPLACE_EXISTING, MOVEFILE_WRITE_THROUGH};
+
+    let mut tmp_wide: Vec<u16> = tmp_path.as_os_str().encode_wide().collect();
+    tmp_wide.push(0);
+    let mut target_wide: Vec<u16> = target_path.as_os_str().encode_wide().collect();
+    target_wide.push(0);
+
+    let moved = unsafe {
+        MoveFileExW(
+            tmp_wide.as_ptr(),
+            target_wide.as_ptr(),
+            MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH,
+        )
+    };
+
+    if moved == 0 {
+        return Err(format!("failed to atomically replace vault database: {}", std::io::Error::last_os_error()));
+    }
+
+    Ok(())
+}
+
+#[cfg(not(target_os = "windows"))]
+fn replace_file_atomically(tmp_path: &std::path::Path, target_path: &std::path::Path) -> Result<(), String> {
+    fs::rename(tmp_path, target_path)
+        .map_err(|error| format!("failed to atomically replace vault database: {error}"))
+}
+
 #[tauri::command]
 fn read_vault_database(app: AppHandle) -> Result<Option<String>, String> {
     let database_path = vault_database_path(&app)?;
@@ -396,8 +427,36 @@ fn read_vault_database(app: AppHandle) -> Result<Option<String>, String> {
 #[tauri::command]
 fn write_vault_database(app: AppHandle, contents: String) -> Result<(), String> {
     let database_path = vault_database_path(&app)?;
-    fs::write(database_path, contents)
-        .map_err(|error| format!("failed to write vault database: {error}"))
+    let tmp_path = database_path.with_extension(format!(
+        "tmp-{}",
+        std::process::id()
+    ));
+
+    {
+        use std::io::Write;
+
+        let mut tmp_file = fs::File::create(&tmp_path)
+            .map_err(|error| format!("failed to create temporary vault database: {error}"))?;
+        tmp_file
+            .write_all(contents.as_bytes())
+            .map_err(|error| format!("failed to write temporary vault database: {error}"))?;
+        tmp_file
+            .sync_all()
+            .map_err(|error| format!("failed to sync temporary vault database: {error}"))?;
+    }
+
+    if let Err(error) = replace_file_atomically(&tmp_path, &database_path) {
+        let _ = fs::remove_file(&tmp_path);
+        return Err(error);
+    }
+
+    if let Some(parent) = database_path.parent() {
+        if let Ok(directory) = fs::File::open(parent) {
+            let _ = directory.sync_all();
+        }
+    }
+
+    Ok(())
 }
 
 #[tauri::command]

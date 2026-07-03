@@ -16,28 +16,28 @@ const forbiddenPatterns = [
 // If any other file uses them, or if these files increase their usage count, the gate fails.
 const baseline = {
   'src/lib/vaultSession.ts': {
-    'withActiveMasterPassword': 1,
+    'withActiveMasterPassword': 0,
     'getActiveMasterPassword': 0,
     'masterPasswordPlain': 0,
     'passwordPlain': 0,
     'deriveEncryptionKey': 0
   },
   'src/lib/storage.ts': {
-    'withActiveMasterPassword': 3, // import, change, migrate
+    'withActiveMasterPassword': 0,
     'getActiveMasterPassword': 0,
     'masterPasswordPlain': 0,
     'passwordPlain': 0,
     'deriveEncryptionKey': 5  // setup, setupWithSecretKey, change, openDerivedVaultSession, migrateActiveVaultStorageToWaSqlite
   },
   'src/lib/attachments.ts': {
-    'withActiveMasterPassword': 2, // import, getRequiredMasterPassword
+    'withActiveMasterPassword': 0,
     'getActiveMasterPassword': 0,
     'masterPasswordPlain': 0,
     'passwordPlain': 0,
     'deriveEncryptionKey': 0
   },
   'src/components/SettingsPanel.tsx': {
-    'withActiveMasterPassword': 4, // import, saveSync, syncNow, registerBiometric
+    'withActiveMasterPassword': 0,
     'getActiveMasterPassword': 0,
     'masterPasswordPlain': 0,
     'passwordPlain': 0,

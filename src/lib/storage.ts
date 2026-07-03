@@ -20,7 +20,7 @@ import {
   closeVaultSession,
   openVaultSession,
   updateActiveVaultEncryptionKey,
-  withActiveMasterPassword,
+  withActiveAccountSecretKey,
   withActiveSessionSecrets,
   withActiveVaultEncryptionKey,
 } from './vaultSession';
@@ -126,17 +126,11 @@ function resolveVaultCredential(password: string, secretKey?: string | null): st
 }
 
 function resolveRotatedVaultCredential(newPassword: string): string {
-  return withActiveMasterPassword((activeCredential) => {
-    if (activeCredential.startsWith('aegis-vault-v7:')) {
-      const newlineIndex = activeCredential.indexOf('\n');
-      if (newlineIndex !== -1) {
-        const secretKey = activeCredential.substring(newlineIndex + 1);
-        return combineMasterPasswordAndSecretKey(newPassword, secretKey);
-      }
-    }
+  const rotatedWithActiveSecret = withActiveAccountSecretKey((secretKey) => (
+    combineMasterPasswordAndSecretKey(newPassword, secretKey)
+  ));
 
-    return resolveVaultCredential(newPassword);
-  }) ?? resolveVaultCredential(newPassword);
+  return rotatedWithActiveSecret ?? resolveVaultCredential(newPassword);
 }
 
 function resolveCurrentVaultCredential(password: string): string {
@@ -335,11 +329,11 @@ export async function resetSystem(): Promise<void> {
 }
 
 export async function migrateActiveVaultStorageToWaSqlite(): Promise<WaSqliteActiveBackendMigrationResult> {
-  const result = withActiveMasterPassword(async (password) => {
-    const migrationResult = await runWaSqliteActiveBackendMigration(password);
+  const result = withActiveSessionSecrets(async (credential) => {
+    const migrationResult = await runWaSqliteActiveBackendMigration(credential);
     if (migrationResult.status === 'promoted') {
       localStorage.setItem(STORAGE_KEYS.IS_SET_UP, 'true');
-      const newKey = await getVaultStorageRepository().deriveEncryptionKey(password);
+      const newKey = await getVaultStorageRepository().deriveEncryptionKey(credential);
       updateActiveVaultEncryptionKey(newKey);
       newKey.fill(0);
     }

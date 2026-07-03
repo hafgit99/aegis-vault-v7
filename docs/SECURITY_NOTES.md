@@ -16,7 +16,7 @@ This project is a password vault, so security claims must stay conservative unti
 - WebCrypto AES-GCM IV generation now uses a fresh 12-byte CSPRNG nonce for every encryption operation instead of process-local counter state.
 - Legacy backup encryption writer and decrypt fallback paths have been removed from the public API.
 - Vault database payloads now include a versioned schema envelope with migration tests for legacy unversioned state.
-- Desktop vault persistence now mirrors database state through the Tauri app data directory.
+- Desktop vault persistence now mirrors database state through the Tauri app data directory, and native database writes use a temp-file + atomic replace flow to reduce crash/power-loss corruption risk.
 - Desktop import/export now uses controlled native Windows file dialogs.
 - Clipboard clearing now removes copied secrets after the safety delay when the clipboard remains unchanged.
 - Browser extension IPC pairing token checks use constant-time comparison, and Unix/macOS token files are written with owner-only permissions.
@@ -47,8 +47,8 @@ This project is a password vault, so security claims must stay conservative unti
 ## Known Security Debt
 
 - `src/lib/legacyCrypto.ts` no longer ships custom SHA/HMAC/HKDF/simulated-Argon2id/AES decrypt primitives. It remains only as a fail-closed error-code boundary for old UI mappings.
-- Legacy XOR attachment records are rejected; older secure legacy attachment formats are migration-only and are rewritten to current AES-GCM storage after successful unlock.
-- `src/lib/vaultSession.ts` still keeps master/backup compatibility secrets as zeroized `Uint8Array` process-memory state during an unlocked session. Routine vault item storage no longer needs those strings after unlock. We have enforced this boundary by moving attachment rewrapping, sync/export, and biometric setup into key-only or native adapters, and we actively prevent leakage using the automated "No-JS-Master-String final gate" baseline scan.
+- Legacy XOR attachment records are rejected; legacy master-password-derived AES-GCM attachment fallback is also fail-closed under the no-JS-master-string boundary. Current attachment records use vault-key-derived AES-GCM/HKDF-SHA-256.
+- `withActiveMasterPassword` and string-returning active master getters are removed from production source. The automated "No-JS-Master-String final gate" now allows zero occurrences of that active-session callback pattern. `src/lib/vaultSession.ts` still keeps zeroizable byte state for explicit setup/unlock/export compatibility boundaries, while routine vault item and attachment operations use the active vault encryption key.
 - `src/lib/sqlite_opfs.ts` is a simulated SQLite/OPFS layer backed by versioned serialized JSON state. The naming and implementation should be aligned with the actual persistence strategy.
 - `src/lib/otp.ts` supports the common RFC 6238 HMAC-SHA1 path plus SHA-256/SHA-512 algorithm variants and `otpauth://totp` URI parsing for issuer/account imports.
 - Product copy should continue to be reviewed before release so public claims stay aligned with the verified implementation.
@@ -60,7 +60,7 @@ This project is a password vault, so security claims must stay conservative unti
 ## Near-Term Security Plan
 
 1. Add repeatable Android regression coverage for secure storage migration, app-private vault persistence, backup/import/download flows, and corrupted payload failures.
-2. Move the remaining master-secret feature edges into key-only or native adapters so deprecated JS string getters can be removed entirely.
+2. Continue shrinking explicit setup/unlock/export credential boundaries toward native adapters; active-session master getter callbacks are already removed.
 3. Complete manual Android biometric wrapping release review on target devices.
 4. Validate TOTP interoperability against more real-world authenticator exports and service QR payloads.
 5. Design the native credential/unlock adapter for a strict no-JS-master-string security boundary.

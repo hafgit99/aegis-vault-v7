@@ -1,53 +1,27 @@
 # Master String Reference Classification
 
-This document classifies all remaining occurrences of plain-text master password string references (`withActiveMasterPassword`, `masterPasswordPlain`, `passwordPlain`, `deriveEncryptionKey`) in the Aegis Vault 7 codebase as of version 7.0.1.0.
+This document records the current Aegis Vault 7 no-JS-master-string boundary.
 
----
+## Current Gate Result
 
-## 1. Core Session Management
+- `withActiveMasterPassword`: **0 allowed occurrences** in production source.
+- `getActiveMasterPassword`: **0 allowed occurrences** in production source.
+- The automated gate `npm run security:no-js-master-string` fails if either API reappears.
 
-### [vaultSession.ts](file:///C:/Users/hrn21/OneDrive/Desktop/aegisvaultv7/src/lib/vaultSession.ts)
-- **Pattern**: `withActiveMasterPassword` definition and export.
-- **Classification**: **Required / Unavoidable (Core Enclave Boundary)**.
-- **Rationale**: Used to store the master password and backup compatibility credentials as a zeroized `Uint8Array` in temporary memory while the vault is unlocked, allowing Argon2id/KDF derivations at setup and password rotation.
+## Session Boundary
 
----
+`src/lib/vaultSession.ts` no longer exports a scoped callback that materializes the active master credential as a JavaScript string. The unlocked session keeps zeroizable byte state for compatibility boundaries, exposes boolean presence probes, exposes the active vault encryption key as a cloned `Uint8Array`, and stores only the active account Secret Key separately for password rotation.
 
-## 2. Setup, Rotation, and Migration
+## Rotation and Migration
 
-### [storage.ts](file:///C:/Users/hrn21/OneDrive/Desktop/aegisvaultv7/src/lib/storage.ts)
-- **Pattern**: `withActiveMasterPassword` in `resolveRotatedVaultCredential` and `migrateActiveVaultStorageToWaSqlite`.
-- **Classification**: **Required / Unavoidable (Setup/Change/Migration Boundary)**.
-- **Rationale**:
-  - `resolveRotatedVaultCredential`: Necessary to parse legacy secret key combined credentials during a password rotation. Password change is inherently a credential setup/rotation boundary.
-  - `migrateActiveVaultStorageToWaSqlite`: Run once during active storage migration to decrypt old OPFS storage and re-encrypt/write to the new wa-sqlite storage. Allowed under the migration boundary.
+Master password rotation no longer parses the active combined credential through `withActiveMasterPassword`. Secret-Key based accounts derive the rotated credential from the active Secret Key boundary.
 
----
+The wa-sqlite active migration remains a setup/migration boundary because storage repositories still verify and migrate credential-derived data. It no longer depends on the removed `withActiveMasterPassword` API.
 
-## 3. Backward Compatibility and Legacy Fallback
+## Attachments
 
-### [attachments.ts](file:///C:/Users/hrn21/OneDrive/Desktop/aegisvaultv7/src/lib/attachments.ts)
-- **Pattern**: `withActiveMasterPassword` in `getRequiredMasterPassword`.
-- **Classification**: **Required / Unavoidable (Legacy Migration Boundary)**.
-- **Rationale**: Used solely to decrypt legacy attachment records (which derived keys directly from the master password instead of the vault encryption key) so they can be transparently migrated to the current AES-GCM + `vault-key` format. Once all attachments are migrated, this fallback is never executed.
+Current attachment encryption/decryption uses vault-key-derived HKDF-SHA-256 keys. Legacy master-password-derived attachment fallback is fail-closed under the no-JS-master-string gate; those records must be migrated before enabling this boundary or restored from a current vault-key backup.
 
----
+## Remaining Credential Terms
 
-## 4. Settings Panels
-
-### [SettingsPanel.tsx](file:///C:/Users/hrn21/OneDrive/Desktop/aegisvaultv7/src/components/SettingsPanel.tsx)
-- **Pattern**: `withActiveMasterPassword` in `handleSyncSave`, `handleSyncNow`, and `handleToggleBiometric`.
-- **Classification**:
-  - **`handleSyncSave` & `handleSyncNow`**: **Can be migrated to Key-Only**. 
-    - *Plan*: The sync configuration password and credentials can be encrypted using a key derived from the active session's vault encryption key instead of the master password.
-  - **`handleToggleBiometric`**: **Required / Unavoidable (OS Biometric Wrapper Boundary)**.
-    - *Rationale*: Setting up platform biometrics wraps the master credential using a key from the secure OS enclave (Android Keystore/Windows Credential Manager). Passing the credential string to the native registration bridge is unavoidable at setup time.
-
----
-
-## 5. Persistence Engines
-
-### [sqlite_opfs.ts](file:///C:/Users/hrn21/OneDrive/Desktop/aegisvaultv7/src/lib/sqlite_opfs.ts), [waSqliteVaultStorageRepository.ts](file:///C:/Users/hrn21/OneDrive/Desktop/aegisvaultv7/src/lib/waSqliteVaultStorageRepository.ts), etc.
-- **Pattern**: `masterPasswordPlain`, `passwordPlain`, `deriveEncryptionKey`.
-- **Classification**: **Required / Unavoidable (Storage Engines)**.
-- **Rationale**: Storage adapter classes must implement the `VaultStorageRepository` interface, which defines KDF derivation methods (`deriveEncryptionKey`) and initial setup/verify methods. These methods by definition receive plain credentials from setup/unlock views.
+Some storage repository interfaces still use parameter names such as `masterPasswordPlain`, `passwordPlain`, and `deriveEncryptionKey` because setup, unlock, import, and migration APIs necessarily receive user credentials at explicit credential-entry boundaries. These are tracked separately from the removed active-session getter/callback pattern.

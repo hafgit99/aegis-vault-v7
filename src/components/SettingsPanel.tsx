@@ -36,7 +36,7 @@ import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from '..
 import { parseUniversalImport, decodeFileBuffer } from '../lib/importer';
 import { secureRandomToken } from '../lib/random';
 import { registerBiometric, isBiometricEnabled, disableBiometric, isBiometricSupported, getBiometricType } from '../lib/biometric';
-import { withActiveBackupPassword, withActiveMasterPassword } from '../lib/vaultSession';
+import { withActiveBackupPassword } from '../lib/vaultSession';
 import { isNativeFileDialogSupported, openDesktopImportFile, saveDesktopExportFile } from '../lib/desktopFiles';
 import { isAndroidAutofillEnabled, isAndroidAutofillSupported, openAndroidAutofillSettings } from '../lib/androidAutofill';
 import { saveEmergencyKit } from '../lib/emergencyKit';
@@ -180,8 +180,8 @@ export default function SettingsPanel({
   const handleSyncSave = async () => {
     const err = validateWebDavConfig({ url: syncUrl, username: syncUsername, password: syncPassword });
     if (err) { setSyncMessage(`Error: ${err}`); return; }
-    const saved = withActiveMasterPassword(async (masterPw) => {
-      await saveSyncConfig({ type: 'webdav', url: syncUrl, username: syncUsername, password: syncPassword }, masterPw);
+    const saved = withActiveBackupPassword(async (backupPassword) => {
+      await saveSyncConfig({ type: 'webdav', url: syncUrl, username: syncUsername, password: syncPassword }, backupPassword);
       return true;
     });
     if (!saved) return;
@@ -229,16 +229,16 @@ export default function SettingsPanel({
   };
 
   const handleSyncNow = async () => {
-    const syncRun = withActiveMasterPassword(async (masterPw) => {
+    const syncRun = withActiveBackupPassword(async (backupPassword) => {
       setSyncLoading(true);
       setSyncStatus('syncing');
       setSyncMessage(null);
       try {
-        const config = await loadSyncConfig(masterPw);
+        const config = await loadSyncConfig(backupPassword);
         const provider = createSyncProvider(config);
         if (!provider) { setSyncStatus('error'); setSyncMessage(t('settings.sync.error.connection')); return; }
         const localItems = await getVaultItems();
-        const result = await performSync(provider, localItems, masterPw);
+        const result = await performSync(provider, localItems, backupPassword);
         if (result.status === 'error') {
           setSyncStatus('error');
           const code = result.error?.code ?? '';
@@ -375,7 +375,7 @@ export default function SettingsPanel({
           throw new Error(t('settings.biometric.unsupportedError'));
         }
         
-        const registered = withActiveMasterPassword((masterPassword) => registerBiometric(masterPassword, type));
+        const registered = withActiveBackupPassword((backupPassword) => registerBiometric(backupPassword, type));
         if (!registered) {
           throw new Error(t('settings.biometric.missingSessionError'));
         }

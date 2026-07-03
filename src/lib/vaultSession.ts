@@ -1,4 +1,5 @@
-let activeMasterPasswordBytes: Uint8Array | null = null;
+let activeCredentialBytes: Uint8Array | null = null;
+let activeAccountSecretKeyBytes: Uint8Array | null = null;
 let activeBackupPasswordBytes: Uint8Array | null = null;
 let activeVaultKeyBytes: Uint8Array | null = null;
 
@@ -31,7 +32,11 @@ export function openVaultSession(
   vaultEncryptionKey?: Uint8Array,
 ): void {
   closeVaultSession();
-  activeMasterPasswordBytes = encodeSecret(masterPassword);
+  activeCredentialBytes = encodeSecret(masterPassword);
+  const secretSeparatorIndex = masterPassword.startsWith('aegis-vault-v7:') ? masterPassword.indexOf('\n') : -1;
+  activeAccountSecretKeyBytes = secretSeparatorIndex !== -1
+    ? encodeSecret(masterPassword.substring(secretSeparatorIndex + 1))
+    : null;
   activeBackupPasswordBytes = encodeSecret(backupPassword);
   activeVaultKeyBytes = vaultEncryptionKey ? cloneBytes(vaultEncryptionKey) : null;
 }
@@ -44,11 +49,13 @@ export function updateActiveVaultEncryptionKey(vaultEncryptionKey: Uint8Array): 
 }
 
 export function closeVaultSession(): void {
-  zeroizeSecret(activeMasterPasswordBytes);
+  zeroizeSecret(activeCredentialBytes);
   zeroizeSecret(activeBackupPasswordBytes);
+  zeroizeSecret(activeAccountSecretKeyBytes);
   zeroizeSecret(activeVaultKeyBytes);
-  activeMasterPasswordBytes = null;
+  activeCredentialBytes = null;
   activeBackupPasswordBytes = null;
+  activeAccountSecretKeyBytes = null;
   activeVaultKeyBytes = null;
   onCloseCallbacks.forEach(cb => {
     try {
@@ -60,7 +67,7 @@ export function closeVaultSession(): void {
 }
 
 export function hasActiveVaultSession(): boolean {
-  return activeMasterPasswordBytes !== null || activeVaultKeyBytes !== null;
+  return activeCredentialBytes !== null || activeVaultKeyBytes !== null;
 }
 
 /**
@@ -70,7 +77,11 @@ export function hasActiveVaultSession(): boolean {
  * available — never use them to obtain the credential itself.
  */
 export function hasActiveMasterPassword(): boolean {
-  return activeMasterPasswordBytes !== null;
+  return activeCredentialBytes !== null;
+}
+
+export function hasActiveAccountSecretKey(): boolean {
+  return activeAccountSecretKeyBytes !== null;
 }
 
 export function hasActiveBackupPassword(): boolean {
@@ -82,10 +93,10 @@ export function withActiveVaultEncryptionKey<T>(callback: (vaultEncryptionKey: U
   return callback(cloneBytes(activeVaultKeyBytes));
 }
 
-export function withActiveMasterPassword<T>(callback: (masterPassword: string) => T): T | null {
-  const masterPassword = decodeSecret(activeMasterPasswordBytes);
-  if (!masterPassword) return null;
-  return callback(masterPassword);
+export function withActiveAccountSecretKey<T>(callback: (secretKey: string) => T): T | null {
+  const secretKey = decodeSecret(activeAccountSecretKeyBytes);
+  if (!secretKey) return null;
+  return callback(secretKey);
 }
 
 export function withActiveBackupPassword<T>(callback: (backupPassword: string) => T): T | null {
@@ -97,7 +108,7 @@ export function withActiveBackupPassword<T>(callback: (backupPassword: string) =
 export function withActiveSessionSecrets<T>(
   callback: (masterPassword: string, backupPassword: string) => T,
 ): T | null {
-  const masterPassword = decodeSecret(activeMasterPasswordBytes);
+  const masterPassword = decodeSecret(activeCredentialBytes);
   const backupPassword = decodeSecret(activeBackupPasswordBytes);
   if (!masterPassword || !backupPassword) return null;
   return callback(masterPassword, backupPassword);

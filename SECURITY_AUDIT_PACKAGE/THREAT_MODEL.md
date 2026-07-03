@@ -154,7 +154,7 @@ Required user-facing recovery rules:
 | Legacy custom cryptographic primitives in `legacyCrypto.ts` | Mitigated | Removed from production decrypt paths; keep fail-closed tests in place |
 | Simulated SQLite/OPFS persistence naming overstates implementation | Open | Decide final desktop storage adapter and align naming |
 | Legacy XOR attachment fallback | Mitigated | Rejected instead of decrypted |
-| Active master password lives in process memory while unlocked | Mitigated (allowlist tracked) | Enforced by a strict "No-JS-Master-String" automated final gate. Routine vault item storage uses a scoped session vault key, and remaining features (biometric setup, sync, attachments) are gated using count-based allowlists. |
+| Active-session master credential callback materializes JS strings | Mitigated (zero-allowlist gate) | `withActiveMasterPassword` and string-returning active master getters are removed from production source. The final gate allows zero occurrences of that pattern; remaining credential exposure is limited to explicit setup/unlock/export/migration boundaries. |
 | Clipboard can keep copied secrets after OS capture or user clipboard changes | Partially mitigated | Safe clearing removes unchanged copied secrets; hostile OS clipboard capture remains out of scope |
 | TOTP follows RFC 6238 for HMAC-SHA1/SHA-256/SHA-512 and accepts `otpauth://totp` imports, but broad provider QR compatibility still needs manual verification | Mitigated with residual validation risk | Add fixture coverage from more authenticator exports before broad public release |
 | Plaintext export option can create unsafe files | Partially mitigated | Warning and typed confirmation are required; decide whether to remove it from final release builds |

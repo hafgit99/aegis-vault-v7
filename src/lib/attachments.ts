@@ -4,7 +4,7 @@
  */
 
 import { secureRandomBytes } from './random';
-import { withActiveMasterPassword, withActiveVaultEncryptionKey } from './vaultSession';
+import { withActiveVaultEncryptionKey } from './vaultSession';
 import { webCryptoAesGcmDecryptBytes, webCryptoAesGcmEncryptBytes, generateSafeIv } from './webcrypto';
 import { logSecurityEvent } from './securityEvents';
 
@@ -235,14 +235,6 @@ async function decryptAttachmentDataWithMasterPassword(
   throw new AttachmentError(attachmentErrorCodes.legacyEncryptionBlocked);
 }
 
-function getRequiredMasterPassword(): string {
-  const masterPassword = withActiveMasterPassword((value) => value);
-  if (!masterPassword) {
-    throw new AttachmentError(attachmentErrorCodes.missingVaultSession);
-  }
-  return masterPassword;
-}
-
 /**
  * New attachment writes always prefer the vault-key path: the master password
  * string is never materialized for encryption. A vault session with an
@@ -272,6 +264,10 @@ export async function decryptAttachmentData(record: AttachmentRecord): Promise<A
     throw new AttachmentError(attachmentErrorCodes.legacyEncryptionBlocked);
   }
 
+  if (!record.iv || !record.tag) {
+    throw new AttachmentError(attachmentErrorCodes.missingEncryptionMetadata);
+  }
+
   if (record.keySource === 'vault-key') {
     const vaultKey = getRequiredVaultKey();
     try {
@@ -281,9 +277,10 @@ export async function decryptAttachmentData(record: AttachmentRecord): Promise<A
     }
   }
 
-  // Legacy path: master-password-derived key (old SHA-256 or old HKDF records).
-  const masterPassword = getRequiredMasterPassword();
-  return decryptAttachmentDataWithMasterPassword(record, masterPassword);
+  // Legacy master-password-derived attachment records are intentionally blocked
+  // in the no-JS-master-string architecture. They must be migrated before this
+  // gate is enabled, or restored from a current vault-key backup.
+  throw new AttachmentError(attachmentErrorCodes.legacyEncryptionBlocked);
 }
 
 export async function migrateAttachmentRecordToAesGcm(record: AttachmentRecord): Promise<AttachmentRecord> {

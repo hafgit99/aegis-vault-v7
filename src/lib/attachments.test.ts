@@ -416,7 +416,7 @@ describe('attachment encryption', () => {
     }
   });
 
-  it('decrypts old AES-GCM attachments using legacy SHA-256 key derivation', async () => {
+  it('blocks old AES-GCM attachments that require legacy SHA-256 master-password derivation', async () => {
     openTestVaultSession();
 
     // Manually construct an old record with SHA-256 KDF (no kdf property)
@@ -437,10 +437,13 @@ describe('attachment encryption', () => {
       // no kdf field, representing old SHA-256 records
     };
 
-    await expect(decryptAttachmentData(oldRecord).then(text)).resolves.toBe('private file');
+    await expect(decryptAttachmentData(oldRecord)).rejects.toMatchObject({
+      code: attachmentErrorCodes.legacyEncryptionBlocked,
+      name: 'AttachmentError',
+    });
   });
 
-  it('migrates old SHA-256 AES-GCM attachment records to HKDF-SHA-256 format during bulk migration', async () => {
+  it('blocks bulk migration of old SHA-256 AES-GCM records that require a JS master-password string', async () => {
     openTestVaultSession();
 
     // Manually construct an old record with SHA-256 KDF and save to IndexedDB
@@ -462,16 +465,13 @@ describe('attachment encryption', () => {
 
     await putAttachmentRecord(oldRecord);
 
-    await expect(migrateLegacyAttachmentsToAesGcm()).resolves.toBe(1);
+    await expect(migrateLegacyAttachmentsToAesGcm()).rejects.toMatchObject({
+      code: attachmentErrorCodes.legacyEncryptionBlocked,
+      name: 'AttachmentError',
+    });
 
-    const migrated = await getStoredAttachmentRecord('attachment-old-bulk');
-    expect(migrated?.algorithm).toBe('AES-256-GCM');
-    expect(migrated?.kdf).toBe('HKDF-SHA-256');
-    expect(migrated?.iv).toHaveLength(24);
-    expect(migrated?.tag).toHaveLength(32);
-
-    const result = await getAttachmentBlob('attachment-old-bulk');
-    await expect(blobText(result?.blob)).resolves.toBe('bulk migrate file');
+    const stored = await getStoredAttachmentRecord('attachment-old-bulk');
+    expect(stored?.kdf).toBeUndefined();
   });
 
   it('re-encrypts stored attachments when the vault key changes (key-only rotation)', async () => {
