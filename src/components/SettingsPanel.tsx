@@ -499,7 +499,10 @@ export default function SettingsPanel({
     try {
       const savedWithDialog = await saveDesktopExportFile(filename, contents);
       if (!savedWithDialog) {
-        if (isNativeFileDialogSupported()) return;
+        if (isNativeFileDialogSupported()) {
+          setBackupError(`${t('settings.export.plainErrorPrefix')}: ${t('settings.export.defaultSaveError')}`);
+          return;
+        }
         downloadTextFile(filename, contents);
       }
     } catch (err: any) {
@@ -525,7 +528,10 @@ export default function SettingsPanel({
       const filename = `aegis_guvenli_yedek_${currentDateSlug()}.aegis`;
       const savedWithDialog = await saveDesktopExportFile(filename, encryptedJsonString);
       if (!savedWithDialog) {
-        if (isNativeFileDialogSupported()) return;
+        if (isNativeFileDialogSupported()) {
+          setBackupError(`${t('settings.export.encryptErrorPrefix')}: ${t('settings.export.defaultSaveError')}`);
+          return;
+        }
         downloadTextFile(filename, encryptedJsonString);
       }
 

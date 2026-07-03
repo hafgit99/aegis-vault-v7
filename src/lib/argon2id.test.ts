@@ -113,19 +113,27 @@ describe('argon2id adapter', () => {
       expect(isVerified).toBe(true);
     });
 
-    it('falls back to WASM when Tauri invoke throws an error', async () => {
+    it('does not fall back to WASM when Tauri derive invoke throws an error', async () => {
       invoke.mockRejectedValue(new Error('Tauri error'));
-      
-      const key = await deriveArgon2idKey('password', 'salt', {
+
+      await expect(deriveArgon2idKey('password', 'salt', {
         memoryKiB: 1024,
         iterations: 2,
         parallelism: 1,
         hashLength: 16,
-      });
+      })).rejects.toThrow('native-argon2id-derive-failed');
 
       expect(invoke).toHaveBeenCalled();
-      expect(hash).toHaveBeenCalled();
-      expect(key).toHaveLength(16);
+      expect(hash).not.toHaveBeenCalled();
+    });
+
+    it('does not fall back to WASM when Tauri hash invoke throws an error', async () => {
+      invoke.mockRejectedValue(new Error('Tauri error'));
+
+      await expect(createArgon2idHash('password', 'salt')).rejects.toThrow('native-argon2id-hash-failed');
+
+      expect(invoke).toHaveBeenCalled();
+      expect(hash).not.toHaveBeenCalled();
     });
   });
 });

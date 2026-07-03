@@ -259,7 +259,7 @@ describe('SettingsPanel import/export', () => {
     });
   });
 
-  it('does not fall back to browser download when the desktop save dialog is cancelled', async () => {
+  it('shows an encrypted export error when the desktop save dialog is cancelled', async () => {
     window.__TAURI_INTERNALS__ = {};
     vi.mocked(isNativeFileDialogSupported).mockReturnValue(true);
     openVaultSession('master-pass');
@@ -269,6 +269,7 @@ describe('SettingsPanel import/export', () => {
 
     await waitFor(() => {
       expect(saveDesktopExportFile).toHaveBeenCalled();
+      expect(container.textContent).toContain('Dosya kaydedilemedi');
     });
     expect(HTMLAnchorElement.prototype.click).not.toHaveBeenCalled();
   });
@@ -877,6 +878,25 @@ describe('SettingsPanel plain export and import errors', () => {
     await waitFor(() => {
       expect(container.textContent).toContain('disk full');
     });
+  });
+
+  it('shows a plain export error when the desktop save dialog is cancelled', async () => {
+    window.__TAURI_INTERNALS__ = {};
+    vi.mocked(isNativeFileDialogSupported).mockReturnValue(true);
+    vi.mocked(saveDesktopExportFile).mockResolvedValueOnce(false);
+    const { container } = renderSettings();
+
+    fireEvent.click(encryptedExportButtons(container)[1]);
+    fireEvent.change(screen.getByTestId('plain-export-confirm-input'), {
+      target: { value: 'EXPORT' },
+    });
+    fireEvent.click(screen.getByTestId('plain-export-confirm-button'));
+
+    await waitFor(() => {
+      expect(saveDesktopExportFile).toHaveBeenCalledWith(expect.stringMatching(/\.json$/), JSON.stringify(vaultItems, null, 2));
+      expect(container.textContent).toContain('Dosya kaydedilemedi');
+    });
+    expect(HTMLAnchorElement.prototype.click).not.toHaveBeenCalled();
   });
 
   it('shows an import error for unsupported file contents', async () => {

@@ -88,7 +88,8 @@ export async function deriveArgon2idKey(
       });
       return new Uint8Array(keyBytes);
     } catch (error) {
-      console.error('Rust deriveArgon2idKey failed, falling back to WebAssembly:', error);
+      console.error('Rust deriveArgon2idKey failed:', error);
+      throw new Error('native-argon2id-derive-failed');
     }
   }
 
@@ -120,7 +121,8 @@ export async function createArgon2idHash(
         options: options || null,
       });
     } catch (error) {
-      console.error('Rust createArgon2idHash failed, falling back to WebAssembly:', error);
+      console.error('Rust createArgon2idHash failed:', error);
+      throw new Error('native-argon2id-hash-failed');
     }
   }
 
@@ -147,7 +149,8 @@ export async function verifyArgon2idHash(password: string, encodedHash: string):
         encodedHash,
       });
     } catch (error) {
-      console.error('Rust verifyArgon2idHash failed, falling back to WebAssembly:', error);
+      console.error('Rust verifyArgon2idHash failed:', error);
+      return false;
     }
   }
 
