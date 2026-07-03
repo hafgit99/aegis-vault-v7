@@ -41,7 +41,7 @@ export function isAccountSecretKeyFormatValid(secretKey: string): boolean {
 }
 
 export function combineMasterPasswordAndSecretKey(password: string, secretKey: string): string {
-  return `aegis-vault-v7:${password}\n${normalizeAccountSecretKey(secretKey)}`;
+  return `aegis-vault-v7:${password}\0${normalizeAccountSecretKey(secretKey)}`;
 }
 
 export function getSecretKeyFingerprint(secretKey: string): string {

@@ -237,7 +237,7 @@ describe('vault session storage', () => {
     );
 
     expect(sqliteOPFSInstance.setupMaster).toHaveBeenCalledWith(
-      'aegis-vault-v7:master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
+      'aegis-vault-v7:master-pass\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
     );
     expect(isAccountSecretKeyRequired()).toBe(true);
     expect(getRememberedAccountSecretKey()).toBe('A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567');
@@ -364,7 +364,7 @@ describe('vault session storage', () => {
     )).resolves.toBe(true);
 
     expect(sqliteOPFSInstance.verifyPassword).toHaveBeenCalledWith(
-      'aegis-vault-v7:master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
+      'aegis-vault-v7:master-pass\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
     );
     expect(hasActiveMasterPassword()).toBe(true);
     expect(hasActiveBackupPassword()).toBe(true);
@@ -396,13 +396,13 @@ describe('vault session storage', () => {
       fingerprint: '3456-7',
     }));
     sqliteOPFSInstance.verifyPassword.mockResolvedValueOnce(true);
-    openVaultSession('aegis-vault-v7:old-master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567', 'old-master-pass', testVaultKey);
+    openVaultSession('aegis-vault-v7:old-master-pass\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567', 'old-master-pass', testVaultKey);
 
     await changeMasterPassword('old-master-pass', 'new-master-pass-12');
 
-    const newCredential = 'aegis-vault-v7:new-master-pass-12\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567';
+    const newCredential = 'aegis-vault-v7:new-master-pass-12\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567';
     expect(sqliteOPFSInstance.changeMasterPassword).toHaveBeenCalledWith(
-      'aegis-vault-v7:old-master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
+      'aegis-vault-v7:old-master-pass\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
       newCredential,
     );
     expect(hasActiveMasterPassword()).toBe(true);
@@ -505,7 +505,7 @@ describe('vault session storage', () => {
   });
 
   it('preserves secret-key combined credentials during wa-sqlite active backend migration', async () => {
-    const combinedCredential = 'aegis-vault-v7:master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567';
+    const combinedCredential = 'aegis-vault-v7:master-pass\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567';
     runWaSqliteActiveBackendMigration.mockResolvedValueOnce({
       status: 'blocked',
       issues: ['wa-sqlite-promotion-dry-run-not-run'],
@@ -728,7 +728,7 @@ describe('vault session storage', () => {
   });
 
   it('accepts already combined credentials while keeping the raw master password as backup', async () => {
-    const combinedCredential = 'aegis-vault-v7:master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567';
+    const combinedCredential = 'aegis-vault-v7:master-pass\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567';
     sqliteOPFSInstance.verifyPassword.mockResolvedValueOnce(true);
 
     await expect(verifyMasterPassword(combinedCredential)).resolves.toBe(true);

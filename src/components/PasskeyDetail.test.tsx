@@ -53,7 +53,7 @@ describe('PasskeyDetail', () => {
       />,
     );
 
-    expect(screen.getByText('HİZMET ADI')).toBeTruthy();
+    expect(screen.getByText(/H.*ZMET \/ KULLANIM ALANI/)).toBeTruthy();
     expect(screen.getByText('GitHub')).toBeTruthy();
     expect(screen.getByText('public-key-id')).toBeTruthy();
     expect(screen.queryByText('private-secret-value')).toBeNull();
@@ -119,7 +119,7 @@ describe('PasskeyDetail', () => {
       />,
     );
 
-    expect(screen.getByText('Google Login')).toBeTruthy();
+    expect(screen.getByText('Güvenli Anahtar')).toBeTruthy();
     expect(screen.getByText('boş')).toBeTruthy();
     expect(screen.getByText('(Değer Girilmedi)')).toBeTruthy();
 
@@ -150,10 +150,10 @@ describe('PasskeyDetail', () => {
       </LanguageProvider>,
     );
 
-    expect(screen.getByText('SERVICE NAME')).toBeTruthy();
-    expect(screen.getByText('PUBLIC KEY ID')).toBeTruthy();
-    expect(screen.getByText('PRIVATE KEY / SECURE SHIELDS EXPONENT')).toBeTruthy();
-    expect(screen.getByText('Google Login')).toBeTruthy();
+    expect(screen.getByText('SERVICE / USE CASE')).toBeTruthy();
+    expect(screen.getByText('IDENTIFIER / PUBLIC ID')).toBeTruthy();
+    expect(screen.getByText('SECRET KEY / TOKEN')).toBeTruthy();
+    expect(screen.getByText('Secure Key')).toBeTruthy();
     expect(screen.getByText('empty')).toBeTruthy();
     expect(screen.getByText('(No Value Entered)')).toBeTruthy();
     expect(screen.getAllByTitle('Copy').length).toBeGreaterThan(0);

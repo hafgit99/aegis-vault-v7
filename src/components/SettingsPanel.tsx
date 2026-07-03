@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -295,6 +295,9 @@ export default function SettingsPanel({
   const [backupError, setBackupError] = useState<string | null>(null);
   const [plainExportArmed, setPlainExportArmed] = useState(false);
   const [plainExportConfirmation, setPlainExportConfirmation] = useState('');
+  const [holdProgress, setHoldProgress] = useState(0);
+  const holdTimerRef = useRef<any>(null);
+  const holdIntervalRef = useRef<any>(null);
 
   // Universal Import unified state
   interface ImportState {
@@ -483,19 +486,54 @@ export default function SettingsPanel({
     setTimeout(() => setPasswordSuccess(false), 4000);
   };
 
+  const startHoldExport = () => {
+    if (plainExportConfirmation.trim().toUpperCase() !== 'EXPORT') {
+      setBackupError(t('settings.export.plainConfirmMismatch'));
+      return;
+    }
+    setBackupError(null);
+    setHoldProgress(0);
+
+    const duration = 3000;
+    const intervalTime = 30;
+    const step = 100 / (duration / intervalTime);
+
+    let currentProgress = 0;
+
+    holdIntervalRef.current = setInterval(() => {
+      currentProgress += step;
+      if (currentProgress >= 100) {
+        setHoldProgress(100);
+        clearInterval(holdIntervalRef.current!);
+      } else {
+        setHoldProgress(Math.floor(currentProgress));
+      }
+    }, intervalTime);
+
+    holdTimerRef.current = setTimeout(async () => {
+      clearInterval(holdIntervalRef.current!);
+      setHoldProgress(0);
+      await executePlainExport();
+    }, duration);
+  };
+
+  const cancelHoldExport = () => {
+    if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+    if (holdIntervalRef.current) clearInterval(holdIntervalRef.current);
+    setHoldProgress(0);
+  };
+
   // Generate a plain (unencrypted) json export download
-  const handleExportPlain = async () => {
+  const handleExportPlain = () => {
     setBackupSuccess(null);
     setBackupError(null);
     if (!plainExportArmed) {
       setPlainExportArmed(true);
       setPlainExportConfirmation('');
-      return;
     }
-    if (plainExportConfirmation.trim().toUpperCase() !== 'EXPORT') {
-      setBackupError(t('settings.export.plainConfirmMismatch'));
-      return;
-    }
+  };
+
+  const executePlainExport = async () => {
     const latestItems = await getVaultItems();
     setItems(latestItems);
     const filename = `aegis_acik_yedek_${currentDateSlug()}.json`;
@@ -1264,15 +1302,33 @@ export default function SettingsPanel({
                       placeholder={t('settings.export.plainConfirmPlaceholder')}
                       autoComplete="off"
                     />
-                    <button
-                      data-testid="plain-export-confirm-button"
-                      type="button"
-                      onClick={handleExportPlain}
-                      className="flex items-center justify-center gap-2 bg-brand-error text-white font-extrabold px-4 py-2 rounded-lg text-xs hover:brightness-110 active:scale-95 transition-all cursor-pointer"
-                    >
-                      <Unlock className="w-4 h-4" />
-                      <span>{t('settings.export.plainConfirmButton')}</span>
-                    </button>
+                    <div className="flex flex-col gap-1">
+                      <button
+                        data-testid="plain-export-confirm-button"
+                        type="button"
+                        onMouseDown={startHoldExport}
+                        onMouseUp={cancelHoldExport}
+                        onMouseLeave={cancelHoldExport}
+                        onTouchStart={startHoldExport}
+                        onTouchEnd={cancelHoldExport}
+                        className="flex items-center justify-center gap-2 bg-brand-error text-white font-extrabold px-4 py-2 rounded-lg text-xs hover:brightness-110 active:scale-95 transition-all cursor-pointer relative overflow-hidden select-none"
+                      >
+                        {holdProgress > 0 && (
+                          <div 
+                            className={`absolute left-0 top-0 bottom-0 bg-white/20 transition-all duration-30 ${progressWidthClass(holdProgress)}`} 
+                          />
+                        )}
+                        <Unlock className="w-4 h-4" />
+                        <span>
+                          {holdProgress > 0 
+                            ? `${t('settings.export.plainConfirmButton')} (${holdProgress}%)` 
+                            : t('settings.export.plainConfirmButton')}
+                        </span>
+                      </button>
+                      <span className="text-[10px] text-brand-error/70 text-right animate-pulse">
+                        {t('settings.export.plainConfirmHoldHelp')}
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}

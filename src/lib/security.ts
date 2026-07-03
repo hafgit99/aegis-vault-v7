@@ -254,7 +254,13 @@ export function generatePassword(options: GeneratorOptions): string {
  * - Complexity: at least 3 character classes (uppercase, lowercase, numbers, symbols)
  */
 export function validateMasterPassword(password: string): boolean {
-  if (!password || password.length < 12) {
+  if (!password) {
+    return false;
+  }
+  if (password.length >= 16) {
+    return true;
+  }
+  if (password.length < 12) {
     return false;
   }
   const hasUpper = /[A-Z]/.test(password);
@@ -262,6 +268,9 @@ export function validateMasterPassword(password: string): boolean {
   const hasDigit = /[0-9]/.test(password);
   const hasSymbol = /[^A-Za-z0-9]/.test(password);
   const classCount = [hasUpper, hasLower, hasDigit, hasSymbol].filter(Boolean).length;
-  return classCount >= 3;
+  if (classCount < 3) {
+    return false;
+  }
+  return zxcvbn(password).score >= 3;
 }
 

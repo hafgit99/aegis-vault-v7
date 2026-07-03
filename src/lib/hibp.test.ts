@@ -118,4 +118,45 @@ describe('HIBP password checks', () => {
       count: 0,
     });
   });
+
+  it('evicts expired cache entries after 1 hour TTL', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      text: async () => '1E4C9B93F3F0682250B6CF8331B7EE68FD8:99',
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await checkPasswordAgainstHibp('password');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await checkPasswordAgainstHibp('password');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(3600 * 1000 + 1000);
+
+    await checkPasswordAgainstHibp('password');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    vi.useRealTimers();
+  });
+
+  it('bounds cache size to MAX_CACHE_SIZE and evicts oldest items in FIFO order', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      text: async () => '1E4C9B93F3F0682250B6CF8331B7EE68FD8:99',
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    for (let i = 0; i < 101; i++) {
+      await checkPasswordAgainstHibp(`different_password_${i}`);
+    }
+
+    expect(fetchMock).toHaveBeenCalledTimes(101);
+
+    fetchMock.mockClear();
+
+    await checkPasswordAgainstHibp('different_password_0');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });

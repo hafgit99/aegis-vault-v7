@@ -665,8 +665,8 @@ describe('SQLite OPFS persistence engine', () => {
   });
 
   it('rotates secret-key combined credentials and decrypts rows after caches are cleared', async () => {
-    const oldCredential = 'aegis-vault-v7:master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567';
-    const newCredential = 'aegis-vault-v7:new-master-pass\nA3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567';
+    const oldCredential = 'aegis-vault-v7:master-pass\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567';
+    const newCredential = 'aegis-vault-v7:new-master-pass\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567';
     const sqlite = await freshSqliteInstance();
     await sqlite.setupMaster(oldCredential);
     await sqlite.saveVaultItem(sampleItem({ id: 'secret-rotated-row', title: 'Secret Rotated Row' }), oldCredential);

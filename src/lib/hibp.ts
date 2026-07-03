@@ -10,7 +10,13 @@ export type HibpPasswordCheck =
 
 const HIBP_RANGE_URL = 'https://api.pwnedpasswords.com/range/';
 const HIBP_TIMEOUT_MS = 4500;
-const prefixCache = new Map<string, Map<string, number>>();
+interface CacheEntry {
+  data: Map<string, number>;
+  timestamp: number;
+}
+const prefixCache = new Map<string, CacheEntry>();
+const MAX_CACHE_SIZE = 100;
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 function toHex(bytes: ArrayBuffer): string {
   return [...new Uint8Array(bytes)]
@@ -48,7 +54,12 @@ function parseRangeResponse(text: string): Map<string, number> {
 
 async function fetchRange(prefix: string): Promise<Map<string, number>> {
   const cached = prefixCache.get(prefix);
-  if (cached) return cached;
+  if (cached) {
+    if (Date.now() - cached.timestamp < CACHE_TTL_MS) {
+      return cached.data;
+    }
+    prefixCache.delete(prefix);
+  }
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), HIBP_TIMEOUT_MS);
@@ -67,7 +78,16 @@ async function fetchRange(prefix: string): Promise<Map<string, number>> {
     }
 
     const parsed = parseRangeResponse(await response.text());
-    prefixCache.set(prefix, parsed);
+    
+    // Bounded eviction
+    if (prefixCache.size >= MAX_CACHE_SIZE) {
+      const oldestKey = prefixCache.keys().next().value;
+      if (oldestKey !== undefined) {
+        prefixCache.delete(oldestKey);
+      }
+    }
+    
+    prefixCache.set(prefix, { data: parsed, timestamp: Date.now() });
     return parsed;
   } finally {
     clearTimeout(timeout);

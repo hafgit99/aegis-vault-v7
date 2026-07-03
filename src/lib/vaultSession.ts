@@ -33,7 +33,7 @@ export function openVaultSession(
 ): void {
   closeVaultSession();
   activeCredentialBytes = encodeSecret(masterPassword);
-  const secretSeparatorIndex = masterPassword.startsWith('aegis-vault-v7:') ? masterPassword.indexOf('\n') : -1;
+  const secretSeparatorIndex = masterPassword.startsWith('aegis-vault-v7:') ? masterPassword.indexOf('\0') : -1;
   activeAccountSecretKeyBytes = secretSeparatorIndex !== -1
     ? encodeSecret(masterPassword.substring(secretSeparatorIndex + 1))
     : null;

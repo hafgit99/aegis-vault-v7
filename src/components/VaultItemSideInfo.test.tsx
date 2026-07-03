@@ -43,7 +43,7 @@ describe('VaultItemSideInfo', () => {
     expect(screen.getByText('Ödeme Kartı')).toBeTruthy();
 
     rerender(<VaultItemSideInfo item={{ ...baseItem, category: 'passkey' }} />);
-    expect(screen.getByText('Passkey / API')).toBeTruthy();
+    expect(screen.getByText((content) => content.includes('Anahtar / API'))).toBeTruthy();
 
     rerender(<VaultItemSideInfo item={{ ...baseItem, category: 'identity' }} />);
     expect(screen.getByText('Kimlik Belgesi')).toBeTruthy();

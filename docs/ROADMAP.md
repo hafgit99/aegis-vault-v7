@@ -34,7 +34,7 @@
   - [x] Vault item detail header extracted to `VaultItemDetailHeader`.
   - [x] Vault item attachment card extracted to `VaultItemAttachmentCard`.
   - [x] Secure note detail extracted to `SecureNoteDetail`.
-  - [x] Passkey detail extracted to `PasskeyDetail`.
+  - [x] Secure key/API secret detail extracted to `PasskeyDetail` while preserving legacy category compatibility.
   - [x] Identity detail extracted to `IdentityDetail`.
   - [x] Card detail extracted to `CardDetail`.
   - [x] Login detail extracted to `LoginDetail`.
@@ -81,7 +81,7 @@
   - [x] Translate vault detail header actions, security assessment, side metadata, and mobile detail controls.
   - [x] Translate login detail fields, password fallback, TOTP status, and copy/reveal controls.
   - [x] Translate card detail fields, fallback values, and copy/reveal controls.
-  - [x] Translate passkey detail fields, fallback values, and copy/reveal controls.
+  - [x] Translate secure key detail fields, fallback values, and copy/reveal controls.
   - [x] Translate identity detail fields, fallback values, gender labels, and copy controls.
   - [x] Translate secure note detail title, copy states, and empty-note fallback.
   - [x] Translate vault attachment card title, decrypt-on-download label, and download tooltip.
@@ -94,7 +94,7 @@
   - [x] Translate vault form shell, category tabs, common fields, validation, and default actions.
   - [x] Translate vault form login credentials, password controls, and TOTP fields.
   - [x] Translate vault form card details, placeholders, and payment credential labels.
-  - [x] Translate vault form passkey/API credential fields and private exponent generator controls.
+  - [x] Translate vault form secure key/API secret fields and high-entropy secret generator controls.
   - [x] Translate vault form identity document fields, date labels, and gender options.
   - [x] Translate vault form secure note copy, shared notes labels, and note placeholders.
   - [x] Translate vault form attachment errors, upload status, encrypted-file labels, and drop zone copy.
@@ -159,7 +159,7 @@
   - [x] Expand vault form edit, validation, attachment failure, and cleanup coverage.
   - [x] Expand card detail copy, reveal, and fallback coverage.
   - [x] Expand login detail copied-state and empty-password coverage.
-  - [x] Expand passkey detail copied-state and fallback coverage.
+  - [x] Expand secure key detail copied-state and fallback coverage.
   - [x] Expand identity detail copied-state and fallback coverage.
   - [x] Expand secure note copied-state and empty-note coverage.
   - [x] Expand attachment card missing-size coverage.
@@ -223,3 +223,8 @@
   - [x] Route export, import, and attachment download through Android document picker flows.
   - [x] Add automated or repeatable Android backup/import regression coverage.
     - Covered Android document picker save/open/cancel/error behavior, backup export/import flows, attachment download, and Emergency Kit save helper with unit tests.
+
+
+## Future WebAuthn Authenticator
+
+Real WebAuthn passkey authenticator support is intentionally not part of the current release boundary. The current vault category stores manually managed secure keys/API secrets only. A future experimental phase should start with a Chrome/Edge-only proof of concept using the official Web Authentication Proxy extension API, native/Rust ES256 signing, explicit user approval, RP ID matching, sign-counter persistence, and separate Android Credential Provider research.

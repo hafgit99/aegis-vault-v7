@@ -67,7 +67,7 @@ Aegis Vault eklentisini, 1Password ve diğer rakiplerin önüne geçirecek 6 ana
 *   **Sorun:** İki adımlı doğrulama (2FA) kodları veya Geçiş Anahtarları (Passkeys/WebAuthn) mobil cihazlarda veya ayrı uygulamalarda kaldığında kullanıcı deneyimi kesintiye uğrar.
 *   **Aegis Çözümü:**
     *   **TOTP:** Giriş formu doldurulduğunda, eklenti ilgili hesabın 2FA kodunu arka planda panoya kopyalar veya doğrudan 2FA alanına otomatik doldurur.
-    *   **Passkeys:** Tarayıcının WebAuthn isteklerini yakalayarak (intercept ederek), passkey oluşturma ve doğrulama süreçlerini doğrudan yerel Tauri uygulaması içindeki güvenli donanıma yönlendirir.
+    *   **G?venli Anahtarlar:** Mevcut s?r?m API tokenlar?, kripto anahtarlar?, SSH s?rlar? ve manuel y?netilen g?venli kimlikleri saklar. Ger?ek WebAuthn authenticator i?levi release blocker de?ildir; Chrome/Edge Web Authentication Proxy + Rust ES256 imzalama PoC sonras? ayr? de?erlendirilecektir.
 
 ### 3.5 Geliştiriciler İçin "Localhost & Dev-Friendly" Doldurucu
 *   **Sorun:** Yazılım geliştiriciler gün içinde yüzlerce kez yerel test ortamlarında (`localhost:3000`, `127.0.0.1:8000`) test hesaplarıyla giriş yaparlar. Ancak şifre yöneticileri genellikle localhost adreslerini karıştırır veya her port için ayrı şifre kaydetmeye çalışır.
@@ -110,7 +110,7 @@ gantt
     DOM Analiz ve Autofill Motoru : des5, 2026-09-10, 25d
     section Faz 4: Biyometrik & Gelişmiş
     Local Biometric Bridge Entegrasyonu : des6, 2026-10-05, 20d
-    Passkey ve TOTP Entegrasyonu : des7, 2026-10-25, 20d
+    TOTP ve Deneysel WebAuthn Ara??t??rmas?? : des7, 2026-10-25, 20d
     section Faz 5: Yayınlama
     Güvenlik Denetimi & Penetrasyon Testleri : des8, 2026-11-15, 15d
     Mağaza Yayınları & Dağıtım : des9, 2026-11-30, 15d

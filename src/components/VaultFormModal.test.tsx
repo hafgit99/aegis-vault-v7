@@ -101,7 +101,7 @@ describe('VaultFormModal', () => {
     expect(screen.getByText('Your data is encrypted locally in your browser processor instantly.')).toBeTruthy();
     expect(screen.getByText('Login')).toBeTruthy();
     expect(screen.getByText('Card')).toBeTruthy();
-    expect(screen.getByText('Passkey')).toBeTruthy();
+    expect(screen.getByText('Secure Key')).toBeTruthy();
     expect(screen.getByText('Identity')).toBeTruthy();
     expect(screen.getByText('Note')).toBeTruthy();
     expect(screen.getByText('GENERAL DETAILS')).toBeTruthy();
@@ -129,17 +129,17 @@ describe('VaultFormModal', () => {
     expect(screen.getByText('EXPIRY (MM/YY)')).toBeTruthy();
     expect(screen.getByText('SECURITY CODE (CVV)')).toBeTruthy();
     expect(screen.getByText('ATM / CARD PIN (OPTIONAL)')).toBeTruthy();
-    fireEvent.click(screen.getByText('Passkey'));
-    expect(screen.getByText('Passkey & Crypto API Keys')).toBeTruthy();
-    expect(screen.getByText('Hardware sign-in credentials and blockchain/API private access codes.')).toBeTruthy();
-    expect(screen.getByText('SERVICE PROVIDER')).toBeTruthy();
-    expect(screen.getByPlaceholderText('e.g. Google Login (Passkey)')).toBeTruthy();
-    expect(screen.getByText('PUBLIC KEY ID')).toBeTruthy();
-    expect(screen.getByPlaceholderText('E.g. yubikey-fido-sha256-id...')).toBeTruthy();
-    expect(screen.getByText('PRIVATE ENCRYPTION PARAMETER (PRIVATE EXPONENT / SECRET KEY)')).toBeTruthy();
-    expect(screen.getByTitle('Generate Strong Random 256-Bit Exponent')).toBeTruthy();
-    expect(screen.getByText('Generate Random')).toBeTruthy();
-    expect(screen.getByPlaceholderText('Enter the maximum-security raw parameter or generate it automatically (hex string)')).toBeTruthy();
+    fireEvent.click(screen.getByText('Secure Key'));
+    expect(screen.getByText('Secure Keys & API Secrets')).toBeTruthy();
+    expect(screen.getByText('Store API tokens, crypto keys, SSH secrets, and manually managed secure identifiers. Real WebAuthn passkey authenticator support is planned separately.')).toBeTruthy();
+    expect(screen.getByText('SERVICE / USE CASE')).toBeTruthy();
+    expect(screen.getByPlaceholderText('e.g. GitHub API, Solana Wallet, SSH Key')).toBeTruthy();
+    expect(screen.getByText('IDENTIFIER / PUBLIC ID')).toBeTruthy();
+    expect(screen.getByPlaceholderText('e.g. github-prod-key-01...')).toBeTruthy();
+    expect(screen.getByText('SECRET KEY / TOKEN / PRIVATE PARAMETER')).toBeTruthy();
+    expect(screen.getByTitle('Generate Strong Random 256-Bit Secret')).toBeTruthy();
+    expect(screen.getByText('Generate Secret')).toBeTruthy();
+    expect(screen.getByPlaceholderText('Enter or generate high-entropy key material (hex string)')).toBeTruthy();
     fireEvent.click(screen.getByText('Identity'));
     expect(screen.getByText('Personal Identity / Document Details')).toBeTruthy();
     expect(screen.getByText('National IDs, passports, driver licenses, or social security records.')).toBeTruthy();
@@ -405,14 +405,14 @@ describe('VaultFormModal', () => {
       />,
     );
 
-    fireEvent.click(screen.getByText('Passkey'));
+    fireEvent.click(screen.getByTestId('vault-item-category-passkey'));
     const inputs = formInputs();
     fireEvent.change(inputs[0], { target: { value: 'API Key' } });
     fireEvent.change(inputs[2], { target: { value: '  Google Login  ' } });
     fireEvent.change(inputs[3], { target: { value: '  public-id-1  ' } });
 
     const exponentButton = Array.from(document.querySelectorAll<HTMLButtonElement>('button'))
-      .find((button) => button.title.includes('Exponent'))!;
+      .find((button) => button.title.toLowerCase().includes('gizli'))!;
     fireEvent.click(exponentButton);
     submitForm();
 

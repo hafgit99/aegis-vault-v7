@@ -287,7 +287,7 @@ Recently improved:
 - `src/lib/storage.ts`: covered setup detection, Secret Key profile fallbacks, remembered-key migration/forget flows, failed unlock session guards, master-password rotation rollback rules, reset marker cleanup, no-session guards, save/delete/reseed wrappers, trash move/restore, retention-boundary cleanup, bulk-save progress callbacks, and full trash emptying.
 - `src/components/PasswordGenerator.tsx`: covered character option changes, all character toggles, strength bar tone branches, diceware mode settings, word-count descriptions, diceware toggles, copy feedback, unmount cleanup, and safe clipboard clearing behavior.
 - `src/lib/diceware.ts`: covered Turkish/English word selection, EFF-sized word-pool expansion, separator formats, capitalization, number and symbol placement, camel/none separator handling, optional entropy calculations, and static word-list separation for practical mutation testing.
-- `src/components/VaultFormModal.tsx`: covered card, passkey, identity, secure note, attachment upload, oversized-file rejection, existing attachment download/removal, and non-login username normalization.
+- `src/components/VaultFormModal.tsx`: covered card, secure key/API secret, identity, secure note, attachment upload, oversized-file rejection, existing attachment download/removal, and non-login username normalization.
 - `src/components/ProfileModal.tsx`: covered gradient detection, profile name validation, preset selection, image file validation, local image loading, save, and cancel flows.
 - `src/components/ConfirmModal.tsx`: covered closed state, confirm/cancel behavior, header close, and alert-only mode.
 - `src/components/SecurityAudit.tsx`: covered empty secure state, critical weak/reused groups, medium-score feedback, excellent-score feedback, metric rendering, and audit item selection.
@@ -303,7 +303,7 @@ Recently improved:
 - Vault detail shell components: covered selected-language rendering for header actions, security assessment, metadata labels, categories, and empty notes.
 - Login detail panel: covered selected-language rendering for username/password labels, empty-password fallback, TOTP status, and copy/reveal controls.
 - Card detail panel: covered selected-language rendering for card labels, fallback values, and copy/reveal controls.
-- Passkey detail panel: covered selected-language rendering for labels, fallback values, and copy/reveal controls.
+- Secure key detail panel: covered selected-language rendering for labels, fallback values, and copy/reveal controls.
 - Identity detail panel: covered selected-language rendering for labels, fallback values, gender labels, and copy controls.
 - Secure note detail panel: covered selected-language rendering for title, copied state, and empty-note fallback.
 - Vault attachment card: covered selected-language rendering for attachment title, decrypt-on-download label, and download tooltip.
@@ -316,7 +316,7 @@ Recently improved:
 - Vault form shell: covered selected-language rendering for modal titles, category tabs, common fields, and default actions.
 - Vault form login section: covered selected-language rendering for credential labels, password controls, and TOTP inputs.
 - Vault form card section: covered selected-language rendering for cardholder, number, expiry, CVV, and PIN fields.
-- Vault form passkey section: covered selected-language rendering for service, public key, private exponent, and generator controls.
+- Vault form secure key section: covered selected-language rendering for service/use-case, identifier, secret material, and generator controls.
 - Vault form identity section: covered selected-language rendering for document, full-name, date, and gender fields.
 - Vault form secure note section: covered selected-language rendering for secure note copy, shared note labels, and placeholders.
 - Vault form attachment section: covered selected-language rendering for encrypted-file heading, protection badge, and drop zone copy.
@@ -334,7 +334,7 @@ Recently improved:
 - `src/components/VaultFormModal.tsx`: covered edit-save identity preservation, title validation, password visibility/autogeneration, selected file removal, attachment upload failures, existing attachment removal before save, and download error notifications.
 - `src/components/CardDetail.tsx`: covered copied states, PIN copy action, missing-field fallbacks, and empty-string copy behavior.
 - `src/components/LoginDetail.tsx`: covered copied states, empty-password fallback, and safe empty-password copy behavior.
-- `src/components/PasskeyDetail.tsx`: covered copied states, missing-field fallbacks, and safe empty-string copy behavior.
+- `src/components/PasskeyDetail.tsx`: covered secure-key copied states, missing-field fallbacks, and safe empty-string copy behavior.
 - `src/components/IdentityDetail.tsx`: covered copied states, male gender label, missing-field fallbacks, and safe empty-name copy behavior.
 - `src/components/SecureNoteDetail.tsx`: covered copied state, empty-note fallback, and safe empty-note copy behavior.
 - `src/components/VaultItemAttachmentCard.tsx`: covered missing-size fallback for encrypted attachment metadata.

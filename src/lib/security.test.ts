@@ -100,12 +100,14 @@ describe('validateMasterPassword', () => {
     expect(validateMasterPassword('abcde!!!!_ab')).toBe(false); // lowercase + symbols (2 classes)
   });
 
-  it('accepts passwords of length >= 12 with 3 or more character classes', () => {
-    expect(validateMasterPassword('abcdeABCDE12')).toBe(true); // lower, upper, digit
-    expect(validateMasterPassword('abcdeABCDE!!')).toBe(true); // lower, upper, symbol
-    expect(validateMasterPassword('abcde12345!!')).toBe(true); // lower, digit, symbol
-    expect(validateMasterPassword('ABCDE12345!!')).toBe(true); // upper, digit, symbol
-    expect(validateMasterPassword('abcdeABCDE12!!')).toBe(true); // all 4 classes
-    expect(validateMasterPassword('A1b2C3d4E5f6')).toBe(true); // 12 chars, 3 classes (upper, lower, digit)
+  it('accepts passwords of length >= 12 with 3 or more character classes and zxcvbn score >= 3', () => {
+    expect(validateMasterPassword('Xy8#pW2!mQ9a')).toBe(true); // lower, upper, digit, symbol (strong)
+    expect(validateMasterPassword('Tr9@kP1!vX4s')).toBe(true); // lower, upper, digit, symbol (strong)
+    expect(validateMasterPassword('abcdeABCDE123456')).toBe(true); // >= 16 characters
+  });
+
+  it('rejects passwords with score < 3 even if they have 12+ characters and 3 classes', () => {
+    expect(validateMasterPassword('abcdefABCDEF12')).toBe(false); // Predictable sequence
+    expect(validateMasterPassword('password123!A')).toBe(false); // Common password
   });
 });

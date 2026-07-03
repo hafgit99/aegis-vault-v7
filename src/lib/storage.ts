@@ -166,9 +166,9 @@ export async function verifyMasterPassword(password: string, secretKey?: string 
   if (isCorrect) {
     let rawMasterPassword = password;
     if (password.startsWith('aegis-vault-v7:')) {
-      const newlineIndex = password.indexOf('\n');
-      if (newlineIndex !== -1) {
-        rawMasterPassword = password.substring('aegis-vault-v7:'.length, newlineIndex);
+      const separatorIndex = password.indexOf('\0');
+      if (separatorIndex !== -1) {
+        rawMasterPassword = password.substring('aegis-vault-v7:'.length, separatorIndex);
       }
     }
     await openDerivedVaultSession(credential, rawMasterPassword);

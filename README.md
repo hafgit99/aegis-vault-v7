@@ -24,7 +24,7 @@ The project focuses on keeping sensitive data under the user's control: vault da
 
 ## Core Features
 
-- Local-first encrypted vault for logins, payment cards, passkeys/API keys, identities, and secure notes.
+- Local-first encrypted vault for logins, payment cards, secure keys/API secrets, identities, and secure notes. Real WebAuthn passkey authenticator support is tracked as a future roadmap item.
 - Master password plus Account Secret Key setup flow.
 - Emergency Kit generation during setup and from Settings after unlock.
 - Android document picker integration for Emergency Kit, encrypted backup export, plain JSON export, encrypted import, and attachment download.

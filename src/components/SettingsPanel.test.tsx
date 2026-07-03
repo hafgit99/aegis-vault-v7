@@ -832,6 +832,7 @@ describe('SettingsPanel plain export and import errors', () => {
   });
 
   it('exports a plain JSON backup through the browser fallback', async () => {
+    vi.useFakeTimers();
     const { container } = renderSettings();
 
     fireEvent.click(encryptedExportButtons(container)[1]);
@@ -841,7 +842,9 @@ describe('SettingsPanel plain export and import errors', () => {
     fireEvent.change(screen.getByTestId('plain-export-confirm-input'), {
       target: { value: 'EXPORT' },
     });
-    fireEvent.click(screen.getByTestId('plain-export-confirm-button'));
+    fireEvent.mouseDown(screen.getByTestId('plain-export-confirm-button'));
+    vi.advanceTimersByTime(3000);
+    vi.useRealTimers();
 
     await waitFor(() => {
       expect(saveDesktopExportFile).toHaveBeenCalledWith(expect.stringMatching(/\.json$/), JSON.stringify(vaultItems, null, 2));
@@ -850,13 +853,16 @@ describe('SettingsPanel plain export and import errors', () => {
   });
 
   it('requires explicit confirmation before creating a plain JSON backup', async () => {
+    vi.useFakeTimers();
     const { container } = renderSettings();
 
     fireEvent.click(encryptedExportButtons(container)[1]);
     fireEvent.change(screen.getByTestId('plain-export-confirm-input'), {
       target: { value: 'NOPE' },
     });
-    fireEvent.click(screen.getByTestId('plain-export-confirm-button'));
+    fireEvent.mouseDown(screen.getByTestId('plain-export-confirm-button'));
+    vi.advanceTimersByTime(3000);
+    vi.useRealTimers();
 
     await waitFor(() => {
       expect(container.textContent).toContain('EXPORT');
@@ -867,13 +873,16 @@ describe('SettingsPanel plain export and import errors', () => {
 
   it('shows an export error when the save dialog fails', async () => {
     vi.mocked(saveDesktopExportFile).mockRejectedValueOnce(new Error('disk full'));
+    vi.useFakeTimers();
     const { container } = renderSettings();
 
     fireEvent.click(encryptedExportButtons(container)[1]);
     fireEvent.change(screen.getByTestId('plain-export-confirm-input'), {
       target: { value: 'EXPORT' },
     });
-    fireEvent.click(screen.getByTestId('plain-export-confirm-button'));
+    fireEvent.mouseDown(screen.getByTestId('plain-export-confirm-button'));
+    vi.advanceTimersByTime(3000);
+    vi.useRealTimers();
 
     await waitFor(() => {
       expect(container.textContent).toContain('disk full');
@@ -884,13 +893,16 @@ describe('SettingsPanel plain export and import errors', () => {
     window.__TAURI_INTERNALS__ = {};
     vi.mocked(isNativeFileDialogSupported).mockReturnValue(true);
     vi.mocked(saveDesktopExportFile).mockResolvedValueOnce(false);
+    vi.useFakeTimers();
     const { container } = renderSettings();
 
     fireEvent.click(encryptedExportButtons(container)[1]);
     fireEvent.change(screen.getByTestId('plain-export-confirm-input'), {
       target: { value: 'EXPORT' },
     });
-    fireEvent.click(screen.getByTestId('plain-export-confirm-button'));
+    fireEvent.mouseDown(screen.getByTestId('plain-export-confirm-button'));
+    vi.advanceTimersByTime(3000);
+    vi.useRealTimers();
 
     await waitFor(() => {
       expect(saveDesktopExportFile).toHaveBeenCalledWith(expect.stringMatching(/\.json$/), JSON.stringify(vaultItems, null, 2));
@@ -997,6 +1009,7 @@ describe('SettingsPanel import interaction states', () => {
       configurable: true,
       value: 'Mozilla/5.0 (Linux; Android 14) AegisVault',
     });
+    vi.useFakeTimers();
     const { container } = renderSettings();
     const input = fileInput(container);
     const inputClickSpy = vi.spyOn(input, 'click');
@@ -1005,7 +1018,9 @@ describe('SettingsPanel import interaction states', () => {
     fireEvent.change(screen.getByTestId('plain-export-confirm-input'), {
       target: { value: 'EXPORT' },
     });
-    fireEvent.click(screen.getByTestId('plain-export-confirm-button'));
+    fireEvent.mouseDown(screen.getByTestId('plain-export-confirm-button'));
+    vi.advanceTimersByTime(3000);
+    vi.useRealTimers();
 
     await waitFor(() => {
       expect(saveDesktopExportFile).toHaveBeenCalledWith(expect.stringMatching(/\.json$/), JSON.stringify(vaultItems, null, 2));

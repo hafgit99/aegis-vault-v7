@@ -40,7 +40,7 @@ describe('account secret key helpers', () => {
     const { combineMasterPasswordAndSecretKey } = await import('./secretKey');
 
     expect(combineMasterPasswordAndSecretKey('master pass', ' a3-abcd-efgh ')).toBe(
-      'aegis-vault-v7:master pass\nA3-ABCD-EFGH',
+      'aegis-vault-v7:master pass\0A3-ABCD-EFGH',
     );
   });
 
