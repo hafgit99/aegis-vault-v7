@@ -19,7 +19,7 @@ describe('useProfileSettings', () => {
     const { result } = renderHook(() => useProfileSettings());
 
     expect(result.current.profileName).toBe('Aegis Kullanıcısı');
-    expect(result.current.profileAvatar).toContain('https://lh3.googleusercontent.com/');
+    expect(result.current.profileAvatar).toContain('data:image/svg+xml;base64,');
     expect(result.current.isProfileModalOpen).toBe(false);
   });
 

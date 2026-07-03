@@ -94,7 +94,7 @@ describe('RecentVaultItem', () => {
     );
 
     const logo = screen.getByAltText('GitHub') as HTMLImageElement;
-    expect(logo.src).toContain('googleusercontent.com');
+    expect(logo.src).toContain('data:image/svg+xml;base64,');
   });
 
   it('shows copied state for the username field', () => {

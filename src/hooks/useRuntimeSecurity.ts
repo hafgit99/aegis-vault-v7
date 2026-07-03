@@ -34,6 +34,7 @@ export function useRuntimeSecurity({
         setScreenRecordingDetected(isRecording);
         if (isRecording) {
           onSensitiveStateClear();
+          onLock();
         }
       }).then((unlisten) => {
         unlistenFn = unlisten;
@@ -47,7 +48,7 @@ export function useRuntimeSecurity({
         unlistenFn();
       }
     };
-  }, [onSensitiveStateClear]);
+  }, [onLock, onSensitiveStateClear]);
 
   useEffect(() => {
     if (!unlocked) {

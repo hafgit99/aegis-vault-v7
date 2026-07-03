@@ -148,7 +148,7 @@ pub fn credential_lease_expires_at(ttl_ms: u64) -> u64 {
 
 pub fn start_tcp_server(
     app_handle: tauri::AppHandle,
-    pairing_token: String,
+    pairing_token: Arc<Mutex<String>>,
     credentials: Arc<Mutex<Option<ExtensionCredentialCache>>>,
 ) {
     thread::spawn(move || {
@@ -174,7 +174,13 @@ pub fn start_tcp_server(
                         continue;
                     }
                     let credentials_clone = credentials.clone();
-                    let token_clone = pairing_token.clone();
+                    let token_clone = match pairing_token.lock() {
+                        Ok(t) => t.clone(),
+                        Err(e) => {
+                            log::error!("Failed to lock pairing token: {}", e);
+                            continue;
+                        }
+                    };
                     let app_clone = app_handle.clone();
                     thread::spawn(move || {
                         if let Err(e) =

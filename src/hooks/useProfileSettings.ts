@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 
 const DEFAULT_PROFILE_AVATAR =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuCH67zv7w_c2Gt3Yi8tRFwGe5bb7gJZYlMCHpd55hfAikMyKhRLMtmZTlLWl678ehHejkJGx6MqpODYIBZua1auVdcHjT8vVlOiB0MPntKW2JQY4zFA_AzO8WJNfo1LML8kIr6t1YRAjbi4Y6uFpdk-C5fT4KUYAP_OtMbO1qFJoVDdIJ5p6VgH-7vQiiqT51yHfwKBOgGFA1tyoib-DmocRb4Rabo1ZRHBLIDouFbA7votkCi_xxvrHSVHOj11xZHDnTpBaauKm7Ui';
+  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgdmlld0JveD0iMCAwIDY0IDY0Ij48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIzMCIgZmlsbD0iIzRmNDZlNSIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMjIiIHI9IjEwIiBmaWxsPSIjZmZmZmZmIi8+PHBhdGggZD0iTTE0IDUwYzAtMTAgOC0xOCAxOC0xOHMxOCA4IDE4IDE4SDE0eiIgZmlsbD0iI2ZmZmZmZiIvPjwvc3ZnPg==';
 
 interface UseProfileSettingsOptions {
   onSaved?: () => void;

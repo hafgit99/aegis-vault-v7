@@ -73,4 +73,14 @@ describe('WebCrypto AES-GCM adapter', () => {
     expect(getImportedAesGcmKeyCacheSizeForTest()).toBeLessThanOrEqual(20);
     closeVaultSession();
   });
+
+  it('clears imported AES-GCM key cache when a new vault session is opened (session change)', async () => {
+    const key1 = new Uint8Array(32).fill(1);
+    await webCryptoAesGcmEncrypt('cache key 1', key1, generateSafeIv());
+    expect(getImportedAesGcmKeyCacheSizeForTest()).toBeGreaterThan(0);
+
+    const { openVaultSession } = await import('./vaultSession');
+    openVaultSession('new-password');
+    expect(getImportedAesGcmKeyCacheSizeForTest()).toBe(0);
+  });
 });

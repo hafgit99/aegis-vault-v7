@@ -182,6 +182,7 @@ describe('useRuntimeSecurity', () => {
     expect(result.current.privacyShieldVisible).toBe(true);
     expect(result.current.screenRecordingDetected).toBe(true);
     expect(onSensitiveStateClear).toHaveBeenCalledTimes(1);
+    expect(onLock).toHaveBeenCalledTimes(1);
 
     // Trigger screen recording stopped (payload = false)
     await act(async () => {

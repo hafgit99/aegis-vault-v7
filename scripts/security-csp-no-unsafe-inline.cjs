@@ -42,6 +42,10 @@ if (/https:\/\/fonts\.googleapis\.com|https:\/\/fonts\.gstatic\.com/.test(csp)) 
   findings.push('src-tauri/tauri.conf.json: remote Google font origins are not required by the bundled build');
 }
 
+if (/https:\/\/lh3\.googleusercontent\.com/.test(csp)) {
+  findings.push('src-tauri/tauri.conf.json: remote Google content origins are not allowed under strict privacy requirements');
+}
+
 for (const file of ['index.html', ...collectFiles('src', ['.tsx', '.ts', '.jsx', '.js'])]) {
   if (/\.(test|spec)\.[tj]sx?$/.test(file)) continue;
   const text = readText(file);

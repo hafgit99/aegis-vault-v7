@@ -87,7 +87,7 @@ describe('VaultItemDetailHeader', () => {
     );
 
     const logo = screen.getByAltText('GitHub Logo') as HTMLImageElement;
-    expect(logo.src).toContain('googleusercontent.com');
+    expect(logo.src).toContain('data:image/svg+xml;base64,');
   });
 
   it('renders action titles in the selected language', () => {

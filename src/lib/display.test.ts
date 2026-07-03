@@ -27,10 +27,10 @@ describe('display helpers', () => {
   });
 
   it('resolves known platform logos from title or url', () => {
-    expect(getLogoForPlatform('GitHub', '')).toContain('googleusercontent.com');
-    expect(getLogoForPlatform('Team Workspace', 'https://workspace.google.com')).toContain('googleusercontent.com');
-    expect(getLogoForPlatform('Bank', 'https://secure.chase.com')).toContain('googleusercontent.com');
-    expect(getLogoForPlatform('Music', 'https://spotify.com')).toContain('googleusercontent.com');
+    expect(getLogoForPlatform('GitHub', '')).toContain('data:image/svg+xml;base64,');
+    expect(getLogoForPlatform('Team Workspace', 'https://workspace.google.com')).toContain('data:image/svg+xml;base64,');
+    expect(getLogoForPlatform('Bank', 'https://secure.chase.com')).toContain('data:image/svg+xml;base64,');
+    expect(getLogoForPlatform('Music', 'https://spotify.com')).toContain('data:image/svg+xml;base64,');
   });
 
   it('returns null for unknown platform logos', () => {

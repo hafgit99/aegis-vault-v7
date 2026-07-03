@@ -39,7 +39,8 @@ import { registerBiometric, isBiometricEnabled, disableBiometric, isBiometricSup
 import { withActiveBackupPassword } from '../lib/vaultSession';
 import { isNativeFileDialogSupported, openDesktopImportFile, saveDesktopExportFile } from '../lib/desktopFiles';
 import { isAndroidAutofillEnabled, isAndroidAutofillSupported, openAndroidAutofillSettings } from '../lib/androidAutofill';
-import { saveEmergencyKit } from '../lib/emergencyKit';
+import { saveEmergencyKit, saveEmergencyKitPdf } from '../lib/emergencyKit';
+import { invoke } from '@tauri-apps/api/core';
 import { isAccountSecretKeyFormatValid } from '../lib/secretKey';
 import { useLanguage } from '../i18n/LanguageContext';
 import { progressWidthClass } from '../lib/progressWidth';
@@ -145,6 +146,10 @@ export default function SettingsPanel({
   const [storageMigrationStatus, setStorageMigrationStatus] = useState<'idle' | 'running' | 'promoted' | 'blocked' | 'error'>('idle');
   const [storageMigrationMessage, setStorageMigrationMessage] = useState<string | null>(null);
 
+  // ── Extension Token Rotation ──────────────────────────────────────────────
+  const [tokenRotateStatus, setTokenRotateStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [tokenRotateMessage, setTokenRotateMessage] = useState<string | null>(null);
+
   // ── Cloud Sync (WebDAV E2EE) States ───────────────────────────────────────
   const [syncProvider, setSyncProvider] = useState<'disabled' | 'webdav'>('disabled');
   const [syncUrl, setSyncUrl] = useState('');
@@ -230,6 +235,21 @@ export default function SettingsPanel({
         ? t('settings.storageMigration.missingSession')
         : `${t('settings.storageMigration.error')}: ${err?.message || t('settings.biometric.genericError')}`;
       setStorageMigrationMessage(message);
+    }
+  };
+
+  const handleRotatePairingToken = async () => {
+    if (!window.__TAURI_INTERNALS__) return;
+    setTokenRotateStatus('loading');
+    setTokenRotateMessage(null);
+    try {
+      await invoke('rotate_pairing_token');
+      setTokenRotateStatus('success');
+      setTokenRotateMessage('Extension token rotated successfully. Reconnect the browser extension.');
+      setTimeout(() => { setTokenRotateStatus('idle'); setTokenRotateMessage(null); }, 6000);
+    } catch (err: any) {
+      setTokenRotateStatus('error');
+      setTokenRotateMessage(`Failed to rotate token: ${err?.message ?? String(err)}`);
     }
   };
 
@@ -1694,6 +1714,33 @@ export default function SettingsPanel({
           {t('settings.sync.securityNote')}
         </p>
       </div>
+
+      {/* Extension Token Rotation — desktop only */}
+      {typeof window !== 'undefined' && window.__TAURI_INTERNALS__ && (
+        <div className="p-4 sm:p-6 bg-brand-surface-container rounded-2xl border border-white/8 space-y-3" id="extension-token-section">
+          <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2 border-b border-white/5 pb-2">
+            <RefreshCw className="w-4 h-4 text-brand-primary" />
+            <span>Extension Pairing Token</span>
+          </h3>
+          <p className="text-xs text-on-surface-variant leading-relaxed">
+            Generate a new random pairing token for the browser extension. The old token will be immediately invalidated — you will need to reconnect the extension after rotating.
+          </p>
+          <button
+            id="rotate-extension-token-btn"
+            onClick={handleRotatePairingToken}
+            disabled={tokenRotateStatus === 'loading'}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-brand-primary/40 hover:bg-brand-primary/10 text-brand-primary font-semibold text-xs transition-all disabled:opacity-50 cursor-pointer"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${tokenRotateStatus === 'loading' ? 'animate-spin' : ''}`} />
+            <span>{tokenRotateStatus === 'loading' ? 'Rotating…' : 'Rotate Extension Token'}</span>
+          </button>
+          {tokenRotateMessage && (
+            <p className={`text-xs px-1 ${tokenRotateStatus === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+              {tokenRotateMessage}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Extreme Danger Zone */}
       <div className="p-4 sm:p-6 bg-brand-error/5 border border-brand-error/20 rounded-2xl space-y-4" id="danger-zone-section">

@@ -11,6 +11,7 @@ const FILE_DIALOG_BUFFER_LEN: usize = 32768;
 struct ExtensionState {
     credentials:
         std::sync::Arc<std::sync::Mutex<Option<native_messaging::ExtensionCredentialCache>>>,
+    pairing_token: std::sync::Arc<std::sync::Mutex<String>>,
 }
 
 #[derive(serde::Serialize)]
@@ -505,6 +506,25 @@ fn clear_extension_credentials(state: tauri::State<'_, ExtensionState>) -> Resul
     Ok(())
 }
 
+#[tauri::command]
+fn rotate_pairing_token(state: tauri::State<'_, ExtensionState>) -> Result<String, String> {
+    let new_token = native_messaging::generate_token();
+
+    if let Some(app_data_dir) = native_messaging::get_app_data_dir() {
+        let _ = fs::create_dir_all(&app_data_dir);
+        let token_path = app_data_dir.join(native_messaging::TOKEN_FILENAME);
+        native_messaging::write_pairing_token_file(&token_path, &new_token)
+            .map_err(|e| format!("failed to write pairing token to file: {e}"))?;
+    } else {
+        return Err("failed to resolve app data directory".to_string());
+    }
+
+    let mut token_guard = state.pairing_token.lock().map_err(|e| e.to_string())?;
+    *token_guard = new_token.clone();
+
+    Ok(new_token)
+}
+
 #[cfg(target_os = "windows")]
 fn wide_null(value: &str) -> Vec<u16> {
     value.encode_utf16().chain(std::iter::once(0)).collect()
@@ -797,8 +817,11 @@ pub fn run() {
     }
 
     let credentials = std::sync::Arc::new(std::sync::Mutex::new(None));
+    let initial_token = native_messaging::generate_token();
+    let pairing_token = std::sync::Arc::new(std::sync::Mutex::new(initial_token.clone()));
     let state = ExtensionState {
         credentials: credentials.clone(),
+        pairing_token: pairing_token.clone(),
     };
 
     let builder = tauri::Builder::default().manage(state);
@@ -820,18 +843,15 @@ pub fn run() {
                 )?;
             }
 
-            // Generate pairing token
-            let token = native_messaging::generate_token();
-
-            // Save pairing token to app data directory
+            // Save initial pairing token to app data directory
             if let Some(app_data_dir) = native_messaging::get_app_data_dir() {
                 let _ = fs::create_dir_all(&app_data_dir);
                 let token_path = app_data_dir.join(native_messaging::TOKEN_FILENAME);
-                let _ = native_messaging::write_pairing_token_file(&token_path, &token);
+                let _ = native_messaging::write_pairing_token_file(&token_path, &initial_token);
             }
 
             // Start TCP server
-            native_messaging::start_tcp_server(app.handle().clone(), token, credentials.clone());
+            native_messaging::start_tcp_server(app.handle().clone(), pairing_token, credentials.clone());
 
             Ok(())
         })
@@ -846,6 +866,7 @@ pub fn run() {
             open_import_file,
             sync_extension_credentials,
             clear_extension_credentials,
+            rotate_pairing_token,
             derive_argon2id_key,
             create_argon2id_hash,
             verify_argon2id_hash,

@@ -92,6 +92,7 @@ describe('air-gap network policy', () => {
 
     expect(() => new WebSocket('wss://telemetry.example.test/socket')).toThrow('air-gap policy');
     expect(NativeWebSocket).not.toHaveBeenCalled();
+    expect(WebSocket.prototype).toBe(NativeWebSocket.prototype);
     expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({
       code: 'network.blocked',
       source: 'AegisSecurity',
