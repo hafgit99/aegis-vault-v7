@@ -1,6 +1,6 @@
 # wa-sqlite Final Gate
 
-This gate groups the checks required before wa-sqlite can be considered for default active-backend promotion. The backend is still intentionally gated; passing this command does not by itself make wa-sqlite the default storage engine.
+This gate groups the checks required for the wa-sqlite active backend. Fresh vaults now start on wa-sqlite by default when persistent IndexedDB VFS support is available. Existing OPFS/JSON vaults remain on the legacy backend until the guarded migration flow proves persistence, parity, and restore safety.
 
 ## Command
 
@@ -52,9 +52,11 @@ Playwright smoke:
 
 ## Default Backend Decision
 
-Before making wa-sqlite the default backend, require:
+wa-sqlite default-backend release requirements:
 
 - This final gate passing on the target desktop host.
+- Fresh install starts on wa-sqlite and persists the active-backend marker.
+- Existing OPFS/JSON vaults are detected and kept on OPFS until the guarded migration succeeds.
 - Android smoke testing after promotion remains green.
 - Backup/export/import flows work after active backend promotion.
-- Release notes clearly state whether wa-sqlite is default or opt-in migration-only.
+- Release notes state that wa-sqlite is default for fresh vaults and migration-gated for legacy vaults.

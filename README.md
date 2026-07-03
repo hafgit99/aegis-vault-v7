@@ -1,6 +1,6 @@
 # Aegis Vault 7
 
-Aegis Vault 7 is a local-first password manager and secure vault built with React, TypeScript, WebCrypto, SQLite/OPFS, and Tauri. It is designed for desktop-first use today, with an Android release candidate path already in active validation.
+Aegis Vault 7 is a local-first password manager and secure vault built with React, TypeScript, WebCrypto, wa-sqlite, OPFS legacy migration support, and Tauri. It is designed for desktop-first use today, with an Android release candidate path already in active validation.
 
 The project focuses on keeping sensitive data under the user's control: vault data is encrypted locally, recovery material is saved through explicit file picker flows, and release candidates are gated by repeatable tests, artifact checks, and device smoke evidence.
 
@@ -32,6 +32,7 @@ The project focuses on keeping sensitive data under the user's control: vault da
 - Password generator with character and Diceware modes.
 - RFC 6238-compatible TOTP generation.
 - Security audit for weak, reused, and breached-password risk signals.
+- wa-sqlite is the default storage backend for fresh vaults; existing OPFS/JSON vaults use a guarded migration flow with parity checks.
 - Attachment encryption and legacy attachment migration.
 - Retention-based trash and restore flow.
 - Donation page with crypto address display and QR support.
@@ -174,7 +175,7 @@ Run Playwright smoke tests when the browser test environment is prepared:
 npm run test:e2e
 ```
 
-Run the focused wa-sqlite final promotion gate:
+Run the focused wa-sqlite active-backend gate:
 
 ```bash
 npm run wa-sqlite:final:gate

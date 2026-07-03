@@ -10,7 +10,7 @@ import {
   getSecretKeyFingerprint,
   normalizeAccountSecretKey,
 } from './secretKey';
-import { clearPersistedActiveVaultStorageBackend, getVaultStorageRepository, restorePersistedActiveVaultStorageBackend } from './vaultStorageProvider';
+import { clearPersistedActiveVaultStorageBackend, getVaultStorageRepository, restoreOrActivateDefaultVaultStorageBackend } from './vaultStorageProvider';
 import {
   runWaSqliteActiveBackendMigration,
   type WaSqliteActiveBackendMigrationResult,
@@ -45,7 +45,9 @@ interface AccountSecretProfile {
 }
 
 export async function initializeStorage(): Promise<void> {
-  await restorePersistedActiveVaultStorageBackend();
+  await restoreOrActivateDefaultVaultStorageBackend({
+    hasLegacyOpfsVaultData: isMasterPasswordSet,
+  });
   await getVaultStorageRepository().hydrate();
   await hydrateBiometric();
   migrateRememberedSecretKeyToSecureStorage();

@@ -16,6 +16,7 @@ import {
   assertWaSqlitePersistenceReadyForActiveBackend,
   assertWaSqlitePersistenceReadyForMigrationTarget,
   createWaSqlitePersistenceProfile,
+  markWaSqlitePersistenceReadyForActiveBackend,
   type WaSqlitePersistenceProfile,
 } from './waSqlitePersistence';
 import { createWaSqliteVaultStorageRepository } from './waSqliteVaultStorageRepository';
@@ -95,6 +96,76 @@ export function readPersistedActiveVaultStorageBackend(): PersistedActiveVaultSt
 
 export interface RestorePersistedVaultStorageBackendOptions {
   createRepository?: (profile: WaSqlitePersistenceProfile) => VaultStorageRepository;
+}
+
+export type VaultStorageStartupBackendStatus = 'restored-wa-sqlite' | 'activated-wa-sqlite-default' | 'kept-legacy-opfs' | 'kept-opfs-fallback';
+
+export interface RestoreOrActivateDefaultVaultStorageBackendOptions extends RestorePersistedVaultStorageBackendOptions {
+  hasLegacyOpfsVaultData?: () => boolean;
+  createPersistenceProfile?: () => WaSqlitePersistenceProfile;
+}
+
+export async function restoreOrActivateDefaultVaultStorageBackend(
+  options: RestoreOrActivateDefaultVaultStorageBackendOptions = {},
+): Promise<VaultStorageStartupBackendStatus> {
+  if (await restorePersistedActiveVaultStorageBackend(options)) {
+    return 'restored-wa-sqlite';
+  }
+
+  const hasLegacyData = (options.hasLegacyOpfsVaultData ?? hasLegacyOpfsVaultData)();
+  if (hasLegacyData) {
+    return 'kept-legacy-opfs';
+  }
+
+  const profile = markWaSqlitePersistenceReadyForActiveBackend(
+    (options.createPersistenceProfile ?? createWaSqlitePersistenceProfile)(),
+  );
+
+  try {
+    assertWaSqlitePersistenceReadyForActiveBackend(profile);
+    const repository = (options.createRepository ?? createActiveWaSqliteRepository)(profile);
+    await repository.hydrate();
+    persistWaSqliteDefaultActiveBackend(profile);
+    replaceActiveVaultStorageRepository(repository, {
+      active: 'wa-sqlite',
+      target: null,
+      mode: 'active',
+    });
+    return 'activated-wa-sqlite-default';
+  } catch {
+    clearPersistedActiveVaultStorageBackend();
+    return 'kept-opfs-fallback';
+  }
+}
+
+function persistWaSqliteDefaultActiveBackend(profile: WaSqlitePersistenceProfile): void {
+  assertWaSqlitePersistenceReadyForActiveBackend(profile);
+  const storage = getBrowserStorage();
+  if (!storage) return;
+
+  const marker: PersistedActiveVaultStorageBackend = {
+    version: 1,
+    backend: 'wa-sqlite',
+    persistenceProfile: profile,
+    promotedAt: new Date().toISOString(),
+  };
+  storage.setItem(ACTIVE_VAULT_STORAGE_BACKEND_KEY, JSON.stringify(marker));
+}
+
+function hasLegacyOpfsVaultData(): boolean {
+  const storage = getBrowserStorage();
+  if (!storage) return false;
+  if (storage.getItem('aegis_is_setup') === 'true') return true;
+
+  const fallback = storage.getItem('aegis_sqlite_fallback');
+  if (!fallback) return false;
+
+  try {
+    const parsed = JSON.parse(fallback) as { user_secrets?: unknown[] };
+    return Array.isArray(parsed.user_secrets) && parsed.user_secrets.length > 0;
+  } catch {
+    return true;
+  }
 }
 
 export async function restorePersistedActiveVaultStorageBackend(

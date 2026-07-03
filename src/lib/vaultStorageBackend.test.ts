@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { parseVaultStorageBackendSelection, VaultStorageBackendSelectionError } from './vaultStorageBackend';
 
 describe('vault storage backend selection', () => {
-  it('keeps OPFS active by default', () => {
+  it('keeps OPFS for the bare build-time selection before runtime startup activation', () => {
     expect(parseVaultStorageBackendSelection(undefined)).toEqual({
       active: 'opfs',
       target: null,

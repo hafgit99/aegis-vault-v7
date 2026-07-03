@@ -21,6 +21,7 @@ import {
   promoteVaultStorageRepositoryFromPlan,
   readPersistedActiveVaultStorageBackend,
   restorePersistedActiveVaultStorageBackend,
+  restoreOrActivateDefaultVaultStorageBackend,
   setVaultStorageRepositoryForTesting,
 } from './vaultStorageProvider';
 import type { VaultStorageRepository } from './vaultStorageRepository';
@@ -228,6 +229,83 @@ describe('vault storage provider', () => {
     } finally {
       setVaultStorageRepositoryForTesting(sqliteOPFSInstance);
     }
+  });
+
+  it('activates wa-sqlite as the default backend for fresh vaults and persists the marker', async () => {
+    const repository = createRepositoryStub();
+
+    const status = await restoreOrActivateDefaultVaultStorageBackend({
+      hasLegacyOpfsVaultData: () => false,
+      createPersistenceProfile: () => createWaSqlitePersistenceProfile('desktop-app-data', true),
+      createRepository: (profile) => {
+        expect(profile).toMatchObject({
+          storageScope: 'desktop-app-data',
+          activeBackendReady: true,
+          persistentVfsReady: true,
+        });
+        return repository;
+      },
+    });
+
+    try {
+      expect(status).toBe('activated-wa-sqlite-default');
+      expect(repository.hydrate).toHaveBeenCalledTimes(1);
+      expect(getVaultStorageRepository()).toBe(repository);
+      expect(getActiveVaultStorageBackendSelection()).toEqual({
+        active: 'wa-sqlite',
+        target: null,
+        mode: 'active',
+      });
+      expect(readPersistedActiveVaultStorageBackend()).toMatchObject({
+        version: 1,
+        backend: 'wa-sqlite',
+        persistenceProfile: expect.objectContaining({
+          storageScope: 'desktop-app-data',
+          activeBackendReady: true,
+        }),
+      });
+    } finally {
+      setVaultStorageRepositoryForTesting(sqliteOPFSInstance);
+    }
+  });
+
+  it('keeps OPFS for legacy JSON vaults until the guarded migration runs', async () => {
+    const repository = createRepositoryStub();
+
+    const status = await restoreOrActivateDefaultVaultStorageBackend({
+      hasLegacyOpfsVaultData: () => true,
+      createRepository: () => repository,
+    });
+
+    expect(status).toBe('kept-legacy-opfs');
+    expect(repository.hydrate).not.toHaveBeenCalled();
+    expect(getVaultStorageRepository()).toBe(sqliteOPFSInstance);
+    expect(getActiveVaultStorageBackendSelection()).toEqual({
+      active: 'opfs',
+      target: null,
+      mode: 'active',
+    });
+    expect(readPersistedActiveVaultStorageBackend()).toBeNull();
+  });
+
+  it('falls back to OPFS when fresh wa-sqlite default activation cannot hydrate', async () => {
+    const repository = createRepositoryStub();
+    vi.mocked(repository.hydrate).mockRejectedValueOnce(new Error('hydrate failed'));
+
+    const status = await restoreOrActivateDefaultVaultStorageBackend({
+      hasLegacyOpfsVaultData: () => false,
+      createPersistenceProfile: () => createWaSqlitePersistenceProfile('desktop-app-data', true),
+      createRepository: () => repository,
+    });
+
+    expect(status).toBe('kept-opfs-fallback');
+    expect(getVaultStorageRepository()).toBe(sqliteOPFSInstance);
+    expect(getActiveVaultStorageBackendSelection()).toEqual({
+      active: 'opfs',
+      target: null,
+      mode: 'active',
+    });
+    expect(readPersistedActiveVaultStorageBackend()).toBeNull();
   });
 
   it('clears forged active backend markers with unsupported scopes or missing VFS names', () => {

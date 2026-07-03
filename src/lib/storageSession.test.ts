@@ -36,7 +36,7 @@ const clearPersistedActiveVaultStorageBackend = vi.hoisted(() => vi.fn(() => {
   localStorage.removeItem('aegis_vault_storage_active_backend');
 }));
 const getVaultStorageRepository = vi.hoisted(() => vi.fn(() => sqliteOPFSInstance));
-const restorePersistedActiveVaultStorageBackend = vi.hoisted(() => vi.fn(async () => false));
+const restoreOrActivateDefaultVaultStorageBackend = vi.hoisted(() => vi.fn(async () => 'kept-legacy-opfs'));
 
 vi.mock('./sqlite_opfs', () => ({
   sqliteOPFSInstance,
@@ -59,7 +59,7 @@ vi.mock('./vaultStorageActiveMigration', () => ({
 vi.mock('./vaultStorageProvider', () => ({
   clearPersistedActiveVaultStorageBackend,
   getVaultStorageRepository,
-  restorePersistedActiveVaultStorageBackend,
+  restoreOrActivateDefaultVaultStorageBackend,
 }));
 
 import {
@@ -119,7 +119,7 @@ afterEach(() => {
   sessionStorage.clear();
   vi.clearAllMocks();
   getVaultStorageRepository.mockReturnValue(sqliteOPFSInstance);
-  restorePersistedActiveVaultStorageBackend.mockResolvedValue(false);
+  restoreOrActivateDefaultVaultStorageBackend.mockResolvedValue('kept-legacy-opfs');
 });
 
 describe('vault session storage', () => {
@@ -137,11 +137,11 @@ describe('vault session storage', () => {
 
     await initializeStorage();
 
-    expect(restorePersistedActiveVaultStorageBackend).toHaveBeenCalledTimes(1);
+    expect(restoreOrActivateDefaultVaultStorageBackend).toHaveBeenCalledTimes(1);
     expect(getVaultStorageRepository).toHaveBeenCalledTimes(1);
     expect(sqliteOPFSInstance.hydrate).toHaveBeenCalledTimes(1);
     expect(hydrateBiometric).toHaveBeenCalledTimes(1);
-    expect(restorePersistedActiveVaultStorageBackend.mock.invocationCallOrder[0]).toBeLessThan(
+    expect(restoreOrActivateDefaultVaultStorageBackend.mock.invocationCallOrder[0]).toBeLessThan(
       getVaultStorageRepository.mock.invocationCallOrder[0],
     );
     expect(sqliteOPFSInstance.hydrate.mock.invocationCallOrder[0]).toBeLessThan(
@@ -159,14 +159,14 @@ describe('vault session storage', () => {
       ...sqliteOPFSInstance,
       hydrate: vi.fn(async () => undefined),
     };
-    restorePersistedActiveVaultStorageBackend.mockImplementationOnce(async () => {
+    restoreOrActivateDefaultVaultStorageBackend.mockImplementationOnce(async () => {
       getVaultStorageRepository.mockReturnValue(restoredRepository);
-      return true;
+      return 'restored-wa-sqlite';
     });
 
     await initializeStorage();
 
-    expect(restorePersistedActiveVaultStorageBackend).toHaveBeenCalledTimes(1);
+    expect(restoreOrActivateDefaultVaultStorageBackend).toHaveBeenCalledTimes(1);
     expect(restoredRepository.hydrate).toHaveBeenCalledTimes(1);
     expect(sqliteOPFSInstance.hydrate).not.toHaveBeenCalled();
     expect(hydrateBiometric).toHaveBeenCalledTimes(1);
@@ -188,9 +188,9 @@ describe('vault session storage', () => {
       saveVaultItems: vi.fn(() => [storedItem, importedItem]),
       saveVaultItemsWithKey: vi.fn(() => [storedItem, importedItem]),
     };
-    restorePersistedActiveVaultStorageBackend.mockImplementationOnce(async () => {
+    restoreOrActivateDefaultVaultStorageBackend.mockImplementationOnce(async () => {
       getVaultStorageRepository.mockReturnValue(restoredRepository);
-      return true;
+      return 'restored-wa-sqlite';
     });
 
     await expect(verifyMasterPassword('master-pass')).resolves.toBe(true);

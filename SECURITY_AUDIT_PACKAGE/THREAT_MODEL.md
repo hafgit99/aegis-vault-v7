@@ -9,7 +9,7 @@ This model covers the desktop application running as a local-first vault on a us
 In scope:
 
 - Master password setup, unlock, lock, and reset behavior.
-- Vault item persistence through the current simulated SQLite/OPFS layer.
+- Vault item persistence through the wa-sqlite active backend, plus legacy OPFS/JSON vaults awaiting guarded migration.
 - Encrypted backup export and import.
 - Attachment encryption and retrieval.
 - Biometric unlock as a local convenience feature.
@@ -38,7 +38,7 @@ Out of scope for the current phase:
 
 - The app UI is trusted only while loaded from the packaged desktop application.
 - Browser-like storage APIs are treated as local persistence, not secure secret storage.
-- `src/lib/vaultSession.ts` is zeroized `Uint8Array` process-memory session state. It is safer than browser `sessionStorage`, but it is not an OS secret enclave and some operations still temporarily decode it into JavaScript strings.
+- `src/lib/vaultSession.ts` is zeroized `Uint8Array` process-memory session state. It is safer than browser `sessionStorage`, but it is not an OS secret enclave; user-entered setup/unlock credentials still cross the JavaScript UI boundary before key material is scoped into the active session.
 - OPFS/localStorage fallback persistence is treated as attacker-readable at rest unless encrypted by the app.
 - User-selected backup files may be attacker-controlled input.
 - Imported JSON/CSV data is untrusted until parsed and normalized.
@@ -89,7 +89,7 @@ Vault database:
 - Legacy unversioned database payloads are normalized to the current schema.
 - Vault rows store sensitive item data inside encrypted metadata.
 - New vault item metadata writes use Argon2id-derived keys and WebCrypto AES-GCM.
-- The current SQLite/OPFS layer is still a simulated persistence layer and must be replaced or finalized before production claims.
+- Fresh vaults use the real wa-sqlite backend with persistent VFS support when available. Existing OPFS/JSON vaults stay on the legacy encrypted store until the guarded migration proves persistence, item parity, and restore safety.
 
 Backups:
 
@@ -152,7 +152,7 @@ Required user-facing recovery rules:
 | Risk | Current status | Planned mitigation |
 | --- | --- | --- |
 | Legacy custom cryptographic primitives in `legacyCrypto.ts` | Mitigated | Removed from production decrypt paths; keep fail-closed tests in place |
-| Simulated SQLite/OPFS persistence naming overstates implementation | Open | Decide final desktop storage adapter and align naming |
+| Simulated SQLite/OPFS persistence naming overstates implementation | Mitigated | Fresh vaults default to wa-sqlite; OPFS/JSON is retained only as a legacy migration source with guarded promotion |
 | Legacy XOR attachment fallback | Mitigated | Rejected instead of decrypted |
 | Active-session master credential callback materializes JS strings | Mitigated (zero-allowlist gate) | `withActiveMasterPassword` and string-returning active master getters are removed from production source. The final gate allows zero occurrences of that pattern; remaining credential exposure is limited to explicit setup/unlock/export/migration boundaries. |
 | Clipboard can keep copied secrets after OS capture or user clipboard changes | Partially mitigated | Safe clearing removes unchanged copied secrets; hostile OS clipboard capture remains out of scope |
@@ -165,6 +165,8 @@ Required user-facing recovery rules:
 Allowed current claims:
 
 - "Local-first desktop vault."
+- "Fresh vaults use wa-sqlite storage when persistent VFS support is available."
+- "Existing OPFS/JSON vaults migrate through a guarded parity-checked flow."
 - "Secure backups use Argon2id and WebCrypto AES-GCM."
 - "New attachments are protected with WebCrypto AES-GCM."
 - "New vault item metadata is protected with WebCrypto AES-GCM."
@@ -175,7 +177,6 @@ Claims to avoid until fixed:
 
 - "Military-grade security."
 - "Zero-knowledge recovery."
-- "SQLite database" unless the persistence layer is finalized as real SQLite.
 - "Biometric security replaces the master password."
 - "All data is protected against malware or device compromise."
 
