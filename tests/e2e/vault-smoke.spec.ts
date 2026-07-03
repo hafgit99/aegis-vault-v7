@@ -126,6 +126,64 @@ test('reveals and copies login detail fields', async ({ page }) => {
   await expect(page.getByTestId('copy-toast-notification')).toBeVisible();
 });
 
+test('adds, persists, and downloads a vault item attachment', async ({ page }) => {
+  const attachmentName = 'aegis-e2e-attachment.txt';
+  const attachmentText = 'Aegis Vault attachment E2E proof.\nLine two stays encrypted at rest.';
+
+  await setupVault(page);
+
+  await page.getByTestId('new-vault-item-button').click();
+  await page.getByTestId('vault-item-title-input').fill('E2E Attachment Login');
+  await page.getByTestId('vault-item-url-input').fill('https://attachments.example');
+  await page.getByTestId('vault-item-username-input').fill('attachment-user');
+  await page.getByTestId('vault-item-password-input').fill('AttachmentPass!42');
+  await page.getByTestId('vault-item-notes-input').fill('Created with an encrypted attachment.');
+  await page.getByTestId('vault-item-attachment-input').setInputFiles({
+    name: attachmentName,
+    mimeType: 'text/plain',
+    buffer: Buffer.from(attachmentText, 'utf8'),
+  });
+
+  await expect(page.getByTestId('vault-item-selected-attachment')).toBeVisible();
+  await expect(page.getByTestId('vault-item-selected-attachment-name')).toContainText(attachmentName);
+  await page.getByTestId('vault-item-save-button').click();
+
+  const savedItem = page.getByTestId('vault-list-item').filter({ hasText: 'E2E Attachment Login' });
+  await expect(savedItem).toBeVisible();
+  await savedItem.click();
+
+  await expect(page.getByTestId('vault-item-attachment-card')).toBeVisible();
+  await expect(page.getByTestId('vault-item-attachment-name')).toContainText(attachmentName);
+
+  let downloadPromise = page.waitForEvent('download');
+  await page.getByTestId('vault-item-attachment-download-button').click();
+  let download = await downloadPromise;
+  let downloadPath = await download.path();
+  expect(download.suggestedFilename()).toBe(attachmentName);
+  expect(downloadPath).toBeTruthy();
+  await expect.poll(async () => fs.readFile(downloadPath!, 'utf8')).toBe(attachmentText);
+
+  await page.reload();
+  await expect(page.getByTestId('lock-password-input')).toBeVisible();
+  await page.getByTestId('lock-password-input').fill(masterPassword);
+  await page.getByTestId('lock-submit-button').click();
+
+  const restoredItem = page.getByTestId('vault-list-item').filter({ hasText: 'E2E Attachment Login' });
+  await expect(restoredItem).toBeVisible();
+  await restoredItem.click();
+
+  await expect(page.getByTestId('vault-item-attachment-card')).toBeVisible();
+  await expect(page.getByTestId('vault-item-attachment-name')).toContainText(attachmentName);
+
+  downloadPromise = page.waitForEvent('download');
+  await page.getByTestId('vault-item-attachment-download-button').click();
+  download = await downloadPromise;
+  downloadPath = await download.path();
+  expect(download.suggestedFilename()).toBe(attachmentName);
+  expect(downloadPath).toBeTruthy();
+  await expect.poll(async () => fs.readFile(downloadPath!, 'utf8')).toBe(attachmentText);
+});
+
 test('moves a vault item to trash and restores it', async ({ page }) => {
   await setupVault(page);
 

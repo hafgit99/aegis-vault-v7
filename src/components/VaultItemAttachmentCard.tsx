@@ -15,7 +15,7 @@ export default function VaultItemAttachmentCard({ item, onDownload }: VaultItemA
   if (!item.attachmentId) return null;
 
   return (
-    <div className="bg-[#101210]/60 p-5 rounded-xl border border-brand-primary/15 space-y-3.5 text-left">
+    <div data-testid="vault-item-attachment-card" className="bg-[#101210]/60 p-5 rounded-xl border border-brand-primary/15 space-y-3.5 text-left">
       <div className="flex items-center justify-between border-b border-outline-variant/5 pb-2">
         <h4 className="text-[10px] font-bold text-brand-primary tracking-widest uppercase flex items-center gap-2">
           <File className="w-4 h-4 text-brand-primary" />
@@ -32,7 +32,7 @@ export default function VaultItemAttachmentCard({ item, onDownload }: VaultItemA
             <File className="w-4.5 h-4.5" />
           </div>
           <div className="min-w-0">
-            <p className="font-bold text-xs text-on-surface truncate pr-2">{item.attachmentName}</p>
+            <p data-testid="vault-item-attachment-name" className="font-bold text-xs text-on-surface truncate pr-2">{item.attachmentName}</p>
             <p className="text-[10px] text-on-surface-variant font-mono mt-0.5 font-bold">
               <span>{formatFileSize(item.attachmentSize || 0)}</span>
               <span className="text-[#059669] ml-2">{t('attachmentCard.decryptOnDownload')}</span>
@@ -41,6 +41,7 @@ export default function VaultItemAttachmentCard({ item, onDownload }: VaultItemA
         </div>
         <button
           type="button"
+          data-testid="vault-item-attachment-download-button"
           onClick={() => onDownload(item.attachmentId!, item.attachmentName!)}
           className="p-2.5 bg-brand-primary text-brand-on-primary rounded-xl hover:brightness-110 active:scale-95 transition-all shadow-md shadow-brand-primary/10 flex items-center justify-center shrink-0"
           title={t('attachmentCard.download')}

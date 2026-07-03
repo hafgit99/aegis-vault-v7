@@ -927,13 +927,13 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                 
                 {/* 1. Existing Attachment inside Database */}
                 {existingAttachment && (
-                  <div className="flex items-center justify-between p-3.5 bg-brand-primary/5 hover:bg-brand-primary/10 border border-brand-primary/20 rounded-xl transition-all">
+                  <div data-testid="vault-item-existing-attachment" className="flex items-center justify-between p-3.5 bg-brand-primary/5 hover:bg-brand-primary/10 border border-brand-primary/20 rounded-xl transition-all">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-9 h-9 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary shrink-0">
                         <File className="w-5 h-5 animate-pulse" />
                       </div>
                       <div className="min-w-0">
-                        <p className="font-bold text-xs text-on-surface truncate pr-2">{existingAttachment.name}</p>
+                        <p data-testid="vault-item-existing-attachment-name" className="font-bold text-xs text-on-surface truncate pr-2">{existingAttachment.name}</p>
                         <p className="text-[9px] text-[#059669] font-bold font-mono uppercase flex items-center gap-1 mt-0.5">
                           <span>{formatFileSize(existingAttachment.size)}</span>
                           <span>•</span>
@@ -944,6 +944,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
+                        data-testid="vault-item-existing-attachment-download-button"
                         onClick={handleDownloadExistingAttachment}
                         className="p-2 bg-[#121412] hover:bg-[#1c1e1c] border border-outline-variant/15 text-brand-primary rounded-lg transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center"
                         title={t('vaultForm.attachment.downloadTitle')}
@@ -952,6 +953,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                       </button>
                       <button
                         type="button"
+                        data-testid="vault-item-existing-attachment-remove-button"
                         onClick={handleRemoveExistingAttachment}
                         className="p-2 bg-[#121412] hover:bg-red-500/10 border border-outline-variant/15 text-red-400 hover:text-red-300 rounded-lg transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center"
                         title={t('vaultForm.attachment.deleteTitle')}
@@ -964,13 +966,13 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
 
                 {/* 2. Newly targeted upload file */}
                 {selectedFile ? (
-                  <div className="flex items-center justify-between p-3.5 bg-brand-secondary/5 border border-brand-secondary/20 rounded-xl animate-fade-in">
+                  <div data-testid="vault-item-selected-attachment" className="flex items-center justify-between p-3.5 bg-brand-secondary/5 border border-brand-secondary/20 rounded-xl animate-fade-in">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 shrink-0">
                         <File className="w-5 h-5" />
                       </div>
                       <div className="min-w-0">
-                        <p className="font-bold text-xs text-on-surface truncate pr-2">{selectedFile.name}</p>
+                        <p data-testid="vault-item-selected-attachment-name" className="font-bold text-xs text-on-surface truncate pr-2">{selectedFile.name}</p>
                         <p className="text-[10px] text-on-surface-variant font-mono mt-0.5 font-bold flex items-center gap-1">
                           <span>{formatFileSize(selectedFile.size)}</span>
                           <span className="text-brand-primary bg-brand-primary/10 px-1 py-0.2 rounded text-[9px] uppercase">{t('vaultForm.attachment.ready')}</span>
@@ -979,6 +981,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                     </div>
                     <button
                       type="button"
+                      data-testid="vault-item-selected-attachment-remove-button"
                       onClick={handleRemoveSelectedFile}
                       className="p-2 bg-[#121412] hover:bg-red-500/10 border border-outline-variant/15 text-red-400 hover:text-red-300 rounded-lg transition-all hover:scale-105 active:scale-95 cursor-pointer"
                       title={t('vaultForm.attachment.cancelSelection')}
@@ -990,6 +993,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                   /* 3. Drop Zone Area */
                   !existingAttachment && (
                     <div 
+                      data-testid="vault-item-attachment-dropzone"
                       onDragOver={handleDragOver}
                       onDrop={handleDrop}
                       onClick={() => fileInputRef.current?.click()}
@@ -997,6 +1001,7 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
                     >
                       <input 
                         type="file"
+                        data-testid="vault-item-attachment-input"
                         ref={fileInputRef}
                         onChange={handleFileChange}
                         className="hidden"
