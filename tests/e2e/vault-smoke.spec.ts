@@ -362,6 +362,12 @@ test('changes the master password, preserves data, and exports with the new sess
 
   await page.getByTestId('lock-vault-button').click();
   await expect(page.getByTestId('lock-password-input')).toBeVisible();
+
+  await page.getByTestId('lock-password-input').fill(masterPassword);
+  await page.getByTestId('lock-submit-button').click();
+  await expect(page.getByTestId('lock-password-input')).toBeVisible();
+  await expect(page.getByTestId('new-vault-item-button')).toBeHidden();
+
   await page.getByTestId('lock-password-input').fill(newMasterPassword);
   await page.getByTestId('lock-submit-button').click();
 
