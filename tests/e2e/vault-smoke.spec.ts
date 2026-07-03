@@ -542,7 +542,18 @@ test('imports an encrypted aegis backup file', async ({ page }) => {
   await expect(page.getByTestId('import-success-message')).toContainText('başarıyla çözüldü');
 
   await page.getByTestId('nav-vault-button').click();
-  await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Encrypted Import' })).toBeVisible();
+  const importedItem = page.getByTestId('vault-list-item').filter({ hasText: 'E2E Encrypted Import' });
+  await expect(importedItem).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByTestId('lock-password-input')).toBeVisible();
+  await page.getByTestId('lock-password-input').fill(masterPassword);
+  await page.getByTestId('lock-submit-button').click();
+
+  const restoredImport = page.getByTestId('vault-list-item').filter({ hasText: 'E2E Encrypted Import' });
+  await expect(restoredImport).toBeVisible();
+  await restoredImport.click();
+  await expect(page.getByTestId('login-username-value')).toContainText('ada-e2e');
 });
 
 test('rejects encrypted aegis import with a wrong password', async ({ page }) => {
