@@ -41,8 +41,13 @@ function base64ToBytes(value: string): Uint8Array {
   return bytes;
 }
 
+interface CacheEntry {
+  key: CryptoKey;
+  freq: number;
+}
+
 // Cache for imported WebCrypto keys to avoid heavy importKey microtasks during bulk operations.
-const importedKeysCache = new Map<string, CryptoKey>();
+const importedKeysCache = new Map<string, CacheEntry>();
 
 export function clearImportedAesGcmKeyCache(): void {
   importedKeysCache.clear();
@@ -57,18 +62,33 @@ registerOnCloseSession(clearImportedAesGcmKeyCache);
 async function importAesGcmKey(rawKey: Uint8Array): Promise<CryptoKey> {
   const hashBuffer = await crypto.subtle.digest('SHA-256', rawKey);
   const cacheKey = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-  let cachedKey = importedKeysCache.get(cacheKey);
-  if (cachedKey) return cachedKey;
+  
+  const cachedEntry = importedKeysCache.get(cacheKey);
+  if (cachedEntry) {
+    cachedEntry.freq++;
+    return cachedEntry.key;
+  }
 
   const key = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
   
-  // Bound cache size
+  // Bound cache size using LFU (Least Frequently Used) eviction strategy
   if (importedKeysCache.size >= 20) {
-    const firstKey = importedKeysCache.keys().next().value;
-    if (firstKey !== undefined) importedKeysCache.delete(firstKey);
+    let minFreq = Infinity;
+    let minKey: string | null = null;
+
+    for (const [k, entry] of importedKeysCache.entries()) {
+      if (entry.freq < minFreq) {
+        minFreq = entry.freq;
+        minKey = k;
+      }
+    }
+
+    if (minKey !== null) {
+      importedKeysCache.delete(minKey);
+    }
   }
   
-  importedKeysCache.set(cacheKey, key);
+  importedKeysCache.set(cacheKey, { key, freq: 1 });
   return key;
 }
 
