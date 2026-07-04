@@ -582,9 +582,9 @@ describe('SettingsPanel account and safety controls', () => {
     expect(resetSystem).not.toHaveBeenCalled();
   });
 
-  it('resets the vault and reloads the app when destructive confirmation is accepted', () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+  it('resets the vault and schedules the app reload when destructive confirmation is accepted', () => {
     vi.mocked(window.confirm).mockReturnValueOnce(true);
+    vi.mocked(resetSystem).mockImplementationOnce(() => new Promise(() => {}));
     const { container } = renderSettings();
 
     fireEvent.click(container.querySelector('#danger-zone-section button') as HTMLButtonElement);
@@ -1142,3 +1142,4 @@ describe('SettingsPanel import interaction states', () => {
     expect(saveVaultItems).not.toHaveBeenCalled();
   });
 });
+

@@ -22,6 +22,8 @@ vi.mock('../lib/desktopFiles', () => ({
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.mocked(getAttachmentBlob).mockReset();
+  vi.mocked(saveDesktopBinaryFile).mockReset();
   localStorage.clear();
   delete window.__TAURI_INTERNALS__;
 });

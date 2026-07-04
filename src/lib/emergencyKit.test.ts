@@ -20,6 +20,9 @@ describe('emergencyKit', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.mocked(isNativeFileDialogSupported).mockReset();
+    vi.mocked(saveDesktopExportFile).mockReset();
+    vi.mocked(saveDesktopBinaryFile).mockReset();
     vi.mocked(isNativeFileDialogSupported).mockReturnValue(false);
     vi.mocked(saveDesktopExportFile).mockResolvedValue(false);
     vi.mocked(saveDesktopBinaryFile).mockResolvedValue(false);
