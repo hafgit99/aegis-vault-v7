@@ -50,6 +50,11 @@ import { SettingsLanguageCard } from './settings/SettingsLanguageCard';
 import { SettingsPasswordCard } from './settings/SettingsPasswordCard';
 import { SettingsStatsCard } from './settings/SettingsStatsCard';
 import { BlockedRequestsPanel } from './settings/BlockedRequestsPanel';
+import { PasskeyManager } from './PasskeyManager';
+import {
+  vaultFieldsToRecord,
+  type PasskeyRecord,
+} from '../lib/passkey';
 import {
   getLastSyncTime,
   hasSyncConfig,
@@ -1226,6 +1231,14 @@ export default function SettingsPanel({
           )}
         </div>
       </div>
+
+      {/* Passkey (WebAuthn) management */}
+      <PasskeyManager
+        records={items
+          .map((item) => vaultFieldsToRecord(item.id, item))
+          .filter((record): record is PasskeyRecord => record !== null)}
+        t={t}
+      />
 
       {/* Blocked Network Requests (Air-Gap policy log) */}
       <BlockedRequestsPanel />

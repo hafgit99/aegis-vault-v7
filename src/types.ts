@@ -32,10 +32,30 @@ export interface VaultItem {
   idExpiryDate?: string;
   idGender?: string;
 
-  // Passkey fields
+  // Passkey fields (manually managed secure keys — kept for backward compatibility)
   passkeyService?: string;
   passkeyPrivateExponent?: string;
   passkeyPublicId?: string;
+
+  // Passkey fields (real WebAuthn authenticator — see src/lib/passkey.ts)
+  passkeyCredentialId?: string;
+  passkeyPublicKey?: string;
+  passkeyRpId?: string;
+  passkeyRpName?: string;
+  passkeyUserName?: string;
+  passkeyUserHandle?: string;
+  passkeyAlgorithm?: 'ES256' | 'EdDSA' | 'RS256';
+  passkeySignCount?: number;
+  passkeyAttachment?: 'platform' | 'cross-platform';
+  passkeyTransports?: string[];
+  passkeyCreatedAt?: string;
+  passkeyLastUsedAt?: string;
+  /** WebCryptoAesGcmPayload JSON shape — vault-key-wrapped private key JWK. */
+  passkeyPrivateKeyBundle?: {
+    iv: string;
+    tag: string;
+    ciphertext: string;
+  };
 
   // Attachment fields
   attachmentId?: string; // Linked ID in IndexedDB
