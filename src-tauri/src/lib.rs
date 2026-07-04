@@ -21,9 +21,7 @@ struct ImportFilePayload {
 }
 
 #[cfg(target_os = "windows")]
-fn apply_screen_capture_protection_to_window(
-    window: &WebviewWindow,
-) -> Result<bool, String> {
+fn apply_screen_capture_protection_to_window(window: &WebviewWindow) -> Result<bool, String> {
     use windows_sys::Win32::UI::WindowsAndMessaging::{
         SetWindowDisplayAffinity, WDA_EXCLUDEFROMCAPTURE,
     };
@@ -40,14 +38,13 @@ fn apply_screen_capture_protection_to_window(
 }
 
 #[cfg(target_os = "macos")]
-fn apply_screen_capture_protection_to_window(
-    window: &WebviewWindow,
-) -> Result<bool, String> {
+fn apply_screen_capture_protection_to_window(window: &WebviewWindow) -> Result<bool, String> {
     use objc2_app_kit::{NSWindow, NSWindowSharingType};
 
     let ns_window_ptr = window
         .ns_window()
-        .map_err(|error| format!("failed to resolve NSWindow pointer: {error}"))? as *mut NSWindow;
+        .map_err(|error| format!("failed to resolve NSWindow pointer: {error}"))?
+        as *mut NSWindow;
 
     if ns_window_ptr.is_null() {
         return Err("NSWindow pointer is null".to_string());
@@ -62,9 +59,11 @@ fn apply_screen_capture_protection_to_window(
 }
 
 #[cfg(target_os = "linux")]
-static MONITORING_STARTED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+static MONITORING_STARTED: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
 #[cfg(target_os = "linux")]
-static SCREEN_RECORDING_DETECTED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+static SCREEN_RECORDING_DETECTED: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
 
 #[cfg(target_os = "linux")]
 fn get_linux_display_server() -> String {
@@ -132,16 +131,35 @@ fn check_pipewire_recording() -> bool {
                 if let Ok(val) = serde_json::from_str::<serde_json::Value>(json_str) {
                     if let Some(arr) = val.as_array() {
                         for item in arr {
-                            if item.get("type") == Some(&serde_json::Value::String("PipeWire:Interface:Node".to_string())) {
+                            if item.get("type")
+                                == Some(&serde_json::Value::String(
+                                    "PipeWire:Interface:Node".to_string(),
+                                ))
+                            {
                                 if let Some(info) = item.get("info") {
-                                    let state = info.get("state").and_then(|s| s.as_str()).unwrap_or("");
+                                    let state =
+                                        info.get("state").and_then(|s| s.as_str()).unwrap_or("");
                                     if state == "running" {
                                         if let Some(props) = info.get("props") {
-                                            let media_class = props.get("media.class").and_then(|m| m.as_str()).unwrap_or("");
-                                            let node_name = props.get("node.name").and_then(|n| n.as_str()).unwrap_or("").to_lowercase();
-                                            let media_name = props.get("media.name").and_then(|m| m.as_str()).unwrap_or("").to_lowercase();
+                                            let media_class = props
+                                                .get("media.class")
+                                                .and_then(|m| m.as_str())
+                                                .unwrap_or("");
+                                            let node_name = props
+                                                .get("node.name")
+                                                .and_then(|n| n.as_str())
+                                                .unwrap_or("")
+                                                .to_lowercase();
+                                            let media_name = props
+                                                .get("media.name")
+                                                .and_then(|m| m.as_str())
+                                                .unwrap_or("")
+                                                .to_lowercase();
                                             if media_class == "Video/Source" {
-                                                let is_cam = node_name.contains("camera") || node_name.contains("webcam") || media_name.contains("camera") || media_name.contains("webcam");
+                                                let is_cam = node_name.contains("camera")
+                                                    || node_name.contains("webcam")
+                                                    || media_name.contains("camera")
+                                                    || media_name.contains("webcam");
                                                 if !is_cam {
                                                     return true;
                                                 }
@@ -162,7 +180,10 @@ fn check_pipewire_recording() -> bool {
 #[cfg(target_os = "linux")]
 fn check_dbus_screencast_sessions() -> bool {
     use std::process::Command;
-    if let Ok(output) = Command::new("busctl").args(&["--user", "tree", "org.freedesktop.portal.Desktop"]).output() {
+    if let Ok(output) = Command::new("busctl")
+        .args(&["--user", "tree", "org.freedesktop.portal.Desktop"])
+        .output()
+    {
         if output.status.success() {
             if let Ok(stdout_str) = std::str::from_utf8(&output.stdout) {
                 if stdout_str.contains("/org/freedesktop/portal/desktop/session/") {
@@ -171,10 +192,15 @@ fn check_dbus_screencast_sessions() -> bool {
             }
         }
     }
-    if let Ok(output) = Command::new("busctl").args(&["--user", "tree", "org.freedesktop.portal.ScreenCast"]).output() {
+    if let Ok(output) = Command::new("busctl")
+        .args(&["--user", "tree", "org.freedesktop.portal.ScreenCast"])
+        .output()
+    {
         if output.status.success() {
             if let Ok(stdout_str) = std::str::from_utf8(&output.stdout) {
-                if stdout_str.contains("/org/freedesktop/portal/desktop/session/") || stdout_str.contains("/session/") {
+                if stdout_str.contains("/org/freedesktop/portal/desktop/session/")
+                    || stdout_str.contains("/session/")
+                {
                     return true;
                 }
             }
@@ -187,12 +213,14 @@ fn check_dbus_screencast_sessions() -> bool {
             "--type=method_call",
             "--print-reply",
             "/org/freedesktop/portal/desktop",
-            "org.freedesktop.DBus.Introspectable.Introspect"
+            "org.freedesktop.DBus.Introspectable.Introspect",
         ])
-        .output() {
+        .output()
+    {
         if output.status.success() {
             if let Ok(stdout_str) = std::str::from_utf8(&output.stdout) {
-                if stdout_str.contains("node name=\"session\"") || stdout_str.contains("/session/") {
+                if stdout_str.contains("node name=\"session\"") || stdout_str.contains("/session/")
+                {
                     return true;
                 }
             }
@@ -212,23 +240,23 @@ fn start_linux_screen_capture_monitor(app_handle: AppHandle) {
     if MONITORING_STARTED.swap(true, std::sync::atomic::Ordering::SeqCst) {
         return;
     }
-    std::thread::spawn(move || {
-        loop {
-            let is_recording = check_linux_screen_recording();
-            let was_recording = SCREEN_RECORDING_DETECTED.swap(is_recording, std::sync::atomic::Ordering::SeqCst);
-            if is_recording != was_recording {
-                log::info!("Linux screen capture status changed: is_recording={}", is_recording);
-                let _ = app_handle.emit("screen-capture-status-changed", is_recording);
-            }
-            std::thread::sleep(std::time::Duration::from_secs(2));
+    std::thread::spawn(move || loop {
+        let is_recording = check_linux_screen_recording();
+        let was_recording =
+            SCREEN_RECORDING_DETECTED.swap(is_recording, std::sync::atomic::Ordering::SeqCst);
+        if is_recording != was_recording {
+            log::info!(
+                "Linux screen capture status changed: is_recording={}",
+                is_recording
+            );
+            let _ = app_handle.emit("screen-capture-status-changed", is_recording);
         }
+        std::thread::sleep(std::time::Duration::from_secs(2));
     });
 }
 
 #[cfg(target_os = "linux")]
-fn apply_screen_capture_protection_to_window(
-    window: &WebviewWindow,
-) -> Result<bool, String> {
+fn apply_screen_capture_protection_to_window(window: &WebviewWindow) -> Result<bool, String> {
     let server = get_linux_display_server();
     if server == "x11" {
         log::warn!("Running under X11. Screen capture protection is limited by display server architecture.");
@@ -239,9 +267,7 @@ fn apply_screen_capture_protection_to_window(
 }
 
 #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
-fn apply_screen_capture_protection_to_window(
-    _window: &WebviewWindow,
-) -> Result<bool, String> {
+fn apply_screen_capture_protection_to_window(_window: &WebviewWindow) -> Result<bool, String> {
     Ok(false)
 }
 
@@ -272,7 +298,10 @@ fn get_linux_security_status() -> Result<Option<LinuxSecurityStatus>, String> {
     {
         let is_x11 = get_linux_display_server() == "x11";
         let is_recording = check_linux_screen_recording();
-        Ok(Some(LinuxSecurityStatus { is_x11, is_recording }))
+        Ok(Some(LinuxSecurityStatus {
+            is_x11,
+            is_recording,
+        }))
     }
     #[cfg(not(target_os = "linux"))]
     {
@@ -335,7 +364,10 @@ fn write_clipboard_text_protected(text: String) -> Result<bool, String> {
             std::ptr::copy_nonoverlapping(data.as_ptr(), ptr as *mut u8, data.len());
             GlobalUnlock(hmem);
             if SetClipboardData(format, hmem).is_null() {
-                return Err(format!("Failed to set clipboard data for format {}", format));
+                return Err(format!(
+                    "Failed to set clipboard data for format {}",
+                    format
+                ));
             }
             Ok(())
         };
@@ -379,7 +411,6 @@ fn write_clipboard_text_protected(_text: String) -> Result<bool, String> {
     Ok(false)
 }
 
-
 fn vault_database_path(app: &AppHandle) -> Result<PathBuf, String> {
     let app_data_dir = app
         .path()
@@ -393,9 +424,14 @@ fn vault_database_path(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 #[cfg(target_os = "windows")]
-fn replace_file_atomically(tmp_path: &std::path::Path, target_path: &std::path::Path) -> Result<(), String> {
+fn replace_file_atomically(
+    tmp_path: &std::path::Path,
+    target_path: &std::path::Path,
+) -> Result<(), String> {
     use std::os::windows::ffi::OsStrExt;
-    use windows_sys::Win32::Storage::FileSystem::{MoveFileExW, MOVEFILE_REPLACE_EXISTING, MOVEFILE_WRITE_THROUGH};
+    use windows_sys::Win32::Storage::FileSystem::{
+        MoveFileExW, MOVEFILE_REPLACE_EXISTING, MOVEFILE_WRITE_THROUGH,
+    };
 
     let mut tmp_wide: Vec<u16> = tmp_path.as_os_str().encode_wide().collect();
     tmp_wide.push(0);
@@ -411,14 +447,20 @@ fn replace_file_atomically(tmp_path: &std::path::Path, target_path: &std::path::
     };
 
     if moved == 0 {
-        return Err(format!("failed to atomically replace vault database: {}", std::io::Error::last_os_error()));
+        return Err(format!(
+            "failed to atomically replace vault database: {}",
+            std::io::Error::last_os_error()
+        ));
     }
 
     Ok(())
 }
 
 #[cfg(not(target_os = "windows"))]
-fn replace_file_atomically(tmp_path: &std::path::Path, target_path: &std::path::Path) -> Result<(), String> {
+fn replace_file_atomically(
+    tmp_path: &std::path::Path,
+    target_path: &std::path::Path,
+) -> Result<(), String> {
     fs::rename(tmp_path, target_path)
         .map_err(|error| format!("failed to atomically replace vault database: {error}"))
 }
@@ -757,7 +799,7 @@ fn derive_argon2id_key(
     salt: String,
     options: Option<RustArgon2idOptions>,
 ) -> Result<Vec<u8>, String> {
-    use argon2::{Argon2, Algorithm, Version};
+    use argon2::{Algorithm, Argon2, Version};
 
     let params = get_params(options)?;
     let output_len = params.output_len().unwrap_or(32);
@@ -777,7 +819,7 @@ fn create_argon2id_hash(
 ) -> Result<String, String> {
     use argon2::{
         password_hash::{PasswordHasher, SaltString},
-        Argon2, Algorithm, Version
+        Algorithm, Argon2, Version,
     };
 
     let params = get_params(options)?;
@@ -796,7 +838,7 @@ fn create_argon2id_hash(
 fn verify_argon2id_hash(password: String, encoded_hash: String) -> Result<bool, String> {
     use argon2::{
         password_hash::{PasswordHash, PasswordVerifier},
-        Argon2
+        Argon2,
     };
 
     let parsed_hash = PasswordHash::new(&encoded_hash)
@@ -917,7 +959,11 @@ pub fn run() {
             }
 
             // Start TCP server
-            native_messaging::start_tcp_server(app.handle().clone(), pairing_token, credentials.clone());
+            native_messaging::start_tcp_server(
+                app.handle().clone(),
+                pairing_token,
+                credentials.clone(),
+            );
 
             Ok(())
         })

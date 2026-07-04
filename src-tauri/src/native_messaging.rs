@@ -2,10 +2,10 @@ use std::fs;
 use std::io::{self, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
-use subtle::ConstantTimeEq;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
+use subtle::ConstantTimeEq;
 
 pub const TCP_PORT: u16 = 49155;
 pub const TOKEN_FILENAME: &str = "aegis_ipc_token.bin";
@@ -112,7 +112,10 @@ pub fn generate_token() -> String {
 
 fn is_pairing_token_valid(received_token: &str, pairing_token: &str) -> bool {
     received_token.len() == pairing_token.len()
-        && received_token.as_bytes().ct_eq(pairing_token.as_bytes()).into()
+        && received_token
+            .as_bytes()
+            .ct_eq(pairing_token.as_bytes())
+            .into()
 }
 
 pub fn write_pairing_token_file(path: &PathBuf, token: &str) -> io::Result<()> {
