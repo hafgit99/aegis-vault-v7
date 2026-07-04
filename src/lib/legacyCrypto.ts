@@ -3,7 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/**
+/******************************************************************************
+ * DO NOT USE — fail-closed boundary. See SECURITY_NOTES.md.
+ * 
  * Legacy custom cryptography has been removed from production code.
  *
  * Older Aegis builds used pure-JS compatibility primitives for backup and
@@ -11,7 +13,7 @@
  * SHA/HMAC/HKDF/simulated-Argon2id/AES fallback remains in this module. Users
  * with pre-hardening exports must re-export from an earlier migration build
  * before importing into this release line.
- */
+ ******************************************************************************/
 export const legacyCryptoErrorCodes = {
   invalidJson: 'legacyCrypto.invalidJson',
   missingFields: 'legacyCrypto.missingFields',
