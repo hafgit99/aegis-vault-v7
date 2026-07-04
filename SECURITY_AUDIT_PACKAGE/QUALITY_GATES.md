@@ -47,6 +47,7 @@ npm run rust:test:native
 ```
 
 The dependency security gate runs `npm audit --audit-level=high` so high and critical npm advisories block release candidates while lower-severity advisories remain review items. The Rust native gate runs `cargo fmt --check` and the focused atomic vault database write tests so desktop persistence regressions are caught before artifact creation.
+Dependency audit hardening is kept current in the lockfile: Vitest and `@vitest/coverage-v8` are on the 4.x line to remove high/critical Vitest/Vite advisories, `form-data` is locked to the patched 4.0.6 tree, and `qs` is pinned through `overrides` at 6.15.3 so the Stryker/typed-rest-client chain does not reintroduce the known parser DoS advisory. The verified release state is `npm audit --audit-level=high` with zero high or critical findings; a full `npm audit` also reports zero vulnerabilities after the override resolution.
 
 The CSP gate fails if Tauri's production Content-Security-Policy reintroduces `style-src 'unsafe-inline'`, remote Google font origins, React inline `style={...}` props, HTML `style` attributes, or production `<style>` blocks. Desktop, Android, and wa-sqlite final gates call it automatically.
 
@@ -431,3 +432,4 @@ Recently improved:
 ## wa-sqlite Final Gate
 
 Use `npm run wa-sqlite:final:gate` before deciding whether wa-sqlite is ready for default active-backend promotion. Use `npm run wa-sqlite:final:gate:unit` for the faster focused unit/integration pass and `npm run wa-sqlite:final:gate:dry` to inspect the command plan. Details live in `docs/WA_SQLITE_FINAL_GATE.md`.
+
