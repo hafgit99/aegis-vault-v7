@@ -8,6 +8,7 @@ const explicitDir = getArgValue('--dir');
 const channel = getArgValue('--channel') || 'internal Android candidate';
 const signed = hasFlag('--signed');
 const finalMode = hasFlag('--final');
+const biometricClaim = hasFlag('--biometric-claim');
 const releaseRoot = path.join(repoRoot, 'release-local', 'android');
 const evidenceDir = explicitDir ? path.resolve(repoRoot, explicitDir) : findLatestEvidenceDir();
 
@@ -26,6 +27,7 @@ function usage() {
     '  --channel <name>   Release channel label. Defaults to internal Android candidate.',
     '  --signed           Mark the candidate as signed in the generated notes.',
     '  --final            Mark notes as final-distribution gated.',
+    '  --biometric-claim  Permit production biometric support wording only after matrix approval.',
     '  --help             Show this help.',
   ].join('\n');
 }
@@ -89,6 +91,35 @@ function checklistStats(file) {
   return { checked, unchecked, fieldsMissing };
 }
 
+function checklistField(contents, label) {
+  const line = contents.split(new RegExp('\\r?\\n')).find((candidate) => candidate.startsWith(label));
+  return line ? line.slice(label.length).trim() : '';
+}
+
+function isPlaceholderValue(value) {
+  return !value || new RegExp('^(blocked|n/?a|na|none|tbd|todo|pending|-|<.*>)$', 'i').test(value.trim());
+}
+
+function biometricMatrixStats(file) {
+  if (!fs.existsSync(file)) return { approved: false, missing: ['<checklist missing>'] };
+  const contents = fs.readFileSync(file, 'utf8');
+  const status = checklistField(contents, '- Biometric production claim status:');
+  const fields = [
+    '- Biometric matrix reviewer:',
+    '- Biometric matrix completed date:',
+    '- Pixel evidence:',
+    '- Samsung evidence:',
+    '- Xiaomi evidence:',
+    '- Android 12 evidence:',
+    '- Android 13 evidence:',
+    '- Android 14 evidence:',
+    '- Android 15 evidence:',
+  ];
+  const missing = fields.filter((label) => isPlaceholderValue(checklistField(contents, label)));
+  if (!/^approved$/i.test(status)) missing.unshift('- Biometric production claim status: approved');
+  return { approved: missing.length === 0, missing };
+}
+
 function artifactLines(artifacts) {
   if (artifacts.length === 0) return ['- No copied Android artifacts were recorded.'];
   return artifacts.map((artifact) => '- `' + artifact.copied + '` - ' + artifactKind(artifact.copied || artifact.source) + ', ' + formatBytes(artifact.sizeBytes));
@@ -107,7 +138,9 @@ function generateNotes() {
   const metadata = readJson(metadataPath);
   const artifacts = Array.isArray(metadata.artifacts) ? metadata.artifacts : [];
   const report = readText(path.join(evidenceDir, 'android-release-report.txt'));
-  const checklist = checklistStats(path.join(evidenceDir, 'ANDROID_MANUAL_SMOKE_CHECKLIST.md'));
+  const checklistPath = path.join(evidenceDir, 'ANDROID_MANUAL_SMOKE_CHECKLIST.md');
+  const checklist = checklistStats(checklistPath);
+  const biometricMatrix = biometricMatrixStats(checklistPath);
   const reportVersion = firstMatch(report, [/version: ([^\r\n]+)/i, /versionName[:=]\s*([^\r\n]+)/i], packageJson.version);
   const packageName = firstMatch(report, [/package(?: name)?: ([^\r\n]+)/i, /applicationId[:=]\s*([^\r\n]+)/i], metadata.signed ? 'com.hafgit99.aegisvault7' : 'com.hafgit99.aegisvault7.debug');
   const mode = firstMatch(report, /Mode: ([^\r\n]+)/i, metadata.signed ? 'release candidate artifacts only' : 'debug candidate artifacts only');
@@ -116,6 +149,9 @@ function generateNotes() {
   if (signed && !metadata.signed) fail('--signed was requested but metadata.signed is false.');
   if (finalMode && (!metadata.signed || !metadata.deviceEvidence || !metadata.freshInstall || checklist.unchecked > 0 || checklist.fieldsMissing.length > 0)) {
     fail('Final Android release notes require signed, device, fresh-install, and completed checklist evidence.');
+  }
+  if (biometricClaim && !biometricMatrix.approved) {
+    fail('Production biometric claim requires completed Pixel/Samsung/Xiaomi and Android 12/13/14/15 biometric matrix evidence.');
   }
 
   const notes = [
@@ -132,12 +168,14 @@ function generateNotes() {
     'Fresh install evidence: ' + (metadata.freshInstall ? 'yes' : 'no'),
     'Device evidence: ' + (metadata.deviceEvidence ? 'yes' : 'no'),
     'Final gate requested: ' + (finalMode ? 'yes' : 'no'),
+    'Production biometric claim: ' + (biometricClaim && biometricMatrix.approved ? 'approved' : 'not claimed'),
     '',
     '## Highlights',
     '',
     '- Local-first encrypted Android vault candidate built through the Android release gate.',
     '- Android document picker flows cover Emergency Kit, backup export/import, and attachment download.',
     '- Android Autofill, FLAG_SECURE screenshot protection, safe-area layout, and private app-data checks are part of the release evidence path.',
+    ...(biometricClaim && biometricMatrix.approved ? ['- Android biometric unlock has completed the production OEM/version approval matrix for this candidate.'] : ['- Android biometric unlock remains release-candidate validation only unless the production approval matrix is completed.']),
     '',
     '## Artifacts',
     '',
@@ -152,11 +190,14 @@ function generateNotes() {
     '- Checked items: ' + checklist.checked,
     '- Unchecked items: ' + checklist.unchecked,
     '- Missing candidate fields: ' + (checklist.fieldsMissing.length ? checklist.fieldsMissing.join(', ') : 'none'),
+    '- Biometric production matrix: ' + (biometricMatrix.approved ? 'approved' : 'blocked'),
+    '- Biometric missing fields: ' + (biometricMatrix.missing.length ? biometricMatrix.missing.join(', ') : 'none'),
     '',
     '## Verification Before Sharing',
     '',
     '- Run `npm run android:release:evidence:verify -- --dir ' + path.relative(repoRoot, evidenceDir).replaceAll('\\', '/') + ' --require-device --require-fresh-install --require-signed --require-completed-checklist` for final signed candidates.',
     '- Run `npm run android:release:evidence:summary -- --dir ' + path.relative(repoRoot, evidenceDir).replaceAll('\\', '/') + ' --final` and confirm `Status: PASS`.',
+    '- Before claiming production biometric support, run `npm run android:release:evidence:verify -- --dir ' + path.relative(repoRoot, evidenceDir).replaceAll('\\', '/') + ' --require-biometric-matrix`.',
     '- Confirm `metadata.json` reports `dirty: false` before sharing outside trusted testing.',
     '- Keep the completed `ANDROID_MANUAL_SMOKE_CHECKLIST.md` with the evidence folder.',
     '',

@@ -244,7 +244,7 @@ Current measured storage orchestration mutation baseline:
 
 ## Android Release Evidence Boundary
 
-Android release quality gates intentionally separate automated script evidence from device-only manual claims. Automated gates can validate artifact integrity, signing metadata, install/launch health, app-private storage, declared Autofill services, and selected security-report output. Final Android release candidates still require the completed checklist copy in `release-local/android/<timestamp>/` for document picker destinations, browser Autofill behavior, biometric flows, FLAG_SECURE behavior on the target phone, and safe-area/mobile UI checks.
+Android release quality gates intentionally separate automated script evidence from device-only manual claims. Automated gates can validate artifact integrity, signing metadata, install/launch health, app-private storage, declared Autofill services, selected security-report output, and the presence of a completed biometric production matrix. Final Android release candidates still require the completed checklist copy in `release-local/android/<timestamp>/` for document picker destinations, browser Autofill behavior, biometric flows, FLAG_SECURE behavior on the target phone, and safe-area/mobile UI checks. Public biometric claims additionally require `--require-biometric-matrix` with Pixel, Samsung, Xiaomi, and Android 12/13/14/15 evidence recorded.
 
 For final candidate review, run:
 

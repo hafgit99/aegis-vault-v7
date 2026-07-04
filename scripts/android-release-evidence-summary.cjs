@@ -7,6 +7,7 @@ const args = process.argv.slice(2);
 const explicitDir = getArgValue('--dir');
 const finalMode = hasFlag('--final');
 const allowDirty = hasFlag('--allow-dirty');
+const requireBiometricMatrix = hasFlag('--require-biometric-matrix') || finalMode;
 const releaseRoot = path.join(repoRoot, 'release-local', 'android');
 const evidenceDir = explicitDir ? path.resolve(repoRoot, explicitDir) : findLatestEvidenceDir();
 
@@ -22,8 +23,10 @@ function usage() {
     '',
     'Options:',
     '  --dir <path>     Evidence directory. Defaults to latest release-local/android/* folder.',
-    '  --final          Require signed, device, fresh-install, and completed checklist evidence.',
+    '  --final          Require signed, device, fresh-install, completed checklist, and biometric matrix evidence.',
     '  --allow-dirty    Permit dirty evidence for internal diagnostics.',
+    '  --require-biometric-matrix',
+    '                   Require Android biometric production approval matrix.',
     '  --help           Show this help.',
   ].join('\n');
 }
@@ -71,7 +74,36 @@ function checklistStats(file) {
   return { checked, unchecked, fieldsMissing };
 }
 
-function verifyEvidence(metadata, artifacts, stats) {
+function checklistField(contents, label) {
+  const line = contents.split(new RegExp('\\r?\\n')).find((candidate) => candidate.startsWith(label));
+  return line ? line.slice(label.length).trim() : '';
+}
+
+function isPlaceholderValue(value) {
+  return !value || new RegExp('^(blocked|n/?a|na|none|tbd|todo|pending|-|<.*>)$', 'i').test(value.trim());
+}
+
+function biometricMatrixStats(file) {
+  if (!fs.existsSync(file)) return { approved: false, missing: ['<checklist missing>'] };
+  const contents = fs.readFileSync(file, 'utf8');
+  const status = checklistField(contents, '- Biometric production claim status:');
+  const fields = [
+    '- Biometric matrix reviewer:',
+    '- Biometric matrix completed date:',
+    '- Pixel evidence:',
+    '- Samsung evidence:',
+    '- Xiaomi evidence:',
+    '- Android 12 evidence:',
+    '- Android 13 evidence:',
+    '- Android 14 evidence:',
+    '- Android 15 evidence:',
+  ];
+  const missing = fields.filter((label) => isPlaceholderValue(checklistField(contents, label)));
+  if (!/^approved$/i.test(status)) missing.unshift('- Biometric production claim status: approved');
+  return { approved: missing.length === 0, missing };
+}
+
+function verifyEvidence(metadata, artifacts, stats, biometricStats) {
   const issues = [];
   const requiredFiles = ['metadata.json', 'SHA256SUMS.txt', 'android-release-report.txt', 'README.md', 'ANDROID_MANUAL_SMOKE_CHECKLIST.md'];
   for (const file of requiredFiles) { if (!fs.existsSync(path.join(evidenceDir, file))) issues.push(file + ' is missing.'); }
@@ -106,6 +138,7 @@ function verifyEvidence(metadata, artifacts, stats) {
   if (finalMode && stats.fieldsMissing.length) issues.push('Checklist candidate fields are incomplete: ' + stats.fieldsMissing.join(', '));
   if (finalMode && stats.unchecked > 0) issues.push('Checklist has unchecked release items: ' + stats.unchecked);
   if (finalMode && stats.checked === 0) issues.push('Checklist has no checked release items.');
+  if (requireBiometricMatrix && !biometricStats.approved) issues.push('Biometric production approval matrix is incomplete: ' + biometricStats.missing.join(', '));
   return issues;
 }
 
@@ -115,8 +148,10 @@ function main() {
   if (!fs.existsSync(evidenceDir) || !fs.statSync(evidenceDir).isDirectory()) bootstrapIssues.push('Evidence directory not found: ' + evidenceDir);
   const metadata = bootstrapIssues.length ? null : readJson(path.join(evidenceDir, 'metadata.json'), bootstrapIssues);
   const artifacts = Array.isArray(metadata?.artifacts) ? metadata.artifacts : [];
-  const stats = checklistStats(path.join(evidenceDir, 'ANDROID_MANUAL_SMOKE_CHECKLIST.md'));
-  const issues = bootstrapIssues.concat(bootstrapIssues.length ? [] : verifyEvidence(metadata, artifacts, stats));
+  const checklistPath = path.join(evidenceDir, 'ANDROID_MANUAL_SMOKE_CHECKLIST.md');
+  const stats = checklistStats(checklistPath);
+  const biometricStats = biometricMatrixStats(checklistPath);
+  const issues = bootstrapIssues.concat(bootstrapIssues.length ? [] : verifyEvidence(metadata, artifacts, stats, biometricStats));
   const passed = issues.length === 0;
 
   console.log('Android release evidence summary');
@@ -134,6 +169,8 @@ function main() {
   console.log('Checklist checked: ' + stats.checked);
   console.log('Checklist unchecked: ' + stats.unchecked);
   console.log('Checklist missing fields: ' + (stats.fieldsMissing.length ? stats.fieldsMissing.join(', ') : 'none'));
+  console.log('Biometric production matrix: ' + (biometricStats.approved ? 'approved' : 'blocked'));
+  console.log('Biometric missing fields: ' + (biometricStats.missing.length ? biometricStats.missing.join(', ') : 'none'));
   if (!passed) {
     console.log('');
     console.log('Blocking issues:');

@@ -35,6 +35,34 @@ export class AegisSecurityError extends Error {
   }
 }
 
+export interface BlockedNetworkEvent {
+  id: string;
+  timestamp: string;
+  url: string;
+  protocol: string;
+}
+
+type SecurityEventCallback = (event: BlockedNetworkEvent) => void;
+
+const subscribers = new Set<SecurityEventCallback>();
+let blockedEvents: BlockedNetworkEvent[] = [];
+const MAX_BLOCKED_EVENTS = 30;
+
+export function subscribeToSecurityEvents(callback: SecurityEventCallback): () => void {
+  subscribers.add(callback);
+  return () => {
+    subscribers.delete(callback);
+  };
+}
+
+export function getBlockedNetworkEvents(): BlockedNetworkEvent[] {
+  return [...blockedEvents];
+}
+
+export function clearBlockedNetworkEvents(): void {
+  blockedEvents = [];
+}
+
 function redactMeta(meta?: Record<string, unknown>): Record<string, unknown> | undefined {
   if (!meta) return undefined;
 
@@ -72,8 +100,38 @@ export function logSecurityEvent(
   } else {
     console.info(entry);
   }
+
+  // Handle network.blocked specifically for UI notification and historical log
+  if (code === securityEventCodes.networkBlocked) {
+    const rawUrl = String(meta?.url || 'unknown');
+    let protocol = 'http/https';
+    if (rawUrl.startsWith('ws://') || rawUrl.startsWith('wss://')) {
+      protocol = 'websocket';
+    } else if (rawUrl.startsWith('webrtc:')) {
+      protocol = 'webrtc';
+    }
+
+    const event: BlockedNetworkEvent = {
+      id: Math.random().toString(36).substring(2, 11),
+      timestamp: new Date().toLocaleTimeString(),
+      url: rawUrl,
+      protocol,
+    };
+
+    blockedEvents = [event, ...blockedEvents].slice(0, MAX_BLOCKED_EVENTS);
+
+    // Notify active subscribers (e.g. toast listener)
+    subscribers.forEach((cb) => {
+      try {
+        cb(event);
+      } catch (err) {
+        console.error('Error in security event subscriber:', err);
+      }
+    });
+  }
 }
 
 export function publicSecurityErrorMessage(): string {
   return 'A secure operation could not be completed. Please try again or restart Aegis Vault.';
 }
+

@@ -38,7 +38,7 @@ Android release decisions use two kinds of evidence:
 | Backup, import, attachments, Emergency Kit | Unit coverage plus Android bridge/report checks | Choose real save/open destinations and confirm created files are visible/readable | File flows are valid only for candidates with a completed checklist |
 | Autofill fill/save | Service declaration, active-provider doctor check, bridge/unit coverage | Chrome, Aloha, and Vivaldi/login-site behavior with Aegis as active provider | Browser support is device/browser dependent and must be recorded per candidate |
 | FLAG_SECURE and privacy shield | Native activity configuration and `android:device:security` output | Screenshot, screen recording, and task-switcher preview checks on target device | Supported Android surfaces block sensitive previews |
-| Biometric and secure storage | Keystore bridge checks and unsupported-path tests | Supported biometric device enrollment, unlock, cancel, and disable checks | Public biometric claims require current supported-device evidence |
+| Biometric and secure storage | Keystore bridge checks, unsupported-path tests, and release evidence matrix validation | Pixel, Samsung, Xiaomi plus Android 12/13/14/15 enrollment, unlock, cancel, and disable checks | Public biometric claims require `--require-biometric-matrix` evidence approval |
 | Safe-area and mobile UI | Playwright mobile viewport smoke tests | Real phone status/navigation bar checks across core screens | Mobile UI is release-ready only with current manual checklist evidence |
 
 ## NPM Commands
@@ -83,7 +83,7 @@ Use `npm run android:release:gate` for the normal internal release candidate gat
 
 Shareable evidence requires a clean working tree. For local experiments only, `npm run android:release:gate -- --evidence --allow-dirty` records dirty status in `metadata.json` and still writes the evidence folder. Evidence metadata also records whether the candidate was tested with `--fresh-install`.
 
-Every evidence folder includes only the latest candidate APK/AAB for the active build type plus a candidate-prefilled copy of `docs/ANDROID_MANUAL_SMOKE_CHECKLIST.md`. Complete that copy for backup/import, attachment, biometric, Autofill, safe-area, and mobile UI release checks. To audit an existing evidence folder later, run `npm run android:release:evidence:verify -- --dir release-local/android/<timestamp>` and add `--require-device`, `--require-fresh-install`, `--require-signed`, or `--require-completed-checklist` when reviewing final candidate evidence. Use `npm run android:release:evidence:summary -- --dir release-local/android/<timestamp>` for a human-readable PASS/BLOCKED release summary, and add `--final` to require signed, device, fresh-install, and completed-checklist evidence together. Use `npm run android:release:notes -- --dir release-local/android/<timestamp> --signed --final` to generate `ANDROID_RELEASE_NOTES.md` after final evidence passes.
+Every evidence folder includes only the latest candidate APK/AAB for the active build type plus a candidate-prefilled copy of `docs/ANDROID_MANUAL_SMOKE_CHECKLIST.md`. Complete that copy for backup/import, attachment, biometric, Autofill, safe-area, and mobile UI release checks. To audit an existing evidence folder later, run `npm run android:release:evidence:verify -- --dir release-local/android/<timestamp>` and add `--require-device`, `--require-fresh-install`, `--require-signed`, `--require-completed-checklist`, or `--require-biometric-matrix` when reviewing final candidate evidence. Use `npm run android:release:evidence:summary -- --dir release-local/android/<timestamp>` for a human-readable PASS/BLOCKED release summary, and add `--final` to require signed, device, fresh-install, completed-checklist, and biometric production matrix evidence together. Use `npm run android:release:notes -- --dir release-local/android/<timestamp> --signed --final` to generate `ANDROID_RELEASE_NOTES.md` after final evidence passes; add `--biometric-claim` only after the biometric matrix is approved.
 
 Use `npm run android:release:signing:check` before public release builds. Release signing is configured from environment variables so private keys and passwords never need to be committed. For repeatable local builds, run `npm run android:release:signing:init` or copy `docs/android-signing.env.example` to `.secrets/android-signing.env`, then fill it locally; `android:release:signing:check` and `android:release:gate -- --signed` load that file automatically without overriding variables already set in the shell.
 
@@ -176,7 +176,7 @@ Run this checklist before every APK/AAB candidate that may be shared outside loc
 - Build target-specific debug smoke APK: `npm run android:build:apk:debug:aarch64`.
 - Run the internal gate: `npm run android:release:gate`.
 - For shareable candidates, run `npm run android:release:gate -- --evidence`; the gate verifies the generated evidence folder before it can complete, then archive `release-local/android/<timestamp>/`.
-- Before publishing or sending a final APK outside trusted testing, complete the copied checklist and run `npm run android:release:evidence:verify -- --dir release-local/android/<timestamp> --require-device --require-fresh-install --require-signed --require-completed-checklist`.
+- Before publishing or sending a final APK outside trusted testing, complete the copied checklist and run `npm run android:release:evidence:verify -- --dir release-local/android/<timestamp> --require-device --require-fresh-install --require-signed --require-completed-checklist`. Before claiming production biometric unlock, also run the same command with `--require-biometric-matrix` after Pixel, Samsung, Xiaomi, and Android 12/13/14/15 rows are complete.
 - Generate `ANDROID_RELEASE_NOTES.md` with `npm run android:release:notes -- --dir release-local/android/<timestamp> --signed --final` and keep it in the evidence folder.
 - Confirm `metadata.json` reports `"dirty": false` before sharing any APK/AAB outside local development.
 - Run `npm run android:release:signing:check` before building a signed release candidate.
@@ -252,7 +252,7 @@ Android needs explicit decisions before release:
 
 - Vault database persistence uses the native Tauri app-data command path on Android and should be regression-tested on release candidate devices.
 - Remembered Secret Key is routed through the Android Keystore-backed secure storage bridge when running inside the Android WebView.
-- Biometric metadata is routed through the Android Keystore-backed secure storage bridge when available, and native biometric registration is blocked if that bridge is unavailable. The biometric prompt/wrapping design still needs final release review on target devices.
+- Biometric metadata is routed through the Android Keystore-backed secure storage bridge when available, and native biometric registration is blocked if that bridge is unavailable. Production biometric claims require the manual matrix in `docs/ANDROID_MANUAL_SMOKE_CHECKLIST.md` to pass on Pixel, Samsung, Xiaomi, and Android 12/13/14/15 before `--require-biometric-matrix` is used.
 - Attachment storage should remain app-private and must survive app restart.
 - Emergency Kit, backup export/import, and attachment download now use Android document picker/storage access APIs and need release-candidate device regression testing.
 - Android document picker cancellation, native errors, and no-callback timeout behavior are covered by repeatable unit tests.
@@ -290,7 +290,7 @@ Android should remain internal/debug-only until:
 
 - Storage adapter behavior is validated on release candidate devices, especially Android app-private vault persistence after restart.
 - Android backup/import/export flows are tested on a real device.
-- Android biometric behavior is Keystore-backed or explicitly disabled with clear copy.
+- Android biometric behavior is Keystore-backed or explicitly disabled with clear copy, and production biometric claims have completed the OEM/version approval matrix.
 - Android Autofill package/domain matching and user approval are implemented with regression coverage.
 - A mobile smoke checklist is run on every release candidate.
 - APK/AAB signing plan is documented.

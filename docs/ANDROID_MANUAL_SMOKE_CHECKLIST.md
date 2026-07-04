@@ -92,6 +92,32 @@ Evidence boundary:
 - [ ] Disabling biometric removes local biometric unlock state.
 - [ ] Remembered Secret Key behavior matches the selected setting.
 
+## Biometric Production Approval Matrix
+
+Complete this section before any public Android release notes, website copy, README text, or store listing claims production-grade biometric unlock support. Until this matrix is approved, describe Android biometric unlock as release-candidate validation only.
+
+- Biometric production claim status: blocked
+- Biometric matrix reviewer:
+- Biometric matrix completed date:
+- Pixel evidence:
+- Samsung evidence:
+- Xiaomi evidence:
+- Android 12 evidence:
+- Android 13 evidence:
+- Android 14 evidence:
+- Android 15 evidence:
+
+Required biometric matrix checks:
+
+- [ ] Pixel-class device: enable biometric while unlocked, restart app, biometric unlock succeeds, cancel path is localized/non-crashing, disable removes local biometric state.
+- [ ] Samsung device: enable biometric while unlocked, restart app, biometric unlock succeeds, cancel path is localized/non-crashing, disable removes local biometric state.
+- [ ] Xiaomi/HyperOS or MIUI device: enable biometric while unlocked, restart app, biometric unlock succeeds, cancel path is localized/non-crashing, disable removes local biometric state.
+- [ ] Android 12 coverage records OEM/model, SDK/API level, biometric hardware type, result, tester, and evidence folder or screenshot/video reference.
+- [ ] Android 13 coverage records OEM/model, SDK/API level, biometric hardware type, result, tester, and evidence folder or screenshot/video reference.
+- [ ] Android 14 coverage records OEM/model, SDK/API level, biometric hardware type, result, tester, and evidence folder or screenshot/video reference.
+- [ ] Android 15 coverage records OEM/model, SDK/API level, biometric hardware type, result, tester, and evidence folder or screenshot/video reference.
+- [ ] Biometric production claim status above is changed to approved only after all required OEM and Android-version rows pass.
+
 ## Autofill
 
 - [ ] Aegis appears in Android Autofill provider settings.

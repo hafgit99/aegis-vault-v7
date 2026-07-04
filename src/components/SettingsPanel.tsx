@@ -49,6 +49,7 @@ import type { LanguageCode } from '../i18n/translations';
 import { SettingsLanguageCard } from './settings/SettingsLanguageCard';
 import { SettingsPasswordCard } from './settings/SettingsPasswordCard';
 import { SettingsStatsCard } from './settings/SettingsStatsCard';
+import { BlockedRequestsPanel } from './settings/BlockedRequestsPanel';
 import {
   getLastSyncTime,
   hasSyncConfig,
@@ -1225,6 +1226,9 @@ export default function SettingsPanel({
           )}
         </div>
       </div>
+
+      {/* Blocked Network Requests (Air-Gap policy log) */}
+      <BlockedRequestsPanel />
 
       {/* Backup, Encryption, and Import Rows */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6" id="backup-restore-rows">

@@ -55,7 +55,7 @@ This project is a password vault, so security claims must stay conservative unti
 - Product copy should continue to be reviewed before release so public claims stay aligned with the verified implementation.
 - Plaintext JSON export is still available for user-controlled migration/recovery, but it is gated by a warning and typed confirmation because the output is intentionally readable.
 - Android screenshots, document-picker file flows, Android Keystore-backed secure storage, and native app-private vault persistence are implemented. The remaining Android storage work is release-candidate regression coverage and final production review.
-- Android biometric registration can use the Tauri biometric plugin path only when the Android Keystore-backed secure storage bridge is present and exposes the expected API shape. A final manual device review is still needed before marketing it as production-grade biometric protection.
+- Android biometric registration can use the Tauri biometric plugin path only when the Android Keystore-backed secure storage bridge is present and exposes the expected API shape. Production-grade biometric wording is blocked until the Pixel/Samsung/Xiaomi and Android 12/13/14/15 approval matrix is completed and verified with `--require-biometric-matrix`.
 - Android Autofill public claims remain browser-dependent and must be backed by current per-candidate manual evidence even though fill/save flows are implemented.
 - OS-level clipboard history managers, Universal Clipboard, cloud clipboard sync, enterprise DLP agents, and privileged local malware may retain copied secrets before Aegis can clear them; product copy must describe clipboard clearing as best-effort, not guaranteed history erasure.
 
@@ -63,7 +63,7 @@ This project is a password vault, so security claims must stay conservative unti
 
 1. Add repeatable Android regression coverage for secure storage migration, app-private vault persistence, backup/import/download flows, and corrupted payload failures.
 2. Continue shrinking explicit setup/unlock/export credential boundaries toward native adapters; active-session master getter callbacks are already removed.
-3. Complete manual Android biometric wrapping release review on target devices.
+3. Complete Android biometric production approval on Pixel, Samsung, Xiaomi, and Android 12/13/14/15 target devices.
 4. Validate TOTP interoperability against more real-world authenticator exports and service QR payloads.
 5. Design the native credential/unlock adapter for a strict no-JS-master-string security boundary.
 6. Continue release-copy review as features move from beta to public release.

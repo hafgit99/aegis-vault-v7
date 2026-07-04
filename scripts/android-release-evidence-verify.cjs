@@ -12,6 +12,7 @@ const requireDevice = hasFlag('--require-device');
 const requireFreshInstall = hasFlag('--require-fresh-install');
 const requireSigned = hasFlag('--require-signed');
 const requireCompletedChecklist = hasFlag('--require-completed-checklist');
+const requireBiometricMatrix = hasFlag('--require-biometric-matrix');
 
 function hasFlag(flag) {
   return args.includes(flag);
@@ -37,6 +38,8 @@ function usage() {
     '  --require-signed          Fail unless metadata records signed=true.',
     '  --require-completed-checklist',
     '                            Fail unless the manual smoke checklist is completed.',
+    '  --require-biometric-matrix',
+    '                            Fail unless Android biometric production approval matrix is complete.',
     '  --help                    Show this help.',
   ].join('\n');
 }
@@ -137,6 +140,42 @@ function verifyCompletedChecklist(file) {
   }
 }
 
+function checklistField(contents, label) {
+  const line = contents.split(/\r?\n/).find((candidate) => candidate.startsWith(label));
+  return line ? line.slice(label.length).trim() : '';
+}
+
+function isPlaceholderValue(value) {
+  return !value || /^(blocked|n\/?a|na|none|tbd|todo|pending|-|<.*>)$/i.test(value.trim());
+}
+
+function verifyBiometricMatrix(file) {
+  const contents = fs.readFileSync(file, 'utf8');
+  const status = checklistField(contents, '- Biometric production claim status:');
+  if (!/^approved$/i.test(status)) {
+    fail('Android biometric production claim is not approved. Set "Biometric production claim status" to approved only after the matrix passes.');
+  }
+
+  const requiredFields = [
+    '- Biometric matrix reviewer:',
+    '- Biometric matrix completed date:',
+    '- Pixel evidence:',
+    '- Samsung evidence:',
+    '- Xiaomi evidence:',
+    '- Android 12 evidence:',
+    '- Android 13 evidence:',
+    '- Android 14 evidence:',
+    '- Android 15 evidence:',
+  ];
+
+  for (const label of requiredFields) {
+    const value = checklistField(contents, label);
+    if (isPlaceholderValue(value)) {
+      fail('Android biometric production matrix is missing completed evidence field: ' + label);
+    }
+  }
+}
+
 function verifyReport(file, metadata) {
   const contents = fs.readFileSync(file, 'utf8');
   for (const expected of ['Android release artifact report', 'Mode:', 'version:']) {
@@ -219,6 +258,7 @@ function verifyEvidence() {
   verifyReport(reportPath, metadata);
   verifyChecklist(checklistPath, metadata);
   if (requireCompletedChecklist) verifyCompletedChecklist(checklistPath);
+  if (requireBiometricMatrix) verifyBiometricMatrix(checklistPath);
   verifyDeviceEvidence(metadata);
 
   console.log('Android release evidence verified: ' + path.relative(repoRoot, evidenceDir));
@@ -227,6 +267,7 @@ function verifyEvidence() {
   console.log('Fresh install: ' + (metadata.freshInstall ? 'yes' : 'no'));
   console.log('Signed: ' + (metadata.signed ? 'yes' : 'no'));
   console.log('Completed checklist required: ' + (requireCompletedChecklist ? 'yes' : 'no'));
+  console.log('Biometric production matrix required: ' + (requireBiometricMatrix ? 'yes' : 'no'));
 }
 
 verifyEvidence();

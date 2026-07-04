@@ -216,6 +216,8 @@
   - [x] Document Android BiometricPrompt/Keystore as the production target.
   - [x] Implement Keystore-backed remembered Secret Key and biometric metadata storage.
   - [ ] Complete final biometric wrapping review for public Android release.
+    - [x] Add release evidence gate for biometric production claim approval.
+    - [ ] Fill Pixel, Samsung, Xiaomi, and Android 12/13/14/15 biometric evidence matrix.
 - [x] Validate Tauri Android feasibility with a debug APK.
   - [x] Build a clean `aarch64` debug APK locally.
   - [x] Install and launch the debug APK on a physical Android device.

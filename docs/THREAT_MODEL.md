@@ -158,7 +158,7 @@ Required user-facing recovery rules:
 | Clipboard can keep copied secrets after OS history/cloud capture or user clipboard changes | Partially mitigated | Safe clearing now uses overwrite-then-clear for unchanged secrets and Windows native writes request history/cloud exclusion where supported; OS clipboard history managers, Universal Clipboard, DLP agents, and hostile local capture remain out of scope |
 | TOTP follows RFC 6238 for HMAC-SHA1/SHA-256/SHA-512, accepts `otpauth://totp` imports, and rejects unsupported digit/period parameters with explicit validation errors, but broad provider QR compatibility still needs manual verification | Mitigated with residual compatibility risk | Add fixture coverage from more authenticator exports before broad public release |
 | Plaintext export option can create unsafe files | Partially mitigated | Warning and typed confirmation are required; decide whether to remove it from final release builds |
-| Android remembered Secret Key and biometric wrapping use the Keystore-backed secure-storage bridge, but final biometric device review is still required | Partially mitigated | Complete manual Android biometric wrapping review on target devices before public release |
+| Android remembered Secret Key and biometric wrapping use the Keystore-backed secure-storage bridge, but production biometric claims require explicit OEM/version matrix evidence | Partially mitigated | Complete Pixel, Samsung, Xiaomi, and Android 12/13/14/15 biometric matrix before using production biometric wording |
 
 ## Release Claim Rules
 
@@ -183,7 +183,7 @@ Claims to avoid until fixed:
 ## Next Decisions
 
 1. Align the simulated SQLite naming with the finalized Tauri app data persistence strategy.
-2. Complete final Android biometric wrapping review on target devices.
+2. Complete the Android biometric production matrix on Pixel, Samsung, Xiaomi, and Android 12/13/14/15 devices before public biometric claims.
 3. Move the remaining unlock/credential boundary and feature edges into native/key-only adapters, then remove deprecated JS master-password getters.
 4. Decide whether plaintext JSON export remains available in release builds.
 5. Review public release branding and installer identity before publishing signed artifacts.

@@ -20,7 +20,7 @@ The project focuses on keeping sensitive data under the user's control: vault da
 | Windows desktop | Local release gate and manual evidence flow are active. | Public artifacts should be signed and final checklist evidence must pass. |
 | Linux desktop | Artifacts can be imported from the private build workflow. | Runtime smoke is deferred until a Linux target device or VM is available. |
 | macOS desktop | DMG/app artifacts can be imported from the private build workflow. | Runtime smoke plus code signing/notarization validation are still required. |
-| Android | Signed APK evidence and physical-device validation are active. | Final completed checklist and biometric/device-regression claims must stay current for each candidate. |
+| Android | Signed APK evidence and physical-device validation are active. | Final completed checklist, biometric production approval matrix, and device-regression claims must stay current for each candidate. |
 | Firefox extension | Signed XPI flow is available. | Native messaging and desktop companion compatibility should be retested per release. |
 | iOS / iPadOS | Planned support; readiness gate and bootstrap plan are documented. | Requires macOS with full Xcode, iOS Rust targets, CocoaPods, signing/provisioning, and runtime smoke before any public claim. |
 
@@ -68,7 +68,7 @@ Important Android work already in place:
 - Android Autofill diagnostics and browser-specific validation notes.
 - Document picker save/open bridge with timeout, cancellation, and native-error handling.
 - Emergency Kit save path validated on device.
-- Android release evidence now separates automated checks from device-only manual claims; final public claims require a completed per-candidate checklist from `release-local/android/<timestamp>/`.
+- Android release evidence now separates automated checks from device-only manual claims; final public claims require a completed per-candidate checklist, and production biometric claims additionally require the Pixel/Samsung/Xiaomi plus Android 12/13/14/15 approval matrix from `release-local/android/<timestamp>/`.
 
 Primary docs:
 

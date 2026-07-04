@@ -36,6 +36,7 @@ import { useVaultStatusAction } from './hooks/useVaultStatusAction';
 import { useRuntimeSecurity } from './hooks/useRuntimeSecurity';
 import { useAndroidAutofillCoordinator } from './hooks/useAndroidAutofillCoordinator';
 import { useLanguage } from './i18n/LanguageContext';
+import { useAirgapAlerts } from './hooks/useAirgapAlerts';
 import { syncExtensionCredentials, clearExtensionCredentials } from './lib/desktopStorage';
 
 const MIN_BACKGROUND_LOCK_DELAY_MS = 60_000;
@@ -147,6 +148,11 @@ export default function App() {
     },
     backgroundLockDelayMs: backgroundLockDelayFromAutoLock(autoLockDuration),
     isAutofillMode: Boolean(pendingAutofillRequest),
+  });
+
+  useAirgapAlerts({
+    unlocked,
+    onNotify: showNotification,
   });
 
   useEffect(() => {
