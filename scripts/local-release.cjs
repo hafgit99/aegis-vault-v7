@@ -39,6 +39,8 @@ printPlatformNote();
 
 if (!skipTests) {
   run('npm', ['run', 'typecheck']);
+  run('npm', ['run', 'rust:fmt:check']);
+  run('npm', ['run', 'rust:test:native']);
   run('npm', ['run', 'security:dependencies']);
   run('npm', ['run', 'test:unit']);
   run('npm', ['run', 'test:fuzz']);

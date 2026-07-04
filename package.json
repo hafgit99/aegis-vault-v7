@@ -81,7 +81,9 @@
     "audit:checksums:verify": "node scripts/generate-audit-package-checksums.cjs --verify",
     "security:csp": "node scripts/security-csp-no-unsafe-inline.cjs",
     "test:fuzz": "vitest run src/lib/importer.fuzz.test.ts src/lib/encryption.fuzz.test.ts src/lib/attachments.fuzz.test.ts",
-    "security:dependencies": "npm audit --audit-level=high"
+    "security:dependencies": "npm audit --audit-level=high",
+    "rust:fmt:check": "cargo fmt --check --manifest-path src-tauri/Cargo.toml",
+    "rust:test:native": "cargo test --manifest-path src-tauri/Cargo.toml write_vault_database_file"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",

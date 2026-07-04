@@ -73,6 +73,8 @@ if (hasFlag('--help')) {
 
 const steps = [
   { command: 'npm', args: ['run', 'lint'] },
+  { command: 'npm', args: ['run', 'rust:fmt:check'] },
+  { command: 'npm', args: ['run', 'rust:test:native'] },
   { command: 'npm', args: ['run', 'security:no-js-master-string'] },
   { command: 'npm', args: ['run', 'security:csp'] },
   { command: 'npm', args: ['run', 'security:dependencies'] },

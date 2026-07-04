@@ -108,6 +108,8 @@ console.log(signed
 
 if (!skipBuild) {
   run('npm', ['run', 'lint']);
+  run('npm', ['run', 'rust:fmt:check']);
+  run('npm', ['run', 'rust:test:native']);
   run('npm', ['run', 'security:no-js-master-string']);
   run('npm', ['run', 'security:csp']);
   run('npm', ['run', 'security:dependencies']);
