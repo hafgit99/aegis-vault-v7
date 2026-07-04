@@ -71,7 +71,14 @@ for (const platform of ['windows', 'linux', 'macos']) {
   });
 }
 
-const passed = checks.every((check) => check.result.ok);
+
+checks.push({
+  label: 'iOS / iPadOS readiness',
+  command: 'node scripts/ios-readiness-check.cjs',
+  result: runNodeScript('ios-readiness-check.cjs', []),
+});
+
+const passed = checks.every((check) => check.result.ok && statusFromOutput(check.result.stdout) === 'PASS');
 const lines = [];
 lines.push('# Aegis Vault 7 Release Readiness Summary');
 lines.push('');

@@ -24,6 +24,7 @@ Not in initial release scope:
 - Cloud sync.
 - Production security claims beyond the current threat model.
 - Public macOS distribution without code signing/notarization validation.
+- iOS / iPadOS distribution; planned support is tracked separately in `docs/IOS_READINESS.md` until macOS/Xcode bootstrap, signing, and runtime smoke gates pass.
 
 ## Required Release Gates
 

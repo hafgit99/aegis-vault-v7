@@ -8,6 +8,7 @@ The project focuses on keeping sensitive data under the user's control: vault da
 
 - Desktop application: active development and local release builds through Tauri. Windows local release evidence is the primary desktop validation path; Linux and macOS artifacts can be produced through the private build workflow but remain internal candidates until runtime smoke is completed on target devices.
 - Android application: signed APK workflow is active, with physical-device smoke testing, safe-area fixes, Autofill support, document picker backup/import, FLAG_SECURE screenshot protection, and Emergency Kit save flow validated.
+- iOS / iPadOS: planned platform track with macOS/Xcode readiness gate documented in `docs/IOS_READINESS.md`; no iOS build is advertised yet.
 - Browser extension: Firefox XPI packaging/signing flow is available for the desktop companion experience.
 - Internationalization: Turkish, English, and Chinese UI strings are maintained in the app.
 - CI note: GitHub Actions can be disabled when quota is unavailable; local release scripts and the private build repository path are documented for Windows, Linux, macOS, and Android candidates.
@@ -21,6 +22,7 @@ The project focuses on keeping sensitive data under the user's control: vault da
 | macOS desktop | DMG/app artifacts can be imported from the private build workflow. | Runtime smoke plus code signing/notarization validation are still required. |
 | Android | Signed APK evidence and physical-device validation are active. | Final completed checklist and biometric/device-regression claims must stay current for each candidate. |
 | Firefox extension | Signed XPI flow is available. | Native messaging and desktop companion compatibility should be retested per release. |
+| iOS / iPadOS | Planned support; readiness gate and bootstrap plan are documented. | Requires macOS with full Xcode, iOS Rust targets, CocoaPods, signing/provisioning, and runtime smoke before any public claim. |
 
 ## Core Features
 
