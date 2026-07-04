@@ -139,6 +139,7 @@ if (!skipVersionCheck) {
 
 if (!skipUnit) {
   steps.push({ command: 'npm', args: ['run', 'test:unit'] });
+  steps.push({ command: 'npm', args: ['run', 'test:fuzz'] });
 }
 
 if (!skipWebBuild) {

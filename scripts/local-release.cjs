@@ -40,6 +40,7 @@ printPlatformNote();
 if (!skipTests) {
   run('npm', ['run', 'typecheck']);
   run('npm', ['run', 'test:unit']);
+  run('npm', ['run', 'test:fuzz']);
 }
 
 run('npm', ['run', 'build:extension']);

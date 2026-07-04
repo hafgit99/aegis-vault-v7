@@ -61,7 +61,7 @@ Current fuzz scope:
 - `src/lib/encryption.fuzz.test.ts`: malformed encrypted backup envelopes, weak/malformed KDF parameters, and malformed JSON error taxonomy.
 - `src/lib/attachments.fuzz.test.ts`: unsupported attachment algorithms, missing AES-GCM metadata, and arbitrary authenticated-decryption metadata boundaries.
 
-This gate already caught and fixed a native Aegis JSON import hardening issue where non-string fields such as `password: true` could be carried into normalized vault item data. Native Aegis JSON array imports now coerce credential fields through explicit string guards.
+This gate already caught and fixed a native Aegis JSON import hardening issue where non-string fields such as `password: true` could be carried into normalized vault item data. Native Aegis JSON array imports now coerce credential fields through explicit string guards. The desktop release gate, Android release gate, local release script, and wa-sqlite final gate now run `npm run test:fuzz` as a visible release step instead of leaving it implicit inside the full unit suite.
 
 ## Current Mutation Gate
 

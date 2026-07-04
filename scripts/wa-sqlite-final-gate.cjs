@@ -75,6 +75,7 @@ const steps = [
   { command: 'npm', args: ['run', 'lint'] },
   { command: 'npm', args: ['run', 'security:no-js-master-string'] },
   { command: 'npm', args: ['run', 'security:csp'] },
+  { command: 'npm', args: ['run', 'test:fuzz'] },
   { command: 'npx', args: ['vitest', 'run', ...focusedUnitFiles] },
 ];
 

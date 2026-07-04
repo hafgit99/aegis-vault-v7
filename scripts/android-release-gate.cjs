@@ -111,6 +111,7 @@ if (!skipBuild) {
   run('npm', ['run', 'security:no-js-master-string']);
   run('npm', ['run', 'security:csp']);
   run('npm', ['run', 'android:release:version:check']);
+  run('npm', ['run', 'test:fuzz']);
   run('npm', ['run', 'build']);
 }
 
