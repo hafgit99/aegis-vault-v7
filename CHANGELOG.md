@@ -21,6 +21,7 @@ All notable Aegis Vault 7 changes are tracked here. The project follows a securi
 - Emergency Kit generation during first-run setup and from Settings after unlock.
 - Crypto donation page with wallet addresses, QR codes, copy actions, and Turkish/English/Chinese UI support.
 - Playwright smoke coverage for setup, unlock, create item, lock/unlock, Settings import/export, wa-sqlite migration UI, Emergency Kit download, donation page visibility, and TR/EN/ZH language switching.
+- Platform WebAuthn passkey management actions for create, authenticate, sign-count/last-used persistence, and delete from Settings.
 
 ### Changed
 
@@ -55,6 +56,7 @@ All notable Aegis Vault 7 changes are tracked here. The project follows a securi
 - Added structured security error taxonomy and security event logging patterns.
 - Added Android FLAG_SECURE protection for sensitive screens.
 - Added HIBP k-anonymity checks for breach-risk signals where enabled.
+- Hardened passkey RP ID validation so invalid host syntax, IP-address RP IDs, overlong labels, paths, schemes, and malformed domains are rejected before a WebAuthn ceremony starts.
 
 ### Fixed
 
@@ -78,8 +80,8 @@ All notable Aegis Vault 7 changes are tracked here. The project follows a securi
 
 - No-JS-Master-String final gate scan and unit test suite successfully verified; integrated as a blocking step in the unit test lifecycle.
 - Signed Android release gate passed with device, fresh-install, and evidence on commit `1df341ec15938da9dad2a8304181dc902013b242`; evidence folder: `release-local/android/2026-07-01T12-41-48-852Z`.
-- Linux and macOS desktop artifact evidence passed standard local verification on commit `30740c2c468aeb56640764fd4d19e05cf4866ef0`; runtime smoke is deferred because no target Linux/macOS devices are available in this workspace, so those artifacts remain internal candidates until platform testing is completed.
-- Unit suite baseline: 111 test files and 848 tests passed in the latest recorded full unit run during release-gate work.
+- Linux and macOS desktop artifact evidence passes standard local verification after regenerating platform release notes and signing reports; runtime smoke is deferred because no target Linux/macOS devices are available in this workspace, so those artifacts remain internal candidates until platform testing is completed.
+- Unit suite baseline: 118 test files and 926 tests passed in the latest recorded full unit run during release-gate work.
 - E2E smoke suite includes 24 passing Chromium smoke scenarios, including setup/unlock, item lifecycle, reload persistence, mobile viewport smoke, wa-sqlite migration UI, Emergency Kit, donation, language switching, encrypted import/export, and confirmed plain JSON export coverage.
 - Coverage and mutation thresholds are documented in `docs/QUALITY_GATES.md`.
 - wa-sqlite final gate unit run passed: 9 focused files and 128 tests.

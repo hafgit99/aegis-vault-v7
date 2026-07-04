@@ -2,8 +2,8 @@
 
 - **Version:** 7.0.1.0
 - **Channel:** Release Candidate (internal validation)
-- **Release notes revision:** 2026-07-02
-- **Source commit:** `7e217ebeb7cba778815d3d64546625d699d6b406` (`7e217eb`)
+- **Release notes revision:** 2026-07-04
+- **Latest verified implementation commit:** `5835305`
 - **Branch:** `main`
 - **Working tree clean at generation:** yes
 
@@ -16,7 +16,7 @@ These notes consolidate the desktop, Android, security gate, wa-sqlite, and know
 ## Desktop
 
 - **Windows** is the primary desktop validation path. The local release gate and manual evidence flow are active; public release additionally requires signed artifacts and a completed manual smoke checklist.
-- **Linux and macOS** artifacts can be produced/imported through the private build workflow. Standard artifact evidence passed on commit `30740c2c468aeb56640764fd4d19e05cf4866ef0`; runtime smoke is **deferred** because no target Linux/macOS hardware is available in this workspace, so those artifacts remain **internal candidates only** until platform runtime smoke, manual checklist evidence, and (for macOS) signing/notarization are completed.
+- **Linux and macOS** artifacts can be produced/imported through the private build workflow. Standard artifact evidence now passes after regenerating platform release notes and signing reports; runtime smoke is **deferred** because no target Linux/macOS hardware is available in this workspace, so those artifacts remain **internal candidates only** until platform runtime smoke, manual checklist evidence, and (for macOS) signing/notarization are completed.
 - The desktop release gate (`npm run desktop:release:gate`) runs: lint, version consistency, unit tests, web build, extension build, Tauri desktop build, artifact collection, signing report, release notes generation, and evidence verification.
 - Desktop artifacts: Windows NSIS setup `.exe` + MSI `.msi` + portable `.exe`; Linux `.deb` + AppImage; macOS `.dmg` + `.app`. Each candidate ships `metadata.json`, `SHA256SUMS.txt`, `DESKTOP_SIGNATURES.md`, and a copied manual smoke checklist under `release-local/<platform>/`.
 - Windows builds enable native screen-capture protection via `SetWindowDisplayAffinity`.
@@ -40,7 +40,7 @@ Aegis Vault 7 enforces a strict, automated boundary so the plain-text master pas
 - **Allowlist enforced:** only authorized boundary files are permitted (core session, setup/rotation/migration, legacy attachment migration, OS biometric wrapper, and storage engines). Test files are excluded from the gate but covered by the unit suite.
 - **Strict occurrence bounds:** every allowlisted file is restricted to an exact baseline count. Any unauthorized file, or any occurrence exceeding its baseline, fails the build and the unit suite.
 - **How to run:** `npm run security:no-js-master-string` (standalone) and `npm run test:unit` (integrated as a blocking step).
-- **Supporting controls:** Argon2id master-password verification, WebCrypto AES-GCM for records/backups/attachments, HKDF-SHA-256 vault session key routing (so routine storage no longer re-materializes the master string), Tauri CSP plus production air-gap network policy, HIBP k-anonymity range checks, clipboard safe-clear, and constant-time IPC token comparison. Full classification of remaining references is in `SECURITY_AUDIT_PACKAGE/MASTER_STRING_CLASSIFICATION.md`.
+- **Supporting controls:** Argon2id master-password verification, WebCrypto AES-GCM for records/backups/attachments, HKDF-SHA-256 vault session key routing (so routine storage no longer re-materializes the master string), Tauri CSP plus production air-gap network policy, HIBP k-anonymity range checks, clipboard safe-clear, and constant-time IPC token comparison. Full classification of remaining references is in `SECURITY_AUDIT_PACKAGE/MASTER_STRING_CLASSIFICATION.md`. Platform WebAuthn passkey management now includes strict RP ID validation, Settings-based create/authenticate/delete actions, and last-used/sign-count persistence without reopening the JS master-string boundary.
 
 ## wa-sqlite
 
@@ -51,7 +51,7 @@ Aegis Vault 7 enforces a strict, automated boundary so the plain-text master pas
 
 ## Quality Gates & Validation
 
-- **Unit suite baseline:** 108 test files and 841 tests passing in the latest recorded full release-gate run.
+- **Unit suite baseline:** 118 test files and 926 tests passing in the latest recorded full release-gate run.
 - **E2E smoke:** 24 passing Chromium scenarios (setup/unlock, item lifecycle, reload persistence, mobile viewport, wa-sqlite migration UI, Emergency Kit, donation, TR/EN/ZH language switching, encrypted import/export, plain JSON export).
 - **Coverage baseline:** lines 94.01%, statements 94.01%, functions 91.94%, branches 87.73%. Regression thresholds: 90 / 90 / 85 / 80.
 - **Mutation gates:** core 460 mutants / 81.74% score; importer 682 / 80.35%; importer helpers 288 / 87.85%. (Storage and storage-orchestration gates are documented in `docs/QUALITY_GATES.md`.)
@@ -67,7 +67,8 @@ Aegis Vault 7 enforces a strict, automated boundary so the plain-text master pas
 
 - wa-sqlite is opt-in migration-only and is **not** the default storage backend.
 - Public desktop artifacts must be **signed** before distribution; unsigned artifacts are suitable for internal diagnostics only.
-- Linux and macOS runtime smoke is **deferred** (no target hardware); those artifacts remain internal candidates.
+- Linux and macOS runtime smoke is **deferred** (no target hardware); standard local evidence passes, but those artifacts remain internal candidates until real platform smoke is completed.
+- iOS / iPadOS readiness is intentionally **blocked on Windows hosts** and requires macOS with full Xcode, iOS Rust targets, CocoaPods, signing/provisioning, and runtime smoke.
 - Android biometric wrapping still requires **final manual device review** before production-grade biometric claims.
 - Browser Autofill depends on Android/browser provider support and user provider selection.
 - Sync/WebDAV is **not** a final public release feature.

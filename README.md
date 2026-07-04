@@ -193,7 +193,7 @@ npm run wa-sqlite:final:gate:unit
 Latest local verification before this README update:
 
 - `npm run lint` passed.
-- `npm run test:unit` passed: 114 test files, 873 tests.
+- `npm run test:unit` passed: 118 test files, 926 tests.
 - `npm run test:coverage` passed: 107 test files, 835 tests.
 - `npm run build` passed.
 - `npm run test:e2e:chromium` passed: 24 Chromium smoke scenarios.
