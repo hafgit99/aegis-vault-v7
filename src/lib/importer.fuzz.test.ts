@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 
+import type { VaultItem } from '../types';
 import { parseCSV, parseUniversalImport } from './importer';
 
 const fuzzConfig = { numRuns: 150, seed: 0xA3615 };
@@ -29,6 +30,44 @@ const itemFieldValue = fc.oneof(
   fc.constant(undefined),
 );
 
+const vaultCategory = fc.constantFrom<VaultItem['category']>('login', 'card', 'passkey', 'identity', 'secure_note');
+const vaultString = fc.string({ maxLength: 96 });
+const isoDate = fc.date({ min: new Date('2020-01-01T00:00:00.000Z'), max: new Date('2035-12-31T23:59:59.999Z') })
+  .map((value) => value.toISOString());
+
+const exportedVaultItem = fc.record({
+  id: vaultString,
+  title: vaultString,
+  username: vaultString,
+  password: fc.option(vaultString, { nil: undefined }),
+  url: vaultString,
+  totpSecret: fc.option(vaultString, { nil: undefined }),
+  notes: fc.option(vaultString, { nil: undefined }),
+  createdAt: isoDate,
+  updatedAt: isoDate,
+  category: vaultCategory,
+  favorite: fc.boolean(),
+  deleted: fc.option(fc.boolean(), { nil: undefined }),
+  deletedAt: fc.option(isoDate, { nil: undefined }),
+  cardholderName: fc.option(vaultString, { nil: undefined }),
+  cardNumber: fc.option(vaultString, { nil: undefined }),
+  cardExpiry: fc.option(vaultString, { nil: undefined }),
+  cardCvv: fc.option(vaultString, { nil: undefined }),
+  cardPin: fc.option(vaultString, { nil: undefined }),
+  idNumber: fc.option(vaultString, { nil: undefined }),
+  idFullName: fc.option(vaultString, { nil: undefined }),
+  idBirthDate: fc.option(vaultString, { nil: undefined }),
+  idExpiryDate: fc.option(vaultString, { nil: undefined }),
+  idGender: fc.option(vaultString, { nil: undefined }),
+  passkeyService: fc.option(vaultString, { nil: undefined }),
+  passkeyPrivateExponent: fc.option(vaultString, { nil: undefined }),
+  passkeyPublicId: fc.option(vaultString, { nil: undefined }),
+  attachmentId: fc.option(vaultString, { nil: undefined }),
+  attachmentName: fc.option(vaultString, { nil: undefined }),
+  attachmentSize: fc.option(fc.integer({ min: 0, max: 250 * 1024 * 1024 }), { nil: undefined }),
+  attachmentType: fc.option(vaultString, { nil: undefined }),
+}, { requiredKeys: ['id', 'title', 'username', 'url', 'createdAt', 'updatedAt', 'category'] }) as fc.Arbitrary<VaultItem>;
+
 const aegisLikeItem = fc.record({
   title: itemFieldValue,
   username: itemFieldValue,
@@ -52,6 +91,36 @@ const aegisLikeItem = fc.record({
   passkeyPrivateExponent: itemFieldValue,
   passkeyPublicId: itemFieldValue,
 }, { requiredKeys: [] });
+
+function expectedString(value: unknown, fallback = ''): string {
+  return typeof value === 'string' ? value : fallback;
+}
+
+function expectedRoundTripItem(item: VaultItem): Partial<VaultItem> {
+  return {
+    title: expectedString(item.title, 'Untitled Import'),
+    username: expectedString(item.username),
+    password: expectedString(item.password),
+    url: expectedString(item.url),
+    notes: expectedString(item.notes),
+    totpSecret: expectedString(item.totpSecret),
+    category: expectedString(item.category, 'login') as VaultItem['category'],
+    favorite: !!item.favorite,
+    cardholderName: item.cardholderName,
+    cardNumber: item.cardNumber,
+    cardExpiry: item.cardExpiry,
+    cardCvv: item.cardCvv,
+    cardPin: item.cardPin,
+    idNumber: item.idNumber,
+    idFullName: item.idFullName,
+    idBirthDate: item.idBirthDate,
+    idExpiryDate: item.idExpiryDate,
+    idGender: item.idGender,
+    passkeyService: item.passkeyService,
+    passkeyPrivateExponent: item.passkeyPrivateExponent,
+    passkeyPublicId: item.passkeyPublicId,
+  };
+}
 
 function expectValidImportResult(content: string): void {
   const result = parseUniversalImport(content);
@@ -120,6 +189,21 @@ describe('universal importer fuzz boundaries', () => {
         }
       }),
       fuzzConfig,
+    );
+  });
+
+  it('round-trips native Aegis JSON exports through the universal importer without losing supported fields', () => {
+    fc.assert(
+      fc.property(fc.array(exportedVaultItem, { maxLength: 24 }), (items) => {
+        const exportedJson = JSON.stringify(items);
+        const result = parseUniversalImport(exportedJson);
+
+        expect(result.type).toBe('success');
+        if (result.type !== 'success') return;
+        expect(result.items).toHaveLength(items.length);
+        expect(result.items).toEqual(items.map(expectedRoundTripItem));
+      }),
+      { numRuns: 120, seed: 0xA3616 },
     );
   });
 
