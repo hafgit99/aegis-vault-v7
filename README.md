@@ -133,6 +133,12 @@ Run the full unit suite:
 npm run test:unit
 ```
 
+Run the bounded property-based fuzz gate for importer, backup-envelope, and attachment metadata boundaries:
+
+```bash
+npm run test:fuzz
+```
+
 Run production web build:
 
 ```bash
@@ -185,7 +191,7 @@ npm run wa-sqlite:final:gate:unit
 Latest local verification before this README update:
 
 - `npm run lint` passed.
-- `npm run test:unit` passed: 108 test files, 841 tests.
+- `npm run test:unit` passed: 114 test files, 873 tests.
 - `npm run test:coverage` passed: 107 test files, 835 tests.
 - `npm run build` passed.
 - `npm run test:e2e:chromium` passed: 24 Chromium smoke scenarios.

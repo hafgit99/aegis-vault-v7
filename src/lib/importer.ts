@@ -31,6 +31,14 @@ export interface ImportLabels {
   errorCsvColumns: string;
 }
 
+function normalizeImportString(value: unknown, fallback = ''): string {
+  return typeof value === 'string' ? value : fallback;
+}
+
+function normalizeOptionalImportString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
 
 /**
  * Parses any password manager export/backup and returns a normalized unified list.
@@ -56,27 +64,27 @@ export function parseUniversalImport(fileContent: string, labels: Partial<Import
       if (Array.isArray(parsed)) {
         // Double check if typical Aegis JSON format
         const items: Partial<VaultItem>[] = parsed.map(x => ({
-          title: x.title || 'Untitled Import',
-          username: x.username || '',
-          password: x.password || '',
-          url: x.url || '',
-          notes: x.notes || '',
-          totpSecret: x.totpSecret || '',
-          category: x.category || 'login',
+          title: normalizeImportString(x.title, 'Untitled Import'),
+          username: normalizeImportString(x.username),
+          password: normalizeImportString(x.password),
+          url: normalizeImportString(x.url),
+          notes: normalizeImportString(x.notes),
+          totpSecret: normalizeImportString(x.totpSecret),
+          category: normalizeImportString(x.category, 'login') as Partial<VaultItem>['category'],
           favorite: !!x.favorite,
-          cardholderName: x.cardholderName,
-          cardNumber: x.cardNumber,
-          cardExpiry: x.cardExpiry,
-          cardCvv: x.cardCvv,
-          cardPin: x.cardPin,
-          idNumber: x.idNumber,
-          idFullName: x.idFullName,
-          idBirthDate: x.idBirthDate,
-          idExpiryDate: x.idExpiryDate,
-          idGender: x.idGender,
-          passkeyService: x.passkeyService,
-          passkeyPrivateExponent: x.passkeyPrivateExponent,
-          passkeyPublicId: x.passkeyPublicId,
+          cardholderName: normalizeOptionalImportString(x.cardholderName),
+          cardNumber: normalizeOptionalImportString(x.cardNumber),
+          cardExpiry: normalizeOptionalImportString(x.cardExpiry),
+          cardCvv: normalizeOptionalImportString(x.cardCvv),
+          cardPin: normalizeOptionalImportString(x.cardPin),
+          idNumber: normalizeOptionalImportString(x.idNumber),
+          idFullName: normalizeOptionalImportString(x.idFullName),
+          idBirthDate: normalizeOptionalImportString(x.idBirthDate),
+          idExpiryDate: normalizeOptionalImportString(x.idExpiryDate),
+          idGender: normalizeOptionalImportString(x.idGender),
+          passkeyService: normalizeOptionalImportString(x.passkeyService),
+          passkeyPrivateExponent: normalizeOptionalImportString(x.passkeyPrivateExponent),
+          passkeyPublicId: normalizeOptionalImportString(x.passkeyPublicId),
         }));
         return { type: 'success', items, formatName: copy.formatAegisJson };
       }

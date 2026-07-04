@@ -45,6 +45,24 @@ npm run security:csp
 
 The CSP gate fails if Tauri's production Content-Security-Policy reintroduces `style-src 'unsafe-inline'`, remote Google font origins, React inline `style={...}` props, HTML `style` attributes, or production `<style>` blocks. Desktop, Android, and wa-sqlite final gates call it automatically.
 
+## Property-Based Fuzz Gate
+
+Malformed backups, importer input, and attachment metadata now have a fast property-based fuzz gate powered by `fast-check`. This gate is intentionally bounded so it can run inside normal unit tests while still exploring malformed JSON, CSV, secure backup envelopes, and AES-GCM attachment metadata.
+
+Run it directly with:
+
+```bash
+npm run test:fuzz
+```
+
+Current fuzz scope:
+
+- `src/lib/importer.fuzz.test.ts`: arbitrary import text, arbitrary JSON-compatible values, native Aegis JSON array normalization, and CSV parser row-shape invariants.
+- `src/lib/encryption.fuzz.test.ts`: malformed encrypted backup envelopes, weak/malformed KDF parameters, and malformed JSON error taxonomy.
+- `src/lib/attachments.fuzz.test.ts`: unsupported attachment algorithms, missing AES-GCM metadata, and arbitrary authenticated-decryption metadata boundaries.
+
+This gate already caught and fixed a native Aegis JSON import hardening issue where non-string fields such as `password: true` could be carried into normalized vault item data. Native Aegis JSON array imports now coerce credential fields through explicit string guards.
+
 ## Current Mutation Gate
 
 The first practical mutation gate runs against critical library helpers with:

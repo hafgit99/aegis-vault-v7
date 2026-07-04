@@ -79,7 +79,8 @@
     "security:session-gates": "node scripts/security-session-gates.cjs",
     "audit:checksums": "node scripts/generate-audit-package-checksums.cjs",
     "audit:checksums:verify": "node scripts/generate-audit-package-checksums.cjs --verify",
-    "security:csp": "node scripts/security-csp-no-unsafe-inline.cjs"
+    "security:csp": "node scripts/security-csp-no-unsafe-inline.cjs",
+    "test:fuzz": "vitest run src/lib/importer.fuzz.test.ts src/lib/encryption.fuzz.test.ts src/lib/attachments.fuzz.test.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",
@@ -112,6 +113,7 @@
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.25.0",
     "fake-indexeddb": "^6.2.5",
+    "fast-check": "^4.8.0",
     "jsdom": "^25.0.1",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
