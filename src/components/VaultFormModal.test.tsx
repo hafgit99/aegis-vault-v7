@@ -131,7 +131,7 @@ describe('VaultFormModal', () => {
     expect(screen.getByText('ATM / CARD PIN (OPTIONAL)')).toBeTruthy();
     fireEvent.click(screen.getByText('Secure Key'));
     expect(screen.getByText('Secure Keys & API Secrets')).toBeTruthy();
-    expect(screen.getByText('Store API tokens, crypto keys, SSH secrets, and manually managed secure identifiers. Real WebAuthn passkey authenticator support is planned separately.')).toBeTruthy();
+    expect(screen.getByText('Store API tokens, crypto keys, SSH secrets, manually managed secure identifiers, and platform WebAuthn passkey records. Browser credential-provider/proxy support remains a separate phase.')).toBeTruthy();
     expect(screen.getByText('SERVICE / USE CASE')).toBeTruthy();
     expect(screen.getByPlaceholderText('e.g. GitHub API, Solana Wallet, SSH Key')).toBeTruthy();
     expect(screen.getByText('IDENTIFIER / PUBLIC ID')).toBeTruthy();

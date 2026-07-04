@@ -359,7 +359,7 @@ Recently improved:
 - `src/components/CardDetail.tsx`: covered copied states, PIN copy action, missing-field fallbacks, and empty-string copy behavior.
 - `src/components/LoginDetail.tsx`: covered copied states, empty-password fallback, and safe empty-password copy behavior.
 - `src/components/PasskeyDetail.tsx`: covered secure-key copied states, missing-field fallbacks, and safe empty-string copy behavior.
-- `src/lib/passkey.ts` and `src/components/PasskeyManager.tsx`: covered WebAuthn capability detection, credential-id encoding, registration validation, platform authenticator request options, vault-key wrapped recovery metadata, tamper/closed-session unwrap behavior, vault-field mapping, localized status rendering, and record list display.
+- `src/lib/passkey.ts`, `src/components/PasskeyManager.tsx`, and the Settings passkey wiring: covered WebAuthn capability detection, credential-id encoding, registration validation, platform authenticator request options, vault-key wrapped recovery metadata, tamper/closed-session unwrap behavior, vault-field mapping, localized status rendering, record list display, create form dispatch, assertion actions, and delete action dispatch.
 - `src/components/IdentityDetail.tsx`: covered copied states, male gender label, missing-field fallbacks, and safe empty-name copy behavior.
 - `src/components/SecureNoteDetail.tsx`: covered copied state, empty-note fallback, and safe empty-note copy behavior.
 - `src/components/VaultItemAttachmentCard.tsx`: covered missing-size fallback for encrypted attachment metadata.

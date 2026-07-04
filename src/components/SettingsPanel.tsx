@@ -30,7 +30,7 @@ import {
   RotateCcw,
   Link
 } from 'lucide-react';
-import { changeMasterPassword, getRememberedAccountSecretKey, getVaultItems, isAccountSecretKeyRequired, migrateActiveVaultStorageToWaSqlite, resetSystem, reseedDemoData, saveVaultItem, saveVaultItems, verifyMasterPassword } from '../lib/storage';
+import { changeMasterPassword, deleteVaultItem, getRememberedAccountSecretKey, getVaultItems, isAccountSecretKeyRequired, migrateActiveVaultStorageToWaSqlite, resetSystem, reseedDemoData, saveVaultItem, saveVaultItems, verifyMasterPassword } from '../lib/storage';
 import { AppNotification, VaultItem } from '../types';
 import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from '../lib/encryption';
 import { parseUniversalImport, decodeFileBuffer } from '../lib/importer';
@@ -52,8 +52,14 @@ import { SettingsStatsCard } from './settings/SettingsStatsCard';
 import { BlockedRequestsPanel } from './settings/BlockedRequestsPanel';
 import { PasskeyManager } from './PasskeyManager';
 import {
+  authenticatePasskey,
+  passkeyErrorCodes,
+  PasskeyError,
+  recordToVaultFields,
+  registerPasskey,
   vaultFieldsToRecord,
   type PasskeyRecord,
+  type RegisterPasskeyInput,
 } from '../lib/passkey';
 import {
   getLastSyncTime,
@@ -151,6 +157,9 @@ export default function SettingsPanel({
   const [emergencyKitError, setEmergencyKitError] = useState<string | null>(null);
   const [storageMigrationStatus, setStorageMigrationStatus] = useState<'idle' | 'running' | 'promoted' | 'blocked' | 'error'>('idle');
   const [storageMigrationMessage, setStorageMigrationMessage] = useState<string | null>(null);
+  const [passkeyStatusKey, setPasskeyStatusKey] = useState<Parameters<typeof t>[0] | null>(null);
+  const [passkeyStatusKind, setPasskeyStatusKind] = useState<'success' | 'error' | 'info' | null>(null);
+  const [passkeyBusy, setPasskeyBusy] = useState(false);
 
   // ── Extension Token Rotation ──────────────────────────────────────────────
   const [tokenRotateStatus, setTokenRotateStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -211,6 +220,105 @@ export default function SettingsPanel({
     setSyncMessage(null); setSyncStatus('idle');
   };
 
+
+  const passkeyErrorToStatusKey = (error: unknown): Parameters<typeof t>[0] => {
+    if (error instanceof PasskeyError) {
+      if (error.code === passkeyErrorCodes.createCancelled) return 'passkey.create.cancelled';
+      if (error.code === passkeyErrorCodes.missingRpId) return 'passkey.create.missingRpId';
+      if (error.code === passkeyErrorCodes.missingUserName) return 'passkey.create.missingUserName';
+      if (error.code === passkeyErrorCodes.unsupported) return 'passkey.create.failed';
+    }
+    return 'passkey.create.failed';
+  };
+
+  const reloadPasskeyItems = async () => {
+    const latestItems = await getVaultItems();
+    setItems(latestItems);
+    return latestItems;
+  };
+
+  const handleCreatePasskey = async (input: RegisterPasskeyInput) => {
+    setPasskeyBusy(true);
+    setPasskeyStatusKey(null);
+    try {
+      const result = await registerPasskey(input);
+      const now = new Date().toISOString();
+      const item: VaultItem = {
+        id: result.record.itemId,
+        title: result.record.rpName || result.record.rpId,
+        username: result.record.userName,
+        password: '',
+        url: result.record.rpId ? `https://${result.record.rpId}` : '',
+        notes: '',
+        createdAt: now,
+        updatedAt: now,
+        category: 'passkey',
+        ...recordToVaultFields(result.record),
+      };
+      const saved = await saveVaultItem(item);
+      setItems(saved);
+      await onDatabaseChanged();
+      setPasskeyStatusKey('passkey.create.success');
+      setPasskeyStatusKind('success');
+    } catch (error) {
+      setPasskeyStatusKey(passkeyErrorToStatusKey(error));
+      setPasskeyStatusKind('error');
+    } finally {
+      setPasskeyBusy(false);
+    }
+  };
+
+  const handleAuthenticatePasskey = async (record: PasskeyRecord) => {
+    setPasskeyBusy(true);
+    setPasskeyStatusKey(null);
+    try {
+      const assertion = await authenticatePasskey({ rpId: record.rpId, credentialIds: [record.credentialId] });
+      if (assertion.credentialId !== record.credentialId) throw new PasskeyError(passkeyErrorCodes.invalidCredentialId);
+      const latestItems = await getVaultItems();
+      const now = new Date().toISOString();
+      const updatedItems = latestItems.map((item) => {
+        if (item.id !== record.itemId) return item;
+        return {
+          ...item,
+          passkeySignCount: (item.passkeySignCount ?? record.signCount ?? 0) + 1,
+          passkeyLastUsedAt: now,
+          updatedAt: now,
+        };
+      });
+      const saved = await saveVaultItems(updatedItems);
+      setItems(saved);
+      await onDatabaseChanged();
+      setPasskeyStatusKey('passkey.authenticate.success');
+      setPasskeyStatusKind('success');
+    } catch (error) {
+      setPasskeyStatusKey(error instanceof PasskeyError && error.code === passkeyErrorCodes.createCancelled
+        ? 'passkey.authenticate.cancelled'
+        : 'passkey.authenticate.failed');
+      setPasskeyStatusKind('error');
+    } finally {
+      setPasskeyBusy(false);
+    }
+  };
+
+  const handleDeletePasskey = async (record: PasskeyRecord) => {
+    const confirmed = window.confirm(`${t('passkey.list.deleteConfirmTitle')}\n\n${t('passkey.list.deleteConfirmMessage')}`);
+    if (!confirmed) return;
+    setPasskeyBusy(true);
+    setPasskeyStatusKey(null);
+    try {
+      const saved = await deleteVaultItem(record.itemId);
+      setItems(saved);
+      await onDatabaseChanged();
+      setPasskeyStatusKey('passkey.delete.success');
+      setPasskeyStatusKind('success');
+    } catch {
+      await reloadPasskeyItems();
+      setPasskeyStatusKey('passkey.delete.failed');
+      setPasskeyStatusKind('error');
+    } finally {
+      setPasskeyBusy(false);
+    }
+  };
 
   const handleWaSqliteMigration = async () => {
     setStorageMigrationMessage(null);
@@ -1238,6 +1346,12 @@ export default function SettingsPanel({
           .map((item) => vaultFieldsToRecord(item.id, item))
           .filter((record): record is PasskeyRecord => record !== null)}
         t={t}
+        statusKey={passkeyStatusKey}
+        statusKind={passkeyStatusKind}
+        busy={passkeyBusy}
+        onCreatePasskey={handleCreatePasskey}
+        onAuthenticatePasskey={handleAuthenticatePasskey}
+        onDeletePasskey={handleDeletePasskey}
       />
 
       {/* Blocked Network Requests (Air-Gap policy log) */}

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import React from 'react';
 
@@ -91,10 +91,11 @@ describe('PasskeyManager', () => {
   it('renders each registered passkey with its Relying Party metadata', () => {
     renderComponent([SAMPLE_RECORD]);
     expect(screen.getByTestId('passkey-record')).toBeTruthy();
-    expect(screen.getByText('Example')).toBeTruthy();
-    expect(screen.getByText('example.com · alice@example.com')).toBeTruthy();
-    expect(screen.getByText('ES256')).toBeTruthy();
-    expect(screen.getByText('passkey.list.signCount: 0')).toBeTruthy();
+    const record = screen.getByTestId('passkey-record');
+    expect(within(record).getByText('Example')).toBeTruthy();
+    expect(within(record).getByText('example.com - alice@example.com')).toBeTruthy();
+    expect(within(record).getByText('ES256')).toBeTruthy();
+    expect(within(record).getByText('passkey.list.signCount: 0')).toBeTruthy();
   });
 
   it('exposes the credential id on each record for testing harnesses', () => {
@@ -132,5 +133,64 @@ describe('PasskeyManager', () => {
     );
     expect(screen.getByText('passkey.create.failed')).toBeTruthy();
     expect(screen.getByRole('alert')).toBeTruthy();
+  });
+
+  it('calls onCreatePasskey with form values and selected algorithm', async () => {
+    const onCreatePasskey = vi.fn(async () => undefined);
+    render(
+      <LanguageProvider>
+        <PasskeyManager records={[]} t={(key) => key as string} onCreatePasskey={onCreatePasskey} />
+      </LanguageProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('passkey.status.platform')).toBeTruthy();
+    });
+
+    fireEvent.change(screen.getByTestId('passkey-rp-id-input'), { target: { value: 'example.com' } });
+    fireEvent.change(screen.getByTestId('passkey-rp-name-input'), { target: { value: 'Example' } });
+    fireEvent.change(screen.getByTestId('passkey-user-name-input'), { target: { value: 'alice@example.com' } });
+    fireEvent.change(screen.getByTestId('passkey-algorithm-select'), { target: { value: 'EdDSA' } });
+    fireEvent.click(screen.getByTestId('passkey-create-button'));
+
+    await waitFor(() => {
+      expect(onCreatePasskey).toHaveBeenCalledWith(expect.objectContaining({
+        rpId: 'example.com',
+        rpName: 'Example',
+        userName: 'alice@example.com',
+        algorithms: ['EdDSA'],
+      }));
+    });
+  });
+
+  it('keeps create disabled until required fields and WebAuthn capability are ready', async () => {
+    renderComponent();
+    const button = screen.getByTestId('passkey-create-button') as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    await waitFor(() => {
+      expect(screen.getByText('passkey.status.platform')).toBeTruthy();
+    });
+    expect(button.disabled).toBe(true);
+  });
+
+  it('calls authenticate and delete handlers for existing records', () => {
+    const onAuthenticatePasskey = vi.fn();
+    const onDeletePasskey = vi.fn();
+    render(
+      <LanguageProvider>
+        <PasskeyManager
+          records={[SAMPLE_RECORD]}
+          t={(key) => key as string}
+          onAuthenticatePasskey={onAuthenticatePasskey}
+          onDeletePasskey={onDeletePasskey}
+        />
+      </LanguageProvider>,
+    );
+
+    fireEvent.click(screen.getByTestId('passkey-authenticate-button'));
+    fireEvent.click(screen.getByTestId('passkey-delete-button'));
+
+    expect(onAuthenticatePasskey).toHaveBeenCalledWith(SAMPLE_RECORD);
+    expect(onDeletePasskey).toHaveBeenCalledWith(SAMPLE_RECORD);
   });
 });
