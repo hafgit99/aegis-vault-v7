@@ -1,7 +1,7 @@
 import { Check, Copy, Eye, EyeOff } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
-import { generateTOTP } from '../lib/otp';
+import { generateTOTP, TOTPValidationError } from '../lib/otp';
 import { VaultItem } from '../types';
 
 interface LoginDetailProps {
@@ -25,7 +25,17 @@ export default function LoginDetail({
 
   if (item.category !== 'login') return null;
 
-  const totpCode = item.totpSecret ? generateTOTP(item.totpSecret) : '';
+  let totpCode = '';
+  let hasTotpValidationError = false;
+
+  if (item.totpSecret) {
+    try {
+      totpCode = generateTOTP(item.totpSecret);
+    } catch (error) {
+      hasTotpValidationError = error instanceof TOTPValidationError;
+      if (!hasTotpValidationError) throw error;
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -90,28 +100,34 @@ export default function LoginDetail({
         </label>
         <div className="flex items-center justify-between">
           {item.totpSecret ? (
-            <>
-              <span className="font-mono text-xl md:text-2xl font-bold text-brand-primary tracking-widest">
-                {totpCode}
-              </span>
-              <div className="flex items-center gap-2.5">
-                <span className="text-[11px] text-on-surface-variant font-mono bg-[#141614] px-2.5 py-1 rounded-md border border-outline-variant/15 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-ping"></span>
-                  <span>{totpCountdown} {t('loginDetail.secondsLeft')}</span>
-                </span>
-                <button
-                  onClick={() => onCopyText(totpCode.replace(' ', ''), 'totp')}
-                  className="text-on-surface-variant hover:text-brand-primary transition-colors focus:outline-none p-1.5 hover:bg-[#1a1c1a]/50 rounded-lg cursor-pointer"
-                  title={t('loginDetail.copyTotp')}
-                >
-                  {copiedField === 'totp' ? (
-                    <Check className="w-4 h-4 text-brand-tertiary" />
-                  ) : (
-                    <Copy className="w-4 h-4" />
-                  )}
-                </button>
+            hasTotpValidationError ? (
+              <div className="text-xs text-amber-300/90 py-1 text-left leading-relaxed">
+                {t('loginDetail.invalidTotp')}
               </div>
-            </>
+            ) : (
+              <>
+                <span className="font-mono text-xl md:text-2xl font-bold text-brand-primary tracking-widest">
+                  {totpCode}
+                </span>
+                <div className="flex items-center gap-2.5">
+                  <span className="text-[11px] text-on-surface-variant font-mono bg-[#141614] px-2.5 py-1 rounded-md border border-outline-variant/15 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-ping"></span>
+                    <span>{totpCountdown} {t('loginDetail.secondsLeft')}</span>
+                  </span>
+                  <button
+                    onClick={() => onCopyText(totpCode.replace(' ', ''), 'totp')}
+                    className="text-on-surface-variant hover:text-brand-primary transition-colors focus:outline-none p-1.5 hover:bg-[#1a1c1a]/50 rounded-lg cursor-pointer"
+                    title={t('loginDetail.copyTotp')}
+                  >
+                    {copiedField === 'totp' ? (
+                      <Check className="w-4 h-4 text-brand-tertiary" />
+                    ) : (
+                      <Copy className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+              </>
+            )
           ) : (
             <div className="text-xs text-on-surface-variant/40 italic py-1 text-left">
               {t('loginDetail.noTotp')}

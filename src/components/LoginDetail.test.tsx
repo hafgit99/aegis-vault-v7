@@ -114,6 +114,25 @@ describe('LoginDetail', () => {
     expect(screen.getByText(/OTP kurulumu aktif değil/)).toBeTruthy();
   });
 
+  it('shows an explicit warning for unsupported TOTP settings without exposing a copy action', () => {
+    const onCopyText = vi.fn();
+
+    render(
+      <LoginDetail
+        item={{ ...loginItem, totpSecret: 'otpauth://totp/Aegis:test@example.com?secret=JBSWY3DPEHPK3PXP&digits=10' }}
+        copiedField={null}
+        isPasswordRevealed={false}
+        totpCountdown={30}
+        onTogglePasswordReveal={vi.fn()}
+        onCopyText={onCopyText}
+      />,
+    );
+
+    expect(screen.getByText(/TOTP ayar/)).toBeTruthy();
+    expect(screen.queryByTitle('Do?rulama Kodunu Kopyala')).toBeNull();
+    expect(onCopyText).not.toHaveBeenCalled();
+  });
+
   it('fires copy and reveal actions', () => {
     const onTogglePasswordReveal = vi.fn();
     const onCopyText = vi.fn();

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { generateTOTP, getTOTPTimeRemaining } from './otp';
+import { generateTOTP, getTOTPTimeRemaining, TOTPValidationError } from './otp';
 
 describe('otp helpers', () => {
   const rfcSha1Secret = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
@@ -123,11 +123,22 @@ describe('otp helpers', () => {
     expect(generateTOTP('otpauth://totp/Aegis:test@example.com')).toBe('000 000');
   });
 
-  it('rejects unsupported digit and period options safely', () => {
-    expect(generateTOTP(rfcSha1Secret, { digits: 5 })).toBe('000 000');
-    expect(generateTOTP(rfcSha1Secret, { digits: 9 })).toBe('000 000');
-    expect(generateTOTP(rfcSha1Secret, { periodSeconds: 0 })).toBe('000 000');
+  it('throws explicit validation errors for unsupported digit and period options', () => {
+    expect(() => generateTOTP(rfcSha1Secret, { digits: 5 })).toThrow(TOTPValidationError);
+    expect(() => generateTOTP(rfcSha1Secret, { digits: 9 })).toThrow(TOTPValidationError);
+    expect(() => generateTOTP(rfcSha1Secret, { digits: 10 })).toThrow(TOTPValidationError);
+    expect(() => generateTOTP(rfcSha1Secret, { periodSeconds: 0 })).toThrow(TOTPValidationError);
+    expect(() => generateTOTP(rfcSha1Secret, { periodSeconds: 301 })).toThrow(TOTPValidationError);
     expect(generateTOTP('====')).toBe('000 000');
+  });
+
+  it('throws explicit validation errors for unsupported otpauth digit and period parameters', () => {
+    expect(() => generateTOTP(
+      `otpauth://totp/Aegis:test@example.com?secret=${rfcSha1Secret}&digits=10`,
+    )).toThrow(TOTPValidationError);
+    expect(() => generateTOTP(
+      `otpauth://totp/Aegis:test@example.com?secret=${rfcSha1Secret}&period=abc`,
+    )).toThrow(TOTPValidationError);
   });
 
   it('serializes counters beyond the low 32-bit range in big-endian form', () => {
