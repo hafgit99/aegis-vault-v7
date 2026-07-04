@@ -227,6 +227,6 @@
     - Covered Android document picker save/open/cancel/error behavior, backup export/import flows, attachment download, and Emergency Kit save helper with unit tests.
 
 
-## Future WebAuthn Authenticator
+## Passkey And WebAuthn Roadmap
 
-Real WebAuthn passkey authenticator support is intentionally not part of the current release boundary. The current vault category stores manually managed secure keys/API secrets only. A future experimental phase should start with a Chrome/Edge-only proof of concept using the official Web Authentication Proxy extension API, native/Rust ES256 signing, explicit user approval, RP ID matching, sign-counter persistence, and separate Android Credential Provider research.
+Aegis Vault 7 now includes a platform WebAuthn passkey management surface: capability detection, platform/cross-platform credential registration, vault metadata storage, localized UI, and unit/component coverage. This does not yet make Aegis a browser credential provider or Android Credential Provider. The next experimental phase should focus on Chrome/Edge Web Authentication Proxy integration, native/Rust signing boundaries, explicit user approval, RP ID matching, sign-counter persistence, and separate Android Credential Provider research before any broad "Aegis fills passkeys on websites" claim.

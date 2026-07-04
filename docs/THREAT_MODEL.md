@@ -28,7 +28,7 @@ Out of scope for the current phase:
 ## Protected Assets
 
 - Master password.
-- Vault item secrets: passwords, card details, secure key/API secret records, identities, notes, TOTP seeds, and metadata that reveals account ownership. Real WebAuthn passkey authenticator support is not part of the current release boundary.
+- Vault item secrets: passwords, card details, secure key/API secret records, platform WebAuthn passkey records, identities, notes, TOTP seeds, and metadata that reveals account ownership. Browser credential-provider/proxy and Android Credential Provider passkey filling remain outside the current release boundary.
 - Attachment contents.
 - Encrypted backup files.
 - Biometric-wrapped master password bundle.
