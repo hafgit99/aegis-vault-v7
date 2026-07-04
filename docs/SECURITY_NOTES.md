@@ -19,7 +19,7 @@ This project is a password vault, so security claims must stay conservative unti
 - Vault database payloads now include a versioned schema envelope with migration tests for legacy unversioned state.
 - Desktop vault persistence now mirrors database state through the Tauri app data directory, and native database writes use a temp-file + atomic replace flow to reduce crash/power-loss corruption risk.
 - Desktop import/export now uses controlled native Windows file dialogs.
-- Clipboard clearing now removes copied secrets after the safety delay when the clipboard remains unchanged.
+- Clipboard clearing now removes copied secrets after the safety delay when the clipboard remains unchanged, using a two-step overwrite-then-clear strategy. Windows native clipboard writes also set history/cloud/monitor exclusion formats where supported.
 - Browser extension IPC pairing token checks use constant-time comparison, and Unix/macOS token files are written with owner-only permissions.
 - WebDAV Basic Auth encoding avoids deprecated `unescape`, and sync local-network exceptions are limited to loopback plus RFC 1918 private address ranges.
 - Production builds install an air-gap network policy that blocks unexpected outbound `fetch`, XHR, WebSocket, `sendBeacon`, EventSource, and WebRTC connections while allowing app-local/Tauri IPC URLs and exact five-character HIBP SHA-1 range checks.
@@ -57,6 +57,7 @@ This project is a password vault, so security claims must stay conservative unti
 - Android screenshots, document-picker file flows, Android Keystore-backed secure storage, and native app-private vault persistence are implemented. The remaining Android storage work is release-candidate regression coverage and final production review.
 - Android biometric registration can use the Tauri biometric plugin path only when the Android Keystore-backed secure storage bridge is present and exposes the expected API shape. A final manual device review is still needed before marketing it as production-grade biometric protection.
 - Android Autofill public claims remain browser-dependent and must be backed by current per-candidate manual evidence even though fill/save flows are implemented.
+- OS-level clipboard history managers, Universal Clipboard, cloud clipboard sync, enterprise DLP agents, and privileged local malware may retain copied secrets before Aegis can clear them; product copy must describe clipboard clearing as best-effort, not guaranteed history erasure.
 
 ## Near-Term Security Plan
 

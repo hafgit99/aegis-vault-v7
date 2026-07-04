@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { clearClipboardIfUnchanged, writeClipboardText } from './clipboard';
+import { CLIPBOARD_HISTORY_OVERWRITE_TEXT, clearClipboardIfUnchanged, writeClipboardText } from './clipboard';
 
 describe('clipboard helpers', () => {
   let clipboardText = '';
@@ -50,7 +50,8 @@ describe('clipboard helpers', () => {
     await expect(clearClipboardIfUnchanged('secret')).resolves.toBe(true);
 
     expect(readText).toHaveBeenCalled();
-    expect(writeText).toHaveBeenCalledWith('');
+    expect(writeText).toHaveBeenNthCalledWith(1, CLIPBOARD_HISTORY_OVERWRITE_TEXT);
+    expect(writeText).toHaveBeenNthCalledWith(2, '');
     expect(clipboardText).toBe('');
   });
 
@@ -84,6 +85,12 @@ describe('clipboard helpers', () => {
 
     readText.mockResolvedValueOnce('secret');
     writeText.mockRejectedValueOnce(new Error('write denied'));
+
+    await expect(clearClipboardIfUnchanged('secret')).resolves.toBe(false);
+
+    readText.mockResolvedValueOnce('secret');
+    writeText.mockResolvedValueOnce(undefined);
+    writeText.mockRejectedValueOnce(new Error('clear denied'));
 
     await expect(clearClipboardIfUnchanged('secret')).resolves.toBe(false);
   });

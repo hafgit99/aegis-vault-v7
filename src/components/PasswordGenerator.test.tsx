@@ -238,10 +238,15 @@ describe('PasswordGenerator', () => {
     const copiedPassword = clipboardText;
 
     unmount();
+
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
     await Promise.resolve();
 
-    expect(readText).toHaveBeenCalled();
     expect(writeText).toHaveBeenLastCalledWith('');
+
+    expect(readText).toHaveBeenCalled();
     expect(clipboardText).toBe('');
     expect(copiedPassword).toBeTruthy();
   });
