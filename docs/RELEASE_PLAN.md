@@ -1,30 +1,46 @@
 # Aegis Vault 7 Release Checklist and Signed Build Plan
 
-This document defines the minimum release gate for Windows desktop builds. It is intentionally conservative because Aegis Vault 7 handles local secrets.
+This document defines the minimum release gate for Aegis Vault 7 desktop and Android release candidates. It is intentionally conservative because Aegis Vault 7 handles local secrets.
 
 ## Release Scope
 
-Initial release target:
+Initial public-ready release target:
 
 - Windows desktop installer from Tauri.
 - NSIS setup executable.
 - MSI installer.
 - Portable release executable for internal smoke testing.
+- Signed Android APK as an internal/public-candidate channel when the final device checklist is completed for that exact artifact.
+- Firefox signed XPI as a companion artifact when native messaging compatibility is retested for the release.
+
+Internal candidate scope until target-device smoke is completed:
+
+- Linux desktop artifacts imported from the private build workflow.
+- macOS app/DMG artifacts imported from the private build workflow.
 
 Not in initial release scope:
 
-- Android builds.
 - Auto-update distribution.
 - Cloud sync.
 - Production security claims beyond the current threat model.
+- Public macOS distribution without code signing/notarization validation.
 
 ## Required Release Gates
 
-Every release candidate must pass:
+Every desktop release candidate must pass:
 
 - `npm ci`
 - `npm run desktop:release:gate` on the matching host OS, or `npm run desktop:release:gate -- --skip-desktop-build` when collecting trusted externally built artifacts.
+- `npm run desktop:release:evidence -- --require-completed-checklist` for final publication evidence.
 - GitHub Actions `Windows Desktop CI` when available.
+
+Every Android release candidate must pass:
+
+- `npm ci`
+- `npm run android:release:gate -- --signed --evidence`
+- `npm run android:release:gate -- --signed --device --fresh-install --evidence` when a physical device is connected.
+- `npm run android:release:evidence:verify -- --dir release-local/android/<timestamp> --require-device --require-fresh-install --require-signed --require-completed-checklist`
+- `npm run android:release:evidence:summary -- --dir release-local/android/<timestamp> --final` with `Status: PASS`.
 
 The desktop release gate runs:
 
@@ -158,11 +174,23 @@ Before the first public release, decide:
 - Whether unsigned builds are internal-only.
 - Whether the app should display a stronger backup/recovery warning during setup.
 
-## Android Internal Build Boundary
+## Android Release Boundary
 
-Android builds are still treated as internal release candidates until the readiness checklist in `docs/ANDROID_READINESS.md` is complete. The latest signed physical-device fresh-install gate passed and should now be followed by completed final evidence review plus desktop release parity checks. A public Android release additionally needs:
+Android is now an active signed release-candidate path, not a future-only target. The APK can be published only when the evidence folder for that exact artifact passes final verification and the manual checklist confirms:
 
-- APK/AAB signing procedure with `AEGIS_ANDROID_KEYSTORE_PATH`, `AEGIS_ANDROID_KEY_ALIAS`, `AEGIS_ANDROID_KEYSTORE_PASSWORD`, and `AEGIS_ANDROID_KEY_PASSWORD`.
-- Android storage and backup UX decision.
-- Android biometric decision.
-- Real-device smoke test evidence.
+- Fresh install, setup, unlock, lock, background lock, and restart persistence.
+- Backup export/import through the Android document picker.
+- Attachment download through the document picker.
+- Autofill behavior on the tested browsers, including Chrome after selecting Aegis as the active Autofill provider.
+- FLAG_SECURE screenshot/task-switcher protection.
+- Emergency Kit save flow.
+- Biometric behavior only on devices where support is actually available and tested.
+
+Required Android signing material stays outside the repository and is loaded from `.secrets/android-signing.env` or equivalent local environment variables:
+
+- `AEGIS_ANDROID_KEYSTORE_PATH`
+- `AEGIS_ANDROID_KEY_ALIAS`
+- `AEGIS_ANDROID_KEYSTORE_PASSWORD`
+- `AEGIS_ANDROID_KEY_PASSWORD`
+
+If the checklist is incomplete or the tested browser/device matrix is stale, publish the APK as an internal candidate only.
