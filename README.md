@@ -194,7 +194,7 @@ Latest local verification before this README update:
 
 - `npm run lint` passed.
 - `npm run test:unit` passed: 118 test files, 926 tests.
-- `npm run test:coverage` passed: 107 test files, 835 tests.
+- `npm run test:coverage` ran: 118 test files and 926 tests passed; coverage thresholds currently block at statements 86.38%, branches 77.85%, functions 86.64%, lines 87.53%.
 - `npm run build` passed.
 - `npm run test:e2e:chromium` passed: 24 Chromium smoke scenarios.
 - `npm run test:mutation:core` passed: 460 mutants, 81.74% mutation score.
@@ -205,24 +205,24 @@ Latest local verification before this README update:
 
 ## Coverage
 
-![Statements](https://img.shields.io/badge/statements-94.01%25-brightgreen)
-![Branches](https://img.shields.io/badge/branches-87.73%25-green)
-![Functions](https://img.shields.io/badge/functions-91.94%25-brightgreen)
-![Lines](https://img.shields.io/badge/lines-94.01%25-brightgreen)
+![Statements](https://img.shields.io/badge/statements-86.38%25-yellow)
+![Branches](https://img.shields.io/badge/branches-77.85%25-orange)
+![Functions](https://img.shields.io/badge/functions-86.64%25-yellow)
+![Lines](https://img.shields.io/badge/lines-87.53%25-yellow)
 
-Coverage was generated locally with `npm run test:coverage`.
+Coverage was generated locally with `npm run test:coverage`. The tests passed, but the current coverage thresholds still block the coverage gate.
 
 | Metric | Coverage |
 | --- | ---: |
-| Statements | 94.01% |
-| Branches | 87.73% |
-| Functions | 91.94% |
-| Lines | 94.01% |
+| Statements | 86.38% |
+| Branches | 77.85% |
+| Functions | 86.64% |
+| Lines | 87.53% |
 
 | Suite | Result |
 | --- | ---: |
-| Test files | 107 passed |
-| Tests | 835 passed |
+| Test files | 118 passed |
+| Tests | 926 passed |
 | Core mutation score | 81.74% passed |
 | Importer mutation score | 80.35% passed |
 | Importer helper mutation score | 87.85% passed |

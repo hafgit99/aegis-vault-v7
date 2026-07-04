@@ -53,7 +53,7 @@ Aegis Vault 7 enforces a strict, automated boundary so the plain-text master pas
 
 - **Unit suite baseline:** 118 test files and 926 tests passing in the latest recorded full release-gate run.
 - **E2E smoke:** 24 passing Chromium scenarios (setup/unlock, item lifecycle, reload persistence, mobile viewport, wa-sqlite migration UI, Emergency Kit, donation, TR/EN/ZH language switching, encrypted import/export, plain JSON export).
-- **Coverage baseline:** lines 94.01%, statements 94.01%, functions 91.94%, branches 87.73%. Regression thresholds: 90 / 90 / 85 / 80.
+- **Coverage baseline:** lines 87.53%, statements 86.38%, functions 86.64%, branches 77.85%. Current thresholds remain 90 / 90 / 85 / 80, so coverage is a visible release-quality blocker until line, statement, and branch gaps are closed.
 - **Mutation gates:** core 460 mutants / 81.74% score; importer 682 / 80.35%; importer helpers 288 / 87.85%. (Storage and storage-orchestration gates are documented in `docs/QUALITY_GATES.md`.)
 - Full gate inventory and thresholds live in `docs/QUALITY_GATES.md`.
 

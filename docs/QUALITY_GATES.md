@@ -10,29 +10,31 @@ Baseline captured with:
 npm run test:coverage
 ```
 
-Current measured baseline:
+Current measured baseline from the latest local run:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 94.01% |
-| Statements | 94.01% |
-| Functions | 91.94% |
-| Branches | 87.73% |
+| Lines | 87.53% |
+| Statements | 86.38% |
+| Functions | 86.64% |
+| Branches | 77.85% |
 
-Coverage thresholds now act as a release-quality regression gate while staying slightly below the current baseline:
+Coverage thresholds are intentionally stricter than the current baseline and currently block the coverage gate until the remaining gaps are closed:
 
-| Metric | Current threshold |
-| --- | ---: |
-| Lines | 90% |
-| Statements | 90% |
-| Functions | 85% |
-| Branches | 80% |
+| Metric | Current threshold | Current status |
+| --- | ---: | --- |
+| Lines | 90% | BLOCKED at 87.53% |
+| Statements | 90% | BLOCKED at 86.38% |
+| Functions | 85% | PASS at 86.64% |
+| Branches | 80% | BLOCKED at 77.85% |
 
-These thresholds prevent meaningful regressions while leaving room to add tests around under-covered areas.
+These thresholds prevent meaningful regressions while keeping the coverage gap visible instead of silently lowering the release-quality bar.
 
 ## Priority Coverage Targets
 
 1. `src/components/SettingsPanel.tsx`: reduce remaining fallback-message and desktop-runtime branch gaps.
+2. `src/lib/indexedDbStorage.ts` and `src/lib/sync/configStorage.ts`: add focused tests or exclude platform-only adapters from coverage if they remain intentionally out of release scope.
+3. `src/hooks/useAutofillCoordinator.ts`: add state-machine branch coverage for pending/cancelled/completed Android Autofill requests.
 
 ## Security Gate Scripts
 
