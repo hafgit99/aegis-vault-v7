@@ -83,7 +83,9 @@
     "test:fuzz": "vitest run src/lib/importer.fuzz.test.ts src/lib/encryption.fuzz.test.ts src/lib/attachments.fuzz.test.ts",
     "security:dependencies": "npm audit --audit-level=high",
     "rust:fmt:check": "cargo fmt --check --manifest-path src-tauri/Cargo.toml",
-    "rust:test:native": "cargo test --manifest-path src-tauri/Cargo.toml write_vault_database_file"
+    "rust:test:native": "cargo test --manifest-path src-tauri/Cargo.toml write_vault_database_file",
+    "release:readiness": "node scripts/release-readiness-summary.cjs",
+    "release:readiness:final": "node scripts/release-readiness-summary.cjs --final --output release-local/RELEASE_READINESS_FINAL.md"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",
