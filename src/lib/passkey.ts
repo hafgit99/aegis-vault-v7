@@ -272,7 +272,20 @@ function validateUserName(userName: string): string {
 function validateRpId(rpId: string): string {
   const trimmed = (rpId || '').trim().toLowerCase();
   if (!trimmed) throw new PasskeyError(passkeyErrorCodes.missingRpId);
-  if (!/^[a-z0-9.\-]+$/.test(trimmed)) throw new PasskeyError(passkeyErrorCodes.missingRpId);
+  if (trimmed.length > 253) throw new PasskeyError(passkeyErrorCodes.missingRpId);
+  if (trimmed === 'localhost') return trimmed;
+  if (!/^[a-z0-9.-]+$/.test(trimmed)) throw new PasskeyError(passkeyErrorCodes.missingRpId);
+  if (trimmed.startsWith('.') || trimmed.endsWith('.') || trimmed.includes('..')) {
+    throw new PasskeyError(passkeyErrorCodes.missingRpId);
+  }
+  const labels = trimmed.split('.');
+  if (labels.length < 2) throw new PasskeyError(passkeyErrorCodes.missingRpId);
+  if (labels.every((label) => /^\d+$/.test(label))) throw new PasskeyError(passkeyErrorCodes.missingRpId);
+  for (const label of labels) {
+    if (!label || label.length > 63) throw new PasskeyError(passkeyErrorCodes.missingRpId);
+    if (label.startsWith('-') || label.endsWith('-')) throw new PasskeyError(passkeyErrorCodes.missingRpId);
+    if (!/^[a-z0-9-]+$/.test(label)) throw new PasskeyError(passkeyErrorCodes.missingRpId);
+  }
   return trimmed;
 }
 

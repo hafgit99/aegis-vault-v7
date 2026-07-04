@@ -226,6 +226,8 @@ export default function SettingsPanel({
       if (error.code === passkeyErrorCodes.createCancelled) return 'passkey.create.cancelled';
       if (error.code === passkeyErrorCodes.missingRpId) return 'passkey.create.missingRpId';
       if (error.code === passkeyErrorCodes.missingUserName) return 'passkey.create.missingUserName';
+      if (error.code === passkeyErrorCodes.unsupportedAlgorithm) return 'passkey.create.unsupportedAlgorithm';
+      if (error.code === passkeyErrorCodes.sessionMissing) return 'passkey.create.sessionMissing';
       if (error.code === passkeyErrorCodes.unsupported) return 'passkey.create.failed';
     }
     return 'passkey.create.failed';

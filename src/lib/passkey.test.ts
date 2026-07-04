@@ -281,6 +281,33 @@ describe('passkey module - registration validation', () => {
     }
   });
 
+  it('normalizes uppercase and surrounding whitespace in rpId values', async () => {
+    stubCredentialsApi();
+    const result = await registerPasskey({ rpId: '  EXAMPLE.COM  ', rpName: 'Example', userName: 'u' });
+    expect(result.record.rpId).toBe('example.com');
+  });
+
+  it.each([
+    'example',
+    '.example.com',
+    'example.com.',
+    'example..com',
+    '-example.com',
+    'example-.com',
+    'exa_mple.com',
+    '127.0.0.1',
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.com',
+  ])('rejects invalid rpId host syntax: %s', async (rpId) => {
+    stubCredentialsApi();
+    try {
+      await registerPasskey({ rpId, rpName: 'X', userName: 'u' });
+      expect.fail('Expected PasskeyError');
+    } catch (error) {
+      expect(error).toBeInstanceOf(PasskeyError);
+      expect((error as PasskeyError).code).toBe(passkeyErrorCodes.missingRpId);
+    }
+  });
+
   it('rejects empty userName with the missingUserName error code', async () => {
     stubCredentialsApi();
     try {

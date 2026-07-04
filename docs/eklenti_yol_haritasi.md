@@ -67,7 +67,7 @@ Aegis Vault eklentisini, 1Password ve diğer rakiplerin önüne geçirecek 6 ana
 *   **Sorun:** İki adımlı doğrulama (2FA) kodları veya Geçiş Anahtarları (Passkeys/WebAuthn) mobil cihazlarda veya ayrı uygulamalarda kaldığında kullanıcı deneyimi kesintiye uğrar.
 *   **Aegis Çözümü:**
     *   **TOTP:** Giriş formu doldurulduğunda, eklenti ilgili hesabın 2FA kodunu arka planda panoya kopyalar veya doğrudan 2FA alanına otomatik doldurur.
-    *   **G?venli Anahtarlar:** Mevcut s?r?m API tokenlar?, kripto anahtarlar?, SSH s?rlar? ve manuel y?netilen g?venli kimlikleri saklar. Ger?ek WebAuthn authenticator i?levi release blocker de?ildir; Chrome/Edge Web Authentication Proxy + Rust ES256 imzalama PoC sonras? ayr? de?erlendirilecektir.
+        *   **G?venli Anahtarlar:** Mevcut s?r?m API tokenlar?, kripto anahtarlar?, SSH s?rlar?, manuel y?netilen g?venli kimlikleri ve platform WebAuthn passkey kay?tlar?n? saklar. Ger?ek taray?c? credential-provider/proxy ve Android Credential Provider deste?i ayr? bir ara?t?rma a?amas?d?r.
 
 ### 3.5 Geliştiriciler İçin "Localhost & Dev-Friendly" Doldurucu
 *   **Sorun:** Yazılım geliştiriciler gün içinde yüzlerce kez yerel test ortamlarında (`localhost:3000`, `127.0.0.1:8000`) test hesaplarıyla giriş yaparlar. Ancak şifre yöneticileri genellikle localhost adreslerini karıştırır veya her port için ayrı şifre kaydetmeye çalışır.
