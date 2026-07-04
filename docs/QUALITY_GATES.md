@@ -398,6 +398,7 @@ Recently improved:
 - wa-sqlite active marker profile validation: persisted active backend markers now reject unsupported storage scopes, missing IndexedDB VFS names, and database/VFS names that do not exactly match the selected storage scope, with tests proving forged markers are cleared without replacing OPFS.
 - wa-sqlite migration rollback source integrity gate: target rollback paths now re-verify that the OPFS/source vault still unlocks and matches the pre-migration item set, adding explicit source-drift blocker codes if rollback safety ever detects source-side mutation.
 - wa-sqlite promotion smoke profile parity: active backend readiness now requires a passing smoke test to report the exact database name and IndexedDB VFS name for the candidate persistence profile, so a smoke pass from another desktop/Android/browser scope cannot promote the backend.
+- Rust native persistence: `cargo test write_vault_database_file` verifies the desktop vault database write helper replaces existing contents through the atomic temp-file path, removes the temporary file after success, and preserves the previous database contents if temporary file creation fails.
 
 ## Next Gates
 
