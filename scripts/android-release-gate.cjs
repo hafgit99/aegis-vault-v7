@@ -110,6 +110,7 @@ if (!skipBuild) {
   run('npm', ['run', 'lint']);
   run('npm', ['run', 'security:no-js-master-string']);
   run('npm', ['run', 'security:csp']);
+  run('npm', ['run', 'security:dependencies']);
   run('npm', ['run', 'android:release:version:check']);
   run('npm', ['run', 'test:fuzz']);
   run('npm', ['run', 'build']);

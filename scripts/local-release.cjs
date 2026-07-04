@@ -39,6 +39,7 @@ printPlatformNote();
 
 if (!skipTests) {
   run('npm', ['run', 'typecheck']);
+  run('npm', ['run', 'security:dependencies']);
   run('npm', ['run', 'test:unit']);
   run('npm', ['run', 'test:fuzz']);
 }

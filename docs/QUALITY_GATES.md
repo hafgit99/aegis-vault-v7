@@ -41,7 +41,10 @@ Release candidates run dedicated security gates in addition to typecheck, unit t
 ```bash
 npm run security:no-js-master-string
 npm run security:csp
+npm run security:dependencies
 ```
+
+The dependency security gate runs `npm audit --audit-level=high` so high and critical npm advisories block release candidates while lower-severity advisories remain review items.
 
 The CSP gate fails if Tauri's production Content-Security-Policy reintroduces `style-src 'unsafe-inline'`, remote Google font origins, React inline `style={...}` props, HTML `style` attributes, or production `<style>` blocks. Desktop, Android, and wa-sqlite final gates call it automatically.
 

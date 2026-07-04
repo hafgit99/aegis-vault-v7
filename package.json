@@ -80,7 +80,8 @@
     "audit:checksums": "node scripts/generate-audit-package-checksums.cjs",
     "audit:checksums:verify": "node scripts/generate-audit-package-checksums.cjs --verify",
     "security:csp": "node scripts/security-csp-no-unsafe-inline.cjs",
-    "test:fuzz": "vitest run src/lib/importer.fuzz.test.ts src/lib/encryption.fuzz.test.ts src/lib/attachments.fuzz.test.ts"
+    "test:fuzz": "vitest run src/lib/importer.fuzz.test.ts src/lib/encryption.fuzz.test.ts src/lib/attachments.fuzz.test.ts",
+    "security:dependencies": "npm audit --audit-level=high"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",
