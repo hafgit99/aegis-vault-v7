@@ -87,6 +87,7 @@ Aegis Vault 7 enforces a strict, automated boundary so the plain-text master pas
 
 - `SECURITY_AUDIT_PACKAGE/` — third-party audit package (README, THREAT_MODEL, SECURITY_NOTES, QUALITY_GATES, MASTER_STRING_CLASSIFICATION, SHA256SUMS.txt)
 - `docs/RELEASE_PLAN.md`, `docs/ANDROID_READINESS.md`, `docs/ANDROID_MANUAL_SMOKE_CHECKLIST.md`, `docs/DESKTOP_MANUAL_SMOKE_CHECKLIST.md`
+- `docs/PUBLIC_RELEASE_BLOCKERS.md` - current final-distribution blockers from the release readiness gate
 - `docs/SECURITY_NOTES.md`, `docs/THREAT_MODEL.md`, `docs/QUALITY_GATES.md`, `docs/WA_SQLITE_FINAL_GATE.md`, `docs/MASTER_STRING_CLASSIFICATION.md`
 - `CHANGELOG.md`, `README.md`, `LOCAL_RELEASE.md`, `FIREFOX_XPI.md`
 

@@ -322,6 +322,7 @@ Do not publish a release candidate if the evidence metadata reports a dirty work
 - `docs/QUALITY_GATES.md` - test, coverage, mutation, and release gates
 - `docs/ANDROID_READINESS.md` - Android release readiness plan
 - `docs/RELEASE_PLAN.md` - desktop and release packaging plan
+- `docs/PUBLIC_RELEASE_BLOCKERS.md` - current public-distribution blockers from the final readiness gate
 - `CHANGELOG.md` - release history and notable changes
 - `FIREFOX_XPI.md` - Firefox XPI packaging/signing notes
 
