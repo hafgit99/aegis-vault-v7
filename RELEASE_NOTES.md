@@ -51,9 +51,9 @@ Aegis Vault 7 enforces a strict, automated boundary so the plain-text master pas
 
 ## Quality Gates & Validation
 
-- **Unit suite baseline:** 123 test files and 959 tests passing in the latest recorded full release-gate run.
+- **Unit suite baseline:** 129 test files and 998 tests passing in the latest recorded full release-gate run.
 - **E2E smoke:** 24 passing Chromium scenarios (setup/unlock, item lifecycle, reload persistence, mobile viewport, wa-sqlite migration UI, Emergency Kit, donation, TR/EN/ZH language switching, encrypted import/export, plain JSON export).
-- **Coverage baseline:** lines 91.18%, statements 90.02%, functions 90.25%, branches 80.99%. Current thresholds remain 90 / 90 / 85 / 80 and pass in the latest local coverage gate.
+- **Coverage baseline:** lines 91.23%, statements 90.05%, functions 90.49%, branches 82.16%. Current thresholds remain 90 / 90 / 85 / 80 and pass in the latest local coverage gate.
 - **Mutation gates:** core 460 mutants / 81.74% score; importer 682 / 80.35%; importer helpers 288 / 87.85%. (Storage and storage-orchestration gates are documented in `docs/QUALITY_GATES.md`.)
 - Full gate inventory and thresholds live in `docs/QUALITY_GATES.md`.
 
@@ -98,6 +98,7 @@ Aegis Vault 7 enforces a strict, automated boundary so the plain-text master pas
 - Complete the platform manual smoke checklist; run `desktop:release:evidence:summary -- --final` / `android:release:evidence:summary -- --final` and confirm `PASS`.
 - Publish signed artifacts only for public channels.
 - For the audit package, run `npm run audit:checksums:verify` and confirm `PASSED` before sending it to the auditor.
+
 
 
 

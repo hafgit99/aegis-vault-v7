@@ -113,4 +113,75 @@ describe('backupValidation', () => {
       /contains corrupt or invalid base64 data/
     );
   });
+
+  it('rejects null or non-object payloads', () => {
+    expect(() => validateBackupPayload(null)).toThrowError(/Invalid JSON backup/);
+    expect(() => validateBackupPayload('string')).toThrowError(/Invalid JSON backup/);
+  });
+
+  it('rejects when attachments is not an array', () => {
+    const payload = {
+      version: 7,
+      items: [{ id: '1', title: 'GitHub' }],
+      attachments: 'not-an-array'
+    };
+    expect(() => validateBackupPayload(payload)).toThrowError(/must be an array/);
+  });
+
+  it('rejects when item is not an object', () => {
+    const payload = [null];
+    expect(() => validateBackupPayload(payload)).toThrowError(/is not an object/);
+  });
+
+  it('rejects when attachment is not an object', () => {
+    const payload = {
+      version: 7,
+      items: [{ id: '1', title: 'GitHub' }],
+      attachments: [null]
+    };
+    expect(() => validateBackupPayload(payload)).toThrowError(/is not an object/);
+  });
+
+  it('handles missing attachments property cleanly', () => {
+    const payload = {
+      version: 7,
+      items: [{ id: '1', title: 'GitHub' }]
+    };
+    const result = validateBackupPayload(payload);
+    expect(result.attachments).toEqual([]);
+  });
+
+  it('rejects attachments with non-string dataBase64', () => {
+    const payload = {
+      version: 7,
+      items: [{ id: '1', title: 'GitHub' }],
+      attachments: [
+        {
+          id: 'att-1',
+          name: 'doc.txt',
+          type: 'text/plain',
+          size: 100,
+          dataBase64: 12345 // non-string type
+        }
+      ]
+    };
+    expect(() => validateBackupPayload(payload)).toThrowError(/missing required metadata fields/);
+  });
+
+  it('rejects attachments with empty string dataBase64', () => {
+    const payload = {
+      version: 7,
+      items: [{ id: '1', title: 'GitHub' }],
+      attachments: [
+        {
+          id: 'att-1',
+          name: 'doc.txt',
+          type: 'text/plain',
+          size: 100,
+          dataBase64: '' // empty string
+        }
+      ]
+    };
+    expect(() => validateBackupPayload(payload)).toThrowError(/contains corrupt or invalid base64 data/);
+  });
 });

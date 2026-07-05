@@ -193,8 +193,8 @@ npm run wa-sqlite:final:gate:unit
 Latest local verification before this README update:
 
 - `npm run lint` passed.
-- `npm run test:unit` passed: 123 test files, 959 tests.
-- `npm run test:coverage` ran: 123 test files and 959 tests passed; coverage thresholds pass at statements 90.02%, branches 80.99%, functions 90.25%, lines 91.18%.
+- `npm run test:unit` passed: 129 test files, 998 tests.
+- `npm run test:coverage` ran: 129 test files and 998 tests passed; coverage thresholds pass at statements 90.05%, branches 82.16%, functions 90.49%, lines 91.23%.
 - `npm run build` passed.
 - `npm run test:e2e:chromium` passed: 24 Chromium smoke scenarios.
 - `npm run test:mutation:core` passed: 460 mutants, 81.74% mutation score.
@@ -205,24 +205,24 @@ Latest local verification before this README update:
 
 ## Coverage
 
-![Statements](https://img.shields.io/badge/statements-90.02%25-brightgreen)
-![Branches](https://img.shields.io/badge/branches-80.99%25-brightgreen)
-![Functions](https://img.shields.io/badge/functions-90.25%25-brightgreen)
-![Lines](https://img.shields.io/badge/lines-91.18%25-brightgreen)
+![Statements](https://img.shields.io/badge/statements-90.05%25-brightgreen)
+![Branches](https://img.shields.io/badge/branches-82.16%25-brightgreen)
+![Functions](https://img.shields.io/badge/functions-90.49%25-brightgreen)
+![Lines](https://img.shields.io/badge/lines-91.23%25-brightgreen)
 
 Coverage was generated locally with `npm run test:coverage`. The tests passed, but the current coverage thresholds still block the coverage gate.
 
 | Metric | Coverage |
 | --- | ---: |
-| Statements | 90.02% |
-| Branches | 80.99% |
-| Functions | 90.25% |
-| Lines | 91.18% |
+| Statements | 90.05% |
+| Branches | 82.16% |
+| Functions | 90.49% |
+| Lines | 91.23% |
 
 | Suite | Result |
 | --- | ---: |
-| Test files | 123 passed |
-| Tests | 959 passed |
+| Test files | 129 passed |
+| Tests | 998 passed |
 | Core mutation score | 81.74% passed |
 | Importer mutation score | 80.35% passed |
 | Importer helper mutation score | 87.85% passed |
@@ -329,5 +329,6 @@ Do not publish a release candidate if the evidence metadata reports a dirty work
 ## Responsible Use
 
 Aegis Vault stores highly sensitive credentials. Use only trusted builds, keep your master password and Emergency Kit offline, and verify release artifacts before sharing them outside your own devices.
+
 
 

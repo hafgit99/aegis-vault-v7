@@ -14,19 +14,19 @@ Current measured baseline from the latest local run:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 91.18% |
-| Statements | 90.02% |
-| Functions | 90.25% |
-| Branches | 80.99% |
+| Lines | 91.23% |
+| Statements | 90.05% |
+| Functions | 90.49% |
+| Branches | 82.16% |
 
 Coverage thresholds are intentionally strict and currently pass at the measured baseline:
 
 | Metric | Current threshold | Current status |
 | --- | ---: | --- |
-| Lines | 90% | PASS at 91.18% |
-| Statements | 90% | PASS at 90.02% |
-| Functions | 85% | PASS at 90.25% |
-| Branches | 80% | PASS at 80.99% |
+| Lines | 90% | PASS at 91.23% |
+| Statements | 90% | PASS at 90.05% |
+| Functions | 85% | PASS at 90.49% |
+| Branches | 80% | PASS at 82.16% |
 
 These thresholds prevent meaningful regressions while keeping the release-quality bar visible and repeatable.
 
@@ -443,6 +443,7 @@ Recently improved:
 ## wa-sqlite Final Gate
 
 Use `npm run wa-sqlite:final:gate` before deciding whether wa-sqlite is ready for default active-backend promotion. Use `npm run wa-sqlite:final:gate:unit` for the faster focused unit/integration pass and `npm run wa-sqlite:final:gate:dry` to inspect the command plan. Details live in `docs/WA_SQLITE_FINAL_GATE.md`.
+
 
 
 

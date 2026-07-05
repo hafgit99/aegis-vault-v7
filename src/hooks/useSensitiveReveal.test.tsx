@@ -53,4 +53,41 @@ describe('useSensitiveReveal', () => {
 
     vi.useRealTimers();
   });
+
+  it('clears existing timer when toggled off before auto-hide', () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() => useSensitiveReveal());
+
+    act(() => {
+      result.current.toggleReveal('password');
+    });
+    expect(result.current.revealed.password).toBe(true);
+
+    act(() => {
+      result.current.toggleReveal('password');
+    });
+    expect(result.current.revealed.password).toBe(false);
+
+    // Verify timer was cleared and won't throw/re-hide or do anything unexpected
+    act(() => {
+      vi.advanceTimersByTime(15_000);
+    });
+    expect(result.current.revealed.password).toBe(false);
+
+    vi.useRealTimers();
+  });
+
+  it('clears active timers on unmount', () => {
+    vi.useFakeTimers();
+    const { result, unmount } = renderHook(() => useSensitiveReveal());
+
+    act(() => {
+      result.current.toggleReveal('password');
+    });
+
+    // Unmount hook, triggering cleanup
+    unmount();
+
+    vi.useRealTimers();
+  });
 });

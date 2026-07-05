@@ -543,4 +543,50 @@ describe('attachment encryption', () => {
     await expect(getAttachmentBlob('attachment-1')).resolves.toBeNull();
     await expect(getAttachmentBlob('attachment-2')).resolves.toBeNull();
   });
+
+  it('handles undefined indexedDB gracefully in export, import, and delete', async () => {
+    const originalIndexedDB = global.indexedDB;
+    // @ts-ignore
+    delete global.indexedDB;
+
+    await expect(exportAllAttachments()).resolves.toEqual([]);
+    await expect(importAttachments([{ id: '1', name: '1.txt', type: 'text', size: 10, dataBase64: 'abc' }])).resolves.toEqual([]);
+    await expect(deleteAttachments(['1'])).resolves.toBeUndefined();
+
+    // Restore
+    global.indexedDB = originalIndexedDB;
+  });
+
+  it('skips attachments failing decryption during export', async () => {
+    openTestVaultSession();
+
+    // Put a broken record that fails decryption
+    const brokenRecord: AttachmentRecord = {
+      id: 'attachment-broken',
+      name: 'broken.txt',
+      type: 'text/plain',
+      size: 12,
+      data: bytes('unencrypted raw data'),
+      encrypted: true,
+      algorithm: 'AES-256-GCM',
+      iv: 'invalid-iv-not-24-hex',
+      tag: 'invalid-tag-not-32-hex',
+    };
+    await putAttachmentRecord(brokenRecord);
+
+    // Put a working record
+    await saveAttachment('attachment-working', new File([bytes('working content')], 'work.txt', { type: 'text/plain' }));
+
+    // Mock console.error to avoid spamming output
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const exported = await exportAllAttachments();
+    
+    // Broken should be skipped, only working is exported
+    expect(exported).toHaveLength(1);
+    expect(exported[0].id).toBe('attachment-working');
+    expect(consoleSpy).toHaveBeenCalled();
+
+    consoleSpy.mockRestore();
+  });
 });
