@@ -121,11 +121,11 @@ describe('encrypted backup envelope', () => {
       name: 'SecureBackupError',
     });
 
-    // Too low memoryKiB
+    // Too low memoryKiB (below the absolute 8 MiB floor for portable WASM).
     const weakMemoryEnvelope = {
       ...baseEnvelope,
       kdfParams: {
-        memoryKiB: 32768, // 32 MiB (too low)
+        memoryKiB: 4096, // 4 MiB (too low)
         iterations: 4,
       },
     };
@@ -140,7 +140,7 @@ describe('encrypted backup envelope', () => {
     const weakIterationsEnvelope = {
       ...baseEnvelope,
       kdfParams: {
-        memoryKiB: 65536,
+        memoryKiB: 32 * 1024,
         iterations: 2, // too low
       },
     };

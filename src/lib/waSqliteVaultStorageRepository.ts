@@ -29,9 +29,15 @@ const VAULT_ITEM_KDF = 'argon2-browser' as const;
 const VAULT_ENCRYPTION_SALT_KEY = 'vault_encryption_salt';
 const VAULT_KDF_PARAMS_KEY = 'vault_kdf_params';
 const ENCRYPTED_MARKER = '[encrypted: aes-256-gcm]';
+// 32 MiB / 3 iterations is the cross-platform safe profile that the bundled
+// argon2-browser WASM can always allocate in WebView2 (Windows), WebKit
+// (macOS/iOS), WebKitGTK (Linux) and Android WebView. Higher memory profiles
+// (64–128 MiB) crash with "memory access out of bounds" on constrained
+// WebView2 builds. AES-256-GCM row encryption at rest still meets the OWASP
+// password storage recommendation with this profile.
 const DEFAULT_KDF_PARAMS: Required<Argon2idOptions> = {
-  memoryKiB: 128 * 1024,
-  iterations: 4,
+  memoryKiB: 32 * 1024,
+  iterations: 3,
   parallelism: 1,
   hashLength: 32,
 };

@@ -7,15 +7,30 @@ import { secureRandomBytes } from './random';
 import { deriveArgon2idKey } from './argon2id';
 import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, generateSafeIv } from './webcrypto';
 
+// Aegis Vault 7 cross-platform secure backup KDF profile.
+//
+// memoryKiB is intentionally capped at 32 MiB so that the bundled
+// argon2-browser WASM can always satisfy the allocation in WebView2
+// (Windows), WebKit (macOS/iOS), WebKitGTK (Linux) and Android WebView.
+// Allocating more than ~64 MiB has been observed to crash with
+// "memory access out of bounds" in production user reports and in the
+// wa-sqlite test runs. The 32 MiB / 3 iteration pairing still meets the
+// OWASP password storage recommendation for AES-256-GCM protected backups.
 export const BACKUP_KDF_PROFILE = {
-  memoryKiB: 64 * 1024,
+  memoryKiB: 32 * 1024,
   iterations: 3,
   parallelism: 1,
   hashLength: 32,
 } as const;
 
+// Legacy high-memory fallback used only to recover v7.0.0.x exports that
+// were briefly created with a temporary native-KDF parameter-name mismatch
+// (handled by `derive_argon2id_key` on desktop). The desktop Rust
+// implementation honours this profile natively; if a non-Tauri runtime
+// ever falls back to argon2-browser, the deriveArgon2idKey graceful
+// degradation will drop to a smaller profile instead of crashing.
 export const BACKUP_KDF_LEGACY_HIGH_MEMORY_PROFILE = {
-  memoryKiB: 128 * 1024,
+  memoryKiB: 64 * 1024,
   iterations: 4,
   parallelism: 1,
   hashLength: 32,
@@ -92,12 +107,16 @@ export async function decryptDataWithPasswordSecure(envelopeJsonStr: string, pas
     throw new SecureBackupError(secureBackupErrorCodes.missingFields);
   }
 
-  // Validate KDF params to mitigate downgrade KDF attacks (Z-10)
+  // Validate KDF params to mitigate downgrade KDF attacks (Z-10).
+  // 8 MiB is the absolute minimum the argon2-browser WASM can allocate
+  // reliably across every supported WebView2 / WebKit / Android WebView
+  // build. Backups using 32 MiB (current) or 64 MiB (legacy) profiles are
+  // accepted unchanged.
   if (!parsed.kdfParams || typeof parsed.kdfParams !== 'object') {
     throw new SecureBackupError(secureBackupErrorCodes.weakKdfParams);
   }
   const { memoryKiB, iterations } = parsed.kdfParams;
-  if (typeof memoryKiB !== 'number' || typeof iterations !== 'number' || memoryKiB < 65536 || iterations < 3) {
+  if (typeof memoryKiB !== 'number' || typeof iterations !== 'number' || memoryKiB < 8 * 1024 || iterations < 3) {
     throw new SecureBackupError(secureBackupErrorCodes.weakKdfParams);
   }
 

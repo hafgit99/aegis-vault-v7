@@ -52,14 +52,14 @@ const VAULT_ITEM_KDF = 'argon2-browser' as const;
 const LEGACY_VAULT_ITEM_KDF = 'legacy-simulated-argon2id' as const;
 const LEGACY_VAULT_ITEM_KDF_SALT = 'aegis_vault_v7_db_encryption_salt';
 const LEGACY_VAULT_ITEM_KDF_PARAMS = {
-  memoryKiB: 64 * 1024,
+  memoryKiB: 32 * 1024,
   iterations: 3,
   parallelism: 1,
   hashLength: 32,
 };
 const NEW_VAULT_ITEM_KDF_PARAMS = {
-  memoryKiB: 128 * 1024,
-  iterations: 4,
+  memoryKiB: 32 * 1024,
+  iterations: 3,
   parallelism: 1,
   hashLength: 32,
 };

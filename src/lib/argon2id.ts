@@ -46,9 +46,14 @@ export function isDesktopRuntime(): boolean {
   return typeof window !== 'undefined' && Boolean(window.__TAURI_INTERNALS__);
 }
 
+// WebView2/WebKit/WebKitGTK can fail Argon2id allocations above ~64 MiB with
+// "memory access out of bounds" runtime errors (see docs/SECURITY_NOTES.md and
+// the Aegis Vault backup WASM memory hardening). 32 MiB is a conservative,
+// widely portable default that still meets the OWASP password storage
+// recommendation when paired with 3+ iterations and AES-256-GCM at rest.
 const DEFAULT_OPTIONS: Required<Argon2idOptions> = {
-  memoryKiB: 128 * 1024,
-  iterations: 4,
+  memoryKiB: 32 * 1024,
+  iterations: 3,
   parallelism: 1,
   hashLength: 32,
 };
@@ -93,19 +98,50 @@ export async function deriveArgon2idKey(
     }
   }
 
-  const argon2 = await loadArgon2();
-  const resolved = resolveOptions(options);
-  const result = await argon2.hash({
-    pass: password,
-    salt,
-    type: argon2.ArgonType.Argon2id,
-    hashLen: resolved.hashLength,
-    time: resolved.iterations,
-    mem: resolved.memoryKiB,
-    parallelism: resolved.parallelism,
-  });
+  // WebView2 / WebKit / WebKitGTK / Android WebView can fail Argon2id
+  // allocations with "memory access out of bounds" runtime errors when
+  // requested memory exceeds what the host's WASM linear memory can address
+  // (the bundled argon2.wasm uses a 32-bit address space). Try the requested
+  // parameters first, then gracefully drop to a known-safe profile before
+  // surfacing a stable error to the caller.
+  const FALLBACK_PROFILES: Required<Argon2idOptions>[] = [
+    { memoryKiB: 16 * 1024, iterations: 3, parallelism: 1, hashLength: 32 },
+    { memoryKiB: 8 * 1024, iterations: 3, parallelism: 1, hashLength: 32 },
+    { memoryKiB: 4 * 1024, iterations: 2, parallelism: 1, hashLength: 32 },
+  ];
 
-  return result.hash;
+  const requested = resolveOptions(options);
+  const profiles: Required<Argon2idOptions>[] = [requested];
+  for (const fallback of FALLBACK_PROFILES) {
+    if (fallback.memoryKiB >= requested.memoryKiB) continue;
+    profiles.push(fallback);
+  }
+
+  let lastError: unknown = null;
+  for (const profile of profiles) {
+    try {
+      const argon2 = await loadArgon2();
+      const result = await argon2.hash({
+        pass: password,
+        salt,
+        type: argon2.ArgonType.Argon2id,
+        hashLen: profile.hashLength,
+        time: profile.iterations,
+        mem: profile.memoryKiB,
+        parallelism: profile.parallelism,
+      });
+      return result.hash;
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : String(error ?? '');
+      if (!/memory access out of bounds|out of memory|wasm|RangeError/i.test(message)) {
+        throw error;
+      }
+      // try the next (smaller) profile
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('argon2-browser-wasm-memory-unsupported');
 }
 
 export async function createArgon2idHash(

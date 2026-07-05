@@ -102,3 +102,4 @@ describe('secure encrypted backup envelope', () => {
   });
 
 });
+

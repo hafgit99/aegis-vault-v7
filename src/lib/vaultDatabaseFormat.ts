@@ -65,9 +65,14 @@ export function normalizeVaultDatabaseState(raw: unknown): VersionedVaultDatabas
       : 1;
 
   const rawKdfParams = input.kdfParams;
+  // Default to the cross-platform safe KDF profile (32 MiB / 3 iterations)
+  // so the bundled argon2-browser WASM can always satisfy the allocation
+  // in WebView2 (Windows), WebKit (macOS/iOS), WebKitGTK (Linux) and Android
+  // WebView. The 128 MiB default previously crashed on constrained WebView2
+  // builds with "memory access out of bounds" during unlock and import.
   const kdfParams = rawKdfParams && typeof rawKdfParams === 'object' ? {
-    memoryKiB: typeof (rawKdfParams as any).memoryKiB === 'number' ? (rawKdfParams as any).memoryKiB : 128 * 1024,
-    iterations: typeof (rawKdfParams as any).iterations === 'number' ? (rawKdfParams as any).iterations : 4,
+    memoryKiB: typeof (rawKdfParams as any).memoryKiB === 'number' ? (rawKdfParams as any).memoryKiB : 32 * 1024,
+    iterations: typeof (rawKdfParams as any).iterations === 'number' ? (rawKdfParams as any).iterations : 3,
     parallelism: typeof (rawKdfParams as any).parallelism === 'number' ? (rawKdfParams as any).parallelism : 1,
     hashLength: typeof (rawKdfParams as any).hashLength === 'number' ? (rawKdfParams as any).hashLength : 32,
   } : undefined;

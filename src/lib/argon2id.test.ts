@@ -76,6 +76,44 @@ describe('argon2id adapter', () => {
     await expect(verifyArgon2idHash('wrong-password', '$argon2id$hash')).resolves.toBe(false);
   });
 
+  it('gracefully degrades to smaller Argon2id profiles on WASM "memory access out of bounds" errors', async () => {
+    const memoryError = new Error('memory access out of bounds');
+    let callCount = 0;
+    hash.mockImplementation(async ({ mem }) => {
+      callCount += 1;
+      if (mem >= 16 * 1024) {
+        throw memoryError;
+      }
+      return {
+        hash: new Uint8Array(32).fill(3),
+        encoded: '$argon2id$degraded',
+      };
+    });
+
+    const key = await deriveArgon2idKey('password', 'salt', {
+      memoryKiB: 32 * 1024,
+      iterations: 3,
+      parallelism: 1,
+      hashLength: 32,
+    });
+
+    expect(key).toHaveLength(32);
+    expect(callCount).toBeGreaterThanOrEqual(2);
+    expect(hash.mock.calls.some(([args]) => (args as any).mem <= 8 * 1024)).toBe(true);
+  });
+
+  it('surfaces the underlying WASM error when even the smallest fallback profile fails', async () => {
+    const fatalError = new Error('memory access out of bounds');
+    hash.mockRejectedValue(fatalError);
+
+    await expect(deriveArgon2idKey('password', 'salt', {
+      memoryKiB: 32 * 1024,
+      iterations: 3,
+      parallelism: 1,
+      hashLength: 32,
+    })).rejects.toBe(fatalError);
+  });
+
   describe('Tauri desktop runtime', () => {
     beforeEach(() => {
       (window as any).__TAURI_INTERNALS__ = {};
