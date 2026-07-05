@@ -34,6 +34,8 @@ import { changeMasterPassword, deleteVaultItem, getRememberedAccountSecretKey, g
 import { AppNotification, VaultItem } from '../types';
 import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from '../lib/encryption';
 import { parseUniversalImport, decodeFileBuffer } from '../lib/importer';
+import { exportAllAttachments, importAttachments, deleteAttachments } from '../lib/attachments';
+import { validateBackupPayload } from '../lib/backupValidation';
 import { secureRandomToken } from '../lib/random';
 import { registerBiometric, isBiometricEnabled, disableBiometric, isBiometricSupported, getBiometricType } from '../lib/biometric';
 import { withActiveBackupPassword } from '../lib/vaultSession';
@@ -122,6 +124,16 @@ function getBackupDecryptErrorMessage(err: any, t: ReturnType<typeof useLanguage
       return t('settings.import.decryptErrorUnsupported');
     case 'secureBackup.weakKdfParams':
       return t('settings.import.decryptErrorWeakParams');
+    case 'validation.invalidBackupFormat':
+    case 'validation.missingItems':
+    case 'validation.itemMissingRequiredFields':
+      return t('settings.import.invalidList');
+    case 'validation.attachmentTooLarge':
+      return t('settings.import.errorAttachmentTooLarge') || 'Attachment size exceeds 250MB limit.';
+    case 'validation.backupTooLarge':
+      return t('settings.import.errorBackupTooLarge') || 'Backup file size exceeds 100MB limit.';
+    case 'validation.attachmentCorruptData':
+      return t('settings.import.errorAttachmentCorrupt') || 'Attachment data is corrupt.';
     default:
       return err?.message || t('settings.import.decryptErrorFallback');
   }
@@ -675,12 +687,18 @@ export default function SettingsPanel({
   };
 
   const executePlainExport = async () => {
-    const latestItems = await getVaultItems();
-    setItems(latestItems);
-    const filename = `aegis_acik_yedek_${currentDateSlug()}.json`;
-    const contents = JSON.stringify(latestItems, null, 2);
-
     try {
+      const latestItems = await getVaultItems();
+      setItems(latestItems);
+      const attachments = await exportAllAttachments();
+      const envelope = {
+        version: 7,
+        items: latestItems,
+        attachments,
+      };
+      const filename = `aegis_acik_yedek_${currentDateSlug()}.json`;
+      const contents = JSON.stringify(envelope, null, 2);
+
       const savedWithDialog = await saveDesktopExportFile(filename, contents);
       if (!savedWithDialog) {
         if (isNativeFileDialogSupported()) {
@@ -706,22 +724,32 @@ export default function SettingsPanel({
     setBackupError(null);
 
     const exportWithPassword = async (passwordToUse: string) => {
-      const latestItems = await getVaultItems();
-      setItems(latestItems);
-      const encryptedJsonString = await encryptDataWithPasswordSecure(JSON.stringify(latestItems), passwordToUse);
-      const filename = `aegis_guvenli_yedek_${currentDateSlug()}.aegis`;
-      const savedWithDialog = await saveDesktopExportFile(filename, encryptedJsonString);
-      if (!savedWithDialog) {
-        if (isNativeFileDialogSupported()) {
-          setBackupError(`${t('settings.export.encryptErrorPrefix')}: ${t('settings.export.defaultSaveError')}`);
-          return;
+      try {
+        const latestItems = await getVaultItems();
+        setItems(latestItems);
+        const attachments = await exportAllAttachments();
+        const envelope = {
+          version: 7,
+          items: latestItems,
+          attachments,
+        };
+        const encryptedJsonString = await encryptDataWithPasswordSecure(JSON.stringify(envelope), passwordToUse);
+        const filename = `aegis_guvenli_yedek_${currentDateSlug()}.aegis`;
+        const savedWithDialog = await saveDesktopExportFile(filename, encryptedJsonString);
+        if (!savedWithDialog) {
+          if (isNativeFileDialogSupported()) {
+            setBackupError(`${t('settings.export.encryptErrorPrefix')}: ${t('settings.export.defaultSaveError')}`);
+            return;
+          }
+          downloadTextFile(filename, encryptedJsonString);
         }
-        downloadTextFile(filename, encryptedJsonString);
-      }
 
-      setBackupSuccess(t('settings.export.encryptedSuccess'));
-      setCustomBackupPassword('');
-      setTimeout(() => setBackupSuccess(null), 5000);
+        setBackupSuccess(t('settings.export.encryptedSuccess'));
+        setCustomBackupPassword('');
+        setTimeout(() => setBackupSuccess(null), 5000);
+      } catch (err: any) {
+        setBackupError(`${t('settings.export.encryptErrorPrefix')}: ${err?.message || t('settings.export.defaultSaveError')}`);
+      }
     };
 
     try {
@@ -757,9 +785,16 @@ export default function SettingsPanel({
     });
   };
 
-  const handleImportedItems = async (itemsList: any[]) => {
+  const handleImportedItems = async (itemsList: any[], attachmentsList: any[] = []) => {
     const mappedItems: VaultItem[] = [];
     const nowStr = new Date().toISOString().split('T')[0];
+
+    // Snapshot of current SQLite items state to support transactional rollback
+    const originalItems = await getVaultItems();
+    const originalItemIds = new Set(originalItems.map(item => item.id));
+    const importedItemIds = itemsList.map(x => x.id).filter(Boolean) as string[];
+    const newlyInsertedIds = importedItemIds.filter(id => !originalItemIds.has(id));
+    const updatedOriginalItems = originalItems.filter(item => importedItemIds.includes(item.id));
 
     setImportState(prev => ({
       ...prev,
@@ -807,26 +842,73 @@ export default function SettingsPanel({
       }
     }
 
-    if (mappedItems.length > 0) {
-      setImportState(prev => ({
-        ...prev,
-        status: 'saving',
-        percent: 60,
-        message: t('settings.import.stage.encrypting'),
-      }));
-      await maybeDelay(50);
+    let sqliteSuccess = false;
+    let importedAttachmentIds: string[] = [];
 
-      if (isTestEnv) {
-        await saveVaultItems(mappedItems);
-      } else {
-        await saveVaultItems(mappedItems, (savedCount) => {
-          const percent = 60 + Math.round((savedCount / mappedItems.length) * 35);
-          setImportState(prev => ({
-            ...prev,
-            percent,
-          }));
-        });
+    try {
+      if (mappedItems.length > 0) {
+        setImportState(prev => ({
+          ...prev,
+          status: 'saving',
+          percent: 60,
+          message: t('settings.import.stage.encrypting'),
+        }));
+        await maybeDelay(50);
+
+        if (isTestEnv) {
+          await saveVaultItems(mappedItems);
+        } else {
+          await saveVaultItems(mappedItems, (savedCount) => {
+            const percent = 60 + Math.round((savedCount / mappedItems.length) * 20);
+            setImportState(prev => ({
+              ...prev,
+              percent,
+            }));
+          });
+        }
+        sqliteSuccess = true;
       }
+
+      // Import attachments to IndexedDB
+      if (attachmentsList.length > 0) {
+        setImportState(prev => ({
+          ...prev,
+          status: 'attachments_saving',
+          percent: 85,
+          message: 'Saving attachments...',
+        }));
+        await maybeDelay(50);
+        importedAttachmentIds = await importAttachments(attachmentsList);
+      }
+
+    } catch (err: any) {
+      // Automatic Rollback to prevent partial write state
+      console.error('Import failed, initiating rollback...', err);
+      
+      if (sqliteSuccess) {
+        try {
+          // Delete newly inserted items
+          for (const id of newlyInsertedIds) {
+            await deleteVaultItem(id);
+          }
+          // Restore original items that were updated
+          if (updatedOriginalItems.length > 0) {
+            await saveVaultItems(updatedOriginalItems);
+          }
+        } catch (sqliteRollbackErr) {
+          console.error('Failed to rollback SQLite items:', sqliteRollbackErr);
+        }
+      }
+
+      if (importedAttachmentIds.length > 0) {
+        try {
+          await deleteAttachments(importedAttachmentIds);
+        } catch (idbRollbackErr) {
+          console.error('Failed to rollback IndexedDB attachments:', idbRollbackErr);
+        }
+      }
+
+      throw err;
     }
 
     setImportState(prev => ({
@@ -866,13 +948,12 @@ export default function SettingsPanel({
 
     try {
       const decryptedDataStr = await decryptDataWithPasswordSecure(JSON.stringify(envelope), decryptPasswordInput);
-      const parsedItemsList = JSON.parse(decryptedDataStr);
+      const parsedEnvelope = JSON.parse(decryptedDataStr);
 
-      if (!Array.isArray(parsedItemsList)) {
-        throw new Error(t('settings.import.invalidList'));
-      }
+      // Validate the backup schema (items and attachments)
+      const { items, attachments } = validateBackupPayload(parsedEnvelope);
 
-      const importedNum = await handleImportedItems(parsedItemsList);
+      const importedNum = await handleImportedItems(items, attachments);
 
       setImportState(prev => ({
         ...prev,
@@ -936,6 +1017,11 @@ export default function SettingsPanel({
     });
 
     try {
+      // 1. Hardened safety check for total backup size
+      if (file.size > 100 * 1024 * 1024) {
+        throw new Error(t('settings.import.errorBackupTooLarge') || 'Backup file size exceeds 100MB limit.');
+      }
+
       const buffer = await readFileAsArrayBuffer(file);
       
       setImportState(prev => ({
@@ -947,25 +1033,18 @@ export default function SettingsPanel({
       await maybeDelay(200);
 
       const decodedResult = decodeFileBuffer(buffer);
-      const scanResult = parseUniversalImport(decodedResult, importLabels);
-      await maybeDelay(300);
 
-      if (scanResult.type === 'error') {
-        throw new Error(scanResult.message);
-      }
+      // Check if it parses as our version 7 unencrypted envelope structure
+      let parsedJson: any = null;
+      try {
+        parsedJson = JSON.parse(decodedResult.trim());
+      } catch {}
 
-      if (scanResult.type === 'encrypted_aegis') {
-        setImportState({
-          status: 'decrypting_pending',
-          percent: 0,
-          message: '',
-          errorMsg: null,
-          successMsg: null,
-          pendingEnvelope: scanResult.envelope,
-        });
-      } else {
-        const count = await handleImportedItems(scanResult.items);
-        
+      if (parsedJson && parsedJson.version === 7 && parsedJson.items) {
+        // Strict Validation
+        const { items, attachments } = validateBackupPayload(parsedJson, file.size);
+        const count = await handleImportedItems(items, attachments);
+
         setImportState(prev => ({
           ...prev,
           status: 'syncing',
@@ -981,20 +1060,66 @@ export default function SettingsPanel({
           percent: 100,
           message: '',
           errorMsg: null,
-          successMsg: `✓ ${scanResult.formatName} ${t('settings.import.detectedSuccessMiddle')} ${count} ${t('settings.import.recordsLoadedSuffix')}`,
+          successMsg: `✓ Aegis JSON Backup ${t('settings.import.detectedSuccessMiddle')} ${count} ${t('settings.import.recordsLoadedSuffix')}`,
           pendingEnvelope: null,
         });
 
         setTimeout(() => {
           setImportState(prev => prev.status === 'success' ? { ...prev, status: 'idle', successMsg: null } : prev);
         }, 4000);
+      } else {
+        const scanResult = parseUniversalImport(decodedResult, importLabels);
+        await maybeDelay(300);
+
+        if (scanResult.type === 'error') {
+          throw new Error(scanResult.message);
+        }
+
+        if (scanResult.type === 'encrypted_aegis') {
+          setImportState({
+            status: 'decrypting_pending',
+            percent: 0,
+            message: '',
+            errorMsg: null,
+            successMsg: null,
+            pendingEnvelope: scanResult.envelope,
+          });
+        } else {
+          // Validate the scanResult items list before saving to prevent corrupt metadata imports
+          const { items } = validateBackupPayload(scanResult.items, file.size);
+          const count = await handleImportedItems(items);
+          
+          setImportState(prev => ({
+            ...prev,
+            status: 'syncing',
+            percent: 98,
+            message: t('settings.import.stage.syncing'),
+          }));
+          await maybeDelay(300);
+
+          await onDatabaseChanged();
+
+          setImportState({
+            status: 'success',
+            percent: 100,
+            message: '',
+            errorMsg: null,
+            successMsg: `✓ ${scanResult.formatName} ${t('settings.import.detectedSuccessMiddle')} ${count} ${t('settings.import.recordsLoadedSuffix')}`,
+            pendingEnvelope: null,
+          });
+
+          setTimeout(() => {
+            setImportState(prev => prev.status === 'success' ? { ...prev, status: 'idle', successMsg: null } : prev);
+          }, 4000);
+        }
       }
     } catch (err: any) {
+      const errorMsg = err?.code ? getBackupDecryptErrorMessage(err, t) : (err?.message || t('settings.import.errorFallback'));
       setImportState({
         status: 'error',
         percent: 0,
         message: '',
-        errorMsg: err?.message || t('settings.import.errorFallback'),
+        errorMsg,
         successMsg: null,
         pendingEnvelope: null,
       });

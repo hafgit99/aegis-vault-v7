@@ -9,7 +9,7 @@ import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from '..
 import { isNativeFileDialogSupported, openDesktopImportFile, saveDesktopExportFile } from '../lib/desktopFiles';
 import { isAndroidAutofillSupported, openAndroidAutofillSettings } from '../lib/androidAutofill';
 import { disableBiometric, isBiometricEnabled, isBiometricSupported, registerBiometric } from '../lib/biometric';
-import { changeMasterPassword, getRememberedAccountSecretKey, getVaultItems, isAccountSecretKeyRequired, migrateActiveVaultStorageToWaSqlite, resetSystem, reseedDemoData, saveVaultItem, saveVaultItems, verifyMasterPassword } from '../lib/storage';
+import { changeMasterPassword, deleteVaultItem, getRememberedAccountSecretKey, getVaultItems, isAccountSecretKeyRequired, migrateActiveVaultStorageToWaSqlite, resetSystem, reseedDemoData, saveVaultItem, saveVaultItems, verifyMasterPassword } from '../lib/storage';
 import { closeVaultSession, openVaultSession } from '../lib/vaultSession';
 import { VaultItem } from '../types';
 import { LanguageProvider } from '../i18n/LanguageContext';
@@ -34,6 +34,7 @@ const vaultItems: VaultItem[] = [
 
 vi.mock('../lib/storage', () => ({
   changeMasterPassword: vi.fn(),
+  deleteVaultItem: vi.fn(async () => []),
   getRememberedAccountSecretKey: vi.fn(() => null),
   getVaultItems: vi.fn(async () => vaultItems),
   isAccountSecretKeyRequired: vi.fn(() => true),
@@ -81,6 +82,13 @@ vi.mock('../lib/biometric', () => ({
 
 vi.mock('../lib/emergencyKit', () => ({
   saveEmergencyKit: vi.fn(async () => true),
+}));
+
+vi.mock('../lib/attachments', () => ({
+  exportAllAttachments: vi.fn(async () => []),
+  importAttachments: vi.fn(async () => []),
+  deleteAttachments: vi.fn(async () => {}),
+  deleteAttachment: vi.fn(async () => {}),
 }));
 
 function renderSettings() {
@@ -239,7 +247,10 @@ describe('SettingsPanel import/export', () => {
     fireEvent.submit(encryptedExportForm(container));
 
     await waitFor(() => {
-      expect(encryptDataWithPasswordSecure).toHaveBeenCalledWith(JSON.stringify(vaultItems), 'master-pass');
+      expect(encryptDataWithPasswordSecure).toHaveBeenCalledWith(
+        JSON.stringify({ version: 7, items: vaultItems, attachments: [] }),
+        'master-pass'
+      );
     });
     expect(saveDesktopExportFile).toHaveBeenCalledWith(expect.stringMatching(/\.aegis$/), expect.stringContaining('"encrypted":true'));
     expect(sessionStorage.getItem('aegis_session_master_pass')).toBeNull();
@@ -255,7 +266,10 @@ describe('SettingsPanel import/export', () => {
     fireEvent.submit(encryptedExportForm(container));
 
     await waitFor(() => {
-      expect(encryptDataWithPasswordSecure).toHaveBeenCalledWith(JSON.stringify(vaultItems), 'backup-pass-12');
+      expect(encryptDataWithPasswordSecure).toHaveBeenCalledWith(
+        JSON.stringify({ version: 7, items: vaultItems, attachments: [] }),
+        'backup-pass-12'
+      );
     });
   });
 
@@ -847,7 +861,10 @@ describe('SettingsPanel plain export and import errors', () => {
     vi.useRealTimers();
 
     await waitFor(() => {
-      expect(saveDesktopExportFile).toHaveBeenCalledWith(expect.stringMatching(/\.json$/), JSON.stringify(vaultItems, null, 2));
+      expect(saveDesktopExportFile).toHaveBeenCalledWith(
+        expect.stringMatching(/\.json$/),
+        JSON.stringify({ version: 7, items: vaultItems, attachments: [] }, null, 2)
+      );
       expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledTimes(1);
     });
   });
@@ -905,7 +922,10 @@ describe('SettingsPanel plain export and import errors', () => {
     vi.useRealTimers();
 
     await waitFor(() => {
-      expect(saveDesktopExportFile).toHaveBeenCalledWith(expect.stringMatching(/\.json$/), JSON.stringify(vaultItems, null, 2));
+      expect(saveDesktopExportFile).toHaveBeenCalledWith(
+        expect.stringMatching(/\.json$/),
+        JSON.stringify({ version: 7, items: vaultItems, attachments: [] }, null, 2)
+      );
       expect(container.textContent).toContain('Dosya kaydedilemedi');
     });
     expect(HTMLAnchorElement.prototype.click).not.toHaveBeenCalled();
@@ -1023,7 +1043,10 @@ describe('SettingsPanel import interaction states', () => {
     vi.useRealTimers();
 
     await waitFor(() => {
-      expect(saveDesktopExportFile).toHaveBeenCalledWith(expect.stringMatching(/\.json$/), JSON.stringify(vaultItems, null, 2));
+      expect(saveDesktopExportFile).toHaveBeenCalledWith(
+        expect.stringMatching(/\.json$/),
+        JSON.stringify({ version: 7, items: vaultItems, attachments: [] }, null, 2)
+      );
       expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledTimes(1);
     });
 
@@ -1140,6 +1163,77 @@ describe('SettingsPanel import interaction states', () => {
       expect(container.textContent).toContain('liste');
     });
     expect(saveVaultItems).not.toHaveBeenCalled();
+  });
+
+  it('rejects a backup file exceeding the 100MB file size limit during import', async () => {
+    const { container } = renderSettings();
+    
+    // Create a mock small file but override size property to 101 MB to avoid memory lags
+    const file = new File(['{}'], 'huge_backup.json', { type: 'application/json' });
+    Object.defineProperty(file, 'size', { value: 101 * 1024 * 1024 });
+
+    fireEvent.change(fileInput(container), { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(container.textContent).toContain('100MB');
+    });
+  });
+
+  it('performs rollback of items if attachment saving fails during restore', async () => {
+    // Mock saveVaultItems to succeed but importAttachments to fail
+    vi.mocked(saveVaultItems).mockResolvedValueOnce(vaultItems);
+    const { importAttachments } = await import('../lib/attachments');
+    vi.mocked(importAttachments).mockRejectedValueOnce(new Error('IndexedDB storage full'));
+
+    const parsedData = {
+      version: 7,
+      items: [
+        { id: 'new-github', title: 'GitHub New', username: 'new-user' }
+      ],
+      attachments: [
+        {
+          id: 'att-fail',
+          name: 'doc.txt',
+          type: 'text/plain',
+          size: 100,
+          dataBase64: 'SGVsbG8gV29ybGQ='
+        }
+      ]
+    };
+
+    vi.mocked(decryptDataWithPasswordSecure).mockResolvedValueOnce(JSON.stringify(parsedData));
+
+    const { container } = renderSettings();
+    const file = new File(
+      [
+        JSON.stringify({
+          version: '1.2',
+          kdf: 'Argon2id',
+          salt: 'salt',
+          payload: 'ciphertext',
+          iv: 'iv',
+          tag: 'tag',
+        }),
+      ],
+      'secure.aegis',
+      { type: 'application/json' },
+    );
+
+    fireEvent.change(fileInput(container), { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(container.querySelector('#universal-import-card form')).toBeTruthy();
+    });
+
+    fireEvent.change(container.querySelector('input[placeholder*="Kilidi"]') as HTMLInputElement, {
+      target: { value: 'backup-pass' },
+    });
+    fireEvent.submit(container.querySelector('#universal-import-card form') as HTMLFormElement);
+
+    // Rollback deletes the newly inserted item
+    await waitFor(() => {
+      expect(deleteVaultItem).toHaveBeenCalledWith('new-github');
+    });
   });
 });
 

@@ -569,3 +569,138 @@ export async function deleteAttachment(id: string): Promise<void> {
     };
   });
 }
+
+export interface AttachmentBackupRecord {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  dataBase64: string;
+}
+
+export function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+export function base64ToArrayBuffer(value: string): ArrayBuffer {
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
+/**
+ * Retrieves all attachments from IndexedDB, decrypts them, and converts to Base64 format for backups.
+ */
+export async function exportAllAttachments(): Promise<AttachmentBackupRecord[]> {
+  if (typeof indexedDB === 'undefined') {
+    return [];
+  }
+  const db = await initDB();
+  try {
+    const records = await new Promise<AttachmentRecord[]>((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.getAll();
+
+      request.onsuccess = () => resolve(request.result as AttachmentRecord[]);
+      request.onerror = () => reject(request.error);
+      transaction.onerror = () => reject(transaction.error);
+    });
+
+    const backupRecords: AttachmentBackupRecord[] = [];
+    for (const record of records) {
+      try {
+        const decrypted = await decryptAttachmentData(record);
+        backupRecords.push({
+          id: record.id,
+          name: record.name,
+          type: record.type,
+          size: record.size,
+          dataBase64: arrayBufferToBase64(decrypted),
+        });
+      } catch (err) {
+        console.error(`Failed to decrypt attachment ${record.id} for export:`, err);
+      }
+    }
+    return backupRecords;
+  } finally {
+    db.close();
+  }
+}
+
+/**
+ * Takes decrypted attachments from backup, encrypts them, and writes to IndexedDB in a single transaction.
+ */
+export async function importAttachments(attachments: AttachmentBackupRecord[]): Promise<string[]> {
+  if (typeof indexedDB === 'undefined' || attachments.length === 0) {
+    return [];
+  }
+  const db = await initDB();
+  try {
+    const importedIds: string[] = [];
+    const encryptedRecords: AttachmentRecord[] = [];
+
+    for (const att of attachments) {
+      const rawBuffer = base64ToArrayBuffer(att.dataBase64);
+      const encryptedAttachment = await encryptAttachmentData(att.id, rawBuffer);
+      encryptedRecords.push({
+        id: att.id,
+        name: att.name,
+        type: att.type,
+        size: att.size,
+        ...encryptedAttachment,
+      });
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+
+      encryptedRecords.forEach((record) => {
+        store.put(record);
+        importedIds.push(record.id);
+      });
+
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+
+    return importedIds;
+  } finally {
+    db.close();
+  }
+}
+
+/**
+ * Deletes multiple attachments from IndexedDB in a single transaction.
+ */
+export async function deleteAttachments(ids: string[]): Promise<void> {
+  if (typeof indexedDB === 'undefined' || ids.length === 0) {
+    return;
+  }
+  const db = await initDB();
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+
+      ids.forEach((id) => {
+        store.delete(id);
+      });
+
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+  } finally {
+    db.close();
+  }
+}
+

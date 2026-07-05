@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @vitest-environment jsdom
  */
 
@@ -17,6 +17,9 @@ import {
   migrateAttachmentRecordToAesGcm,
   reencryptAttachmentsForVaultKeyChange,
   saveAttachment,
+  exportAllAttachments,
+  importAttachments,
+  deleteAttachments,
   type AttachmentRecord,
 } from './attachments';
 import { closeVaultSession, openVaultSession } from './vaultSession';
@@ -499,5 +502,45 @@ describe('attachment encryption', () => {
     openVaultSession('new-master-pass', 'new-master-pass', NEW_VAULT_KEY);
     const result = await getAttachmentBlob('attachment-1');
     await expect(blobText(result?.blob)).resolves.toBe('private file');
+  });
+
+  it('exports all attachments, imports them in bulk, and supports bulk deletion', async () => {
+    openTestVaultSession();
+
+    // 1. Save two attachments
+    await saveAttachment('attachment-1', new File([bytes('file 1 content')], 'file1.txt', { type: 'text/plain' }));
+    await saveAttachment('attachment-2', new File([bytes('file 2 content')], 'file2.txt', { type: 'text/plain' }));
+
+    // 2. Export them
+    const exported = await exportAllAttachments();
+    expect(exported).toHaveLength(2);
+    
+    const att1 = exported.find(x => x.id === 'attachment-1');
+    const att2 = exported.find(x => x.id === 'attachment-2');
+    expect(att1?.name).toBe('file1.txt');
+    expect(att2?.name).toBe('file2.txt');
+    expect(atob(att1!.dataBase64)).toBe('file 1 content');
+    expect(atob(att2!.dataBase64)).toBe('file 2 content');
+
+    // 3. Clear Database
+    await deleteAttachment('attachment-1');
+    await deleteAttachment('attachment-2');
+    await expect(getAttachmentBlob('attachment-1')).resolves.toBeNull();
+    await expect(getAttachmentBlob('attachment-2')).resolves.toBeNull();
+
+    // 4. Import them in bulk
+    const importedIds = await importAttachments(exported);
+    expect(importedIds).toEqual(['attachment-1', 'attachment-2']);
+
+    const blob1 = await getAttachmentBlob('attachment-1');
+    await expect(blobText(blob1?.blob)).resolves.toBe('file 1 content');
+
+    const blob2 = await getAttachmentBlob('attachment-2');
+    await expect(blobText(blob2?.blob)).resolves.toBe('file 2 content');
+
+    // 5. Bulk deletion
+    await deleteAttachments(['attachment-1', 'attachment-2']);
+    await expect(getAttachmentBlob('attachment-1')).resolves.toBeNull();
+    await expect(getAttachmentBlob('attachment-2')).resolves.toBeNull();
   });
 });
