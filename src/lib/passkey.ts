@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -29,6 +29,7 @@ export const passkeyErrorCodes = {
   unsupported: 'passkey.unsupported',
   createFailed: 'passkey.createFailed',
   createCancelled: 'passkey.createCancelled',
+  rpIdOriginMismatch: 'passkey.rpIdOriginMismatch',
   missingRpId: 'passkey.missingRpId',
   missingUserName: 'passkey.missingUserName',
   sessionMissing: 'passkey.sessionMissing',
@@ -332,6 +333,9 @@ export async function registerPasskey(input: RegisterPasskeyInput): Promise<Regi
     if (name === 'NotAllowedError' || name === 'AbortError') {
       throw new PasskeyError(passkeyErrorCodes.createCancelled);
     }
+    if (name === 'SecurityError') {
+      throw new PasskeyError(passkeyErrorCodes.rpIdOriginMismatch);
+    }
     logSecurityEvent(
       securityEventCodes.passkeyCreateFailed,
       'WebAuthn create() rejected by platform authenticator.',
@@ -443,6 +447,9 @@ export async function authenticatePasskey(input: AuthenticatePasskeyInput): Prom
     if (name === 'NotAllowedError' || name === 'AbortError') {
       throw new PasskeyError(passkeyErrorCodes.createCancelled);
     }
+    if (name === 'SecurityError') {
+      throw new PasskeyError(passkeyErrorCodes.rpIdOriginMismatch);
+    }
     throw new PasskeyError(passkeyErrorCodes.createFailed);
   }
   if (!assertion) throw new PasskeyError(passkeyErrorCodes.createFailed);
@@ -507,4 +514,6 @@ export function vaultFieldsToRecord(itemId: string, fields: VaultPasskeyFields):
     attachment: fields.passkeyAttachment,
   };
 }
+
+
 

@@ -382,6 +382,11 @@ describe('passkey module - registration validation', () => {
       code: passkeyErrorCodes.createCancelled,
     });
 
+    create.mockRejectedValueOnce(new DOMException('rp id mismatch', 'SecurityError'));
+    await expect(registerPasskey({ rpId: 'example.com', rpName: 'Example', userName: 'alice' })).rejects.toMatchObject({
+      code: passkeyErrorCodes.rpIdOriginMismatch,
+    });
+
     create.mockRejectedValueOnce(new Error('platform failed'));
     await expect(registerPasskey({ rpId: 'example.com', rpName: 'Example', userName: 'alice' })).rejects.toMatchObject({
       code: passkeyErrorCodes.createFailed,
@@ -580,6 +585,7 @@ describe('passkey module - vault field mapping', () => {
     expect(record?.userName).toBe('alice@example.com');
   });
 });
+
 
 
 

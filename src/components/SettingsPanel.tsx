@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -178,11 +178,11 @@ export default function SettingsPanel({
   const [passkeyStatusKind, setPasskeyStatusKind] = useState<'success' | 'error' | 'info' | null>(null);
   const [passkeyBusy, setPasskeyBusy] = useState(false);
 
-  // ── Extension Token Rotation ──────────────────────────────────────────────
+  // â”€â”€ Extension Token Rotation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [tokenRotateStatus, setTokenRotateStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [tokenRotateMessage, setTokenRotateMessage] = useState<string | null>(null);
 
-  // ── Cloud Sync (WebDAV E2EE) States ───────────────────────────────────────
+  // â”€â”€ Cloud Sync (WebDAV E2EE) States â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [syncProvider, setSyncProvider] = useState<'disabled' | 'webdav'>('disabled');
   const [syncUrl, setSyncUrl] = useState('');
   const [syncUsername, setSyncUsername] = useState('');
@@ -205,7 +205,7 @@ export default function SettingsPanel({
 
   const handleSyncTest = async () => {
     const err = validateWebDavConfig({ url: syncUrl, username: syncUsername, password: syncPassword });
-    if (err) { setSyncTestResult(`❌ ${err}`); return; }
+    if (err) { setSyncTestResult(`âŒ ${err}`); return; }
     setSyncTestLoading(true);
     setSyncTestResult(null);
     try {
@@ -241,6 +241,7 @@ export default function SettingsPanel({
   const passkeyErrorToStatusKey = (error: unknown): Parameters<typeof t>[0] => {
     if (error instanceof PasskeyError) {
       if (error.code === passkeyErrorCodes.createCancelled) return 'passkey.create.cancelled';
+      if (error.code === passkeyErrorCodes.rpIdOriginMismatch) return 'passkey.create.rpIdOriginMismatch';
       if (error.code === passkeyErrorCodes.missingRpId) return 'passkey.create.missingRpId';
       if (error.code === passkeyErrorCodes.missingUserName) return 'passkey.create.missingUserName';
       if (error.code === passkeyErrorCodes.unsupportedAlgorithm) return 'passkey.create.unsupportedAlgorithm';
@@ -780,7 +781,7 @@ export default function SettingsPanel({
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as ArrayBuffer);
-      reader.onerror = () => reject(reader.error || new Error('Dosya okunamadı.'));
+      reader.onerror = () => reject(reader.error || new Error('Dosya okunamadÄ±.'));
       reader.readAsArrayBuffer(file);
     });
   };
@@ -1060,7 +1061,7 @@ export default function SettingsPanel({
           percent: 100,
           message: '',
           errorMsg: null,
-          successMsg: `✓ Aegis JSON Backup ${t('settings.import.detectedSuccessMiddle')} ${count} ${t('settings.import.recordsLoadedSuffix')}`,
+          successMsg: `âœ“ Aegis JSON Backup ${t('settings.import.detectedSuccessMiddle')} ${count} ${t('settings.import.recordsLoadedSuffix')}`,
           pendingEnvelope: null,
         });
 
@@ -1104,7 +1105,7 @@ export default function SettingsPanel({
             percent: 100,
             message: '',
             errorMsg: null,
-            successMsg: `✓ ${scanResult.formatName} ${t('settings.import.detectedSuccessMiddle')} ${count} ${t('settings.import.recordsLoadedSuffix')}`,
+            successMsg: `âœ“ ${scanResult.formatName} ${t('settings.import.detectedSuccessMiddle')} ${count} ${t('settings.import.recordsLoadedSuffix')}`,
             pendingEnvelope: null,
           });
 
@@ -1487,7 +1488,7 @@ export default function SettingsPanel({
         t={t}
       />
 
-      {/* Extension Token Rotation — desktop only */}
+      {/* Extension Token Rotation â€” desktop only */}
       {typeof window !== 'undefined' && window.__TAURI_INTERNALS__ && (
         <div className="p-4 sm:p-6 bg-brand-surface-container rounded-2xl border border-white/8 space-y-3" id="extension-token-section">
           <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2 border-b border-white/5 pb-2">
@@ -1522,3 +1523,5 @@ export default function SettingsPanel({
     </div>
   );
 }
+
+
