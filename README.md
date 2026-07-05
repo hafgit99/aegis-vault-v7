@@ -1,4 +1,4 @@
-# Aegis Vault 7
+﻿# Aegis Vault 7
 
 Aegis Vault 7 is a local-first password manager and secure vault built with React, TypeScript, WebCrypto, wa-sqlite, OPFS legacy migration support, and Tauri. It is designed for desktop-first use today, with an Android release candidate path already in active validation.
 
@@ -193,8 +193,8 @@ npm run wa-sqlite:final:gate:unit
 Latest local verification before this README update:
 
 - `npm run lint` passed.
-- `npm run test:unit` passed: 118 test files, 926 tests.
-- `npm run test:coverage` ran: 118 test files and 926 tests passed; coverage thresholds currently block at statements 86.38%, branches 77.85%, functions 86.64%, lines 87.53%.
+- `npm run test:unit` passed: 123 test files, 959 tests.
+- `npm run test:coverage` ran: 123 test files and 959 tests passed; coverage thresholds pass at statements 90.02%, branches 80.99%, functions 90.25%, lines 91.18%.
 - `npm run build` passed.
 - `npm run test:e2e:chromium` passed: 24 Chromium smoke scenarios.
 - `npm run test:mutation:core` passed: 460 mutants, 81.74% mutation score.
@@ -205,24 +205,24 @@ Latest local verification before this README update:
 
 ## Coverage
 
-![Statements](https://img.shields.io/badge/statements-86.38%25-yellow)
-![Branches](https://img.shields.io/badge/branches-77.85%25-orange)
-![Functions](https://img.shields.io/badge/functions-86.64%25-yellow)
-![Lines](https://img.shields.io/badge/lines-87.53%25-yellow)
+![Statements](https://img.shields.io/badge/statements-90.02%25-brightgreen)
+![Branches](https://img.shields.io/badge/branches-80.99%25-brightgreen)
+![Functions](https://img.shields.io/badge/functions-90.25%25-brightgreen)
+![Lines](https://img.shields.io/badge/lines-91.18%25-brightgreen)
 
 Coverage was generated locally with `npm run test:coverage`. The tests passed, but the current coverage thresholds still block the coverage gate.
 
 | Metric | Coverage |
 | --- | ---: |
-| Statements | 86.38% |
-| Branches | 77.85% |
-| Functions | 86.64% |
-| Lines | 87.53% |
+| Statements | 90.02% |
+| Branches | 80.99% |
+| Functions | 90.25% |
+| Lines | 91.18% |
 
 | Suite | Result |
 | --- | ---: |
-| Test files | 118 passed |
-| Tests | 926 passed |
+| Test files | 123 passed |
+| Tests | 959 passed |
 | Core mutation score | 81.74% passed |
 | Importer mutation score | 80.35% passed |
 | Importer helper mutation score | 87.85% passed |
@@ -329,3 +329,5 @@ Do not publish a release candidate if the evidence metadata reports a dirty work
 ## Responsible Use
 
 Aegis Vault stores highly sensitive credentials. Use only trusted builds, keep your master password and Emergency Kit offline, and verify release artifacts before sharing them outside your own devices.
+
+

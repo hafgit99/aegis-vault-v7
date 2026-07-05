@@ -1,4 +1,4 @@
-# Quality Gates
+﻿# Quality Gates
 
 This document tracks the automated test gates for Aegis Vault 7. The goal is to raise confidence in small, measurable steps without making early development brittle.
 
@@ -14,27 +14,35 @@ Current measured baseline from the latest local run:
 
 | Metric | Baseline |
 | --- | ---: |
-| Lines | 87.53% |
-| Statements | 86.38% |
-| Functions | 86.64% |
-| Branches | 77.85% |
+| Lines | 91.18% |
+| Statements | 90.02% |
+| Functions | 90.25% |
+| Branches | 80.99% |
 
-Coverage thresholds are intentionally stricter than the current baseline and currently block the coverage gate until the remaining gaps are closed:
+Coverage thresholds are intentionally strict and currently pass at the measured baseline:
 
 | Metric | Current threshold | Current status |
 | --- | ---: | --- |
-| Lines | 90% | BLOCKED at 87.53% |
-| Statements | 90% | BLOCKED at 86.38% |
-| Functions | 85% | PASS at 86.64% |
-| Branches | 80% | BLOCKED at 77.85% |
+| Lines | 90% | PASS at 91.18% |
+| Statements | 90% | PASS at 90.02% |
+| Functions | 85% | PASS at 90.25% |
+| Branches | 80% | PASS at 80.99% |
 
-These thresholds prevent meaningful regressions while keeping the coverage gap visible instead of silently lowering the release-quality bar.
+These thresholds prevent meaningful regressions while keeping the release-quality bar visible and repeatable.
 
 ## Priority Coverage Targets
 
+Completed in the latest coverage recovery pass:
+
+1. `src/hooks/useAndroidAutofillCoordinator.ts`: pending, stale, cancel, approve, native completion failure, and Android save-candidate state-machine coverage.
+2. `src/lib/indexedDbStorage.ts`: IndexedDB read/write/remove/clear, localStorage migration, sync-cache fallback, and unsupported IndexedDB no-op coverage.
+3. `src/lib/sync/syncConfigStorage.ts`, `src/lib/sync/index.ts`, `src/lib/clipboard.ts`, and `src/lib/passkey.ts`: encrypted sync config persistence, provider factory, protected clipboard fallback, and WebAuthn create/authenticate error paths.
+
+Next useful targets after the 90/80 global gate is stable:
+
 1. `src/components/SettingsPanel.tsx`: reduce remaining fallback-message and desktop-runtime branch gaps.
-2. `src/lib/indexedDbStorage.ts` and `src/lib/sync/configStorage.ts`: add focused tests or exclude platform-only adapters from coverage if they remain intentionally out of release scope.
-3. `src/hooks/useAutofillCoordinator.ts`: add state-machine branch coverage for pending/cancelled/completed Android Autofill requests.
+2. `src/lib/attachments.ts` and `src/lib/biometric.ts`: deepen edge-case coverage around legacy metadata and platform bridge failures.
+3. `src/lib/waSqlite*.ts`: continue migration rollback and persistence branch coverage as wa-sqlite becomes the default storage path.
 
 ## Security Gate Scripts
 
@@ -435,4 +443,7 @@ Recently improved:
 ## wa-sqlite Final Gate
 
 Use `npm run wa-sqlite:final:gate` before deciding whether wa-sqlite is ready for default active-backend promotion. Use `npm run wa-sqlite:final:gate:unit` for the faster focused unit/integration pass and `npm run wa-sqlite:final:gate:dry` to inspect the command plan. Details live in `docs/WA_SQLITE_FINAL_GATE.md`.
+
+
+
 

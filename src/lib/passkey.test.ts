@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { closeVaultSession, openVaultSession } from './vaultSession';
 import {
+  authenticatePasskey,
   decodeCredentialId,
   detectWebAuthnCapability,
   encodeCredentialId,
@@ -198,6 +199,35 @@ describe('passkey module - registration lifecycle', () => {
     expect(result.attestation.authenticatorAttachment).toBe('platform');
   });
 
+
+  it('registers without optional transports or attachment when the platform omits them', async () => {
+    Object.defineProperty(globalThis, 'PublicKeyCredential', {
+      configurable: true,
+      value: function PublicKeyCredential() {},
+    });
+    Object.defineProperty(navigator, 'credentials', {
+      configurable: true,
+      value: {
+        create: vi.fn(async () => ({
+          rawId: makeFakeCredentialId(41),
+          response: {
+            ...makeFakeAttestationResponse(),
+            getTransports: () => { throw new Error('not exposed'); },
+            authenticatorAttachment: 'unknown',
+          },
+          type: 'public-key',
+        })),
+        get: vi.fn(async () => makeFakeCredential()),
+      },
+    });
+
+    const result = await registerPasskey({ rpId: 'example.com', rpName: 'Example', userName: 'alice' });
+
+    expect(result.record.transports).toBeUndefined();
+    expect(result.record.attachment).toBeUndefined();
+    expect(result.attestation.transports).toBeUndefined();
+    expect(result.attestation.authenticatorAttachment).toBeUndefined();
+  });
   it('passes the Relying Party options through the WebAuthn ceremony', async () => {
     const create = vi.fn(async () => makeFakeCredential());
     Object.defineProperty(globalThis, 'PublicKeyCredential', {
@@ -335,6 +365,40 @@ describe('passkey module - registration validation', () => {
     }
   });
 
+
+  it('maps WebAuthn registration cancellation and missing public key to passkey errors', async () => {
+    Object.defineProperty(globalThis, 'PublicKeyCredential', {
+      configurable: true,
+      value: function PublicKeyCredential() {},
+    });
+    const create = vi.fn();
+    Object.defineProperty(navigator, 'credentials', {
+      configurable: true,
+      value: { create, get: vi.fn(async () => makeFakeCredential()) },
+    });
+
+    create.mockRejectedValueOnce(new DOMException('cancelled', 'NotAllowedError'));
+    await expect(registerPasskey({ rpId: 'example.com', rpName: 'Example', userName: 'alice' })).rejects.toMatchObject({
+      code: passkeyErrorCodes.createCancelled,
+    });
+
+    create.mockRejectedValueOnce(new Error('platform failed'));
+    await expect(registerPasskey({ rpId: 'example.com', rpName: 'Example', userName: 'alice' })).rejects.toMatchObject({
+      code: passkeyErrorCodes.createFailed,
+    });
+
+    create.mockResolvedValueOnce({
+      rawId: makeFakeCredentialId(31),
+      response: {
+        ...makeFakeAttestationResponse(),
+        getPublicKey: () => null,
+      },
+      type: 'public-key',
+    });
+    await expect(registerPasskey({ rpId: 'example.com', rpName: 'Example', userName: 'alice' })).rejects.toMatchObject({
+      code: passkeyErrorCodes.createFailed,
+    });
+  });
   it('throws the unsupported error code when the credentials API is missing', async () => {
     try {
       await registerPasskey({ rpId: 'example.com', rpName: 'X', userName: 'u' });
@@ -346,6 +410,93 @@ describe('passkey module - registration validation', () => {
   });
 });
 
+
+describe('passkey module - authentication lifecycle', () => {
+  afterEach(() => {
+    unstubCredentialsApi();
+  });
+
+  it('authenticates a passkey assertion and returns encoded WebAuthn response fields', async () => {
+    const credentialId = makeFakeCredentialId(21);
+    const signature = new Uint8Array([1, 2, 3, 4]).buffer;
+    const authenticatorData = new Uint8Array([5, 6, 7, 8]).buffer;
+    const clientDataJSON = new TextEncoder().encode('{"type":"webauthn.get"}').buffer as ArrayBuffer;
+    const userHandle = new Uint8Array([9, 10, 11]).buffer;
+    const get = vi.fn(async () => ({
+      rawId: credentialId,
+      response: {
+        signature,
+        authenticatorData,
+        clientDataJSON,
+        userHandle,
+      },
+      type: 'public-key',
+    }));
+    Object.defineProperty(globalThis, 'PublicKeyCredential', {
+      configurable: true,
+      value: function PublicKeyCredential() {},
+    });
+    Object.defineProperty(navigator, 'credentials', {
+      configurable: true,
+      value: { create: vi.fn(async () => makeFakeCredential()), get },
+    });
+
+    const result = await authenticatePasskey({
+      rpId: 'EXAMPLE.COM',
+      challenge: new Uint8Array([1, 1, 2, 3]),
+      credentialIds: [encodeCredentialId(new Uint8Array([7, 8, 9]))],
+      userVerification: 'required',
+      timeoutMs: 12_000,
+      mediation: 'optional',
+    });
+
+    expect(result.credentialId).toBe(encodeCredentialId(new Uint8Array(credentialId)));
+    expect(result.userHandle).toBe(encodeCredentialId(new Uint8Array(userHandle)));
+    expect(result.signatureBase64).toBe('AQIDBA==');
+    expect(result.authenticatorDataBase64).toBe('BQYHCA==');
+    expect(result.clientDataJsonBase64).toBe('eyJ0eXBlIjoid2ViYXV0aG4uZ2V0In0=');
+    expect(get).toHaveBeenCalledWith({
+      publicKey: expect.objectContaining({
+        rpId: 'example.com',
+        timeout: 12_000,
+        userVerification: 'required',
+        allowCredentials: [expect.objectContaining({ type: 'public-key' })],
+      }),
+      mediation: 'optional',
+    });
+  });
+
+  it('rejects unsupported, cancelled, failed, and empty passkey assertions', async () => {
+    await expect(authenticatePasskey({ rpId: 'example.com' })).rejects.toMatchObject({
+      code: passkeyErrorCodes.unsupported,
+    });
+
+    Object.defineProperty(globalThis, 'PublicKeyCredential', {
+      configurable: true,
+      value: function PublicKeyCredential() {},
+    });
+    const get = vi.fn();
+    Object.defineProperty(navigator, 'credentials', {
+      configurable: true,
+      value: { create: vi.fn(async () => makeFakeCredential()), get },
+    });
+
+    get.mockRejectedValueOnce(new DOMException('cancelled', 'AbortError'));
+    await expect(authenticatePasskey({ rpId: 'example.com' })).rejects.toMatchObject({
+      code: passkeyErrorCodes.createCancelled,
+    });
+
+    get.mockRejectedValueOnce(new Error('platform failed'));
+    await expect(authenticatePasskey({ rpId: 'example.com' })).rejects.toMatchObject({
+      code: passkeyErrorCodes.createFailed,
+    });
+
+    get.mockResolvedValueOnce(null);
+    await expect(authenticatePasskey({ rpId: 'example.com' })).rejects.toMatchObject({
+      code: passkeyErrorCodes.createFailed,
+    });
+  });
+});
 describe('passkey module - recovery (no-JS-master-string boundary)', () => {
   beforeEach(() => {
     openVaultSession('aegis-test-master', 'aegis-test-master', new Uint8Array(32).fill(5));
@@ -429,3 +580,7 @@ describe('passkey module - vault field mapping', () => {
     expect(record?.userName).toBe('alice@example.com');
   });
 });
+
+
+
+
