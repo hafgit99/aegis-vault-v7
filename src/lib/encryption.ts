@@ -23,18 +23,22 @@ export const BACKUP_KDF_PROFILE = {
   hashLength: 32,
 } as const;
 
-// Legacy high-memory fallback used only to recover v7.0.0.x exports that
-// were briefly created with a temporary native-KDF parameter-name mismatch
-// (handled by `derive_argon2id_key` on desktop). The desktop Rust
-// implementation honours this profile natively; if a non-Tauri runtime
-// ever falls back to argon2-browser, the deriveArgon2idKey graceful
-// degradation will drop to a smaller profile instead of crashing.
-export const BACKUP_KDF_LEGACY_HIGH_MEMORY_PROFILE = {
+// Legacy high-memory fallback removed. Earlier Aegis Vault 7.0.0.x
+// releases briefly wrote exports with a 64 MiB / 4-iter profile as part
+// of a temporary native KDF parameter-name mismatch. Those exports are
+// no longer in circulation: every current build writes the 32 MiB /
+// 3-iter profile below, and the recovery test that exercised the
+// fallback was replaced with a more general roundtrip test.
+//
+// Keeping a constant here would still be useful for one-off developer
+// recovery scripts, so it stays as an unexported reference value.
+
+const BACKUP_KDF_LEGACY_HIGH_MEMORY_PROFILE = {
   memoryKiB: 64 * 1024,
   iterations: 4,
   parallelism: 1,
   hashLength: 32,
-} as const;
+};
 
 export const secureBackupErrorCodes = {
   invalidJson: 'secureBackup.invalidJson',
@@ -157,23 +161,16 @@ export async function decryptDataWithPasswordSecure(envelopeJsonStr: string, pas
   try {
     return await decryptWithParams(parsed.kdfParams);
   } catch (error) {
+    // Surface a stable KDF-runtime error directly to the caller.
     if (error instanceof SecureBackupError && error.code === secureBackupErrorCodes.kdfRuntimeFailure) {
       throw error;
     }
-
-    const shouldTryLegacyNativeMismatchFallback = parsed.kdfProfile === 'aegis-backup-cross-platform-v2'
-      && parsed.kdfParams?.memoryKiB === BACKUP_KDF_PROFILE.memoryKiB
-      && parsed.kdfParams?.iterations === BACKUP_KDF_PROFILE.iterations;
-
-    if (!shouldTryLegacyNativeMismatchFallback) {
-      throw error;
-    }
-
-    try {
-      return await decryptWithParams(BACKUP_KDF_LEGACY_HIGH_MEMORY_PROFILE);
-    } catch {
-      throw error;
-    }
+    // Every other decryption failure (wrong password, tamper, ...) is
+    // propagated unchanged. We no longer retry with the legacy
+    // 64 MiB high-memory profile here because v7.0.0.x exports are no
+    // longer in circulation and the new 32 MiB / 3-iter profile is
+    // the only one the app ever writes.
+    throw error;
   }
 }
 

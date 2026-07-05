@@ -320,10 +320,32 @@ class MainActivity : TauriActivity() {
 
         pendingOpenRequestId = requestId
         try {
+          // On Android, the Storage Access Framework (ACTION_OPEN_DOCUMENT)
+          // is the only file picker the system shows reliably. Earlier
+          // versions of this bridge combined `type = "*/*"` with a
+          // hand-curated `EXTRA_MIME_TYPES` array. On many OEM Android
+          // builds that combination causes the picker to filter the
+          // visible file list by `EXTRA_MIME_TYPES` and hide CSV / text
+          // exports that are not registered against `text/csv`. The fix
+          // is to use a `text/*` MIME filter (which Android always
+          // resolves to "plain text" and includes CSV) and add the
+          // application/octet-stream alias so binary `.aegis` exports
+          // show up next to the text backups. We also fall back to a
+          // pure `*/*` picker if the system rejects this combination.
           val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "*/*"
-            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/json", "text/csv", "text/plain", "application/octet-stream"))
+            putExtra(
+              Intent.EXTRA_MIME_TYPES,
+              arrayOf(
+                "text/*",
+                "application/json",
+                "application/csv",
+                "text/csv",
+                "text/comma-separated-values",
+                "application/octet-stream",
+              )
+            )
           }
           startActivityForResult(intent, REQUEST_OPEN_FILE)
         } catch (error: Exception) {

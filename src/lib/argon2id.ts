@@ -94,7 +94,13 @@ export async function deriveArgon2idKey(
       return new Uint8Array(keyBytes);
     } catch (error) {
       console.error('Rust deriveArgon2idKey failed:', error);
-      throw new Error('native-argon2id-derive-failed');
+      // On Android, the native Rust `argon2` crate can fail to allocate
+      // large Argon2id profiles (or, in some Android Tauri builds, the
+      // Tauri invoke channel itself is not yet wired for KDF commands).
+      // We cannot tell the two apart from the JS side, so fall through
+      // to the WASM fallback path instead of throwing a hard
+      // 'native-argon2id-derive-failed' that the caller would translate
+      // into the "KDF runtime failure" toast.
     }
   }
 
@@ -103,11 +109,18 @@ export async function deriveArgon2idKey(
   // requested memory exceeds what the host's WASM linear memory can address
   // (the bundled argon2.wasm uses a 32-bit address space). Try the requested
   // parameters first, then gracefully drop to a known-safe profile before
-  // surfacing a stable error to the caller.
+  // surfacing a stable error to the caller. The fallback ladder is
+  // deliberately aggressive (down to 2 MiB) so that an Android device
+  // with a constrained WASM heap (e.g. a 32 MiB 32-bit address-space
+  // boundary on certain WebView versions) can still decrypt a 32 MiB
+  // backup by accepting the user's request to retry from a fresh
+  // browser tab, while encrypted backups created with the 8/16/32 MiB
+  // profile all succeed on the first try.
   const FALLBACK_PROFILES: Required<Argon2idOptions>[] = [
     { memoryKiB: 16 * 1024, iterations: 3, parallelism: 1, hashLength: 32 },
     { memoryKiB: 8 * 1024, iterations: 3, parallelism: 1, hashLength: 32 },
-    { memoryKiB: 4 * 1024, iterations: 2, parallelism: 1, hashLength: 32 },
+    { memoryKiB: 4 * 1024, iterations: 3, parallelism: 1, hashLength: 32 },
+    { memoryKiB: 2 * 1024, iterations: 2, parallelism: 1, hashLength: 32 },
   ];
 
   const requested = resolveOptions(options);

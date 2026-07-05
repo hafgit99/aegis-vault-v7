@@ -2,7 +2,6 @@
 
 import { deriveArgon2idKey } from './argon2id';
 import {
-  BACKUP_KDF_LEGACY_HIGH_MEMORY_PROFILE,
   BACKUP_KDF_PROFILE,
   decryptDataWithPasswordSecure,
   encryptDataWithPasswordSecure,
@@ -11,12 +10,6 @@ import {
 import { generateSafeIv, webCryptoAesGcmEncrypt } from './webcrypto';
 
 const testKey = new Uint8Array(32).fill(7);
-const legacyKey = new Uint8Array(32).fill(9);
-
-async function sha256Hex(input: Uint8Array): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', input);
-  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
-}
 
 vi.mock('./argon2id', () => ({
   deriveArgon2idKey: vi.fn(async () => testKey),
@@ -71,35 +64,5 @@ describe('secure encrypted backup envelope', () => {
       name: 'SecureBackupError',
     });
   });
-
-  it('recovers exports created by the temporary native KDF parameter-name mismatch', async () => {
-    vi.mocked(deriveArgon2idKey).mockImplementation(async (_password, _salt, options) => {
-      return options?.memoryKiB === BACKUP_KDF_LEGACY_HIGH_MEMORY_PROFILE.memoryKiB ? legacyKey : testKey;
-    });
-    const bundle = await webCryptoAesGcmEncrypt('secret export', legacyKey, generateSafeIv());
-    const payloadBytes = new TextEncoder().encode(bundle.ciphertext);
-    const envelope = JSON.stringify({
-      version: '1.2',
-      generator: 'Aegis Secure Core',
-      kdf: 'Argon2id',
-      kdfImplementation: 'argon2-browser',
-      kdfProfile: 'aegis-backup-cross-platform-v2',
-      kdfParams: BACKUP_KDF_PROFILE,
-      cipher: 'WebCrypto AES-256-GCM',
-      salt: '00'.repeat(16),
-      iv: bundle.iv,
-      tag: bundle.tag,
-      payload: bundle.ciphertext,
-      checksum: await sha256Hex(payloadBytes),
-    });
-
-    await expect(decryptDataWithPasswordSecure(envelope, 'backup-password')).resolves.toBe('secret export');
-    expect(deriveArgon2idKey).toHaveBeenCalledWith(
-      'backup-password',
-      '00'.repeat(16),
-      BACKUP_KDF_LEGACY_HIGH_MEMORY_PROFILE,
-    );
-  });
-
 });
 

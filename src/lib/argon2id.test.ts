@@ -151,18 +151,28 @@ describe('argon2id adapter', () => {
       expect(isVerified).toBe(true);
     });
 
-    it('does not fall back to WASM when Tauri derive invoke throws an error', async () => {
+    it('falls back to the WASM graceful-degradation path when Tauri derive invoke throws an error', async () => {
       invoke.mockRejectedValue(new Error('Tauri error'));
+      // Reset the hash mock so the previous test's "memory access out of
+      // bounds" mock implementation does not leak into this one.
+      hash.mockReset();
+      hash.mockResolvedValue({ hash: new Uint8Array(16), encoded: 'mock-encoded' });
 
-      await expect(deriveArgon2idKey('password', 'salt', {
+      // On Android the native Rust argon2 crate can fail to allocate a
+      // 32 MiB profile, and in some Tauri Android builds the KDF invoke
+      // channel is not wired at all. The adapter now transparently falls
+      // through to the WASM path so the user can still import their
+      // backup instead of being blocked by a hard
+      // 'native-argon2id-derive-failed' error.
+      const key = await deriveArgon2idKey('password', 'salt', {
         memoryKiB: 1024,
         iterations: 2,
         parallelism: 1,
         hashLength: 16,
-      })).rejects.toThrow('native-argon2id-derive-failed');
+      });
 
+      expect(key).toBeInstanceOf(Uint8Array);
       expect(invoke).toHaveBeenCalled();
-      expect(hash).not.toHaveBeenCalled();
     });
 
     it('does not fall back to WASM when Tauri hash invoke throws an error', async () => {
