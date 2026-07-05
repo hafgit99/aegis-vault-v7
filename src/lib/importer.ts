@@ -39,6 +39,56 @@ function normalizeOptionalImportString(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
+/**
+ * Builds a non-empty human-readable title for an imported vault item.
+ *
+ * Many CSV exports (and a few sloppy JSON exports) ship rows with an empty
+ * title cell. The vault schema requires every item to have a title or a
+ * username, so a "İsimsiz Aktarım" / "Untitled Import" placeholder is
+ * unavoidable when the row really has no identifying data. To keep the
+ * fallback as informative as possible we prefer, in order:
+ *
+ *   1. the explicit `titleCandidate` argument (e.g. the row's own title
+ *      cell, trimmed)
+ *   2. the row's `username` value (e.g. an email or login name)
+ *   3. the row's `url` host (e.g. "github.com" for a row with no name)
+ *   4. the row's `notes` first line as a last-ditch descriptive label
+ *   5. the localized `untitledFallback` (İsimsiz Aktarım / Untitled Import)
+ *
+ * Returning a non-empty string is guaranteed; the placeholder is only
+ * used when every other source is empty.
+ */
+function buildImportedTitle(
+  titleCandidate: string | undefined,
+  username: string | undefined,
+  url: string | undefined,
+  notes: string | undefined,
+  untitledFallback: string,
+): string {
+  if (titleCandidate && titleCandidate.trim().length > 0) {
+    return titleCandidate.trim();
+  }
+  if (username && username.trim().length > 0) {
+    return username.trim();
+  }
+  if (url && url.trim().length > 0) {
+    try {
+      // Trim trailing slashes, paths, and ports so the title stays short.
+      const parsed = new URL(url.trim().includes('://') ? url.trim() : `https://${url.trim()}`);
+      const host = parsed.hostname.replace(/^www\./i, '');
+      if (host) return host;
+    } catch {
+      const stripped = url.trim().replace(/^https?:\/\//i, '').replace(/^www\./i, '').split('/')[0];
+      if (stripped) return stripped;
+    }
+  }
+  if (notes && notes.trim().length > 0) {
+    const firstLine = notes.trim().split(/\r?\n/)[0].trim();
+    if (firstLine.length > 0 && firstLine.length <= 60) return firstLine;
+  }
+  return untitledFallback;
+}
+
 
 /**
  * Parses any password manager export/backup and returns a normalized unified list.
@@ -63,29 +113,34 @@ export function parseUniversalImport(fileContent: string, labels: Partial<Import
       // 2. Multi-record Aegis JSON array
       if (Array.isArray(parsed)) {
         // Double check if typical Aegis JSON format
-        const items: Partial<VaultItem>[] = parsed.map(x => ({
-          title: normalizeImportString(x.title, 'Untitled Import'),
-          username: normalizeImportString(x.username),
-          password: normalizeImportString(x.password),
-          url: normalizeImportString(x.url),
-          notes: normalizeImportString(x.notes),
-          totpSecret: normalizeImportString(x.totpSecret),
-          category: normalizeImportString(x.category, 'login') as Partial<VaultItem>['category'],
-          favorite: !!x.favorite,
-          cardholderName: normalizeOptionalImportString(x.cardholderName),
-          cardNumber: normalizeOptionalImportString(x.cardNumber),
-          cardExpiry: normalizeOptionalImportString(x.cardExpiry),
-          cardCvv: normalizeOptionalImportString(x.cardCvv),
-          cardPin: normalizeOptionalImportString(x.cardPin),
-          idNumber: normalizeOptionalImportString(x.idNumber),
-          idFullName: normalizeOptionalImportString(x.idFullName),
-          idBirthDate: normalizeOptionalImportString(x.idBirthDate),
-          idExpiryDate: normalizeOptionalImportString(x.idExpiryDate),
-          idGender: normalizeOptionalImportString(x.idGender),
-          passkeyService: normalizeOptionalImportString(x.passkeyService),
-          passkeyPrivateExponent: normalizeOptionalImportString(x.passkeyPrivateExponent),
-          passkeyPublicId: normalizeOptionalImportString(x.passkeyPublicId),
-        }));
+        const items: Partial<VaultItem>[] = parsed.map(x => {
+          const username = normalizeImportString(x.username);
+          const url = normalizeImportString(x.url);
+          const notes = normalizeImportString(x.notes);
+          return {
+            title: buildImportedTitle(normalizeImportString(x.title, ''), username, url, notes, copy.untitledUniversal),
+            username,
+            password: normalizeImportString(x.password),
+            url,
+            notes,
+            totpSecret: normalizeImportString(x.totpSecret),
+            category: normalizeImportString(x.category, 'login') as Partial<VaultItem>['category'],
+            favorite: !!x.favorite,
+            cardholderName: normalizeOptionalImportString(x.cardholderName),
+            cardNumber: normalizeOptionalImportString(x.cardNumber),
+            cardExpiry: normalizeOptionalImportString(x.cardExpiry),
+            cardCvv: normalizeOptionalImportString(x.cardCvv),
+            cardPin: normalizeOptionalImportString(x.cardPin),
+            idNumber: normalizeOptionalImportString(x.idNumber),
+            idFullName: normalizeOptionalImportString(x.idFullName),
+            idBirthDate: normalizeOptionalImportString(x.idBirthDate),
+            idExpiryDate: normalizeOptionalImportString(x.idExpiryDate),
+            idGender: normalizeOptionalImportString(x.idGender),
+            passkeyService: normalizeOptionalImportString(x.passkeyService),
+            passkeyPrivateExponent: normalizeOptionalImportString(x.passkeyPrivateExponent),
+            passkeyPublicId: normalizeOptionalImportString(x.passkeyPublicId),
+          };
+        });
         return { type: 'success', items, formatName: copy.formatAegisJson };
       }
 
@@ -93,9 +148,23 @@ export function parseUniversalImport(fileContent: string, labels: Partial<Import
       if (parsed.items && Array.isArray(parsed.items)) {
         const items: Partial<VaultItem>[] = [];
         parsed.items.forEach((bw: any) => {
+          // First pass: discover the row's identifying fields so we can
+          // synthesise a non-empty title if `bw.name` is missing.
+          const username = (bw.type === 1 && bw.login?.username) || '';
+          const url = (bw.type === 1 && bw.login?.uris && bw.login.uris[0]?.uri) || '';
+          const cardholderName = (bw.type === 3 && bw.card?.cardholderName) || '';
+          const idFullName = (bw.type === 4 && bw.identity)
+            ? `${bw.identity.firstName || ''} ${bw.identity.lastName || ''}`.trim()
+            : '';
+          const notes = bw.notes || '';
+
+          // Choose the most informative title candidate: explicit name →
+          // cardholder name → identity name → username → url host.
+          const titleCandidate = bw.name || cardholderName || idFullName || username || url;
+
           const item: Partial<VaultItem> = {
-            title: bw.name || 'Untitled Bitwarden',
-            notes: bw.notes || '',
+            title: buildImportedTitle(titleCandidate, username, url, notes, copy.untitledUniversal),
+            notes,
             favorite: !!bw.favorite,
           };
 
@@ -103,9 +172,9 @@ export function parseUniversalImport(fileContent: string, labels: Partial<Import
           if (bw.type === 1) {
             item.category = 'login';
             if (bw.login) {
-              item.username = bw.login.username || '';
+              item.username = username;
               item.password = bw.login.password || '';
-              item.url = (bw.login.uris && bw.login.uris[0]?.uri) || '';
+              item.url = url;
               item.totpSecret = bw.login.totp || '';
             }
           } else if (bw.type === 2) {
@@ -113,7 +182,7 @@ export function parseUniversalImport(fileContent: string, labels: Partial<Import
           } else if (bw.type === 3) {
             item.category = 'card';
             if (bw.card) {
-              item.cardholderName = bw.card.cardholderName || '';
+              item.cardholderName = cardholderName;
               item.cardNumber = bw.card.number || '';
               item.cardCvv = bw.card.code || '';
               item.cardPin = '';
@@ -124,7 +193,7 @@ export function parseUniversalImport(fileContent: string, labels: Partial<Import
           } else if (bw.type === 4) {
             item.category = 'identity';
             if (bw.identity) {
-              item.idFullName = `${bw.identity.firstName || ''} ${bw.identity.lastName || ''}`.trim();
+              item.idFullName = idFullName;
               item.idNumber = bw.identity.ssn || bw.identity.passportNumber || '';
               item.idGender = '';
             }
@@ -201,11 +270,14 @@ export function parseUniversalImport(fileContent: string, labels: Partial<Import
       // Always materialise a non-empty title so that an empty source cell
       // does not cascade into a downstream "itemMissingRequiredFields"
       // rejection that would surface as "Yedek dosyasının içi liste
-      // yapısında değil".
+      // yapısında değil". When the title cell is empty we fall back to
+      // the username, then the url host, then the notes first line, and
+      // finally to the localized "İsimsiz Aktarım" placeholder.
       const rawTitle = nameIdx !== -1 ? row[nameIdx] : '';
-      const title = (typeof rawTitle === 'string' && rawTitle.trim().length > 0)
-        ? rawTitle.trim()
-        : 'Untitled Bitwarden';
+      const username = (userIdx !== -1 ? row[userIdx] : '') || '';
+      const url = (uriIdx !== -1 ? row[uriIdx] : '') || '';
+      const notes = (notesIdx !== -1 ? row[notesIdx] : '') || '';
+      const title = buildImportedTitle(rawTitle, username, url, notes, copy.untitledUniversal);
 
       // Map Bitwarden type strings/ids to local categories.
       const typeStr = (typeIdx !== -1 ? row[typeIdx] : 'login').toLowerCase();
@@ -216,11 +288,11 @@ export function parseUniversalImport(fileContent: string, labels: Partial<Import
 
       return {
         title,
-        username: (userIdx !== -1 ? row[userIdx] : '') || '',
+        username,
         password: (passIdx !== -1 ? row[passIdx] : '') || '',
-        url: (uriIdx !== -1 ? row[uriIdx] : '') || '',
+        url,
         totpSecret: (totpIdx !== -1 ? row[totpIdx] : '') || '',
-        notes: (notesIdx !== -1 ? row[notesIdx] : '') || '',
+        notes,
         favorite: favIdx !== -1 ? row[favIdx] === 'true' || row[favIdx] === '1' : false,
         category,
       };
@@ -243,15 +315,16 @@ export function parseUniversalImport(fileContent: string, labels: Partial<Import
       // not cascade into a downstream "itemMissingRequiredFields" error
       // that would surface as "Yedek dosyasının içi liste yapısında değil".
       const rawTitle = nameIdx !== -1 ? row[nameIdx] : '';
-      const title = (typeof rawTitle === 'string' && rawTitle.trim().length > 0)
-        ? rawTitle.trim()
-        : 'Untitled LastPass';
+      const username = (userIdx !== -1 ? row[userIdx] : '') || '';
+      const url = (urlIdx !== -1 ? row[urlIdx] : '') || '';
+      const notes = (extraIdx !== -1 ? row[extraIdx] : '') || '';
+      const title = buildImportedTitle(rawTitle, username, url, notes, copy.untitledUniversal);
       return {
         title,
-        username: (userIdx !== -1 ? row[userIdx] : '') || '',
+        username,
         password: (passIdx !== -1 ? row[passIdx] : '') || '',
-        url: (urlIdx !== -1 ? row[urlIdx] : '') || '',
-        notes: (extraIdx !== -1 ? row[extraIdx] : '') || '',
+        url,
+        notes,
         favorite: favIdx !== -1 ? row[favIdx] === '1' || row[favIdx] === 'true' : false,
         category: 'login',
       };
@@ -273,15 +346,16 @@ export function parseUniversalImport(fileContent: string, labels: Partial<Import
       // not cascade into a downstream "itemMissingRequiredFields" error
       // that would surface as "Yedek dosyasının içi liste yapısında değil".
       const rawTitle = nameIdx !== -1 ? row[nameIdx] : '';
-      const title = (typeof rawTitle === 'string' && rawTitle.trim().length > 0)
-        ? rawTitle.trim()
-        : 'Untitled Chrome';
+      const username = (userIdx !== -1 ? row[userIdx] : '') || '';
+      const url = (urlIdx !== -1 ? row[urlIdx] : '') || '';
+      const notes = (noteIdx !== -1 ? row[noteIdx] : '') || '';
+      const title = buildImportedTitle(rawTitle, username, url, notes, copy.untitledUniversal);
       return {
         title,
-        username: (userIdx !== -1 ? row[userIdx] : '') || '',
+        username,
         password: (passIdx !== -1 ? row[passIdx] : '') || '',
-        url: (urlIdx !== -1 ? row[urlIdx] : '') || '',
-        notes: (noteIdx !== -1 ? row[noteIdx] : '') || '',
+        url,
+        notes,
         category: 'login',
       };
     });
@@ -297,14 +371,21 @@ export function parseUniversalImport(fileContent: string, labels: Partial<Import
     const passIdx = findColumnIndex(['password']);
     const notesIdx = findColumnIndex(['notes']);
 
-    const items: Partial<VaultItem>[] = dataRows.map(row => ({
-      title: (titleIdx !== -1 ? row[titleIdx] : 'Untitled 1Password') || 'Untitled 1Password',
-      username: (userIdx !== -1 ? row[userIdx] : '') || '',
-      password: (passIdx !== -1 ? row[passIdx] : '') || '',
-      url: (webIdx !== -1 ? row[webIdx] : '') || '',
-      notes: (notesIdx !== -1 ? row[notesIdx] : '') || '',
-      category: 'login',
-    }));
+    const items: Partial<VaultItem>[] = dataRows.map(row => {
+      const rawTitle = titleIdx !== -1 ? row[titleIdx] : '';
+      const username = (userIdx !== -1 ? row[userIdx] : '') || '';
+      const url = (webIdx !== -1 ? row[webIdx] : '') || '';
+      const notes = (notesIdx !== -1 ? row[notesIdx] : '') || '';
+      const title = buildImportedTitle(rawTitle, username, url, notes, copy.untitledUniversal);
+      return {
+        title,
+        username,
+        password: (passIdx !== -1 ? row[passIdx] : '') || '',
+        url,
+        notes,
+        category: 'login',
+      };
+    });
 
     return { type: 'success', items, formatName: copy.formatOnePasswordCsv };
   }
@@ -320,19 +401,22 @@ export function parseUniversalImport(fileContent: string, labels: Partial<Import
   if (titleIdx !== -1 || userIdx !== -1 || passIdx !== -1) {
     // Always materialise a non-empty title slot so a CSV row with an empty
     // title cell plus an empty username cell does not get rejected by the
-    // downstream "item must have title or username" schema check.
-    const fallbackTitle = copy.untitledUniversal;
+    // downstream "item must have title or username" schema check. The
+    // buildImportedTitle helper falls through username -> url host ->
+    // notes first line before defaulting to the localized
+    // "İsimsiz Aktarım" placeholder.
     const items: Partial<VaultItem>[] = dataRows.map(row => {
       const rawTitle = titleIdx !== -1 ? row[titleIdx] : '';
-      const title = (typeof rawTitle === 'string' && rawTitle.trim().length > 0)
-        ? rawTitle.trim()
-        : fallbackTitle;
+      const username = userIdx !== -1 ? row[userIdx] : '';
+      const url = urlIdx !== -1 ? row[urlIdx] : '';
+      const notes = notesIdx !== -1 ? row[notesIdx] : '';
+      const title = buildImportedTitle(rawTitle, username, url, notes, copy.untitledUniversal);
       return {
         title,
-        username: userIdx !== -1 ? row[userIdx] : '',
+        username: username || '',
         password: passIdx !== -1 ? row[passIdx] : '',
-        url: urlIdx !== -1 ? row[urlIdx] : '',
-        notes: notesIdx !== -1 ? row[notesIdx] : '',
+        url: url || '',
+        notes: notes || '',
         totpSecret: totpIdx !== -1 ? row[totpIdx] : '',
         category: 'login',
       };

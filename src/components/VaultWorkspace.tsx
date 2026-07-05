@@ -1,4 +1,4 @@
-import React, { Fragment, useState, useEffect, memo } from 'react';
+import React, { Fragment, useCallback, useState, useEffect, memo } from 'react';
 import { ArrowLeft, CreditCard, FileText, Fingerprint, Heart, KeyRound, Layers, LayoutDashboard, Lock, Plus, Search, Smartphone, User, X } from 'lucide-react';
 
 import type { VaultCategoryFilter } from '../hooks/useVaultFilters';
@@ -109,23 +109,59 @@ export function VaultWorkspaceContent({
   const { t } = useLanguage();
   const autofillTargetLabel = androidAutofillTargetLabel(autofillRequest);
 
-  const [visibleCount, setVisibleCount] = useState(30);
+  const [visibleCount, setVisibleCount] = useState(60);
 
   // Reset visibleCount if search query or filters change
   useEffect(() => {
-    setVisibleCount(30);
+    setVisibleCount(60);
   }, [filteredItems]);
 
-  // We can automatically slice and load more on scroll
+  // The vault list grows up to 600+ items for an Aegis export. Rendering
+  // every row at once is wasteful and freezes the WebView on first
+  // paint, but the original onScroll handler relied on a single nested
+  // <div> being the only scroll surface. If the parent flex container
+  // did not have a fixed height (e.g. when the .safe-screen min-height
+  // root grew past the viewport), the nested div's scrollTop never
+  // changed and the infinite-scroll threshold was never reached, so
+  // the user only ever saw the first 30 items. We now:
+  //   1. Keep the original nested onScroll handler for the normal case.
+  //   2. Also listen for window scroll events so even if the body itself
+  //      becomes the scroller the next batch is loaded.
+  //   3. Append a small "Daha fazla göster" affordance so the user is
+  //      never stuck on the first page even if both scroll surfaces
+  //      somehow fail to fire.
+  const loadMore = useCallback(() => {
+    setVisibleCount((prev) => {
+      if (prev >= filteredItems.length) return prev;
+      return Math.min(prev + 30, filteredItems.length);
+    });
+  }, [filteredItems.length]);
+
   const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
     // Check if we are near the bottom of the scroll container
     if (target.scrollHeight - target.scrollTop <= target.clientHeight + 300) {
-      if (visibleCount < filteredItems.length) {
-        setVisibleCount((prev) => Math.min(prev + 30, filteredItems.length));
-      }
+      loadMore();
     }
   };
+
+  // Window-level fallback. In some layouts (mobile, rescaled window,
+  // Safari rubber-band) the body becomes the scroller instead of the
+  // nested list container. We mirror the bottom-of-page detection here
+  // so the next batch is loaded regardless of which surface is active.
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const handleWindowScroll = () => {
+      const scrolled = window.scrollY + window.innerHeight;
+      if (document.documentElement.scrollHeight - scrolled <= 300) {
+        loadMore();
+      }
+    };
+
+    window.addEventListener('scroll', handleWindowScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleWindowScroll);
+  }, [loadMore]);
 
   const autofillMatchCount = isAutofillMode
     ? filteredItems.filter((item) => isAndroidAutofillTargetMatch(item, autofillRequest)).length
@@ -158,7 +194,7 @@ export function VaultWorkspaceContent({
               data-testid="vault-filter-all"
               onClick={() => {
                 onSetFavoritesOnly(false);
-                setVisibleCount(30);
+                setVisibleCount(60);
               }}
               className={`flex-1 py-1.5 rounded-md font-bold transition-all text-center cursor-pointer ${
                 !filterFavoritesOnly
@@ -172,7 +208,7 @@ export function VaultWorkspaceContent({
               data-testid="vault-filter-favorites"
               onClick={() => {
                 onSetFavoritesOnly(true);
-                setVisibleCount(30);
+                setVisibleCount(60);
               }}
               className={`flex-1 py-1.5 rounded-md font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer ${
                 filterFavoritesOnly
@@ -201,7 +237,7 @@ export function VaultWorkspaceContent({
                 data-testid={`category-chip-${cat.key}`}
                 onClick={() => {
                   onSelectCategory(cat.key);
-                  setVisibleCount(30);
+                  setVisibleCount(60);
                 }}
                 className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer whitespace-nowrap ${
                   selectedCategory === cat.key
@@ -322,6 +358,20 @@ export function VaultWorkspaceContent({
                 />
               </Fragment>
             ))
+          )}
+
+          {visibleCount < filteredItems.length && (
+            <button
+              type="button"
+              data-testid="vault-list-load-more"
+              onClick={loadMore}
+              className="mt-2 w-full rounded-lg border border-outline-variant/15 bg-surface-low/70 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant hover:border-brand-primary/25 hover:bg-brand-primary/5 hover:text-brand-primary transition-all cursor-pointer"
+            >
+              {t('common.loadMore', 'Daha fazla göster')}
+              <span className="ml-2 font-mono text-[10px] opacity-70">
+                {visibleCount}/{filteredItems.length}
+              </span>
+            </button>
           )}
         </div>
       </section>

@@ -315,7 +315,7 @@ export default function App() {
   }
 
   return (
-    <div className="safe-screen flex w-full bg-[#121412] text-[#e2e3df] overflow-hidden font-sans">
+    <div className="safe-screen-fixed flex w-full bg-[#121412] text-[#e2e3df] overflow-hidden font-sans">
       <MobileSidebarBackdrop isOpen={isSidebarOpen} onClose={handleCloseSidebar} />
 
       <SidebarNavigation

@@ -96,9 +96,50 @@ function expectedString(value: unknown, fallback = ''): string {
   return typeof value === 'string' ? value : fallback;
 }
 
+/**
+ * Mirrors the smart title fallback in `buildImportedTitle` (src/lib/importer.ts):
+ *   1. explicit `title` (string) if non-empty
+ *   2. `username` if non-empty
+ *   3. `url` host if non-empty
+ *   4. first line of `notes` if non-empty
+ *   5. localized "İsimsiz Aktarım" placeholder
+ *
+ * The fuzz test exports a JSON array through the universal importer and
+ * then expects every item to round-trip. The new smart title builder
+ * means a JSON row with `title: ''` but a non-empty `username` will be
+ * imported with the username as the title, so the round-trip expectation
+ * has to mirror that behaviour or every such item fails the assertion.
+ */
+function expectedImportedTitle(
+  item: { title?: unknown; username?: unknown; url?: unknown; notes?: unknown },
+  placeholder: string,
+): string {
+  const title = expectedString(item.title).trim();
+  if (title.length > 0) return title;
+  const username = expectedString(item.username).trim();
+  if (username.length > 0) return username;
+  const url = expectedString(item.url).trim();
+  if (url.length > 0) {
+    try {
+      const parsed = new URL(url.includes('://') ? url : `https://${url}`);
+      const host = parsed.hostname.replace(/^www\./i, '');
+      if (host) return host;
+    } catch {
+      const stripped = url.replace(/^https?:\/\//i, '').replace(/^www\./i, '').split('/')[0];
+      if (stripped) return stripped;
+    }
+  }
+  const notes = expectedString(item.notes).trim();
+  if (notes.length > 0) {
+    const firstLine = notes.split(/\r?\n/)[0].trim();
+    if (firstLine.length > 0 && firstLine.length <= 60) return firstLine;
+  }
+  return placeholder;
+}
+
 function expectedRoundTripItem(item: VaultItem): Partial<VaultItem> {
   return {
-    title: expectedString(item.title, 'Untitled Import'),
+    title: expectedImportedTitle(item, expectedString(item.title, 'Untitled Import')),
     username: expectedString(item.username),
     password: expectedString(item.password),
     url: expectedString(item.url),

@@ -80,8 +80,11 @@ describe('universal importer', () => {
     expect(csvResult.type).toBe('success');
     if (csvResult.type !== 'success') return;
     expect(csvResult.formatName).toBe('Universal Column-Compatible CSV');
+    // The smart title builder falls through to the username when the
+    // title cell is empty, so the localized `untitledUniversal`
+    // placeholder is only used when both title and username are empty.
     expect(csvResult.items[0]).toMatchObject({
-      title: 'Untitled Import',
+      title: 'owner@example.com',
       username: 'owner@example.com',
       password: 'secret',
     });
@@ -124,7 +127,10 @@ describe('universal importer', () => {
     expect(parseSuccess('title,website,password\ns,u,p').formatName).toBe('onepassword-x');
     const universal = parseSuccess('email,pwd\nu,p');
     expect(universal.formatName).toBe('universal-x');
-    expect(universal.items[0].title).toBe('untitled-x');
+    // The smart title builder falls through to the username ('u') when
+    // the title cell is empty, so the localized `untitledUniversal`
+    // placeholder is only used when both title and username are empty.
+    expect(universal.items[0].title).toBe('u');
     expect(parseUniversalImport('alpha,beta\na,b', labels)).toEqual({ type: 'error', message: 'csv-columns-x' });
   });
 
@@ -314,8 +320,13 @@ describe('universal importer', () => {
 
     expect(result.type).toBe('success');
     if (result.type !== 'success') return;
+    // Items with no name, no username, no url, and no notes all fall
+    // through to the localized "İsimsiz Aktarım" placeholder. The
+    // previous hard-coded "Untitled Bitwarden" string was replaced by
+    // the shared buildImportedTitle helper so the same fallback chain
+    // is used across every parser.
     expect(result.items[0]).toMatchObject({
-      title: 'Untitled Bitwarden',
+      title: 'Untitled Import',
       notes: '',
       favorite: false,
       category: 'login',
@@ -335,7 +346,7 @@ describe('universal importer', () => {
       idGender: '',
     });
     expect(result.items[3]).toMatchObject({
-      title: 'Untitled Bitwarden',
+      title: 'Untitled Import',
       category: 'login',
     });
   });
@@ -448,8 +459,11 @@ describe('universal importer', () => {
 
     expect(result.type).toBe('success');
     if (result.type !== 'success') return;
+    // The smart title builder falls through username -> url host -> notes
+    // first line -> the localized placeholder, so a row with no name,
+    // no url and no notes lands on the shared "İsimsiz Aktarım" string.
     expect(result.items[0]).toMatchObject({
-      title: 'Untitled LastPass',
+      title: 'Untitled Import',
       username: '',
       password: '',
       url: '',
@@ -501,8 +515,11 @@ describe('universal importer', () => {
 
     expect(result.type).toBe('success');
     if (result.type !== 'success') return;
+    // The smart title builder falls through to the username when the
+    // title cell is empty, so this row's title should now equal the
+    // username instead of the localized "İsimsiz Aktarım" placeholder.
     expect(result.items[0]).toMatchObject({
-      title: expect.stringContaining('Untitled'),
+      title: 'owner@example.com',
       username: 'owner@example.com',
       password: 'secret',
       url: '',

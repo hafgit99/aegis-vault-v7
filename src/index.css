@@ -33,6 +33,30 @@
     padding-left: env(safe-area-inset-left);
   }
 
+  /**
+   * Root layout container that pins the app to a single viewport height.
+   *
+   * `.safe-screen` uses `min-height`, which lets the page grow when its
+   * children overflow. That is correct for the centred LockScreen but
+   * breaks the main vault layout: when the body grows past the viewport,
+   * nested `flex-1 overflow-y-auto` containers never gain a scroll bar
+   * because the page itself becomes the scroller, and the
+   * `<section onScroll>` handler in VaultWorkspace is never fired.
+   *
+   * The vault UI needs a fixed-height root so that its inner flex
+   * children are the only scroll surfaces. `100dvh` is preferred over
+   * `100vh` because it excludes the iOS / Android browser chrome
+   * collapse animation and is stable on Tauri WebView2.
+   */
+  .safe-screen-fixed {
+    height: 100vh;
+    height: 100dvh;
+    padding-top: env(safe-area-inset-top);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+  }
+
   .safe-top {
     padding-top: max(env(safe-area-inset-top), 0px);
   }
