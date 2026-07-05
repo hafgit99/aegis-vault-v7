@@ -1355,13 +1355,15 @@ export default function SettingsPanel({
       />
 
       {/* Android Autofill Settings Card */}
-      <SettingsAutofillCard
-        autofillEnabled={autofillEnabled}
-        autofillMessage={autofillMessage}
-        autofillError={autofillError}
-        onOpenAutofillSettings={handleOpenAndroidAutofillSettings}
-        t={t}
-      />
+      {isAndroidAutofillSupported() && (
+        <SettingsAutofillCard
+          autofillEnabled={autofillEnabled}
+          autofillMessage={autofillMessage}
+          autofillError={autofillError}
+          onOpenAutofillSettings={handleOpenAndroidAutofillSettings}
+          t={t}
+        />
+      )}
 
       {/* Passkey (WebAuthn) management */}
       <PasskeyManager
@@ -1490,10 +1492,10 @@ export default function SettingsPanel({
         <div className="p-4 sm:p-6 bg-brand-surface-container rounded-2xl border border-white/8 space-y-3" id="extension-token-section">
           <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2 border-b border-white/5 pb-2">
             <RefreshCw className="w-4 h-4 text-brand-primary" />
-            <span>Extension Pairing Token</span>
+            <span>{t('settings.extension.title')}</span>
           </h3>
           <p className="text-xs text-on-surface-variant leading-relaxed">
-            Generate a new random pairing token for the browser extension. The old token will be immediately invalidated — you will need to reconnect the extension after rotating.
+            {t('settings.extension.description')}
           </p>
           <button
             id="rotate-extension-token-btn"
@@ -1502,7 +1504,7 @@ export default function SettingsPanel({
             className="flex items-center gap-2 px-4 py-2 rounded-lg border border-brand-primary/40 hover:bg-brand-primary/10 text-brand-primary font-semibold text-xs transition-all disabled:opacity-50 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${tokenRotateStatus === 'loading' ? 'animate-spin' : ''}`} />
-            <span>{tokenRotateStatus === 'loading' ? 'Rotating…' : 'Rotate Extension Token'}</span>
+            <span>{tokenRotateStatus === 'loading' ? t('settings.extension.rotating') : t('settings.extension.rotateBtn')}</span>
           </button>
           {tokenRotateMessage && (
             <p className={`text-xs px-1 ${tokenRotateStatus === 'success' ? 'text-green-400' : 'text-red-400'}`}>

@@ -68,7 +68,7 @@ vi.mock('../lib/desktopFiles', () => ({
 
 vi.mock('../lib/androidAutofill', () => ({
   isAndroidAutofillEnabled: vi.fn(() => false),
-  isAndroidAutofillSupported: vi.fn(() => false),
+  isAndroidAutofillSupported: vi.fn(() => true),
   openAndroidAutofillSettings: vi.fn(() => false),
 }));
 
@@ -608,15 +608,12 @@ describe('SettingsPanel account and safety controls', () => {
 });
 
 describe('SettingsPanel Android Autofill controls', () => {
-  it('shows an unsupported message when Android Autofill bridge is unavailable', async () => {
-    const { container } = renderSettingsWithLanguage('en');
+  it('does not render Android Autofill card when unsupported', async () => {
+    vi.mocked(isAndroidAutofillSupported).mockReturnValueOnce(false);
+    renderSettingsWithLanguage('en');
 
-    fireEvent.click(screen.getByText('Open Android Autofill Settings'));
-
-    await waitFor(() => {
-      expect(container.textContent).toContain('Android Autofill is supported only in the Android 8.0+ Tauri app.');
-    });
-    expect(openAndroidAutofillSettings).not.toHaveBeenCalled();
+    expect(screen.queryByText('Android Autofill')).toBeNull();
+    expect(screen.queryByText('Open Android Autofill Settings')).toBeNull();
   });
 
   it('opens Android Autofill settings through the native bridge', async () => {
