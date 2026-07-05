@@ -52,11 +52,25 @@ export function isDesktopFileDialogSupported(): boolean {
 }
 
 function isAndroidFileDialogSupported(): boolean {
+  // Only treat the Android native bridge as "supported" when the WryActivity
+  // has actually injected the AegisAndroidFiles bridge object. Previously
+  // this was only gated on isAndroidTauriRuntime() which made
+  // isNativeFileDialogSupported() return true on every Tauri Android build
+  // and caused openDesktopImportFile() to take the bridge path even when no
+  // bridge was registered. The bridge then rejected with
+  // "Android file picker is not available." and the user could not import
+  // any backup at all (including CSV) because the HTML <input> fallback
+  // was never tried.
   return isAndroidTauriRuntime() && typeof window !== 'undefined' && Boolean(window.AegisAndroidFiles);
 }
 
 export function isNativeFileDialogSupported(): boolean {
-  return isDesktopFileDialogSupported() || isAndroidFileDialogSupported();
+  // On Android, also fall back to the HTML <input type="file"> path when the
+  // native bridge is missing. WebView's stock document picker (ACTION_OPEN_DOCUMENT)
+  // honours the `accept` attribute and shows .csv / .aegis / .json files just
+  // fine, so the user can still select a backup file.
+  if (isAndroidTauriRuntime()) return isAndroidFileDialogSupported();
+  return isDesktopFileDialogSupported();
 }
 
 function ensureAndroidFileBridge(): NonNullable<Window['AegisAndroidFiles']> | null {
@@ -174,7 +188,14 @@ function openAndroidTextFile(): Promise<DesktopImportFile | null> {
 }
 
 export async function saveDesktopExportFile(defaultFilename: string, contents: string): Promise<boolean> {
-  if (isAndroidTauriRuntime()) return saveAndroidTextFile(defaultFilename, contents);
+  if (isAndroidTauriRuntime()) {
+    // Only attempt the Android native bridge if it is actually registered.
+    // Without this guard the bridge rejects with "Android file picker is
+    // not available." and the export silently fails. Returning false here
+    // matches the browser-fallback contract.
+    if (!isAndroidFileDialogSupported()) return false;
+    return saveAndroidTextFile(defaultFilename, contents);
+  }
   if (!isDesktopFileDialogSupported()) return false;
   return invoke<boolean>('save_export_file', { defaultFilename, contents });
 }
@@ -190,7 +211,10 @@ function bytesToBase64(bytes: Uint8Array): string {
 }
 
 export async function saveDesktopBinaryFile(defaultFilename: string, bytes: Uint8Array): Promise<boolean> {
-  if (isAndroidTauriRuntime()) return saveAndroidBase64File(defaultFilename, bytesToBase64(bytes));
+  if (isAndroidTauriRuntime()) {
+    if (!isAndroidFileDialogSupported()) return false;
+    return saveAndroidBase64File(defaultFilename, bytesToBase64(bytes));
+  }
   if (!isDesktopFileDialogSupported()) return false;
   return invoke<boolean>('save_binary_file', {
     defaultFilename,
@@ -199,7 +223,15 @@ export async function saveDesktopBinaryFile(defaultFilename: string, bytes: Uint
 }
 
 export async function openDesktopImportFile(): Promise<DesktopImportFile | null> {
-  if (isAndroidTauriRuntime()) return openAndroidTextFile();
+  if (isAndroidTauriRuntime()) {
+    // Without the native Android bridge, fall back to the HTML <input> path
+    // which the caller (SettingsPanel.triggerImportSelect) already handles
+    // via fileInputRef.current?.click(). Returning null here mirrors the
+    // browser-fallback contract and lets the drag-and-drop and file-input
+    // paths run.
+    if (!isAndroidFileDialogSupported()) return null;
+    return openAndroidTextFile();
+  }
   if (!isDesktopFileDialogSupported()) return null;
   return invoke<DesktopImportFile | null>('open_import_file');
 }

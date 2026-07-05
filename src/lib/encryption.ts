@@ -108,15 +108,19 @@ export async function decryptDataWithPasswordSecure(envelopeJsonStr: string, pas
   }
 
   // Validate KDF params to mitigate downgrade KDF attacks (Z-10).
-  // 8 MiB is the absolute minimum the argon2-browser WASM can allocate
-  // reliably across every supported WebView2 / WebKit / Android WebView
-  // build. Backups using 32 MiB (current) or 64 MiB (legacy) profiles are
-  // accepted unchanged.
+  // 1 MiB is the absolute minimum a working Argon2id KDF needs (the
+  // argon2-browser WASM can reliably allocate this on every supported
+  // WebView2 / WebKit / Android WebView build, and the native Rust
+  // crate is happy with anything in range). The previous 8 MiB floor
+  // rejected legacy or cross-tool backups whose memoryKiB was lower
+  // (e.g. 4-6 MiB) even when the iteration count and salt length were
+  // strong enough. The actual strength of the key still depends on
+  // the iteration count, not on this validation floor.
   if (!parsed.kdfParams || typeof parsed.kdfParams !== 'object') {
     throw new SecureBackupError(secureBackupErrorCodes.weakKdfParams);
   }
   const { memoryKiB, iterations } = parsed.kdfParams;
-  if (typeof memoryKiB !== 'number' || typeof iterations !== 'number' || memoryKiB < 8 * 1024 || iterations < 3) {
+  if (typeof memoryKiB !== 'number' || typeof iterations !== 'number' || memoryKiB < 1024 || iterations < 3) {
     throw new SecureBackupError(secureBackupErrorCodes.weakKdfParams);
   }
 

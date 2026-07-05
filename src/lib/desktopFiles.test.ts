@@ -64,18 +64,27 @@ describe('desktopFiles', () => {
     expect(invoke).toHaveBeenNthCalledWith(3, 'open_import_file');
   });
 
-  it('fails loudly when Android Tauri runtime is missing the native file bridge', async () => {
+  it('falls back to the web file input when the Android Tauri runtime is missing the native file bridge', async () => {
     window.__TAURI_INTERNALS__ = {};
     Object.defineProperty(window.navigator, 'userAgent', {
       configurable: true,
       value: 'Mozilla/5.0 (Linux; Android 14) AegisVault',
     });
 
+    // No AegisAndroidFiles bridge is registered. The previous behaviour was
+    // to take the Android code path and reject every call with
+    // "Android file picker is not available.", which made CSV / .aegis
+    // imports impossible on Android. We now fall back to the HTML
+    // <input type="file"> path so the WebView's stock document picker
+    // (ACTION_OPEN_DOCUMENT) is used instead.
     expect(isDesktopFileDialogSupported()).toBe(false);
     expect(isNativeFileDialogSupported()).toBe(false);
-    await expect(saveDesktopExportFile('backup.aegis', 'payload')).rejects.toThrow('Android file picker is not available.');
-    await expect(saveDesktopBinaryFile('secret.bin', new Uint8Array([1, 2, 3]))).rejects.toThrow('Android file picker is not available.');
-    await expect(openDesktopImportFile()).rejects.toThrow('Android file picker is not available.');
+    // Export is intentionally not available without the native bridge on
+    // Android because there is no <a download> fallback.
+    await expect(saveDesktopExportFile('backup.aegis', 'payload')).resolves.toBe(false);
+    await expect(saveDesktopBinaryFile('secret.bin', new Uint8Array([1, 2, 3]))).resolves.toBe(false);
+    // Import returns null so the caller falls back to the hidden <input>.
+    await expect(openDesktopImportFile()).resolves.toBeNull();
     expect(invoke).not.toHaveBeenCalled();
   });
 
