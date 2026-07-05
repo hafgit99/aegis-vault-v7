@@ -765,9 +765,11 @@ fn open_import_file() -> Result<Option<ImportFilePayload>, String> {
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct RustArgon2idOptions {
+    #[serde(alias = "memoryKiB")]
     memory_kib: Option<u32>,
     iterations: Option<u32>,
     parallelism: Option<u32>,
+    #[serde(alias = "hashLength")]
     hash_length: Option<u32>,
 }
 

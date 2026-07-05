@@ -109,24 +109,48 @@ export async function decryptDataWithPasswordSecure(envelopeJsonStr: string, pas
     throw new SecureBackupError(secureBackupErrorCodes.checksumMismatch);
   }
 
-  let aesKey: Uint8Array;
-  try {
-    aesKey = await deriveArgon2idKey(password, parsed.salt, parsed.kdfParams);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error ?? '');
-    if (/memory access out of bounds|out of memory|wasm/i.test(message)) {
-      throw new SecureBackupError(secureBackupErrorCodes.kdfRuntimeFailure);
+  const decryptWithParams = async (kdfParams: typeof parsed.kdfParams): Promise<string> => {
+    let aesKey: Uint8Array;
+    try {
+      aesKey = await deriveArgon2idKey(password, parsed.salt, kdfParams);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error ?? '');
+      if (/memory access out of bounds|out of memory|wasm/i.test(message)) {
+        throw new SecureBackupError(secureBackupErrorCodes.kdfRuntimeFailure);
+      }
+      throw error;
     }
-    throw error;
-  }
 
-  return webCryptoAesGcmDecrypt(
-    {
-      iv: parsed.iv,
-      tag: parsed.tag,
-      ciphertext: parsed.payload,
-    },
-    aesKey,
-  );
+    return webCryptoAesGcmDecrypt(
+      {
+        iv: parsed.iv,
+        tag: parsed.tag,
+        ciphertext: parsed.payload,
+      },
+      aesKey,
+    );
+  };
+
+  try {
+    return await decryptWithParams(parsed.kdfParams);
+  } catch (error) {
+    if (error instanceof SecureBackupError && error.code === secureBackupErrorCodes.kdfRuntimeFailure) {
+      throw error;
+    }
+
+    const shouldTryLegacyNativeMismatchFallback = parsed.kdfProfile === 'aegis-backup-cross-platform-v2'
+      && parsed.kdfParams?.memoryKiB === BACKUP_KDF_PROFILE.memoryKiB
+      && parsed.kdfParams?.iterations === BACKUP_KDF_PROFILE.iterations;
+
+    if (!shouldTryLegacyNativeMismatchFallback) {
+      throw error;
+    }
+
+    try {
+      return await decryptWithParams(BACKUP_KDF_LEGACY_HIGH_MEMORY_PROFILE);
+    } catch {
+      throw error;
+    }
+  }
 }
 
