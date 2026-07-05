@@ -1097,8 +1097,12 @@ export default function SettingsPanel({
             pendingEnvelope: scanResult.envelope,
           });
         } else {
-          // Validate the scanResult items list before saving to prevent corrupt metadata imports
-          const { items } = validateBackupPayload(scanResult.items, file.size);
+          // Validate the scanResult items list before saving to prevent corrupt metadata imports.
+          // Pass fromUniversalImport: true so the validator tolerates CSV rows where
+          // a single cell is empty (e.g. a row with only url+password and no title),
+          // which would otherwise be rejected with the misleading
+          // "Yedek dosyasının içi liste yapısında değil" error.
+          const { items } = validateBackupPayload(scanResult.items, file.size, { fromUniversalImport: true });
           const count = await handleImportedItems(items);
           
           setImportState(prev => ({

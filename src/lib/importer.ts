@@ -154,13 +154,36 @@ export function parseUniversalImport(fileContent: string, labels: Partial<Import
   const headers = rows[0].map(h => h.toLowerCase().trim().replace(/^["']|["']$/g, ''));
   const dataRows = rows.slice(1);
 
-  // Helper helper to locate column index by aliases
+  // Helper to locate column index by aliases.
+  // Matching priority (most specific first) to avoid false positives like
+  // "username" matching the "name" title alias or "uri" matching "url":
+  //   1. exact match (case-insensitive)
+  //   2. word-boundary match (e.g. "User Name" matches alias "name")
+  // Substring fallback is intentionally NOT used because short aliases
+  // like "name", "url", "pass" would otherwise match the middle of
+  // unrelated headers ("username", "uri", "password"). For non-Latin
+  // headers we rely on the i18n CSV fallback to fail gracefully with a
+  // localised "no recognised columns" error rather than mis-match.
   const findColumnIndex = (aliases: string[]): number => {
-    const exactMatch = headers.findIndex(h => aliases.some(alias => h === alias));
-    if (exactMatch !== -1) {
-      return exactMatch;
+    const normalizedHeaders = headers.map(h => h.toLowerCase().trim());
+    const normalizedAliases = aliases.map(a => a.toLowerCase());
+
+    // 1. Exact match
+    for (const alias of normalizedAliases) {
+      const idx = normalizedHeaders.indexOf(alias);
+      if (idx !== -1) return idx;
     }
-    return headers.findIndex(h => aliases.some(alias => h.includes(alias)));
+
+    // 2. Word-boundary match: split header on non-alphanumeric chars and
+    //    compare whole tokens. This finds "User Name" → "name" while
+    //    rejecting "username" → "name".
+    const splitTokens = (value: string) => value.split(/[^a-z0-9\u00C0-\u017F]+/i).filter(Boolean);
+    for (const alias of normalizedAliases) {
+      const idx = normalizedHeaders.findIndex(h => splitTokens(h).includes(alias));
+      if (idx !== -1) return idx;
+    }
+
+    return -1;
   };
 
   // 1. Bitwarden CSV detection: "folder,favorite,type,name,notes,fields,login_uri,login_username,login_password,login_totp"
@@ -175,6 +198,16 @@ export function parseUniversalImport(fileContent: string, labels: Partial<Import
     const typeIdx = findColumnIndex(['type']); // Login, Note, Card, Identity
 
     const items: Partial<VaultItem>[] = dataRows.map(row => {
+      // Always materialise a non-empty title so that an empty source cell
+      // does not cascade into a downstream "itemMissingRequiredFields"
+      // rejection that would surface as "Yedek dosyasının içi liste
+      // yapısında değil".
+      const rawTitle = nameIdx !== -1 ? row[nameIdx] : '';
+      const title = (typeof rawTitle === 'string' && rawTitle.trim().length > 0)
+        ? rawTitle.trim()
+        : 'Untitled Bitwarden';
+
+      // Map Bitwarden type strings/ids to local categories.
       const typeStr = (typeIdx !== -1 ? row[typeIdx] : 'login').toLowerCase();
       let category: 'login' | 'card' | 'identity' | 'secure_note' = 'login';
       if (typeStr.includes('note') || typeStr === '2') category = 'secure_note';
@@ -182,7 +215,7 @@ export function parseUniversalImport(fileContent: string, labels: Partial<Import
       else if (typeStr.includes('identity') || typeStr === '4') category = 'identity';
 
       return {
-        title: (nameIdx !== -1 ? row[nameIdx] : 'Untitled Import') || 'Untitled Import',
+        title,
         username: (userIdx !== -1 ? row[userIdx] : '') || '',
         password: (passIdx !== -1 ? row[passIdx] : '') || '',
         url: (uriIdx !== -1 ? row[uriIdx] : '') || '',
@@ -205,15 +238,24 @@ export function parseUniversalImport(fileContent: string, labels: Partial<Import
     const nameIdx = findColumnIndex(['name', 'title']);
     const favIdx = findColumnIndex(['fav', 'favorite']);
 
-    const items: Partial<VaultItem>[] = dataRows.map(row => ({
-      title: (nameIdx !== -1 ? row[nameIdx] : 'Untitled LastPass') || 'Untitled LastPass',
-      username: (userIdx !== -1 ? row[userIdx] : '') || '',
-      password: (passIdx !== -1 ? row[passIdx] : '') || '',
-      url: (urlIdx !== -1 ? row[urlIdx] : '') || '',
-      notes: (extraIdx !== -1 ? row[extraIdx] : '') || '',
-      favorite: favIdx !== -1 ? row[favIdx] === '1' || row[favIdx] === 'true' : false,
-      category: 'login',
-    }));
+    const items: Partial<VaultItem>[] = dataRows.map(row => {
+      // Always materialise a non-empty title so an empty source cell does
+      // not cascade into a downstream "itemMissingRequiredFields" error
+      // that would surface as "Yedek dosyasının içi liste yapısında değil".
+      const rawTitle = nameIdx !== -1 ? row[nameIdx] : '';
+      const title = (typeof rawTitle === 'string' && rawTitle.trim().length > 0)
+        ? rawTitle.trim()
+        : 'Untitled LastPass';
+      return {
+        title,
+        username: (userIdx !== -1 ? row[userIdx] : '') || '',
+        password: (passIdx !== -1 ? row[passIdx] : '') || '',
+        url: (urlIdx !== -1 ? row[urlIdx] : '') || '',
+        notes: (extraIdx !== -1 ? row[extraIdx] : '') || '',
+        favorite: favIdx !== -1 ? row[favIdx] === '1' || row[favIdx] === 'true' : false,
+        category: 'login',
+      };
+    });
 
     return { type: 'success', items, formatName: copy.formatLastPassCsv };
   }
@@ -226,14 +268,23 @@ export function parseUniversalImport(fileContent: string, labels: Partial<Import
     const passIdx = findColumnIndex(['password']);
     const noteIdx = findColumnIndex(['note', 'notes']);
 
-    const items: Partial<VaultItem>[] = dataRows.map(row => ({
-      title: (nameIdx !== -1 ? row[nameIdx] : 'Untitled Chrome') || 'Untitled Chrome',
-      username: (userIdx !== -1 ? row[userIdx] : '') || '',
-      password: (passIdx !== -1 ? row[passIdx] : '') || '',
-      url: (urlIdx !== -1 ? row[urlIdx] : '') || '',
-      notes: (noteIdx !== -1 ? row[noteIdx] : '') || '',
-      category: 'login',
-    }));
+    const items: Partial<VaultItem>[] = dataRows.map(row => {
+      // Always materialise a non-empty title so an empty source cell does
+      // not cascade into a downstream "itemMissingRequiredFields" error
+      // that would surface as "Yedek dosyasının içi liste yapısında değil".
+      const rawTitle = nameIdx !== -1 ? row[nameIdx] : '';
+      const title = (typeof rawTitle === 'string' && rawTitle.trim().length > 0)
+        ? rawTitle.trim()
+        : 'Untitled Chrome';
+      return {
+        title,
+        username: (userIdx !== -1 ? row[userIdx] : '') || '',
+        password: (passIdx !== -1 ? row[passIdx] : '') || '',
+        url: (urlIdx !== -1 ? row[urlIdx] : '') || '',
+        notes: (noteIdx !== -1 ? row[noteIdx] : '') || '',
+        category: 'login',
+      };
+    });
 
     return { type: 'success', items, formatName: copy.formatChromeCsv };
   }
@@ -267,15 +318,25 @@ export function parseUniversalImport(fileContent: string, labels: Partial<Import
   const totpIdx = findColumnIndex(['totp', 'secret', 'key', 'otp', '2fa', 'authenticator']);
 
   if (titleIdx !== -1 || userIdx !== -1 || passIdx !== -1) {
-    const items: Partial<VaultItem>[] = dataRows.map(row => ({
-      title: titleIdx !== -1 ? row[titleIdx] : copy.untitledUniversal,
-      username: userIdx !== -1 ? row[userIdx] : '',
-      password: passIdx !== -1 ? row[passIdx] : '',
-      url: urlIdx !== -1 ? row[urlIdx] : '',
-      notes: notesIdx !== -1 ? row[notesIdx] : '',
-      totpSecret: totpIdx !== -1 ? row[totpIdx] : '',
-      category: 'login',
-    }));
+    // Always materialise a non-empty title slot so a CSV row with an empty
+    // title cell plus an empty username cell does not get rejected by the
+    // downstream "item must have title or username" schema check.
+    const fallbackTitle = copy.untitledUniversal;
+    const items: Partial<VaultItem>[] = dataRows.map(row => {
+      const rawTitle = titleIdx !== -1 ? row[titleIdx] : '';
+      const title = (typeof rawTitle === 'string' && rawTitle.trim().length > 0)
+        ? rawTitle.trim()
+        : fallbackTitle;
+      return {
+        title,
+        username: userIdx !== -1 ? row[userIdx] : '',
+        password: passIdx !== -1 ? row[passIdx] : '',
+        url: urlIdx !== -1 ? row[urlIdx] : '',
+        notes: notesIdx !== -1 ? row[notesIdx] : '',
+        totpSecret: totpIdx !== -1 ? row[totpIdx] : '',
+        category: 'login',
+      };
+    });
 
     return { type: 'success', items, formatName: copy.formatUniversalCsv };
   }

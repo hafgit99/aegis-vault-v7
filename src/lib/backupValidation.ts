@@ -39,11 +39,20 @@ function isValidBase64(str: string): boolean {
 /**
  * Validates and extracts contents from a decrypted backup payload.
  * Supports legacy flat array format and version 7 envelope format.
+ *
+ * When `options.fromUniversalImport` is true the caller is the CSV/JSON
+ * universal importer, which has already normalised every row to a non-empty
+ * title (or to the localised "untitled" fallback). In that mode we relax
+ * the per-item check so that a CSV row whose source cell is genuinely
+ * empty is still accepted as long as the row carries a title, username,
+ * url, password or notes value. This is what the user sees as the
+ * misleading "Yedek dosyasının içi liste yapısında değil" message.
  */
-export function validateBackupPayload(parsed: any, fileSizeBytes?: number): {
-  items: any[];
-  attachments: any[];
-} {
+export function validateBackupPayload(
+  parsed: any,
+  fileSizeBytes?: number,
+  options: { fromUniversalImport?: boolean } = {},
+): { items: any[]; attachments: any[] } {
   // 1. File size checks
   if (fileSizeBytes !== undefined && fileSizeBytes > MAX_BACKUP_FILE_SIZE) {
     throw new BackupValidationError(
@@ -86,7 +95,31 @@ export function validateBackupPayload(parsed: any, fileSizeBytes?: number): {
         `Item at index ${idx} is not an object.`
       );
     }
-    // Must have title or username
+
+    if (options.fromUniversalImport) {
+      // The universal importer always materialises a non-empty title and
+      // a non-empty username cell, so the strict title-or-username check
+      // is too aggressive for CSV-derived rows. Accept the row as long as
+      // it carries at least one piece of recognisable vault data.
+      const hasAnyVaultField =
+        (typeof item.title === 'string' && item.title.trim().length > 0) ||
+        (typeof item.username === 'string' && item.username.trim().length > 0) ||
+        (typeof item.url === 'string' && item.url.trim().length > 0) ||
+        (typeof item.password === 'string' && item.password.length > 0) ||
+        (typeof item.notes === 'string' && item.notes.trim().length > 0) ||
+        (typeof item.totpSecret === 'string' && item.totpSecret.length > 0) ||
+        (typeof item.cardNumber === 'string' && item.cardNumber.length > 0);
+
+      if (!hasAnyVaultField) {
+        throw new BackupValidationError(
+          validationErrorCodes.itemMissingRequiredFields,
+          `Item at index ${idx} has no recognisable vault field.`
+        );
+      }
+      continue;
+    }
+
+    // Strict mode: must have title or username
     if (!item.title && !item.username) {
       throw new BackupValidationError(
         validationErrorCodes.itemMissingRequiredFields,

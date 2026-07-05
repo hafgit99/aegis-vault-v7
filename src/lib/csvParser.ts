@@ -6,9 +6,16 @@
 /**
  * Fast and robust, quote-aware CSV parser that handles quotes, nested commas, and newlines.
  * Automatically detects delimiter (comma, semicolon, or tab) to support Excel/European exports.
+ * Strips a leading UTF-8 BOM (﻿) so Windows-saved CSVs do not poison the first header.
  */
 export function parseCSV(text: string): string[][] {
   if (!text) return [];
+
+  // Strip a leading UTF-8 BOM if present (common in Windows-saved CSV files).
+  if (text.charCodeAt(0) === 0xFEFF) {
+    text = text.slice(1);
+    if (!text) return [];
+  }
 
   const firstLine = text.split(/\r?\n/)[0] || '';
   const commaCount = (firstLine.match(/,/g) || []).length;
