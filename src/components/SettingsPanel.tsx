@@ -50,6 +50,11 @@ import { SettingsLanguageCard } from './settings/SettingsLanguageCard';
 import { SettingsPasswordCard } from './settings/SettingsPasswordCard';
 import { SettingsStatsCard } from './settings/SettingsStatsCard';
 import { BlockedRequestsPanel } from './settings/BlockedRequestsPanel';
+import { SettingsBiometricCard } from './settings/SettingsBiometricCard';
+import { SettingsAutofillCard } from './settings/SettingsAutofillCard';
+import { SettingsSyncSection } from './settings/SettingsSyncSection';
+import { SettingsBackupSection } from './settings/SettingsBackupSection';
+import { SettingsDangerZone } from './settings/SettingsDangerZone';
 import { PasskeyManager } from './PasskeyManager';
 import {
   authenticatePasskey,
@@ -1215,132 +1220,23 @@ export default function SettingsPanel({
       </div>
 
       {/* Biometric Lock Settings Card */}
-      <div className="glass-panel p-4 sm:p-6 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 items-center border border-outline-variant/10" id="biometric-settings-card">
-        <div className="md:col-span-1 space-y-1.5 min-w-0">
-          <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-start gap-2 min-w-0">
-            <Fingerprint className="w-5 h-5 text-brand-primary animate-pulse shrink-0" />
-            <span className="min-w-0 leading-snug break-words">{t('settings.biometric.title')}</span>
-          </h3>
-          <p className="hidden sm:block text-xs text-on-surface-variant leading-relaxed break-words">
-            {t('settings.biometric.descriptionPrefix')} <b>PBKDF2-SHA256</b> + <b>AES-GCM</b> {t('settings.biometric.descriptionSuffix')}
-          </p>
-        </div>
-        
-        <div className="md:col-span-2 space-y-4 min-w-0">
-          <div className="space-y-3 bg-[#141614] p-3 sm:p-4 rounded-xl border border-outline-variant/10 min-w-0">
-            <div className="min-w-0 w-full">
-              <span className="text-xs font-bold text-on-surface block uppercase leading-snug whitespace-normal">
-                {t('settings.biometric.statusLabel')}:{' '}
-                {biometricEnabled
-                  ? getBiometricType() === 'cross-platform'
-                    ? t('settings.biometric.statusActiveFido2')
-                    : t('settings.biometric.statusActivePlatform')
-                  : t('settings.biometric.statusPassive')}
-              </span>
-              <p className="text-[11px] text-on-surface-variant mt-1 leading-relaxed whitespace-normal max-w-[68ch]">
-                {biometricEnabled
-                  ? getBiometricType() === 'cross-platform'
-                    ? t('settings.biometric.activeDescriptionFido2')
-                    : t('settings.biometric.activeDescriptionPlatform')
-                  : t('settings.biometric.passiveDescription')}
-              </p>
-            </div>
-            {biometricEnabled ? (
-              <button
-                type="button"
-                disabled={biometricLoading}
-                onClick={() => handleToggleBiometric('platform')}
-                className="w-full sm:w-auto px-5 py-2.5 rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 border border-red-500/30 text-red-400 hover:bg-red-500/10"
-              >
-                {biometricLoading ? <span>{t('settings.biometric.loading')}</span> : <span>{t('settings.biometric.disable')}</span>}
-              </button>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full min-w-0">
-                <button
-                  type="button"
-                  disabled={biometricLoading}
-                  onClick={() => handleToggleBiometric('platform')}
-                  className="w-full min-h-11 px-4 py-2.5 rounded-lg text-xs font-bold leading-snug transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 bg-brand-primary text-brand-on-primary hover:brightness-110 shadow-md shadow-brand-primary/10 whitespace-normal text-center min-w-0"
-                >
-                  <Fingerprint className="w-4 h-4 shrink-0" />
-                  <span className="min-w-0 break-words">{t('settings.biometric.enablePlatform')}</span>
-                </button>
-                <button
-                  type="button"
-                  disabled={biometricLoading}
-                  onClick={() => handleToggleBiometric('cross-platform')}
-                  className="w-full min-h-11 px-4 py-2.5 rounded-lg text-xs font-bold leading-snug transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 bg-brand-primary/10 border border-brand-primary/30 text-brand-primary hover:bg-brand-primary/20 whitespace-normal text-center min-w-0"
-                >
-                  <Key className="w-4 h-4 shrink-0" />
-                  <span className="min-w-0 break-words">{t('settings.biometric.enableFido2')}</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {biometricSuccess && (
-            <div className="p-3 bg-brand-tertiary/10 border border-brand-tertiary/20 rounded-lg text-brand-tertiary text-xs leading-relaxed animate-fade-in flex items-start gap-2">
-              <Check className="w-4 h-4 shrink-0 text-brand-tertiary mt-0.5" />
-              <span>{biometricSuccess}</span>
-            </div>
-          )}
-
-          {biometricError && (
-            <div className="p-3 bg-brand-error/10 border border-brand-error/20 rounded-lg text-brand-error text-xs leading-relaxed animate-fade-in flex items-start gap-2">
-              <ShieldAlert className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
-              <span>{biometricError}</span>
-            </div>
-          )}
-        </div>
-      </div>
+      <SettingsBiometricCard
+        biometricEnabled={biometricEnabled}
+        biometricLoading={biometricLoading}
+        biometricSuccess={biometricSuccess}
+        biometricError={biometricError}
+        onToggleBiometric={handleToggleBiometric}
+        t={t}
+      />
 
       {/* Android Autofill Settings Card */}
-      <div className="glass-panel p-4 sm:p-6 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 items-center border border-outline-variant/10" id="android-autofill-settings-card">
-        <div className="md:col-span-1 space-y-1.5">
-          <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2">
-            <Smartphone className="w-5 h-5 text-[#2096f3]" />
-            <span>{t('settings.autofill.title')}</span>
-          </h3>
-          <p className="hidden sm:block text-xs text-on-surface-variant leading-relaxed">
-            {t('settings.autofill.description')}
-          </p>
-        </div>
-
-        <div className="md:col-span-2 space-y-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 justify-between bg-[#141614] p-3 sm:p-4 rounded-xl border border-outline-variant/10">
-            <div>
-              <span className="text-xs font-bold text-on-surface block uppercase">
-                {t('settings.autofill.statusLabel')}: {autofillEnabled ? t('settings.autofill.statusActive') : t('settings.autofill.statusSetup')}
-              </span>
-              <p className="text-[11px] text-on-surface-variant mt-1 leading-relaxed">
-                {t('settings.autofill.safetyNote')}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleOpenAndroidAutofillSettings}
-              className="px-5 py-2.5 rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 shrink-0 bg-[#2096f3] text-white hover:brightness-110 shadow-md shadow-[#2096f3]/10"
-            >
-              <Smartphone className="w-4 h-4" />
-              <span>{t('settings.autofill.openSettings')}</span>
-            </button>
-          </div>
-
-          {autofillMessage && (
-            <div className="p-3 bg-brand-tertiary/10 border border-brand-tertiary/20 rounded-lg text-brand-tertiary text-xs leading-relaxed animate-fade-in flex items-start gap-2">
-              <Check className="w-4 h-4 shrink-0 text-brand-tertiary mt-0.5" />
-              <span>{autofillMessage}</span>
-            </div>
-          )}
-
-          {autofillError && (
-            <div className="p-3 bg-brand-error/10 border border-brand-error/20 rounded-lg text-brand-error text-xs leading-relaxed animate-fade-in flex items-start gap-2">
-              <ShieldAlert className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
-              <span>{autofillError}</span>
-            </div>
-          )}
-        </div>
-      </div>
+      <SettingsAutofillCard
+        autofillEnabled={autofillEnabled}
+        autofillMessage={autofillMessage}
+        autofillError={autofillError}
+        onOpenAutofillSettings={handleOpenAndroidAutofillSettings}
+        t={t}
+      />
 
       {/* Passkey (WebAuthn) management */}
       <PasskeyManager
@@ -1360,279 +1256,35 @@ export default function SettingsPanel({
       <BlockedRequestsPanel />
 
       {/* Backup, Encryption, and Import Rows */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6" id="backup-restore-rows">
-        {/* Encrypted Export Card */}
-        <div className="glass-panel p-4 sm:p-6 rounded-2xl flex flex-col justify-between space-y-4" id="encrypted-export-card">
-          <div className="space-y-3.5">
-            <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2 border-b border-outline-variant/10 pb-2">
-              <Download className="w-4 h-4 text-brand-tertiary" />
-              <span>{t('settings.export.title')}</span>
-            </h3>
-            <p className="hidden sm:block text-xs text-on-surface-variant leading-relaxed">
-              {t('settings.export.descriptionPrefix')} <b className="text-brand-tertiary">.aegis</b> {t('settings.export.descriptionSuffix')}
-            </p>
-
-            <form onSubmit={handleExportEncrypted} className="space-y-3 pt-1">
-              <div className="flex items-center gap-2.5 bg-[#141614] p-3 rounded-xl border border-outline-variant/10">
-                <input
-                  type="checkbox"
-                  id="useMasterCheck"
-                  checked={useMasterForBackup}
-                  onChange={(e) => setUseMasterForBackup(e.target.checked)}
-                  className="w-4 h-4 accent-brand-secondary rounded border-outline-variant bg-[#141614] cursor-pointer"
-                />
-                <label htmlFor="useMasterCheck" className="text-xs text-on-surface font-semibold cursor-pointer select-none">
-                  {t('settings.export.useMaster')}
-                </label>
-              </div>
-
-              {!useMasterForBackup && (
-                <div className="space-y-1.5 animate-fade-in">
-                  <label className="block text-[10px] font-bold text-brand-secondary uppercase">
-                    {t('settings.export.passwordLabel')}
-                  </label>
-                  <input
-                    type="password"
-                    value={customBackupPassword}
-                    onChange={(e) => setCustomBackupPassword(e.target.value)}
-                    className="w-full bg-[#141614] border border-outline-variant/30 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-tertiary text-on-surface"
-                    placeholder={t('settings.export.passwordPlaceholder')}
-                    minLength={6}
-                    required={!useMasterForBackup}
-                  />
-                </div>
-              )}
-
-              {backupSuccess && (
-                <div className="p-3 bg-brand-tertiary/10 border border-brand-tertiary/20 rounded-lg text-brand-tertiary text-xs">
-                  {backupSuccess}
-                </div>
-              )}
-
-              {backupError && (
-                <div className="p-3 bg-brand-error/10 border border-brand-error/20 rounded-lg text-brand-error text-xs flex gap-2 items-center">
-                  <ShieldAlert className="w-4 h-4 shrink-0" />
-                  <span>{backupError}</span>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                <button
-                  data-testid="encrypted-export-button"
-                  type="submit"
-                  className="w-full flex items-center justify-center gap-2 bg-brand-tertiary text-black font-extrabold py-3 rounded-lg text-xs hover:brightness-110 active:scale-95 transition-all cursor-pointer shadow-lg shadow-brand-tertiary/5"
-                >
-                  <Lock className="w-4 h-4" />
-                  <span>{t('settings.export.encryptedButton')}</span>
-                </button>
-                <button
-                  data-testid="plain-export-button"
-                  type="button"
-                  onClick={handleExportPlain}
-                  className="w-full flex items-center justify-center gap-2 border border-outline-variant/30 text-on-surface-variant hover:text-on-surface py-3 rounded-lg text-xs hover:bg-[#1a1c1a]/50 active:scale-95 transition-all cursor-pointer"
-                >
-                  <Unlock className="w-4 h-4" />
-                  <span>{t('settings.export.plainButton')}</span>
-                </button>
-              </div>
-
-              {plainExportArmed && (
-                <div
-                  data-testid="plain-export-warning"
-                  className="p-3 bg-brand-error/10 border border-brand-error/25 rounded-xl space-y-3 animate-fade-in"
-                >
-                  <div className="flex items-start gap-2 text-xs text-brand-error leading-relaxed">
-                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                    <span>{t('settings.export.plainWarning')}</span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
-                    <input
-                      data-testid="plain-export-confirm-input"
-                      type="text"
-                      value={plainExportConfirmation}
-                      onChange={(event) => setPlainExportConfirmation(event.target.value)}
-                      className="w-full bg-[#141614] border border-brand-error/30 rounded-lg px-3 py-2 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-brand-error"
-                      placeholder={t('settings.export.plainConfirmPlaceholder')}
-                      autoComplete="off"
-                    />
-                    <div className="flex flex-col gap-1">
-                      <button
-                        data-testid="plain-export-confirm-button"
-                        type="button"
-                        onMouseDown={startHoldExport}
-                        onMouseUp={cancelHoldExport}
-                        onMouseLeave={cancelHoldExport}
-                        onTouchStart={startHoldExport}
-                        onTouchEnd={cancelHoldExport}
-                        className="flex items-center justify-center gap-2 bg-brand-error text-white font-extrabold px-4 py-2 rounded-lg text-xs hover:brightness-110 active:scale-95 transition-all cursor-pointer relative overflow-hidden select-none"
-                      >
-                        {holdProgress > 0 && (
-                          <div 
-                            className={`absolute left-0 top-0 bottom-0 bg-white/20 transition-all duration-30 ${progressWidthClass(holdProgress)}`} 
-                          />
-                        )}
-                        <Unlock className="w-4 h-4" />
-                        <span>
-                          {holdProgress > 0 
-                            ? `${t('settings.export.plainConfirmButton')} (${holdProgress}%)` 
-                            : t('settings.export.plainConfirmButton')}
-                        </span>
-                      </button>
-                      <span className="text-[10px] text-brand-error/70 text-right animate-pulse">
-                        {t('settings.export.plainConfirmHoldHelp')}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </form>
-          </div>
-        </div>
-
-        {/* Universal Importer and Uploader Card */}
-        <div className="glass-panel p-4 sm:p-6 rounded-2xl flex flex-col justify-between space-y-4" id="universal-import-card">
-          <div className="space-y-4">
-            <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2 border-b border-outline-variant/10 pb-2">
-              <Upload className="w-4 h-4 text-[#2096f3]" />
-              <span>{t('settings.import.title')}</span>
-            </h3>
-            <p className="hidden sm:block text-xs text-on-surface-variant leading-relaxed">
-              {t('settings.import.descriptionPrefix')} <u className="text-brand-primary">.aegis</u> {t('settings.import.descriptionMiddle')} <b>Bitwarden (JSON/CSV)</b>, <b>LastPass (CSV)</b>, <b>Chrome (CSV)</b> {t('settings.import.providerJoin')} <b>1Password (CSV)</b> {t('settings.import.descriptionSuffix')}
-            </p>
-
-            {/* Show progress bar during import */}
-            {(importState.status !== 'idle' &&
-              importState.status !== 'decrypting_pending' &&
-              importState.status !== 'success' &&
-              importState.status !== 'error') && (
-              <div className="p-4 bg-[#141614] border border-brand-primary/30 rounded-xl space-y-3 transition-opacity duration-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-brand-primary rounded-full animate-pulse" />
-                    <span className="text-xs font-bold text-brand-primary uppercase tracking-wider text-left">
-                      {t('settings.import.stage.' + importState.status)}
-                    </span>
-                  </div>
-                </div>
-                <div className="w-full h-2 bg-[#0a0c0a] rounded-full overflow-hidden border border-brand-primary/20">
-                  <div
-                    className={`h-full bg-gradient-to-r from-brand-primary to-brand-primary/70 transition-all duration-300 ease-out ${progressWidthClass(importState.percent)}`}
-                  />
-                </div>
-                <div className="text-[10px] text-on-surface-variant text-right font-mono">
-                  {importState.percent}%
-                </div>
-              </div>
-            )}
-
-            {/* Display loading state or pending Decryption details */}
-            {importState.status === 'decrypting_pending' && importState.pendingEnvelope ? (
-              <form onSubmit={handleDecryptAndImport} className="p-4 bg-[#141614] border border-brand-primary/20 rounded-xl space-y-3 animate-fade-in text-left">
-                <div className="flex items-center gap-2 text-brand-primary">
-                  <Lock className="w-4 h-4 animate-bounce" />
-                  <span className="text-xs font-bold uppercase tracking-wider">{t('settings.import.lockedTitle')}</span>
-                </div>
-                <p className="text-[11px] text-on-surface-variant">
-                  {t('settings.import.lockedDescription')}
-                </p>
-
-                <div>
-                  <input
-                    data-testid="decrypt-import-password-input"
-                    type="password"
-                    value={decryptPasswordInput}
-                    onChange={(e) => setDecryptPasswordInput(e.target.value)}
-                    className="w-full bg-[#181c18] border border-outline-variant/30 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-brand-primary text-on-surface font-mono"
-                    placeholder={t('settings.import.decryptPlaceholder')}
-                    required
-                  />
-                </div>
-
-                {importState.errorMsg && (
-                  <div
-                    data-testid="decrypt-import-error-message"
-                    className="p-2.5 bg-brand-error/15 border border-brand-error/30 text-brand-error text-[10px] rounded flex gap-1.5 items-center"
-                  >
-                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                    <span>{importState.errorMsg}</span>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-2.5">
-                  <button
-                    data-testid="decrypt-import-submit-button"
-                    type="submit"
-                    className="flex-1 py-2 bg-brand-primary text-brand-on-primary font-bold text-xs rounded-lg hover:brightness-110 active:scale-95 transition-all"
-                  >
-                    {t('settings.import.decryptSubmit')}
-                  </button>
-                  <button
-                    data-testid="decrypt-import-cancel-button"
-                    type="button"
-                    onClick={() => {
-                      resetImportFlowState();
-                    }}
-                    className="py-2 px-3 border border-outline-variant/30 text-on-surface-variant hover:text-on-surface text-xs rounded-lg"
-                  >
-                    {t('settings.import.cancel')}
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div
-                onDragOver={onDragOver}
-                onDragLeave={onDragLeave}
-                onDrop={onDrop}
-                onClick={() => {
-                  const isImportActive = importState.status !== 'idle' && importState.status !== 'success' && importState.status !== 'error' && importState.status !== 'decrypting_pending';
-                  if (isImportActive) return;
-                  void triggerImportSelect();
-                }}
-                className={`border-2 border-dashed rounded-xl p-4 sm:p-5 text-center cursor-pointer transition-all ${
-                  isDragOver
-                    ? 'border-brand-primary bg-brand-primary/10'
-                    : 'border-outline-variant/30 bg-[#141614] hover:bg-[#181a18]'
-                }`}
-                id="drop-zone-select"
-              >
-                <input
-                  data-testid="import-file-input"
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileSelect}
-                  onClick={(e) => e.stopPropagation()}
-                  accept=".json,.csv,.aegis,application/json,text/csv"
-                  className="hidden"
-                />
-                <Upload className="w-8 h-8 mx-auto text-on-surface-variant/50 mb-2" />
-                <p className="text-xs text-on-surface font-semibold">{t('settings.import.dropTitle')}</p>
-                <p className="text-[10px] text-on-surface-variant/40 mt-1 uppercase font-mono tracking-widest">
-                  {t('settings.import.supported')}
-                </p>
-              </div>
-            )}
-
-            {importState.errorMsg && importState.status === 'error' && (
-              <div
-                data-testid="import-error-message"
-                className="p-3 bg-brand-error/10 border border-brand-error/20 rounded-lg text-brand-error text-xs"
-              >
-                {importState.errorMsg}
-              </div>
-            )}
-            
-            {importState.successMsg && importState.status === 'success' && (
-              <div
-                data-testid="import-success-message"
-                className="p-3 bg-brand-tertiary/10 border border-brand-tertiary/20 rounded-lg text-brand-tertiary text-xs font-semibold"
-              >
-                {importState.successMsg}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
+      <SettingsBackupSection
+        useMasterForBackup={useMasterForBackup}
+        setUseMasterForBackup={setUseMasterForBackup}
+        customBackupPassword={customBackupPassword}
+        setCustomBackupPassword={setCustomBackupPassword}
+        backupSuccess={backupSuccess}
+        backupError={backupError}
+        onExportEncrypted={handleExportEncrypted}
+        onExportPlain={handleExportPlain}
+        plainExportArmed={plainExportArmed}
+        plainExportConfirmation={plainExportConfirmation}
+        setPlainExportConfirmation={setPlainExportConfirmation}
+        holdProgress={holdProgress}
+        startHoldExport={startHoldExport}
+        cancelHoldExport={cancelHoldExport}
+        importState={importState}
+        decryptPasswordInput={decryptPasswordInput}
+        setDecryptPasswordInput={setDecryptPasswordInput}
+        handleDecryptAndImport={handleDecryptAndImport}
+        resetImportFlowState={resetImportFlowState}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+        triggerImportSelect={triggerImportSelect}
+        isDragOver={isDragOver}
+        fileInputRef={fileInputRef}
+        handleFileSelect={handleFileSelect}
+        t={t}
+      />
 
       {/* Storage Backend Migration Section */}
       <div className="p-4 sm:p-6 bg-surface-elevated border border-white/5 rounded-2xl space-y-4" id="storage-backend-section">
@@ -1686,167 +1338,27 @@ export default function SettingsPanel({
       </div>
 
       {/* Cloud Sync (E2EE) Section */}
-      <div className="p-4 sm:p-6 bg-surface-elevated border border-white/5 rounded-2xl space-y-5" id="sync-section">
-        <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2 border-b border-white/10 pb-2">
-          <Cloud className="w-4 h-4 text-brand-primary" />
-          <span>{t('settings.sync.title')}</span>
-        </h3>
-        <p className="text-xs text-on-surface-variant leading-relaxed">{t('settings.sync.description')}</p>
-
-        {/* Provider Selector */}
-        <div className="space-y-2">
-          <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-            {t('settings.sync.provider.label')}
-          </label>
-          <select
-            id="sync-provider-select"
-            value={syncProvider}
-            onChange={e => setSyncProvider(e.target.value as 'disabled' | 'webdav')}
-            className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2 text-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-brand-primary"
-          >
-            <option value="disabled">{t('settings.sync.provider.disabled')}</option>
-            <option value="webdav">{t('settings.sync.provider.webdav')}</option>
-          </select>
-        </div>
-
-        {/* WebDAV Config Form */}
-        {syncProvider === 'webdav' && (
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-on-surface-variant">{t('settings.sync.configure.url')}</label>
-              <input
-                id="sync-webdav-url"
-                type="url"
-                value={syncUrl}
-                onChange={e => setSyncUrl(e.target.value)}
-                placeholder={t('settings.sync.configure.urlPlaceholder')}
-                className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:ring-1 focus:ring-brand-primary"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="block text-xs font-medium text-on-surface-variant">{t('settings.sync.configure.username')}</label>
-                <input
-                  id="sync-webdav-username"
-                  type="text"
-                  autoComplete="username"
-                  value={syncUsername}
-                  onChange={e => setSyncUsername(e.target.value)}
-                  placeholder={t('settings.sync.configure.usernamePlaceholder')}
-                  className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:ring-1 focus:ring-brand-primary"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="block text-xs font-medium text-on-surface-variant">{t('settings.sync.configure.password')}</label>
-                <input
-                  id="sync-webdav-password"
-                  type="password"
-                  autoComplete="current-password"
-                  value={syncPassword}
-                  onChange={e => setSyncPassword(e.target.value)}
-                  placeholder={t('settings.sync.configure.passwordPlaceholder')}
-                  className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:ring-1 focus:ring-brand-primary"
-                />
-              </div>
-            </div>
-
-            {/* Test Connection */}
-            <button
-              id="sync-test-btn"
-              onClick={handleSyncTest}
-              disabled={syncTestLoading}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-brand-primary/40 text-brand-primary hover:bg-brand-primary/10 text-xs font-medium transition-all disabled:opacity-50 cursor-pointer"
-            >
-              <Wifi className="w-3.5 h-3.5" />
-              <span>{syncTestLoading ? '…' : t('settings.sync.configure.testConnection')}</span>
-            </button>
-            {syncTestResult && (
-              <p className={`text-xs px-1 ${syncTestSucceeded ? 'text-green-400' : 'text-red-400'}`}>
-                {syncTestResult}
-              </p>
-            )}
-
-            {/* Save / Disable buttons */}
-            <div className="flex gap-2 flex-wrap">
-              <button
-                id="sync-save-btn"
-                onClick={handleSyncSave}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-brand-primary text-brand-on-primary font-semibold text-xs hover:opacity-90 transition-all cursor-pointer"
-              >
-                <Check className="w-3.5 h-3.5" />
-                <span>{t('settings.sync.configure.save')}</span>
-              </button>
-              <button
-                id="sync-disable-btn"
-                onClick={handleSyncDisable}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-white/15 text-on-surface-variant hover:text-brand-error hover:border-brand-error/40 font-medium text-xs transition-all cursor-pointer"
-              >
-                <CloudOff className="w-3.5 h-3.5" />
-                <span>{t('settings.sync.configure.disable')}</span>
-              </button>
-            </div>
-            {syncMessage && (
-              <p className="text-xs text-on-surface-variant px-1">{syncMessage}</p>
-            )}
-          </div>
-        )}
-
-        {/* Sync Now + Status */}
-        {syncProvider === 'webdav' && (
-          <div className="border-t border-white/10 pt-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <p className="text-xs font-semibold text-on-surface">{t('settings.sync.lastSync')}</p>
-                <p className="text-xs text-on-surface-variant">
-                  {syncLastAt
-                    ? new Date(syncLastAt).toLocaleString()
-                    : t('settings.sync.never')}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                {syncStatus === 'success' && <CheckCircle className="w-4 h-4 text-green-400" />}
-                {syncStatus === 'error' && <AlertCircle className="w-4 h-4 text-red-400" />}
-                {syncStatus === 'conflict' && <AlertCircle className="w-4 h-4 text-yellow-400" />}
-                {syncStatus === 'syncing' && <RefreshCw className="w-4 h-4 text-brand-primary animate-spin" />}
-                <button
-                  id="sync-now-btn"
-                  onClick={handleSyncNow}
-                  disabled={syncLoading}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-primary/90 hover:bg-brand-primary text-brand-on-primary font-semibold text-xs transition-all disabled:opacity-50 cursor-pointer"
-                >
-                  <RotateCcw className={`w-3.5 h-3.5 ${syncLoading ? 'animate-spin' : ''}`} />
-                  <span>{syncLoading ? t('settings.sync.syncNowLoading') : t('settings.sync.syncNow')}</span>
-                </button>
-              </div>
-            </div>
-            {syncStatus !== 'idle' && (
-              <p className={`text-xs px-1 ${
-                syncStatus === 'success' ? 'text-green-400' :
-                syncStatus === 'conflict' ? 'text-yellow-400' :
-                syncStatus === 'error' ? 'text-red-400' :
-                'text-on-surface-variant'
-              }`}>
-                {syncStatus === 'syncing' ? t('settings.sync.status.syncing') :
-                 syncStatus === 'success' ? t('settings.sync.status.success') :
-                 syncStatus === 'conflict' ? t('settings.sync.status.conflict') :
-                 syncStatus === 'error' ? t('settings.sync.status.error') : ''}
-                {syncMessage && <span className="ml-1">— {syncMessage}</span>}
-              </p>
-            )}
-            {syncStatus === 'conflict' && (
-              <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 space-y-1">
-                <p className="text-xs font-semibold text-yellow-300">{t('settings.sync.conflict.title')}</p>
-                <p className="text-xs text-yellow-200/70">{t('settings.sync.conflict.description')}</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Zero-Knowledge Note */}
-        <p className="text-xs text-on-surface-variant/60 italic border-t border-white/5 pt-3">
-          {t('settings.sync.securityNote')}
-        </p>
-      </div>
+      <SettingsSyncSection
+        syncProvider={syncProvider}
+        setSyncProvider={setSyncProvider}
+        syncUrl={syncUrl}
+        setSyncUrl={setSyncUrl}
+        syncUsername={syncUsername}
+        setSyncUsername={setSyncUsername}
+        syncPassword={syncPassword}
+        setSyncPassword={setSyncPassword}
+        syncStatus={syncStatus}
+        syncMessage={syncMessage}
+        syncLastAt={syncLastAt}
+        syncTestResult={syncTestResult}
+        syncTestLoading={syncTestLoading}
+        syncLoading={syncLoading}
+        onSyncTest={handleSyncTest}
+        onSyncSave={handleSyncSave}
+        onSyncDisable={handleSyncDisable}
+        onSyncNow={handleSyncNow}
+        t={t}
+      />
 
       {/* Extension Token Rotation — desktop only */}
       {typeof window !== 'undefined' && window.__TAURI_INTERNALS__ && (
@@ -1876,22 +1388,10 @@ export default function SettingsPanel({
       )}
 
       {/* Extreme Danger Zone */}
-      <div className="p-4 sm:p-6 bg-brand-error/5 border border-brand-error/20 rounded-2xl space-y-4" id="danger-zone-section">
-        <h3 className="font-bold text-sm text-brand-error uppercase tracking-wider flex items-center gap-2 border-b border-brand-error/10 pb-2">
-          <Trash2 className="w-4 h-4" />
-          <span>{t('settings.danger.title')}</span>
-        </h3>
-        <p className="hidden sm:block text-xs text-on-surface-variant leading-relaxed">
-          {t('settings.danger.description')}
-        </p>
-        <button
-          onClick={triggerResetAll}
-          className="flex items-center gap-2 px-5 py-3 rounded-lg border-2 border-brand-error hover:bg-brand-error hover:text-brand-on-error font-bold text-xs text-brand-error transition-all cursor-pointer"
-        >
-          <Trash2 className="w-4" />
-          <span>{t('settings.danger.resetAll')}</span>
-        </button>
-      </div>
+      <SettingsDangerZone
+        onResetAll={triggerResetAll}
+        t={t}
+      />
     </div>
   );
 }
