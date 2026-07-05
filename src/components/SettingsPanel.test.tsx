@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from '../lib/encryption';
 import { isNativeFileDialogSupported, openDesktopImportFile, saveDesktopExportFile } from '../lib/desktopFiles';
+import { isAndroidRuntime } from '../lib/desktopStorage';
 import { isAndroidAutofillSupported, openAndroidAutofillSettings } from '../lib/androidAutofill';
 import { disableBiometric, isBiometricEnabled, isBiometricSupported, registerBiometric } from '../lib/biometric';
 import { changeMasterPassword, deleteVaultItem, getRememberedAccountSecretKey, getVaultItems, isAccountSecretKeyRequired, migrateActiveVaultStorageToWaSqlite, resetSystem, reseedDemoData, saveVaultItem, saveVaultItems, verifyMasterPassword } from '../lib/storage';
@@ -573,6 +574,24 @@ describe('SettingsPanel account and safety controls', () => {
       expect(screen.getByTestId('wa-sqlite-migration-message').textContent).toContain('wa-sqlite migration was stopped by safety checks.');
     });
     expect(screen.getByTestId('wa-sqlite-migration-message').textContent).toContain('wa-sqlite-promotion-dry-run-not-run');
+  });
+
+
+  it('blocks wa-sqlite migration on Android before invoking the WASM engine', async () => {
+    window.__TAURI_INTERNALS__ = {};
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Linux; Android 15) AegisVault',
+    });
+    renderSettingsWithLanguage('en');
+
+    fireEvent.click(screen.getByTestId('wa-sqlite-migration-button'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wa-sqlite-migration-message').textContent).toContain('Android WebView on this device does not provide enough WASM memory for wa-sqlite migration.');
+    });
+    expect(window.confirm).not.toHaveBeenCalled();
+    expect(migrateActiveVaultStorageToWaSqlite).not.toHaveBeenCalled();
   });
 
   it('shows a session warning when wa-sqlite migration starts without an unlocked vault', async () => {

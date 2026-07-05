@@ -40,6 +40,7 @@ import { secureRandomToken } from '../lib/random';
 import { registerBiometric, isBiometricEnabled, disableBiometric, isBiometricSupported, getBiometricType } from '../lib/biometric';
 import { withActiveBackupPassword } from '../lib/vaultSession';
 import { isNativeFileDialogSupported, openDesktopImportFile, saveDesktopExportFile } from '../lib/desktopFiles';
+import { isAndroidRuntime } from '../lib/desktopStorage';
 import { isAndroidAutofillEnabled, isAndroidAutofillSupported, openAndroidAutofillSettings } from '../lib/androidAutofill';
 import { saveEmergencyKit, saveEmergencyKitPdf } from '../lib/emergencyKit';
 import { invoke } from '@tauri-apps/api/core';
@@ -124,6 +125,8 @@ function getBackupDecryptErrorMessage(err: any, t: ReturnType<typeof useLanguage
       return t('settings.import.decryptErrorUnsupported');
     case 'secureBackup.weakKdfParams':
       return t('settings.import.decryptErrorWeakParams');
+    case 'secureBackup.kdfRuntimeFailure':
+      return t('settings.import.decryptErrorKdfRuntime');
     case 'validation.invalidBackupFormat':
     case 'validation.missingItems':
     case 'validation.itemMissingRequiredFields':
@@ -342,6 +345,12 @@ export default function SettingsPanel({
 
   const handleWaSqliteMigration = async () => {
     setStorageMigrationMessage(null);
+    if (isAndroidRuntime()) {
+      setStorageMigrationStatus('error');
+      setStorageMigrationMessage(t('settings.storageMigration.androidUnsupported'));
+      return;
+    }
+
     const confirmed = window.confirm(t('settings.storageMigration.confirm'));
     if (!confirmed) return;
 
@@ -367,7 +376,9 @@ export default function SettingsPanel({
       setStorageMigrationStatus('error');
       const message = err?.message === 'vault-storage-active-migration-session-required'
         ? t('settings.storageMigration.missingSession')
-        : `${t('settings.storageMigration.error')}: ${err?.message || t('settings.biometric.genericError')}`;
+        : err?.message === 'wa-sqlite-android-webview-wasm-memory-unsupported' || err?.message === 'wa-sqlite-webview-wasm-memory-unsupported'
+          ? t('settings.storageMigration.androidUnsupported')
+          : `${t('settings.storageMigration.error')}: ${err?.message || t('settings.biometric.genericError')}`;
       setStorageMigrationMessage(message);
     }
   };

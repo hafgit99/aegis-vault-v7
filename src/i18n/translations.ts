@@ -444,6 +444,7 @@ export const translations = {
     'settings.import.decryptErrorIntegrity': 'Yedek bütünlük doğrulaması başarısız oldu. Veri bozulmuş, tahrif edilmiş veya parola hatalı olabilir.',
     'settings.import.decryptErrorUnsupported': 'Desteklenmeyen güvenli yedek zarfı sürümü. Bu yedek Aegis Vault\'un eski bir sürümünden olabilir. Lütfen v6.x ile geri yüklemeyi deneyin.',
     'settings.import.decryptErrorWeakParams': 'Yetersiz veya zayıf KDF parametreleri tespit edildi. İçe aktarma güvenliğiniz için reddedildi.',
+    'settings.import.decryptErrorKdfRuntime': 'Bu yedek, Android cihazinizin WebView bellek sinirini asan eski yuksek bellekli KDF profiliyle olusturulmus. Windows uygulamasinda yeni bir sifreli yedek olusturup Androide tekrar aktariniz.',
     'settings.import.detectedSuccessMiddle': 'başarıyla tespit edildi!',
     'settings.import.recordsLoadedSuffix': 'adet kayıt kasaya yüklendi.',
     'settings.import.errorFallback': 'İçe aktarım başarısız oldu. Dosya formatını kontrol edin.',
@@ -477,6 +478,7 @@ export const translations = {
     'settings.storageMigration.promoted': 'wa-sqlite depolama motoru aktif hale getirildi.',
     'settings.storageMigration.blocked': 'wa-sqlite gecisi guvenlik kontrollerinde durduruldu.',
     'settings.storageMigration.missingSession': 'Gecis icin acik bir kasa oturumu gerekiyor.',
+    'settings.storageMigration.androidUnsupported': 'Android WebView bu cihazda wa-sqlite WASM gecisi icin yeterli bellek saglamiyor. Android surumunde mevcut guvenli depolama kullanilmaya devam eder; wa-sqlite gecisini Windows masaustu uygulamasinda yapin.',
     'settings.storageMigration.error': 'wa-sqlite gecisi tamamlanamadi',
     // Sync
     'settings.sync.title': 'Bulut Senkronizasyon (E2EE)',
@@ -1135,6 +1137,7 @@ export const translations = {
     'settings.storageMigration.promoted': 'The wa-sqlite storage engine is now active.',
     'settings.storageMigration.blocked': 'wa-sqlite migration was stopped by safety checks.',
     'settings.storageMigration.missingSession': 'An unlocked vault session is required before migration.',
+    'settings.storageMigration.androidUnsupported': 'Android WebView on this device does not provide enough WASM memory for wa-sqlite migration. The Android app will continue using the current secure storage; run wa-sqlite migration on the Windows desktop app instead.',
     'settings.storageMigration.error': 'wa-sqlite migration could not be completed',
     // Sync
     'settings.sync.title': 'Cloud Sync (E2EE)',
@@ -1239,6 +1242,7 @@ export const translations = {
     'settings.import.decryptErrorIntegrity': 'Backup integrity verification failed. The data may be corrupted, tampered with, or protected by a different password.',
     'settings.import.decryptErrorUnsupported': 'Unsupported secure backup envelope version. This backup may be from an older version of Aegis Vault. Please try restoring it with v6.x.',
     'settings.import.decryptErrorWeakParams': 'Insufficient or weak KDF parameters detected. Import rejected for your security.',
+    'settings.import.decryptErrorKdfRuntime': 'This backup was created with an older high-memory KDF profile that exceeds this Android WebView memory limit. Create a new encrypted backup on Windows and import that backup on Android.',
     'settings.import.detectedSuccessMiddle': 'was detected successfully!',
     'settings.import.recordsLoadedSuffix': 'records were loaded into the vault.',
     'settings.import.errorFallback': 'Import failed. Check the file format.',
@@ -1879,6 +1883,7 @@ export const translations = {
     'settings.storageMigration.promoted': 'The wa-sqlite storage engine is now active.',
     'settings.storageMigration.blocked': 'wa-sqlite migration was stopped by safety checks.',
     'settings.storageMigration.missingSession': 'An unlocked vault session is required before migration.',
+    'settings.storageMigration.androidUnsupported': '此设备的 Android WebView 没有为 wa-sqlite 迁移提供足够的 WASM 内存。Android 应用将继续使用当前安全存储；请在 Windows 桌面应用中运行 wa-sqlite 迁移。',
     'settings.storageMigration.error': 'wa-sqlite migration could not be completed',
     // Sync
     'settings.sync.title': '云端同步（E2EE）',
@@ -1983,6 +1988,7 @@ export const translations = {
     'settings.import.decryptErrorIntegrity': '备份完整性验证失败。数据可能已损坏、被篡改，或使用了不同的密码保护。',
     'settings.import.decryptErrorUnsupported': '不支持的安全备份封套版本。该备份可能来自旧版本的 Aegis Vault，请尝试使用 v6.x 进行恢复。',
     'settings.import.decryptErrorWeakParams': '检测到不足或较弱的的 KDF 参数。为了您的安全，导入已被拒绝。',
+    'settings.import.decryptErrorKdfRuntime': '此备份使用旧的高内存 KDF 配置创建，超出了此 Android WebView 的内存限制。请在 Windows 应用中重新创建加密备份，然后在 Android 上导入。',
     'settings.import.detectedSuccessMiddle': '已成功检测到！',
     'settings.import.recordsLoadedSuffix': '条记录已加载到保险库。',
     'settings.import.errorFallback': '导入失败。请检查文件格式。',

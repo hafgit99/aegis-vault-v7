@@ -1,7 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
+﻿import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { deriveArgon2idKey } from './argon2id';
-import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from './encryption';
+import {
+  BACKUP_KDF_PROFILE,
+  decryptDataWithPasswordSecure,
+  encryptDataWithPasswordSecure,
+  secureBackupErrorCodes,
+} from './encryption';
 
 const testKey = new Uint8Array(32).fill(7);
 
@@ -10,7 +15,12 @@ vi.mock('./argon2id', () => ({
 }));
 
 describe('secure encrypted backup envelope', () => {
-  it('uses the vetted Argon2id adapter metadata for new exports', async () => {
+  beforeEach(() => {
+    vi.mocked(deriveArgon2idKey).mockClear();
+    vi.mocked(deriveArgon2idKey).mockImplementation(async () => testKey);
+  });
+
+  it('uses the cross-platform Argon2id backup profile for new exports', async () => {
     const envelope = await encryptDataWithPasswordSecure('secret export', 'backup-password');
     const parsed = JSON.parse(envelope);
 
@@ -18,13 +28,9 @@ describe('secure encrypted backup envelope', () => {
       version: '1.2',
       kdf: 'Argon2id',
       kdfImplementation: 'argon2-browser',
+      kdfProfile: 'aegis-backup-cross-platform-v2',
       cipher: 'WebCrypto AES-256-GCM',
-      kdfParams: {
-        memoryKiB: 131072,
-        iterations: 4,
-        parallelism: 1,
-        hashLength: 32,
-      },
+      kdfParams: BACKUP_KDF_PROFILE,
     });
     expect(deriveArgon2idKey).toHaveBeenCalledWith(
       'backup-password',
@@ -46,5 +52,15 @@ describe('secure encrypted backup envelope', () => {
     parsed.tag = `${tamperedTagPrefix}${parsed.tag.slice(2)}`;
 
     await expect(decryptDataWithPasswordSecure(JSON.stringify(parsed), 'backup-password')).rejects.toThrow();
+  });
+
+  it('maps Android/WebView Argon2 WASM memory failures to a stable import error', async () => {
+    const envelope = await encryptDataWithPasswordSecure('secret export', 'backup-password');
+    vi.mocked(deriveArgon2idKey).mockRejectedValueOnce(new Error('memory access out of bounds'));
+
+    await expect(decryptDataWithPasswordSecure(envelope, 'backup-password')).rejects.toMatchObject({
+      code: secureBackupErrorCodes.kdfRuntimeFailure,
+      name: 'SecureBackupError',
+    });
   });
 });

@@ -39,6 +39,7 @@ import {
   removeIndexedDbItemSync,
   clearAllSetupFlagsSync,
 } from './indexedDbStorage';
+import { isAndroidRuntime } from './desktopStorage';
 
 const STORAGE_KEYS = {
   IS_SET_UP: 'aegis_is_setup',
@@ -336,8 +337,21 @@ export async function resetSystem(): Promise<void> {
 }
 
 export async function migrateActiveVaultStorageToWaSqlite(): Promise<WaSqliteActiveBackendMigrationResult> {
+  if (isAndroidRuntime()) {
+    throw new Error('wa-sqlite-android-webview-wasm-memory-unsupported');
+  }
+
   const result = withActiveSessionSecrets(async (credential) => {
-    const migrationResult = await runWaSqliteActiveBackendMigration(credential);
+    let migrationResult: WaSqliteActiveBackendMigrationResult;
+    try {
+      migrationResult = await runWaSqliteActiveBackendMigration(credential);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error ?? '');
+      if (/memory access out of bounds|out of memory|wasm/i.test(message)) {
+        throw new Error('wa-sqlite-webview-wasm-memory-unsupported');
+      }
+      throw error;
+    }
     if (migrationResult.status === 'promoted') {
       setIndexedDbItemSync(STORAGE_KEYS.IS_SET_UP, 'true');
       const newKey = await getVaultStorageRepository().deriveEncryptionKey(credential);

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,12 +7,27 @@ import { secureRandomBytes } from './random';
 import { deriveArgon2idKey } from './argon2id';
 import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, generateSafeIv } from './webcrypto';
 
+export const BACKUP_KDF_PROFILE = {
+  memoryKiB: 64 * 1024,
+  iterations: 3,
+  parallelism: 1,
+  hashLength: 32,
+} as const;
+
+export const BACKUP_KDF_LEGACY_HIGH_MEMORY_PROFILE = {
+  memoryKiB: 128 * 1024,
+  iterations: 4,
+  parallelism: 1,
+  hashLength: 32,
+} as const;
+
 export const secureBackupErrorCodes = {
   invalidJson: 'secureBackup.invalidJson',
   missingFields: 'secureBackup.missingFields',
   checksumMismatch: 'secureBackup.checksumMismatch',
   weakKdfParams: 'secureBackup.weakKdfParams',
   unsupportedLegacyEnvelope: 'secureBackup.unsupportedLegacyEnvelope',
+  kdfRuntimeFailure: 'secureBackup.kdfRuntimeFailure',
 } as const;
 
 export type SecureBackupErrorCode = (typeof secureBackupErrorCodes)[keyof typeof secureBackupErrorCodes];
@@ -32,12 +47,7 @@ async function sha256Hex(input: Uint8Array): Promise<string> {
 export async function encryptDataWithPasswordSecure(rawData: string, password: string): Promise<string> {
   const saltBytes = secureRandomBytes(16);
   const saltHex = Array.from(saltBytes).map(b => b.toString(16).padStart(2, '0')).join('');
-  const kdfParams = {
-    memoryKiB: 128 * 1024,
-    iterations: 4,
-    parallelism: 1,
-    hashLength: 32,
-  };
+  const kdfParams = { ...BACKUP_KDF_PROFILE };
 
   const aesKey = await deriveArgon2idKey(password, saltHex, kdfParams);
   const bundle = await webCryptoAesGcmEncrypt(rawData, aesKey, generateSafeIv());
@@ -52,6 +62,7 @@ export async function encryptDataWithPasswordSecure(rawData: string, password: s
       generator: 'Aegis Secure Core',
       kdf: 'Argon2id',
       kdfImplementation: 'argon2-browser',
+      kdfProfile: 'aegis-backup-cross-platform-v2',
       kdfParams,
       cipher: 'WebCrypto AES-256-GCM',
       salt: saltHex,
@@ -98,7 +109,16 @@ export async function decryptDataWithPasswordSecure(envelopeJsonStr: string, pas
     throw new SecureBackupError(secureBackupErrorCodes.checksumMismatch);
   }
 
-  const aesKey = await deriveArgon2idKey(password, parsed.salt, parsed.kdfParams);
+  let aesKey: Uint8Array;
+  try {
+    aesKey = await deriveArgon2idKey(password, parsed.salt, parsed.kdfParams);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error ?? '');
+    if (/memory access out of bounds|out of memory|wasm/i.test(message)) {
+      throw new SecureBackupError(secureBackupErrorCodes.kdfRuntimeFailure);
+    }
+    throw error;
+  }
 
   return webCryptoAesGcmDecrypt(
     {
@@ -109,3 +129,4 @@ export async function decryptDataWithPasswordSecure(envelopeJsonStr: string, pas
     aesKey,
   );
 }
+
