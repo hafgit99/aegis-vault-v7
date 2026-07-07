@@ -943,7 +943,7 @@ pub fn run() {
     #[cfg(mobile)]
     let builder = builder.plugin(tauri_plugin_biometric::init());
 
-    builder
+    let app = builder
         .setup(move |app| {
             if let Err(error) = apply_screen_capture_protection(app.handle()) {
                 log::warn!("failed to enable screen capture protection: {error}");
@@ -1000,7 +1000,6 @@ pub fn run() {
             credential_handler::update_rust_active_vault_key,
             credential_handler::has_rust_session
         ])
-    let app = builder
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 
