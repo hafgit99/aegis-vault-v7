@@ -40,6 +40,7 @@ import {
   clearAllSetupFlagsSync,
 } from './indexedDbStorage';
 import { isAndroidRuntime, isDesktopRuntime } from './desktopStorage';
+import { sqliteOPFSInstance } from './sqlite_opfs';
 import { invoke } from '@tauri-apps/api/core';
 
 const STORAGE_KEYS = {
@@ -55,6 +56,13 @@ interface AccountSecretProfile {
 
 export async function initializeStorage(): Promise<void> {
   await initializeIndexedDbStorage();
+  if (isDesktopRuntime() && !isAndroidRuntime()) {
+    try {
+      await sqliteOPFSInstance.hydrate();
+    } catch (e) {
+      console.error('Failed to pre-hydrate sqliteOPFSInstance:', e);
+    }
+  }
   await restoreOrActivateDefaultVaultStorageBackend({
     hasLegacyOpfsVaultData: isMasterPasswordSet,
   });

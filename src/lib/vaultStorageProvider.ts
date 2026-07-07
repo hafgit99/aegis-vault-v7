@@ -21,6 +21,7 @@ import {
 } from './waSqlitePersistence';
 import { createWaSqliteVaultStorageRepository } from './waSqliteVaultStorageRepository';
 import { getIndexedDbItemSync, setIndexedDbItemSync, removeIndexedDbItemSync } from './indexedDbStorage';
+import { isAndroidRuntime, isDesktopRuntime } from './desktopStorage';
 
 export const ACTIVE_VAULT_STORAGE_BACKEND_KEY = 'aegis_vault_storage_active_backend';
 
@@ -105,7 +106,8 @@ export async function restoreOrActivateDefaultVaultStorageBackend(
   }
 
   const hasLegacyData = (options.hasLegacyOpfsVaultData ?? hasLegacyOpfsVaultData)();
-  if (hasLegacyData) {
+  const isDesktop = isDesktopRuntime() && !isAndroidRuntime();
+  if (hasLegacyData || isDesktop) {
     return 'kept-legacy-opfs';
   }
 
