@@ -1,5 +1,6 @@
 import React, { Fragment, useCallback, useState, useEffect, memo } from 'react';
 import { ArrowLeft, CreditCard, FileText, Fingerprint, Heart, KeyRound, Layers, LayoutDashboard, Lock, Plus, Search, Smartphone, User, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import type { VaultCategoryFilter } from '../hooks/useVaultFilters';
 
@@ -60,6 +61,7 @@ interface VaultWorkspaceProps {
   autofillRequest?: AndroidAutofillRequest | null;
   onCancelAutofill?: () => void;
   onApproveAutofill?: (item: VaultItem) => void;
+  onUpdateItemCategory?: (itemId: string, category: VaultItem['category']) => void;
 }
 
 export function VaultWorkspaceContent({
@@ -105,11 +107,13 @@ export function VaultWorkspaceContent({
   autofillRequest = null,
   onCancelAutofill,
   onApproveAutofill,
+  onUpdateItemCategory,
 }: VaultWorkspaceProps) {
   const { t } = useLanguage();
   const autofillTargetLabel = androidAutofillTargetLabel(autofillRequest);
 
   const [visibleCount, setVisibleCount] = useState(60);
+  const [dragOverCategory, setDragOverCategory] = useState<VaultCategoryFilter | null>(null);
 
   // Reset visibleCount if search query or filters change
   useEffect(() => {
@@ -230,28 +234,60 @@ export function VaultWorkspaceContent({
               { key: 'passkey' as VaultCategoryFilter, icon: <Fingerprint className="w-3 h-3" />, label: t('detail.category.passkey'), count: passkeyCount },
               { key: 'identity' as VaultCategoryFilter, icon: <User className="w-3 h-3" />, label: t('detail.category.identity'), count: identityCount },
               { key: 'secure_note' as VaultCategoryFilter, icon: <FileText className="w-3 h-3" />, label: t('detail.category.secureNote'), count: secureNoteCount },
-            ]).map((cat) => (
-              <button
-                key={cat.key}
-                type="button"
-                data-testid={`category-chip-${cat.key}`}
-                onClick={() => {
-                  onSelectCategory(cat.key);
-                  setVisibleCount(60);
-                }}
-                className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer whitespace-nowrap ${
-                  selectedCategory === cat.key
-                    ? 'bg-brand-primary/15 text-brand-primary border-brand-primary/25'
-                    : 'bg-transparent text-on-surface-variant/70 border-outline-variant/10 hover:text-on-surface hover:bg-surface-low/60'
-                }`}
-              >
-                {cat.icon}
-                <span>{cat.label}</span>
-                <span className={`ml-0.5 font-mono text-[9px] ${
-                  selectedCategory === cat.key ? 'text-brand-primary/70' : 'text-on-surface-variant/40'
-                }`}>{cat.count}</span>
-              </button>
-            ))}
+            ]).map((cat) => {
+              const isDragOver = dragOverCategory === cat.key;
+              const isDropAllowed = cat.key !== 'all';
+
+              return (
+                <button
+                  key={cat.key}
+                  type="button"
+                  data-testid={`category-chip-${cat.key}`}
+                  onClick={() => {
+                    onSelectCategory(cat.key);
+                    setVisibleCount(60);
+                  }}
+                  onDragOver={(e) => {
+                    if (isDropAllowed) {
+                      e.preventDefault();
+                    }
+                  }}
+                  onDragEnter={(e) => {
+                    if (isDropAllowed) {
+                      setDragOverCategory(cat.key);
+                    }
+                  }}
+                  onDragLeave={() => {
+                    if (isDropAllowed) {
+                      setDragOverCategory(null);
+                    }
+                  }}
+                  onDrop={(e) => {
+                    if (isDropAllowed) {
+                      e.preventDefault();
+                      setDragOverCategory(null);
+                      const itemId = e.dataTransfer.getData('text/plain');
+                      if (itemId && onUpdateItemCategory) {
+                        onUpdateItemCategory(itemId, cat.key as any);
+                      }
+                    }
+                  }}
+                  className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer whitespace-nowrap ${
+                    selectedCategory === cat.key
+                      ? 'bg-brand-primary/15 text-brand-primary border-brand-primary/25'
+                      : isDragOver
+                        ? 'bg-brand-primary/20 text-brand-primary border-brand-primary ring-2 ring-brand-primary/40'
+                        : 'bg-transparent text-on-surface-variant/70 border-outline-variant/10 hover:text-on-surface hover:bg-surface-low/60'
+                  }`}
+                >
+                  {cat.icon}
+                  <span>{cat.label}</span>
+                  <span className={`ml-0.5 font-mono text-[9px] ${
+                    selectedCategory === cat.key ? 'text-brand-primary/70' : 'text-on-surface-variant/40'
+                  }`}>{cat.count}</span>
+                </button>
+              );
+            })}
           </div>
 
           <div className="flex justify-between items-center text-on-surface-variant text-xs mt-1">
@@ -348,16 +384,25 @@ export function VaultWorkspaceContent({
               </p>
             </div>
           ) : (
-            displayedItems.map((item) => (
-              <Fragment key={item.id}>
-                <VaultListItem
-                  item={item}
-                  isSelected={selectedItem?.id === item.id}
-                  onSelect={onSelectItem}
-                  autofillRecommended={isAutofillMode && isAndroidAutofillTargetMatch(item, autofillRequest)}
-                />
-              </Fragment>
-            ))
+            <AnimatePresence initial={false}>
+              {displayedItems.map((item) => (
+                <motion.div
+                  key={item.id}
+                  layout
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <VaultListItem
+                    item={item}
+                    isSelected={selectedItem?.id === item.id}
+                    onSelect={onSelectItem}
+                    autofillRecommended={isAutofillMode && isAndroidAutofillTargetMatch(item, autofillRequest)}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
           )}
 
           {visibleCount < filteredItems.length && (

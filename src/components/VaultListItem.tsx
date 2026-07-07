@@ -1,5 +1,5 @@
 import { Heart, Sparkles } from 'lucide-react';
-import { memo } from 'react';
+import { memo, useState } from 'react';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { TranslationKey } from '../i18n/translations';
@@ -23,6 +23,7 @@ const strengthLabelKeys: Record<ReturnType<typeof getStrengthLabel>['label'], Tr
 
 function VaultListItemContent({ item, isSelected, onSelect, autofillRecommended = false }: VaultListItemProps) {
   const { t } = useLanguage();
+  const [isDragging, setIsDragging] = useState(false);
   const logoUrl = getLogoForPlatform(item.title, item.url);
   const itemStrength = getStrengthLabel(item.password || '');
 
@@ -30,7 +31,18 @@ function VaultListItemContent({ item, isSelected, onSelect, autofillRecommended 
     <div
       data-testid="vault-list-item"
       onClick={() => onSelect(item)}
+      draggable={true}
+      onDragStart={(e) => {
+        setIsDragging(true);
+        e.dataTransfer.setData('text/plain', item.id);
+        e.dataTransfer.effectAllowed = 'move';
+      }}
+      onDragEnd={() => {
+        setIsDragging(false);
+      }}
       className={`group p-3 rounded-lg border flex items-center gap-3 cursor-pointer transition-all ${
+        isDragging ? 'opacity-40 scale-[0.98]' : ''
+      } ${
         isSelected
           ? 'border-brand-primary/25 bg-brand-primary/10'
           : 'border-transparent hover:border-outline-variant/15 hover:bg-surface-high/80'

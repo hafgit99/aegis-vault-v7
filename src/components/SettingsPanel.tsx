@@ -50,6 +50,7 @@ import { progressWidthClass } from '../lib/progressWidth';
 import { validateMasterPassword } from '../lib/security';
 import type { LanguageCode } from '../i18n/translations';
 import { SettingsLanguageCard } from './settings/SettingsLanguageCard';
+import { SettingsThemeCard } from './settings/SettingsThemeCard';
 import { SettingsPasswordCard } from './settings/SettingsPasswordCard';
 import { SettingsStatsCard } from './settings/SettingsStatsCard';
 import { BlockedRequestsPanel } from './settings/BlockedRequestsPanel';
@@ -1246,6 +1247,8 @@ export default function SettingsPanel({
         onLanguageChange={setLanguage}
         t={t}
       />
+
+      <SettingsThemeCard />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6" id="settings-top-row">
         <SettingsStatsCard

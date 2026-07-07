@@ -289,6 +289,19 @@ export default function App() {
     openEditItemForm(selectedItem);
   };
 
+  const handleUpdateItemCategory = async (itemId: string, newCategory: any) => {
+    const item = items.find(i => i.id === itemId);
+    if (item) {
+      const updatedItem = { ...item, category: newCategory, updatedAt: new Date().toISOString() };
+      await handleSaveItem(updatedItem);
+      showNotification({
+        title: t('vaultForm.title.edit'),
+        message: 'Category updated successfully / Kategori güncellendi',
+        type: 'success',
+      });
+    }
+  };
+
   const score = useSelectedItemScore(selectedItem);
 
   const handleManualRefresh = async () => {
@@ -309,13 +322,41 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!unlocked) return;
+
+      const isMac = typeof navigator !== 'undefined' && navigator.userAgent.toLowerCase().includes('mac');
+      const modifier = isMac ? e.metaKey : e.ctrlKey;
+
+      if (modifier) {
+        const key = e.key.toLowerCase();
+        if (key === 'k') {
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent('aegis-focus-search'));
+        } else if (key === 'n') {
+          e.preventDefault();
+          handleTriggerNew();
+        } else if (key === 'l') {
+          e.preventDefault();
+          handleLock();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [unlocked, handleTriggerNew, handleLock]);
+
   // If locked, return the beautiful LockScreen UI
   if (!unlocked) {
     return <LockScreen onUnlock={handleUnlock} isAutofillPending={Boolean(pendingAutofillRequest)} />;
   }
 
   return (
-    <div className="safe-screen-fixed flex w-full bg-[#121412] text-[#e2e3df] overflow-hidden font-sans">
+    <div className="safe-screen-fixed flex w-full bg-brand-bg text-on-surface overflow-hidden font-sans">
       <MobileSidebarBackdrop isOpen={isSidebarOpen} onClose={handleCloseSidebar} />
 
       <SidebarNavigation
@@ -381,6 +422,7 @@ export default function App() {
           onToggleFavorite={handleToggleFavorite}
           onEdit={handleTriggerEdit}
           onDelete={handleDeleteItem}
+          onUpdateItemCategory={handleUpdateItemCategory}
           onToggleReveal={toggleReveal}
           onCopyText={handleCopyText}
           onDownloadAttachment={handleDownloadAttachment}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 import { Bell, Lock, Menu, RefreshCw, Search } from 'lucide-react';
 
@@ -36,6 +36,16 @@ export default function TopBar({
 }: TopBarProps) {
   const { t } = useLanguage();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleFocusSearch = () => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    };
+    window.addEventListener('aegis-focus-search', handleFocusSearch);
+    return () => window.removeEventListener('aegis-focus-search', handleFocusSearch);
+  }, []);
 
   const handleRefreshClick = async () => {
     if (isRefreshing) return;
@@ -62,6 +72,7 @@ export default function TopBar({
           <div className="relative w-full max-w-md min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px] w-4 h-4" />
             <input
+              ref={inputRef}
               data-testid="vault-search-input"
               type="text"
               value={searchQuery}
