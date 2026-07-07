@@ -20,6 +20,7 @@ export const extensionTranslations = {
     'banner.saveDesc': 'Bu sitedeki giriş bilgilerini kasanıza kaydetmek ister misiniz?',
     'banner.saveBtn': 'Kaydet',
     'banner.dismissBtn': 'Yoksay',
+    'settings.autoSubmit': 'Otomatik Gönder',
   },
   en: {
     'locked.title': 'Aegis Vault Locked',
@@ -42,6 +43,7 @@ export const extensionTranslations = {
     'banner.saveDesc': 'Would you like to save these credentials to your vault?',
     'banner.saveBtn': 'Save',
     'banner.dismissBtn': 'Dismiss',
+    'settings.autoSubmit': 'Auto-Submit',
   },
   zh: {
     'locked.title': 'Aegis Vault 已锁定',
@@ -64,6 +66,7 @@ export const extensionTranslations = {
     'banner.saveDesc': '您想将此登录凭据保存到您的保险库中吗？',
     'banner.saveBtn': '保存',
     'banner.dismissBtn': '忽略',
+    'settings.autoSubmit': '自动提交',
   }
 };
 

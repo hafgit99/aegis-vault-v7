@@ -201,25 +201,103 @@ pub fn start_tcp_server(
     });
 }
 
-fn get_hostname(url_str: &str) -> String {
-    let mut clean = url_str.to_lowercase();
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ParsedUrl {
+    host: String,
+    port: Option<u16>,
+    path: String,
+}
+
+fn parse_url(url_str: &str) -> ParsedUrl {
+    let mut clean = url_str.trim().to_lowercase();
+    
     // Remove protocol
     if let Some(pos) = clean.find("://") {
         clean = clean[pos + 3..].to_string();
     }
-    // Remove path/query
-    if let Some(pos) = clean.find('/') {
+    
+    // Remove query and fragment
+    if let Some(pos) = clean.find('?') {
         clean = clean[..pos].to_string();
     }
-    // Remove port
-    if let Some(pos) = clean.find(':') {
+    if let Some(pos) = clean.find('#') {
         clean = clean[..pos].to_string();
     }
-    // Remove www.
-    if clean.starts_with("www.") {
-        clean = clean[4..].to_string();
+    
+    // Split host/port and path
+    let (host_port, path) = if let Some(pos) = clean.find('/') {
+        (clean[..pos].to_string(), clean[pos..].to_string())
+    } else {
+        (clean, "/".to_string())
+    };
+    
+    // Extract port
+    let mut host = host_port;
+    let mut port = None;
+    if let Some(pos) = host.rfind(':') {
+        if let Ok(p) = host[pos + 1..].parse::<u16>() {
+            port = Some(p);
+            host = host[..pos].to_string();
+        }
     }
-    clean.trim().to_string()
+    
+    // Remove www. prefix if present
+    if host.starts_with("www.") {
+        host = host[4..].to_string();
+    }
+    
+    ParsedUrl { host, port, path }
+}
+
+fn match_credentials(active: &ParsedUrl, item: &ParsedUrl) -> Option<u32> {
+    // 1. Host matching
+    let host_score = if active.host == item.host {
+        100 // Exact host match
+    } else if active.host.ends_with(&format!(".{}", item.host)) {
+        80  // Subdomain match (e.g. active is sub.domain.com, item is domain.com)
+    } else if item.host.ends_with(&format!(".{}", active.host)) {
+        60  // Parent domain match (e.g. active is domain.com, item is sub.domain.com)
+    } else {
+        return None; // No host match
+    };
+
+    // 2. Port matching
+    let is_dev_host = active.host == "localhost" || active.host == "127.0.0.1" || active.host == "[::1]";
+    
+    let port_score = match (active.port, item.port) {
+        (Some(ap), Some(ip)) => {
+            if ap == ip {
+                20 // Ports match exactly
+            } else {
+                return None; // Port mismatch, reject
+            }
+        }
+        (Some(_), None) | (None, Some(_)) => {
+            if is_dev_host {
+                // Reject port mismatch on localhost/127.0.0.1
+                return None;
+            }
+            0 // Wildcard/default port match allowed for normal sites, no bonus
+        }
+        (None, None) => 10, // Both default ports
+    };
+
+    // 3. Path matching
+    let clean_item_path = item.path.trim_end_matches('/');
+    let path_score = if clean_item_path.is_empty() || clean_item_path == "/" {
+        10 // Wildcard/empty path match
+    } else {
+        let clean_active_path = active.path.trim_end_matches('/');
+        if clean_active_path == clean_item_path {
+            30 // Exact path match
+        } else if active.path.starts_with(&format!("{}/", clean_item_path)) {
+            20 // Sub-path match (e.g. active /admin/dashboard, item /admin)
+        } else {
+            return None; // Path specified in credential but does not match active path -> REJECT
+        }
+    };
+
+    Some(host_score + port_score + path_score)
 }
 
 fn focus_webview_window(window: &tauri::WebviewWindow) {
@@ -322,7 +400,7 @@ fn handle_client(
             }
             "get_credentials" => {
                 let url = req["url"].as_str().unwrap_or("");
-                let active_host = get_hostname(url);
+                let active_parsed = parse_url(url);
 
                 let mut creds_guard = credentials.lock().unwrap();
                 let now_ms = credential_lease_expires_at(0);
@@ -334,29 +412,25 @@ fn handle_client(
                 }
 
                 if let Some(ref cache) = *creds_guard {
-                    let matching: Vec<ExtensionCredential> = if active_host.is_empty() {
-                        Vec::new()
-                    } else {
-                        cache
-                            .credentials
-                            .iter()
-                            .filter(|item| {
-                                let item_host = get_hostname(&item.url);
-                                if item_host.is_empty() {
-                                    false
-                                } else {
-                                    // Eşleşme kriteri:
-                                    // 1. Hostnameler birebir aynıysa
-                                    // 2. Aktif host, şifre hostunun subdomaini ise (ör. active: sub.domain.com, item: domain.com)
-                                    // 3. Şifre hostu, aktif hostun subdomaini ise
-                                    active_host == item_host
-                                        || active_host.ends_with(&format!(".{}", item_host))
-                                        || item_host.ends_with(&format!(".{}", active_host))
-                                }
-                            })
-                            .cloned()
-                            .collect()
-                    };
+                    let mut scored_credentials: Vec<(u32, ExtensionCredential)> = Vec::new();
+                    
+                    if !active_parsed.host.is_empty() {
+                        for item in &cache.credentials {
+                            let item_parsed = parse_url(&item.url);
+                            if let Some(score) = match_credentials(&active_parsed, &item_parsed) {
+                                scored_credentials.push((score, item.clone()));
+                            }
+                        }
+                    }
+                    
+                    // Sort by score descending (highest score first)
+                    scored_credentials.sort_by(|a, b| b.0.cmp(&a.0));
+                    
+                    let matching: Vec<ExtensionCredential> = scored_credentials
+                        .into_iter()
+                        .map(|(_, cred)| cred)
+                        .collect();
+                        
                     serde_json::json!({ "locked": false, "credentials": matching })
                 } else {
                     serde_json::json!({ "locked": true, "credentials": [] })
@@ -544,5 +618,46 @@ mod tests {
 
         assert!(short > 0);
         assert!(long.saturating_sub(short) <= EXTENSION_CREDENTIAL_LEASE_MS);
+    }
+
+    #[test]
+    fn test_parse_url() {
+        let parsed = parse_url("https://www.example.com:8080/admin/login?q=1#hash");
+        assert_eq!(parsed.host, "example.com");
+        assert_eq!(parsed.port, Some(8080));
+        assert_eq!(parsed.path, "/admin/login");
+
+        let parsed2 = parse_url("http://localhost/index.html");
+        assert_eq!(parsed2.host, "localhost");
+        assert_eq!(parsed2.port, None);
+        assert_eq!(parsed2.path, "/index.html");
+
+        let parsed3 = parse_url("127.0.0.1:3000");
+        assert_eq!(parsed3.host, "127.0.0.1");
+        assert_eq!(parsed3.port, Some(3000));
+        assert_eq!(parsed3.path, "/");
+    }
+
+    #[test]
+    fn test_match_credentials() {
+        let active = parse_url("https://sub.example.com:3000/admin/dashboard");
+
+        // Subdomain matching + port matching + path matching
+        let item1 = parse_url("https://example.com:3000/admin");
+        assert!(match_credentials(&active, &item1).is_some());
+
+        // Port mismatch on localhost
+        let local_active = parse_url("http://localhost:3000/test");
+        let local_item = parse_url("http://localhost:8000/test");
+        assert!(match_credentials(&local_active, &local_item).is_none());
+
+        // Path mismatch
+        let path_item = parse_url("https://example.com:3000/user");
+        assert!(match_credentials(&active, &path_item).is_none());
+
+        // Port mismatch on normal host should be allowed if one is None, but returns Some
+        let host_active = parse_url("https://example.com:3000/");
+        let host_item = parse_url("https://example.com/");
+        assert!(match_credentials(&host_active, &host_item).is_some());
     }
 }

@@ -178,10 +178,18 @@ document.head?.appendChild(styleEl);
 
 // Keep track of active dropdown
 let activeDropdown: HTMLDivElement | null = null;
+let activeTargetInput: HTMLInputElement | null = null;
+let lastFilledCredential: { username: string; password: string; timestamp: number } | null = null;
 
 // Clean active dropdown on click elsewhere
 document.addEventListener('click', (e) => {
-  if (activeDropdown && !activeDropdown.contains(e.target as Node)) {
+  if (activeDropdown && !activeDropdown.contains(e.target as Node) && e.target !== activeTargetInput) {
+    closeDropdown();
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
     closeDropdown();
   }
 });
@@ -191,29 +199,127 @@ function closeDropdown() {
     activeDropdown.remove();
     activeDropdown = null;
   }
+  activeTargetInput = null;
+  window.removeEventListener('scroll', closeDropdown);
+  window.removeEventListener('resize', closeDropdown);
 }
 
 // Handle messages from background service worker
 chrome.runtime.onMessage.addListener((message) => {
   if (message.action === 'fill_inputs') {
-    fillPageCredentials(message.username, message.password);
+    const activeEl = document.activeElement as HTMLInputElement;
+    const target = (activeEl && isLoginInput(activeEl)) ? activeEl : (document.querySelector('input[type="password"], input[type="email"], input[type="text"]') as HTMLInputElement);
+    if (target) {
+      fillPageCredentials(target, message.username, message.password);
+    }
   }
 });
 
+function isLoginInput(el: HTMLInputElement): boolean {
+  if (el.type === 'password') return true;
+  
+  if (el.type === 'text' || el.type === 'email') {
+    const name = (el.name || '').toLowerCase();
+    const id = (el.id || '').toLowerCase();
+    const placeholder = (el.placeholder || '').toLowerCase();
+    const autocomplete = (el.getAttribute('autocomplete') || '').toLowerCase();
+    
+    if (autocomplete === 'username' || autocomplete === 'email' || autocomplete === 'username email') {
+      return true;
+    }
+    
+    const loginKeywords = ['username', 'login', 'email', 'identifier', 'loginfmt', 'userid', 'user_id', 'eposta', 'kullanici'];
+    for (const keyword of loginKeywords) {
+      if (name.includes(keyword) || id.includes(keyword) || placeholder.includes(keyword)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function isElementVisible(el: HTMLElement): boolean {
+  if (!el.isConnected) return false;
+  const style = window.getComputedStyle(el);
+  if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+    return false;
+  }
+  let parent = el.parentElement;
+  while (parent) {
+    const parentStyle = window.getComputedStyle(parent);
+    if (parentStyle.display === 'none' || parentStyle.visibility === 'hidden') {
+      return false;
+    }
+    parent = parent.parentElement;
+  }
+  return true;
+}
+
+function triggerAutoSubmitIfEnabled(inputElement: HTMLInputElement) {
+  chrome.storage.local.get(['autoSubmit'], (res) => {
+    if (res.autoSubmit === true) {
+      setTimeout(() => {
+        const form = inputElement.form || inputElement.closest('form');
+        if (form) {
+          const submitBtn = form.querySelector('input[type="submit"], button[type="submit"]');
+          if (submitBtn) {
+            (submitBtn as HTMLElement).click();
+          } else {
+            form.submit();
+          }
+        } else {
+          const parent = inputElement.closest('div');
+          if (parent) {
+            const buttons = parent.querySelectorAll('button, input[type="button"]');
+            for (const btn of Array.from(buttons)) {
+              const text = btn.textContent?.toLowerCase() || '';
+              if (text.includes('login') || text.includes('giriş') || text.includes('next') || text.includes('ileri') || text.includes('sign')) {
+                (btn as HTMLElement).click();
+                break;
+              }
+            }
+          }
+        }
+      }, 250);
+    }
+  });
+}
+
+function checkAndAutofillPendingPassword() {
+  if (!lastFilledCredential) return;
+  if (Date.now() - lastFilledCredential.timestamp > 60000) {
+    lastFilledCredential = null;
+    return;
+  }
+  
+  const passwordInputs = document.querySelectorAll('input[type="password"]');
+  passwordInputs.forEach((passEl) => {
+    const passInput = passEl as HTMLInputElement;
+    if (passInput && !passInput.value && isElementVisible(passInput)) {
+      passInput.value = lastFilledCredential!.password;
+      passInput.dispatchEvent(new Event('input', { bubbles: true }));
+      passInput.dispatchEvent(new Event('change', { bubbles: true }));
+      
+      lastFilledCredential = null;
+      triggerAutoSubmitIfEnabled(passInput);
+    }
+  });
+}
+
 // Scan inputs and inject 'A' icon button
 function scanAndInject() {
-  const passwordInputs = document.querySelectorAll('input[type="password"]');
-  passwordInputs.forEach((passInput) => {
+  const inputs = document.querySelectorAll('input');
+  inputs.forEach((inputEl) => {
+    const input = inputEl as HTMLInputElement;
+    if (!isLoginInput(input)) return;
+    
     // Avoid double injection
-    if (passInput.getAttribute('data-aegis-injected') === 'true') return;
-    passInput.setAttribute('data-aegis-injected', 'true');
+    if (input.getAttribute('data-aegis-injected') === 'true') return;
+    input.setAttribute('data-aegis-injected', 'true');
 
-    // Find parent or wrap it to position the icon
-    const parent = passInput.parentElement;
+    const parent = input.parentElement;
     if (!parent) return;
 
-    // We can position the icon relative to the parent if parent has relative position
-    // Or we apply position relative to the parent
     parent.classList.add('aegis-input-container');
 
     const iconBtn = document.createElement('button');
@@ -226,35 +332,60 @@ function scanAndInject() {
       e.preventDefault();
       e.stopPropagation();
 
-      // If dropdown is already open, close it
-      if (activeDropdown) {
+      if (activeDropdown && activeTargetInput === input) {
         closeDropdown();
         return;
       }
 
-      // Fetch matching credentials from background
       chrome.runtime.sendMessage(
         { action: 'query_credentials', url: window.location.href },
         (response) => {
-          showDropdown(passInput as HTMLInputElement, response);
+          showDropdown(input, response);
+        }
+      );
+    });
+
+    input.addEventListener('focus', () => {
+      chrome.runtime.sendMessage(
+        { action: 'query_credentials', url: window.location.href },
+        (response) => {
+          showDropdown(input, response);
+        }
+      );
+    });
+    
+    input.addEventListener('click', (e) => {
+      e.stopPropagation();
+      chrome.runtime.sendMessage(
+        { action: 'query_credentials', url: window.location.href },
+        (response) => {
+          showDropdown(input, response);
         }
       );
     });
 
     parent.appendChild(iconBtn);
   });
+  
+  checkAndAutofillPendingPassword();
 }
 
 function showDropdown(targetInput: HTMLInputElement, response: any) {
   closeDropdown();
+  activeTargetInput = targetInput;
 
   const rect = targetInput.getBoundingClientRect();
   const dropdown = document.createElement('div');
   dropdown.className = 'aegis-dropdown';
   
-  // Position it below the input field
-  dropdown.style.left = `${targetInput.offsetLeft}px`;
-  dropdown.style.top = `${targetInput.offsetTop + targetInput.offsetHeight}px`;
+  // Set floating styles and absolute coordinates relative to the page viewport bounds
+  dropdown.style.position = 'absolute';
+  dropdown.style.left = `${rect.left + window.scrollX}px`;
+  dropdown.style.top = `${rect.bottom + window.scrollY + 4}px`;
+  dropdown.style.width = `${Math.max(240, Math.min(360, rect.width))}px`;
+
+  window.addEventListener('scroll', closeDropdown, { passive: true });
+  window.addEventListener('resize', closeDropdown, { passive: true });
 
   if (!response || response.locked) {
     const lockedMsg = document.createElement('div');
@@ -278,8 +409,9 @@ function showDropdown(targetInput: HTMLInputElement, response: any) {
         user.textContent = item.username || '---';
         option.appendChild(user);
 
-        option.addEventListener('click', () => {
-          fillPageCredentials(item.username, item.password || '');
+        option.addEventListener('click', (e) => {
+          e.stopPropagation();
+          fillPageCredentials(targetInput, item.username, item.password || '');
           closeDropdown();
         });
 
@@ -320,16 +452,13 @@ function showDropdown(targetInput: HTMLInputElement, response: any) {
     e.stopPropagation();
     const generated = generateSecurePassword(18);
     
-    // Fill active field
     targetInput.value = generated;
     targetInput.dispatchEvent(new Event('input', { bubbles: true }));
     targetInput.dispatchEvent(new Event('change', { bubbles: true }));
 
-    // Copy to clipboard for easy manual fallback
     navigator.clipboard.writeText(generated);
 
-    // Try to find another password field in the same form (to fill "re-enter password")
-    const form = targetInput.form;
+    const form = targetInput.form || targetInput.closest('form');
     if (form) {
       const otherPasswords = form.querySelectorAll('input[type="password"]');
       otherPasswords.forEach((pwEl) => {
@@ -346,54 +475,65 @@ function showDropdown(targetInput: HTMLInputElement, response: any) {
 
   dropdown.appendChild(genOption);
 
-  targetInput.parentElement?.appendChild(dropdown);
+  document.body.appendChild(dropdown);
   activeDropdown = dropdown;
 }
 
 // Find login/password form fields and fill them
-function fillPageCredentials(username: string, password: string) {
-  const passwordInputs = document.querySelectorAll('input[type="password"]');
-  if (passwordInputs.length === 0) return;
+function fillPageCredentials(activeInput: HTMLInputElement, username: string, password: string) {
+  lastFilledCredential = { username, password, timestamp: Date.now() };
 
-  passwordInputs.forEach((passEl) => {
-    const passInput = passEl as HTMLInputElement;
-    passInput.value = password;
+  const fillInput = (el: HTMLInputElement, val: string) => {
+    el.value = val;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+
+  const passwordInputs = Array.from(document.querySelectorAll('input[type="password"]')) as HTMLInputElement[];
+  
+  if (activeInput.type === 'password') {
+    fillInput(activeInput, password);
     
-    // Trigger standard input events
-    passInput.dispatchEvent(new Event('input', { bubbles: true }));
-    passInput.dispatchEvent(new Event('change', { bubbles: true }));
-
-    // Try to find the username field inside the same form or adjacent to the password field
-    const form = passInput.form;
+    const form = activeInput.form || activeInput.closest('form');
     let usernameInput: HTMLInputElement | null = null;
-
     if (form) {
-      // Find typical username inputs in the form
       usernameInput = form.querySelector('input[type="text"], input[type="email"], input[name="username"], input[name="login"]') as HTMLInputElement;
     }
-
     if (!usernameInput) {
-      // Fallback: search adjacent text fields
       const textInputs = document.querySelectorAll('input[type="text"], input[type="email"]');
-      let minDistance = Infinity;
       textInputs.forEach((textEl) => {
         const textInput = textEl as HTMLInputElement;
-        if (textInput === passInput) return;
-        
-        // Simple distance metric based on DOM position
-        const compare = passInput.compareDocumentPosition(textInput);
+        const compare = activeInput.compareDocumentPosition(textInput);
         if (compare & Node.DOCUMENT_POSITION_PRECEDING || compare & Node.DOCUMENT_POSITION_FOLLOWING) {
           usernameInput = textInput;
         }
       });
     }
-
+    
     if (usernameInput) {
-      usernameInput.value = username;
-      usernameInput.dispatchEvent(new Event('input', { bubbles: true }));
-      usernameInput.dispatchEvent(new Event('change', { bubbles: true }));
+      fillInput(usernameInput, username);
     }
-  });
+    
+    triggerAutoSubmitIfEnabled(activeInput);
+  } else {
+    fillInput(activeInput, username);
+    
+    const form = activeInput.form || activeInput.closest('form');
+    let passwordInput: HTMLInputElement | null = null;
+    if (form) {
+      passwordInput = form.querySelector('input[type="password"]') as HTMLInputElement;
+    }
+    if (!passwordInput && passwordInputs.length > 0) {
+      passwordInput = passwordInputs[0];
+    }
+    
+    if (passwordInput) {
+      fillInput(passwordInput, password);
+      triggerAutoSubmitIfEnabled(passwordInput);
+    } else {
+      triggerAutoSubmitIfEnabled(activeInput);
+    }
+  }
 }
 
 function secureRandomIndex(maxExclusive: number): number {
@@ -639,7 +779,12 @@ setTimeout(() => {
 const observer = new MutationObserver(() => {
   scanAndInject();
 });
-observer.observe(document.body, { childList: true, subtree: true });
+observer.observe(document.body, { 
+  childList: true, 
+  subtree: true,
+  attributes: true,
+  attributeFilter: ['class', 'style', 'hidden', 'type']
+});
 
 // Initial scan
 scanAndInject();

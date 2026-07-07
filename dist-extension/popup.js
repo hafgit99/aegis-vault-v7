@@ -21,7 +21,8 @@
       "banner.saveTitle": "Yeni Kay\u0131t Alg\u0131land\u0131",
       "banner.saveDesc": "Bu sitedeki giri\u015F bilgilerini kasan\u0131za kaydetmek ister misiniz?",
       "banner.saveBtn": "Kaydet",
-      "banner.dismissBtn": "Yoksay"
+      "banner.dismissBtn": "Yoksay",
+      "settings.autoSubmit": "Otomatik G\xF6nder"
     },
     en: {
       "locked.title": "Aegis Vault Locked",
@@ -43,7 +44,8 @@
       "banner.saveTitle": "New Credential Detected",
       "banner.saveDesc": "Would you like to save these credentials to your vault?",
       "banner.saveBtn": "Save",
-      "banner.dismissBtn": "Dismiss"
+      "banner.dismissBtn": "Dismiss",
+      "settings.autoSubmit": "Auto-Submit"
     },
     zh: {
       "locked.title": "Aegis Vault \u5DF2\u9501\u5B9A",
@@ -65,7 +67,8 @@
       "banner.saveTitle": "\u68C0\u6D4B\u5230\u65B0\u51ED\u636E",
       "banner.saveDesc": "\u60A8\u60F3\u5C06\u6B64\u767B\u5F55\u51ED\u636E\u4FDD\u5B58\u5230\u60A8\u7684\u4FDD\u9669\u5E93\u4E2D\u5417\uFF1F",
       "banner.saveBtn": "\u4FDD\u5B58",
-      "banner.dismissBtn": "\u5FFD\u7565"
+      "banner.dismissBtn": "\u5FFD\u7565",
+      "settings.autoSubmit": "\u81EA\u52A8\u63D0\u4EA4"
     }
   };
   function getPreferredLanguage() {
@@ -99,6 +102,14 @@
   var themeToggle = document.getElementById("themeToggle");
   var toast = document.getElementById("toast");
   var focusAppBtn = document.getElementById("focusAppBtn");
+  var autoSubmitToggle = document.getElementById("autoSubmitToggle");
+  var autoSubmitLabel = document.getElementById("autoSubmitLabel");
+  chrome.storage.local.get(["autoSubmit"], (res) => {
+    autoSubmitToggle.checked = res.autoSubmit === true;
+  });
+  autoSubmitToggle.addEventListener("change", (e) => {
+    chrome.storage.local.set({ autoSubmit: e.target.checked });
+  });
   var lockedTitle = document.getElementById("lockedTitle");
   var lockedDesc = document.getElementById("lockedDesc");
   langSelect.value = activeLanguage;
@@ -133,6 +144,7 @@
     focusAppBtn.textContent = translate("btn.openApp", activeLanguage);
     searchInput.placeholder = translate("search.placeholder", activeLanguage);
     phishingText.textContent = translate("phishing.warning", activeLanguage);
+    autoSubmitLabel.title = translate("settings.autoSubmit", activeLanguage);
   }
   function checkPhishing(url) {
     if (!url) return false;

@@ -21,7 +21,8 @@
       "banner.saveTitle": "Yeni Kay\u0131t Alg\u0131land\u0131",
       "banner.saveDesc": "Bu sitedeki giri\u015F bilgilerini kasan\u0131za kaydetmek ister misiniz?",
       "banner.saveBtn": "Kaydet",
-      "banner.dismissBtn": "Yoksay"
+      "banner.dismissBtn": "Yoksay",
+      "settings.autoSubmit": "Otomatik G\xF6nder"
     },
     en: {
       "locked.title": "Aegis Vault Locked",
@@ -43,7 +44,8 @@
       "banner.saveTitle": "New Credential Detected",
       "banner.saveDesc": "Would you like to save these credentials to your vault?",
       "banner.saveBtn": "Save",
-      "banner.dismissBtn": "Dismiss"
+      "banner.dismissBtn": "Dismiss",
+      "settings.autoSubmit": "Auto-Submit"
     },
     zh: {
       "locked.title": "Aegis Vault \u5DF2\u9501\u5B9A",
@@ -65,7 +67,8 @@
       "banner.saveTitle": "\u68C0\u6D4B\u5230\u65B0\u51ED\u636E",
       "banner.saveDesc": "\u60A8\u60F3\u5C06\u6B64\u767B\u5F55\u51ED\u636E\u4FDD\u5B58\u5230\u60A8\u7684\u4FDD\u9669\u5E93\u4E2D\u5417\uFF1F",
       "banner.saveBtn": "\u4FDD\u5B58",
-      "banner.dismissBtn": "\u5FFD\u7565"
+      "banner.dismissBtn": "\u5FFD\u7565",
+      "settings.autoSubmit": "\u81EA\u52A8\u63D0\u4EA4"
     }
   };
   function getPreferredLanguage() {
@@ -256,8 +259,15 @@
   styleEl.textContent = inlineStyle;
   document.head?.appendChild(styleEl);
   var activeDropdown = null;
+  var activeTargetInput = null;
+  var lastFilledCredential = null;
   document.addEventListener("click", (e) => {
-    if (activeDropdown && !activeDropdown.contains(e.target)) {
+    if (activeDropdown && !activeDropdown.contains(e.target) && e.target !== activeTargetInput) {
+      closeDropdown();
+    }
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
       closeDropdown();
     }
   });
@@ -266,18 +276,109 @@
       activeDropdown.remove();
       activeDropdown = null;
     }
+    activeTargetInput = null;
+    window.removeEventListener("scroll", closeDropdown);
+    window.removeEventListener("resize", closeDropdown);
   }
   chrome.runtime.onMessage.addListener((message) => {
     if (message.action === "fill_inputs") {
-      fillPageCredentials(message.username, message.password);
+      const activeEl = document.activeElement;
+      const target = activeEl && isLoginInput(activeEl) ? activeEl : document.querySelector('input[type="password"], input[type="email"], input[type="text"]');
+      if (target) {
+        fillPageCredentials(target, message.username, message.password);
+      }
     }
   });
-  function scanAndInject() {
+  function isLoginInput(el) {
+    if (el.type === "password") return true;
+    if (el.type === "text" || el.type === "email") {
+      const name = (el.name || "").toLowerCase();
+      const id = (el.id || "").toLowerCase();
+      const placeholder = (el.placeholder || "").toLowerCase();
+      const autocomplete = (el.getAttribute("autocomplete") || "").toLowerCase();
+      if (autocomplete === "username" || autocomplete === "email" || autocomplete === "username email") {
+        return true;
+      }
+      const loginKeywords = ["username", "login", "email", "identifier", "loginfmt", "userid", "user_id", "eposta", "kullanici"];
+      for (const keyword of loginKeywords) {
+        if (name.includes(keyword) || id.includes(keyword) || placeholder.includes(keyword)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  function isElementVisible(el) {
+    if (!el.isConnected) return false;
+    const style = window.getComputedStyle(el);
+    if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") {
+      return false;
+    }
+    let parent = el.parentElement;
+    while (parent) {
+      const parentStyle = window.getComputedStyle(parent);
+      if (parentStyle.display === "none" || parentStyle.visibility === "hidden") {
+        return false;
+      }
+      parent = parent.parentElement;
+    }
+    return true;
+  }
+  function triggerAutoSubmitIfEnabled(inputElement) {
+    chrome.storage.local.get(["autoSubmit"], (res) => {
+      if (res.autoSubmit === true) {
+        setTimeout(() => {
+          const form = inputElement.form || inputElement.closest("form");
+          if (form) {
+            const submitBtn = form.querySelector('input[type="submit"], button[type="submit"]');
+            if (submitBtn) {
+              submitBtn.click();
+            } else {
+              form.submit();
+            }
+          } else {
+            const parent = inputElement.closest("div");
+            if (parent) {
+              const buttons = parent.querySelectorAll('button, input[type="button"]');
+              for (const btn of Array.from(buttons)) {
+                const text = btn.textContent?.toLowerCase() || "";
+                if (text.includes("login") || text.includes("giri\u015F") || text.includes("next") || text.includes("ileri") || text.includes("sign")) {
+                  btn.click();
+                  break;
+                }
+              }
+            }
+          }
+        }, 250);
+      }
+    });
+  }
+  function checkAndAutofillPendingPassword() {
+    if (!lastFilledCredential) return;
+    if (Date.now() - lastFilledCredential.timestamp > 6e4) {
+      lastFilledCredential = null;
+      return;
+    }
     const passwordInputs = document.querySelectorAll('input[type="password"]');
-    passwordInputs.forEach((passInput) => {
-      if (passInput.getAttribute("data-aegis-injected") === "true") return;
-      passInput.setAttribute("data-aegis-injected", "true");
-      const parent = passInput.parentElement;
+    passwordInputs.forEach((passEl) => {
+      const passInput = passEl;
+      if (passInput && !passInput.value && isElementVisible(passInput)) {
+        passInput.value = lastFilledCredential.password;
+        passInput.dispatchEvent(new Event("input", { bubbles: true }));
+        passInput.dispatchEvent(new Event("change", { bubbles: true }));
+        lastFilledCredential = null;
+        triggerAutoSubmitIfEnabled(passInput);
+      }
+    });
+  }
+  function scanAndInject() {
+    const inputs = document.querySelectorAll("input");
+    inputs.forEach((inputEl) => {
+      const input = inputEl;
+      if (!isLoginInput(input)) return;
+      if (input.getAttribute("data-aegis-injected") === "true") return;
+      input.setAttribute("data-aegis-injected", "true");
+      const parent = input.parentElement;
       if (!parent) return;
       parent.classList.add("aegis-input-container");
       const iconBtn = document.createElement("button");
@@ -288,27 +389,50 @@
       iconBtn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        if (activeDropdown) {
+        if (activeDropdown && activeTargetInput === input) {
           closeDropdown();
           return;
         }
         chrome.runtime.sendMessage(
           { action: "query_credentials", url: window.location.href },
           (response) => {
-            showDropdown(passInput, response);
+            showDropdown(input, response);
+          }
+        );
+      });
+      input.addEventListener("focus", () => {
+        chrome.runtime.sendMessage(
+          { action: "query_credentials", url: window.location.href },
+          (response) => {
+            showDropdown(input, response);
+          }
+        );
+      });
+      input.addEventListener("click", (e) => {
+        e.stopPropagation();
+        chrome.runtime.sendMessage(
+          { action: "query_credentials", url: window.location.href },
+          (response) => {
+            showDropdown(input, response);
           }
         );
       });
       parent.appendChild(iconBtn);
     });
+    checkAndAutofillPendingPassword();
   }
   function showDropdown(targetInput, response) {
     closeDropdown();
+    activeTargetInput = targetInput;
     const rect = targetInput.getBoundingClientRect();
     const dropdown = document.createElement("div");
     dropdown.className = "aegis-dropdown";
-    dropdown.style.left = `${targetInput.offsetLeft}px`;
-    dropdown.style.top = `${targetInput.offsetTop + targetInput.offsetHeight}px`;
+    dropdown.style.position = "absolute";
+    dropdown.style.left = `${rect.left + window.scrollX}px`;
+    dropdown.style.top = `${rect.bottom + window.scrollY + 4}px`;
+    dropdown.style.width = `${Math.max(240, Math.min(360, rect.width))}px`;
+    window.addEventListener("scroll", closeDropdown, { passive: true });
+    window.addEventListener("resize", closeDropdown, { passive: true });
     if (!response || response.locked) {
       const lockedMsg = document.createElement("div");
       lockedMsg.className = "aegis-dropdown-locked";
@@ -328,8 +452,9 @@
           user.className = "aegis-dropdown-user";
           user.textContent = item.username || "---";
           option.appendChild(user);
-          option.addEventListener("click", () => {
-            fillPageCredentials(item.username, item.password || "");
+          option.addEventListener("click", (e) => {
+            e.stopPropagation();
+            fillPageCredentials(targetInput, item.username, item.password || "");
             closeDropdown();
           });
           dropdown.appendChild(option);
@@ -366,7 +491,7 @@
       targetInput.dispatchEvent(new Event("input", { bubbles: true }));
       targetInput.dispatchEvent(new Event("change", { bubbles: true }));
       navigator.clipboard.writeText(generated);
-      const form = targetInput.form;
+      const form = targetInput.form || targetInput.closest("form");
       if (form) {
         const otherPasswords = form.querySelectorAll('input[type="password"]');
         otherPasswords.forEach((pwEl) => {
@@ -380,40 +505,55 @@
       closeDropdown();
     });
     dropdown.appendChild(genOption);
-    targetInput.parentElement?.appendChild(dropdown);
+    document.body.appendChild(dropdown);
     activeDropdown = dropdown;
   }
-  function fillPageCredentials(username, password) {
-    const passwordInputs = document.querySelectorAll('input[type="password"]');
-    if (passwordInputs.length === 0) return;
-    passwordInputs.forEach((passEl) => {
-      const passInput = passEl;
-      passInput.value = password;
-      passInput.dispatchEvent(new Event("input", { bubbles: true }));
-      passInput.dispatchEvent(new Event("change", { bubbles: true }));
-      const form = passInput.form;
+  function fillPageCredentials(activeInput, username, password) {
+    lastFilledCredential = { username, password, timestamp: Date.now() };
+    const fillInput = (el, val) => {
+      el.value = val;
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+    const passwordInputs = Array.from(document.querySelectorAll('input[type="password"]'));
+    if (activeInput.type === "password") {
+      fillInput(activeInput, password);
+      const form = activeInput.form || activeInput.closest("form");
       let usernameInput = null;
       if (form) {
         usernameInput = form.querySelector('input[type="text"], input[type="email"], input[name="username"], input[name="login"]');
       }
       if (!usernameInput) {
         const textInputs = document.querySelectorAll('input[type="text"], input[type="email"]');
-        let minDistance = Infinity;
         textInputs.forEach((textEl) => {
           const textInput = textEl;
-          if (textInput === passInput) return;
-          const compare = passInput.compareDocumentPosition(textInput);
+          const compare = activeInput.compareDocumentPosition(textInput);
           if (compare & Node.DOCUMENT_POSITION_PRECEDING || compare & Node.DOCUMENT_POSITION_FOLLOWING) {
             usernameInput = textInput;
           }
         });
       }
       if (usernameInput) {
-        usernameInput.value = username;
-        usernameInput.dispatchEvent(new Event("input", { bubbles: true }));
-        usernameInput.dispatchEvent(new Event("change", { bubbles: true }));
+        fillInput(usernameInput, username);
       }
-    });
+      triggerAutoSubmitIfEnabled(activeInput);
+    } else {
+      fillInput(activeInput, username);
+      const form = activeInput.form || activeInput.closest("form");
+      let passwordInput = null;
+      if (form) {
+        passwordInput = form.querySelector('input[type="password"]');
+      }
+      if (!passwordInput && passwordInputs.length > 0) {
+        passwordInput = passwordInputs[0];
+      }
+      if (passwordInput) {
+        fillInput(passwordInput, password);
+        triggerAutoSubmitIfEnabled(passwordInput);
+      } else {
+        triggerAutoSubmitIfEnabled(activeInput);
+      }
+    }
   }
   function secureRandomIndex(maxExclusive) {
     if (!Number.isSafeInteger(maxExclusive) || maxExclusive <= 0) {
@@ -602,7 +742,12 @@
   var observer = new MutationObserver(() => {
     scanAndInject();
   });
-  observer.observe(document.body, { childList: true, subtree: true });
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["class", "style", "hidden", "type"]
+  });
   scanAndInject();
 })();
 //# sourceMappingURL=content.js.map

@@ -25,6 +25,16 @@ const langSelect = document.getElementById('langSelect') as HTMLSelectElement;
 const themeToggle = document.getElementById('themeToggle') as HTMLButtonElement;
 const toast = document.getElementById('toast') as HTMLDivElement;
 const focusAppBtn = document.getElementById('focusAppBtn') as HTMLButtonElement;
+const autoSubmitToggle = document.getElementById('autoSubmitToggle') as HTMLInputElement;
+const autoSubmitLabel = document.getElementById('autoSubmitLabel') as HTMLLabelElement;
+
+// Load auto-submit setting
+chrome.storage.local.get(['autoSubmit'], (res) => {
+  autoSubmitToggle.checked = res.autoSubmit === true;
+});
+autoSubmitToggle.addEventListener('change', (e) => {
+  chrome.storage.local.set({ autoSubmit: (e.target as HTMLInputElement).checked });
+});
 
 // Text Elements for translation
 const lockedTitle = document.getElementById('lockedTitle') as HTMLHeadingElement;
@@ -72,6 +82,7 @@ function applyTranslations() {
   focusAppBtn.textContent = translate('btn.openApp', activeLanguage);
   searchInput.placeholder = translate('search.placeholder', activeLanguage);
   phishingText.textContent = translate('phishing.warning', activeLanguage);
+  autoSubmitLabel.title = translate('settings.autoSubmit', activeLanguage);
 }
 
 // Homograph Phishing detection
