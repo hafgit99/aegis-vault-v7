@@ -169,12 +169,303 @@ const inlineStyle = `
     from { opacity: 0; transform: translateY(-4px); }
     to { opacity: 1; transform: translateY(0); }
   }
+
+  /* Phishing Alert Banner Styles */
+  .aegis-phishing-alert-banner {
+    position: fixed !important;
+    top: -180px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 90% !important;
+    max-width: 600px !important;
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.95) 0%, rgba(185, 28, 28, 0.98) 100%) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: 1px solid rgba(248, 113, 113, 0.45) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+    padding: 16px 24px !important;
+    z-index: 2147483647 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 20px !important;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+    transition: top 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+  }
+  .aegis-phishing-alert-banner.show {
+    top: 24px !important;
+  }
+  .aegis-phishing-alert-icon {
+    font-size: 28px !important;
+    flex-shrink: 0 !important;
+    animation: aegis-wiggle 1s ease-in-out infinite alternate !important;
+  }
+  .aegis-phishing-alert-info {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+    flex: 1 !important;
+    text-align: left !important;
+  }
+  .aegis-phishing-alert-title {
+    color: #ffffff !important;
+    font-weight: 800 !important;
+    font-size: 15px !important;
+    letter-spacing: 0.3px !important;
+  }
+  .aegis-phishing-alert-desc {
+    color: #fee2e2 !important;
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+    opacity: 0.95 !important;
+  }
+  .aegis-phishing-alert-domain {
+    font-family: monospace !important;
+    font-size: 11px !important;
+    color: #fef08a !important;
+    background: rgba(254, 240, 138, 0.15) !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+    border: 1px solid rgba(254, 240, 138, 0.2) !important;
+    display: inline-block !important;
+    margin-top: 4px !important;
+    word-break: break-all !important;
+  }
+  .aegis-phishing-alert-btn {
+    padding: 8px 18px !important;
+    border-radius: 8px !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    cursor: pointer !important;
+    border: none !important;
+    background: #ffffff !important;
+    color: #dc2626 !important;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+    transition: background 0.15s, transform 0.1s, box-shadow 0.15s !important;
+  }
+  .aegis-phishing-alert-btn:hover {
+    background: #fecaca !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15) !important;
+  }
+  .aegis-phishing-alert-btn:active {
+    transform: translateY(0) !important;
+  }
+  @keyframes aegis-wiggle {
+    0% { transform: rotate(-8deg); }
+    100% { transform: rotate(8deg); }
+  }
 `;
 
 // Inject Styles
 const styleEl = document.createElement('style');
 styleEl.textContent = inlineStyle;
 document.head?.appendChild(styleEl);
+
+// ─── Content Phishing Detection Engine ─────────────────────────────────────────
+let activePhishingThreat: any = null;
+
+const CONFUSABLE_MAP: Record<string, string> = {
+  '\u0430': 'a', '\u0435': 'e', '\u043e': 'o', '\u0440': 'p', '\u0441': 'c',
+  '\u0443': 'y', '\u0445': 'x', '\u0456': 'i', '\u0458': 'j', '\u04bb': 'h',
+  '\u0455': 's', '\u0491': 'g', '\u04c0': 'l', '\u0501': 'd', '\u051b': 'q',
+  '\u0261': 'g', '\u026a': 'i', '\u0280': 'r', '\u1d00': 'a', '\u1d04': 'c',
+  '\u1d05': 'd', '\u1d07': 'e', '\u1d0b': 'k', '\u1d0d': 'm', '\u1d0f': 'o',
+  '\u1d18': 'p', '\u1d1b': 't', '\u1d1c': 'u', '\u1d20': 'v', '\u1d21': 'w',
+  '\u1d22': 'z', '\u0251': 'a', '\u025b': 'e', '\u0254': 'o',
+  '\u2160': 'i', '\u2170': 'i', '\u217a': 'x', '\u2169': 'x',
+  '\uff41': 'a', '\uff42': 'b', '\uff43': 'c', '\uff44': 'd', '\uff45': 'e',
+  '\uff46': 'f', '\uff47': 'g', '\uff48': 'h', '\uff49': 'i', '\uff4a': 'j',
+  '\uff4b': 'k', '\uff4c': 'l', '\uff4d': 'm', '\uff4e': 'n', '\uff4f': 'o',
+  '\uff50': 'p', '\uff51': 'q', '\uff52': 'r', '\uff53': 's', '\uff54': 't',
+  '\uff55': 'u', '\uff56': 'v', '\uff57': 'w', '\uff58': 'x', '\uff59': 'y',
+  '\uff5a': 'z',
+  '0': 'o', '1': 'l', '!': 'i',
+};
+
+function extractRegistrableDomain(hostname: string): string {
+  const parts = hostname.replace(/^www\./, '').toLowerCase().split('.');
+  if (parts.length <= 2) return parts.join('.');
+  return parts.slice(-2).join('.');
+}
+
+function normalizeConfusables(text: string): string {
+  return [...text].map(ch => CONFUSABLE_MAP[ch] || ch).join('');
+}
+
+function hasConfusableChars(hostname: string): boolean {
+  for (const ch of hostname) {
+    if (CONFUSABLE_MAP[ch] !== undefined) return true;
+  }
+  return false;
+}
+
+function levenshteinDistance(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        dp[i][j] = Math.min(dp[i][j], dp[i - 2][j - 2] + cost);
+      }
+    }
+  }
+  return dp[m][n];
+}
+
+function checkContentPhishing(url: string, trustedDomains: string[] = []): any {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.toLowerCase();
+
+    // 1. IDN Punycode homograph detection
+    if (hostname.includes('xn--')) {
+      return { isSuspicious: true, threatType: 'homograph', details: hostname };
+    }
+
+    // 2. Non-ASCII / Unicode confusable detection
+    const asciiRegex = /^[\x00-\x7F]*$/;
+    if (!asciiRegex.test(hostname)) {
+      const isConf = hasConfusableChars(hostname);
+      return { isSuspicious: true, threatType: isConf ? 'confusable' : 'homograph', details: hostname };
+    }
+
+    // 3. Confusable character substitution in ASCII domain
+    const activeDomain = extractRegistrableDomain(hostname);
+    if (hasConfusableChars(activeDomain)) {
+      const normalized = normalizeConfusables(activeDomain);
+      for (const trusted of trustedDomains) {
+        if (normalized === trusted && activeDomain !== trusted) {
+          return { isSuspicious: true, threatType: 'confusable', matchedDomain: trusted, details: activeDomain };
+        }
+      }
+    }
+
+    // 4. Typo-squatting
+    if (trustedDomains.length > 0) {
+      for (const trusted of trustedDomains) {
+        if (activeDomain === trusted) continue;
+        const dist = levenshteinDistance(activeDomain, trusted);
+        const maxLen = Math.max(activeDomain.length, trusted.length);
+        const similarity = 1 - dist / maxLen;
+
+        if (similarity >= 0.85 && dist > 0 && dist <= 3) {
+          return { isSuspicious: true, threatType: 'typosquat', matchedDomain: trusted, details: activeDomain };
+        }
+
+        const normalizedActive = normalizeConfusables(activeDomain);
+        const normalizedTrusted = normalizeConfusables(trusted);
+        if (normalizedActive === normalizedTrusted && activeDomain !== trusted) {
+          return { isSuspicious: true, threatType: 'confusable', matchedDomain: trusted, details: activeDomain };
+        }
+      }
+    }
+  } catch {}
+  return null;
+}
+
+function showInPagePhishingBanner(result: any) {
+  if (document.querySelector('.aegis-phishing-alert-banner')) return;
+
+  const banner = document.createElement('div');
+  banner.className = 'aegis-phishing-alert-banner';
+
+  const icon = document.createElement('div');
+  icon.className = 'aegis-phishing-alert-icon';
+  icon.textContent = result.threatType === 'homograph' ? '🛡️' : 
+                     result.threatType === 'confusable' ? '🔤' :
+                     result.threatType === 'typosquat' ? '🎯' : '⚠️';
+
+  const info = document.createElement('div');
+  info.className = 'aegis-phishing-alert-info';
+
+  const title = document.createElement('span');
+  title.className = 'aegis-phishing-alert-title';
+  
+  let titleKey = 'phishing.warning';
+  let descKey = 'phishing.warning';
+  if (result.threatType === 'homograph') {
+    titleKey = 'phishing.homograph';
+    descKey = 'phishing.homograph.desc';
+  } else if (result.threatType === 'confusable') {
+    titleKey = 'phishing.confusable';
+    descKey = 'phishing.confusable.desc';
+  } else if (result.threatType === 'typosquat') {
+    titleKey = 'phishing.typosquat';
+    descKey = 'phishing.typosquat.desc';
+  }
+
+  title.textContent = translate(titleKey as any, activeLanguage);
+
+  const desc = document.createElement('span');
+  desc.className = 'aegis-phishing-alert-desc';
+  let descText = translate(descKey as any, activeLanguage);
+  if (result.matchedDomain && (result.threatType === 'typosquat' || result.threatType === 'confusable')) {
+    descText += ` ${result.matchedDomain}`;
+  }
+  desc.textContent = descText;
+
+  info.appendChild(title);
+  info.appendChild(desc);
+
+  if (result.details) {
+    const details = document.createElement('span');
+    details.className = 'aegis-phishing-alert-domain';
+    details.textContent = result.details;
+    info.appendChild(details);
+  }
+
+  const dismissBtn = document.createElement('button');
+  dismissBtn.className = 'aegis-phishing-alert-btn';
+  dismissBtn.textContent = translate('phishing.page.dismiss', activeLanguage);
+  dismissBtn.addEventListener('click', () => {
+    banner.classList.remove('show');
+    setTimeout(() => banner.remove(), 500);
+  });
+
+  banner.appendChild(icon);
+  banner.appendChild(info);
+  banner.appendChild(dismissBtn);
+
+  document.body.appendChild(banner);
+  setTimeout(() => {
+    banner.classList.add('show');
+  }, 100);
+}
+
+function initializePhishingCheck() {
+  chrome.runtime.sendMessage({ action: 'list_credentials' }, (response) => {
+    if (response && response.credentials) {
+      const trustedDomains: string[] = [];
+      response.credentials.forEach((item: any) => {
+        if (item.url) {
+          try {
+            let cleanUrl = item.url.trim().toLowerCase();
+            if (!/^https?:\/\//i.test(cleanUrl)) cleanUrl = 'https://' + cleanUrl;
+            const parsed = new URL(cleanUrl);
+            const domain = extractRegistrableDomain(parsed.hostname);
+            if (domain && !trustedDomains.includes(domain)) {
+              trustedDomains.push(domain);
+            }
+          } catch {}
+        }
+      });
+
+      const result = checkContentPhishing(window.location.href, trustedDomains);
+      if (result && result.isSuspicious) {
+        activePhishingThreat = result;
+        showInPagePhishingBanner(result);
+      }
+    }
+  });
+}
 
 // Keep track of active dropdown
 let activeDropdown: HTMLDivElement | null = null;
@@ -207,11 +498,23 @@ function closeDropdown() {
 // Handle messages from background service worker
 chrome.runtime.onMessage.addListener((message) => {
   if (message.action === 'fill_inputs') {
+    if (activePhishingThreat) {
+      alert(translate('phishing.autofill.blocked', activeLanguage));
+      return;
+    }
     const activeEl = document.activeElement as HTMLInputElement;
     const target = (activeEl && isLoginInput(activeEl)) ? activeEl : (document.querySelector('input[type="password"], input[type="email"], input[type="text"]') as HTMLInputElement);
     if (target) {
       fillPageCredentials(target, message.username, message.password);
     }
+  } else if (message.action === 'aegis_phishing_alert') {
+    activePhishingThreat = {
+      isSuspicious: true,
+      threatType: message.threatType,
+      matchedDomain: message.matchedDomain,
+      details: message.details
+    };
+    showInPagePhishingBanner(activePhishingThreat);
   }
 });
 
@@ -387,7 +690,14 @@ function showDropdown(targetInput: HTMLInputElement, response: any) {
   window.addEventListener('scroll', closeDropdown, { passive: true });
   window.addEventListener('resize', closeDropdown, { passive: true });
 
-  if (!response || response.locked) {
+  if (activePhishingThreat) {
+    const warningMsg = document.createElement('div');
+    warningMsg.className = 'aegis-dropdown-locked';
+    warningMsg.style.color = '#ef4444';
+    warningMsg.style.fontWeight = 'bold';
+    warningMsg.textContent = translate('phishing.autofill.blocked', activeLanguage);
+    dropdown.appendChild(warningMsg);
+  } else if (!response || response.locked) {
     const lockedMsg = document.createElement('div');
     lockedMsg.className = 'aegis-dropdown-locked';
     lockedMsg.textContent = translate('locked.title', activeLanguage);
@@ -481,6 +791,10 @@ function showDropdown(targetInput: HTMLInputElement, response: any) {
 
 // Find login/password form fields and fill them
 function fillPageCredentials(activeInput: HTMLInputElement, username: string, password: string) {
+  if (activePhishingThreat) {
+    alert(translate('phishing.autofill.blocked', activeLanguage));
+    return;
+  }
   lastFilledCredential = { username, password, timestamp: Date.now() };
 
   const fillInput = (el: HTMLInputElement, val: string) => {
@@ -788,3 +1102,4 @@ observer.observe(document.body, {
 
 // Initial scan
 scanAndInject();
+initializePhishingCheck();

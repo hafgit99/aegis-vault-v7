@@ -167,26 +167,76 @@ select.lang-select option {
   pointer-events: none;
 }
 
-/* Phishing Warning Banner */
+/* Phishing Warning Banner — Enhanced */
 .phishing-banner {
   display: none;
-  padding: 8px 12px;
-  background: var(--warning-bg);
-  border: 1px solid var(--warning-border);
-  border-radius: 8px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(220, 38, 38, 0.2) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 10px;
   color: var(--warning-text);
   font-size: 11px;
   font-weight: 500;
   margin-bottom: 12px;
-  align-items: center;
-  gap: 8px;
-  animation: pulse 2s infinite;
+  align-items: flex-start;
+  gap: 10px;
+  animation: phishing-pulse 2.5s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+.phishing-banner::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #ef4444, #f97316, #ef4444);
+  background-size: 200% 100%;
+  animation: phishing-gradient-slide 3s linear infinite;
+}
+.warning-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.phishing-text-container {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+.phishing-title {
+  font-weight: 700;
+  font-size: 12px;
+  color: #fca5a5;
+  letter-spacing: 0.2px;
+}
+.phishing-desc {
+  font-size: 10px;
+  color: #d4a0a0;
+  line-height: 1.4;
+  opacity: 0.9;
+}
+.phishing-domain {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 10px;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-top: 2px;
+  display: inline-block;
+  word-break: break-all;
 }
 
-@keyframes pulse {
-  0% { opacity: 0.9; }
-  50% { opacity: 0.7; }
-  100% { opacity: 0.9; }
+@keyframes phishing-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.15); }
+  50% { box-shadow: 0 0 12px 2px rgba(239, 68, 68, 0.1); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.15); }
+}
+@keyframes phishing-gradient-slide {
+  0% { background-position: 0% 0; }
+  100% { background-position: 200% 0; }
 }
 
 /* Main Content Area */

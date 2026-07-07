@@ -14,6 +14,16 @@
       "item.password": "\u015Eifre",
       "item.cardNumber": "Kart Numaras\u0131",
       "phishing.warning": "\u26A0\uFE0F Dikkat: Oltalama (Phishing) \u015E\xFCphesi! Alan ad\u0131n\u0131 kontrol edin.",
+      "phishing.homograph": "\u{1F6E1}\uFE0F Homograf Sald\u0131r\u0131s\u0131 Tespit Edildi",
+      "phishing.homograph.desc": "Bu site Unicode karakterler kullanarak g\xFCvenilir bir alan ad\u0131n\u0131 taklit ediyor olabilir.",
+      "phishing.typosquat": "\u{1F3AF} Typo-Squatting Uyar\u0131s\u0131",
+      "phishing.typosquat.desc": "Bu alan ad\u0131, kasan\u0131zdaki g\xFCvenilir bir siteye \xE7ok benziyor:",
+      "phishing.confusable": "\u{1F524} Yan\u0131lt\u0131c\u0131 Karakterler Tespit Edildi",
+      "phishing.confusable.desc": "Bu alan ad\u0131nda, latin harflere benzeyen Unicode karakterler kullan\u0131lm\u0131\u015F.",
+      "phishing.autofill.blocked": "G\xFCvenlik tehdidi nedeniyle otomatik doldurma engellendi.",
+      "phishing.page.title": "Aegis Vault \u2014 Oltalama Uyar\u0131s\u0131",
+      "phishing.page.desc": "Bu site \u015F\xFCpheli g\xF6r\xFCn\xFCyor. Giri\u015F bilgilerinizi girmeden \xF6nce dikkatli olun.",
+      "phishing.page.dismiss": "Anlad\u0131m",
       "section.suggested": "E\u015Fle\u015Fen Hesaplar",
       "section.favorites": "S\u0131k Kullan\u0131lanlar (\u2605)",
       "search.invitation": "T\xFCm kasan\u0131zda aramak i\xE7in yukar\u0131daki kutuyu kullan\u0131n.",
@@ -37,6 +47,16 @@
       "item.password": "Password",
       "item.cardNumber": "Card Number",
       "phishing.warning": "\u26A0\uFE0F Warning: Suspected Phishing! Check the domain name.",
+      "phishing.homograph": "\u{1F6E1}\uFE0F Homograph Attack Detected",
+      "phishing.homograph.desc": "This site may be impersonating a trusted domain using Unicode characters.",
+      "phishing.typosquat": "\u{1F3AF} Typo-Squatting Warning",
+      "phishing.typosquat.desc": "This domain closely resembles a trusted site in your vault:",
+      "phishing.confusable": "\u{1F524} Confusable Characters Detected",
+      "phishing.confusable.desc": "This domain uses Unicode characters that look like Latin letters.",
+      "phishing.autofill.blocked": "Autofill blocked due to a security threat.",
+      "phishing.page.title": "Aegis Vault \u2014 Phishing Warning",
+      "phishing.page.desc": "This site looks suspicious. Be careful before entering your credentials.",
+      "phishing.page.dismiss": "Got it",
       "section.suggested": "Suggested Accounts",
       "section.favorites": "Favorites (\u2605)",
       "search.invitation": "Use the search box above to search your entire vault.",
@@ -60,6 +80,16 @@
       "item.password": "\u5BC6\u7801",
       "item.cardNumber": "\u5361\u53F7",
       "phishing.warning": "\u26A0\uFE0F \u8B66\u544A\uFF1A\u7591\u4F3C\u9493\u9C7C\u7F51\u7AD9\uFF01\u8BF7\u6838\u5BF9\u57DF\u540D\u3002",
+      "phishing.homograph": "\u{1F6E1}\uFE0F \u68C0\u6D4B\u5230\u540C\u5F62\u653B\u51FB",
+      "phishing.homograph.desc": "\u6B64\u7F51\u7AD9\u53EF\u80FD\u4F7F\u7528Unicode\u5B57\u7B26\u5192\u5145\u53D7\u4FE1\u4EFB\u7684\u57DF\u540D\u3002",
+      "phishing.typosquat": "\u{1F3AF} \u8BEF\u690D\u57DF\u540D\u8B66\u544A",
+      "phishing.typosquat.desc": "\u6B64\u57DF\u540D\u4E0E\u60A8\u4FDD\u9669\u5E93\u4E2D\u7684\u53D7\u4FE1\u4EFB\u7F51\u7AD9\u975E\u5E38\u76F8\u4F3C\uFF1A",
+      "phishing.confusable": "\u{1F524} \u68C0\u6D4B\u5230\u6DF7\u6DC6\u5B57\u7B26",
+      "phishing.confusable.desc": "\u6B64\u57DF\u540D\u4F7F\u7528\u4E86\u770B\u8D77\u6765\u50CF\u62C9\u4E01\u5B57\u6BCD\u7684Unicode\u5B57\u7B26\u3002",
+      "phishing.autofill.blocked": "\u7531\u4E8E\u5B89\u5168\u5A01\u80C1\uFF0C\u81EA\u52A8\u586B\u5145\u5DF2\u88AB\u963B\u6B62\u3002",
+      "phishing.page.title": "Aegis Vault \u2014 \u9493\u9C7C\u8B66\u544A",
+      "phishing.page.desc": "\u6B64\u7F51\u7AD9\u770B\u8D77\u6765\u53EF\u7591\u3002\u5728\u8F93\u5165\u51ED\u636E\u4E4B\u524D\u8BF7\u8C28\u614E\u3002",
+      "phishing.page.dismiss": "\u77E5\u9053\u4E86",
       "section.suggested": "\u63A8\u8350\u8D26\u6237",
       "section.favorites": "\u5E38\u7528\u6536\u85CF (\u2605)",
       "search.invitation": "\u4F7F\u7528\u4E0A\u65B9\u641C\u7D22\u6846\u8FDB\u884C\u5168\u5E93\u641C\u7D22\u3002",
@@ -146,21 +176,165 @@
     phishingText.textContent = translate("phishing.warning", activeLanguage);
     autoSubmitLabel.title = translate("settings.autoSubmit", activeLanguage);
   }
-  function checkPhishing(url) {
-    if (!url) return false;
+  var CONFUSABLE_MAP = {
+    "\u0430": "a",
+    "\u0435": "e",
+    "\u043E": "o",
+    "\u0440": "p",
+    "\u0441": "c",
+    "\u0443": "y",
+    "\u0445": "x",
+    "\u0456": "i",
+    "\u0458": "j",
+    "\u04BB": "h",
+    "\u0455": "s",
+    "\u0491": "g",
+    "\u04C0": "l",
+    "\u0501": "d",
+    "\u051B": "q",
+    "\u0261": "g",
+    "\u026A": "i",
+    "\u0280": "r",
+    "\u1D00": "a",
+    "\u1D04": "c",
+    "\u1D05": "d",
+    "\u1D07": "e",
+    "\u1D0B": "k",
+    "\u1D0D": "m",
+    "\u1D0F": "o",
+    "\u1D18": "p",
+    "\u1D1B": "t",
+    "\u1D1C": "u",
+    "\u1D20": "v",
+    "\u1D21": "w",
+    "\u1D22": "z",
+    "\u0251": "a",
+    "\u025B": "e",
+    "\u0254": "o",
+    "\u2160": "i",
+    "\u2170": "i",
+    "\u217A": "x",
+    "\u2169": "x",
+    "\uFF41": "a",
+    "\uFF42": "b",
+    "\uFF43": "c",
+    "\uFF44": "d",
+    "\uFF45": "e",
+    "\uFF46": "f",
+    "\uFF47": "g",
+    "\uFF48": "h",
+    "\uFF49": "i",
+    "\uFF4A": "j",
+    "\uFF4B": "k",
+    "\uFF4C": "l",
+    "\uFF4D": "m",
+    "\uFF4E": "n",
+    "\uFF4F": "o",
+    "\uFF50": "p",
+    "\uFF51": "q",
+    "\uFF52": "r",
+    "\uFF53": "s",
+    "\uFF54": "t",
+    "\uFF55": "u",
+    "\uFF56": "v",
+    "\uFF57": "w",
+    "\uFF58": "x",
+    "\uFF59": "y",
+    "\uFF5A": "z",
+    "0": "o",
+    "1": "l",
+    "!": "i"
+  };
+  function extractRegistrableDomain(hostname) {
+    const parts = hostname.replace(/^www\./, "").toLowerCase().split(".");
+    if (parts.length <= 2) return parts.join(".");
+    return parts.slice(-2).join(".");
+  }
+  function normalizeConfusables(text) {
+    return [...text].map((ch) => CONFUSABLE_MAP[ch] || ch).join("");
+  }
+  function hasConfusableChars(hostname) {
+    for (const ch of hostname) {
+      if (CONFUSABLE_MAP[ch] !== void 0) return true;
+    }
+    return false;
+  }
+  function levenshteinDistance(a, b) {
+    const m = a.length;
+    const n = b.length;
+    const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+        if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+          dp[i][j] = Math.min(dp[i][j], dp[i - 2][j - 2] + cost);
+        }
+      }
+    }
+    return dp[m][n];
+  }
+  function checkPhishing(url, trustedDomains = []) {
+    const result = { isSuspicious: false, threatType: null };
+    if (!url) return result;
     try {
       const parsed = new URL(url);
-      const hostname = parsed.hostname;
+      const hostname = parsed.hostname.toLowerCase();
       if (hostname.includes("xn--")) {
-        return true;
+        result.isSuspicious = true;
+        result.threatType = "homograph";
+        result.details = hostname;
+        return result;
       }
       const asciiRegex = /^[\x00-\x7F]*$/;
       if (!asciiRegex.test(hostname)) {
-        return true;
+        result.isSuspicious = true;
+        result.threatType = hasConfusableChars(hostname) ? "confusable" : "homograph";
+        result.details = hostname;
+        return result;
       }
-      return false;
+      const activeDomain = extractRegistrableDomain(hostname);
+      if (hasConfusableChars(activeDomain)) {
+        const normalized = normalizeConfusables(activeDomain);
+        for (const trusted of trustedDomains) {
+          if (normalized === trusted && activeDomain !== trusted) {
+            result.isSuspicious = true;
+            result.threatType = "confusable";
+            result.matchedDomain = trusted;
+            result.details = activeDomain;
+            return result;
+          }
+        }
+      }
+      if (trustedDomains.length > 0) {
+        for (const trusted of trustedDomains) {
+          if (activeDomain === trusted) continue;
+          const dist = levenshteinDistance(activeDomain, trusted);
+          const maxLen = Math.max(activeDomain.length, trusted.length);
+          const similarity = 1 - dist / maxLen;
+          if (similarity >= 0.85 && dist > 0 && dist <= 3) {
+            result.isSuspicious = true;
+            result.threatType = "typosquat";
+            result.matchedDomain = trusted;
+            result.details = activeDomain;
+            return result;
+          }
+          const normalizedActive = normalizeConfusables(activeDomain);
+          const normalizedTrusted = normalizeConfusables(trusted);
+          if (normalizedActive === normalizedTrusted && activeDomain !== trusted) {
+            result.isSuspicious = true;
+            result.threatType = "confusable";
+            result.matchedDomain = trusted;
+            result.details = activeDomain;
+            return result;
+          }
+        }
+      }
+      return result;
     } catch {
-      return false;
+      return result;
     }
   }
   var allCredentials = [];
@@ -171,15 +345,12 @@
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const activeTab = tabs[0];
       activeUrl = activeTab && activeTab.url ? activeTab.url : "";
-      if (activeUrl && checkPhishing(activeUrl)) {
-        phishingBanner.style.display = "flex";
-      } else {
-        phishingBanner.style.display = "none";
-      }
       chrome.runtime.sendMessage(
         { action: "list_credentials" },
         (response) => {
           if (!response || response.locked || response.error) {
+            const basicResult = checkPhishing(activeUrl);
+            renderPhishingBanner(basicResult);
             lockedScreen.style.display = "flex";
             credentialList.style.display = "none";
             searchWrapper.style.display = "none";
@@ -192,6 +363,23 @@
           credentialList.style.display = "flex";
           searchWrapper.style.display = "block";
           allCredentials = response.credentials || [];
+          const trustedDomains = [];
+          allCredentials.forEach((item) => {
+            if (item.url) {
+              try {
+                let cleanUrl = item.url.trim().toLowerCase();
+                if (!/^https?:\/\//i.test(cleanUrl)) cleanUrl = "https://" + cleanUrl;
+                const parsed = new URL(cleanUrl);
+                const domain = extractRegistrableDomain(parsed.hostname);
+                if (domain && !trustedDomains.includes(domain)) {
+                  trustedDomains.push(domain);
+                }
+              } catch {
+              }
+            }
+          });
+          const phishingResult = checkPhishing(activeUrl, trustedDomains);
+          renderPhishingBanner(phishingResult);
           if (activeUrl && (activeUrl.startsWith("http://") || activeUrl.startsWith("https://"))) {
             try {
               const parsedActive = new URL(activeUrl);
@@ -226,6 +414,69 @@
           displayInitialScreen();
         }
       );
+    });
+  }
+  function renderPhishingBanner(result) {
+    if (!result.isSuspicious) {
+      phishingBanner.style.display = "none";
+      return;
+    }
+    phishingBanner.style.display = "flex";
+    let titleKey;
+    let descKey;
+    switch (result.threatType) {
+      case "homograph":
+        titleKey = "phishing.homograph";
+        descKey = "phishing.homograph.desc";
+        break;
+      case "confusable":
+        titleKey = "phishing.confusable";
+        descKey = "phishing.confusable.desc";
+        break;
+      case "typosquat":
+        titleKey = "phishing.typosquat";
+        descKey = "phishing.typosquat.desc";
+        break;
+      default:
+        titleKey = "phishing.warning";
+        descKey = "phishing.warning";
+    }
+    const titleText = translate(titleKey, activeLanguage);
+    let descText = translate(descKey, activeLanguage);
+    if (result.matchedDomain && (result.threatType === "typosquat" || result.threatType === "confusable")) {
+      descText += ` ${result.matchedDomain}`;
+    }
+    phishingBanner.innerHTML = "";
+    const iconSpan = document.createElement("span");
+    iconSpan.className = "warning-icon";
+    iconSpan.textContent = result.threatType === "homograph" ? "\u{1F6E1}\uFE0F" : result.threatType === "confusable" ? "\u{1F524}" : result.threatType === "typosquat" ? "\u{1F3AF}" : "\u26A0\uFE0F";
+    phishingBanner.appendChild(iconSpan);
+    const textContainer = document.createElement("div");
+    textContainer.className = "phishing-text-container";
+    const titleEl = document.createElement("div");
+    titleEl.className = "phishing-title";
+    titleEl.textContent = titleText;
+    textContainer.appendChild(titleEl);
+    const descEl = document.createElement("div");
+    descEl.className = "phishing-desc";
+    descEl.textContent = descText;
+    textContainer.appendChild(descEl);
+    if (result.details) {
+      const detailsEl = document.createElement("div");
+      detailsEl.className = "phishing-domain";
+      detailsEl.textContent = result.details;
+      textContainer.appendChild(detailsEl);
+    }
+    phishingBanner.appendChild(textContainer);
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]?.id) {
+        chrome.tabs.sendMessage(tabs[0].id, {
+          action: "aegis_phishing_alert",
+          threatType: result.threatType,
+          matchedDomain: result.matchedDomain,
+          details: result.details
+        });
+      }
     });
   }
   function displayInitialScreen() {
