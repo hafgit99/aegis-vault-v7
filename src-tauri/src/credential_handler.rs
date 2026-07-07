@@ -1,6 +1,7 @@
 use std::sync::Mutex;
 use tauri::State;
 use serde::{Deserialize, Serialize};
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -52,7 +53,7 @@ pub fn derive_argon2id_key_internal(
     Ok(hash)
 }
 
-#[derive(Default)]
+#[derive(Default, Zeroize, ZeroizeOnDrop)]
 pub struct SessionState {
     active_credential: Option<Vec<u8>>,
     active_account_secret_key: Option<Vec<u8>>,
@@ -62,26 +63,7 @@ pub struct SessionState {
 
 impl SessionState {
     pub fn clear(&mut self) {
-        if let Some(ref mut bytes) = self.active_credential {
-            for b in bytes.iter_mut() {
-                unsafe { std::ptr::write_volatile(b, 0); }
-            }
-        }
-        if let Some(ref mut bytes) = self.active_account_secret_key {
-            for b in bytes.iter_mut() {
-                unsafe { std::ptr::write_volatile(b, 0); }
-            }
-        }
-        if let Some(ref mut bytes) = self.active_backup_password {
-            for b in bytes.iter_mut() {
-                unsafe { std::ptr::write_volatile(b, 0); }
-            }
-        }
-        if let Some(ref mut bytes) = self.active_vault_key {
-            for b in bytes.iter_mut() {
-                unsafe { std::ptr::write_volatile(b, 0); }
-            }
-        }
+        self.zeroize();
         self.active_credential = None;
         self.active_account_secret_key = None;
         self.active_backup_password = None;
@@ -312,9 +294,7 @@ pub fn update_rust_active_vault_key(
 ) -> Result<(), String> {
     let mut state = session.state.lock().map_err(|e| e.to_string())?;
     if let Some(ref mut bytes) = state.active_vault_key {
-        for b in bytes.iter_mut() {
-            unsafe { std::ptr::write_volatile(b, 0); }
-        }
+        bytes.zeroize();
     }
     state.active_vault_key = Some(new_vault_key);
     Ok(())

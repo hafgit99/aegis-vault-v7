@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { isDesktopRuntime } from './argon2id';
+import { createSecureBuffer, wasmZeroizeArray } from './wasmZeroizer';
 
 let fallbackCredentialBytes: Uint8Array | null = null;
 let fallbackAccountSecretKeyBytes: Uint8Array | null = null;
@@ -11,7 +12,11 @@ let hasActiveBackupPass = false;
 let hasActiveSecretKey = false;
 
 function encodeSecret(value: string): Uint8Array {
-  return new TextEncoder().encode(value);
+  const bytes = new TextEncoder().encode(value);
+  const secureBuf = createSecureBuffer(bytes.length);
+  secureBuf.array.set(bytes);
+  bytes.fill(0);
+  return secureBuf.array;
 }
 
 function decodeSecret(value: Uint8Array | null): string | null {
@@ -20,11 +25,15 @@ function decodeSecret(value: Uint8Array | null): string | null {
 }
 
 function cloneBytes(value: Uint8Array): Uint8Array {
-  return new Uint8Array(value);
+  const secureBuf = createSecureBuffer(value.length);
+  secureBuf.array.set(value);
+  return secureBuf.array;
 }
 
 function zeroizeSecret(value: Uint8Array | null): void {
-  value?.fill(0);
+  if (value) {
+    wasmZeroizeArray(value);
+  }
 }
 
 const onCloseCallbacks: (() => void)[] = [];
@@ -187,5 +196,18 @@ export async function withActiveSessionSecrets<T>(
     const backupPassword = decodeSecret(fallbackBackupPasswordBytes);
     if (!masterPassword || !backupPassword) return null;
     return await callback(masterPassword, backupPassword);
+  }
+}
+
+export function initializeTauriWindowCloseListener(): void {
+  if (isDesktopRuntime()) {
+    import('@tauri-apps/api/window')
+      .then(({ getCurrentWindow }) => {
+        const appWindow = getCurrentWindow();
+        appWindow.onCloseRequested(async () => {
+          closeVaultSession();
+        });
+      })
+      .catch((e) => console.error('Failed to register Tauri onCloseRequested listener:', e));
   }
 }
