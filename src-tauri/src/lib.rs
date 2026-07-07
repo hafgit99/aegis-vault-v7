@@ -3,8 +3,8 @@ use std::fs;
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager, WebviewWindow};
 
-mod native_messaging;
 mod credential_handler;
+mod native_messaging;
 
 const VAULT_DATABASE_FILENAME: &str = "aegis_sqlite.db";
 const FILE_DIALOG_BUFFER_LEN: usize = 32768;

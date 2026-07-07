@@ -50,6 +50,18 @@ const ICONS: Record<FolderIconKey, typeof FolderIcon> = {
   'file-text': FileText,
 };
 
+const PADDING_BY_DEPTH: Record<number, string> = {
+  0: 'pl-[6px]',
+  1: 'pl-[18px]',
+  2: 'pl-[30px]',
+  3: 'pl-[42px]',
+  4: 'pl-[54px]',
+  5: 'pl-[66px]',
+  6: 'pl-[78px]',
+  7: 'pl-[90px]',
+  8: 'pl-[102px]',
+};
+
 interface FolderTreeProps {
   folders: VaultFolder[];
   activeFolderId: string | null;
@@ -139,10 +151,9 @@ function FolderNode({
   return (
     <li>
       <div
-        className={`group flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-surface-high/60 ${
-          isActive ? 'bg-brand-primary/10 text-brand-primary' : 'text-on-surface'
-        }`}
-        style={{ paddingLeft: depth * 12 + 6 }}
+        className={`group flex items-center gap-1 rounded-md pr-1.5 py-1 hover:bg-surface-high/60 ${
+          PADDING_BY_DEPTH[depth] || 'pl-[6px]'
+        } ${isActive ? 'bg-brand-primary/10 text-brand-primary' : 'text-on-surface'}`}
       >
         <button
           type="button"

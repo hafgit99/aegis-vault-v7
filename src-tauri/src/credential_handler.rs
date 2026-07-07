@@ -1,6 +1,6 @@
+use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use tauri::State;
-use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
@@ -113,8 +113,8 @@ pub fn open_rust_session(
         Argon2,
     };
 
-    let parsed_hash = PasswordHash::new(&argon_hash)
-        .map_err(|e| format!("invalid password hash format: {e}"))?;
+    let parsed_hash =
+        PasswordHash::new(&argon_hash).map_err(|e| format!("invalid password hash format: {e}"))?;
 
     let verified = Argon2::default()
         .verify_password(password.as_bytes(), &parsed_hash)
@@ -159,7 +159,7 @@ pub fn setup_rust_session(
 
     let params = get_params(kdf_params)?;
     let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
-    
+
     let mut rng_bytes = [0u8; 16];
     rand::thread_rng().fill(&mut rng_bytes);
     let salt_str = SaltString::encode_b64(&rng_bytes)
@@ -246,7 +246,9 @@ pub fn close_rust_session(session: State<'_, CredentialSession>) -> Result<(), S
 }
 
 #[tauri::command]
-pub fn get_rust_active_credential(session: State<'_, CredentialSession>) -> Result<Option<String>, String> {
+pub fn get_rust_active_credential(
+    session: State<'_, CredentialSession>,
+) -> Result<Option<String>, String> {
     let state = session.state.lock().map_err(|e| e.to_string())?;
     if let Some(ref bytes) = state.active_credential {
         String::from_utf8(bytes.clone())
@@ -258,7 +260,9 @@ pub fn get_rust_active_credential(session: State<'_, CredentialSession>) -> Resu
 }
 
 #[tauri::command]
-pub fn get_rust_active_backup_password(session: State<'_, CredentialSession>) -> Result<Option<String>, String> {
+pub fn get_rust_active_backup_password(
+    session: State<'_, CredentialSession>,
+) -> Result<Option<String>, String> {
     let state = session.state.lock().map_err(|e| e.to_string())?;
     if let Some(ref bytes) = state.active_backup_password {
         String::from_utf8(bytes.clone())
@@ -270,7 +274,9 @@ pub fn get_rust_active_backup_password(session: State<'_, CredentialSession>) ->
 }
 
 #[tauri::command]
-pub fn get_rust_active_account_secret_key(session: State<'_, CredentialSession>) -> Result<Option<String>, String> {
+pub fn get_rust_active_account_secret_key(
+    session: State<'_, CredentialSession>,
+) -> Result<Option<String>, String> {
     let state = session.state.lock().map_err(|e| e.to_string())?;
     if let Some(ref bytes) = state.active_account_secret_key {
         String::from_utf8(bytes.clone())
@@ -282,7 +288,9 @@ pub fn get_rust_active_account_secret_key(session: State<'_, CredentialSession>)
 }
 
 #[tauri::command]
-pub fn get_rust_active_vault_key(session: State<'_, CredentialSession>) -> Result<Option<Vec<u8>>, String> {
+pub fn get_rust_active_vault_key(
+    session: State<'_, CredentialSession>,
+) -> Result<Option<Vec<u8>>, String> {
     let state = session.state.lock().map_err(|e| e.to_string())?;
     Ok(state.active_vault_key.clone())
 }

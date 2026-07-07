@@ -210,12 +210,12 @@ struct ParsedUrl {
 
 fn parse_url(url_str: &str) -> ParsedUrl {
     let mut clean = url_str.trim().to_lowercase();
-    
+
     // Remove protocol
     if let Some(pos) = clean.find("://") {
         clean = clean[pos + 3..].to_string();
     }
-    
+
     // Remove query and fragment
     if let Some(pos) = clean.find('?') {
         clean = clean[..pos].to_string();
@@ -223,14 +223,14 @@ fn parse_url(url_str: &str) -> ParsedUrl {
     if let Some(pos) = clean.find('#') {
         clean = clean[..pos].to_string();
     }
-    
+
     // Split host/port and path
     let (host_port, path) = if let Some(pos) = clean.find('/') {
         (clean[..pos].to_string(), clean[pos..].to_string())
     } else {
         (clean, "/".to_string())
     };
-    
+
     // Extract port
     let mut host = host_port;
     let mut port = None;
@@ -240,12 +240,12 @@ fn parse_url(url_str: &str) -> ParsedUrl {
             host = host[..pos].to_string();
         }
     }
-    
+
     // Remove www. prefix if present
     if host.starts_with("www.") {
         host = host[4..].to_string();
     }
-    
+
     ParsedUrl { host, port, path }
 }
 
@@ -254,16 +254,17 @@ fn match_credentials(active: &ParsedUrl, item: &ParsedUrl) -> Option<u32> {
     let host_score = if active.host == item.host {
         100 // Exact host match
     } else if active.host.ends_with(&format!(".{}", item.host)) {
-        80  // Subdomain match (e.g. active is sub.domain.com, item is domain.com)
+        80 // Subdomain match (e.g. active is sub.domain.com, item is domain.com)
     } else if item.host.ends_with(&format!(".{}", active.host)) {
-        60  // Parent domain match (e.g. active is domain.com, item is sub.domain.com)
+        60 // Parent domain match (e.g. active is domain.com, item is sub.domain.com)
     } else {
         return None; // No host match
     };
 
     // 2. Port matching
-    let is_dev_host = active.host == "localhost" || active.host == "127.0.0.1" || active.host == "[::1]";
-    
+    let is_dev_host =
+        active.host == "localhost" || active.host == "127.0.0.1" || active.host == "[::1]";
+
     let port_score = match (active.port, item.port) {
         (Some(ap), Some(ip)) => {
             if ap == ip {
@@ -413,7 +414,7 @@ fn handle_client(
 
                 if let Some(ref cache) = *creds_guard {
                     let mut scored_credentials: Vec<(u32, ExtensionCredential)> = Vec::new();
-                    
+
                     if !active_parsed.host.is_empty() {
                         for item in &cache.credentials {
                             let item_parsed = parse_url(&item.url);
@@ -422,15 +423,15 @@ fn handle_client(
                             }
                         }
                     }
-                    
+
                     // Sort by score descending (highest score first)
                     scored_credentials.sort_by(|a, b| b.0.cmp(&a.0));
-                    
+
                     let matching: Vec<ExtensionCredential> = scored_credentials
                         .into_iter()
                         .map(|(_, cred)| cred)
                         .collect();
-                        
+
                     serde_json::json!({ "locked": false, "credentials": matching })
                 } else {
                     serde_json::json!({ "locked": true, "credentials": [] })
