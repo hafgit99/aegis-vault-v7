@@ -70,4 +70,70 @@ describe('useVaultQueries', () => {
     expect(result.current.secureNoteCount).toBe(1);
     expect(result.current.auditReport.totalCount).toBe(3);
   });
+
+  it('tolerates a single-character typo when fuzzy search is enabled', () => {
+    const { result } = renderHook(() =>
+      useVaultQueries({
+        items,
+        searchQuery: 'githab', // one typo away from "github"
+        favoritesOnly: false,
+        selectedCategory: 'all',
+        fuzzyEnabled: true,
+      }),
+    );
+
+    expect(result.current.filteredItems.map((item) => item.id)).toContain('1');
+  });
+
+  it('does not match a typo when fuzzy search is disabled', () => {
+    const { result } = renderHook(() =>
+      useVaultQueries({
+        items,
+        searchQuery: 'githab',
+        favoritesOnly: false,
+        selectedCategory: 'all',
+        fuzzyEnabled: false,
+      }),
+    );
+
+    expect(result.current.filteredItems).toHaveLength(0);
+  });
+
+  it('exposes match metadata for highlighting', () => {
+    const { result } = renderHook(() =>
+      useVaultQueries({
+        items,
+        searchQuery: 'github',
+        favoritesOnly: false,
+        selectedCategory: 'all',
+      }),
+    );
+
+    const hit = result.current.filteredItemResults.find((entry) => entry.item.id === '1');
+    expect(hit).toBeDefined();
+    expect(hit?.match?.matchedField).toBe('title');
+    expect((hit?.match?.score ?? 0) > 0).toBe(true);
+  });
+
+  it('filters by an inclusive date range', () => {
+    const dated: VaultItem[] = [
+      item({ id: 'a', title: 'Old', createdAt: '2024-01-01', updatedAt: '2024-01-01' }),
+      item({ id: 'b', title: 'New', createdAt: '2025-06-15', updatedAt: '2025-06-15' }),
+      item({ id: 'c', title: 'Future', createdAt: '2026-12-31', updatedAt: '2026-12-31' }),
+    ];
+
+    const { result } = renderHook(() =>
+      useVaultQueries({
+        items: dated,
+        searchQuery: '',
+        favoritesOnly: false,
+        selectedCategory: 'all',
+        dateRange: { from: '2025-01-01', to: '2025-12-31' },
+        dateField: 'updatedAt',
+      }),
+    );
+
+    expect(result.current.filteredItems.map((item) => item.id)).toEqual(['b']);
+  });
 });
+

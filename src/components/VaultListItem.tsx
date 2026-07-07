@@ -5,13 +5,17 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { TranslationKey } from '../i18n/translations';
 import { getLogoForPlatform } from '../lib/display';
 import { getStrengthLabel } from '../lib/security';
+import type { FuzzyScore } from '../lib/fuzzySearch';
 import { VaultItem } from '../types';
+import SearchHighlight from './SearchHighlight';
 
 interface VaultListItemProps {
   item: VaultItem;
   isSelected: boolean;
   onSelect: (item: VaultItem) => void;
   autofillRecommended?: boolean;
+  /** Optional match metadata — when present, matched field text is highlighted. */
+  match?: FuzzyScore | null;
 }
 
 const strengthLabelKeys: Record<ReturnType<typeof getStrengthLabel>['label'], TranslationKey> = {
@@ -21,11 +25,27 @@ const strengthLabelKeys: Record<ReturnType<typeof getStrengthLabel>['label'], Tr
   SECURE: 'vaultItem.strength.secure',
 };
 
-function VaultListItemContent({ item, isSelected, onSelect, autofillRecommended = false }: VaultListItemProps) {
+function VaultListItemContent({
+  item,
+  isSelected,
+  onSelect,
+  autofillRecommended = false,
+  match = null,
+}: VaultListItemProps) {
   const { t } = useLanguage();
   const [isDragging, setIsDragging] = useState(false);
   const logoUrl = getLogoForPlatform(item.title, item.url);
   const itemStrength = getStrengthLabel(item.password || '');
+
+  // When the user is searching and the match points to title or
+  // username, render those fields with a highlight. Other matched
+  // fields (url / notes) are still shown but without highlight, to
+  // keep the list scannable.
+  const showTitleHighlight = Boolean(match && match.matchedField === 'title' && match.score > 0);
+  const showUsernameHighlight = Boolean(
+    match && match.matchedField === 'username' && match.score > 0,
+  );
+  const highlightQuery = match && match.score > 0 ? t('top.search.placeholderActive') : undefined;
 
   return (
     <div
@@ -63,8 +83,30 @@ function VaultListItemContent({ item, isSelected, onSelect, autofillRecommended 
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <h3 className="font-bold text-sm text-on-surface truncate leading-tight">{item.title}</h3>
-        <p className="text-on-surface-variant text-xs truncate font-mono mt-0.5">{item.username}</p>
+        {showTitleHighlight ? (
+          <h3 className="font-bold text-sm text-on-surface truncate leading-tight">
+            <SearchHighlight
+              text={item.title}
+              matchStart={match?.matchStart ?? -1}
+              matchEnd={match?.matchEnd ?? -1}
+              query={highlightQuery}
+            />
+          </h3>
+        ) : (
+          <h3 className="font-bold text-sm text-on-surface truncate leading-tight">{item.title}</h3>
+        )}
+        {showUsernameHighlight ? (
+          <p className="text-on-surface-variant text-xs truncate font-mono mt-0.5">
+            <SearchHighlight
+              text={item.username}
+              matchStart={match?.matchStart ?? -1}
+              matchEnd={match?.matchEnd ?? -1}
+              query={highlightQuery}
+            />
+          </p>
+        ) : (
+          <p className="text-on-surface-variant text-xs truncate font-mono mt-0.5">{item.username}</p>
+        )}
       </div>
       <div className="shrink-0 flex flex-col items-end gap-1.5">
         {autofillRecommended && (
@@ -97,6 +139,11 @@ export default memo(VaultListItemContent, (prevProps, nextProps) => {
     prevProps.item.password === nextProps.item.password &&
     prevProps.isSelected === nextProps.isSelected &&
     prevProps.autofillRecommended === nextProps.autofillRecommended &&
-    prevProps.onSelect === nextProps.onSelect
+    prevProps.onSelect === nextProps.onSelect &&
+    (prevProps.match?.score ?? 0) === (nextProps.match?.score ?? 0) &&
+    prevProps.match?.matchedField === nextProps.match?.matchedField &&
+    prevProps.match?.matchStart === nextProps.match?.matchStart &&
+    prevProps.match?.matchEnd === nextProps.match?.matchEnd
   );
 });
+

@@ -36,6 +36,21 @@ describe('TopBar', () => {
         onOpenVaultStatus={onOpenVaultStatus}
         onOpenProfile={onOpenProfile}
         onLock={onLock}
+        fuzzyEnabled
+        onToggleFuzzy={vi.fn()}
+        selectedTags={[]}
+        onToggleTag={vi.fn()}
+        onClearTags={vi.fn()}
+        dateRange={{ from: null, to: null }}
+        dateField="updatedAt"
+        onDateFieldChange={vi.fn()}
+        onChangeDateRange={vi.fn()}
+        onClearDateRange={vi.fn()}
+        onResetAdvancedFilters={vi.fn()}
+        recentSearches={[]}
+        onRemoveRecentEntry={vi.fn()}
+        onClearRecentSearches={vi.fn()}
+        onCommitSearch={vi.fn()}
       />,
     );
 
@@ -67,6 +82,21 @@ describe('TopBar', () => {
         onOpenVaultStatus={vi.fn()}
         onOpenProfile={vi.fn()}
         onLock={vi.fn()}
+        fuzzyEnabled
+        onToggleFuzzy={vi.fn()}
+        selectedTags={[]}
+        onToggleTag={vi.fn()}
+        onClearTags={vi.fn()}
+        dateRange={{ from: null, to: null }}
+        dateField="updatedAt"
+        onDateFieldChange={vi.fn()}
+        onChangeDateRange={vi.fn()}
+        onClearDateRange={vi.fn()}
+        onResetAdvancedFilters={vi.fn()}
+        recentSearches={[]}
+        onRemoveRecentEntry={vi.fn()}
+        onClearRecentSearches={vi.fn()}
+        onCommitSearch={vi.fn()}
       />,
     );
 
@@ -90,6 +120,21 @@ describe('TopBar', () => {
           onOpenVaultStatus={vi.fn()}
           onOpenProfile={vi.fn()}
           onLock={vi.fn()}
+        fuzzyEnabled
+        onToggleFuzzy={vi.fn()}
+        selectedTags={[]}
+        onToggleTag={vi.fn()}
+        onClearTags={vi.fn()}
+        dateRange={{ from: null, to: null }}
+        dateField="updatedAt"
+        onDateFieldChange={vi.fn()}
+        onChangeDateRange={vi.fn()}
+        onClearDateRange={vi.fn()}
+        onResetAdvancedFilters={vi.fn()}
+        recentSearches={[]}
+        onRemoveRecentEntry={vi.fn()}
+        onClearRecentSearches={vi.fn()}
+        onCommitSearch={vi.fn()}
         />
       </LanguageProvider>,
     );
@@ -123,6 +168,21 @@ describe('TopBar', () => {
         onOpenVaultStatus={vi.fn()}
         onOpenProfile={vi.fn()}
         onLock={vi.fn()}
+        fuzzyEnabled
+        onToggleFuzzy={vi.fn()}
+        selectedTags={[]}
+        onToggleTag={vi.fn()}
+        onClearTags={vi.fn()}
+        dateRange={{ from: null, to: null }}
+        dateField="updatedAt"
+        onDateFieldChange={vi.fn()}
+        onChangeDateRange={vi.fn()}
+        onClearDateRange={vi.fn()}
+        onResetAdvancedFilters={vi.fn()}
+        recentSearches={[]}
+        onRemoveRecentEntry={vi.fn()}
+        onClearRecentSearches={vi.fn()}
+        onCommitSearch={vi.fn()}
       />,
     );
 

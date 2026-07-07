@@ -106,10 +106,25 @@ export default function App() {
   const {
     searchQuery,
     setSearchQuery,
+    commitSearch,
     filterFavoritesOnly,
     setFilterFavoritesOnly,
     selectedCategory,
     setSelectedCategory,
+    fuzzyEnabled,
+    setFuzzyEnabled,
+    selectedTags,
+    toggleTag,
+    clearTags,
+    dateRange,
+    dateField,
+    setDateField,
+    updateDateRange,
+    clearDateRange,
+    recentSearches,
+    removeRecentEntry,
+    clearRecent,
+    resetAdvancedFilters,
   } = useVaultFilters();
   const {
     confirmConfig,
@@ -263,6 +278,7 @@ export default function App() {
     activeItems,
     trashItems,
     filteredItems,
+    filteredItemResults,
     favoriteCount,
     loginCount,
     cardCount,
@@ -275,6 +291,10 @@ export default function App() {
     searchQuery,
     favoritesOnly: filterFavoritesOnly,
     selectedCategory,
+    fuzzyEnabled,
+    selectedTags,
+    dateRange,
+    dateField,
   });
 
   const { selectItem: handleSelectItem, selectAuditItem: handleAuditSelectItem } = useVaultSelection({
@@ -380,6 +400,21 @@ export default function App() {
           onOpenVaultStatus={handleOpenVaultStatus}
           onOpenProfile={handleOpenProfile}
           onLock={handleLock}
+          fuzzyEnabled={fuzzyEnabled}
+          onToggleFuzzy={setFuzzyEnabled}
+          selectedTags={selectedTags}
+          onToggleTag={toggleTag}
+          onClearTags={clearTags}
+          dateRange={dateRange}
+          dateField={dateField}
+          onDateFieldChange={setDateField}
+          onChangeDateRange={updateDateRange}
+          onClearDateRange={clearDateRange}
+          onResetAdvancedFilters={resetAdvancedFilters}
+          recentSearches={recentSearches}
+          onRemoveRecentEntry={removeRecentEntry}
+          onClearRecentSearches={clearRecent}
+          onCommitSearch={commitSearch}
         />
 
         <MainContent
@@ -387,6 +422,7 @@ export default function App() {
           selectedItem={selectedItem}
           mobileActiveView={mobileActiveView}
           filteredItems={filteredItems}
+          filteredItemResults={filteredItemResults}
           activeItems={activeItems}
           trashItems={trashItems}
           filterFavoritesOnly={filterFavoritesOnly}

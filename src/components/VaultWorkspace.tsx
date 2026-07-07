@@ -3,6 +3,7 @@ import { ArrowLeft, CreditCard, FileText, Fingerprint, Heart, KeyRound, Layers, 
 import { motion, AnimatePresence } from 'framer-motion';
 
 import type { VaultCategoryFilter } from '../hooks/useVaultFilters';
+import type { FilteredVaultItem } from '../hooks/useVaultQueries';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { androidAutofillTargetLabel, type AndroidAutofillRequest } from '../lib/androidAutofill';
@@ -22,6 +23,8 @@ interface VaultWorkspaceProps {
   selectedItem: VaultItem | null;
   mobileActiveView: 'list' | 'detail';
   filteredItems: VaultItem[];
+  /** Items enriched with fuzzy match metadata, used for highlighting. */
+  filteredItemResults: FilteredVaultItem[];
   activeItems: VaultItem[];
   filterFavoritesOnly: boolean;
   favoriteCount: number;
@@ -68,6 +71,7 @@ export function VaultWorkspaceContent({
   selectedItem,
   mobileActiveView,
   filteredItems,
+  filteredItemResults,
   activeItems,
   filterFavoritesOnly,
   favoriteCount,
@@ -172,6 +176,8 @@ export function VaultWorkspaceContent({
     : 0;
   const orderedItems = isAutofillMode ? sortAndroidAutofillMatches(filteredItems, autofillRequest) : filteredItems;
   const displayedItems = orderedItems.slice(0, visibleCount);
+  // Build a quick lookup so the renderer can fetch the match metadata for a given item.
+  const matchByItemId = new Map(filteredItemResults.map((entry) => [entry.item.id, entry.match]));
 
   return (
     <>
@@ -399,6 +405,7 @@ export function VaultWorkspaceContent({
                     isSelected={selectedItem?.id === item.id}
                     onSelect={onSelectItem}
                     autofillRecommended={isAutofillMode && isAndroidAutofillTargetMatch(item, autofillRequest)}
+                    match={matchByItemId.get(item.id) ?? null}
                   />
                 </motion.div>
               ))}

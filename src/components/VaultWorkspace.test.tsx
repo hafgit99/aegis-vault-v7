@@ -62,6 +62,7 @@ function renderWorkspace(
     selectedItem: null,
     mobileActiveView: 'list',
     filteredItems: activeItems,
+    filteredItemResults: activeItems.map((item) => ({ item, match: null })),
     activeItems,
     filterFavoritesOnly: false,
     favoriteCount: 1,

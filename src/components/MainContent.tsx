@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 import type { VaultCategoryFilter } from '../hooks/useVaultFilters';
 import type { AndroidAutofillRequest } from '../lib/androidAutofill';
+import type { FilteredVaultItem } from '../hooks/useVaultQueries';
 import { ActiveTab, AppNotification, AuditReport, VaultItem } from '../types';
 import PasswordGenerator from './PasswordGenerator';
 import SecurityAudit from './SecurityAudit';
@@ -16,6 +17,8 @@ interface MainContentProps {
   selectedItem: VaultItem | null;
   mobileActiveView: 'list' | 'detail';
   filteredItems: VaultItem[];
+  /** Item entries enriched with fuzzy match metadata, used for highlighting. */
+  filteredItemResults: FilteredVaultItem[];
   activeItems: VaultItem[];
   trashItems: VaultItem[];
   filterFavoritesOnly: boolean;
@@ -72,6 +75,7 @@ export function MainContentComponent({
   selectedItem,
   mobileActiveView,
   filteredItems,
+  filteredItemResults,
   activeItems,
   trashItems,
   filterFavoritesOnly,
@@ -138,6 +142,7 @@ export function MainContentComponent({
               selectedItem={selectedItem}
               mobileActiveView={mobileActiveView}
               filteredItems={filteredItems}
+              filteredItemResults={filteredItemResults}
               activeItems={activeItems}
               filterFavoritesOnly={filterFavoritesOnly}
               favoriteCount={favoriteCount}

@@ -62,6 +62,11 @@ export interface VaultItem {
   attachmentName?: string;
   attachmentSize?: number;
   attachmentType?: string;
+
+  // Optional: free-form tags used by the advanced search feature.
+  // Backwards-compatible — the field is omitted for older vaults and
+  // for items that simply have no tags.
+  tags?: string[];
 }
 
 export interface GeneratorOptions {
