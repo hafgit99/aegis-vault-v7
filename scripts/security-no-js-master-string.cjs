@@ -9,7 +9,10 @@ const forbiddenPatterns = [
   'getActiveMasterPassword',
   'masterPasswordPlain',
   'passwordPlain',
-  'deriveEncryptionKey'
+  'deriveEncryptionKey',
+  'activeCredentialBytes',
+  'activeBackupPasswordBytes',
+  'activeAccountSecretKeyBytes'
 ];
 
 // Baselines representing the exact approved occurrences of these patterns.
@@ -20,84 +23,120 @@ const baseline = {
     'getActiveMasterPassword': 0,
     'masterPasswordPlain': 0,
     'passwordPlain': 0,
-    'deriveEncryptionKey': 0
+    'deriveEncryptionKey': 0,
+    'activeCredentialBytes': 0,
+    'activeBackupPasswordBytes': 0,
+    'activeAccountSecretKeyBytes': 0
   },
   'src/lib/storage.ts': {
     'withActiveMasterPassword': 0,
     'getActiveMasterPassword': 0,
     'masterPasswordPlain': 0,
     'passwordPlain': 0,
-    'deriveEncryptionKey': 5  // setup, setupWithSecretKey, change, openDerivedVaultSession, migrateActiveVaultStorageToWaSqlite
+    'deriveEncryptionKey': 5,  // setup, setupWithSecretKey, change, openDerivedVaultSession, migrateActiveVaultStorageToWaSqlite
+    'activeCredentialBytes': 0,
+    'activeBackupPasswordBytes': 0,
+    'activeAccountSecretKeyBytes': 0
   },
   'src/lib/attachments.ts': {
     'withActiveMasterPassword': 0,
     'getActiveMasterPassword': 0,
     'masterPasswordPlain': 0,
     'passwordPlain': 0,
-    'deriveEncryptionKey': 0
+    'deriveEncryptionKey': 0,
+    'activeCredentialBytes': 0,
+    'activeBackupPasswordBytes': 0,
+    'activeAccountSecretKeyBytes': 0
   },
   'src/components/SettingsPanel.tsx': {
     'withActiveMasterPassword': 0,
     'getActiveMasterPassword': 0,
     'masterPasswordPlain': 0,
     'passwordPlain': 0,
-    'deriveEncryptionKey': 0
+    'deriveEncryptionKey': 0,
+    'activeCredentialBytes': 0,
+    'activeBackupPasswordBytes': 0,
+    'activeAccountSecretKeyBytes': 0
   },
   'src/lib/sqlite_opfs.ts': {
     'withActiveMasterPassword': 0,
     'getActiveMasterPassword': 0,
     'masterPasswordPlain': 8,
     'passwordPlain': 9,
-    'deriveEncryptionKey': 9
+    'deriveEncryptionKey': 9,
+    'activeCredentialBytes': 0,
+    'activeBackupPasswordBytes': 0,
+    'activeAccountSecretKeyBytes': 0
   },
   'src/lib/vaultStorageMigration.ts': {
     'withActiveMasterPassword': 0,
     'getActiveMasterPassword': 0,
     'masterPasswordPlain': 15,
     'passwordPlain': 0,
-    'deriveEncryptionKey': 0
+    'deriveEncryptionKey': 0,
+    'activeCredentialBytes': 0,
+    'activeBackupPasswordBytes': 0,
+    'activeAccountSecretKeyBytes': 0
   },
   'src/lib/vaultStorageMigrationDryRun.ts': {
     'withActiveMasterPassword': 0,
     'getActiveMasterPassword': 0,
     'masterPasswordPlain': 4,
     'passwordPlain': 0,
-    'deriveEncryptionKey': 0
+    'deriveEncryptionKey': 0,
+    'activeCredentialBytes': 0,
+    'activeBackupPasswordBytes': 0,
+    'activeAccountSecretKeyBytes': 0
   },
   'src/lib/vaultStorageRepository.ts': {
     'withActiveMasterPassword': 0,
     'getActiveMasterPassword': 0,
     'masterPasswordPlain': 4,
     'passwordPlain': 3,
-    'deriveEncryptionKey': 1
+    'deriveEncryptionKey': 1,
+    'activeCredentialBytes': 0,
+    'activeBackupPasswordBytes': 0,
+    'activeAccountSecretKeyBytes': 0
   },
   'src/lib/vaultStorageWaSqliteAdapter.ts': {
     'withActiveMasterPassword': 0,
     'getActiveMasterPassword': 0,
     'masterPasswordPlain': 2,
     'passwordPlain': 0,
-    'deriveEncryptionKey': 2
+    'deriveEncryptionKey': 2,
+    'activeCredentialBytes': 0,
+    'activeBackupPasswordBytes': 0,
+    'activeAccountSecretKeyBytes': 0
   },
   'src/lib/vaultStorageMigrationCandidate.ts': {
     'withActiveMasterPassword': 0,
     'getActiveMasterPassword': 0,
     'masterPasswordPlain': 2,
     'passwordPlain': 0,
-    'deriveEncryptionKey': 0
+    'deriveEncryptionKey': 0,
+    'activeCredentialBytes': 0,
+    'activeBackupPasswordBytes': 0,
+    'activeAccountSecretKeyBytes': 0
   },
   'src/lib/vaultStorageActiveMigration.ts': {
     'withActiveMasterPassword': 0,
     'getActiveMasterPassword': 0,
     'masterPasswordPlain': 3,
     'passwordPlain': 0,
-    'deriveEncryptionKey': 0
+    'deriveEncryptionKey': 0,
+    'activeCredentialBytes': 0,
+    'activeBackupPasswordBytes': 0,
+    'activeAccountSecretKeyBytes': 0
   },
   'src/lib/waSqliteVaultStorageRepository.ts': {
     'withActiveMasterPassword': 0,
     'getActiveMasterPassword': 0,
     'masterPasswordPlain': 9,
     'passwordPlain': 9,
-    'deriveEncryptionKey': 7
+    'deriveEncryptionKey': 7,
+    'activeCredentialBytes': 0,
+    'activeBackupPasswordBytes': 0,
+    'activeAccountSecretKeyBytes': 0
   }
 };
 

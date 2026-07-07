@@ -33,6 +33,12 @@ const vaultItems: VaultItem[] = [
   },
 ];
 
+const invoke = vi.fn();
+
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: (...args: unknown[]) => invoke(...args),
+}));
+
 vi.mock('../lib/storage', () => ({
   changeMasterPassword: vi.fn(),
   deleteVaultItem: vi.fn(async () => []),
@@ -149,6 +155,17 @@ function dropZone(container: HTMLElement): HTMLElement {
 }
 
 beforeEach(() => {
+  invoke.mockReset();
+  invoke.mockImplementation(async (cmd, args) => {
+    if (cmd === 'get_rust_active_backup_password') {
+      return 'master-pass';
+    }
+    if (cmd === 'get_rust_active_credential') {
+      return 'master-pass';
+    }
+    return null;
+  });
+
   Object.defineProperty(window.navigator, 'userAgent', {
     configurable: true,
     value: 'Mozilla/5.0 jsdom',

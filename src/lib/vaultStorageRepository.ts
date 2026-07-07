@@ -53,5 +53,16 @@ export interface VaultStorageRepository {
   deletePermanentlyBatchWithKey?(ids: string[], vaultEncryptionKey: Uint8Array): Promise<VaultItem[]>;
   reseedDemo(passwordPlain: string, demoItems: VaultItem[]): Promise<VaultItem[]>;
   reseedDemoWithKey?(vaultEncryptionKey: Uint8Array, demoItems: VaultItem[]): Promise<VaultItem[]>;
+  getArgonHash?(): string | Promise<string>;
+  getCurrentVaultEncryptionSalt?(): string | Promise<string>;
+  getKdfParams?(): any | Promise<any>;
+  setupMasterWithHash?(argonHash: string, salt: string, kdfParams: any): Promise<void>;
+  changeMasterPasswordWithHash?(
+    newArgonHash: string,
+    newSalt: string,
+    kdfParams: any,
+    oldVaultKey: Uint8Array,
+    newVaultKey: Uint8Array,
+  ): Promise<void>;
   close?(): Promise<void>;
 }

@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use tauri::{AppHandle, Manager, WebviewWindow};
 
 mod native_messaging;
+mod credential_handler;
 
 const VAULT_DATABASE_FILENAME: &str = "aegis_sqlite.db";
 const FILE_DIALOG_BUFFER_LEN: usize = 32768;
@@ -934,7 +935,10 @@ pub fn run() {
         pairing_token: pairing_token.clone(),
     };
 
-    let builder = tauri::Builder::default().manage(state);
+    let credential_session = credential_handler::CredentialSession::default();
+    let builder = tauri::Builder::default()
+        .manage(state)
+        .manage(credential_session);
 
     #[cfg(mobile)]
     let builder = builder.plugin(tauri_plugin_biometric::init());
@@ -984,7 +988,17 @@ pub fn run() {
             derive_argon2id_key,
             create_argon2id_hash,
             verify_argon2id_hash,
-            get_linux_security_status
+            get_linux_security_status,
+            credential_handler::open_rust_session,
+            credential_handler::setup_rust_session,
+            credential_handler::rotate_rust_session,
+            credential_handler::close_rust_session,
+            credential_handler::get_rust_active_credential,
+            credential_handler::get_rust_active_backup_password,
+            credential_handler::get_rust_active_account_secret_key,
+            credential_handler::get_rust_active_vault_key,
+            credential_handler::update_rust_active_vault_key,
+            credential_handler::has_rust_session
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

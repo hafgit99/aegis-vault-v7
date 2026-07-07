@@ -155,8 +155,12 @@ class SQLiteOPFS implements VaultStorageRepository {
     return this.state.encryption_salt;
   }
 
-  private getCurrentVaultEncryptionSalt(): string {
+  public getCurrentVaultEncryptionSalt(): string {
     return this.state.encryption_salt || LEGACY_VAULT_ITEM_KDF_SALT;
+  }
+
+  public getArgonHash(): string {
+    return this.state.user_secrets[0]?.argon_hash || '';
   }
 
   private createDesktopManagedSetupMarker(): string {
@@ -433,6 +437,18 @@ class SQLiteOPFS implements VaultStorageRepository {
     await this.saveToPersistentStorage();
   }
 
+  public async setupMasterWithHash(argonHash: string, salt: string, kdfParams: any): Promise<void> {
+    await this.hydrate();
+    this.state.encryption_salt = salt;
+    this.state.kdfParams = kdfParams;
+    this.state.user_secrets = [{
+      username: 'owner',
+      argon_hash: argonHash,
+    }];
+    this.logQuery('INSERT INTO user_secrets (username, argon_hash) VALUES ("owner", "[argon2id verification hash]");', 'SUCCESS', 1);
+    await this.saveToPersistentStorage();
+  }
+
   /**
    * Rotates the vault master credential without wiping saved records.
    */
@@ -508,7 +524,74 @@ class SQLiteOPFS implements VaultStorageRepository {
     }
   }
 
-  private getKdfParams() {
+  public async changeMasterPasswordWithHash(
+    newArgonHash: string,
+    newSalt: string,
+    kdfParams: any,
+    oldVaultKey: Uint8Array,
+    newVaultKey: Uint8Array,
+  ): Promise<void> {
+    await this.hydrate();
+    const items = await this.getVaultItemsWithKey(oldVaultKey);
+    const previousState = this.cloneState();
+    const previousDecryptedItemsCache = this.cloneDecryptedItemsCache();
+
+    try {
+      this.clearDerivedKeyCache();
+      this.state.encryption_salt = newSalt;
+      this.state.kdfParams = kdfParams;
+      this.state.user_secrets = [{
+        username: 'owner',
+        argon_hash: newArgonHash,
+      }];
+
+      this.state.vault_items = await Promise.all(items.map(async (item) => {
+        const encrypted = await webCryptoAesGcmEncrypt(JSON.stringify(item), newVaultKey, generateSafeIv());
+        const nowStr = new Date().toISOString().split('T')[0];
+
+        return {
+          id: item.id || secureRandomToken(9),
+          title: item.title || 'Imported Record',
+          category: item.category || 'login',
+          favorite: item.favorite ? 1 : 0,
+          deleted: item.deleted ? 1 : 0,
+          deleted_at: item.deletedAt || null,
+          created_at: item.createdAt || nowStr,
+          updated_at: nowStr,
+          username: item.username || '',
+          username_db: '[encrypted: aes-256-gcm]',
+          password_db: '[encrypted: aes-256-gcm]',
+          notes_db: item.notes ? '[encrypted: aes-256-gcm]' : '',
+          enc_metadata: JSON.stringify(encrypted),
+          enc_kdf: VAULT_ITEM_KDF,
+        };
+      }));
+
+      this.decryptedItemsCache.clear();
+      for (const item of items) {
+        const row = this.state.vault_items.find((candidate) => candidate.id === item.id);
+        if (row) {
+          this.decryptedItemsCache.set(row.id, {
+            enc_metadata: row.enc_metadata,
+            item,
+          });
+        }
+      }
+
+      const persisted = await this.saveToPersistentStorage();
+      if (!persisted) {
+        throw new Error('master-password-rotation-persist-failed');
+      }
+
+      this.logQuery('UPDATE user_secrets SET argon_hash = "[rotated argon2id verification hash]"; REKEY vault_items;', 'SUCCESS', items.length);
+    } catch (err) {
+      this.restoreTransactionalState(previousState, previousDecryptedItemsCache);
+      this.logQuery('UPDATE user_secrets SET argon_hash = "[rekey rolled back: persistence failed]"; REKEY vault_items;', 'ERROR', 0);
+      throw err;
+    }
+  }
+
+  public getKdfParams() {
     return this.state.kdfParams || LEGACY_VAULT_ITEM_KDF_PARAMS;
   }
 

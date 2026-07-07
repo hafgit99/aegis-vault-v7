@@ -185,6 +185,59 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
     return deriveArgon2idKey(password, salt ?? await this.ensureVaultEncryptionSalt(), await this.getKdfParams());
   }
 
+  public async getArgonHash(): Promise<string> {
+    await this.hydrate();
+    const rows = await this.engine.selectObjects("SELECT argon_hash FROM user_secrets WHERE username = 'owner';");
+    return typeof rows[0]?.argon_hash === 'string' ? rows[0].argon_hash : '';
+  }
+
+  public async getCurrentVaultEncryptionSalt(): Promise<string> {
+    return this.ensureVaultEncryptionSalt();
+  }
+
+  public async setupMasterWithHash(argonHash: string, salt: string, kdfParams: any): Promise<void> {
+    await this.hydrate();
+    await this.runTransaction(async () => {
+      await this.executeRequired('DELETE FROM user_secrets;');
+      await this.executeRequired('DELETE FROM vault_items;');
+      await this.upsertStorageMetadata(VAULT_ENCRYPTION_SALT_KEY, salt);
+      await this.upsertStorageMetadata(VAULT_KDF_PARAMS_KEY, JSON.stringify(kdfParams));
+      await this.executeRequired(
+        'INSERT INTO user_secrets (username, argon_hash) VALUES '
+        + `(${this.sqlString('owner')}, ${this.sqlString(argonHash)});`,
+      );
+    });
+
+    this.logQuery('INSERT INTO user_secrets (username, argon_hash) VALUES ("owner", "[argon2id verification hash]");', 'SUCCESS', 1);
+  }
+
+  public async changeMasterPasswordWithHash(
+    newArgonHash: string,
+    newSalt: string,
+    kdfParams: any,
+    oldVaultKey: Uint8Array,
+    newVaultKey: Uint8Array,
+  ): Promise<void> {
+    const items = await this.getVaultItemsWithKey(oldVaultKey);
+    const rekeyedRows = await Promise.all(items.map((item) => this.createEncryptedRow(item, newVaultKey)));
+
+    await this.runTransaction(async () => {
+      await this.executeRequired('DELETE FROM user_secrets;');
+      await this.upsertStorageMetadata(VAULT_ENCRYPTION_SALT_KEY, newSalt);
+      await this.upsertStorageMetadata(VAULT_KDF_PARAMS_KEY, JSON.stringify(kdfParams));
+      await this.executeRequired(
+        'INSERT INTO user_secrets (username, argon_hash) VALUES '
+        + `(${this.sqlString('owner')}, ${this.sqlString(newArgonHash)});`,
+      );
+      await this.executeRequired('DELETE FROM vault_items;');
+      for (const row of rekeyedRows) {
+        await this.executeRequired(this.createVaultItemUpsertSql(row));
+      }
+    });
+
+    this.logQuery('UPDATE user_secrets SET argon_hash = "[rotated argon2id verification hash]"; REKEY vault_items;', 'SUCCESS', rekeyedRows.length);
+  }
+
   public async getVaultItems(masterPasswordPlain: string): Promise<VaultItem[]> {
     const verified = await this.verifyPassword(masterPasswordPlain);
     if (!verified) {
@@ -515,7 +568,7 @@ FROM vault_items;
     return salt;
   }
 
-  private async getKdfParams(): Promise<Required<Argon2idOptions>> {
+  public async getKdfParams(): Promise<Required<Argon2idOptions>> {
     const rawParams = await this.getStorageMetadata(VAULT_KDF_PARAMS_KEY);
     if (!rawParams) {
       return DEFAULT_KDF_PARAMS;

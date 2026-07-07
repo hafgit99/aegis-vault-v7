@@ -39,7 +39,8 @@ import {
   removeIndexedDbItemSync,
   clearAllSetupFlagsSync,
 } from './indexedDbStorage';
-import { isAndroidRuntime } from './desktopStorage';
+import { isAndroidRuntime, isDesktopRuntime } from './desktopStorage';
+import { invoke } from '@tauri-apps/api/core';
 
 const STORAGE_KEYS = {
   IS_SET_UP: 'aegis_is_setup',
@@ -136,22 +137,23 @@ function resolveVaultCredential(password: string, secretKey?: string | null): st
   return combineMasterPasswordAndSecretKey(password, usableSecretKey);
 }
 
-function resolveRotatedVaultCredential(newPassword: string): string {
-  const rotatedWithActiveSecret = withActiveAccountSecretKey((secretKey) => (
+async function resolveRotatedVaultCredential(newPassword: string): Promise<string> {
+  const rotatedWithActiveSecret = await withActiveAccountSecretKey((secretKey) => (
     combineMasterPasswordAndSecretKey(newPassword, secretKey)
   ));
 
   return rotatedWithActiveSecret ?? resolveVaultCredential(newPassword);
 }
 
-function resolveCurrentVaultCredential(password: string): string {
-  return withActiveSessionSecrets((activeCredential, activeBackupPassword) => {
+async function resolveCurrentVaultCredential(password: string): Promise<string> {
+  const secrets = await withActiveSessionSecrets((activeCredential, activeBackupPassword) => {
     if (activeCredential.startsWith('aegis-vault-v7:') && activeBackupPassword === password) {
       return activeCredential;
     }
 
     return resolveVaultCredential(password);
-  }) ?? resolveVaultCredential(password);
+  });
+  return secrets ?? resolveVaultCredential(password);
 }
 
 /**
@@ -170,29 +172,68 @@ async function openDerivedVaultSession(credential: string, backupPassword: strin
 
 export async function verifyMasterPassword(password: string, secretKey?: string | null): Promise<boolean> {
   await initializeStorage();
-  const credential = resolveVaultCredential(password, secretKey);
-  const isCorrect = await getVaultStorageRepository().verifyPassword(credential);
-  if (isCorrect) {
-    let rawMasterPassword = password;
-    if (password.startsWith('aegis-vault-v7:')) {
-      const separatorIndex = password.indexOf('\0');
-      if (separatorIndex !== -1) {
-        rawMasterPassword = password.substring('aegis-vault-v7:'.length, separatorIndex);
+  
+  if (isDesktopRuntime()) {
+    const repo = getVaultStorageRepository();
+    const salt = repo.getCurrentVaultEncryptionSalt ? await repo.getCurrentVaultEncryptionSalt() : 'aegis_vault_v7_db_encryption_salt';
+    const kdfParams = repo.getKdfParams ? await repo.getKdfParams() : { memoryKiB: 32 * 1024, iterations: 3, parallelism: 1, hashLength: 32 };
+    const argonHash = repo.getArgonHash ? await repo.getArgonHash() : '';
+
+    const usableSecretKey = secretKey || getRememberedAccountSecretKey();
+
+    try {
+      const vaultKeyBytes = await invoke<number[]>('open_rust_session', {
+        password,
+        backupPassword: password,
+        argonHash,
+        salt,
+        kdfParams,
+        secretKey: usableSecretKey || null,
+      });
+
+      const sessionVaultEncryptionKey = new Uint8Array(vaultKeyBytes);
+      openVaultSession(sessionVaultEncryptionKey, { hasBackup: true, hasSecret: usableSecretKey !== null });
+      
+      try {
+        await migrateLegacyAttachmentsToAesGcm();
+      } catch (err) {
+        logSecurityEvent(
+          securityEventCodes.attachmentLegacyMigrationFailed,
+          'Legacy attachment migration failed after unlock.',
+          'warning',
+          { error: err instanceof Error ? err.message : String(err) },
+        );
+      }
+      return true;
+    } catch (err) {
+      console.error('Rust unlock failed:', err);
+      return false;
+    }
+  } else {
+    const credential = resolveVaultCredential(password, secretKey);
+    const isCorrect = await getVaultStorageRepository().verifyPassword(credential);
+    if (isCorrect) {
+      let rawMasterPassword = password;
+      if (password.startsWith('aegis-vault-v7:')) {
+        const separatorIndex = password.indexOf('\0');
+        if (separatorIndex !== -1) {
+          rawMasterPassword = password.substring('aegis-vault-v7:'.length, separatorIndex);
+        }
+      }
+      await openDerivedVaultSession(credential, rawMasterPassword);
+      try {
+        await migrateLegacyAttachmentsToAesGcm();
+      } catch (err) {
+        logSecurityEvent(
+          securityEventCodes.attachmentLegacyMigrationFailed,
+          'Legacy attachment migration failed after unlock.',
+          'warning',
+          { error: err instanceof Error ? err.message : String(err) },
+        );
       }
     }
-    await openDerivedVaultSession(credential, rawMasterPassword);
-    try {
-      await migrateLegacyAttachmentsToAesGcm();
-    } catch (err) {
-      logSecurityEvent(
-        securityEventCodes.attachmentLegacyMigrationFailed,
-        'Legacy attachment migration failed after unlock.',
-        'warning',
-        { error: err instanceof Error ? err.message : String(err) },
-      );
-    }
+    return isCorrect;
   }
-  return isCorrect;
 }
 
 /**
@@ -200,9 +241,54 @@ export async function verifyMasterPassword(password: string, secretKey?: string 
  */
 export async function setupMasterPassword(password: string): Promise<void> {
   await initializeStorage();
-  const credential = resolveVaultCredential(password);
-  await getVaultStorageRepository().setupMaster(credential);
-  await openDerivedVaultSession(credential, password);
+  
+  if (isDesktopRuntime()) {
+    const salt = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+    const kdfParams = { memoryKiB: 32 * 1024, iterations: 3, parallelism: 1, hashLength: 32 };
+    
+    const result = await invoke<{
+      vaultEncryptionKey: number[];
+      argonHash: string;
+      salt: string;
+    }>('setup_rust_session', {
+      password,
+      backupPassword: password,
+      secretKey: null,
+      salt,
+      kdfParams,
+    });
+
+    const vaultKeyBytes = new Uint8Array(result.vaultEncryptionKey);
+    const repo = getVaultStorageRepository();
+    if (repo.setupMasterWithHash) {
+      await repo.setupMasterWithHash(result.argonHash, result.salt, kdfParams);
+    } else {
+      const credential = resolveVaultCredential(password);
+      await repo.setupMaster(credential);
+    }
+    
+    openVaultSession(vaultKeyBytes, { hasBackup: true, hasSecret: false });
+    
+    const seedKey = new Uint8Array(vaultKeyBytes);
+    try {
+      await getVaultStorageRepository().reseedDemoWithKey!(seedKey, INITIAL_DEMO_ITEMS);
+    } finally {
+      seedKey.fill(0);
+    }
+  } else {
+    const credential = resolveVaultCredential(password);
+    await getVaultStorageRepository().setupMaster(credential);
+    await openDerivedVaultSession(credential, password);
+    const seedKey = await getVaultStorageRepository().deriveEncryptionKey(credential);
+    try {
+      await getVaultStorageRepository().reseedDemoWithKey!(seedKey, INITIAL_DEMO_ITEMS);
+    } finally {
+      seedKey.fill(0);
+    }
+  }
+
   try {
     await migrateLegacyAttachmentsToAesGcm();
   } catch (err) {
@@ -214,14 +300,6 @@ export async function setupMasterPassword(password: string): Promise<void> {
     );
   }
   setIndexedDbItemSync(STORAGE_KEYS.IS_SET_UP, 'true');
-
-  // Seed default items in SQLite
-  const seedKey = await getVaultStorageRepository().deriveEncryptionKey(credential);
-  try {
-    await getVaultStorageRepository().reseedDemoWithKey!(seedKey, INITIAL_DEMO_ITEMS);
-  } finally {
-    seedKey.fill(0);
-  }
 }
 
 export async function setupMasterPasswordWithSecretKey(
@@ -233,8 +311,52 @@ export async function setupMasterPasswordWithSecretKey(
   const credential = combineMasterPasswordAndSecretKey(password, normalizedSecretKey);
 
   await initializeStorage();
-  await getVaultStorageRepository().setupMaster(credential);
-  await openDerivedVaultSession(credential, password);
+
+  if (isDesktopRuntime()) {
+    const salt = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+    const kdfParams = { memoryKiB: 32 * 1024, iterations: 3, parallelism: 1, hashLength: 32 };
+    
+    const result = await invoke<{
+      vaultEncryptionKey: number[];
+      argonHash: string;
+      salt: string;
+    }>('setup_rust_session', {
+      password,
+      backupPassword: password,
+      secretKey: normalizedSecretKey,
+      salt,
+      kdfParams,
+    });
+
+    const vaultKeyBytes = new Uint8Array(result.vaultEncryptionKey);
+    const repo = getVaultStorageRepository();
+    if (repo.setupMasterWithHash) {
+      await repo.setupMasterWithHash(result.argonHash, result.salt, kdfParams);
+    } else {
+      await repo.setupMaster(credential);
+    }
+    
+    openVaultSession(vaultKeyBytes, { hasBackup: true, hasSecret: true });
+    
+    const seedKey = new Uint8Array(vaultKeyBytes);
+    try {
+      await getVaultStorageRepository().reseedDemoWithKey!(seedKey, INITIAL_DEMO_ITEMS);
+    } finally {
+      seedKey.fill(0);
+    }
+  } else {
+    await getVaultStorageRepository().setupMaster(credential);
+    await openDerivedVaultSession(credential, password);
+    const seedKey = await getVaultStorageRepository().deriveEncryptionKey(credential);
+    try {
+      await getVaultStorageRepository().reseedDemoWithKey!(seedKey, INITIAL_DEMO_ITEMS);
+    } finally {
+      seedKey.fill(0);
+    }
+  }
+
   try {
     await migrateLegacyAttachmentsToAesGcm();
   } catch (err) {
@@ -256,74 +378,125 @@ export async function setupMasterPasswordWithSecretKey(
   } else {
     forgetRememberedAccountSecretKey();
   }
-
-  const seedKey = await getVaultStorageRepository().deriveEncryptionKey(credential);
-  try {
-    await getVaultStorageRepository().reseedDemoWithKey!(seedKey, INITIAL_DEMO_ITEMS);
-  } finally {
-    seedKey.fill(0);
-  }
 }
 
 export async function changeMasterPassword(oldPassword: string, newPassword: string): Promise<void> {
   await initializeStorage();
-  const oldCredential = resolveCurrentVaultCredential(oldPassword);
-  const isCorrectOld = await getVaultStorageRepository().verifyPassword(oldCredential);
-  if (!isCorrectOld) {
-    throw new Error('current-master-password-invalid');
-  }
+  
+  if (isDesktopRuntime()) {
+    const repo = getVaultStorageRepository();
+    const newSalt = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+    const kdfParams = { memoryKiB: 32 * 1024, iterations: 3, parallelism: 1, hashLength: 32 };
 
-  const newCredential = resolveRotatedVaultCredential(newPassword);
+    const result = await invoke<{
+      newVaultKey: number[];
+      newArgonHash: string;
+    }>('rotate_rust_session', {
+      oldPassword,
+      newPassword,
+      newSalt,
+      kdfParams,
+    });
 
-  // Derive the old and new vault encryption keys up front so attachment
-  // re-encryption can run through the key-only path instead of materializing
-  // the master password string. The old key is read from the active session
-  // (already derived at unlock); the new key is derived from the rotated
-  // credential. Both copies are zeroized once the rotation completes.
-  const oldVaultKey = await withActiveVaultEncryptionKey(async (key) => new Uint8Array(key));
-  if (!oldVaultKey) {
-    throw new Error('vault-storage-active-migration-session-required');
-  }
-
-  let newVaultKey: Uint8Array;
-  try {
-    newVaultKey = await getVaultStorageRepository().deriveEncryptionKey(newCredential);
-  } catch (err) {
-    oldVaultKey.fill(0);
-    throw err;
-  }
-
-  let rotatedAttachmentCount = 0;
-  try {
-    rotatedAttachmentCount = await reencryptAttachmentsForVaultKeyChange(
-      oldVaultKey,
-      newVaultKey,
-      oldCredential, // legacy master-password fallback for pre-vault-key records
-    );
-  } catch (err) {
-    oldVaultKey.fill(0);
-    newVaultKey.fill(0);
-    throw err;
-  }
-
-  try {
-    await getVaultStorageRepository().changeMasterPassword(oldCredential, newCredential);
-  } catch (err) {
-    if (rotatedAttachmentCount > 0) {
-      // Rollback: re-encrypt attachments back onto the old vault key.
-      await reencryptAttachmentsForVaultKeyChange(newVaultKey, oldVaultKey, newCredential).catch(() => {});
+    const newVaultKey = new Uint8Array(result.newVaultKey);
+    const oldVaultKey = await withActiveVaultEncryptionKey(async (key) => new Uint8Array(key));
+    if (!oldVaultKey) {
+      throw new Error('vault-storage-active-migration-session-required');
     }
+
+    let rotatedAttachmentCount = 0;
+    try {
+      const oldCredential = await invoke<string | null>('get_rust_active_credential') || '';
+      rotatedAttachmentCount = await reencryptAttachmentsForVaultKeyChange(
+        oldVaultKey,
+        newVaultKey,
+        oldCredential,
+      );
+    } catch (err) {
+      oldVaultKey.fill(0);
+      newVaultKey.fill(0);
+      throw err;
+    }
+
+    try {
+      if (repo.changeMasterPasswordWithHash) {
+        await repo.changeMasterPasswordWithHash(result.newArgonHash, newSalt, kdfParams, oldVaultKey, newVaultKey);
+      } else {
+        const oldCredential = await invoke<string | null>('get_rust_active_credential') || '';
+        const newCredential = await resolveRotatedVaultCredential(newPassword);
+        await repo.changeMasterPassword(oldCredential, newCredential);
+      }
+    } catch (err) {
+      if (rotatedAttachmentCount > 0) {
+        const oldCredential = await invoke<string | null>('get_rust_active_credential') || '';
+        await reencryptAttachmentsForVaultKeyChange(newVaultKey, oldVaultKey, oldCredential).catch(() => {});
+      }
+      oldVaultKey.fill(0);
+      newVaultKey.fill(0);
+      throw err;
+    }
+
     oldVaultKey.fill(0);
     newVaultKey.fill(0);
-    throw err;
+
+    openVaultSession(newVaultKey);
+    disableBiometric();
+    setIndexedDbItemSync(STORAGE_KEYS.IS_SET_UP, 'true');
+  } else {
+    const oldCredential = await resolveCurrentVaultCredential(oldPassword);
+    const isCorrectOld = await getVaultStorageRepository().verifyPassword(oldCredential);
+    if (!isCorrectOld) {
+      throw new Error('current-master-password-invalid');
+    }
+
+    const newCredential = await resolveRotatedVaultCredential(newPassword);
+
+    const oldVaultKey = await withActiveVaultEncryptionKey(async (key) => new Uint8Array(key));
+    if (!oldVaultKey) {
+      throw new Error('vault-storage-active-migration-session-required');
+    }
+
+    let newVaultKey: Uint8Array;
+    try {
+      newVaultKey = await getVaultStorageRepository().deriveEncryptionKey(newCredential);
+    } catch (err) {
+      oldVaultKey.fill(0);
+      throw err;
+    }
+
+    let rotatedAttachmentCount = 0;
+    try {
+      rotatedAttachmentCount = await reencryptAttachmentsForVaultKeyChange(
+        oldVaultKey,
+        newVaultKey,
+        oldCredential,
+      );
+    } catch (err) {
+      oldVaultKey.fill(0);
+      newVaultKey.fill(0);
+      throw err;
+    }
+
+    try {
+      await getVaultStorageRepository().changeMasterPassword(oldCredential, newCredential);
+    } catch (err) {
+      if (rotatedAttachmentCount > 0) {
+        await reencryptAttachmentsForVaultKeyChange(newVaultKey, oldVaultKey, newCredential).catch(() => {});
+      }
+      oldVaultKey.fill(0);
+      newVaultKey.fill(0);
+      throw err;
+    }
+
+    oldVaultKey.fill(0);
+    newVaultKey.fill(0);
+
+    await openDerivedVaultSession(newCredential, newPassword);
+    disableBiometric();
+    setIndexedDbItemSync(STORAGE_KEYS.IS_SET_UP, 'true');
   }
-
-  oldVaultKey.fill(0);
-  newVaultKey.fill(0);
-
-  await openDerivedVaultSession(newCredential, newPassword);
-  disableBiometric();
-  setIndexedDbItemSync(STORAGE_KEYS.IS_SET_UP, 'true');
 }
 
 /**
@@ -341,7 +514,7 @@ export async function migrateActiveVaultStorageToWaSqlite(): Promise<WaSqliteAct
     throw new Error('wa-sqlite-android-webview-wasm-memory-unsupported');
   }
 
-  const result = withActiveSessionSecrets(async (credential) => {
+  const result = await withActiveSessionSecrets(async (credential) => {
     let migrationResult: WaSqliteActiveBackendMigrationResult;
     try {
       migrationResult = await runWaSqliteActiveBackendMigration(credential);

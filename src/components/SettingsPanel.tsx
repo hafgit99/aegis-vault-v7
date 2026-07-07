@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -225,12 +225,11 @@ export default function SettingsPanel({
   const handleSyncSave = async () => {
     const err = validateWebDavConfig({ url: syncUrl, username: syncUsername, password: syncPassword });
     if (err) { setSyncMessage(`Error: ${err}`); return; }
-    const saved = withActiveBackupPassword(async (backupPassword) => {
+    const saved = await withActiveBackupPassword(async (backupPassword) => {
       await saveSyncConfig({ type: 'webdav', url: syncUrl, username: syncUsername, password: syncPassword }, backupPassword);
       return true;
     });
     if (!saved) return;
-    await saved;
     setSyncMessage(t('settings.sync.configure.save'));
   };
   const handleSyncDisable = async () => {
@@ -399,7 +398,7 @@ export default function SettingsPanel({
   };
 
   const handleSyncNow = async () => {
-    const syncRun = withActiveBackupPassword(async (backupPassword) => {
+    const syncRun = await withActiveBackupPassword(async (backupPassword) => {
       setSyncLoading(true);
       setSyncStatus('syncing');
       setSyncMessage(null);
@@ -437,8 +436,6 @@ export default function SettingsPanel({
         setSyncLoading(false);
       }
     });
-    if (!syncRun) return;
-    await syncRun;
   };
 
   // Auto-Lock Option Selectors
@@ -548,12 +545,13 @@ export default function SettingsPanel({
           throw new Error(t('settings.biometric.unsupportedError'));
         }
         
-        const registered = withActiveBackupPassword((backupPassword) => registerBiometric(backupPassword, type));
+        const registered = await withActiveBackupPassword(async (backupPassword) => {
+          await registerBiometric(backupPassword, type);
+          return true;
+        });
         if (!registered) {
           throw new Error(t('settings.biometric.missingSessionError'));
         }
-        
-        await registered;
         setBiometricEnabled(true);
         setBiometricSuccess(t('settings.biometric.enabledSuccess'));
       } catch (err: any) {
@@ -766,12 +764,14 @@ export default function SettingsPanel({
 
     try {
       if (useMasterForBackup) {
-        const exported = withActiveBackupPassword((masterPassword) => exportWithPassword(masterPassword));
+        const exported = await withActiveBackupPassword(async (masterPassword) => {
+          await exportWithPassword(masterPassword);
+          return true;
+        });
         if (!exported) {
           setBackupError(t('settings.export.missingMaster'));
           return;
         }
-        await exported;
       } else {
         if (!customBackupPassword) {
           setBackupError(t('settings.export.missingPassword'));

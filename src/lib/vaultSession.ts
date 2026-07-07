@@ -1,7 +1,14 @@
-let activeCredentialBytes: Uint8Array | null = null;
-let activeAccountSecretKeyBytes: Uint8Array | null = null;
-let activeBackupPasswordBytes: Uint8Array | null = null;
+import { invoke } from '@tauri-apps/api/core';
+import { isDesktopRuntime } from './argon2id';
+
+let fallbackCredentialBytes: Uint8Array | null = null;
+let fallbackAccountSecretKeyBytes: Uint8Array | null = null;
+let fallbackBackupPasswordBytes: Uint8Array | null = null;
 let activeVaultKeyBytes: Uint8Array | null = null;
+
+let hasActiveMasterPass = false;
+let hasActiveBackupPass = false;
+let hasActiveSecretKey = false;
 
 function encodeSecret(value: string): Uint8Array {
   return new TextEncoder().encode(value);
@@ -43,18 +50,37 @@ export function registerOnCloseSession(cb: () => void): void {
 }
 
 export function openVaultSession(
-  masterPassword: string,
-  backupPassword = masterPassword,
+  masterPasswordOrKey: string | Uint8Array,
+  backupPassword?: string | { hasBackup?: boolean; hasSecret?: boolean },
   vaultEncryptionKey?: Uint8Array,
 ): void {
   closeVaultSession();
-  activeCredentialBytes = encodeSecret(masterPassword);
+
+  if (masterPasswordOrKey instanceof Uint8Array) {
+    // Desktop runtime / key-only path
+    activeVaultKeyBytes = cloneBytes(masterPasswordOrKey);
+    const flags = backupPassword as { hasBackup?: boolean; hasSecret?: boolean } | undefined;
+    hasActiveMasterPass = true;
+    hasActiveBackupPass = flags?.hasBackup ?? true;
+    hasActiveSecretKey = flags?.hasSecret ?? false;
+    notifySubscribers();
+    return;
+  }
+
+  // Fallback path
+  const masterPassword = masterPasswordOrKey;
+  fallbackCredentialBytes = encodeSecret(masterPassword);
   const secretSeparatorIndex = masterPassword.startsWith('aegis-vault-v7:') ? masterPassword.indexOf('\0') : -1;
-  activeAccountSecretKeyBytes = secretSeparatorIndex !== -1
+  fallbackAccountSecretKeyBytes = secretSeparatorIndex !== -1
     ? encodeSecret(masterPassword.substring(secretSeparatorIndex + 1))
     : null;
-  activeBackupPasswordBytes = encodeSecret(backupPassword);
+  fallbackBackupPasswordBytes = encodeSecret((backupPassword as string | undefined) || masterPassword);
   activeVaultKeyBytes = vaultEncryptionKey ? cloneBytes(vaultEncryptionKey) : null;
+
+  hasActiveMasterPass = fallbackCredentialBytes !== null;
+  hasActiveBackupPass = fallbackBackupPasswordBytes !== null;
+  hasActiveSecretKey = fallbackAccountSecretKeyBytes !== null;
+
   notifySubscribers();
 }
 
@@ -63,18 +89,30 @@ export function updateActiveVaultEncryptionKey(vaultEncryptionKey: Uint8Array): 
     zeroizeSecret(activeVaultKeyBytes);
   }
   activeVaultKeyBytes = cloneBytes(vaultEncryptionKey);
+  if (isDesktopRuntime()) {
+    invoke('update_rust_active_vault_key', { newVaultKey: Array.from(vaultEncryptionKey) })
+      .catch(e => console.error('Failed to update vault key in Rust:', e));
+  }
   notifySubscribers();
 }
 
 export function closeVaultSession(): void {
-  zeroizeSecret(activeCredentialBytes);
-  zeroizeSecret(activeBackupPasswordBytes);
-  zeroizeSecret(activeAccountSecretKeyBytes);
+  zeroizeSecret(fallbackCredentialBytes);
+  zeroizeSecret(fallbackBackupPasswordBytes);
+  zeroizeSecret(fallbackAccountSecretKeyBytes);
   zeroizeSecret(activeVaultKeyBytes);
-  activeCredentialBytes = null;
-  activeBackupPasswordBytes = null;
-  activeAccountSecretKeyBytes = null;
+  fallbackCredentialBytes = null;
+  fallbackBackupPasswordBytes = null;
+  fallbackAccountSecretKeyBytes = null;
   activeVaultKeyBytes = null;
+  hasActiveMasterPass = false;
+  hasActiveBackupPass = false;
+  hasActiveSecretKey = false;
+
+  if (isDesktopRuntime()) {
+    invoke('close_rust_session').catch(e => console.error('Failed to close rust session:', e));
+  }
+
   onCloseCallbacks.forEach(cb => {
     try {
       cb();
@@ -86,7 +124,7 @@ export function closeVaultSession(): void {
 }
 
 export function hasActiveVaultSession(): boolean {
-  return activeCredentialBytes !== null || activeVaultKeyBytes !== null;
+  return activeVaultKeyBytes !== null || hasActiveMasterPass;
 }
 
 /**
@@ -96,15 +134,15 @@ export function hasActiveVaultSession(): boolean {
  * available — never use them to obtain the credential itself.
  */
 export function hasActiveMasterPassword(): boolean {
-  return activeCredentialBytes !== null;
+  return hasActiveMasterPass;
 }
 
 export function hasActiveAccountSecretKey(): boolean {
-  return activeAccountSecretKeyBytes !== null;
+  return hasActiveSecretKey;
 }
 
 export function hasActiveBackupPassword(): boolean {
-  return activeBackupPasswordBytes !== null;
+  return hasActiveBackupPass;
 }
 
 export function withActiveVaultEncryptionKey<T>(callback: (vaultEncryptionKey: Uint8Array) => T): T | null {
@@ -112,23 +150,42 @@ export function withActiveVaultEncryptionKey<T>(callback: (vaultEncryptionKey: U
   return callback(cloneBytes(activeVaultKeyBytes));
 }
 
-export function withActiveAccountSecretKey<T>(callback: (secretKey: string) => T): T | null {
-  const secretKey = decodeSecret(activeAccountSecretKeyBytes);
-  if (!secretKey) return null;
-  return callback(secretKey);
+export async function withActiveAccountSecretKey<T>(callback: (secretKey: string) => Promise<T> | T): Promise<T | null> {
+  if (isDesktopRuntime()) {
+    const secretKey = await invoke<string | null>('get_rust_active_account_secret_key');
+    if (!secretKey) return null;
+    return await callback(secretKey);
+  } else {
+    const secretKey = decodeSecret(fallbackAccountSecretKeyBytes);
+    if (!secretKey) return null;
+    return await callback(secretKey);
+  }
 }
 
-export function withActiveBackupPassword<T>(callback: (backupPassword: string) => T): T | null {
-  const backupPassword = decodeSecret(activeBackupPasswordBytes);
-  if (!backupPassword) return null;
-  return callback(backupPassword);
+export async function withActiveBackupPassword<T>(callback: (backupPassword: string) => Promise<T> | T): Promise<T | null> {
+  if (isDesktopRuntime()) {
+    const backupPassword = await invoke<string | null>('get_rust_active_backup_password');
+    if (!backupPassword) return null;
+    return await callback(backupPassword);
+  } else {
+    const backupPassword = decodeSecret(fallbackBackupPasswordBytes);
+    if (!backupPassword) return null;
+    return await callback(backupPassword);
+  }
 }
 
-export function withActiveSessionSecrets<T>(
-  callback: (masterPassword: string, backupPassword: string) => T,
-): T | null {
-  const masterPassword = decodeSecret(activeCredentialBytes);
-  const backupPassword = decodeSecret(activeBackupPasswordBytes);
-  if (!masterPassword || !backupPassword) return null;
-  return callback(masterPassword, backupPassword);
+export async function withActiveSessionSecrets<T>(
+  callback: (masterPassword: string, backupPassword: string) => Promise<T> | T,
+): Promise<T | null> {
+  if (isDesktopRuntime()) {
+    const masterPassword = await invoke<string | null>('get_rust_active_credential');
+    const backupPassword = await invoke<string | null>('get_rust_active_backup_password');
+    if (!masterPassword || !backupPassword) return null;
+    return await callback(masterPassword, backupPassword);
+  } else {
+    const masterPassword = decodeSecret(fallbackCredentialBytes);
+    const backupPassword = decodeSecret(fallbackBackupPasswordBytes);
+    if (!masterPassword || !backupPassword) return null;
+    return await callback(masterPassword, backupPassword);
+  }
 }
