@@ -80,6 +80,9 @@ export interface AuditReport {
   reusedCount: number;
   secureCount: number;
   totalCount: number;
+  missingTotpCount?: number;
+  oldPasswordCount?: number;
+  unsecureHttpCount?: number;
 }
 
 export interface AppNotification {

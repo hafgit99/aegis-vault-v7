@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { calculatePasswordScore, generatePassword, getStrengthLabel, runVaultAudit, validateMasterPassword } from './security';
+import { calculatePasswordScore, generatePassword, getStrengthLabel, runVaultAudit, validateMasterPassword, supportsTwoFactor, isUnsecureHttpUrl, getPasswordAgeInDays } from './security';
 import { VaultItem } from '../types';
 import { closeVaultSession } from './vaultSession';
 import { ZxcvbnFactory } from '@zxcvbn-ts/core';
@@ -150,5 +150,48 @@ describe('validateMasterPassword', () => {
   it('rejects weak passwords >= 16 characters under NIST 800-63B guidelines', () => {
     expect(validateMasterPassword('1234567890123456')).toBe(false); // Too predictable
     expect(validateMasterPassword('abcdefghijklmnopqrst')).toBe(false); // Too sequential
+  });
+});
+
+describe('extended security audit checks', () => {
+  it('identifies domains that support 2FA correctly', () => {
+    expect(supportsTwoFactor('https://github.com/login')).toBe(true);
+    expect(supportsTwoFactor('https://google.com')).toBe(true);
+    expect(supportsTwoFactor('https://myownlocalsite.org')).toBe(false);
+  });
+
+  it('detects unsecure HTTP links correctly', () => {
+    expect(isUnsecureHttpUrl('http://myinsecuresite.com')).toBe(true);
+    expect(isUnsecureHttpUrl('https://securesite.com')).toBe(false);
+    expect(isUnsecureHttpUrl('http://localhost:3000')).toBe(false);
+    expect(isUnsecureHttpUrl('http://127.0.0.1')).toBe(false);
+  });
+
+  it('calculates password age correctly', () => {
+    const today = new Date().toISOString().split('T')[0];
+    expect(getPasswordAgeInDays(today)).toBe(0);
+
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 95);
+    const oldDateStr = ninetyDaysAgo.toISOString().split('T')[0];
+    expect(getPasswordAgeInDays(oldDateStr)).toBeGreaterThanOrEqual(95);
+  });
+
+  it('calculates AuditReport with the new extended metrics and penalties', () => {
+    const oldDate = new Date();
+    oldDate.setDate(oldDate.getDate() - 100);
+    const oldDateStr = oldDate.toISOString().split('T')[0];
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    const report = runVaultAudit([
+      baseItem({ id: '1', category: 'login', password: 'CorrectHorseBatteryStaple123!', url: 'https://github.com', createdAt: todayStr, updatedAt: todayStr }), // Missing TOTP on 2FA site
+      baseItem({ id: '2', category: 'login', password: 'SomeStrongPassword123!', url: 'http://myinsecuresite.com', createdAt: todayStr, updatedAt: todayStr }), // Unsecure HTTP
+      baseItem({ id: '3', category: 'login', password: 'AnotherStrongPassword99!', url: 'https://securesite.com', updatedAt: oldDateStr }), // Old password
+    ]);
+
+    expect(report.missingTotpCount).toBe(1);
+    expect(report.unsecureHttpCount).toBe(1);
+    expect(report.oldPasswordCount).toBe(1);
+    expect(report.score).toBeLessThan(100);
   });
 });

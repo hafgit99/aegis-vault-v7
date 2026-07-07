@@ -22,17 +22,20 @@ afterEach(() => {
   vi.mocked(checkPasswordAgainstHibp).mockResolvedValue({ status: 'clean', count: 0 });
 });
 
-const makeItem = (overrides: Partial<VaultItem>): VaultItem => ({
-  id: overrides.id ?? 'item-1',
-  title: overrides.title ?? 'Example',
-  username: overrides.username ?? 'user@example.com',
-  password: overrides.password ?? 'StrongPass123!@#',
-  url: overrides.url ?? 'https://example.com',
-  createdAt: overrides.createdAt ?? '2026-01-01T00:00:00.000Z',
-  updatedAt: overrides.updatedAt ?? '2026-01-01T00:00:00.000Z',
-  category: overrides.category ?? 'login',
-  ...overrides,
-});
+const makeItem = (overrides: Partial<VaultItem>): VaultItem => {
+  const todayStr = new Date().toISOString();
+  return {
+    id: overrides.id ?? 'item-1',
+    title: overrides.title ?? 'Example',
+    username: overrides.username ?? 'user@example.com',
+    password: overrides.password ?? 'StrongPass123!@#',
+    url: overrides.url ?? 'https://example.com',
+    createdAt: overrides.createdAt ?? todayStr,
+    updatedAt: overrides.updatedAt ?? todayStr,
+    category: overrides.category ?? 'login',
+    ...overrides,
+  };
+};
 
 describe('SecurityAudit', () => {
   it('renders the empty secure state with zero risk metrics', () => {

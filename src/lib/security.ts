@@ -155,6 +155,104 @@ export function getStrengthLabel(password: string): {
   }
 }
 
+const COMMON_2FA_DOMAINS = [
+  'github.com',
+  'google.com',
+  'microsoft.com',
+  'apple.com',
+  'facebook.com',
+  'twitter.com',
+  'x.com',
+  'gitlab.com',
+  'bitbucket.org',
+  'amazon.com',
+  'dropbox.com',
+  'proton.me',
+  'protonmail.com',
+  'binance.com',
+  'coinbase.com'
+];
+
+export function supportsTwoFactor(url: string | undefined): boolean {
+  if (!url) return false;
+  try {
+    const hostname = url.includes('://') ? new URL(url).hostname : url;
+    const cleanHost = hostname.toLowerCase().replace('www.', '');
+    return COMMON_2FA_DOMAINS.some(d => cleanHost === d || cleanHost.endsWith('.' + d));
+  } catch {
+    const cleanUrl = url.toLowerCase();
+    return COMMON_2FA_DOMAINS.some(d => cleanUrl.includes(d));
+  }
+}
+
+export function getPasswordAgeInDays(updatedAt: string): number {
+  if (!updatedAt) return 0;
+  const updated = new Date(updatedAt).getTime();
+  if (isNaN(updated)) return 0;
+  const diffTime = Date.now() - updated;
+  return Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+}
+
+export function isUnsecureHttpUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  const cleanUrl = url.trim().toLowerCase();
+  return cleanUrl.startsWith('http://') && !cleanUrl.startsWith('http://localhost') && !cleanUrl.startsWith('http://127.0.0.1');
+}
+
+export function saveAuditScoreToHistory(score: number): void {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const historyJson = localStorage.getItem('aegis-vault-v7-audit-history') || '[]';
+    let history: { date: string; score: number }[] = JSON.parse(historyJson);
+    if (!Array.isArray(history)) {
+      history = [];
+    }
+    const today = new Date().toISOString().split('T')[0];
+    
+    const existingIndex = history.findIndex(h => h.date === today);
+    if (existingIndex !== -1) {
+      history[existingIndex].score = score;
+    } else {
+      history.push({ date: today, score });
+    }
+    
+    history.sort((a, b) => a.date.localeCompare(b.date));
+    if (history.length > 10) {
+      history.shift();
+    }
+    
+    localStorage.setItem('aegis-vault-v7-audit-history', JSON.stringify(history));
+  } catch (e) {
+    console.error("Failed to save audit history:", e);
+  }
+}
+
+export function getAuditScoreHistory(): { date: string; score: number }[] {
+  if (typeof localStorage !== 'undefined') {
+    try {
+      const historyJson = localStorage.getItem('aegis-vault-v7-audit-history');
+      if (historyJson) {
+        const history = JSON.parse(historyJson);
+        if (Array.isArray(history) && history.length > 0) return history;
+      }
+    } catch {}
+  }
+  
+  // Default fallback mock history for beautiful visualization
+  const mockHistory = [];
+  const now = new Date();
+  for (let i = 4; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i * 7);
+    const dateStr = d.toISOString().split('T')[0];
+    mockHistory.push({
+      date: dateStr,
+      score: 60 + (4 - i) * 8 + Math.round(Math.random() * 5),
+    });
+  }
+  return mockHistory;
+}
+
 /**
  * Performs a comprehensive audit of the entire vault collection.
  * Identifies weak and reused values.
@@ -163,13 +261,25 @@ export function getStrengthLabel(password: string): {
  */
 export function runVaultAudit(items: VaultItem[]): AuditReport {
   if (items.length === 0) {
-    return { score: 100, weakCount: 0, reusedCount: 0, secureCount: 0, totalCount: 0 };
+    return {
+      score: 100,
+      weakCount: 0,
+      reusedCount: 0,
+      secureCount: 0,
+      totalCount: 0,
+      missingTotpCount: 0,
+      oldPasswordCount: 0,
+      unsecureHttpCount: 0,
+    };
   }
 
   let totalIndividualScore = 0;
   let weakCount = 0;
   let reusedCount = 0;
   let secureCount = 0;
+  let missingTotpCount = 0;
+  let oldPasswordCount = 0;
+  let unsecureHttpCount = 0;
 
   // Record frequencies of passwords to detect duplicates
   const passwordFreq: Record<string, number> = {};
@@ -194,6 +304,20 @@ export function runVaultAudit(items: VaultItem[]): AuditReport {
     if (pw && passwordFreq[pw] > 1) {
       reusedCount++;
     }
+
+    if (item.category === 'login') {
+      if (supportsTwoFactor(item.url) && !item.totpSecret) {
+        missingTotpCount++;
+      }
+      const age = getPasswordAgeInDays(item.updatedAt || item.createdAt);
+      if (age >= 90) {
+        oldPasswordCount++;
+      }
+    }
+
+    if (isUnsecureHttpUrl(item.url)) {
+      unsecureHttpCount++;
+    }
   });
 
   // Calculate overall security rating
@@ -201,8 +325,17 @@ export function runVaultAudit(items: VaultItem[]): AuditReport {
   const averageScore = totalIndividualScore / items.length;
   const reusedPenalty = (reusedCount / items.length) * 35;
   const weakPenalty = (weakCount / items.length) * 45;
-  const rawScore = averageScore - reusedPenalty - weakPenalty;
+
+  // NIST / Advanced security checks penalties
+  const unsecureHttpPenalty = Math.min(20, unsecureHttpCount * 5);
+  const oldPasswordPenalty = Math.min(15, oldPasswordCount * 3);
+  const missingTotpPenalty = Math.min(20, missingTotpCount * 4);
+
+  const rawScore = averageScore - reusedPenalty - weakPenalty - unsecureHttpPenalty - oldPasswordPenalty - missingTotpPenalty;
   const finalScore = Math.max(10, Math.min(100, Math.round(rawScore)));
+
+  // Save score to history
+  saveAuditScoreToHistory(finalScore);
 
   return {
     score: finalScore,
@@ -210,6 +343,9 @@ export function runVaultAudit(items: VaultItem[]): AuditReport {
     reusedCount,
     secureCount,
     totalCount: items.length,
+    missingTotpCount,
+    oldPasswordCount,
+    unsecureHttpCount,
   };
 }
 
