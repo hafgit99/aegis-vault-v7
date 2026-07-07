@@ -7,13 +7,9 @@ import {LanguageProvider} from './i18n/LanguageContext';
 import {ThemeProvider} from './context/ThemeContext';
 import {installAirgapNetworkPolicy} from './lib/airgapNetworkPolicy';
 
-import {initializeTauriWindowCloseListener} from './lib/vaultSession';
-
 if (import.meta.env.PROD) {
   installAirgapNetworkPolicy();
 }
-
-initializeTauriWindowCloseListener();
 
 const root = createRoot(document.getElementById('root')!);
 

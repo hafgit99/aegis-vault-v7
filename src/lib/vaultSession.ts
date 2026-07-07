@@ -199,21 +199,3 @@ export async function withActiveSessionSecrets<T>(
   }
 }
 
-export function initializeTauriWindowCloseListener(): void {
-  if (isDesktopRuntime()) {
-    import('@tauri-apps/api/window')
-      .then(({ getCurrentWindow }) => {
-        const appWindow = getCurrentWindow();
-        appWindow.onCloseRequested(async (event) => {
-          event.preventDefault();
-          closeVaultSession();
-          try {
-            await appWindow.destroy();
-          } catch (e) {
-            console.error('Failed to destroy window on close request:', e);
-          }
-        });
-      })
-      .catch((e) => console.error('Failed to register Tauri onCloseRequested listener:', e));
-  }
-}

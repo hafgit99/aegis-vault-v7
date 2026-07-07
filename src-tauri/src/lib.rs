@@ -1000,6 +1000,14 @@ pub fn run() {
             credential_handler::update_rust_active_vault_key,
             credential_handler::has_rust_session
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+    let app = builder
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application");
+
+    app.run(|_app_handle, event| match event {
+        tauri::RunEvent::ExitRequested { .. } => {
+            std::process::exit(0);
+        }
+        _ => {}
+    });
 }
