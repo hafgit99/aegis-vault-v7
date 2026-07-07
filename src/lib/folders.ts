@@ -163,10 +163,13 @@ export function subtreeOf(folders: VaultFolder[], id: string): VaultFolder[] {
   if (!root) return [];
   const out: VaultFolder[] = [root];
   const stack: VaultFolder[] = [root];
+  const visited = new Set<string>([root.id]);
   while (stack.length > 0) {
     const next = stack.pop()!;
     const kids = map.get(next.id) ?? [];
     for (const kid of kids) {
+      if (visited.has(kid.id)) continue;
+      visited.add(kid.id);
       out.push(kid);
       stack.push(kid);
     }

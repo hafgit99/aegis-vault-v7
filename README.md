@@ -1,4 +1,4 @@
-﻿# Aegis Vault 7
+# Aegis Vault 7
 
 Aegis Vault 7 is a local-first password manager and secure vault built with React, TypeScript, WebCrypto, wa-sqlite, OPFS legacy migration support, and Tauri. It is designed for desktop-first use today, with an Android release candidate path already in active validation.
 
@@ -171,6 +171,7 @@ Run the storage bridge mutation gate:
 npm run test:mutation:storage
 ```
 
+
 Run the vault storage orchestration mutation gate:
 
 ```bash
@@ -193,36 +194,30 @@ npm run wa-sqlite:final:gate:unit
 Latest local verification before this README update:
 
 - `npm run lint` passed.
-- `npm run test:unit` passed: 129 test files, 998 tests.
-- `npm run test:coverage` ran: 129 test files and 998 tests passed; coverage thresholds pass at statements 90.05%, branches 82.16%, functions 90.49%, lines 91.23%.
+- `npm run test:unit` passed: 138 test files, 1081 tests.
+- `npm run test:coverage` ran: 138 test files and 1081 tests passed; coverage thresholds pass at statements 91.59%, branches 83.47%, functions 88.64%, lines 93.32%.
 - `npm run build` passed.
-- `npm run test:e2e:chromium` passed: 24 Chromium smoke scenarios.
-- `npm run test:mutation:core` passed: 460 mutants, 81.74% mutation score.
-- `npm run test:mutation:importer` passed: 682 mutants, 80.35% mutation score.
-- `npm run test:mutation:importer:helpers` passed: 288 mutants, 87.85% mutation score.
-- `npm run test:mutation:storage` passed: 131 mutants, 90.84% mutation score.
-- `npm run test:mutation:storage:orchestration` passed: 242 mutants, 88.43% mutation score.
 
 ## Coverage
 
-![Statements](https://img.shields.io/badge/statements-90.05%25-brightgreen)
-![Branches](https://img.shields.io/badge/branches-82.16%25-brightgreen)
-![Functions](https://img.shields.io/badge/functions-90.49%25-brightgreen)
-![Lines](https://img.shields.io/badge/lines-91.23%25-brightgreen)
+![Statements](https://img.shields.io/badge/statements-91.59%25-brightgreen)
+![Branches](https://img.shields.io/badge/branches-83.47%25-brightgreen)
+![Functions](https://img.shields.io/badge/functions-88.64%25-brightgreen)
+![Lines](https://img.shields.io/badge/lines-93.32%25-brightgreen)
 
-Coverage was generated locally with `npm run test:coverage`. The tests passed, but the current coverage thresholds still block the coverage gate.
+Coverage was generated locally with `npm run test:coverage`.
 
 | Metric | Coverage |
 | --- | ---: |
-| Statements | 90.05% |
-| Branches | 82.16% |
-| Functions | 90.49% |
-| Lines | 91.23% |
+| Statements | 91.59% |
+| Branches | 83.47% |
+| Functions | 88.64% |
+| Lines | 93.32% |
 
 | Suite | Result |
 | --- | ---: |
-| Test files | 129 passed |
-| Tests | 998 passed |
+| Test files | 138 passed |
+| Tests | 1081 passed |
 | Core mutation score | 81.74% passed |
 | Importer mutation score | 80.35% passed |
 | Importer helper mutation score | 87.85% passed |
