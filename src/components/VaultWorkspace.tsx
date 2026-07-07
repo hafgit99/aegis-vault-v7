@@ -18,6 +18,8 @@ import DashboardSecurityScoreCard from './DashboardSecurityScoreCard';
 import RecentVaultPanel from './RecentVaultPanel';
 import VaultItemDetailPanel from './VaultItemDetailPanel';
 import VaultListItem from './VaultListItem';
+import BulkActionBar from './BulkActionBar';
+import BulkSelectWrapper from './BulkSelectWrapper';
 
 interface VaultWorkspaceProps {
   selectedItem: VaultItem | null;
@@ -65,6 +67,11 @@ interface VaultWorkspaceProps {
   onCancelAutofill?: () => void;
   onApproveAutofill?: (item: VaultItem) => void;
   onUpdateItemCategory?: (itemId: string, category: VaultItem['category']) => void;
+  // 5.3 Tags & Organisation
+  bulkSelection?: any;
+  folders?: any[];
+  tags?: any[];
+  onApplyBulkAction?: (action: any) => void;
 }
 
 export function VaultWorkspaceContent({
@@ -112,6 +119,17 @@ export function VaultWorkspaceContent({
   onCancelAutofill,
   onApproveAutofill,
   onUpdateItemCategory,
+  bulkSelection = {
+    selectedIds: new Set(),
+    isSelectionMode: false,
+    isSelected: () => false,
+    toggle: () => {},
+    selectOnly: () => {},
+    clear: () => {},
+  },
+  folders = [],
+  tags = [],
+  onApplyBulkAction = () => {},
 }: VaultWorkspaceProps) {
   const { t } = useLanguage();
   const autofillTargetLabel = androidAutofillTargetLabel(autofillRequest);
@@ -186,6 +204,14 @@ export function VaultWorkspaceContent({
           mobileActiveView === 'detail' ? 'hidden lg:flex' : 'flex'
         }`}
       >
+        <BulkActionBar
+          selectedIds={bulkSelection.selectedIds}
+          selectedItems={activeItems.filter(item => bulkSelection.selectedIds.has(item.id))}
+          folders={folders}
+          library={tags}
+          onClear={bulkSelection.clear}
+          onApply={onApplyBulkAction}
+        />
         <div className="p-5 pb-2 space-y-3 shrink-0">
           <h2 className="font-display text-lg font-bold text-on-surface flex items-center justify-between">
             <span>{t('vaultList.title')}</span>
@@ -400,13 +426,30 @@ export function VaultWorkspaceContent({
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.15 }}
                 >
-                  <VaultListItem
-                    item={item}
-                    isSelected={selectedItem?.id === item.id}
-                    onSelect={onSelectItem}
-                    autofillRecommended={isAutofillMode && isAndroidAutofillTargetMatch(item, autofillRequest)}
-                    match={matchByItemId.get(item.id) ?? null}
-                  />
+                  <BulkSelectWrapper
+                    id={item.id}
+                    isSelectionMode={bulkSelection.isSelectionMode}
+                    isSelected={bulkSelection.isSelected(item.id)}
+                    onToggle={bulkSelection.toggle}
+                    onSelectOnly={bulkSelection.selectOnly}
+                    onShiftSelect={(id) => {
+                      const allIds = displayedItems.map((i) => i.id);
+                      const activeItem = allIds.find(aid => bulkSelection.selectedIds.has(aid));
+                      if (activeItem) {
+                        bulkSelection.selectRange(allIds, activeItem, id);
+                      } else {
+                        bulkSelection.toggle(id);
+                      }
+                    }}
+                  >
+                    <VaultListItem
+                      item={item}
+                      isSelected={selectedItem?.id === item.id}
+                      onSelect={onSelectItem}
+                      autofillRecommended={isAutofillMode && isAndroidAutofillTargetMatch(item, autofillRequest)}
+                      match={matchByItemId.get(item.id) ?? null}
+                    />
+                  </BulkSelectWrapper>
                 </motion.div>
               ))}
             </AnimatePresence>

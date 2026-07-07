@@ -30,7 +30,7 @@ import {
   Layers,
   Sparkle
 } from 'lucide-react';
-import { AppNotification, VaultItem } from '../types';
+import { AppNotification, TagDefinition, VaultFolder, VaultItem } from '../types';
 import { generatePassword } from '../lib/security';
 import { saveAttachment, getAttachmentBlob } from '../lib/attachments';
 import { secureRandomIndex, secureRandomToken } from '../lib/random';
@@ -39,6 +39,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { progressWidthClass } from '../lib/progressWidth';
 import { VaultFormCategoryTabs, type VaultFormCategory } from './vault-form/VaultFormCategoryTabs';
 import { VaultFormGeneralFields } from './vault-form/VaultFormGeneralFields';
+import TagPicker from './TagPicker';
 
 interface VaultFormModalProps {
   isOpen: boolean;
@@ -46,9 +47,19 @@ interface VaultFormModalProps {
   onSave: (item: VaultItem) => void | Promise<void>;
   editingItem: VaultItem | null;
   onNotify?: (notification: AppNotification) => void;
+  folders?: VaultFolder[];
+  tags?: TagDefinition[];
 }
 
-export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, onNotify }: VaultFormModalProps) {
+export default function VaultFormModal({
+  isOpen,
+  onClose,
+  onSave,
+  editingItem,
+  onNotify,
+  folders = [],
+  tags = [],
+}: VaultFormModalProps) {
   const { t } = useLanguage();
 
   // Category Selector Strategy
@@ -81,6 +92,10 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
   const [passkeyService, setPasskeyService] = useState('');
   const [passkeyPrivateExponent, setPasskeyPrivateExponent] = useState('');
   const [passkeyPublicId, setPasskeyPublicId] = useState('');
+
+  // 5.3 Tags & Organisation States
+  const [folderId, setFolderId] = useState('');
+  const [itemTags, setItemTags] = useState<string[]>([]);
 
   // File Attachment States
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -139,6 +154,9 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
       } else {
         setExistingAttachment(null);
       }
+
+      setFolderId(editingItem.folderId || '');
+      setItemTags(editingItem.tags || []);
     } else {
       // Clean start for new items
       setCategory('login');
@@ -166,6 +184,8 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
       setPasskeyPublicId('');
 
       setExistingAttachment(null);
+      setFolderId('');
+      setItemTags([]);
     }
     // Always clear selected temporary files and error messages on reopen
     setSelectedFile(null);
@@ -357,6 +377,10 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
       attachmentName: attachmentNameToSave,
       attachmentSize: attachmentSizeToSave,
       attachmentType: attachmentTypeToSave,
+
+      // 5.3 Tags & Organisation
+      folderId: folderId || undefined,
+      tags: itemTags.length > 0 ? itemTags : undefined,
     };
 
     onSave(itemData);
@@ -417,6 +441,40 @@ export default function VaultFormModal({ isOpen, onClose, onSave, editingItem, o
             onUrlChange={setUrl}
             t={t}
           />
+
+          {/* Folder & Tags Section */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#101210]/40 p-4 rounded-2xl border border-outline-variant/15 text-left animate-fade-in">
+            <div>
+              <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
+                {t('organisation.folders')}
+              </label>
+              <select
+                data-testid="vault-item-folder-select"
+                value={folderId}
+                onChange={(e) => setFolderId(e.target.value)}
+                className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl px-3 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface cursor-pointer"
+              >
+                <option value="">{t('bulk.noFolder') || 'No Folder / Klasör Yok'}</option>
+                {folders.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
+                {t('organisation.tags')}
+              </label>
+              <TagPicker
+                selected={itemTags}
+                library={tags}
+                onChange={setItemTags}
+                compact={true}
+              />
+            </div>
+          </div>
 
           {/* Dynamic view category 1: login credentials */}
           {category === 'login' && (

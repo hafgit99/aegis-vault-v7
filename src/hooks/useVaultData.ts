@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 
 import { VaultItem } from '../types';
-import { getVaultItems, saveVaultItem } from '../lib/storage';
+import { getVaultItems, saveVaultItem, saveVaultItems } from '../lib/storage';
 
 const isTestEnv = typeof window === 'undefined' || 
   (typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.includes('jsdom')) || 
@@ -66,6 +66,11 @@ export function useVaultData() {
     }
   };
 
+  const saveItems = async (itemsToSave: VaultItem[]) => {
+    const updated = await saveVaultItems(itemsToSave);
+    setItems(updated);
+  };
+
   const toggleFavorite = async (item: VaultItem) => {
     const updatedItem = { ...item, favorite: !item.favorite };
     const updated = await saveVaultItem(updatedItem);
@@ -80,6 +85,7 @@ export function useVaultData() {
     setSelectedItem,
     refreshDatabase,
     saveItem,
+    saveItems,
     toggleFavorite,
   };
 }

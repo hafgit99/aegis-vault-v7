@@ -1,9 +1,11 @@
 import { useMemo } from 'react';
 
 import { scoreMultiField, type FuzzyScore } from '../lib/fuzzySearch';
-import { VaultItem } from '../types';
+import { SmartFolder, VaultFolder, VaultItem } from '../types';
 import { runVaultAudit } from '../lib/security';
 import type { VaultCategoryFilter, VaultDateRange } from './useVaultFilters';
+import { buildContext as buildSmartContext, evaluateSmartFolder } from '../lib/smartFolders';
+import { ROOT_FOLDER_ID, subtreeOf } from '../lib/folders';
 
 interface UseVaultQueriesOptions {
   items: VaultItem[];
@@ -18,6 +20,11 @@ interface UseVaultQueriesOptions {
   dateRange?: VaultDateRange;
   /** Which timestamp to use for `dateRange` filtering. */
   dateField?: 'createdAt' | 'updatedAt';
+  // 5.3 Tags & Organisation
+  selectedFolderId?: string | null;
+  activeSmartFolderId?: string | null;
+  folders?: VaultFolder[];
+  smartFolders?: SmartFolder[];
 }
 
 export interface FilteredVaultItem {
@@ -38,7 +45,6 @@ function isWithinDateRange(value: string, range: VaultDateRange): boolean {
   return true;
 }
 
-
 export function useVaultQueries({
   items,
   searchQuery,
@@ -48,6 +54,10 @@ export function useVaultQueries({
   selectedTags = [],
   dateRange,
   dateField = 'updatedAt',
+  selectedFolderId = null,
+  activeSmartFolderId = null,
+  folders = [],
+  smartFolders = [],
 }: UseVaultQueriesOptions) {
   // 1. Memoize item classifications and security audit.
   // This ONLY recalculates when the vault item collection itself changes.
@@ -83,6 +93,18 @@ export function useVaultQueries({
     const hasQuery = trimmedQuery.length > 0;
     const hasTags = selectedTags.length > 0;
     const hasDateRange = !!(dateRange && (dateRange.from || dateRange.to));
+
+    // Resolve folder subtree if we have a folder filter selected.
+    let folderIds: Set<string> | null = null;
+    if (selectedFolderId && selectedFolderId !== ROOT_FOLDER_ID) {
+      folderIds = new Set(subtreeOf(folders, selectedFolderId).map((f) => f.id));
+    }
+
+    // Resolve smart folder if one is selected.
+    const activeSmartFolder = activeSmartFolderId
+      ? smartFolders.find((f) => f.id === activeSmartFolderId)
+      : null;
+    const smartCtx = activeSmartFolder ? buildSmartContext(auditState.activeItems) : null;
 
     return auditState.activeItems
       .map<FilteredVaultItem | null>((item) => {
@@ -142,11 +164,31 @@ export function useVaultQueries({
           matchesDate = isWithinDateRange(raw, dateRange!);
         }
 
+        // 5) Folder filter.
+        let matchesFolder = true;
+        if (selectedFolderId === ROOT_FOLDER_ID) {
+          matchesFolder = !item.folderId;
+        } else if (selectedFolderId && folderIds) {
+          matchesFolder = !!item.folderId && folderIds.has(item.folderId);
+        }
+
+        // 6) Smart folder filter.
+        let matchesSmartFolder = true;
+        if (activeSmartFolder && smartCtx) {
+          matchesSmartFolder = evaluateSmartFolder(activeSmartFolder, item, smartCtx);
+        }
+
         const matchesSearch = !hasQuery || match !== null;
         const passesFavorites = !favoritesOnly || item.favorite;
 
         const accepted =
-          matchesSearch && matchesCategory && matchesTags && matchesDate && passesFavorites;
+          matchesSearch &&
+          matchesCategory &&
+          matchesTags &&
+          matchesDate &&
+          matchesFolder &&
+          matchesSmartFolder &&
+          passesFavorites;
 
         return accepted ? { item, match } : null;
       })
@@ -167,6 +209,10 @@ export function useVaultQueries({
     selectedTags,
     dateRange,
     dateField,
+    selectedFolderId,
+    activeSmartFolderId,
+    folders,
+    smartFolders,
   ]);
 
   return {

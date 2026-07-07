@@ -1,4 +1,4 @@
-import { AppConfirmConfig, AppNotification, VaultItem } from '../types';
+import { AppConfirmConfig, AppNotification, TagDefinition, VaultFolder, VaultItem } from '../types';
 import ConfirmModal from './ConfirmModal';
 import ProfileModal from './ProfileModal';
 import VaultFormModal from './VaultFormModal';
@@ -16,6 +16,8 @@ interface AppModalsProps {
   onCloseProfile: () => void;
   onSaveProfile: (name: string, avatar: string) => void;
   onCancelConfirm: () => void;
+  folders: VaultFolder[];
+  tags: TagDefinition[];
 }
 
 export default function AppModals({
@@ -31,6 +33,8 @@ export default function AppModals({
   onCloseProfile,
   onSaveProfile,
   onCancelConfirm,
+  folders,
+  tags,
 }: AppModalsProps) {
   return (
     <>
@@ -40,6 +44,8 @@ export default function AppModals({
         onSave={onSaveVaultItem}
         editingItem={editingItem}
         onNotify={onNotify}
+        folders={folders}
+        tags={tags}
       />
 
       <ProfileModal

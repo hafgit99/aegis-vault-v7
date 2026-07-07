@@ -7,6 +7,7 @@ import { getLogoForPlatform } from '../lib/display';
 import { getStrengthLabel } from '../lib/security';
 import type { FuzzyScore } from '../lib/fuzzySearch';
 import { VaultItem } from '../types';
+import { resolveTagColor, TAG_PALETTE } from '../lib/tags';
 import SearchHighlight from './SearchHighlight';
 
 interface VaultListItemProps {
@@ -107,6 +108,22 @@ function VaultListItemContent({
         ) : (
           <p className="text-on-surface-variant text-xs truncate font-mono mt-0.5">{item.username}</p>
         )}
+        {item.tags && item.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1.5" data-testid="item-tag-list">
+            {item.tags.map((tag) => {
+              const colorKey = resolveTagColor(tag);
+              const palette = TAG_PALETTE[colorKey] || TAG_PALETTE.slate;
+              return (
+                <span
+                  key={tag}
+                  className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${palette.pill}`}
+                >
+                  {tag}
+                </span>
+              );
+            })}
+          </div>
+        )}
       </div>
       <div className="shrink-0 flex flex-col items-end gap-1.5">
         {autofillRecommended && (
@@ -137,6 +154,8 @@ export default memo(VaultListItemContent, (prevProps, nextProps) => {
     prevProps.item.username === nextProps.item.username &&
     prevProps.item.favorite === nextProps.item.favorite &&
     prevProps.item.password === nextProps.item.password &&
+    prevProps.item.folderId === nextProps.item.folderId &&
+    JSON.stringify(prevProps.item.tags) === JSON.stringify(nextProps.item.tags) &&
     prevProps.isSelected === nextProps.isSelected &&
     prevProps.autofillRecommended === nextProps.autofillRecommended &&
     prevProps.onSelect === nextProps.onSelect &&

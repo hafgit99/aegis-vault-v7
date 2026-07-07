@@ -51,7 +51,7 @@ const editingItemWithAttachment: VaultItem = {
 };
 
 function formInputs(): HTMLInputElement[] {
-  return Array.from(document.querySelectorAll<HTMLInputElement>('input:not([type="file"])'));
+  return Array.from(document.querySelectorAll<HTMLInputElement>('input:not([type="file"]):not([data-testid="tag-picker-input"])'));
 }
 
 function submitForm() {
@@ -448,7 +448,8 @@ describe('VaultFormModal', () => {
     const dateInputs = document.querySelectorAll<HTMLInputElement>('input[type="date"]');
     fireEvent.change(dateInputs[0], { target: { value: '1815-12-10' } });
     fireEvent.change(dateInputs[1], { target: { value: '2030-12-10' } });
-    fireEvent.change(document.querySelector('select')!, { target: { value: 'Female' } });
+    const genderSelect = Array.from(document.querySelectorAll('select')).find(s => s.querySelector('option[value="Female"]'))!;
+    fireEvent.change(genderSelect, { target: { value: 'Female' } });
 
     submitForm();
 

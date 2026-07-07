@@ -1,16 +1,22 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import type { VaultCategoryFilter } from '../hooks/useVaultFilters';
 import type { AndroidAutofillRequest } from '../lib/androidAutofill';
 import type { FilteredVaultItem } from '../hooks/useVaultQueries';
 import { ActiveTab, AppNotification, AuditReport, VaultItem } from '../types';
+import type { SmartFolder, TagColorKey, TagDefinition, VaultFolder } from '../types';
+import { useLanguage } from '../i18n/LanguageContext';
+import { applyBulkAction, type BulkActionInput } from '../lib/bulkActions';
+import { useBulkActionRunner, type UseBulkSelectionResult } from '../hooks/useOrganisation';
+import { createSmartFolder as createSmartFolderLib, type CreateSmartFolderInput } from '../lib/smartFolders';
 import PasswordGenerator from './PasswordGenerator';
 import SecurityAudit from './SecurityAudit';
 import SettingsPanel from './SettingsPanel';
 import TrashWorkspace from './TrashWorkspace';
 import VaultWorkspace from './VaultWorkspace';
 import DonationPanel from './DonationPanel';
+import OrganisationSidebar from './OrganisationSidebar';
 
 interface MainContentProps {
   activeTab: ActiveTab;
@@ -68,6 +74,24 @@ interface MainContentProps {
   onCancelAutofill?: () => void;
   onApproveAutofill?: (item: VaultItem) => void;
   onUpdateItemCategory?: (itemId: string, category: VaultItem['category']) => void;
+  // 5.3 — Tagging & Organisation
+  tags?: TagDefinition[];
+  folders?: VaultFolder[];
+  smartFolders?: SmartFolder[];
+  smartFolderCounts?: Record<string, number>;
+  selectedFolderId?: string | null;
+  activeSmartFolderId?: string | null;
+  onSelectFolder?: (folderId: string | null) => void;
+  onSelectSmartFolder?: (id: string | null) => void;
+  onCreateFolder?: (parentId: string | null) => void;
+  onDeleteFolder?: (folderId: string) => void;
+  onCreateTag?: (input: { name: string; color?: TagColorKey }) => TagDefinition | null;
+  onUpdateTag?: (id: string, patch: { name?: string; color?: TagColorKey }) => void;
+  onDeleteTag?: (id: string) => void;
+  onItemsChange?: (next: VaultItem[]) => void;
+  bulkSelection?: UseBulkSelectionResult;
+  onCreateSmartFolder?: (input: CreateSmartFolderInput) => SmartFolder;
+  onDeleteSmartFolder?: (id: string) => void;
 }
 
 export function MainContentComponent({
@@ -125,7 +149,45 @@ export function MainContentComponent({
   onCancelAutofill,
   onApproveAutofill,
   onUpdateItemCategory,
+  // 5.3 — Tagging & Organisation
+  tags = [],
+  folders = [],
+  smartFolders = [],
+  smartFolderCounts = {},
+  selectedFolderId = null,
+  activeSmartFolderId = null,
+  onSelectFolder = () => {},
+  onSelectSmartFolder = () => {},
+  onCreateFolder = () => {},
+  onDeleteFolder = () => {},
+  onCreateTag = () => null,
+  onUpdateTag = () => {},
+  onDeleteTag = () => {},
+  onItemsChange = () => {},
+  bulkSelection = {
+    selectedIds: new Set(),
+    isSelectionMode: false,
+    isSelected: () => false,
+    toggle: () => {},
+    selectOnly: () => {},
+    clear: () => {},
+    selectRange: () => {},
+  } as any,
+  onCreateSmartFolder = () => ({} as any),
+  onDeleteSmartFolder = () => {},
 }: MainContentProps) {
+  const runBulkAction = useBulkActionRunner(activeItems, onItemsChange);
+
+  const handleApplyBulkAction = (action: any) => {
+    runBulkAction({
+      kind: action.kind,
+      ids: bulkSelection.selectedIds,
+      tag: 'tag' in action ? action.tag : undefined,
+      folderId: 'folderId' in action ? action.folderId : undefined,
+    });
+    bulkSelection.clear();
+  };
+
   return (
     <div className="flex flex-1 overflow-hidden relative">
       <AnimatePresence mode="wait">
@@ -138,40 +200,59 @@ export function MainContentComponent({
           className="flex-1 flex overflow-hidden min-h-0"
         >
           {activeTab === 'vault' && (
-            <VaultWorkspace
-              selectedItem={selectedItem}
-              mobileActiveView={mobileActiveView}
-              filteredItems={filteredItems}
-              filteredItemResults={filteredItemResults}
-              activeItems={activeItems}
-              filterFavoritesOnly={filterFavoritesOnly}
-              favoriteCount={favoriteCount}
-              loginCount={loginCount}
-              cardCount={cardCount}
-              secureNoteCount={secureNoteCount}
-              passkeyCount={passkeyCount}
-              identityCount={identityCount}
-              selectedCategory={selectedCategory}
-              auditReport={auditReport}
-              profileName={profileName}
-              copiedField={copiedField}
-              score={score}
-              isPasswordRevealed={isPasswordRevealed}
-              isCardNumberRevealed={isCardNumberRevealed}
-              isCvvRevealed={isCvvRevealed}
-              isPinRevealed={isPinRevealed}
-              isPasskeyPrivateExponentRevealed={isPasskeyPrivateExponentRevealed}
-              totpCountdown={totpCountdown}
-              onNewItem={onNewItem}
-              onOpenProfile={onOpenProfile}
-              onLock={onLock}
-              onOpenAudit={onOpenAudit}
-              onOpenGenerator={onOpenGenerator}
-              onSetFavoritesOnly={onSetFavoritesOnly}
-              onSelectCategory={onSelectCategory}
-              onSelectDashboard={onSelectDashboard}
-              onBackToList={onBackToList}
-              onSelectItem={onSelectItem}
+            <>
+              <OrganisationSidebar
+                folders={folders}
+                tags={tags}
+                smartFolders={smartFolders}
+                smartFolderCounts={smartFolderCounts}
+                items={activeItems}
+                activeFolderId={selectedFolderId}
+                activeSmartFolderId={activeSmartFolderId}
+                onSelectFolder={onSelectFolder}
+                onSelectSmartFolder={onSelectSmartFolder}
+                onCreateFolder={onCreateFolder}
+                onDeleteFolder={onDeleteFolder}
+                onCreateTag={onCreateTag}
+                onUpdateTag={onUpdateTag}
+                onDeleteTag={onDeleteTag}
+                onCreateSmartFolder={onCreateSmartFolder}
+                onDeleteSmartFolder={onDeleteSmartFolder}
+              />
+              <VaultWorkspace
+                selectedItem={selectedItem}
+                mobileActiveView={mobileActiveView}
+                filteredItems={filteredItems}
+                filteredItemResults={filteredItemResults}
+                activeItems={activeItems}
+                filterFavoritesOnly={filterFavoritesOnly}
+                favoriteCount={favoriteCount}
+                loginCount={loginCount}
+                cardCount={cardCount}
+                secureNoteCount={secureNoteCount}
+                passkeyCount={passkeyCount}
+                identityCount={identityCount}
+                selectedCategory={selectedCategory}
+                auditReport={auditReport}
+                profileName={profileName}
+                copiedField={copiedField}
+                score={score}
+                isPasswordRevealed={isPasswordRevealed}
+                isCardNumberRevealed={isCardNumberRevealed}
+                isCvvRevealed={isCvvRevealed}
+                isPinRevealed={isPinRevealed}
+                isPasskeyPrivateExponentRevealed={isPasskeyPrivateExponentRevealed}
+                totpCountdown={totpCountdown}
+                onNewItem={onNewItem}
+                onOpenProfile={onOpenProfile}
+                onLock={onLock}
+                onOpenAudit={onOpenAudit}
+                onOpenGenerator={onOpenGenerator}
+                onSetFavoritesOnly={onSetFavoritesOnly}
+                onSelectCategory={onSelectCategory}
+                onSelectDashboard={onSelectDashboard}
+                onBackToList={onBackToList}
+                onSelectItem={onSelectItem}
               onToggleFavorite={onToggleFavorite}
               onEdit={onEdit}
               onDelete={onDelete}
@@ -183,7 +264,12 @@ export function MainContentComponent({
               onCancelAutofill={onCancelAutofill}
               onApproveAutofill={onApproveAutofill}
               onUpdateItemCategory={onUpdateItemCategory}
+              bulkSelection={bulkSelection}
+              folders={folders}
+              tags={tags}
+              onApplyBulkAction={handleApplyBulkAction}
             />
+          </>
           )}
 
           {activeTab === 'audit' && (

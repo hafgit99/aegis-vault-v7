@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 import LockScreen from './components/LockScreen';
@@ -37,6 +37,13 @@ import { useRuntimeSecurity } from './hooks/useRuntimeSecurity';
 import { useAndroidAutofillCoordinator } from './hooks/useAndroidAutofillCoordinator';
 import { useLanguage } from './i18n/LanguageContext';
 import { useAirgapAlerts } from './hooks/useAirgapAlerts';
+import { VaultItem } from './types';
+import {
+  useTagLibrary,
+  useVaultFolders,
+  useSmartFolders,
+  useBulkSelection,
+} from './hooks/useOrganisation';
 import { syncExtensionCredentials, clearExtensionCredentials } from './lib/desktopStorage';
 
 const MIN_BACKGROUND_LOCK_DELAY_MS = 60_000;
@@ -88,6 +95,7 @@ export default function App() {
     setSelectedItem,
     refreshDatabase,
     saveItem: handleSaveItem,
+    saveItems: handleSaveItems,
     toggleFavorite: handleToggleFavorite,
   } = useVaultData();
 
@@ -274,6 +282,35 @@ export default function App() {
     onRefresh: refreshDatabase,
   });
 
+  // 5.3 Organisation state and hooks
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [activeSmartFolderId, setActiveSmartFolderId] = useState<string | null>(null);
+
+  const { tags, createTag, updateTag, deleteTag } = useTagLibrary();
+  const { folders, createFolder, updateFolder, deleteFolder } = useVaultFolders();
+  const { smartFolders, createSmartFolder, deleteSmartFolder, counts: smartFolderCounts } = useSmartFolders(items);
+  const bulkSelection = useBulkSelection();
+
+  const handleCreateFolder = (parentId: string | null) => {
+    const name = window.prompt(t('folders.createPrompt') || 'New folder name:');
+    if (name && name.trim()) {
+      createFolder({ name: name.trim(), parentId });
+    }
+  };
+
+  const handleDeleteFolder = (folderId: string) => {
+    if (window.confirm(t('confirm.defaultConfirm') || 'Are you sure?')) {
+      deleteFolder(folderId);
+      if (selectedFolderId === folderId) {
+        setSelectedFolderId(null);
+      }
+    }
+  };
+
+  const handleItemsChange = async (nextItems: VaultItem[]) => {
+    await handleSaveItems(nextItems);
+  };
+
   const {
     activeItems,
     trashItems,
@@ -295,6 +332,10 @@ export default function App() {
     selectedTags,
     dateRange,
     dateField,
+    selectedFolderId,
+    activeSmartFolderId,
+    folders,
+    smartFolders,
   });
 
   const { selectItem: handleSelectItem, selectAuditItem: handleAuditSelectItem } = useVaultSelection({
@@ -468,6 +509,23 @@ export default function App() {
           onEmptyTrash={handleEmptyTrash}
           onRestoreTrashItem={handleRestoreTrashItem}
           onDeleteTrashItemPermanently={handleDeleteTrashItemPermanently}
+          tags={tags}
+          folders={folders}
+          smartFolders={smartFolders}
+          smartFolderCounts={smartFolderCounts}
+          selectedFolderId={selectedFolderId}
+          activeSmartFolderId={activeSmartFolderId}
+          onSelectFolder={setSelectedFolderId}
+          onSelectSmartFolder={setActiveSmartFolderId}
+          onCreateFolder={handleCreateFolder}
+          onDeleteFolder={handleDeleteFolder}
+          onCreateTag={createTag}
+          onUpdateTag={updateTag}
+          onDeleteTag={deleteTag}
+          onItemsChange={handleItemsChange}
+          bulkSelection={bulkSelection}
+          onCreateSmartFolder={createSmartFolder}
+          onDeleteSmartFolder={deleteSmartFolder}
           isAutofillMode={Boolean(pendingAutofillRequest)}
           autofillRequest={pendingAutofillRequest}
           onCancelAutofill={handleCancelAutofillRequest}
@@ -513,6 +571,8 @@ export default function App() {
         onCloseProfile={handleCloseProfile}
         onSaveProfile={handleSaveProfile}
         onCancelConfirm={handleCloseConfirm}
+        folders={folders}
+        tags={tags}
       />
 
       {/* Floating Toast Notification for Copied Fields */}
