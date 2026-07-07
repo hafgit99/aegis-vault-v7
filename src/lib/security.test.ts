@@ -2,18 +2,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { calculatePasswordScore, generatePassword, getStrengthLabel, runVaultAudit, validateMasterPassword } from './security';
 import { VaultItem } from '../types';
 import { closeVaultSession } from './vaultSession';
-import zxcvbn from 'zxcvbn';
+import { ZxcvbnFactory } from '@zxcvbn-ts/core';
 
-vi.mock('zxcvbn', async (importOriginal) => {
-  const actual = await importOriginal<any>();
-  const mockFunc = vi.fn((password: string) => {
-    const fn = actual.default || actual;
-    return fn(password);
-  });
-  return {
-    default: mockFunc,
-  };
-});
+const checkSpy = vi.spyOn(ZxcvbnFactory.prototype, 'check');
 
 const baseItem = (overrides: Partial<VaultItem>): VaultItem => ({
   id: crypto.randomUUID(),
@@ -112,19 +103,19 @@ describe('security helpers', () => {
   });
 
   it('clears password score cache on close session', () => {
-    vi.mocked(zxcvbn).mockClear();
+    checkSpy.mockClear();
 
     const pw = 'SomeHighlySpecificPasswordString123!';
     calculatePasswordScore(pw);
-    expect(zxcvbn).toHaveBeenCalledTimes(1);
+    expect(checkSpy).toHaveBeenCalledTimes(1);
 
     calculatePasswordScore(pw);
-    expect(zxcvbn).toHaveBeenCalledTimes(1);
+    expect(checkSpy).toHaveBeenCalledTimes(1);
 
     closeVaultSession();
 
     calculatePasswordScore(pw);
-    expect(zxcvbn).toHaveBeenCalledTimes(2);
+    expect(checkSpy).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -148,11 +139,16 @@ describe('validateMasterPassword', () => {
   it('accepts passwords of length >= 12 with 3 or more character classes and zxcvbn score >= 3', () => {
     expect(validateMasterPassword('Xy8#pW2!mQ9a')).toBe(true); // lower, upper, digit, symbol (strong)
     expect(validateMasterPassword('Tr9@kP1!vX4s')).toBe(true); // lower, upper, digit, symbol (strong)
-    expect(validateMasterPassword('abcdeABCDE123456')).toBe(true); // >= 16 characters
+    expect(validateMasterPassword('CorrectHorseBatteryStaple123!')).toBe(true); // >= 16 characters
   });
 
   it('rejects passwords with score < 3 even if they have 12+ characters and 3 classes', () => {
     expect(validateMasterPassword('abcdefABCDEF12')).toBe(false); // Predictable sequence
     expect(validateMasterPassword('password123!A')).toBe(false); // Common password
+  });
+
+  it('rejects weak passwords >= 16 characters under NIST 800-63B guidelines', () => {
+    expect(validateMasterPassword('1234567890123456')).toBe(false); // Too predictable
+    expect(validateMasterPassword('abcdefghijklmnopqrst')).toBe(false); // Too sequential
   });
 });

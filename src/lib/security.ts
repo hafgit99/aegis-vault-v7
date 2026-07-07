@@ -5,8 +5,25 @@
 
 import { VaultItem, GeneratorOptions, AuditReport } from '../types';
 import { secureRandomIndex } from './random';
-import zxcvbn from 'zxcvbn';
+import { ZxcvbnFactory } from '@zxcvbn-ts/core';
+import * as zxcvbnCommonPackage from '@zxcvbn-ts/language-common';
+import * as zxcvbnTrPackage from '@zxcvbn-ts/language-tr';
 import { registerOnCloseSession } from './vaultSession';
+
+const options = {
+  translations: zxcvbnTrPackage.translations,
+  dictionary: {
+    ...zxcvbnCommonPackage.dictionary,
+    ...zxcvbnTrPackage.dictionary,
+  },
+  graphs: zxcvbnCommonPackage.adjacencyGraphs,
+};
+
+const zxcvbnFactory = new ZxcvbnFactory(options);
+
+export function zxcvbn(password: string) {
+  return zxcvbnFactory.check(password);
+}
 
 /**
  * In-memory score cache: avoids re-running zxcvbn for the same password string.
@@ -251,26 +268,33 @@ export function generatePassword(options: GeneratorOptions): string {
 /**
  * Validates that the master password meets length and complexity requirements:
  * - Minimum length: 12 characters
- * - Complexity: at least 3 character classes (uppercase, lowercase, numbers, symbols)
+ * - NIST 800-63B Alignment:
+ *   - Checks against dictionary/compromised passwords (zxcvbn score >= 3) for all lengths.
+ *   - Waives complexity rules for passphrases (length >= 16) that pass the score threshold.
+ *   - Enforces a complexity requirement of >= 3 character classes for short passwords (12-15 chars).
  */
 export function validateMasterPassword(password: string): boolean {
-  if (!password) {
+  if (!password || password.length < 12) {
     return false;
   }
+
+  // NIST 800-63B: Reject if the password is too weak/predictable
+  if (zxcvbn(password).score < 3) {
+    return false;
+  }
+
+  // Waive complexity rules for long passwords (passphrases) >= 16 chars
   if (password.length >= 16) {
     return true;
   }
-  if (password.length < 12) {
-    return false;
-  }
+
+  // Enforce basic complexity for shorter passwords (12-15 chars)
   const hasUpper = /[A-Z]/.test(password);
   const hasLower = /[a-z]/.test(password);
   const hasDigit = /[0-9]/.test(password);
   const hasSymbol = /[^A-Za-z0-9]/.test(password);
   const classCount = [hasUpper, hasLower, hasDigit, hasSymbol].filter(Boolean).length;
-  if (classCount < 3) {
-    return false;
-  }
-  return zxcvbn(password).score >= 3;
+  
+  return classCount >= 3;
 }
 
