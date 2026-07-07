@@ -2,6 +2,9 @@ import { AppConfirmConfig, AppNotification, TagDefinition, VaultFolder, VaultIte
 import ConfirmModal from './ConfirmModal';
 import ProfileModal from './ProfileModal';
 import VaultFormModal from './VaultFormModal';
+import ShareModal from './ShareModal';
+import ReceiveShareModal from './ReceiveShareModal';
+import { DecryptedSharePayload } from '../lib/share';
 
 interface AppModalsProps {
   isVaultFormOpen: boolean;
@@ -18,6 +21,14 @@ interface AppModalsProps {
   onCancelConfirm: () => void;
   folders: VaultFolder[];
   tags: TagDefinition[];
+  // Share & Receive Modals
+  isShareOpen: boolean;
+  sharingItem: VaultItem | null;
+  onCloseShare: () => void;
+  isReceiveOpen: boolean;
+  receivedPayload: DecryptedSharePayload | null;
+  onCloseReceive: () => void;
+  onImportShare: (item: Partial<VaultItem>) => void | Promise<void>;
 }
 
 export default function AppModals({
@@ -35,6 +46,13 @@ export default function AppModals({
   onCancelConfirm,
   folders,
   tags,
+  isShareOpen,
+  sharingItem,
+  onCloseShare,
+  isReceiveOpen,
+  receivedPayload,
+  onCloseReceive,
+  onImportShare,
 }: AppModalsProps) {
   return (
     <>
@@ -46,6 +64,19 @@ export default function AppModals({
         onNotify={onNotify}
         folders={folders}
         tags={tags}
+      />
+
+      <ShareModal
+        isOpen={isShareOpen}
+        onClose={onCloseShare}
+        item={sharingItem}
+      />
+
+      <ReceiveShareModal
+        isOpen={isReceiveOpen}
+        onClose={onCloseReceive}
+        payload={receivedPayload}
+        onImport={onImportShare}
       />
 
       <ProfileModal

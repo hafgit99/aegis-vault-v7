@@ -36,6 +36,7 @@ interface VaultItemDetailPanelProps {
   isAutofillMode?: boolean;
   autofillRequest?: AndroidAutofillRequest | null;
   onApproveAutofill?: (item: VaultItem) => void;
+  onSecureShare?: () => void;
 }
 
 export default function VaultItemDetailPanel({
@@ -59,6 +60,7 @@ export default function VaultItemDetailPanel({
   isAutofillMode = false,
   autofillRequest = null,
   onApproveAutofill,
+  onSecureShare,
 }: VaultItemDetailPanelProps) {
   const { t } = useLanguage();
   const canApproveAutofill = isAutofillMode && item.category === 'login' && Boolean(item.password) && Boolean(onApproveAutofill);
@@ -100,6 +102,7 @@ export default function VaultItemDetailPanel({
         onEdit={onEdit}
         onCopyText={onCopyText}
         onDelete={onDelete}
+        onSecureShare={onSecureShare}
       />
 
       {canApproveAutofill && (

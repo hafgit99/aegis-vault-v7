@@ -123,6 +123,15 @@ function renderAppModals(overrides: Partial<ComponentProps<typeof AppModals>> = 
     onCloseProfile: vi.fn(),
     onSaveProfile: vi.fn(),
     onCancelConfirm: vi.fn(),
+    folders: [],
+    tags: [],
+    isShareOpen: false,
+    sharingItem: null,
+    onCloseShare: vi.fn(),
+    isReceiveOpen: false,
+    receivedPayload: null,
+    onCloseReceive: vi.fn(),
+    onImportShare: vi.fn(),
     ...overrides,
   };
 

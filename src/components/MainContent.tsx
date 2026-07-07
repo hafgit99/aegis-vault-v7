@@ -69,6 +69,7 @@ interface MainContentProps {
   onEmptyTrash: () => void;
   onRestoreTrashItem: (item: VaultItem) => void;
   onDeleteTrashItemPermanently: (item: VaultItem) => void;
+  onSecureShare?: (item: VaultItem) => void;
   isAutofillMode?: boolean;
   autofillRequest?: AndroidAutofillRequest | null;
   onCancelAutofill?: () => void;
@@ -175,6 +176,7 @@ export function MainContentComponent({
   } as any,
   onCreateSmartFolder = () => ({} as any),
   onDeleteSmartFolder = () => {},
+  onSecureShare = () => {},
 }: MainContentProps) {
   const runBulkAction = useBulkActionRunner(activeItems, onItemsChange);
 
@@ -268,6 +270,7 @@ export function MainContentComponent({
               folders={folders}
               tags={tags}
               onApplyBulkAction={handleApplyBulkAction}
+              onSecureShare={onSecureShare}
             />
           </>
           )}

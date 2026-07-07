@@ -67,6 +67,7 @@ interface VaultWorkspaceProps {
   onCancelAutofill?: () => void;
   onApproveAutofill?: (item: VaultItem) => void;
   onUpdateItemCategory?: (itemId: string, category: VaultItem['category']) => void;
+  onSecureShare?: (item: VaultItem) => void;
   // 5.3 Tags & Organisation
   bulkSelection?: any;
   folders?: any[];
@@ -130,6 +131,7 @@ export function VaultWorkspaceContent({
   folders = [],
   tags = [],
   onApplyBulkAction = () => {},
+  onSecureShare = () => {},
 }: VaultWorkspaceProps) {
   const { t } = useLanguage();
   const autofillTargetLabel = androidAutofillTargetLabel(autofillRequest);
@@ -498,6 +500,7 @@ export function VaultWorkspaceContent({
             isAutofillMode={isAutofillMode}
             autofillRequest={autofillRequest}
             onApproveAutofill={onApproveAutofill}
+            onSecureShare={() => onSecureShare(selectedItem)}
           />
         ) : (
           <div className="max-w-6xl mx-auto space-y-4 sm:space-y-5 py-2 sm:py-4 lg:py-5 animate-fade-in text-left">

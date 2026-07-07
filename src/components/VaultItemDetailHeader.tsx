@@ -1,4 +1,4 @@
-import { Check, Edit, ExternalLink, Heart, Share2, Trash2 } from 'lucide-react';
+import { Check, Edit, ExternalLink, Heart, Share2, Trash2, QrCode } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { getLogoForPlatform } from '../lib/display';
@@ -11,6 +11,7 @@ interface VaultItemDetailHeaderProps {
   onEdit: () => void;
   onCopyText: (text: string, field: string) => void;
   onDelete: (id: string) => void;
+  onSecureShare?: () => void;
 }
 
 export default function VaultItemDetailHeader({
@@ -20,6 +21,7 @@ export default function VaultItemDetailHeader({
   onEdit,
   onCopyText,
   onDelete,
+  onSecureShare,
 }: VaultItemDetailHeaderProps) {
   const { t } = useLanguage();
   const logoUrl = getLogoForPlatform(item.title, item.url);
@@ -79,6 +81,13 @@ export default function VaultItemDetailHeader({
           title={t('detail.header.edit')}
         >
           <Edit className="w-4.5 h-4.5" />
+        </button>
+        <button
+          onClick={onSecureShare}
+          className="p-2.5 rounded-lg bg-surface-high text-on-surface-variant hover:text-brand-primary hover:bg-[#202220] transition-all cursor-pointer border border-outline-variant/10"
+          title={t('detail.header.secureShare') || 'Secure Share / Güvenli Paylaş'}
+        >
+          <QrCode className="w-4.5 h-4.5" />
         </button>
         <button
           onClick={() => onCopyText(JSON.stringify(item, null, 2), 'item_export')}
