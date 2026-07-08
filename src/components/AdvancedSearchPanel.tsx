@@ -94,7 +94,7 @@ export default function AdvancedSearchPanel({
   return (
     <div
       data-testid="advanced-search-panel"
-      className="absolute top-full left-0 right-0 mt-2 z-40 rounded-xl border border-outline-variant/20 bg-surface-lowest/97 backdrop-blur shadow-2xl shadow-black/40 p-3 sm:p-4 space-y-3 animate-fade-in"
+      className="fixed sm:absolute left-4 right-4 sm:left-0 sm:right-0 top-[58px] sm:top-full z-40 rounded-xl border border-outline-variant/20 bg-surface-lowest/97 backdrop-blur shadow-2xl shadow-black/40 p-3 sm:p-4 space-y-3 animate-fade-in"
       role="region"
       aria-label={t('top.search.advanced')}
     >
