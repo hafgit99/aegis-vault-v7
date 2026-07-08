@@ -13,10 +13,7 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [themeMode, setThemeModeState] = useState<ThemeMode>(() => {
-    const saved = localStorage.getItem('aegis-theme-mode');
-    return (saved === 'light' || saved === 'dark') ? saved : 'dark';
-  });
+  const [themeMode] = useState<ThemeMode>('dark');
 
   const [themePalette, setThemePaletteState] = useState<ThemePalette>(() => {
     const saved = localStorage.getItem('aegis-theme-palette');
@@ -24,9 +21,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return valid.includes(saved as ThemePalette) ? (saved as ThemePalette) : 'emerald';
   });
 
-  const setThemeMode = (mode: ThemeMode) => {
-    setThemeModeState(mode);
-    localStorage.setItem('aegis-theme-mode', mode);
+  const setThemeMode = () => {
+    localStorage.setItem('aegis-theme-mode', 'dark');
   };
 
   const setThemePalette = (palette: ThemePalette) => {
@@ -47,10 +43,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       'palette-red'
     );
 
-    // Add current classes
-    root.classList.add(themeMode);
+    // Force dark mode
+    root.classList.add('dark');
     root.classList.add(`palette-${themePalette}`);
-  }, [themeMode, themePalette]);
+    localStorage.setItem('aegis-theme-mode', 'dark');
+  }, [themePalette]);
 
   return (
     <ThemeContext.Provider value={{ themeMode, themePalette, setThemeMode, setThemePalette }}>

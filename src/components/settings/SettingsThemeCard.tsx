@@ -1,4 +1,4 @@
-import { Moon, Sun, Palette, Check } from 'lucide-react';
+import { Palette, Check } from 'lucide-react';
 import { useTheme, type ThemeMode, type ThemePalette } from '../../context/ThemeContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 
@@ -29,68 +29,30 @@ export function SettingsThemeCard() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Theme Mode Toggle */}
-        <div className="space-y-2">
-          <span className="block text-[10px] font-bold text-on-surface-variant/85 uppercase tracking-wide">
-            {t('settings.theme.modeLabel')}
-          </span>
-          <div className="flex bg-surface-low p-1 rounded-lg border border-outline-variant/15 gap-1">
-            <button
-              type="button"
-              data-testid="theme-mode-dark"
-              onClick={() => setThemeMode('dark')}
-              className={`flex-1 py-2 rounded-md font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                themeMode === 'dark'
-                  ? 'bg-brand-primary/15 text-brand-primary border border-brand-primary/20'
-                  : 'text-on-surface-variant hover:text-on-surface bg-transparent border border-transparent'
-              }`}
-            >
-              <Moon className="w-3.5 h-3.5" />
-              <span>{t('settings.theme.modeDark')}</span>
-            </button>
-            <button
-              type="button"
-              data-testid="theme-mode-light"
-              onClick={() => setThemeMode('light')}
-              className={`flex-1 py-2 rounded-md font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                themeMode === 'light'
-                  ? 'bg-brand-primary/15 text-brand-primary border border-brand-primary/20'
-                  : 'text-on-surface-variant hover:text-on-surface bg-transparent border border-transparent'
-              }`}
-            >
-              <Sun className="w-3.5 h-3.5" />
-              <span>{t('settings.theme.modeLight')}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Color Palette Picker */}
-        <div className="space-y-2">
-          <span className="block text-[10px] font-bold text-on-surface-variant/85 uppercase tracking-wide">
-            {t('settings.theme.paletteLabel')}
-          </span>
-          <div className="flex items-center gap-3 py-1.5">
-            {palettes.map((palette) => {
-              const isActive = themePalette === palette.key;
-              return (
-                <button
-                  key={palette.key}
-                  type="button"
-                  data-testid={`theme-palette-${palette.key}`}
-                  onClick={() => setThemePalette(palette.key)}
-                  title={t(palette.nameKey as any)}
-                  className={`w-8 h-8 rounded-full cursor-pointer flex items-center justify-center border-2 transition-all relative hover:scale-110 active:scale-95 ${palette.colorClass} ${
-                    isActive
-                      ? 'ring-2 ring-brand-primary ring-offset-2 ring-offset-surface-low scale-105 border-white'
-                      : 'border-transparent opacity-80 hover:opacity-100'
-                  }`}
-                >
-                  {isActive && <Check className="w-4 h-4 text-white drop-shadow-md" />}
-                </button>
-              );
-            })}
-          </div>
+      <div className="space-y-2">
+        <span className="block text-[10px] font-bold text-on-surface-variant/85 uppercase tracking-wide">
+          {t('settings.theme.paletteLabel')}
+        </span>
+        <div className="flex flex-wrap items-center gap-3 py-1.5">
+          {palettes.map((palette) => {
+            const isActive = themePalette === palette.key;
+            return (
+              <button
+                key={palette.key}
+                type="button"
+                data-testid={`theme-palette-${palette.key}`}
+                onClick={() => setThemePalette(palette.key)}
+                title={t(palette.nameKey as any)}
+                className={`w-8 h-8 rounded-full cursor-pointer flex items-center justify-center border-2 transition-all relative hover:scale-110 active:scale-95 ${palette.colorClass} ${
+                  isActive
+                    ? 'ring-2 ring-brand-primary ring-offset-2 ring-offset-surface-low scale-105 border-white'
+                    : 'border-transparent opacity-80 hover:opacity-100'
+                }`}
+              >
+                {isActive && <Check className="w-4 h-4 text-white drop-shadow-md" />}
+              </button>
+            );
+          })}
         </div>
       </div>
     </section>
