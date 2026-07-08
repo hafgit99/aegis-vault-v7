@@ -29,7 +29,7 @@
 }
 
 /* PALETTE: EMERALD (Light Mode overrides) */
-:root.light {
+html.light {
   --surface-lowest: #f1f3f1;
   --surface-low: #ffffff;
   --brand-bg: #f7faf7;
@@ -57,7 +57,7 @@
 }
 
 /* PALETTE: OCEAN BLUE */
-:root.palette-blue {
+html.palette-blue {
   --surface-lowest: #0b0f17;
   --surface-low: #131924;
   --brand-bg: #0f141e;
@@ -84,7 +84,7 @@
   --shadow-color: rgba(0, 0, 0, 0.3);
 }
 
-:root.light.palette-blue {
+html.light.palette-blue {
   --surface-lowest: #f0f4f8;
   --surface-low: #ffffff;
   --brand-bg: #f8fafc;
@@ -112,7 +112,7 @@
 }
 
 /* PALETTE: AMETHYST PURPLE */
-:root.palette-purple {
+html.palette-purple {
   --surface-lowest: #0e0a16;
   --surface-low: #171124;
   --brand-bg: #120d1d;
@@ -139,7 +139,7 @@
   --shadow-color: rgba(0, 0, 0, 0.3);
 }
 
-:root.light.palette-purple {
+html.light.palette-purple {
   --surface-lowest: #f5f3ff;
   --surface-low: #ffffff;
   --brand-bg: #faf5ff;
@@ -167,7 +167,7 @@
 }
 
 /* PALETTE: AMBER ORANGE */
-:root.palette-orange {
+html.palette-orange {
   --surface-lowest: #120d0a;
   --surface-low: #1d1511;
   --brand-bg: #17100d;
@@ -194,7 +194,7 @@
   --shadow-color: rgba(0, 0, 0, 0.3);
 }
 
-:root.light.palette-orange {
+html.light.palette-orange {
   --surface-lowest: #fdf6f0;
   --surface-low: #ffffff;
   --brand-bg: #fffbf7;
@@ -222,7 +222,7 @@
 }
 
 /* PALETTE: CRIMSON RED */
-:root.palette-red {
+html.palette-red {
   --surface-lowest: #120a0a;
   --surface-low: #1d1111;
   --brand-bg: #170d0d;
@@ -249,7 +249,7 @@
   --shadow-color: rgba(0, 0, 0, 0.3);
 }
 
-:root.light.palette-red {
+html.light.palette-red {
   --surface-lowest: #fff5f5;
   --surface-low: #ffffff;
   --brand-bg: #fffafc;

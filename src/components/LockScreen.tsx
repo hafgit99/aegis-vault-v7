@@ -249,7 +249,7 @@ export default function LockScreen({ onUnlock, isAutofillPending = false }: Lock
   };
 
   return (
-    <div className="safe-screen bg-brand-bg flex flex-col justify-between relative overflow-hidden select-none">
+    <div className="safe-screen bg-brand-bg text-on-surface flex flex-col justify-between relative overflow-hidden select-none">
       <div className="absolute inset-0 bg-[linear-gradient(rgba(220,225,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(220,225,255,0.025)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
       <div className="absolute -top-40 -left-40 w-96 h-96 bg-brand-primary/5 blur-[120px] rounded-full pointer-events-none animate-pulse" />
       <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-brand-tertiary/5 blur-[120px] rounded-full pointer-events-none" />
