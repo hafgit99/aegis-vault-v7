@@ -65,7 +65,7 @@ export function BlockedRequestsPanel() {
             </thead>
             <tbody>
               {events.map((event) => (
-                <tr key={event.id} className="border-b border-outline-variant/5 last:border-0 hover:bg-[#1a1c1a]/50">
+                <tr key={event.id} className="border-b border-outline-variant/5 last:border-0 hover:bg-surface-low/50">
                   <td className="py-2.5 font-mono text-on-surface-variant/80">{event.timestamp}</td>
                   <td className="py-2.5">
                     <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-brand-primary/10 text-brand-primary border border-brand-primary/10">

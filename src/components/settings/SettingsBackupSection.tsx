@@ -142,7 +142,7 @@ export function SettingsBackupSection({
                 data-testid="plain-export-button"
                 type="button"
                 onClick={onExportPlain}
-                className="w-full flex items-center justify-center gap-2 border border-outline-variant/30 text-on-surface-variant hover:text-on-surface py-3 rounded-lg text-xs hover:bg-[#1a1c1a]/50 active:scale-95 transition-all cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 border border-outline-variant/30 text-on-surface-variant hover:text-on-surface py-3 rounded-lg text-xs hover:bg-surface-low/50 active:scale-95 transition-all cursor-pointer"
               >
                 <Unlock className="w-4 h-4" />
                 <span>{t('settings.export.plainButton')}</span>

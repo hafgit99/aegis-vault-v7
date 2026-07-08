@@ -41,7 +41,7 @@ export function SettingsStatsCard({ itemCount, onReseedDemo, t }: SettingsStatsC
       <div className="pt-2">
         <button
           onClick={onReseedDemo}
-          className="w-full flex items-center justify-center gap-2 text-xs font-semibold bg-[#1a1c1a] border border-outline-variant/25 hover:bg-[#252825] py-3 rounded-lg text-on-surface-variant hover:text-on-surface transition-all cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 text-xs font-semibold bg-surface-low border border-outline-variant/25 hover:bg-surface-high py-3 rounded-lg text-on-surface-variant hover:text-on-surface transition-all cursor-pointer"
           id="demo-reseed-btn"
         >
           <RefreshCw className="w-4 h-4" />

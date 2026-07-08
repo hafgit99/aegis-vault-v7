@@ -38,7 +38,7 @@ export function SettingsBiometricCard({
       </div>
       
       <div className="md:col-span-2 space-y-4 min-w-0">
-        <div className="space-y-3 bg-[#141614] p-3 sm:p-4 rounded-xl border border-outline-variant/10 min-w-0">
+        <div className="space-y-3 bg-surface-low p-3 sm:p-4 rounded-xl border border-outline-variant/10 min-w-0">
           <div className="min-w-0 w-full">
             <span className="text-xs font-bold text-on-surface block uppercase leading-snug whitespace-normal">
               {t('settings.biometric.statusLabel')}:{' '}

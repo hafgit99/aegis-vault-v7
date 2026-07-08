@@ -33,7 +33,7 @@ export function SettingsAutofillCard({
       </div>
 
       <div className="md:col-span-2 space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 justify-between bg-[#141614] p-3 sm:p-4 rounded-xl border border-outline-variant/10">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 justify-between bg-surface-low p-3 sm:p-4 rounded-xl border border-outline-variant/10">
           <div>
             <span className="text-xs font-bold text-on-surface block uppercase">
               {t('settings.autofill.statusLabel')}: {autofillEnabled ? t('settings.autofill.statusActive') : t('settings.autofill.statusSetup')}
