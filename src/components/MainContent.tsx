@@ -178,6 +178,7 @@ export function MainContentComponent({
   onDeleteSmartFolder = () => {},
   onSecureShare = () => {},
 }: MainContentProps) {
+  const [isFolderSidebarOpen, setIsFolderSidebarOpen] = useState(false);
   const runBulkAction = useBulkActionRunner(activeItems, onItemsChange);
 
   const handleApplyBulkAction = (action: any) => {
@@ -188,6 +189,16 @@ export function MainContentComponent({
       folderId: 'folderId' in action ? action.folderId : undefined,
     });
     bulkSelection.clear();
+  };
+
+  const handleSelectFolder = (id: string | null) => {
+    onSelectFolder(id);
+    setIsFolderSidebarOpen(false);
+  };
+
+  const handleSelectSmartFolder = (id: string | null) => {
+    onSelectSmartFolder(id);
+    setIsFolderSidebarOpen(false);
   };
 
   return (
@@ -203,6 +214,12 @@ export function MainContentComponent({
         >
           {activeTab === 'vault' && (
             <>
+              {isFolderSidebarOpen && (
+                <div
+                  className="fixed inset-0 bg-[#000000]/60 backdrop-blur-sm z-30 lg:hidden"
+                  onClick={() => setIsFolderSidebarOpen(false)}
+                />
+              )}
               <OrganisationSidebar
                 folders={folders}
                 tags={tags}
@@ -211,8 +228,8 @@ export function MainContentComponent({
                 items={activeItems}
                 activeFolderId={selectedFolderId}
                 activeSmartFolderId={activeSmartFolderId}
-                onSelectFolder={onSelectFolder}
-                onSelectSmartFolder={onSelectSmartFolder}
+                onSelectFolder={handleSelectFolder}
+                onSelectSmartFolder={handleSelectSmartFolder}
                 onCreateFolder={onCreateFolder}
                 onDeleteFolder={onDeleteFolder}
                 onCreateTag={onCreateTag}
@@ -220,6 +237,7 @@ export function MainContentComponent({
                 onDeleteTag={onDeleteTag}
                 onCreateSmartFolder={onCreateSmartFolder}
                 onDeleteSmartFolder={onDeleteSmartFolder}
+                isOpen={isFolderSidebarOpen}
               />
               <VaultWorkspace
                 selectedItem={selectedItem}
@@ -255,24 +273,25 @@ export function MainContentComponent({
                 onSelectDashboard={onSelectDashboard}
                 onBackToList={onBackToList}
                 onSelectItem={onSelectItem}
-              onToggleFavorite={onToggleFavorite}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onToggleReveal={onToggleReveal}
-              onCopyText={onCopyText}
-              onDownloadAttachment={onDownloadAttachment}
-              isAutofillMode={isAutofillMode}
-              autofillRequest={autofillRequest}
-              onCancelAutofill={onCancelAutofill}
-              onApproveAutofill={onApproveAutofill}
-              onUpdateItemCategory={onUpdateItemCategory}
-              bulkSelection={bulkSelection}
-              folders={folders}
-              tags={tags}
-              onApplyBulkAction={handleApplyBulkAction}
-              onSecureShare={onSecureShare}
-            />
-          </>
+                onToggleFavorite={onToggleFavorite}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onToggleReveal={onToggleReveal}
+                onCopyText={onCopyText}
+                onDownloadAttachment={onDownloadAttachment}
+                isAutofillMode={isAutofillMode}
+                autofillRequest={autofillRequest}
+                onCancelAutofill={onCancelAutofill}
+                onApproveAutofill={onApproveAutofill}
+                onUpdateItemCategory={onUpdateItemCategory}
+                bulkSelection={bulkSelection}
+                folders={folders}
+                tags={tags}
+                onApplyBulkAction={handleApplyBulkAction}
+                onSecureShare={onSecureShare}
+                onOpenFolderSidebar={() => setIsFolderSidebarOpen(true)}
+              />
+            </>
           )}
 
           {activeTab === 'audit' && (

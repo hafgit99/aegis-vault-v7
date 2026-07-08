@@ -73,6 +73,7 @@ interface VaultWorkspaceProps {
   folders?: any[];
   tags?: any[];
   onApplyBulkAction?: (action: any) => void;
+  onOpenFolderSidebar?: () => void;
 }
 
 export function VaultWorkspaceContent({
@@ -132,6 +133,7 @@ export function VaultWorkspaceContent({
   tags = [],
   onApplyBulkAction = () => {},
   onSecureShare = () => {},
+  onOpenFolderSidebar = () => {},
 }: VaultWorkspaceProps) {
   const { t } = useLanguage();
   const autofillTargetLabel = androidAutofillTargetLabel(autofillRequest);
@@ -216,7 +218,17 @@ export function VaultWorkspaceContent({
         />
         <div className="p-5 pb-2 space-y-3 shrink-0">
           <h2 className="font-display text-lg font-bold text-on-surface flex items-center justify-between">
-            <span>{t('vaultList.title')}</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onOpenFolderSidebar}
+                className="lg:hidden toolbar-button cursor-pointer text-brand-primary flex items-center justify-center p-1.5"
+                title={t('organisation.title') || 'Folders'}
+              >
+                <Layers className="w-4.5 h-4.5" />
+              </button>
+              <span>{t('vaultList.title')}</span>
+            </div>
             <button
               data-testid="new-vault-item-button"
               onClick={onNewItem}
