@@ -38,7 +38,7 @@ export function SettingsLanguageCard({ language, onLanguageChange, t }: Settings
           data-testid="language-select"
           value={language}
           onChange={(event) => onLanguageChange(event.target.value as LanguageCode)}
-          className="w-full bg-[#141614] border border-outline-variant/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 text-on-surface"
+          className="w-full bg-surface-lowest border border-outline-variant/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 text-on-surface"
         >
           {supportedLanguages.map((code) => (
             <option key={code} value={code}>

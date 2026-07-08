@@ -86,13 +86,13 @@ export function SettingsBackupSection({
           </p>
 
           <form onSubmit={onExportEncrypted} className="space-y-3 pt-1">
-            <div className="flex items-center gap-2.5 bg-[#141614] p-3 rounded-xl border border-outline-variant/10">
+            <div className="flex items-center gap-2.5 bg-surface-low p-3 rounded-xl border border-outline-variant/10">
               <input
                 type="checkbox"
                 id="useMasterCheck"
                 checked={useMasterForBackup}
                 onChange={(e) => setUseMasterForBackup(e.target.checked)}
-                className="w-4 h-4 accent-brand-secondary rounded border-outline-variant bg-[#141614] cursor-pointer"
+                className="w-4 h-4 accent-brand-secondary rounded border-outline-variant bg-surface-low cursor-pointer"
               />
               <label htmlFor="useMasterCheck" className="text-xs text-on-surface font-semibold cursor-pointer select-none">
                 {t('settings.export.useMaster')}
@@ -108,7 +108,7 @@ export function SettingsBackupSection({
                   type="password"
                   value={customBackupPassword}
                   onChange={(e) => setCustomBackupPassword(e.target.value)}
-                  className="w-full bg-[#141614] border border-outline-variant/30 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-tertiary text-on-surface"
+                  className="w-full bg-surface-lowest border border-outline-variant/30 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-tertiary text-on-surface"
                   placeholder={t('settings.export.passwordPlaceholder')}
                   minLength={6}
                   required={!useMasterForBackup}
@@ -159,15 +159,15 @@ export function SettingsBackupSection({
                   <span>{t('settings.export.plainWarning')}</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
-                  <input
-                    data-testid="plain-export-confirm-input"
-                    type="text"
-                    value={plainExportConfirmation}
-                    onChange={(event) => setPlainExportConfirmation(event.target.value)}
-                    className="w-full bg-[#141614] border border-brand-error/30 rounded-lg px-3 py-2 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-brand-error"
-                    placeholder={t('settings.export.plainConfirmPlaceholder')}
-                    autoComplete="off"
-                  />
+                    <input
+                      data-testid="plain-export-confirm-input"
+                      type="text"
+                      value={plainExportConfirmation}
+                      onChange={(event) => setPlainExportConfirmation(event.target.value)}
+                      className="w-full bg-surface-lowest border border-brand-error/30 rounded-lg px-3 py-2 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-brand-error"
+                      placeholder={t('settings.export.plainConfirmPlaceholder')}
+                      autoComplete="off"
+                    />
                   <div className="flex flex-col gap-1">
                     <button
                       data-testid="plain-export-confirm-button"
@@ -218,7 +218,7 @@ export function SettingsBackupSection({
             importState.status !== 'decrypting_pending' &&
             importState.status !== 'success' &&
             importState.status !== 'error') && (
-            <div className="p-4 bg-[#141614] border border-brand-primary/30 rounded-xl space-y-3 transition-opacity duration-200">
+            <div className="p-4 bg-surface-low border border-brand-primary/30 rounded-xl space-y-3 transition-opacity duration-200">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-brand-primary rounded-full animate-pulse" />
@@ -227,7 +227,7 @@ export function SettingsBackupSection({
                   </span>
                 </div>
               </div>
-              <div className="w-full h-2 bg-[#0a0c0a] rounded-full overflow-hidden border border-brand-primary/20">
+              <div className="w-full h-2 bg-surface-lowest rounded-full overflow-hidden border border-brand-primary/20">
                 <div
                   className={`h-full bg-gradient-to-r from-brand-primary to-brand-primary/70 transition-all duration-300 ease-out ${progressWidthClass(importState.percent)}`}
                 />
@@ -240,7 +240,7 @@ export function SettingsBackupSection({
 
           {/* Display loading state or pending Decryption details */}
           {importState.status === 'decrypting_pending' && importState.pendingEnvelope ? (
-            <form onSubmit={handleDecryptAndImport} className="p-4 bg-[#141614] border border-brand-primary/20 rounded-xl space-y-3 animate-fade-in text-left">
+            <form onSubmit={handleDecryptAndImport} className="p-4 bg-surface-low border border-brand-primary/20 rounded-xl space-y-3 animate-fade-in text-left">
               <div className="flex items-center gap-2 text-brand-primary">
                 <Lock className="w-4 h-4 animate-bounce" />
                 <span className="text-xs font-bold uppercase tracking-wider">{t('settings.import.lockedTitle')}</span>
@@ -255,7 +255,7 @@ export function SettingsBackupSection({
                   type="password"
                   value={decryptPasswordInput}
                   onChange={(e) => setDecryptPasswordInput(e.target.value)}
-                  className="w-full bg-[#181c18] border border-outline-variant/30 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-brand-primary text-on-surface font-mono"
+                  className="w-full bg-surface-lowest border border-outline-variant/30 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-brand-primary text-on-surface font-mono"
                   placeholder={t('settings.import.decryptPlaceholder')}
                   required
                 />
@@ -302,7 +302,7 @@ export function SettingsBackupSection({
               className={`border-2 border-dashed rounded-xl p-4 sm:p-5 text-center cursor-pointer transition-all ${
                 isDragOver
                   ? 'border-brand-primary bg-brand-primary/10'
-                  : 'border-outline-variant/30 bg-[#141614] hover:bg-[#181a18]'
+                  : 'border-outline-variant/30 bg-surface-low hover:bg-surface-container'
               }`}
               id="drop-zone-select"
             >

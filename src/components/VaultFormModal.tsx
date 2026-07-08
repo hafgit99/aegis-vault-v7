@@ -396,7 +396,7 @@ export default function VaultFormModal({
         <div className="absolute top-0 left-0 w-full h-1 bg-brand-primary" />
 
         {/* Form Modal Header */}
-        <div className="flex justify-between items-center px-4 sm:px-6 py-3 sm:py-5 border-b border-outline-variant/10 bg-[#0c0d0c]/95 shrink-0">
+        <div className="flex justify-between items-center px-4 sm:px-6 py-3 sm:py-5 border-b border-outline-variant/10 bg-surface-container/95 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center text-brand-primary">
               <Layers className="w-4.5 h-4.5" />
@@ -443,7 +443,7 @@ export default function VaultFormModal({
           />
 
           {/* Folder & Tags Section */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#101210]/40 p-4 rounded-2xl border border-outline-variant/15 text-left animate-fade-in">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-surface-low/40 p-4 rounded-2xl border border-outline-variant/15 text-left animate-fade-in">
             <div>
               <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
                 {t('organisation.folders')}
@@ -452,7 +452,7 @@ export default function VaultFormModal({
                 data-testid="vault-item-folder-select"
                 value={folderId}
                 onChange={(e) => setFolderId(e.target.value)}
-                className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl px-3 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface cursor-pointer"
+                className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl px-3 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface cursor-pointer"
               >
                 <option value="">{t('bulk.noFolder') || 'No Folder / Klasör Yok'}</option>
                 {folders.map((f) => (
@@ -497,7 +497,7 @@ export default function VaultFormModal({
                       required={category === 'login'}
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface"
+                      className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface"
                       placeholder={t('vaultForm.login.usernamePlaceholder')}
                     />
                   </div>
@@ -522,7 +522,7 @@ export default function VaultFormModal({
                       type={isPasswordVisible ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-20 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
+                      className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-20 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
                       placeholder={t('vaultForm.login.passwordPlaceholder')}
                     />
                     <div className="absolute right-3 top-2 flex items-center gap-1.5">
@@ -557,7 +557,7 @@ export default function VaultFormModal({
                     type="text"
                     value={totpSecret}
                     onChange={(e) => setTotpSecret(e.target.value)}
-                    className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface uppercase font-mono"
+                    className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface uppercase font-mono"
                     placeholder={t('vaultForm.login.totpPlaceholder')}
                   />
                 </div>
@@ -583,7 +583,7 @@ export default function VaultFormModal({
                     type="text"
                     value={cardholderName}
                     onChange={(e) => setCardholderName(e.target.value)}
-                    className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface"
+                    className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface"
                     placeholder={t('vaultForm.card.cardholderPlaceholder')}
                   />
                 </div>
@@ -600,7 +600,7 @@ export default function VaultFormModal({
                       type="text"
                       value={cardNumber}
                       onChange={(e) => setCardNumber(e.target.value)}
-                      className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
+                      className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
                       placeholder={t('vaultForm.card.numberPlaceholder')}
                     />
                   </div>
@@ -616,7 +616,7 @@ export default function VaultFormModal({
                       type="text"
                       value={cardExpiry}
                       onChange={(e) => setCardExpiry(e.target.value)}
-                      className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
+                      className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
                       placeholder={t('vaultForm.card.expiryPlaceholder')}
                     />
                   </div>
@@ -635,7 +635,7 @@ export default function VaultFormModal({
                       maxLength={4}
                       value={cardCvv}
                       onChange={(e) => setCardCvv(e.target.value)}
-                      className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
+                      className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
                       placeholder={t('vaultForm.card.cvvPlaceholder')}
                     />
                   </div>
@@ -652,7 +652,7 @@ export default function VaultFormModal({
                       maxLength={6}
                       value={cardPin}
                       onChange={(e) => setCardPin(e.target.value)}
-                      className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
+                      className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
                       placeholder={t('vaultForm.card.pinPlaceholder')}
                     />
                   </div>
@@ -680,7 +680,7 @@ export default function VaultFormModal({
                       type="text"
                       value={passkeyService}
                       onChange={(e) => setPasskeyService(e.target.value)}
-                      className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface"
+                      className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface"
                       placeholder={t('vaultForm.passkey.servicePlaceholder')}
                     />
                   </div>
@@ -696,7 +696,7 @@ export default function VaultFormModal({
                       type="text"
                       value={passkeyPublicId}
                       onChange={(e) => setPasskeyPublicId(e.target.value)}
-                      className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
+                      className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
                       placeholder={t('vaultForm.passkey.publicIdPlaceholder')}
                     />
                   </div>
@@ -722,7 +722,7 @@ export default function VaultFormModal({
                     rows={2}
                     value={passkeyPrivateExponent}
                     onChange={(e) => setPasskeyPrivateExponent(e.target.value)}
-                    className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono resize-none text-[11px]"
+                    className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono resize-none text-[11px]"
                     placeholder={t('vaultForm.passkey.privateExponentPlaceholder')}
                   />
                 </div>
@@ -749,7 +749,7 @@ export default function VaultFormModal({
                       type="text"
                       value={idNumber}
                       onChange={(e) => setIdNumber(e.target.value)}
-                      className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-semibold font-mono"
+                      className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-semibold font-mono"
                       placeholder={t('vaultForm.identity.documentNumberPlaceholder')}
                     />
                   </div>
@@ -765,7 +765,7 @@ export default function VaultFormModal({
                       type="text"
                       value={idFullName}
                       onChange={(e) => setIdFullName(e.target.value)}
-                      className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-semibold"
+                      className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-semibold"
                       placeholder={t('vaultForm.identity.fullNamePlaceholder')}
                     />
                   </div>
@@ -783,7 +783,7 @@ export default function VaultFormModal({
                       type="date"
                       value={idBirthDate}
                       onChange={(e) => setIdBirthDate(e.target.value)}
-                      className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2 px-2 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface"
+                      className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2 px-2 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface"
                     />
                   </div>
                 </div>
@@ -798,7 +798,7 @@ export default function VaultFormModal({
                       type="date"
                       value={idExpiryDate}
                       onChange={(e) => setIdExpiryDate(e.target.value)}
-                      className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2 px-2 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface"
+                      className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2 px-2 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface"
                     />
                   </div>
                 </div>
@@ -810,7 +810,7 @@ export default function VaultFormModal({
                   <select
                     value={idGender}
                     onChange={(e) => setIdGender(e.target.value)}
-                    className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl px-3 py-2 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface"
+                    className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl px-3 py-2 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface"
                   >
                     <option value="Male">{t('vaultForm.identity.genderMale')}</option>
                     <option value="Female">{t('vaultForm.identity.genderFemale')}</option>
@@ -844,14 +844,14 @@ export default function VaultFormModal({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={category === 'secure_note' ? 8 : 3}
-                className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface resize-none font-sans leading-relaxed"
+                className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface resize-none font-sans leading-relaxed"
                 placeholder={category === 'secure_note' ? t('vaultForm.notes.securePlaceholder') : t('vaultForm.notes.extraPlaceholder')}
               />
             </div>
           </div>
 
           {/* 250MB EMBEDDED MILITARY-GRADE LOCAL FILE ENCRYPTION CONTAINER */}
-          <div className="bg-[#101210]/60 p-4 sm:p-5 rounded-2xl border border-outline-variant/15 space-y-4 text-left">
+          <div className="bg-surface-low/60 p-4 sm:p-5 rounded-2xl border border-outline-variant/15 space-y-4 text-left">
             <div className="flex items-center justify-between border-b border-outline-variant/5 pb-2">
               <h4 className="text-[10px] font-bold text-brand-primary tracking-widest uppercase flex items-center gap-2">
                 <UploadCloud className="w-4.5 h-4.5 text-brand-primary" />
@@ -862,13 +862,13 @@ export default function VaultFormModal({
 
             {/* Display status or progress if uploading */}
             {isUploading ? (
-              <div className="flex flex-col items-center justify-center py-6 space-y-3 bg-[#0d0d0d] rounded-xl border border-outline-variant/5">
+              <div className="flex flex-col items-center justify-center py-6 space-y-3 bg-surface-lowest rounded-xl border border-outline-variant/5">
                 <Loader2 className="w-8 h-8 text-brand-primary animate-spin" />
                 <div className="text-center">
                   <p className="text-xs font-bold text-on-surface">{t('vaultForm.attachment.encrypting')}</p>
                   <p className="text-[10px] text-on-surface-variant mt-1">{t('vaultForm.attachment.encryptingDescription')}</p>
                 </div>
-                <div className="w-48 bg-[#181a18] h-1.5 rounded-full overflow-hidden relative">
+                <div className="w-48 bg-surface-low h-1.5 rounded-full overflow-hidden relative">
                   <div className={`bg-brand-primary h-full transition-all duration-300 ${progressWidthClass(uploadProgress)}`} />
                 </div>
                 <span className="text-[10px] font-mono text-brand-primary">%{uploadProgress}</span>
@@ -897,7 +897,7 @@ export default function VaultFormModal({
                         type="button"
                         data-testid="vault-item-existing-attachment-download-button"
                         onClick={handleDownloadExistingAttachment}
-                        className="p-2 bg-[#121412] hover:bg-[#1c1e1c] border border-outline-variant/15 text-brand-primary rounded-lg transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center"
+                        className="p-2 bg-surface-lowest hover:bg-[#1c1e1c] border border-outline-variant/15 text-brand-primary rounded-lg transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center"
                         title={t('vaultForm.attachment.downloadTitle')}
                       >
                         <Download className="w-4 h-4" />
@@ -906,7 +906,7 @@ export default function VaultFormModal({
                         type="button"
                         data-testid="vault-item-existing-attachment-remove-button"
                         onClick={handleRemoveExistingAttachment}
-                        className="p-2 bg-[#121412] hover:bg-red-500/10 border border-outline-variant/15 text-red-400 hover:text-red-300 rounded-lg transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center"
+                        className="p-2 bg-surface-lowest hover:bg-red-500/10 border border-outline-variant/15 text-red-400 hover:text-red-300 rounded-lg transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center"
                         title={t('vaultForm.attachment.deleteTitle')}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -934,7 +934,7 @@ export default function VaultFormModal({
                       type="button"
                       data-testid="vault-item-selected-attachment-remove-button"
                       onClick={handleRemoveSelectedFile}
-                      className="p-2 bg-[#121412] hover:bg-red-500/10 border border-outline-variant/15 text-red-400 hover:text-red-300 rounded-lg transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                      className="p-2 bg-surface-lowest hover:bg-red-500/10 border border-outline-variant/15 text-red-400 hover:text-red-300 rounded-lg transition-all hover:scale-105 active:scale-95 cursor-pointer"
                       title={t('vaultForm.attachment.cancelSelection')}
                     >
                       <Trash2 className="w-4 h-4" />
@@ -948,7 +948,7 @@ export default function VaultFormModal({
                       onDragOver={handleDragOver}
                       onDrop={handleDrop}
                       onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-outline-variant/20 hover:border-brand-primary/40 bg-[#0d0e0d] hover:bg-[#121412] rounded-2xl p-4 sm:p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 group"
+                    className="border-2 border-dashed border-outline-variant/20 hover:border-brand-primary/40 bg-surface-lowest hover:bg-surface-low rounded-2xl p-4 sm:p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 group"
                     >
                       <input 
                         type="file"
@@ -975,12 +975,12 @@ export default function VaultFormModal({
           </div>
 
           {/* Footer Action buttons row */}
-          <div className="sticky bottom-0 z-10 flex justify-end gap-3 pt-3 sm:pt-4 border-t border-outline-variant/10 bg-[#0c0d0c]/95 p-4 sm:p-6 -mx-4 sm:-mx-6 -mb-4 sm:-mb-6 safe-bottom">
+          <div className="sticky bottom-0 z-10 flex justify-end gap-3 pt-3 sm:pt-4 border-t border-outline-variant/10 bg-surface-container/95 p-4 sm:p-6 -mx-4 sm:-mx-6 -mb-4 sm:-mb-6 safe-bottom">
             <button
               type="button"
               onClick={onClose}
               disabled={isUploading}
-              className="px-5 py-2.5 bg-[#1b1d1b] hover:bg-[#232623] border border-outline-variant/15 rounded-xl font-bold text-xs text-on-surface transition-colors cursor-pointer focus:outline-none disabled:opacity-50"
+              className="px-5 py-2.5 bg-surface-lowest hover:bg-surface-low border border-outline-variant/15 rounded-xl font-bold text-xs text-on-surface transition-colors cursor-pointer focus:outline-none disabled:opacity-50"
             >
               {t('vaultForm.footer.cancel')}
             </button>

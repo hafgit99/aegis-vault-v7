@@ -69,7 +69,7 @@ export function SettingsPasswordCard({
               type="password"
               value={oldPassword}
               onChange={(e) => onOldPasswordChange(e.target.value)}
-              className="w-full bg-[#141614] border border-outline-variant/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 text-on-surface"
+              className="w-full bg-surface-lowest border border-outline-variant/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 text-on-surface"
               placeholder="????????"
               required
             />
@@ -82,7 +82,7 @@ export function SettingsPasswordCard({
               type="password"
               value={newPassword}
               onChange={(e) => onNewPasswordChange(e.target.value)}
-              className="w-full bg-[#141614] border border-outline-variant/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 text-on-surface"
+              className="w-full bg-surface-lowest border border-outline-variant/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 text-on-surface"
               placeholder="????????"
               required
             />
@@ -97,7 +97,7 @@ export function SettingsPasswordCard({
             type="password"
             value={confirmPassword}
             onChange={(e) => onConfirmPasswordChange(e.target.value)}
-            className="w-full bg-[#141614] border border-outline-variant/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 text-on-surface"
+            className="w-full bg-surface-lowest border border-outline-variant/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 text-on-surface"
             placeholder="????????"
             required
           />

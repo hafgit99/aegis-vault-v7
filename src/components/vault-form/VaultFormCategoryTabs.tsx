@@ -26,7 +26,7 @@ const categoryTabs = [
 
 export function VaultFormCategoryTabs({ category, onCategoryChange, t }: VaultFormCategoryTabsProps) {
   return (
-    <div className="px-3 sm:px-6 py-2 sm:py-3 border-b border-outline-variant/5 bg-[#090a09]/95 shrink-0 overflow-x-auto scrollbar-hide">
+    <div className="px-3 sm:px-6 py-2 sm:py-3 border-b border-outline-variant/5 bg-surface-container/95 shrink-0 overflow-x-auto scrollbar-hide">
       <div data-testid="vault-item-category-tabs" className="grid grid-cols-5 gap-1.5 sm:gap-2 min-w-[430px] sm:min-w-0">
         {categoryTabs.map(({ id, testId, labelKey, Icon }) => (
           <button
@@ -37,7 +37,7 @@ export function VaultFormCategoryTabs({ category, onCategoryChange, t }: VaultFo
             className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 border transition-all text-center cursor-pointer ${
               category === id
                 ? 'bg-brand-primary/10 border-brand-primary/30 text-brand-primary text-xs font-bold'
-                : 'bg-transparent border-transparent text-on-surface-variant/70 hover:text-on-surface hover:bg-[#151715]/40 text-xs'
+                : 'bg-transparent border-transparent text-on-surface-variant/70 hover:text-on-surface hover:bg-surface-high/40 text-xs'
             }`}
           >
             <Icon className="w-4 h-4" />

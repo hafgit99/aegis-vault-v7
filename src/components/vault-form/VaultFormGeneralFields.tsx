@@ -24,7 +24,7 @@ export function VaultFormGeneralFields({
   t,
 }: VaultFormGeneralFieldsProps) {
   return (
-    <div className="bg-[#121412]/50 p-3 sm:p-4 rounded-xl border border-outline-variant/10 space-y-4">
+    <div className="bg-surface-low/50 p-3 sm:p-4 rounded-xl border border-outline-variant/10 space-y-4">
       <h4 className="text-[10px] font-bold text-brand-primary tracking-widest uppercase flex items-center gap-1.5">
         <Sparkle className="w-3.5 h-3.5 fill-current" />
         <span>{t('vaultForm.general.title')}</span>
@@ -42,7 +42,7 @@ export function VaultFormGeneralFields({
               required
               value={title}
               onChange={(e) => onTitleChange(e.target.value)}
-              className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-semibold"
+              className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-semibold"
               placeholder={t('vaultForm.placeholder.title')}
             />
           </div>
@@ -59,7 +59,7 @@ export function VaultFormGeneralFields({
               type="text"
               value={url}
               onChange={(e) => onUrlChange(e.target.value)}
-              className="w-full bg-[#161816] hover:bg-[#1c1e1c] focus:bg-[#1e201e] border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
+              className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
               placeholder={t('vaultForm.placeholder.url')}
             />
           </div>

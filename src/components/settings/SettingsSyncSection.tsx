@@ -51,8 +51,8 @@ export function SettingsSyncSection({
   const syncTestSucceeded = syncTestResult === t('settings.sync.test.success');
 
   return (
-    <div className="p-4 sm:p-6 bg-surface-elevated border border-white/5 rounded-2xl space-y-5" id="sync-section">
-      <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2 border-b border-white/10 pb-2">
+    <div className="p-4 sm:p-6 bg-surface-low/80 border border-outline-variant/10 rounded-2xl space-y-5" id="sync-section">
+      <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2 border-b border-outline-variant/10 pb-2">
         <Cloud className="w-4 h-4 text-brand-primary" />
         <span>{t('settings.sync.title')}</span>
       </h3>
@@ -67,7 +67,7 @@ export function SettingsSyncSection({
           id="sync-provider-select"
           value={syncProvider}
           onChange={e => setSyncProvider(e.target.value as 'disabled' | 'webdav')}
-          className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2 text-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-brand-primary"
+          className="w-full bg-surface-lowest border border-outline-variant/20 rounded-lg px-3 py-2 text-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-brand-primary"
         >
           <option value="disabled">{t('settings.sync.provider.disabled')}</option>
           <option value="webdav">{t('settings.sync.provider.webdav')}</option>
@@ -85,7 +85,7 @@ export function SettingsSyncSection({
               value={syncUrl}
               onChange={e => setSyncUrl(e.target.value)}
               placeholder={t('settings.sync.configure.urlPlaceholder')}
-              className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:ring-1 focus:ring-brand-primary"
+              className="w-full bg-surface-lowest border border-outline-variant/20 rounded-lg px-3 py-2 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:ring-1 focus:ring-brand-primary"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -98,7 +98,7 @@ export function SettingsSyncSection({
                 value={syncUsername}
                 onChange={e => setSyncUsername(e.target.value)}
                 placeholder={t('settings.sync.configure.usernamePlaceholder')}
-                className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                className="w-full bg-surface-lowest border border-outline-variant/20 rounded-lg px-3 py-2 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:ring-1 focus:ring-brand-primary"
               />
             </div>
             <div className="space-y-1">
@@ -110,7 +110,7 @@ export function SettingsSyncSection({
                 value={syncPassword}
                 onChange={e => setSyncPassword(e.target.value)}
                 placeholder={t('settings.sync.configure.passwordPlaceholder')}
-                className="w-full bg-surface border border-white/10 rounded-lg px-3 py-2 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                className="w-full bg-surface-lowest border border-outline-variant/20 rounded-lg px-3 py-2 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:ring-1 focus:ring-brand-primary"
               />
             </div>
           </div>
@@ -144,7 +144,7 @@ export function SettingsSyncSection({
             <button
               id="sync-disable-btn"
               onClick={onSyncDisable}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-white/15 text-on-surface-variant hover:text-brand-error hover:border-brand-error/40 font-medium text-xs transition-all cursor-pointer"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-outline-variant/15 text-on-surface-variant hover:text-brand-error hover:border-brand-error/40 font-medium text-xs transition-all cursor-pointer"
             >
               <CloudOff className="w-3.5 h-3.5" />
               <span>{t('settings.sync.configure.disable')}</span>
@@ -158,7 +158,7 @@ export function SettingsSyncSection({
 
       {/* Sync Now + Status */}
       {syncProvider === 'webdav' && (
-        <div className="border-t border-white/10 pt-4 space-y-3">
+        <div className="border-t border-outline-variant/10 pt-4 space-y-3">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <p className="text-xs font-semibold text-on-surface">{t('settings.sync.lastSync')}</p>
@@ -208,7 +208,7 @@ export function SettingsSyncSection({
       )}
 
       {/* Zero-Knowledge Note */}
-      <p className="text-xs text-on-surface-variant/60 italic border-t border-white/5 pt-3">
+      <p className="text-xs text-on-surface-variant/60 italic border-t border-outline-variant/10 pt-3">
         {t('settings.sync.securityNote')}
       </p>
     </div>

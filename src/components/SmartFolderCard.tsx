@@ -88,10 +88,12 @@ export default function SmartFolderCard({
           <Icon className="w-4 h-4" aria-hidden="true" />
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-on-surface truncate">{folder.name}</p>
+          <p className="text-sm font-bold text-on-surface truncate">
+            {folder.builtIn ? t(`smartFolders.${folder.id}.name`) : folder.name}
+          </p>
           {folder.description && (
             <p className="text-[11px] text-on-surface-variant/80 leading-tight mt-0.5 line-clamp-2">
-              {folder.description}
+              {folder.builtIn ? t(`smartFolders.${folder.id}.desc`) : folder.description}
             </p>
           )}
         </div>

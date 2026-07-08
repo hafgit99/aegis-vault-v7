@@ -1284,7 +1284,7 @@ export default function SettingsPanel({
         </div>
 
         <div className="md:col-span-2 space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end bg-[#141614] p-3 sm:p-4 rounded-xl border border-outline-variant/10">
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end bg-surface-low p-3 sm:p-4 rounded-xl border border-outline-variant/10">
             <div>
               <label className="block text-[10px] font-bold text-on-surface-variant/85 uppercase mb-1.5">
                 {t('settings.emergencyKit.secretKeyLabel')}
@@ -1294,7 +1294,7 @@ export default function SettingsPanel({
                 type="password"
                 value={emergencySecretKey}
                 onChange={(e) => setEmergencySecretKey(e.target.value)}
-                className="w-full bg-[#0f100f] border border-outline-variant/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 text-on-surface"
+                className="w-full bg-surface-lowest border border-outline-variant/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 text-on-surface"
                 placeholder={t('settings.emergencyKit.secretKeyPlaceholder')}
                 autoComplete="off"
                 spellCheck={false}
@@ -1353,7 +1353,7 @@ export default function SettingsPanel({
                 className={`py-3 px-2 rounded-xl text-xs font-bold text-center border transition-all cursor-pointer ${
                   isSelected
                     ? 'border-brand-primary bg-brand-primary/15 text-brand-primary shadow-md'
-                    : 'border-outline-variant/15 bg-[#141614] hover:bg-[#1f211f] text-on-surface-variant hover:text-on-surface'
+                    : 'border-outline-variant/15 bg-surface-low hover:bg-surface-container text-on-surface-variant hover:text-on-surface'
                 }`}
               >
                 {opt.label}
