@@ -56,7 +56,7 @@ interface AccountSecretProfile {
 
 export async function initializeStorage(): Promise<void> {
   await initializeIndexedDbStorage();
-  if (isDesktopRuntime() && !isAndroidRuntime()) {
+  if (isDesktopRuntime()) {
     try {
       await sqliteOPFSInstance.hydrate();
     } catch (e) {

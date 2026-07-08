@@ -106,7 +106,7 @@ export async function restoreOrActivateDefaultVaultStorageBackend(
   }
 
   const hasLegacyData = (options.hasLegacyOpfsVaultData ?? hasLegacyOpfsVaultData)();
-  const isDesktop = isDesktopRuntime() && !isAndroidRuntime();
+  const isDesktop = isDesktopRuntime();
   if (hasLegacyData || isDesktop) {
     return 'kept-legacy-opfs';
   }
