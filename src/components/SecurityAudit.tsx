@@ -232,9 +232,9 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-brand-tertiary" />
-              <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Güvenlik Skoru Trendi</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">{t('securityAudit.trendTitle')}</span>
             </div>
-            <span className="text-[10px] text-on-surface-variant font-mono">Son {history.length} Denetim</span>
+            <span className="text-[10px] text-on-surface-variant font-mono">{t('securityAudit.lastAudits').replace('{count}', String(history.length))}</span>
           </div>
 
           <div className="relative h-20 w-full mt-2">
@@ -327,7 +327,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
                 </div>
                 <div className="text-xs font-bold text-brand-tertiary flex items-center gap-1.5 mt-0.5 whitespace-nowrap">
                   <div className="w-1.5 h-1.5 rounded-full bg-brand-tertiary animate-pulse" />
-                  Güvenlik: %{points[hoveredIndex].score}
+                  {t('securityAudit.securityLabel')}: %{points[hoveredIndex].score}
                 </div>
               </div>
             )}
@@ -526,7 +526,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
           <div className="space-y-2.5">
             {missingTotpItems.length === 0 ? (
               <div className="p-4 bg-[#141614] rounded-xl text-xs text-on-surface-variant/40 italic text-center border border-outline-variant/5">
-                Tüm FIDO2/2FA destekli hesaplarınızda TOTP yapılandırılmış.
+                {t('securityAudit.noTotpDeficiency')}
               </div>
             ) : (
               missingTotpItems.map((item) => (
@@ -544,7 +544,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
                     </div>
                   </div>
                   <div className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full shrink-0">
-                    <span>2FA Tanımla</span>
+                    <span>{t('securityAudit.totpAction')}</span>
                     <ArrowRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" />
                   </div>
                 </div>
@@ -563,7 +563,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
           <div className="space-y-2.5">
             {oldPasswordItems.length === 0 ? (
               <div className="p-4 bg-[#141614] rounded-xl text-xs text-on-surface-variant/40 italic text-center border border-outline-variant/5">
-                Tüm şifreleriniz güncel. Eski şifreniz bulunmamaktadır.
+                {t('securityAudit.noOldPasswords')}
               </div>
             ) : (
               oldPasswordItems.map((item) => {
@@ -580,11 +580,11 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
                       </h4>
                       <div className="flex items-center gap-1.5 text-xs text-on-surface-variant mt-0.5">
                         <Clock className="w-3.5 h-3.5 text-blue-400" />
-                        <span>Şifre Yaşı: {age} gün</span>
+                        <span>{t('securityAudit.passwordAge').replace('{age}', String(age))}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-blue-300 bg-blue-500/10 px-2.5 py-1 rounded-full shrink-0">
-                      <span>Güncelle</span>
+                      <span>{t('securityAudit.updateAction')}</span>
                       <ArrowRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" />
                     </div>
                   </div>
@@ -604,7 +604,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
           <div className="space-y-2.5">
             {unsecureHttpItems.length === 0 ? (
               <div className="p-4 bg-[#141614] rounded-xl text-xs text-on-surface-variant/40 italic text-center border border-outline-variant/5">
-                Kasanızda güvensiz HTTP bağlantılı site bulunmamaktadır. Harika!
+                {t('securityAudit.noHttpGroup')}
               </div>
             ) : (
               unsecureHttpItems.map((item) => (
@@ -622,7 +622,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
                     </div>
                   </div>
                   <div className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold text-brand-error bg-brand-error/10 px-2.5 py-1 rounded-full shrink-0">
-                    <span>Düzelt</span>
+                    <span>{t('securityAudit.fixActionShort')}</span>
                     <ArrowRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" />
                   </div>
                 </div>
