@@ -61,7 +61,7 @@ export function SettingsBiometricCard({
               type="button"
               disabled={biometricLoading}
               onClick={() => onToggleBiometric('platform')}
-              className="w-full sm:w-auto px-5 py-2.5 rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 border border-red-500/30 text-red-400 hover:bg-red-500/10"
+              className="w-full sm:w-auto px-5 py-2.5 rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 border border-red-500/30 text-brand-error hover:bg-red-500/10"
             >
               {biometricLoading ? <span>{t('settings.biometric.loading')}</span> : <span>{t('settings.biometric.disable')}</span>}
             </button>
@@ -98,7 +98,7 @@ export function SettingsBiometricCard({
 
         {biometricError && (
           <div className="p-3 bg-brand-error/10 border border-brand-error/20 rounded-lg text-brand-error text-xs leading-relaxed animate-fade-in flex items-start gap-2">
-            <ShieldAlert className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
+            <ShieldAlert className="w-4 h-4 shrink-0 text-brand-error mt-0.5" />
             <span>{biometricError}</span>
           </div>
         )}
