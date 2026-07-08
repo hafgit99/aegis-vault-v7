@@ -28,33 +28,7 @@
   --shadow-color: rgba(0, 0, 0, 0.22);
 }
 
-/* PALETTE: EMERALD (Light Mode overrides) */
-html.light {
-  --surface-lowest: #f1f3f1;
-  --surface-low: #ffffff;
-  --brand-bg: #f7faf7;
-  --surface-container: #e6e8e6;
-  --surface-high: #dbdddb;
-  --surface-highest: #d0d2d0;
-  --outline-variant: #cbd5e1;
-  --brand-primary: #3b82f6;
-  --brand-on-primary: #ffffff;
-  --brand-secondary: #2563eb;
-  --brand-on-secondary: #ffffff;
-  --brand-tertiary: #10b981;
-  --brand-on-tertiary: #ffffff;
-  --brand-error: #ef4444;
-  --brand-on-error: #ffffff;
-  --on-surface: #1a1c1a;
-  --on-surface-variant: #5c6258;
 
-  --glass-bg: rgba(255, 255, 255, 0.72);
-  --glass-border: rgba(0, 0, 0, 0.08);
-  --surface-panel-bg: rgba(247, 250, 247, 0.82);
-  --surface-card-bg: rgba(255, 255, 255, 0.68);
-  --surface-border: rgba(0, 0, 0, 0.08);
-  --shadow-color: rgba(0, 0, 0, 0.06);
-}
 
 /* PALETTE: OCEAN BLUE */
 html.palette-blue {
@@ -84,32 +58,7 @@ html.palette-blue {
   --shadow-color: rgba(0, 0, 0, 0.3);
 }
 
-html.light.palette-blue {
-  --surface-lowest: #f0f4f8;
-  --surface-low: #ffffff;
-  --brand-bg: #f8fafc;
-  --surface-container: #e2e8f0;
-  --surface-high: #cbd5e1;
-  --surface-highest: #94a3b8;
-  --outline-variant: #cbd5e1;
-  --brand-primary: #0284c7;
-  --brand-on-primary: #ffffff;
-  --brand-secondary: #2563eb;
-  --brand-on-secondary: #ffffff;
-  --brand-tertiary: #0891b2;
-  --brand-on-tertiary: #ffffff;
-  --brand-error: #ef4444;
-  --brand-on-error: #ffffff;
-  --on-surface: #0f172a;
-  --on-surface-variant: #475569;
 
-  --glass-bg: rgba(255, 255, 255, 0.72);
-  --glass-border: rgba(0, 0, 0, 0.08);
-  --surface-panel-bg: rgba(248, 250, 252, 0.82);
-  --surface-card-bg: rgba(255, 255, 255, 0.68);
-  --surface-border: rgba(0, 0, 0, 0.08);
-  --shadow-color: rgba(0, 0, 0, 0.06);
-}
 
 /* PALETTE: AMETHYST PURPLE */
 html.palette-purple {
@@ -139,32 +88,7 @@ html.palette-purple {
   --shadow-color: rgba(0, 0, 0, 0.3);
 }
 
-html.light.palette-purple {
-  --surface-lowest: #f5f3ff;
-  --surface-low: #ffffff;
-  --brand-bg: #faf5ff;
-  --surface-container: #eedffc;
-  --surface-high: #d8b4fe;
-  --surface-highest: #a855f7;
-  --outline-variant: #d8b4fe;
-  --brand-primary: #9333ea;
-  --brand-on-primary: #ffffff;
-  --brand-secondary: #db2777;
-  --brand-on-secondary: #ffffff;
-  --brand-tertiary: #7c3aed;
-  --brand-on-tertiary: #ffffff;
-  --brand-error: #ef4444;
-  --brand-on-error: #ffffff;
-  --on-surface: #1e1b4b;
-  --on-surface-variant: #6b21a8;
 
-  --glass-bg: rgba(255, 255, 255, 0.72);
-  --glass-border: rgba(0, 0, 0, 0.08);
-  --surface-panel-bg: rgba(250, 245, 255, 0.82);
-  --surface-card-bg: rgba(255, 255, 255, 0.68);
-  --surface-border: rgba(0, 0, 0, 0.08);
-  --shadow-color: rgba(0, 0, 0, 0.06);
-}
 
 /* PALETTE: AMBER ORANGE */
 html.palette-orange {
@@ -194,32 +118,7 @@ html.palette-orange {
   --shadow-color: rgba(0, 0, 0, 0.3);
 }
 
-html.light.palette-orange {
-  --surface-lowest: #fdf6f0;
-  --surface-low: #ffffff;
-  --brand-bg: #fffbf7;
-  --surface-container: #fed7aa;
-  --surface-high: #fdba74;
-  --surface-highest: #f97316;
-  --outline-variant: #fed7aa;
-  --brand-primary: #ea580c;
-  --brand-on-primary: #ffffff;
-  --brand-secondary: #d97706;
-  --brand-on-secondary: #ffffff;
-  --brand-tertiary: #ca8a04;
-  --brand-on-tertiary: #ffffff;
-  --brand-error: #ef4444;
-  --brand-on-error: #ffffff;
-  --on-surface: #431407;
-  --on-surface-variant: #9a3412;
 
-  --glass-bg: rgba(255, 255, 255, 0.72);
-  --glass-border: rgba(0, 0, 0, 0.08);
-  --surface-panel-bg: rgba(255, 251, 247, 0.82);
-  --surface-card-bg: rgba(255, 255, 255, 0.68);
-  --surface-border: rgba(0, 0, 0, 0.08);
-  --shadow-color: rgba(0, 0, 0, 0.06);
-}
 
 /* PALETTE: CRIMSON RED */
 html.palette-red {
@@ -249,32 +148,7 @@ html.palette-red {
   --shadow-color: rgba(0, 0, 0, 0.3);
 }
 
-html.light.palette-red {
-  --surface-lowest: #fff5f5;
-  --surface-low: #ffffff;
-  --brand-bg: #fffafc;
-  --surface-container: #fecdd3;
-  --surface-high: #fda4af;
-  --surface-highest: #f43f5e;
-  --outline-variant: #fecdd3;
-  --brand-primary: #dc2626;
-  --brand-on-primary: #ffffff;
-  --brand-secondary: #e11d48;
-  --brand-on-secondary: #ffffff;
-  --brand-tertiary: #be123c;
-  --brand-on-tertiary: #ffffff;
-  --brand-error: #b91c1c;
-  --brand-on-error: #ffffff;
-  --on-surface: #4c0519;
-  --on-surface-variant: #9f1239;
 
-  --glass-bg: rgba(255, 255, 255, 0.72);
-  --glass-border: rgba(0, 0, 0, 0.08);
-  --surface-panel-bg: rgba(255, 250, 252, 0.82);
-  --surface-card-bg: rgba(255, 255, 255, 0.68);
-  --surface-border: rgba(0, 0, 0, 0.08);
-  --shadow-color: rgba(0, 0, 0, 0.06);
-}
 
 @theme {
   --font-sans: "Geist", "Inter", ui-sans-serif, system-ui, sans-serif;
