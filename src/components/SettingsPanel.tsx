@@ -851,6 +851,35 @@ export default function SettingsPanel({
           passkeyService: x.passkeyService || '',
           passkeyPublicId: x.passkeyPublicId || '',
           passkeyPrivateExponent: x.passkeyPrivateExponent || '',
+
+          // real WebAuthn passkey fields
+          passkeyCredentialId: x.passkeyCredentialId,
+          passkeyPublicKey: x.passkeyPublicKey,
+          passkeyRpId: x.passkeyRpId,
+          passkeyRpName: x.passkeyRpName,
+          passkeyUserName: x.passkeyUserName,
+          passkeyUserHandle: x.passkeyUserHandle,
+          passkeyAlgorithm: x.passkeyAlgorithm,
+          passkeySignCount: x.passkeySignCount,
+          passkeyAttachment: x.passkeyAttachment,
+          passkeyTransports: x.passkeyTransports,
+          passkeyCreatedAt: x.passkeyCreatedAt,
+          passkeyLastUsedAt: x.passkeyLastUsedAt,
+          passkeyPrivateKeyBundle: x.passkeyPrivateKeyBundle,
+
+          // Attachment fields
+          attachmentId: x.attachmentId,
+          attachmentName: x.attachmentName,
+          attachmentSize: x.attachmentSize,
+          attachmentType: x.attachmentType,
+
+          // Tags and Folders
+          tags: x.tags,
+          folderId: x.folderId,
+
+          // Trash / Deletion
+          deleted: x.deleted,
+          deletedAt: x.deletedAt,
         });
       }
     }

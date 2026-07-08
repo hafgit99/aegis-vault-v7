@@ -63,7 +63,7 @@ export function openVaultSession(
   backupPassword?: string | { hasBackup?: boolean; hasSecret?: boolean },
   vaultEncryptionKey?: Uint8Array,
 ): void {
-  closeVaultSession();
+  closeVaultSession(true);
 
   if (masterPasswordOrKey instanceof Uint8Array) {
     // Desktop runtime / key-only path
@@ -105,7 +105,7 @@ export function updateActiveVaultEncryptionKey(vaultEncryptionKey: Uint8Array): 
   notifySubscribers();
 }
 
-export function closeVaultSession(): void {
+export function closeVaultSession(skipNativeClose: boolean = false): void {
   zeroizeSecret(fallbackCredentialBytes);
   zeroizeSecret(fallbackBackupPasswordBytes);
   zeroizeSecret(fallbackAccountSecretKeyBytes);
@@ -118,7 +118,7 @@ export function closeVaultSession(): void {
   hasActiveBackupPass = false;
   hasActiveSecretKey = false;
 
-  if (isDesktopRuntime()) {
+  if (isDesktopRuntime() && !skipNativeClose) {
     invoke('close_rust_session').catch(e => console.error('Failed to close rust session:', e));
   }
 
