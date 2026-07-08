@@ -249,14 +249,14 @@ export default function LockScreen({ onUnlock, isAutofillPending = false }: Lock
   };
 
   return (
-    <div className="safe-screen bg-[#070807] flex flex-col justify-between relative overflow-hidden select-none">
+    <div className="safe-screen bg-brand-bg flex flex-col justify-between relative overflow-hidden select-none">
       <div className="absolute inset-0 bg-[linear-gradient(rgba(220,225,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(220,225,255,0.025)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
       <div className="absolute -top-40 -left-40 w-96 h-96 bg-brand-primary/5 blur-[120px] rounded-full pointer-events-none animate-pulse" />
       <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-brand-tertiary/5 blur-[120px] rounded-full pointer-events-none" />
 
       {/* Top Bar with Language Selector */}
       <header className="absolute top-[max(env(safe-area-inset-top),0.5rem)] right-[max(env(safe-area-inset-right),1rem)] sm:right-[max(env(safe-area-inset-right),1.5rem)] z-50">
-        <div className="flex items-center gap-2 bg-[#1a1c1a]/60 backdrop-blur-md rounded-lg px-3 py-1.5 border border-outline-variant/10">
+        <div className="flex items-center gap-2 bg-surface-low/60 backdrop-blur-md rounded-lg px-3 py-1.5 border border-outline-variant/10">
           <Languages className="w-4 h-4 text-brand-primary" />
           <select
             data-testid="lock-language-select"
@@ -265,7 +265,7 @@ export default function LockScreen({ onUnlock, isAutofillPending = false }: Lock
             className="bg-transparent text-xs font-bold text-on-surface focus:outline-none cursor-pointer pr-1"
           >
             {supportedLanguages.map((code) => (
-              <option key={code} value={code} className="bg-[#121412] text-on-surface">
+              <option key={code} value={code} className="bg-surface-lowest text-on-surface">
                 {languageLabels[code]}
               </option>
             ))}
@@ -386,9 +386,9 @@ export default function LockScreen({ onUnlock, isAutofillPending = false }: Lock
                 {isAutofillPending && isSetup && (
                   <div
                     data-testid="lock-autofill-pending-banner"
-                    className="flex items-start gap-3 p-4 rounded-xl bg-[#2096f3]/10 border border-[#2096f3]/25 text-[#9fd3ff] text-xs leading-relaxed animate-fade-in"
+                    className="flex items-start gap-3 p-4 rounded-xl bg-brand-primary/10 border border-brand-primary/20 text-brand-primary text-xs leading-relaxed animate-fade-in"
                   >
-                    <Smartphone className="w-5 h-5 shrink-0 text-[#60b7ff] mt-0.5" />
+                    <Smartphone className="w-5 h-5 shrink-0 text-brand-primary mt-0.5" />
                     <div className="text-left">
                       <span className="block font-bold text-on-surface">{t('lock.autofill.title')}</span>
                       <span className="block mt-1 text-on-surface-variant">{t('lock.autofill.description')}</span>
@@ -424,7 +424,7 @@ export default function LockScreen({ onUnlock, isAutofillPending = false }: Lock
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full bg-[#141614] hover:bg-[#181a18] focus:bg-[#1a1c1a] border border-outline-variant/20 focus:border-brand-primary/30 rounded-xl pl-4 pr-11 py-3 sm:py-3.5 text-on-surface placeholder-on-surface-variant/20 focus:ring-2 focus:ring-brand-primary/10 focus:shadow-[0_0_15px_rgba(220,225,255,0.06)] focus:outline-none transition-all duration-300 text-center tracking-widest text-lg font-mono"
+                      className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 focus:border-brand-primary/30 rounded-xl pl-4 pr-11 py-3 sm:py-3.5 text-on-surface placeholder-on-surface-variant/20 focus:ring-2 focus:ring-brand-primary/10 focus:shadow-[0_0_15px_rgba(220,225,255,0.06)] focus:outline-none transition-all duration-300 text-center tracking-widest text-lg font-mono"
                       placeholder="••••••••"
                       required
                       autoFocus
@@ -452,7 +452,7 @@ export default function LockScreen({ onUnlock, isAutofillPending = false }: Lock
                         type={showConfirmPassword ? 'text' : 'password'}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full bg-[#141614] hover:bg-[#181a18] focus:bg-[#1a1c1a] border border-outline-variant/20 focus:border-brand-primary/30 rounded-xl pl-4 pr-11 py-3 sm:py-3.5 text-on-surface placeholder-on-surface-variant/20 focus:ring-2 focus:ring-brand-primary/10 focus:shadow-[0_0_15px_rgba(220,225,255,0.06)] focus:outline-none transition-all duration-300 text-center tracking-widest text-lg font-mono"
+                        className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 focus:border-brand-primary/30 rounded-xl pl-4 pr-11 py-3 sm:py-3.5 text-on-surface placeholder-on-surface-variant/20 focus:ring-2 focus:ring-brand-primary/10 focus:shadow-[0_0_15px_rgba(220,225,255,0.06)] focus:outline-none transition-all duration-300 text-center tracking-widest text-lg font-mono"
                         placeholder="••••••••"
                         required
                       />
@@ -489,7 +489,7 @@ export default function LockScreen({ onUnlock, isAutofillPending = false }: Lock
                         value={secretKey}
                         onChange={(e) => setSecretKey(e.target.value)}
                         readOnly={!isSetup}
-                        className="w-full bg-[#141614] border border-outline-variant/30 rounded-xl px-3 py-2.5 sm:py-3 text-on-surface focus:ring-2 focus:ring-brand-primary/20 focus:outline-none transition-all text-center tracking-wider text-xs font-mono"
+                        className="w-full bg-surface-lowest border border-outline-variant/30 rounded-xl px-3 py-2.5 sm:py-3 text-on-surface focus:ring-2 focus:ring-brand-primary/20 focus:outline-none transition-all text-center tracking-wider text-xs font-mono"
                         placeholder="A3-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
                         required={requiresSecretKey}
                       />
@@ -610,7 +610,7 @@ export default function LockScreen({ onUnlock, isAutofillPending = false }: Lock
                 type="button"
                 onClick={() => setShowResetConfirm(false)}
                 disabled={resetLoading}
-                className="flex-1 py-3 rounded-xl border border-outline-variant/20 text-on-surface text-xs font-bold hover:bg-[#1a1c1a] transition-all cursor-pointer"
+                className="flex-1 py-3 rounded-xl border border-outline-variant/20 text-on-surface text-xs font-bold hover:bg-surface-low transition-all cursor-pointer"
               >
                 {t('lock.reset.cancel')}
               </button>
@@ -652,7 +652,7 @@ export default function LockScreen({ onUnlock, isAutofillPending = false }: Lock
       )}
 
       {/* Futuristic clean footer */}
-      <footer className="hidden w-full border-t border-outline-variant/5 py-4 bg-[#0a0b0a]/40 text-center text-[10px] text-on-surface-variant/30 font-mono flex-col sm:flex-row items-center justify-between px-6 gap-2">
+      <footer className="hidden w-full border-t border-outline-variant/5 py-4 bg-surface-lowest/40 text-center text-[10px] text-on-surface-variant/30 font-mono flex-col sm:flex-row items-center justify-between px-6 gap-2">
         <span>© 2026 {t('lock.footer.name')}</span>
         <span>{t('lock.footer.crypto')}</span>
       </footer>
