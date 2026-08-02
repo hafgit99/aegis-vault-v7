@@ -20,6 +20,8 @@
  *    not crash the search experience.
  */
 
+import { registerOnCloseSession } from './vaultSession';
+
 export interface RecentSearchEntry {
   /** The query the user actually submitted (trimmed, non-empty). */
   query: string;
@@ -67,7 +69,11 @@ export function readRecentSearches(): RecentSearchEntry[] {
 function writeEntries(entries: RecentSearchEntry[]): void {
   if (!isStorageAvailable()) return;
   try {
-    window.localStorage.setItem(RECENT_SEARCHES_STORAGE_KEY, JSON.stringify(entries));
+    if (entries.length === 0) {
+      window.localStorage.removeItem(RECENT_SEARCHES_STORAGE_KEY);
+    } else {
+      window.localStorage.setItem(RECENT_SEARCHES_STORAGE_KEY, JSON.stringify(entries));
+    }
   } catch {
     // Ignore quota / privacy-mode errors — the recent searches panel
     // is a nice-to-have and must never break the main search flow.
@@ -104,5 +110,15 @@ export function removeRecentSearch(query: string): RecentSearchEntry[] {
 
 /** Wipe the entire history. */
 export function clearRecentSearches(): void {
-  writeEntries([]);
+  if (!isStorageAvailable()) return;
+  try {
+    window.localStorage.removeItem(RECENT_SEARCHES_STORAGE_KEY);
+  } catch {
+    // Ignore storage errors
+  }
 }
+
+registerOnCloseSession(() => {
+  clearRecentSearches();
+});
+

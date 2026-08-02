@@ -446,10 +446,11 @@ export async function changeMasterPassword(oldPassword: string, newPassword: str
       throw err;
     }
 
+    openVaultSession(newVaultKey);
+
     oldVaultKey.fill(0);
     newVaultKey.fill(0);
 
-    openVaultSession(newVaultKey);
     disableBiometric();
     setIndexedDbItemSync(STORAGE_KEYS.IS_SET_UP, 'true');
   } else {

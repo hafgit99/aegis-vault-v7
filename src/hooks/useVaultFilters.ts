@@ -7,6 +7,7 @@ import {
   removeRecentSearch,
   type RecentSearchEntry,
 } from '../lib/recentSearches';
+import { subscribeToVaultSession } from '../lib/vaultSession';
 
 export type VaultCategoryFilter = 'all' | 'login' | 'card' | 'passkey' | 'identity' | 'secure_note';
 
@@ -46,8 +47,7 @@ export function useVaultFilters() {
   const [recentSearches, setRecentSearches] = useState<RecentSearchEntry[]>(() => readRecentSearches());
 
   // Persist recent searches when the user actually performs a query.
-  // The hook only re-hydrates from localStorage on mount; subsequent
-  // writes are routed through the helpers above to keep state in sync.
+  // The hook re-hydrates when localStorage changes or when the vault session closes.
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const onStorage = (event: StorageEvent) => {
@@ -55,8 +55,14 @@ export function useVaultFilters() {
         setRecentSearches(readRecentSearches());
       }
     };
+    const unsubscribeSession = subscribeToVaultSession(() => {
+      setRecentSearches(readRecentSearches());
+    });
     window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    return () => {
+      unsubscribeSession();
+      window.removeEventListener('storage', onStorage);
+    };
   }, []);
 
   const commitSearch = useCallback((query: string) => {

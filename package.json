@@ -110,8 +110,7 @@
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "vite": "^6.2.3",
-    "wa-sqlite": "^1.0.0",
-    "zxcvbn": "^4.4.2"
+    "wa-sqlite": "^1.0.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
@@ -125,7 +124,6 @@
     "@types/chrome": "^0.0.307",
     "@types/node": "^22.14.0",
     "@types/qrcode": "^1.5.6",
-    "@types/zxcvbn": "^4.4.5",
     "@vitejs/plugin-react": "^5.0.4",
     "@vitest/coverage-v8": "^4.1.9",
     "autoprefixer": "^10.4.21",

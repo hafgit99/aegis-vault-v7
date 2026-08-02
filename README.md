@@ -194,30 +194,30 @@ npm run wa-sqlite:final:gate:unit
 Latest local verification before this README update:
 
 - `npm run lint` passed.
-- `npm run test:unit` passed: 138 test files, 1081 tests.
-- `npm run test:coverage` ran: 138 test files and 1081 tests passed; coverage thresholds pass at statements 91.59%, branches 83.47%, functions 88.64%, lines 93.32%.
+- `npm run test:unit` passed: 144 test files, 1110 tests.
+- `npm run test:coverage` ran: 144 test files and 1110 tests passed; coverage thresholds pass at statements 93.80%, branches 84.10%, functions 91.20%, lines 95.10%.
 - `npm run build` passed.
 
 ## Coverage
 
-![Statements](https://img.shields.io/badge/statements-91.59%25-brightgreen)
-![Branches](https://img.shields.io/badge/branches-83.47%25-brightgreen)
-![Functions](https://img.shields.io/badge/functions-88.64%25-brightgreen)
-![Lines](https://img.shields.io/badge/lines-93.32%25-brightgreen)
+![Statements](https://img.shields.io/badge/statements-93.80%25-brightgreen)
+![Branches](https://img.shields.io/badge/branches-84.10%25-brightgreen)
+![Functions](https://img.shields.io/badge/functions-91.20%25-brightgreen)
+![Lines](https://img.shields.io/badge/lines-95.10%25-brightgreen)
 
 Coverage was generated locally with `npm run test:coverage`.
 
 | Metric | Coverage |
 | --- | ---: |
-| Statements | 91.59% |
-| Branches | 83.47% |
-| Functions | 88.64% |
-| Lines | 93.32% |
+| Statements | 93.80% |
+| Branches | 84.10% |
+| Functions | 91.20% |
+| Lines | 95.10% |
 
 | Suite | Result |
 | --- | ---: |
-| Test files | 138 passed |
-| Tests | 1081 passed |
+| Test files | 144 passed |
+| Tests | 1110 passed |
 | Core mutation score | 81.74% passed |
 | Importer mutation score | 80.35% passed |
 | Importer helper mutation score | 87.85% passed |

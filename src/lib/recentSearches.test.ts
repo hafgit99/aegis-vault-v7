@@ -72,4 +72,15 @@ describe('recentSearches', () => {
     window.localStorage.setItem(RECENT_SEARCHES_STORAGE_KEY, '{not json');
     expect(readRecentSearches()).toEqual([]);
   });
+
+  it('automatically wipes history on closeVaultSession', async () => {
+    recordRecentSearch('secret-bank');
+    expect(readRecentSearches()).toHaveLength(1);
+
+    const { closeVaultSession } = await import('./vaultSession');
+    closeVaultSession(true);
+
+    expect(readRecentSearches()).toEqual([]);
+    expect(window.localStorage.getItem(RECENT_SEARCHES_STORAGE_KEY)).toBeNull();
+  });
 });
