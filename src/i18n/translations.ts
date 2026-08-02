@@ -807,6 +807,10 @@ export const translations = {
     'lock.footer.name': 'Aegis Vault 7 Siber Güvenlik Altyapısı',
     'lock.footer.crypto': 'AES-256-GCM Uçtan Uca İstemci Taraflı Kriptografi',
     'security.screenCaptureDetected': 'Ekran kaydı veya paylaşımı algılandı. Güvenliğiniz için ekran gizlendi.',
+    'security.assetIntegrityTitle': 'Uygulama Bütünlüğü Uyarısı',
+    'security.assetIntegrityMessage': 'Uygulamanın paketlenmiş dosyalarından biri doğrulanamadı. Aegis kasayı otomatik engellemez; bu kurulumu kullanmayı bırakın ve resmi, imzası doğrulanmış paketi yeniden kurun.',
+    'security.androidRiskTitle': 'Cihaz Bütünlüğü Uyarısı',
+    'security.androidRiskMessage': 'Bu Android cihazında root, hata ayıklama veya çalışma zamanı müdahalesi belirtisi algılandı. Aegis yalnızca uyarı verir ve kasayı engellemez; cihaz güvenilir hale gelene kadar hassas bilgileri kullanmayın.',
     'security.x11WarningTitle': 'Güvensiz Görüntü Sunucusu (X11)',
     'security.x11WarningMessage': 'Masaüstünüz X11 oturumu kullanıyor. Standart pencere koruması ekran kaydını engelleyemez. Wayland oturumuna geçmeniz önerilir.',
     // 5.3 Organisation, tags, folders & smart folders
@@ -1708,6 +1712,10 @@ export const translations = {
     'lock.footer.name': 'Aegis Vault 7 Cyber Security Infrastructure',
     'lock.footer.crypto': 'AES-256-GCM End-To-End Client-Side Cryptography',
     'security.screenCaptureDetected': 'Screen recording or sharing detected. View is hidden for safety.',
+    'security.assetIntegrityTitle': 'Application Integrity Warning',
+    'security.assetIntegrityMessage': 'A packaged application asset could not be verified. Aegis does not automatically block the vault; stop using this installation and reinstall an official package with a verified signature.',
+    'security.androidRiskTitle': 'Device Integrity Warning',
+    'security.androidRiskMessage': 'Root, debugging, or runtime instrumentation indicators were detected on this Android device. Aegis remains in warning-only mode and does not block the vault; avoid sensitive operations until the device is trusted.',
     'security.x11WarningTitle': 'Insecure Display Server (X11)',
     'security.x11WarningMessage': 'Your desktop is running X11. Standard window protection cannot block screen capture. We recommend switching to Wayland.',
     // 5.3 Organisation, tags, folders & smart folders
@@ -2609,6 +2617,10 @@ export const translations = {
     'lock.footer.name': 'Aegis Vault 7 网络安全基础设施',
     'lock.footer.crypto': 'AES-256-GCM 端到端客户端加密',
     'security.screenCaptureDetected': '检测到屏幕录制或共享。为了您的安全，视图已被隐藏。',
+    'security.assetIntegrityTitle': '应用完整性警告',
+    'security.assetIntegrityMessage': '无法验证某个已打包的应用文件。Aegis 不会自动锁定保险库；请停止使用此安装，并重新安装签名已验证的官方软件包。',
+    'security.androidRiskTitle': '设备完整性警告',
+    'security.androidRiskMessage': '此 Android 设备检测到 Root、调试或运行时注入迹象。Aegis 仅发出警告，不会阻止保险库；在确认设备可信之前，请避免执行敏感操作。',
     'security.x11WarningTitle': '不安全的显示服务器 (X11)',
     'security.x11WarningMessage': '您的桌面运行在 X11 上。标准窗口保护无法阻止屏幕捕获。建议切换到 Wayland 会话。',
     // 5.3 Organisation, tags, folders & smart folders

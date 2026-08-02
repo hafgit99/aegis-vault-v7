@@ -3,8 +3,10 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import { defineConfig } from 'vite';
 
-export default defineConfig(() => {
+export default defineConfig(({ mode }) => {
   const tauriHost = process.env.TAURI_DEV_HOST;
+  const tauriDebug = process.env.TAURI_ENV_DEBUG === 'true' || process.env.TAURI_ENV_DEBUG === '1';
+  const isDebugBuild = mode !== 'production' || tauriDebug;
 
   return {
     plugins: [react(), tailwindcss()],
@@ -36,8 +38,8 @@ export default defineConfig(() => {
     },
     build: {
       target: process.env.TAURI_ENV_PLATFORM === 'windows' ? 'chrome105' : 'safari13',
-      minify: process.env.TAURI_ENV_DEBUG ? false : ('esbuild' as const),
-      sourcemap: !!process.env.TAURI_ENV_DEBUG,
+      minify: isDebugBuild ? false : ('esbuild' as const),
+      sourcemap: isDebugBuild,
       chunkSizeWarningLimit: 900,
       rollupOptions: {
         output: {
@@ -69,5 +71,10 @@ export default defineConfig(() => {
         },
       },
     },
+    esbuild: isDebugBuild
+      ? undefined
+      : {
+          drop: ['console', 'debugger'],
+        },
   };
 });

@@ -1,4 +1,4 @@
-﻿# Quality Gates
+# Quality Gates
 
 This document tracks the automated test gates for Aegis Vault 7. The goal is to raise confidence in small, measurable steps without making early development brittle.
 
@@ -51,6 +51,7 @@ Release candidates run dedicated security gates in addition to typecheck, unit t
 ```bash
 npm run security:no-js-master-string
 npm run security:csp
+npm run security:release-hardening
 npm run security:dependencies
 npm run rust:fmt:check
 npm run rust:test:native
@@ -60,6 +61,8 @@ The dependency security gate runs `npm audit --audit-level=high` so high and cri
 Dependency audit hardening is kept current in the lockfile: Vitest and `@vitest/coverage-v8` are on the 4.x line to remove high/critical Vitest/Vite advisories, `form-data` is locked to the patched 4.0.6 tree, and `qs` is pinned through `overrides` at 6.15.3 so the Stryker/typed-rest-client chain does not reintroduce the known parser DoS advisory. The verified release state is `npm audit --audit-level=high` with zero high or critical findings; a full `npm audit` also reports zero vulnerabilities after the override resolution.
 
 The CSP gate fails if Tauri's production Content-Security-Policy reintroduces `style-src 'unsafe-inline'`, remote Google font origins, React inline `style={...}` props, HTML `style` attributes, or production `<style>` blocks. Desktop, Android, and wa-sqlite final gates call it automatically.
+
+The release-hardening gate scans the real dist and browser-extension outputs plus Android release configuration for source maps, development runtime markers, first-party console/debugger statements, bundled signing or credential patterns, tracked secret files, enabled Tauri devtools, disabled R8, debuggable release builds, Android backup exposure, and cleartext traffic. Existing merged Android release manifests are verified as artifacts; pass `--require-android-artifact` when an Android candidate must be present. Desktop, Android, local release, `release:readiness`, and `release:readiness:final` flows include this result automatically; signed Android gates require a generated release manifest.
 
 ## Property-Based Fuzz Gate
 
@@ -82,6 +85,8 @@ This gate already caught and fixed a native Aegis JSON import hardening issue wh
 ## Current Mutation Gate
 
 The first practical mutation gate runs against critical library helpers with:
+
+The same gate validates the native-anchored asset integrity manifest: all production files are hashed with SHA-256, the canonical root is embedded by the Rust build script, and the runtime verifier compares every served asset against that root. This is defense in depth for detecting modified packages, not a replacement for Windows/macOS code signing, Android APK signing, or trusted distribution checksums.
 
 ```bash
 npm run test:mutation:core:dry
@@ -436,6 +441,8 @@ Recently improved:
 - Add desktop final checklist evidence gate:
   - `npm run desktop:release:evidence -- --require-completed-checklist` before publishing desktop artifacts after the copied manual smoke checklist is completed.
   - `npm run desktop:release:evidence:summary -- --platform <windows|linux|macos> --final` to print a desktop PASS/BLOCKED evidence summary.
+  - `npm run desktop:release:gate -- --final` is the distribution gate: it requires a clean tree, completed checklist evidence, release hardening, and verified signatures for every Windows/macOS executable or installer. Linux publication requires matching SHA-256 evidence; detached package signing remains platform/distribution specific.
+  - Rust release binaries use thin LTO, one codegen unit, `panic = "abort"`, symbol stripping, disabled debug info, and disabled incremental compilation. `npm run security:release-hardening` enforces this profile so a debug-oriented binary cannot silently enter release evidence.
 - Continue smoke E2E expansion beyond the current 24 Chromium scenarios, with next focus on Android-specific manual parity checks and wa-sqlite UI-level backup/import smoke.
 - Push importer helper and storage orchestration mutation scores toward the 90% high threshold, then expand mutation testing into SQLite migration modules.
 - Keep global coverage thresholds at or above 90% lines/statements, 85% functions, and 80% branches; raise them again after the current priority targets improve.

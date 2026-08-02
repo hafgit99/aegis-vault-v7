@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { archiveContainsForbiddenDebugArtifact, isForbiddenDebugArtifact, signingCoverage } = require('./desktop-signing-policy.cjs');
 
 const rootDir = path.resolve(__dirname, '..');
 const packageJson = require(path.join(rootDir, 'package.json'));
@@ -98,15 +99,28 @@ function signingStats(file) {
   return { verified, applicable, missing: false };
 }
 
-function verifyEvidence(metadata, artifacts, stats) {
+function verifyEvidence(metadata, artifacts, stats, signing) {
   const issues = [];
   if (!['windows', 'linux', 'macos'].includes(platform)) issues.push('Unsupported platform: ' + platform);
   const requiredFiles = ['metadata.json', 'SHA256SUMS.txt', 'README.md', 'RELEASE_NOTES.md', 'DESKTOP_SIGNATURES.md', 'DESKTOP_MANUAL_SMOKE_CHECKLIST.md'];
   for (const file of requiredFiles) if (!fs.existsSync(path.join(evidenceDir, file))) issues.push(file + ' is missing.');
+  const forbiddenDebugArtifacts = walk(evidenceDir).filter((file) =>
+    isForbiddenDebugArtifact(path.relative(evidenceDir, file)),
+  );
+  for (const file of forbiddenDebugArtifacts) {
+    issues.push('Forbidden debug artifact is present: ' + path.relative(evidenceDir, file));
+  }
   if (!metadata) return issues;
   if (metadata.packageName !== packageJson.name) issues.push('metadata.json packageName mismatch: ' + metadata.packageName);
   if (metadata.version !== packageJson.version) issues.push('metadata.json version mismatch: ' + metadata.version + ' !== ' + packageJson.version);
   if (metadata.platform !== platform) issues.push('metadata.json platform mismatch: ' + metadata.platform + ' !== ' + platform);
+  if (
+    metadata.assetIntegrity?.schemaVersion !== 1
+    || metadata.assetIntegrity?.algorithm !== 'SHA-256'
+    || !/^[a-f0-9]{64}$/.test(metadata.assetIntegrity?.rootSha256 || '')
+    || !Number.isSafeInteger(metadata.assetIntegrity?.assetCount)
+    || metadata.assetIntegrity.assetCount <= 0
+  ) issues.push('Asset integrity evidence is invalid or missing.');
   if (metadata.dirty && !allowDirty) issues.push('Working tree was dirty when evidence was created.');
   if (artifacts.length === 0 && !allowEmpty) issues.push('No desktop artifacts are listed in metadata.json.');
 
@@ -121,6 +135,7 @@ function verifyEvidence(metadata, artifacts, stats) {
     const statsFs = fs.statSync(artifactPath);
     if (artifact.type === 'file') {
       if (!statsFs.isFile()) { issues.push('Artifact type mismatch, expected file: ' + artifact.path); continue; }
+      if (/\.(?:xpi|zip)$/i.test(artifact.name) && archiveContainsForbiddenDebugArtifact(fs.readFileSync(artifactPath))) issues.push('Archive contains a forbidden debug artifact: ' + artifact.name);
       const actualHash = sha256(artifactPath);
       if (artifact.sha256 !== actualHash) issues.push('metadata.json sha256 mismatch for ' + artifact.name);
       if (artifact.sizeBytes !== statsFs.size) issues.push('metadata.json size mismatch for ' + artifact.name);
@@ -141,6 +156,14 @@ function verifyEvidence(metadata, artifacts, stats) {
   if (finalMode && stats.fieldsMissing.length) issues.push('Checklist candidate fields are incomplete: ' + stats.fieldsMissing.join(', '));
   if (finalMode && stats.unchecked > 0) issues.push('Checklist has unchecked release items: ' + stats.unchecked);
   if (finalMode && stats.checked === 0) issues.push('Checklist has no checked release items.');
+  const signingReportPath = path.join(evidenceDir, 'DESKTOP_SIGNATURES.md');
+  const signingReport = fs.existsSync(signingReportPath) ? fs.readFileSync(signingReportPath, 'utf8') : '';
+  const coverage = signingCoverage(artifacts, platform, signingReport);
+  if (finalMode && coverage.required > 0) {
+    if (signing.missing) issues.push('Final Windows/macOS evidence requires a signing report.');
+    if (coverage.applicable < coverage.required) issues.push(`Signing report covers only ${coverage.applicable}/${coverage.required} signable artifacts.`);
+    if (coverage.verified < coverage.required) issues.push(`Final Windows/macOS evidence has only ${coverage.verified}/${coverage.required} verified signatures.`);
+  }
   return issues;
 }
 
@@ -152,7 +175,7 @@ function main() {
   const artifacts = Array.isArray(metadata?.artifacts) ? metadata.artifacts : [];
   const checklist = checklistStats(path.join(evidenceDir, 'DESKTOP_MANUAL_SMOKE_CHECKLIST.md'));
   const signing = signingStats(path.join(evidenceDir, 'DESKTOP_SIGNATURES.md'));
-  const issues = bootstrapIssues.concat(bootstrapIssues.length ? [] : verifyEvidence(metadata, artifacts, checklist));
+  const issues = bootstrapIssues.concat(bootstrapIssues.length ? [] : verifyEvidence(metadata, artifacts, checklist, signing));
   const passed = issues.length === 0;
 
   console.log('Desktop release evidence summary');
@@ -164,6 +187,7 @@ function main() {
   console.log('Commit: ' + (metadata?.commit || '<unknown>'));
   console.log('Branch: ' + (metadata?.branch || '<unknown>'));
   console.log('Dirty: ' + formatBool(Boolean(metadata?.dirty)));
+  console.log('Asset integrity root: ' + (metadata?.assetIntegrity?.rootSha256 || '<missing>'));
   console.log('Artifacts: ' + artifacts.length);
   for (const artifact of artifacts) {
     const hash = artifact.sha256 ? ', sha256 ' + String(artifact.sha256).slice(0, 12) + '...' : '';

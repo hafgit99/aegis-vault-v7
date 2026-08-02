@@ -67,6 +67,8 @@ Candidate:
 
 ## Platform Packaging
 
+- [ ] npm run security:release-hardening passes for the production desktop bundle.
+- [ ] Published artifacts do not contain PDB, source-map, or dSYM debug sidecars, and developer tools stay disabled.
 - [ ] Windows NSIS installer works when present.
 - [ ] Windows MSI installer works when present.
 - [ ] Linux AppImage launches when present.
@@ -74,6 +76,7 @@ Candidate:
 - [ ] macOS `.dmg` opens and app can be copied/launched when present.
 - [ ] macOS `.app` bundle metadata and icon are correct when present.
 - [ ] `SHA256SUMS.txt` matches published file artifacts.
+- [ ] Windows/macOS final artifacts have verified platform signatures; Linux artifacts have verified SHA-256 checksums.
 - [ ] `metadata.json` reports the expected commit, version, platform, and clean/dirty status.
 
 ## Notes

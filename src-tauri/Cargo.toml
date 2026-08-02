@@ -15,6 +15,7 @@ name = "aegis_vault_v7_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
+serde_json = "1.0"
 tauri-build = { version = "2.6.2", features = [] }
 
 [dependencies]
@@ -43,3 +44,12 @@ windows-sys = { version = "0.61.2", features = [
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6.4"
 objc2-app-kit = { version = "0.3.2", features = ["NSWindow"] }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
+debug = 0
+incremental = false

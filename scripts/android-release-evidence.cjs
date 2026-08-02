@@ -77,6 +77,24 @@ function sha256(file) {
   return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 }
 
+function readAssetIntegrityEvidence() {
+  const manifestPath = path.join(repoRoot, 'dist', 'aegis-integrity.json');
+  if (!fs.existsSync(manifestPath)) throw new Error('Production asset integrity manifest is missing. Run npm run build first.');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  if (
+    manifest.schemaVersion !== 1
+    || manifest.algorithm !== 'SHA-256'
+    || !/^[a-f0-9]{64}$/.test(manifest.rootSha256 || '')
+    || !Array.isArray(manifest.assets)
+    || manifest.assets.length === 0
+  ) throw new Error('Production asset integrity manifest is invalid.');
+  return {
+    schemaVersion: manifest.schemaVersion,
+    algorithm: manifest.algorithm,
+    rootSha256: manifest.rootSha256,
+    assetCount: manifest.assets.length,
+  };
+}
 function copyArtifact(file) {
   const destination = path.join(outDir, 'artifacts', path.basename(file));
   fs.mkdirSync(path.dirname(destination), { recursive: true });
@@ -164,6 +182,7 @@ const metadata = {
   signed,
   freshInstall,
   androidHome: process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || '',
+  assetIntegrity: readAssetIntegrityEvidence(),
   artifacts: copiedArtifacts,
 };
 
@@ -189,6 +208,7 @@ fs.writeFileSync(
     `Signed candidate: ${metadata.signed ? 'yes' : 'no'}`,
     `Fresh install smoke: ${metadata.freshInstall ? 'yes' : 'no'}`,
     `Device evidence: ${metadata.deviceEvidence ? 'yes' : 'no'}`,
+    'Asset integrity root: ' + metadata.assetIntegrity.rootSha256,
     '',
     '## Files',
     '',

@@ -1,4 +1,4 @@
-﻿const fs = require('fs');
+const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
@@ -226,6 +226,15 @@ function verifyEvidence() {
 
   const metadata = readJson(metadataPath);
   const artifacts = Array.isArray(metadata.artifacts) ? metadata.artifacts : [];
+  if (
+    metadata.assetIntegrity?.schemaVersion !== 1
+    || metadata.assetIntegrity?.algorithm !== 'SHA-256'
+    || !/^[a-f0-9]{64}$/.test(metadata.assetIntegrity?.rootSha256 || '')
+    || !Number.isSafeInteger(metadata.assetIntegrity?.assetCount)
+    || metadata.assetIntegrity.assetCount <= 0
+  ) {
+    fail('metadata.json assetIntegrity evidence is invalid or missing.');
+  }
   if (metadata.dirty && !allowDirty) {
     fail('Refusing Android release evidence from a dirty working tree. Use --allow-dirty only for internal diagnostics.');
   }
@@ -262,6 +271,7 @@ function verifyEvidence() {
   verifyDeviceEvidence(metadata);
 
   console.log('Android release evidence verified: ' + path.relative(repoRoot, evidenceDir));
+  console.log('Asset integrity root: ' + metadata.assetIntegrity.rootSha256);
   console.log('Artifacts: ' + artifacts.length);
   console.log('Device evidence: ' + (metadata.deviceEvidence ? 'yes' : 'no'));
   console.log('Fresh install: ' + (metadata.freshInstall ? 'yes' : 'no'));

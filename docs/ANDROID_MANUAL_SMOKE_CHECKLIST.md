@@ -83,6 +83,11 @@ Evidence boundary:
 - [ ] Returning before configured auto-lock delay does not unnecessarily require unlock.
 - [ ] Returning after configured auto-lock delay requires unlock.
 - [ ] Clipboard copy works and clears according to app policy.
+- [ ] `npm run security:release-hardening:android` passes for the exact release APK build.
+- [ ] `npm run android:device:security -- --release` confirms the installed package is non-debuggable and `run-as` is denied.
+- [ ] Release WebView does not appear as a debuggable target in Chrome `chrome://inspect`.
+- [ ] A normal trusted device shows no Android device-integrity warning.
+- [ ] If a rooted/test-key/instrumented test device is available, Aegis shows one localized warning but does not lock or block the vault.
 
 ## Biometric And Secret Storage
 

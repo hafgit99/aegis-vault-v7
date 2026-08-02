@@ -105,9 +105,10 @@ function getBiometricUnlockErrorMessage(err: any, t: ReturnType<typeof useLangua
 interface LockScreenProps {
   onUnlock: () => void;
   isAutofillPending?: boolean;
+  integrityWarning?: boolean;
 }
 
-export default function LockScreen({ onUnlock, isAutofillPending = false }: LockScreenProps) {
+export default function LockScreen({ onUnlock, isAutofillPending = false, integrityWarning = false }: LockScreenProps) {
   const { language, setLanguage, t } = useLanguage();
   const isSetup = isMasterPasswordSet();
   const requiresSecretKey = isAccountSecretKeyRequired();
@@ -273,6 +274,21 @@ export default function LockScreen({ onUnlock, isAutofillPending = false }: Lock
         </div>
       </header>
 
+      {integrityWarning && (
+        <div
+          data-testid="asset-integrity-warning"
+          role="alert"
+          className="relative z-40 mx-auto mt-[calc(max(env(safe-area-inset-top),0.5rem)+3.25rem)] w-[calc(100%-2rem)] max-w-3xl border border-red-500/40 bg-red-950/95 px-4 py-3 text-red-50 shadow-2xl"
+        >
+          <div className="flex items-start gap-3">
+            <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-red-400" />
+            <div className="min-w-0">
+              <p className="text-sm font-bold">{t('security.assetIntegrityTitle')}</p>
+              <p className="mt-1 text-xs leading-relaxed text-red-100/85">{t('security.assetIntegrityMessage')}</p>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex-1 w-full max-w-6xl mx-auto px-4 py-1 sm:py-2 flex items-center justify-center relative z-10">
         <div className="w-full flex items-center justify-center">
           <div className="w-full flex flex-col lg:flex-row items-center lg:items-stretch gap-6 lg:gap-10">

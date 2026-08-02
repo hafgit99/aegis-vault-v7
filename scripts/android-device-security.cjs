@@ -86,6 +86,10 @@ function sourceHasFlagSecure() {
   return source.includes('WindowManager.LayoutParams.FLAG_SECURE') &&
     /window\.setFlags\(\s*WindowManager\.LayoutParams\.FLAG_SECURE,\s*WindowManager\.LayoutParams\.FLAG_SECURE\s*\)/.test(source);
 }
+function sourceHasWebViewDebugGuard() {
+  const source = fs.existsSync(mainActivitySource) ? fs.readFileSync(mainActivitySource, 'utf8') : '';
+  return /WebView\.setWebContentsDebuggingEnabled\(BuildConfig\.DEBUG\)/.test(source);
+}
 
 function summarizeRelevantLogcat() {
   const logs = tryRun(['logcat', '-d', '-t', '300']);
@@ -165,6 +169,31 @@ if (devices.length > 0) {
     pass('MainActivity sets FLAG_SECURE before WebView creation');
   } else {
     fail('MainActivity FLAG_SECURE source guard is missing or changed');
+  }
+  if (sourceHasWebViewDebugGuard()) {
+    pass('WebView debugging is restricted to BuildConfig.DEBUG');
+  } else {
+    fail('WebView debugging release guard is missing or changed');
+  }
+
+  const packageFlagsLine = packageDump
+    .split(/\r?\n/)
+    .find((line) => /(?:pkgFlags|flags)=\[/.test(line)) || '';
+  const installedDebuggable = /\bDEBUGGABLE\b/.test(packageFlagsLine);
+  if (releaseMode && installedDebuggable) {
+    fail('installed release package is marked DEBUGGABLE');
+  } else if (releaseMode) {
+    pass('installed release package is not marked DEBUGGABLE');
+  } else {
+    pass('debug package mode is explicitly selected');
+  }
+
+  const runAsResult = tryRun(['shell', 'run-as', packageName, 'id']);
+  const runAsSucceeded = /\buid=\d+/.test(runAsResult);
+  if (releaseMode && runAsSucceeded) {
+    fail('run-as succeeded for the release package; debuggable exposure detected');
+  } else if (releaseMode) {
+    pass('run-as is denied for the release package');
   }
 
   const windowDump = tryRun(['shell', 'dumpsys', 'window']);

@@ -5,6 +5,7 @@ import path from 'path';
 const outDir = path.resolve('dist-extension');
 const outDirFirefox = path.resolve('dist-extension-firefox');
 const srcDir = path.resolve('src-extension');
+const isDebugBuild = process.argv.includes('--debug');
 
 const batPath = path.join(outDir, 'aegis-host.bat');
 const manifestPath = path.join(outDir, 'com.hafgit99.aegisvault7.json');
@@ -52,7 +53,7 @@ if (fs.existsSync(tauriIconsSrc)) {
 }
 
 async function build() {
-  console.log('Compiling extension TS files using esbuild...');
+  console.log('Compiling extension TS files using esbuild (' + (isDebugBuild ? 'debug' : 'release') + ')...');
   await esbuild.build({
     entryPoints: [
       path.join(srcDir, 'background.ts'),
@@ -63,8 +64,9 @@ async function build() {
     outdir: outDir,
     platform: 'browser',
     target: ['chrome105', 'firefox100', 'safari15'],
-    minify: false, // Let's keep it false in dev/local build so it's easy to debug and read, or make it configurable
-    sourcemap: true,
+    minify: !isDebugBuild,
+    sourcemap: isDebugBuild,
+    legalComments: 'none',
   });
 
   // Copy HTML, CSS, Manifest

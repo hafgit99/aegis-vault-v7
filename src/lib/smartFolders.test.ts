@@ -7,7 +7,7 @@
  * @vitest-environment jsdom
  */
 
-import { describe, expect, it, beforeEach, afterEach } from 'vitest';
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import {
   createSmartFolder,
   updateSmartFolder,
@@ -68,6 +68,7 @@ describe('Smart Folders Library', () => {
 
   afterEach(() => {
     localStorage.clear();
+    vi.useRealTimers();
   });
 
   it('correctly loads built-in presets', () => {
@@ -99,9 +100,11 @@ describe('Smart Folders Library', () => {
   });
 
   it('evaluates all rule kinds correctly', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-07T12:00:00.000Z'));
+
     const items = mockItems();
     const context = buildContext(items);
-    const now = Date.parse('2026-07-07T12:00:00.000Z');
 
     const testRule = (rule: any, expectedIds: string[]) => {
       const folder = createSmartFolder({

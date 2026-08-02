@@ -35,6 +35,8 @@ import { useSelectedItemScore } from './hooks/useSelectedItemScore';
 import { useVaultStatusAction } from './hooks/useVaultStatusAction';
 import { useRuntimeSecurity } from './hooks/useRuntimeSecurity';
 import { useAndroidAutofillCoordinator } from './hooks/useAndroidAutofillCoordinator';
+import { useAndroidRuntimeSecurity } from './hooks/useAndroidRuntimeSecurity';
+import { useAssetIntegrity } from './hooks/useAssetIntegrity';
 import { useLanguage } from './i18n/LanguageContext';
 import { useAirgapAlerts } from './hooks/useAirgapAlerts';
 import { VaultItem } from './types';
@@ -175,6 +177,16 @@ export default function App() {
   });
 
   useAirgapAlerts({
+    unlocked,
+    onNotify: showNotification,
+  });
+
+  useAndroidRuntimeSecurity({
+    unlocked,
+    onNotify: showNotification,
+  });
+
+  const { failureReason: assetIntegrityFailure } = useAssetIntegrity({
     unlocked,
     onNotify: showNotification,
   });
@@ -499,7 +511,13 @@ export default function App() {
 
   // If locked, return the beautiful LockScreen UI
   if (!unlocked) {
-    return <LockScreen onUnlock={handleUnlock} isAutofillPending={Boolean(pendingAutofillRequest)} />;
+    return (
+      <LockScreen
+        onUnlock={handleUnlock}
+        isAutofillPending={Boolean(pendingAutofillRequest)}
+        integrityWarning={Boolean(assetIntegrityFailure)}
+      />
+    );
   }
 
   return (

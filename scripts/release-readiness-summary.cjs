@@ -48,6 +48,12 @@ function fenced(text) {
 }
 
 const checks = [];
+checks.push({
+  label: 'Release reverse-engineering hardening',
+  command: 'node scripts/security-release-hardening.cjs',
+  result: runNodeScript('security-release-hardening.cjs', []),
+});
+
 const androidDir = latestAndroidEvidence();
 if (androidDir) {
   checks.push({

@@ -14,6 +14,8 @@ This document tracks the Android preparation path for Aegis Vault 7. Android is 
 - The universal debug APK build has been validated locally.
 - The `aarch64` debug APK has been installed and smoke-tested on a physical Android device.
 - The main Android activity sets `FLAG_SECURE` to block normal screenshots, screen recordings, and task-switcher previews on supported system surfaces.
+- Release WebView debugging is tied to `BuildConfig.DEBUG`; R8/resource shrinking, explicit non-debuggable Java/JNI settings, ProGuard bridge-name preservation, and Rust native symbol stripping are enforced by `security:release-hardening:android`.
+- Root/debugger/test-key/instrumentation indicators are exposed as bounded warning-only runtime posture signals. They never automatically deny vault access because heuristic device-integrity checks are bypassable and can be wrong.
 - Android Emergency Kit, backup export, plaintext export, encrypted import, and attachment download flows use the system document picker bridge so users choose the destination or source file explicitly.
 - Android document picker requests now fail closed with a safety timeout if the native bridge never calls back, surface native picker errors, and treat user cancellation as an explicit `false`/`null` result.
 - Android remembered Secret Key state and biometric metadata now prefer an Android Keystore AES-GCM secure storage bridge, with browser storage kept as fallback and migration source.
@@ -38,6 +40,7 @@ Android release decisions use two kinds of evidence:
 | Backup, import, attachments, Emergency Kit | Unit coverage plus Android bridge/report checks | Choose real save/open destinations and confirm created files are visible/readable | File flows are valid only for candidates with a completed checklist |
 | Autofill fill/save | Service declaration, active-provider doctor check, bridge/unit coverage | Chrome, Aloha, and Vivaldi/login-site behavior with Aegis as active provider | Browser support is device/browser dependent and must be recorded per candidate |
 | FLAG_SECURE and privacy shield | Native activity configuration and `android:device:security` output | Screenshot, screen recording, and task-switcher preview checks on target device | Supported Android surfaces block sensitive previews |
+| Release runtime hardening | Strict manifest/R8/WebView/ELF-section gate plus installed-package debuggable and `run-as` checks | Confirm normal launch/unlock and warning-only behavior on rooted/test devices when available | Hardening raises analysis cost but is not described as tamper-proof |
 | Biometric and secure storage | Keystore bridge checks, unsupported-path tests, and release evidence matrix validation | Pixel, Samsung, Xiaomi plus Android 12/13/14/15 enrollment, unlock, cancel, and disable checks | Public biometric claims require `--require-biometric-matrix` evidence approval |
 | Safe-area and mobile UI | Playwright mobile viewport smoke tests | Real phone status/navigation bar checks across core screens | Mobile UI is release-ready only with current manual checklist evidence |
 
@@ -61,6 +64,7 @@ npm run android:release:notes
 npm run android:release:version:check
 npm run android:release:signing:check
 npm run android:release:report
+npm run security:release-hardening:android
 npm run android:device:doctor
 npm run android:device:install
 npm run android:device:launch
@@ -69,13 +73,14 @@ npm run android:device:smoke
 npm run android:device:security
 ```
 
-On this Windows workstation, Android builds also require the Android Studio JBR, SDK, and NDK environment variables to be available before invoking the build scripts.
+On this Windows workstation, Android builds also require the Android Studio JBR, SDK, and NDK environment variables to be available before invoking the build scripts. When OneDrive denies Rust build-script cleanup under `src-tauri/target`, set `CARGO_TARGET_DIR` to a local non-synchronized path such as `C:\tmp\aegis-vault-v7-android-target`.
 
 Use `android:build:apk:debug:aarch64` for normal phone smoke tests. The generic `android:build:apk:debug` command creates a universal debug APK that bundles `arm64-v8a`, `armeabi-v7a`, `x86`, and `x86_64` native libraries; it is useful for broad compatibility checks but is expected to be much larger.
 
 The target-specific APK commands run `android:clean:jni` first because Tauri/Gradle can leave native library symlinks from previous multi-architecture builds under `src-tauri/gen/android/app/src/main/jniLibs`. Cleaning those ignored intermediates prevents stale ABIs from being packed into a later single-target APK.
 
-Use `npm run android:release:report` after APK/AAB builds to record artifact size, SHA-256, package metadata, requested permissions, backup settings, cleartext traffic status, native ABI metadata, APK signature verification, signer certificate SHA-256, Autofill service protection, and FileProvider export status. Add `-- --strict` when warnings should fail the command. The report now focuses on the latest candidate artifact for the active build type (`debug` by default, `release` with `-- --signed`) so stale universal APKs left in Gradle output folders do not pollute the release decision.
+Use `npm run android:release:report
+npm run security:release-hardening:android` after APK/AAB builds to record artifact size, SHA-256, package metadata, requested permissions, backup settings, cleartext traffic status, native ABI metadata, APK signature verification, signer certificate SHA-256, Autofill service protection, and FileProvider export status. Add `-- --strict` when warnings should fail the command. The report now focuses on the latest candidate artifact for the active build type (`debug` by default, `release` with `-- --signed`) so stale universal APKs left in Gradle output folders do not pollute the release decision.
 
 Use `npm run android:device:doctor` before device testing to diagnose SDK/ADB setup, authorized USB devices, APK presence, installed package state, app-private data directory, and active Autofill provider status. Add `-- --enable-autofill` on a local debug device when the test reinstall resets the active Android Autofill provider; some OEM Android builds reject shell activation and still require manual provider selection.
 
@@ -181,7 +186,9 @@ Run this checklist before every APK/AAB candidate that may be shared outside loc
 - Confirm `metadata.json` reports `"dirty": false` before sharing any APK/AAB outside local development.
 - Run `npm run android:release:signing:check` before building a signed release candidate.
 - Build release APK/AAB with signing configuration when release keys are ready. Use `npm run android:release:gate -- --signed --evidence` for artifact evidence, and add `--device` only when a physical device should install/test the signed release package `com.hafgit99.aegisvault7`. Add `--fresh-install` for the final clean-install smoke pass.
-- Run `npm run android:release:report -- --strict` and store the output with the release candidate notes; for signed release candidates use `npm run android:release:report -- --strict --signed`.
+- Run `npm run android:release:report
+npm run security:release-hardening:android -- --strict` and store the output with the release candidate notes; for signed release candidates use `npm run android:release:report
+npm run security:release-hardening:android -- --strict --signed`.
 - Confirm the release artifact does not contain stale multi-ABI debug libraries; `android:release:report -- --strict` now reports and gates native ABI count.
 - Record artifact sizes:
   - Universal debug APK is expected to be large because it contains multiple ABIs.

@@ -16,12 +16,13 @@ const skipCollect = hasFlag('--skip-collect');
 const skipEvidenceVerify = hasFlag('--skip-evidence-verify');
 const skipReleaseNotes = hasFlag('--skip-release-notes');
 const skipSigningReport = hasFlag('--skip-signing-report');
-const requireSignedArtifacts = hasFlag('--require-signed-artifacts');
-const signedReleaseNotes = hasFlag('--signed-release-notes');
+const finalMode = hasFlag('--final');
+const requireSignedArtifacts = hasFlag('--require-signed-artifacts') || (finalMode && platform !== 'linux');
+const signedReleaseNotes = hasFlag('--signed-release-notes') || (finalMode && platform !== 'linux');
 const releaseChannel = getArgValue('--channel');
 const allowDirtyEvidence = hasFlag('--allow-dirty-evidence');
 const allowEmptyEvidence = hasFlag('--allow-empty-evidence');
-const requireCompletedChecklist = hasFlag('--require-completed-checklist');
+const requireCompletedChecklist = hasFlag('--require-completed-checklist') || finalMode;
 const macUniversal = hasFlag('--mac-universal');
 
 function hasFlag(flag) {
@@ -50,6 +51,7 @@ function usage() {
     '  --platform <windows|linux|macos>  Collect evidence for a specific platform.',
     '  --mac-universal                  Build macOS universal artifacts on macOS.',
     '  --dry-run                        Print the gate plan without executing commands.',
+    '  --final                          Require a complete publishable candidate; Windows/macOS signatures and all manual checks become mandatory.',
     '  --skip-version-check             Skip desktop version consistency check.',
     '  --skip-unit                      Skip unit tests.',
     '  --skip-web-build                 Skip Vite web build.',
@@ -87,6 +89,24 @@ function assertHostCanBuild(targetPlatform) {
   }
 }
 
+function assertFinalMode() {
+  if (!finalMode) return;
+  const forbiddenSkips = [
+    [skipVersionCheck, '--skip-version-check'],
+    [skipUnit, '--skip-unit'],
+    [skipWebBuild, '--skip-web-build'],
+    [skipDesktopBuild, '--skip-desktop-build'],
+    [skipCollect, '--skip-collect'],
+    [skipEvidenceVerify, '--skip-evidence-verify'],
+    [skipReleaseNotes, '--skip-release-notes'],
+    [skipSigningReport, '--skip-signing-report'],
+    [allowDirtyEvidence, '--allow-dirty-evidence'],
+    [allowEmptyEvidence, '--allow-empty-evidence'],
+  ].filter(([enabled]) => enabled).map(([, flag]) => flag);
+  if (forbiddenSkips.length > 0) {
+    throw new Error('Final desktop release mode does not allow: ' + forbiddenSkips.join(', '));
+  }
+}
 function commandLabel(command, commandArgs) {
   return (command + ' ' + commandArgs.join(' ')).trim();
 }
@@ -125,6 +145,7 @@ if (hasFlag('--help')) {
 }
 
 assertPlatform(platform);
+assertFinalMode();
 assertHostCanBuild(platform);
 
 const steps = [
@@ -148,6 +169,8 @@ if (!skipUnit) {
 if (!skipWebBuild) {
   steps.push({ command: 'npm', args: ['run', 'build'] });
 }
+
+steps.push({ command: 'npm', args: ['run', 'security:release-hardening'] });
 
 if (!skipExtension) {
   steps.push({ command: 'npm', args: ['run', 'build:extension'] });
@@ -183,6 +206,7 @@ if (!skipCollect && !skipEvidenceVerify) {
   if (allowDirtyEvidence) evidenceArgs.push('--allow-dirty');
   if (allowEmptyEvidence) evidenceArgs.push('--allow-empty');
   if (requireCompletedChecklist) evidenceArgs.push('--require-completed-checklist');
+  if (requireSignedArtifacts) evidenceArgs.push('--require-signed-artifacts');
   steps.push({ command: 'node', args: evidenceArgs });
 }
 

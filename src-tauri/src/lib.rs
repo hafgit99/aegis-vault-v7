@@ -21,6 +21,25 @@ struct ImportFilePayload {
     contents: String,
 }
 
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AssetIntegrityAnchor {
+    schema_version: u8,
+    algorithm: &'static str,
+    root_sha256: &'static str,
+    production: bool,
+}
+
+#[tauri::command]
+fn get_asset_integrity_anchor() -> AssetIntegrityAnchor {
+    AssetIntegrityAnchor {
+        schema_version: 1,
+        algorithm: "SHA-256",
+        root_sha256: option_env!("AEGIS_ASSET_INTEGRITY_ROOT").unwrap_or(""),
+        production: !cfg!(debug_assertions),
+    }
+}
+
 #[cfg(target_os = "windows")]
 fn apply_screen_capture_protection_to_window(window: &WebviewWindow) -> Result<bool, String> {
     use windows_sys::Win32::UI::WindowsAndMessaging::{
@@ -974,6 +993,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            get_asset_integrity_anchor,
             read_vault_database,
             write_vault_database,
             reset_vault_database,

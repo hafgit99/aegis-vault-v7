@@ -220,6 +220,24 @@ function completedManualChecklist(contents, metadata) {
     .join('\n') + '\n';
 }
 
+function readAssetIntegrityEvidence() {
+  const manifestPath = path.join(rootDir, 'dist', 'aegis-integrity.json');
+  if (!fs.existsSync(manifestPath)) throw new Error('Production asset integrity manifest is missing. Run npm run build first.');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  if (
+    manifest.schemaVersion !== 1
+    || manifest.algorithm !== 'SHA-256'
+    || !/^[a-f0-9]{64}$/.test(manifest.rootSha256 || '')
+    || !Array.isArray(manifest.assets)
+    || manifest.assets.length === 0
+  ) throw new Error('Production asset integrity manifest is invalid.');
+  return {
+    schemaVersion: manifest.schemaVersion,
+    algorithm: manifest.algorithm,
+    rootSha256: manifest.rootSha256,
+    assetCount: manifest.assets.length,
+  };
+}
 function writeReleaseMetadata(artifacts) {
   const dirtyStatus = gitValue(['status', '--short'], '');
   const metadata = {
@@ -233,6 +251,7 @@ function writeReleaseMetadata(artifacts) {
     branch: gitValue(['branch', '--show-current']),
     dirty: Boolean(dirtyStatus),
     dirtyStatus,
+    assetIntegrity: readAssetIntegrityEvidence(),
     artifacts: artifacts.map(describeArtifact),
   };
 
@@ -261,6 +280,7 @@ function writeReleaseMetadata(artifacts) {
       'Commit: ' + metadata.commit,
       'Branch: ' + metadata.branch,
       'Dirty working tree: ' + (metadata.dirty ? 'yes' : 'no'),
+      'Asset integrity root: ' + metadata.assetIntegrity.rootSha256,
       '',
       '## Files',
       '',

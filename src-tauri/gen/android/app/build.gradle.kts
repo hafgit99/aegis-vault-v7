@@ -58,7 +58,13 @@ android {
             }
         }
         getByName("release") {
+            isDebuggable = false
+            isJniDebuggable = false
             isMinifyEnabled = true
+            isShrinkResources = true
+            ndk {
+                debugSymbolLevel = "NONE"
+            }
             if (releaseSigningConfigured) {
                 signingConfig = signingConfigs.getByName("aegisRelease")
             }

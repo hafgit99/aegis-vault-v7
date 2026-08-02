@@ -67,6 +67,19 @@ afterEach(() => {
 });
 
 describe('LockScreen', () => {
+  it('shows the asset integrity warning before credentials are submitted', () => {
+    window.localStorage.setItem(languageStorageKey, 'en');
+
+    render(
+      <LanguageProvider>
+        <LockScreen onUnlock={vi.fn()} integrityWarning />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByTestId('asset-integrity-warning')).toBeTruthy();
+    expect(screen.getByText('Application Integrity Warning')).toBeTruthy();
+  });
+
   it('validates minimum master password length during setup', () => {
     render(<LockScreen onUnlock={vi.fn()} />);
 

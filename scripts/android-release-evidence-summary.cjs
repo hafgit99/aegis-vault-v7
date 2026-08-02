@@ -108,6 +108,13 @@ function verifyEvidence(metadata, artifacts, stats, biometricStats) {
   const requiredFiles = ['metadata.json', 'SHA256SUMS.txt', 'android-release-report.txt', 'README.md', 'ANDROID_MANUAL_SMOKE_CHECKLIST.md'];
   for (const file of requiredFiles) { if (!fs.existsSync(path.join(evidenceDir, file))) issues.push(file + ' is missing.'); }
   if (!metadata) return issues;
+  if (
+    metadata.assetIntegrity?.schemaVersion !== 1
+    || metadata.assetIntegrity?.algorithm !== 'SHA-256'
+    || !/^[a-f0-9]{64}$/.test(metadata.assetIntegrity?.rootSha256 || '')
+    || !Number.isSafeInteger(metadata.assetIntegrity?.assetCount)
+    || metadata.assetIntegrity.assetCount <= 0
+  ) issues.push('Asset integrity evidence is invalid or missing.');
   if (metadata.dirty && !allowDirty) issues.push('Working tree was dirty when evidence was created.');
   if (finalMode && !metadata.deviceEvidence) issues.push('Final mode requires device evidence.');
   if (finalMode && !metadata.freshInstall) issues.push('Final mode requires fresh-install evidence.');
@@ -164,6 +171,7 @@ function main() {
   console.log('Signed: ' + formatBool(Boolean(metadata?.signed)));
   console.log('Fresh install: ' + formatBool(Boolean(metadata?.freshInstall)));
   console.log('Device evidence: ' + formatBool(Boolean(metadata?.deviceEvidence)));
+  console.log('Asset integrity root: ' + (metadata?.assetIntegrity?.rootSha256 || '<missing>'));
   console.log('Artifacts: ' + artifacts.length);
   for (const artifact of artifacts) console.log(' - ' + artifact.copied + ' (' + artifact.sizeBytes + ' bytes, sha256 ' + String(artifact.sha256 || '').slice(0, 12) + '...)');
   console.log('Checklist checked: ' + stats.checked);

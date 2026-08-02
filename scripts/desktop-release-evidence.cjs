@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { execFileSync } = require('child_process');
+const { archiveContainsForbiddenDebugArtifact, isForbiddenDebugArtifact, signingCoverage } = require('./desktop-signing-policy.cjs');
 
 const rootDir = path.resolve(__dirname, '..');
 const releaseLocalDir = path.join(rootDir, 'release-local');
@@ -14,6 +15,7 @@ const evidenceDir = explicitDir ? path.resolve(rootDir, explicitDir) : path.join
 const allowDirty = hasFlag('--allow-dirty');
 const allowEmpty = hasFlag('--allow-empty');
 const requireCompletedChecklist = hasFlag('--require-completed-checklist');
+const requireSignedArtifacts = hasFlag('--require-signed-artifacts');
 
 function hasFlag(flag) {
   return args.includes(flag);
@@ -43,6 +45,7 @@ function usage() {
     '  --allow-dirty                    Permit metadata.json dirty=true for internal diagnostics.',
     '  --allow-empty                    Permit evidence with no copied file artifacts.',
     '  --require-completed-checklist    Fail unless the manual smoke checklist is completed.',
+    '  --require-signed-artifacts       Fail unless every Windows/macOS signable artifact is verified.',
     '  --help                           Show this help.',
   ].join('\n');
 }
@@ -183,7 +186,7 @@ function verifyReleaseNotes(file, metadata) {
   }
 }
 
-function verifySigningReport(file, metadata) {
+function verifySigningReport(file, metadata, artifacts) {
   const contents = fs.readFileSync(file, 'utf8');
   for (const expected of [
     '# Aegis Vault 7 Desktop Signing Report',
@@ -196,8 +199,16 @@ function verifySigningReport(file, metadata) {
       fail('DESKTOP_SIGNATURES.md is missing expected signing context: ' + expected);
     }
   }
-}
 
+  if (!requireSignedArtifacts) return;
+  const coverage = signingCoverage(artifacts, metadata.platform, contents);
+  if (coverage.required === 0) {
+    fail('Signed artifact verification was required, but metadata.json contains no signable Windows/macOS artifacts.');
+  }
+  if (!coverage.complete) {
+    fail(`Required desktop signatures are incomplete: verified ${coverage.verified}/${coverage.required}, applicable ${coverage.applicable}/${coverage.required}.`);
+  }
+}
 function verifyEvidence() {
   assertPlatform(platform);
 
@@ -205,6 +216,12 @@ function verifyEvidence() {
     fail('Desktop release evidence directory not found: ' + evidenceDir);
   }
 
+  const forbiddenDebugArtifacts = walk(evidenceDir).filter((file) =>
+    isForbiddenDebugArtifact(path.relative(evidenceDir, file)),
+  );
+  if (forbiddenDebugArtifacts.length > 0) {
+    fail('Forbidden debug artifact found in desktop evidence: ' + path.relative(evidenceDir, forbiddenDebugArtifacts[0]));
+  }
   const metadataPath = path.join(evidenceDir, 'metadata.json');
   const checksumsPath = path.join(evidenceDir, 'SHA256SUMS.txt');
   const readmePath = path.join(evidenceDir, 'README.md');
@@ -228,6 +245,15 @@ function verifyEvidence() {
   }
   if (metadata.platform !== platform) {
     fail('metadata.json platform mismatch: ' + metadata.platform + ' !== ' + platform);
+  }
+  if (
+    metadata.assetIntegrity?.schemaVersion !== 1
+    || metadata.assetIntegrity?.algorithm !== 'SHA-256'
+    || !/^[a-f0-9]{64}$/.test(metadata.assetIntegrity?.rootSha256 || '')
+    || !Number.isSafeInteger(metadata.assetIntegrity?.assetCount)
+    || metadata.assetIntegrity.assetCount <= 0
+  ) {
+    fail('metadata.json assetIntegrity evidence is invalid or missing.');
   }
   if (metadata.dirty && !allowDirty) {
     fail('Refusing desktop release evidence from a dirty working tree. Use --allow-dirty only for internal diagnostics.');
@@ -254,6 +280,9 @@ function verifyEvidence() {
     const stats = fs.statSync(artifactPath);
     if (artifact.type === 'file') {
       if (!stats.isFile()) fail('Artifact type mismatch, expected file: ' + artifact.path);
+      if (/\.(?:xpi|zip)$/i.test(artifact.name) && archiveContainsForbiddenDebugArtifact(fs.readFileSync(artifactPath))) {
+        fail('Archive contains a forbidden debug artifact: ' + artifact.name);
+      }
       const actualHash = sha256(artifactPath);
       if (artifact.sha256 !== actualHash) {
         fail('metadata.json sha256 mismatch for ' + artifact.name);
@@ -292,10 +321,11 @@ function verifyEvidence() {
   verifyChecklist(checklistPath, metadata);
   if (requireCompletedChecklist) verifyCompletedChecklist(checklistPath);
   verifyReleaseNotes(releaseNotesPath, metadata);
-  verifySigningReport(signaturesPath, metadata);
+  verifySigningReport(signaturesPath, metadata, artifacts);
   console.log('Desktop release evidence verified: ' + path.relative(rootDir, evidenceDir));
   console.log('Artifacts: ' + artifacts.length);
   console.log('Completed checklist required: ' + (requireCompletedChecklist ? 'yes' : 'no'));
+  console.log('Signed artifacts required: ' + (requireSignedArtifacts ? 'yes' : 'no'));
 }
 
 if (hasFlag('--help')) {

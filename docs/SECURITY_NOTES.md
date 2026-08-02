@@ -27,6 +27,10 @@ This project is a password vault, so security claims must stay conservative unti
 - TOTP generation now follows the RFC 6238 flow for Base32 secrets, HMAC-SHA1/SHA-256/SHA-512, 8-byte counters, dynamic truncation, and `otpauth://totp` URI parsing.
 - Desktop Windows builds enable native screen capture protection through `SetWindowDisplayAffinity`.
 - Android builds set `FLAG_SECURE` on the main activity to block screenshots and task-switcher previews for supported system surfaces.
+- Android release builds disable WebView debugging through `BuildConfig.DEBUG`, enable R8 and resource shrinking, preserve only annotated JavaScript bridge APIs, disable Java/JNI debuggability, and verify stripped Rust `.so` section tables with the NDK `llvm-readelf` tool.
+- Browser extension release builds are minified and source-map free; debug maps require an explicit debug build. Desktop evidence rejects PDB/source-map/dSYM sidecars and inspects XPI/ZIP archive filenames before distribution. Rust/MSVC may retain PDB files in the private build cache, but the collector does not publish them.
+- Production builds generate a versioned SHA-256 asset manifest. Its deterministic root is embedded into the Rust binary, and the application re-hashes packaged assets at startup. Failures are classified as critical, shown before credential entry, and repeated as warning-only after unlock; platform signatures remain the primary authenticity boundary.
+- Android release runtime posture checks report debugger, test-key, common root-artifact, and instrumentation-map signals through a warning-only bridge. The vault is never blocked solely by these heuristic signals, and only bounded signal codes reach the WebView.
 - Android Emergency Kit, import, export, backup, and attachment download flows now use the Android document picker bridge instead of invisible browser downloads.
 - Android document picker calls now include a safety timeout and regression coverage for native errors, user cancellation, and no-callback failures.
 - Android remembered Secret Key state and biometric metadata now prefer a JavaScript bridge backed by Android Keystore AES-GCM encrypted SharedPreferences, with browser storage retained only as a fallback or legacy migration source.
@@ -58,6 +62,7 @@ This project is a password vault, so security claims must stay conservative unti
 - Android screenshots, document-picker file flows, Android Keystore-backed secure storage, and native app-private vault persistence are implemented. The remaining Android storage work is release-candidate regression coverage and final production review.
 - Android biometric registration can use the Tauri biometric plugin path only when the Android Keystore-backed secure storage bridge is present and exposes the expected API shape. Production-grade biometric wording is blocked until the Pixel/Samsung/Xiaomi and Android 12/13/14/15 approval matrix is completed and verified with `--require-biometric-matrix`.
 - Android Autofill public claims remain browser-dependent and must be backed by current per-candidate manual evidence even though fill/save flows are implemented.
+- Android root/debugger/instrumentation detection is defense-in-depth telemetry, not a trust boundary. It can produce false positives or be bypassed by a privileged attacker, so it remains warning-only and must not be advertised as tamper prevention.
 - OS-level clipboard history managers, Universal Clipboard, cloud clipboard sync, enterprise DLP agents, and privileged local malware may retain copied secrets before Aegis can clear them; product copy must describe clipboard clearing as best-effort, not guaranteed history erasure.
 
 ## Near-Term Security Plan

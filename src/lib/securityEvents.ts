@@ -20,6 +20,8 @@ export const securityEventCodes = {
   androidAutofillCancelled: 'android.autofill.cancelled',
   androidAutofillCompleted: 'android.autofill.completed',
   androidAutofillFailed: 'android.autofill.failed',
+  androidRuntimeRiskDetected: 'android.runtime.riskDetected',
+  assetIntegrityFailed: 'application.assetIntegrity.failed',
 } as const;
 
 export type SecurityEventCode = (typeof securityEventCodes)[keyof typeof securityEventCodes];

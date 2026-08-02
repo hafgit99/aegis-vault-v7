@@ -126,6 +126,8 @@ if (!skipAndroidBuild) {
   run('npm', ['run', signed ? 'android:build:apk:aarch64' : 'android:build:apk:debug:aarch64']);
 }
 
+run('npm', ['run', signed ? 'security:release-hardening:android' : 'security:release-hardening']);
+
 run('npm', ['run', 'android:release:report', '--', '--strict', ...(signed ? ['--signed'] : [])]);
 
 if (!skipDevice) {

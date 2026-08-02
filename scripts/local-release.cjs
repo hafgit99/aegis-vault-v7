@@ -53,6 +53,7 @@ if (platform === 'darwin' && macUniversal) {
   tauriArgs.push('--target', 'universal-apple-darwin');
 }
 run('npx', tauriArgs);
+run('npm', ['run', 'security:release-hardening']);
 
 const platformName = platform === 'win32'
   ? 'windows'

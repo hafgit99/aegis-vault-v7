@@ -2,10 +2,12 @@ package com.hafgit99.aegisvault7
 
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.database.Cursor
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Debug
 import android.provider.Settings
 import android.provider.OpenableColumns
 import android.security.keystore.KeyGenParameterSpec
@@ -28,6 +30,7 @@ import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
+import org.json.JSONArray
 import org.json.JSONObject
 
 class MainActivity : TauriActivity() {
@@ -38,6 +41,7 @@ class MainActivity : TauriActivity() {
   private var pendingAutofillSaveCandidate: AutofillSaveCandidate? = null
 
   override fun onCreate(savedInstanceState: Bundle?) {
+    WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG)
     window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
     enableEdgeToEdge()
     captureAutofillIntent(intent)
@@ -68,9 +72,11 @@ class MainActivity : TauriActivity() {
   override fun onWebViewCreate(webView: WebView) {
     super.onWebViewCreate(webView)
     webViewRef = webView
+    hardenWebView(webView)
     webView.addJavascriptInterface(AndroidFileBridge(), "AegisAndroidFiles")
     webView.addJavascriptInterface(AndroidSecureStorageBridge(), "AegisAndroidSecureStorage")
     webView.addJavascriptInterface(AndroidAutofillBridge(), "AegisAndroidAutofill")
+    webView.addJavascriptInterface(AndroidRuntimeSecurityBridge(), "AegisAndroidSecurity")
     webView.post { notifyAutofillIntent() }
     webView.post { notifyAutofillSaveCandidate() }
     webView.postDelayed({ notifyAutofillIntent() }, 250)
@@ -494,6 +500,71 @@ class MainActivity : TauriActivity() {
     }
   }
 
+  private fun hardenWebView(webView: WebView) {
+    webView.removeJavascriptInterface("searchBoxJavaBridge_")
+    webView.removeJavascriptInterface("accessibility")
+    webView.removeJavascriptInterface("accessibilityTraversal")
+    webView.settings.apply {
+      javaScriptCanOpenWindowsAutomatically = false
+      setSupportMultipleWindows(false)
+      mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        safeBrowsingEnabled = true
+      }
+    }
+  }
+
+  inner class AndroidRuntimeSecurityBridge {
+    @JavascriptInterface
+    fun getPosture(): String = runtimeSecurityPosture().toString()
+  }
+
+  private fun runtimeSecurityPosture(): JSONObject {
+    val releaseBuild = !BuildConfig.DEBUG
+    val appDebuggable = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+    val debuggerAttached = Debug.isDebuggerConnected() || Debug.waitingForDebugger()
+    val signals = linkedSetOf<String>()
+
+    if (appDebuggable && releaseBuild) signals.add("app_debuggable")
+    if (debuggerAttached && releaseBuild) signals.add("debugger_attached")
+    if (releaseBuild && Build.TAGS?.contains("test-keys", ignoreCase = true) == true) {
+      signals.add("test_keys")
+    }
+    if (releaseBuild && hasRootArtifactSignal()) signals.add("root_artifact")
+    if (releaseBuild && hasInstrumentationSignal()) signals.add("instrumentation")
+
+    return JSONObject()
+      .put("releaseBuild", releaseBuild)
+      .put("appDebuggable", appDebuggable)
+      .put("debuggerAttached", debuggerAttached)
+      .put("riskDetected", releaseBuild && signals.isNotEmpty())
+      .put("mode", "warning-only")
+      .put("signals", JSONArray(signals.toList()))
+  }
+
+  private fun hasRootArtifactSignal(): Boolean {
+    return ROOT_ARTIFACT_PATHS.any { candidate ->
+      try {
+        java.io.File(candidate).exists()
+      } catch (_: SecurityException) {
+        false
+      }
+    }
+  }
+
+  private fun hasInstrumentationSignal(): Boolean {
+    return try {
+      java.io.File("/proc/self/maps").useLines { lines ->
+        lines.any { line ->
+          val normalized = line.lowercase()
+          INSTRUMENTATION_MARKERS.any(normalized::contains)
+        }
+      }
+    } catch (_: Exception) {
+      false
+    }
+  }
+
   private fun createAutofillPresentation(label: String): RemoteViews {
     return RemoteViews(packageName, android.R.layout.simple_list_item_1).apply {
       setTextViewText(android.R.id.text1, label)
@@ -622,5 +693,21 @@ class MainActivity : TauriActivity() {
     private const val SECURE_STORAGE_CIPHER = "AES/GCM/NoPadding"
     private const val AUTOFILL_REQUEST_MAX_AGE_MS = 5 * 60 * 1000L
     private const val AUTOFILL_LOG_TAG = "AegisAutofill"
+    private val ROOT_ARTIFACT_PATHS = arrayOf(
+      "/system/app/Superuser.apk",
+      "/system/bin/su",
+      "/system/xbin/su",
+      "/sbin/su",
+      "/su/bin/su",
+      "/data/adb/magisk",
+      "/data/adb/ksu",
+    )
+    private val INSTRUMENTATION_MARKERS = arrayOf(
+      "frida",
+      "gum-js-loop",
+      "xposed",
+      "substrate",
+      "zygisk",
+    )
   }
 }
