@@ -1,9 +1,13 @@
-import React, { Fragment, useCallback, useState, useEffect, memo } from 'react';
+import React, { Fragment, useCallback, useState, useEffect, useRef, useReducer, memo } from 'react';
 import { ArrowLeft, CreditCard, FileText, Fingerprint, Heart, KeyRound, Layers, LayoutDashboard, Lock, Plus, Search, Smartphone, User, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import type { VaultCategoryFilter } from '../hooks/useVaultFilters';
 import type { FilteredVaultItem } from '../hooks/useVaultQueries';
+import {
+  createInitialPaginationState,
+  createVaultPaginationReducer,
+} from '../hooks/useVaultPagination';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { androidAutofillTargetLabel, type AndroidAutofillRequest } from '../lib/androidAutofill';
@@ -138,60 +142,77 @@ export function VaultWorkspaceContent({
   const { t } = useLanguage();
   const autofillTargetLabel = androidAutofillTargetLabel(autofillRequest);
 
-  const [visibleCount, setVisibleCount] = useState(60);
+  const [paginationState, dispatchPagination] = useReducer(
+    createVaultPaginationReducer(),
+    filteredItems.length,
+    (totalCount) => createInitialPaginationState(totalCount),
+  );
+  const visibleCount = paginationState.visibleCount;
+  const resetVisibleCount = useCallback(() => {
+    dispatchPagination({ type: 'reset', totalCount: filteredItems.length });
+  }, [filteredItems.length]);
   const [dragOverCategory, setDragOverCategory] = useState<VaultCategoryFilter | null>(null);
 
-  // Reset visibleCount if search query or filters change
-  useEffect(() => {
-    setVisibleCount(60);
-  }, [filteredItems]);
+  // Sentinel ref. The sentinel is the last <button> inside the scrollable
+  // container; an IntersectionObserver attached to it is the only thing
+  // that ever calls loadMore. We deliberately do not listen for scroll
+  // events: on Android WebView the combination of framer-motion's layout
+  // animations on the row mount/unmount and the synchronous scrollHeight
+  // growth causes the scrollTop to bounce inside the bottom threshold,
+  // which used to fire `loadMore` 3-4 times per frame and produced a
+  // self-feeding scroll loop (the user saw the list scrubbing on its own).
+  const sentinelRef = useRef<HTMLButtonElement | null>(null);
 
-  // The vault list grows up to 600+ items for an Aegis export. Rendering
-  // every row at once is wasteful and freezes the WebView on first
-  // paint, but the original onScroll handler relied on a single nested
-  // <div> being the only scroll surface. If the parent flex container
-  // did not have a fixed height (e.g. when the .safe-screen min-height
-  // root grew past the viewport), the nested div's scrollTop never
-  // changed and the infinite-scroll threshold was never reached, so
-  // the user only ever saw the first 30 items. We now:
-  //   1. Keep the original nested onScroll handler for the normal case.
-  //   2. Also listen for window scroll events so even if the body itself
-  //      becomes the scroller the next batch is loaded.
-  //   3. Append a small "Daha fazla göster" affordance so the user is
-  //      never stuck on the first page even if both scroll surfaces
-  //      somehow fail to fire.
+  // Reset visibleCount if the filtered set changes.
+  useEffect(() => {
+    resetVisibleCount();
+  }, [resetVisibleCount]);
+
   const loadMore = useCallback(() => {
-    setVisibleCount((prev) => {
-      if (prev >= filteredItems.length) return prev;
-      return Math.min(prev + 30, filteredItems.length);
-    });
+    dispatchPagination({ type: 'loadMore', totalCount: filteredItems.length });
   }, [filteredItems.length]);
 
-  const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const target = e.currentTarget;
-    // Check if we are near the bottom of the scroll container
-    if (target.scrollHeight - target.scrollTop <= target.clientHeight + 300) {
-      loadMore();
-    }
-  };
-
-  // Window-level fallback. In some layouts (mobile, rescaled window,
-  // Safari rubber-band) the body becomes the scroller instead of the
-  // nested list container. We mirror the bottom-of-page detection here
-  // so the next batch is loaded regardless of which surface is active.
+  // Release the loading guard after a paint so the next batch can be
+  // scheduled once the new items are committed to the DOM. The reducer
+  // tracks the guard internally; we only need to tell it when to release.
   useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-
-    const handleWindowScroll = () => {
-      const scrolled = window.scrollY + window.innerHeight;
-      if (document.documentElement.scrollHeight - scrolled <= 300) {
-        loadMore();
+    if (!paginationState.loadingMore) return;
+    const id = (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function')
+      ? window.requestAnimationFrame(() => {
+          dispatchPagination({ type: 'release' });
+        })
+      : (setTimeout(() => dispatchPagination({ type: 'release' }), 0) as unknown as number);
+    return () => {
+      if (typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+        window.cancelAnimationFrame(id);
+      } else {
+        clearTimeout(id as unknown as ReturnType<typeof setTimeout>);
       }
     };
+  }, [paginationState.loadingMore]);
 
-    window.addEventListener('scroll', handleWindowScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleWindowScroll);
-  }, [loadMore]);
+  // Single source of truth for "are we close to the bottom": an
+  // IntersectionObserver attached to the sentinel button. It is unaffected
+  // by scrollHeight jitter from layout animations and never fires more
+  // often than once per IO callback batch.
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return undefined;
+    if (typeof IntersectionObserver === 'undefined') return undefined;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            loadMore();
+          }
+        }
+      },
+      { rootMargin: '300px 0px 300px 0px', threshold: 0 },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loadMore, visibleCount]);
 
   const autofillMatchCount = isAutofillMode
     ? filteredItems.filter((item) => isAndroidAutofillTargetMatch(item, autofillRequest)).length
@@ -244,7 +265,7 @@ export function VaultWorkspaceContent({
               data-testid="vault-filter-all"
               onClick={() => {
                 onSetFavoritesOnly(false);
-                setVisibleCount(60);
+                resetVisibleCount();
               }}
               className={`flex-1 py-1.5 rounded-md font-bold transition-all text-center cursor-pointer ${
                 !filterFavoritesOnly
@@ -258,7 +279,7 @@ export function VaultWorkspaceContent({
               data-testid="vault-filter-favorites"
               onClick={() => {
                 onSetFavoritesOnly(true);
-                setVisibleCount(60);
+                resetVisibleCount();
               }}
               className={`flex-1 py-1.5 rounded-md font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer ${
                 filterFavoritesOnly
@@ -291,7 +312,7 @@ export function VaultWorkspaceContent({
                   data-testid={`category-chip-${cat.key}`}
                   onClick={() => {
                     onSelectCategory(cat.key);
-                    setVisibleCount(60);
+                    resetVisibleCount();
                   }}
                   onDragOver={(e) => {
                     if (isDropAllowed) {
@@ -414,7 +435,6 @@ export function VaultWorkspaceContent({
         </div>
 
         <div
-          onScroll={handleListScroll}
           className="flex-1 overflow-y-auto p-3 pt-0 space-y-1.5 scrollbar-hide"
         >
           {displayedItems.length === 0 ? (
@@ -471,6 +491,7 @@ export function VaultWorkspaceContent({
 
           {visibleCount < filteredItems.length && (
             <button
+              ref={sentinelRef}
               type="button"
               data-testid="vault-list-load-more"
               onClick={loadMore}
