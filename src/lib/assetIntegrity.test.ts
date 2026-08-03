@@ -5,9 +5,13 @@ import { canonicalAssetPayload, verifyRuntimeAssetIntegrity } from './assetInteg
 
 const invokeMock = vi.hoisted(() => vi.fn());
 const isDesktopRuntimeMock = vi.hoisted(() => vi.fn());
+const isAndroidRuntimeMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: invokeMock }));
-vi.mock('./desktopStorage', () => ({ isDesktopRuntime: isDesktopRuntimeMock }));
+vi.mock('./desktopStorage', () => ({
+  isAndroidRuntime: isAndroidRuntimeMock,
+  isDesktopRuntime: isDesktopRuntimeMock,
+}));
 
 function hash(value: Uint8Array | string): string {
   return createHash('sha256').update(value).digest('hex');
@@ -28,8 +32,10 @@ describe('runtime asset integrity', () => {
   beforeEach(() => {
     invokeMock.mockReset();
     isDesktopRuntimeMock.mockReset();
+    isAndroidRuntimeMock.mockReset();
     vi.unstubAllGlobals();
     isDesktopRuntimeMock.mockReturnValue(true);
+    isAndroidRuntimeMock.mockReturnValue(false);
   });
 
   it('skips browser and debug runtimes', async () => {
@@ -37,8 +43,18 @@ describe('runtime asset integrity', () => {
     await expect(verifyRuntimeAssetIntegrity()).resolves.toEqual({ status: 'skipped', reason: 'browser-runtime' });
 
     isDesktopRuntimeMock.mockReturnValue(true);
+    isAndroidRuntimeMock.mockReturnValue(false);
     invokeMock.mockResolvedValue({ schemaVersion: 1, algorithm: 'SHA-256', rootSha256: '', production: false });
     await expect(verifyRuntimeAssetIntegrity()).resolves.toEqual({ status: 'skipped', reason: 'debug-build' });
+  });
+
+  it('uses Android APK signing as the package integrity boundary', async () => {
+    isAndroidRuntimeMock.mockReturnValue(true);
+    await expect(verifyRuntimeAssetIntegrity()).resolves.toEqual({
+      status: 'skipped',
+      reason: 'android-signed-package',
+    });
+    expect(invokeMock).not.toHaveBeenCalled();
   });
 
   it('verifies the manifest root and every packaged asset', async () => {

@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 
-import { isDesktopRuntime } from './desktopStorage';
+import { isAndroidRuntime, isDesktopRuntime } from './desktopStorage';
 
 const MANIFEST_PATH = './aegis-integrity.json';
 const MAX_ASSET_COUNT = 256;
@@ -29,7 +29,7 @@ interface NativeIntegrityAnchor {
 
 export type AssetIntegrityResult =
   | { status: 'verified'; assetCount: number }
-  | { status: 'skipped'; reason: 'browser-runtime' | 'debug-build' }
+  | { status: 'skipped'; reason: 'browser-runtime' | 'android-signed-package' | 'debug-build' }
   | { status: 'failed'; reason: string };
 
 function bytesToHex(bytes: Uint8Array): string {
@@ -95,6 +95,10 @@ async function fetchJson(url: string): Promise<unknown> {
 
 export async function verifyRuntimeAssetIntegrity(): Promise<AssetIntegrityResult> {
   if (!isDesktopRuntime()) return { status: 'skipped', reason: 'browser-runtime' };
+  // Android's APK signature is the package integrity boundary. Tauri's Android
+  // WebView serves embedded assets through a different transport than desktop,
+  // so hashing them again here creates false positives without adding security.
+  if (isAndroidRuntime()) return { status: 'skipped', reason: 'android-signed-package' };
 
   let anchor: NativeIntegrityAnchor;
   try {

@@ -25,7 +25,7 @@
     "android:build:apk": "tauri android build --apk",
     "android:build:apk:debug": "tauri android build --apk --debug",
     "android:build:apk:debug:aarch64": "npm run android:clean:jni && tauri android build --apk --debug --target aarch64",
-    "android:build:apk:aarch64": "npm run android:clean:jni && tauri android build --apk --target aarch64",
+    "android:build:apk:aarch64": "node scripts/android-build-release.cjs",
     "android:release:gate": "node scripts/android-release-gate.cjs",
     "android:release:evidence": "node scripts/android-release-evidence.cjs",
     "android:release:evidence:verify": "node scripts/android-release-evidence-verify.cjs",
