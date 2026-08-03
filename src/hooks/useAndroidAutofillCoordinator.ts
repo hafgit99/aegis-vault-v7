@@ -10,6 +10,8 @@ import {
   getPendingAndroidAutofillRequest,
   getPendingAndroidAutofillSaveCandidate,
   isAndroidAutofillRequestFresh,
+  requiresEncryptedAutofillSaveResolution,
+  resolveEncryptedAndroidAutofillSaveCandidate,
   subscribeAndroidAutofillRequests,
   subscribeAndroidAutofillSaveCandidates,
 } from '../lib/androidAutofill';
@@ -92,6 +94,25 @@ export function useAndroidAutofillCoordinator({
   useEffect(() => {
     if (!unlocked || !pendingAutofillSaveCandidate) return;
     if (handledAutofillSaveRef.current === pendingAutofillSaveCandidate.requestId) return;
+    if (requiresEncryptedAutofillSaveResolution(pendingAutofillSaveCandidate)) {
+      // The save candidate still references an encrypted temp file. Resolve
+      // it via the native bridge so we never look at the password until it
+      // has been decrypted in-process. The bridge deletes the file on read.
+      const resolved = resolveEncryptedAndroidAutofillSaveCandidate(pendingAutofillSaveCandidate.requestId);
+      if (!resolved) {
+        clearPendingAndroidAutofillSaveCandidate(pendingAutofillSaveCandidate.requestId);
+        handledAutofillSaveRef.current = pendingAutofillSaveCandidate.requestId;
+        setPendingAutofillSaveCandidate(null);
+        showNotification({
+          title: t('autofill.saveCaptured.title'),
+          message: t('autofill.saveCaptured.message'),
+          type: 'info',
+        });
+        return;
+      }
+      setPendingAutofillSaveCandidate(resolved);
+      return;
+    }
 
     handledAutofillSaveRef.current = pendingAutofillSaveCandidate.requestId;
     clearPendingAndroidAutofillSaveCandidate(pendingAutofillSaveCandidate.requestId);

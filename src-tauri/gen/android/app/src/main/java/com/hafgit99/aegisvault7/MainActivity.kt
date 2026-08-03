@@ -24,6 +24,7 @@ import android.view.autofill.AutofillManager
 import android.view.autofill.AutofillValue
 import android.widget.RemoteViews
 import androidx.activity.enableEdgeToEdge
+import com.hafgit99.aegisvault7.security.SecureTempFileStorage
 import java.nio.charset.StandardCharsets
 import java.security.KeyStore
 import javax.crypto.Cipher
@@ -194,16 +195,42 @@ class MainActivity : TauriActivity() {
       val requestId = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_REQUEST_ID)
         ?: "android-autofill-save-${System.currentTimeMillis()}"
       val createdAt = intent.getLongExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_CREATED_AT, System.currentTimeMillis())
-      pendingAutofillSaveCandidate = AutofillSaveCandidate(
-        requestId = requestId,
-        createdAt = createdAt,
-        title = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_TITLE).orEmpty(),
-        username = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_USERNAME).orEmpty(),
-        password = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_PASSWORD).orEmpty(),
-        url = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_URL)?.takeIf { it.isNotBlank() },
-        appPackage = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_APP_PACKAGE)?.takeIf { it.isNotBlank() },
-        webDomain = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_WEB_DOMAIN)?.takeIf { it.isNotBlank() },
-      )
+      val payloadUri = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_PAYLOAD_URI)
+      val payloadToken = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_PAYLOAD_TOKEN)
+
+      if (payloadUri != null && payloadToken != null) {
+        // Modern path: the password is sealed inside an encrypted temp file
+        // referenced by the FileProvider URI. The WebView will resolve it via
+        // [getPendingSaveCandidateFromUri] which consumes the file once and
+        // then deletes it.
+        pendingAutofillSaveCandidate = AutofillSaveCandidate(
+          requestId = requestId,
+          createdAt = createdAt,
+          title = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_TITLE).orEmpty(),
+          username = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_USERNAME).orEmpty(),
+          password = "",
+          url = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_URL)?.takeIf { it.isNotBlank() },
+          appPackage = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_APP_PACKAGE)?.takeIf { it.isNotBlank() },
+          webDomain = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_WEB_DOMAIN)?.takeIf { it.isNotBlank() },
+          payloadUri = payloadUri,
+          payloadToken = payloadToken,
+        )
+      } else {
+        // Legacy fallback: an older autofill service may still ship the
+        // password as a plaintext extra. We honor it to avoid breaking older
+        // builds, but log a warning so we notice the regression.
+        Log.w(AUTOFILL_LOG_TAG, "Save intent delivered via legacy plaintext extras; please upgrade")
+        pendingAutofillSaveCandidate = AutofillSaveCandidate(
+          requestId = requestId,
+          createdAt = createdAt,
+          title = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_TITLE).orEmpty(),
+          username = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_USERNAME).orEmpty(),
+          password = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_PASSWORD).orEmpty(),
+          url = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_URL)?.takeIf { it.isNotBlank() },
+          appPackage = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_APP_PACKAGE)?.takeIf { it.isNotBlank() },
+          webDomain = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_WEB_DOMAIN)?.takeIf { it.isNotBlank() },
+        )
+      }
       return
     }
 
@@ -451,10 +478,70 @@ class MainActivity : TauriActivity() {
       return pendingAutofillSaveCandidate?.toJson()?.toString()
     }
 
+    /**
+     * Resolves the encrypted save payload referenced by [requestId]. Returns
+     * the JSON of an [AutofillSaveCandidate] with the decrypted password in
+     * place, or null if the request has already been consumed / has expired.
+     *
+     * The WebView calls this exactly once per save candidate: the file is
+     * deleted on consumption, and the in-memory copy is wiped by
+     * [clearPendingSaveCandidate].
+     */
+    @JavascriptInterface
+    fun resolveEncryptedSavePayload(requestId: String): String? {
+      val current = pendingAutofillSaveCandidate ?: return null
+      if (current.requestId != requestId) return null
+      if (!current.requiresUriResolution()) {
+        return current.toJson().toString()
+      }
+
+      val token = current.payloadToken ?: return null
+      val plaintext = try {
+        SecureTempFileStorage(this@MainActivity).consume(token)
+      } catch (error: Exception) {
+        Log.w(AUTOFILL_LOG_TAG, "Failed to resolve encrypted save payload: ${error.message ?: "unknown"}")
+        null
+      }
+
+      val resolved = if (plaintext != null) {
+        try {
+          val parsed = JSONObject(String(plaintext, StandardCharsets.UTF_8))
+          current.copy(
+            password = parsed.optString("password", ""),
+            title = parsed.optString("title", current.title).ifBlank { current.title },
+            username = parsed.optString("username", current.username).ifBlank { current.username },
+            url = parsed.optString("url", current.url.orEmpty()).ifBlank { current.url },
+          )
+        } catch (error: Exception) {
+          Log.w(AUTOFILL_LOG_TAG, "Decrypted payload was not valid JSON: ${error.message ?: "unknown"}")
+          null
+        }
+      } else {
+        null
+      }
+
+      if (resolved == null) {
+        pendingAutofillSaveCandidate = null
+        return null
+      }
+
+      pendingAutofillSaveCandidate = resolved
+      return resolved.toJson().toString()
+    }
+
     @JavascriptInterface
     fun clearPendingSaveCandidate(requestId: String): Boolean {
       val current = pendingAutofillSaveCandidate ?: return true
       if (current.requestId != requestId) return false
+      // Best-effort sweep of any orphaned encrypted temp files left behind by
+      // a previous, unconsumed save attempt. This is a defensive purge; the
+      // normal flow already deletes the file when [resolveEncryptedSavePayload]
+      // succeeds.
+      try {
+        SecureTempFileStorage(this@MainActivity).purge()
+      } catch (error: Exception) {
+        Log.w(AUTOFILL_LOG_TAG, "Temp file purge failed: ${error.message ?: "unknown"}")
+      }
       pendingAutofillSaveCandidate = null
       return true
     }
@@ -645,9 +732,19 @@ class MainActivity : TauriActivity() {
     val url: String?,
     val appPackage: String?,
     val webDomain: String?,
+    val payloadUri: String? = null,
+    val payloadToken: String? = null,
   ) {
-    fun toJson(): JSONObject =
-      JSONObject()
+    /**
+     * Returns true when the candidate carries an encrypted FileProvider URI
+     * that still needs to be decrypted by the WebView side. In that case the
+     * password field stays empty until [resolveEncryptedSavePayload] runs.
+     */
+    fun requiresUriResolution(): Boolean =
+      payloadUri != null && payloadToken != null
+
+    fun toJson(): JSONObject {
+      val base = JSONObject()
         .put("requestId", requestId)
         .put("createdAt", createdAt)
         .put("source", "android-autofill-save")
@@ -657,6 +754,11 @@ class MainActivity : TauriActivity() {
         .put("url", url)
         .put("appPackage", appPackage)
         .put("webDomain", webDomain)
+
+      if (payloadUri != null) base.put("payloadUri", payloadUri)
+      if (payloadToken != null) base.put("payloadToken", payloadToken)
+      return base
+    }
   }
 
   private data class AutofillLaunchRequest(

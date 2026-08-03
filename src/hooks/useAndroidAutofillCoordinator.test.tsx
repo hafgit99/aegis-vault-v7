@@ -18,6 +18,7 @@ const autofillState = vi.hoisted(() => ({
   saveListeners: [] as Array<(candidate: any) => void>,
   fresh: true,
   completeResult: true,
+  resolvedSaves: new Map<string, any>(),
 }));
 
 const androidAutofillMock = vi.hoisted(() => ({
@@ -41,6 +42,17 @@ const androidAutofillMock = vi.hoisted(() => ({
   getPendingAndroidAutofillRequest: vi.fn(() => autofillState.pendingRequest),
   getPendingAndroidAutofillSaveCandidate: vi.fn(() => autofillState.pendingSaveCandidate),
   isAndroidAutofillRequestFresh: vi.fn(() => autofillState.fresh),
+  requiresEncryptedAutofillSaveResolution: vi.fn((candidate: any) =>
+    Boolean(candidate && candidate.payloadUri && candidate.payloadToken && candidate.password === ''),
+  ),
+  resolveEncryptedAndroidAutofillSaveCandidate: vi.fn((requestId: string) => {
+    if (autofillState.resolvedSaves.has(requestId)) {
+      const resolved = autofillState.resolvedSaves.get(requestId);
+      autofillState.resolvedSaves.delete(requestId);
+      return resolved;
+    }
+    return null;
+  }),
   subscribeAndroidAutofillRequests: vi.fn((listener: (request: any) => void) => {
     autofillState.requestListeners.push(listener);
     return () => {
@@ -126,6 +138,7 @@ describe('useAndroidAutofillCoordinator', () => {
     autofillState.saveListeners = [];
     autofillState.fresh = true;
     autofillState.completeResult = true;
+    autofillState.resolvedSaves = new Map();
     vi.clearAllMocks();
   });
 
@@ -333,5 +346,63 @@ describe('useAndroidAutofillCoordinator', () => {
       url: 'fallback.example',
       category: 'login',
     });
-  });});
+  });
+
+  it('resolves encrypted save payloads via the native bridge before opening the form', async () => {
+    const encryptedCandidate = {
+      ...saveCandidate({ requestId: 'encrypted-save' }),
+      password: '',
+      payloadUri: 'content://com.hafgit99.aegisvault7.fileprovider/aegis-autofill-tmp/abcd.aest',
+      payloadToken: 'opaque-token',
+    };
+    autofillState.pendingSaveCandidate = encryptedCandidate;
+    autofillState.resolvedSaves.set('encrypted-save', {
+      ...encryptedCandidate,
+      password: 'Decrypted!Pass1',
+    });
+
+    const { openNewItemForm, setActiveTab } = renderCoordinator(true);
+
+    await act(async () => {
+      autofillState.saveListeners[0](encryptedCandidate);
+      await Promise.resolve();
+    });
+
+    expect(androidAutofillMock.resolveEncryptedAndroidAutofillSaveCandidate).toHaveBeenCalledWith('encrypted-save');
+    expect(androidAutofillMock.clearPendingAndroidAutofillSaveCandidate).toHaveBeenCalledWith('encrypted-save');
+    expect(setActiveTab).toHaveBeenCalledWith('vault');
+    expect(openNewItemForm).toHaveBeenCalledWith({
+      title: 'Example',
+      username: 'alice',
+      password: 'Decrypted!Pass1',
+      url: 'https://example.com/login',
+      category: 'login',
+    });
+  });
+
+  it('skips the form when the encrypted payload cannot be resolved', async () => {
+    const encryptedCandidate = {
+      ...saveCandidate({ requestId: 'encrypted-missing' }),
+      password: '',
+      payloadUri: 'content://com.hafgit99.aegisvault7.fileprovider/aegis-autofill-tmp/missing.aest',
+      payloadToken: 'opaque-token',
+    };
+    const { openNewItemForm, setActiveTab, showNotification } = renderCoordinator(true);
+
+    await act(async () => {
+      autofillState.saveListeners[0](encryptedCandidate);
+      await Promise.resolve();
+    });
+
+    expect(androidAutofillMock.resolveEncryptedAndroidAutofillSaveCandidate).toHaveBeenCalledWith('encrypted-missing');
+    expect(openNewItemForm).not.toHaveBeenCalled();
+    expect(setActiveTab).not.toHaveBeenCalledWith('vault');
+    expect(androidAutofillMock.clearPendingAndroidAutofillSaveCandidate).toHaveBeenCalledWith('encrypted-missing');
+    expect(showNotification).toHaveBeenCalledWith({
+      title: 'autofill.saveCaptured.title',
+      message: 'autofill.saveCaptured.message',
+      type: 'info',
+    });
+  });
+});
 

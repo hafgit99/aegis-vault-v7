@@ -2,6 +2,7 @@ package com.hafgit99.aegisvault7
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.service.autofill.AutofillService
 import android.service.autofill.FillCallback
@@ -17,6 +18,9 @@ import android.view.autofill.AutofillId
 import android.app.assist.AssistStructure
 import android.widget.RemoteViews
 import androidx.annotation.RequiresApi
+import androidx.core.content.FileProvider
+import com.hafgit99.aegisvault7.security.SecureTempFileStorage
+import org.json.JSONObject
 
 @RequiresApi(Build.VERSION_CODES.O)
 class AegisAutofillService : AutofillService() {
@@ -69,26 +73,86 @@ class AegisAutofillService : AutofillService() {
       return
     }
 
+    val createdAt = System.currentTimeMillis()
+    val requestId = "android-autofill-save-$createdAt"
+
     try {
+      val (payloadUri, token) = stashEncryptedPayload(requestId, candidate)
+        ?: run {
+          Log.w(AUTOFILL_LOG_TAG, "SaveRequest could not stage encrypted payload")
+          callback.onSuccess()
+          return
+        }
+
       val intent = Intent(this, MainActivity::class.java).apply {
         action = ACTION_AUTOFILL_SAVE
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        putExtra(EXTRA_AUTOFILL_SAVE_REQUEST_ID, "android-autofill-save-${System.currentTimeMillis()}")
-        putExtra(EXTRA_AUTOFILL_SAVE_CREATED_AT, System.currentTimeMillis())
+        // The Intent now carries only non-sensitive metadata. The password
+        // travels through the FileProvider URI + decryption token and never
+        // touches the Binder transaction buffer.
+        putExtra(EXTRA_AUTOFILL_SAVE_REQUEST_ID, requestId)
+        putExtra(EXTRA_AUTOFILL_SAVE_CREATED_AT, createdAt)
         putExtra(EXTRA_AUTOFILL_SAVE_TITLE, candidate.title())
         putExtra(EXTRA_AUTOFILL_SAVE_USERNAME, candidate.username)
-        putExtra(EXTRA_AUTOFILL_SAVE_PASSWORD, candidate.password)
+        putExtra(EXTRA_AUTOFILL_SAVE_PAYLOAD_URI, payloadUri.toString())
+        putExtra(EXTRA_AUTOFILL_SAVE_PAYLOAD_TOKEN, token)
         putExtra(EXTRA_AUTOFILL_SAVE_URL, candidate.url())
         putExtra(EXTRA_AUTOFILL_APP_PACKAGE, candidate.appPackage)
         putExtra(EXTRA_AUTOFILL_WEB_DOMAIN, candidate.webDomain)
       }
       startActivity(intent)
-      Log.i(AUTOFILL_LOG_TAG, "SaveRequest forwarded to Aegis package=${candidate.appPackage ?: "unknown"} domain=${candidate.webDomain ?: "unknown"}")
+      Log.i(
+        AUTOFILL_LOG_TAG,
+        "SaveRequest forwarded to Aegis package=${candidate.appPackage ?: "unknown"} " +
+          "domain=${candidate.webDomain ?: "unknown"} payload=encrypted",
+      )
     } catch (error: Exception) {
       Log.w(AUTOFILL_LOG_TAG, "SaveRequest could not launch Aegis: ${error.message ?: "unknown"}")
     }
 
     callback.onSuccess()
+  }
+
+  /**
+   * Writes [candidate] to a short-lived AES-256-GCM encrypted file inside the
+   * app's private cache directory and returns a FileProvider URI plus a
+   * decryption token. Returns null if staging fails for any reason, in which
+   * case the caller must abort the autofill save flow to avoid leaking the
+   * password through alternative channels.
+   */
+  private fun stashEncryptedPayload(
+    requestId: String,
+    candidate: SaveCandidate,
+  ): Pair<Uri, String>? {
+    val tempStorage = SecureTempFileStorage(applicationContext)
+
+    val payload = JSONObject().apply {
+      put("requestId", requestId)
+      put("title", candidate.title())
+      put("username", candidate.username)
+      put("password", candidate.password)
+      put("url", candidate.url())
+      put("appPackage", candidate.appPackage ?: JSONObject.NULL)
+      put("webDomain", candidate.webDomain ?: JSONObject.NULL)
+    }
+
+    val (token, cacheFile) = try {
+      tempStorage.stashWithFile(payload.toString().toByteArray(Charsets.UTF_8))
+    } catch (error: Exception) {
+      Log.w(AUTOFILL_LOG_TAG, "Failed to encrypt save payload: ${error.message ?: "unknown"}")
+      return null
+    }
+
+    val authority = "${packageName}.fileprovider"
+    val uri = try {
+      FileProvider.getUriForFile(applicationContext, authority, cacheFile)
+    } catch (error: Exception) {
+      Log.w(AUTOFILL_LOG_TAG, "FileProvider URI build failed: ${error.message ?: "unknown"}")
+      cacheFile.delete()
+      return null
+    }
+
+    return uri to token
   }
 
   private fun collectLoginFields(structure: AssistStructure): LoginFields {
@@ -254,7 +318,15 @@ class AegisAutofillService : AutofillService() {
     const val EXTRA_AUTOFILL_SAVE_CREATED_AT = "com.hafgit99.aegisvault7.extra.AUTOFILL_SAVE_CREATED_AT"
     const val EXTRA_AUTOFILL_SAVE_TITLE = "com.hafgit99.aegisvault7.extra.AUTOFILL_SAVE_TITLE"
     const val EXTRA_AUTOFILL_SAVE_USERNAME = "com.hafgit99.aegisvault7.extra.AUTOFILL_SAVE_USERNAME"
+    /**
+     * Deprecated. Older autofill builds wrote the plaintext password to the
+     * intent extras under this key. Newer builds must use
+     * [EXTRA_AUTOFILL_SAVE_PAYLOAD_URI] + [EXTRA_AUTOFILL_SAVE_PAYLOAD_TOKEN]
+     * so the password never leaves the FileProvider-controlled cache file.
+     */
     const val EXTRA_AUTOFILL_SAVE_PASSWORD = "com.hafgit99.aegisvault7.extra.AUTOFILL_SAVE_PASSWORD"
+    const val EXTRA_AUTOFILL_SAVE_PAYLOAD_URI = "com.hafgit99.aegisvault7.extra.AUTOFILL_SAVE_PAYLOAD_URI"
+    const val EXTRA_AUTOFILL_SAVE_PAYLOAD_TOKEN = "com.hafgit99.aegisvault7.extra.AUTOFILL_SAVE_PAYLOAD_TOKEN"
     const val EXTRA_AUTOFILL_SAVE_URL = "com.hafgit99.aegisvault7.extra.AUTOFILL_SAVE_URL"
   }
 }

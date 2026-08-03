@@ -2,4 +2,10 @@
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
   <external-path name="my_images" path="." />
   <cache-path name="my_cache_images" path="." />
+  <!--
+    Scoped cache path for AegisVault's autofill encrypted payload handoff.
+    Only this directory is exposed to FileProvider for the secure temp file
+    flow; no other cache data is shareable.
+  -->
+  <cache-path name="aegis_autofill_tmp" path="aegis-autofill-tmp/" />
 </paths>

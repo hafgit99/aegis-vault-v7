@@ -14,6 +14,16 @@ declare global {
       completePendingRequest(requestId: string, username: string, password: string, label: string): boolean;
       getPendingSaveCandidate?(): string | null;
       clearPendingSaveCandidate?(requestId: string): boolean;
+      /**
+       * Resolves an encrypted autofill save payload referenced by
+       * [payloadUri] + [payloadToken]. Returns the JSON of the candidate with
+       * the decrypted password in place, or null if the payload has already
+       * been consumed, expired, or failed the integrity check.
+       *
+       * Implementations are expected to delete the backing file after a
+       * successful read so a single payload cannot be replayed.
+       */
+      resolveEncryptedSavePayload?(requestId: string): string | null;
     };
     __aegisAndroidAutofill?: {
       onRequest(request: AndroidAutofillRequest | null): void;
@@ -43,6 +53,20 @@ export interface AndroidAutofillSaveCandidate {
   url?: string | null;
   appPackage?: string | null;
   webDomain?: string | null;
+  /**
+   * Optional FileProvider URI pointing at an AES-256-GCM encrypted payload
+   * staged in the app's private cache directory. Combined with
+   * [payloadToken] this lets the WebView recover the password without ever
+   * letting it travel through Intent extras.
+   */
+  payloadUri?: string | null;
+  /**
+   * Token required to decrypt the payload referenced by [payloadUri]. The
+   * token never leaves the secure temp file boundary; the native bridge
+   * consumes it on demand and deletes the file as soon as the JSON is
+   * returned to JS.
+   */
+  payloadToken?: string | null;
 }
 
 type AndroidAutofillRequestListener = (request: AndroidAutofillRequest) => void;
@@ -86,6 +110,8 @@ function isAndroidAutofillSaveCandidate(value: unknown): value is AndroidAutofil
   const hasValidAppPackage = candidate.appPackage === undefined || candidate.appPackage === null || typeof candidate.appPackage === 'string';
   const hasValidWebDomain = candidate.webDomain === undefined || candidate.webDomain === null || typeof candidate.webDomain === 'string';
   const hasValidUrl = candidate.url === undefined || candidate.url === null || typeof candidate.url === 'string';
+  const hasValidPayloadUri = candidate.payloadUri === undefined || candidate.payloadUri === null || typeof candidate.payloadUri === 'string';
+  const hasValidPayloadToken = candidate.payloadToken === undefined || candidate.payloadToken === null || typeof candidate.payloadToken === 'string';
 
   return typeof candidate.requestId === 'string' &&
     typeof candidate.createdAt === 'number' &&
@@ -95,7 +121,9 @@ function isAndroidAutofillSaveCandidate(value: unknown): value is AndroidAutofil
     typeof candidate.password === 'string' &&
     hasValidUrl &&
     hasValidAppPackage &&
-    hasValidWebDomain;
+    hasValidWebDomain &&
+    hasValidPayloadUri &&
+    hasValidPayloadToken;
 }
 
 function parsePendingRequest(payload: string | null): AndroidAutofillRequest | null {
@@ -226,6 +254,40 @@ export function completePendingAndroidAutofillRequest(
   } catch {
     return false;
   }
+}
+
+/**
+ * Requests that the native bridge decrypt and return the encrypted save
+ * candidate associated with [requestId]. Returns null when the bridge does
+ * not implement the new path, the payload is missing, the integrity check
+ * fails, or the candidate has already been consumed.
+ *
+ * The native side deletes the encrypted file as soon as the JSON is returned,
+ * so callers must treat the result as a one-shot read.
+ */
+export function resolveEncryptedAndroidAutofillSaveCandidate(
+  requestId: string,
+): AndroidAutofillSaveCandidate | null {
+  const bridge = androidAutofillBridge();
+  if (!bridge || !bridge.resolveEncryptedSavePayload) return null;
+
+  try {
+    return parsePendingSaveCandidate(bridge.resolveEncryptedSavePayload(requestId));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Returns true when the supplied candidate carries an encrypted FileProvider
+ * payload that still needs to be resolved through the native bridge. In that
+ * case the [AndroidAutofillSaveCandidate.password] field is empty.
+ */
+export function requiresEncryptedAutofillSaveResolution(
+  candidate: AndroidAutofillSaveCandidate | null | undefined,
+): boolean {
+  if (!candidate) return false;
+  return Boolean(candidate.payloadUri && candidate.payloadToken && candidate.password === '');
 }
 
 export function androidAutofillTargetLabel(request: AndroidAutofillRequest | null | undefined): string | null {

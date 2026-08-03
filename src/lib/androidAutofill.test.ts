@@ -15,6 +15,8 @@ import {
   isAndroidAutofillEnabled,
   isAndroidAutofillSupported,
   openAndroidAutofillSettings,
+  requiresEncryptedAutofillSaveResolution,
+  resolveEncryptedAndroidAutofillSaveCandidate,
   subscribeAndroidAutofillRequests,
   subscribeAndroidAutofillSaveCandidates,
 } from './androidAutofill';
@@ -261,5 +263,74 @@ describe('android autofill bridge', () => {
       source: 'android-autofill',
     });
     expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  describe('encrypted autofill save resolution', () => {
+    const baseCandidate = {
+      requestId: 'android-autofill-save-encrypted',
+      createdAt: 1000,
+      source: 'android-autofill-save' as const,
+      title: 'Example',
+      username: 'alice',
+      password: '',
+      url: 'https://example.com',
+      appPackage: 'com.android.chrome',
+      webDomain: 'example.com',
+      payloadUri: 'content://com.hafgit99.aegisvault7.fileprovider/aegis-autofill-tmp/abcd.aest',
+      payloadToken: 'opaque-token',
+    };
+
+    it('returns null when the native bridge does not implement the resolver', () => {
+      window.AegisAndroidAutofill = {
+        isSupported: () => true,
+        isEnabled: () => true,
+        openSettings: () => true,
+        getPendingRequest: () => null,
+        clearPendingRequest: () => true,
+        completePendingRequest: () => true,
+      };
+
+      expect(resolveEncryptedAndroidAutofillSaveCandidate('android-autofill-save-encrypted')).toBeNull();
+    });
+
+    it('returns the decrypted candidate returned by the native bridge', () => {
+      const resolveEncryptedSavePayload = vi.fn(() =>
+        JSON.stringify({ ...baseCandidate, password: 'Decrypted!Pass1' }),
+      );
+      window.AegisAndroidAutofill = {
+        isSupported: () => true,
+        isEnabled: () => true,
+        openSettings: () => true,
+        getPendingRequest: () => null,
+        clearPendingRequest: () => true,
+        completePendingRequest: () => true,
+        resolveEncryptedSavePayload,
+      };
+
+      const resolved = resolveEncryptedAndroidAutofillSaveCandidate('android-autofill-save-encrypted');
+      expect(resolveEncryptedSavePayload).toHaveBeenCalledWith('android-autofill-save-encrypted');
+      expect(resolved).toEqual({ ...baseCandidate, password: 'Decrypted!Pass1' });
+    });
+
+    it('flags candidates whose password still needs to be resolved from a FileProvider URI', () => {
+      expect(requiresEncryptedAutofillSaveResolution(baseCandidate)).toBe(true);
+      expect(requiresEncryptedAutofillSaveResolution({ ...baseCandidate, password: 'Decrypted' })).toBe(false);
+      expect(requiresEncryptedAutofillSaveResolution({ ...baseCandidate, payloadUri: null })).toBe(false);
+      expect(requiresEncryptedAutofillSaveResolution(null)).toBe(false);
+    });
+
+    it('returns null when the native bridge payload fails validation', () => {
+      window.AegisAndroidAutofill = {
+        isSupported: () => true,
+        isEnabled: () => true,
+        openSettings: () => true,
+        getPendingRequest: () => null,
+        clearPendingRequest: () => true,
+        completePendingRequest: () => true,
+        resolveEncryptedSavePayload: () => JSON.stringify({ requestId: 42 }),
+      };
+
+      expect(resolveEncryptedAndroidAutofillSaveCandidate('android-autofill-save-encrypted')).toBeNull();
+    });
   });
 });
