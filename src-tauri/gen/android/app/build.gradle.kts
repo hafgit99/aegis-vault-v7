@@ -41,6 +41,16 @@ android {
                 storePassword = releaseKeystorePassword
                 keyAlias = releaseKeyAlias
                 keyPassword = releaseKeyPassword
+                // Android 13+ devices (and Play Integrity on newer releases)
+                // refuse to silently verify packages that only carry an APK
+                // Signature Scheme v2 signature, surfacing the "package
+                // integrity could not be verified" warning. Force all four
+                // schemes on so the produced APK passes PackageManager's
+                // integrity check on every supported Android version.
+                enableV1Signing = false
+                enableV2Signing = true
+                enableV3Signing = true
+                enableV4Signing = false
             }
         }
     }
