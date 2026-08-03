@@ -71,7 +71,20 @@ interface NativeBiometricInfoV3 {
   pbkdf2Iterations?: number;
 }
 
-type BiometricInfo = BiometricInfoV2 | NativeBiometricInfoV3;
+export interface BiometricInfoV4 {
+  version: 4;
+  kdf: 'WebCrypto PBKDF2-SHA256' | 'WebAuthn PRF + PBKDF2-SHA256';
+  cipher: 'WebCrypto AES-256-GCM';
+  credentialId: string;
+  salt: string;
+  prfSalt?: string;
+  prfSupported: boolean;
+  bundle: WebCryptoAesGcmPayload;
+  pbkdf2Iterations?: number;
+  authenticatorType?: 'platform' | 'cross-platform';
+}
+
+type BiometricInfo = BiometricInfoV2 | NativeBiometricInfoV3 | BiometricInfoV4;
 
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
@@ -273,6 +286,13 @@ export function getBiometricType(): 'platform' | 'cross-platform' | 'native' | n
   return cachedBiometricInfo.authenticatorType ?? 'platform';
 }
 
+export function isBiometricHardwareBound(): boolean {
+  if (!cachedBiometricInfo) return false;
+  if (cachedBiometricInfo.version === 4 && cachedBiometricInfo.prfSupported) return true;
+  if (cachedBiometricInfo.version === 3 && isSecureStorageAvailable()) return true;
+  return false;
+}
+
 export function disableBiometric(): void {
   cachedBiometricInfo = null;
   removeSecureStorageItem(secureStorageKeys.biometricInfo);
@@ -302,11 +322,9 @@ async function registerWebAuthnBiometric(masterPassword: string, type: 'platform
     throw new BiometricError(biometricErrorCodes.unsupported);
   }
 
-  // Create a randomized challenge
   const challenge = secureRandomBytes(32);
-
-  // Create a randomized userId
   const userId = secureRandomBytes(16);
+  const prfSalt = secureRandomBytes(32);
 
   const creationOptions: CredentialCreationOptions = {
     publicKey: {
@@ -327,6 +345,13 @@ async function registerWebAuthnBiometric(masterPassword: string, type: 'platform
         authenticatorAttachment: type,
         userVerification: "required",
       },
+      extensions: {
+        prf: {
+          eval: {
+            first: prfSalt.buffer,
+          },
+        },
+      } as any,
       timeout: 60000,
     }
   };
@@ -336,22 +361,33 @@ async function registerWebAuthnBiometric(masterPassword: string, type: 'platform
     throw new BiometricError(biometricErrorCodes.registrationCancelled);
   }
 
-  // Use rawId to derive the secure AES-256 wrapping key
   const rawIdBytes = new Uint8Array(credential.rawId);
-  
-  // Clean generated 16-byte random salt for PBKDF2-SHA256
   const salt = secureRandomBytes(16);
 
-  const wrappingKey = await deriveWebCryptoPbkdf2Key(rawIdBytes, salt, BIOMETRIC_PBKDF2_ITERATIONS, 32);
+  let prfSupported = false;
+  let keyMaterial: Uint8Array = rawIdBytes;
 
+  const clientExtResults = (credential as any).getClientExtensionResults ? (credential as any).getClientExtensionResults() : null;
+  const prfResult = clientExtResults?.prf?.results?.first;
+  if (prfResult) {
+    const prfSecret = new Uint8Array(prfResult);
+    keyMaterial = new Uint8Array(prfSecret.length + rawIdBytes.length);
+    keyMaterial.set(prfSecret);
+    keyMaterial.set(rawIdBytes, prfSecret.length);
+    prfSupported = true;
+  }
+
+  const wrappingKey = await deriveWebCryptoPbkdf2Key(keyMaterial, salt, BIOMETRIC_PBKDF2_ITERATIONS, 32);
   const bundle = await webCryptoAesGcmEncrypt(masterPassword, wrappingKey, generateSafeIv());
 
-  const biometricInfo: BiometricInfoV2 = {
-    version: 2,
-    kdf: 'WebCrypto PBKDF2-SHA256',
+  const biometricInfo: BiometricInfoV4 = {
+    version: 4,
+    kdf: prfSupported ? 'WebAuthn PRF + PBKDF2-SHA256' : 'WebCrypto PBKDF2-SHA256',
     cipher: 'WebCrypto AES-256-GCM',
     credentialId: bytesToBase64(new Uint8Array(credential.rawId)),
     salt: bytesToBase64(salt),
+    prfSalt: bytesToBase64(prfSalt),
+    prfSupported,
     bundle: bundle,
     pbkdf2Iterations: BIOMETRIC_PBKDF2_ITERATIONS,
     authenticatorType: type,
@@ -417,8 +453,16 @@ export async function authenticateBiometric(): Promise<string> {
 
   const credIdBytes = base64ToBytes(biometricInfo.credentialId);
   const saltBytes = base64ToBytes(biometricInfo.salt);
-
   const challenge = secureRandomBytes(32);
+
+  const extensions: any = {};
+  if ('prfSalt' in biometricInfo && biometricInfo.prfSalt) {
+    extensions.prf = {
+      eval: {
+        first: base64ToBytes(biometricInfo.prfSalt).buffer,
+      },
+    };
+  }
 
   const requestOptions: CredentialRequestOptions = {
     publicKey: {
@@ -430,6 +474,7 @@ export async function authenticateBiometric(): Promise<string> {
         }
       ],
       userVerification: "required",
+      extensions: Object.keys(extensions).length > 0 ? extensions : undefined,
       timeout: 60000,
     }
   };
@@ -440,11 +485,21 @@ export async function authenticateBiometric(): Promise<string> {
   }
 
   const rawIdBytes = new Uint8Array(assertion.rawId);
+  let keyMaterial: Uint8Array = rawIdBytes;
+
+  const clientExtResults = (assertion as any).getClientExtensionResults ? (assertion as any).getClientExtensionResults() : null;
+  const prfResult = clientExtResults?.prf?.results?.first;
+  if (prfResult) {
+    const prfSecret = new Uint8Array(prfResult);
+    keyMaterial = new Uint8Array(prfSecret.length + rawIdBytes.length);
+    keyMaterial.set(prfSecret);
+    keyMaterial.set(rawIdBytes, prfSecret.length);
+  }
 
   try {
-    if (biometricInfo.version === 2 && biometricInfo.cipher === 'WebCrypto AES-256-GCM') {
+    if ((biometricInfo.version === 2 || biometricInfo.version === 4) && biometricInfo.cipher === 'WebCrypto AES-256-GCM') {
       const iterations = biometricInfo.pbkdf2Iterations ?? BIOMETRIC_PBKDF2_ITERATIONS;
-      const wrappingKey = await deriveWebCryptoPbkdf2Key(rawIdBytes, saltBytes, iterations, 32);
+      const wrappingKey = await deriveWebCryptoPbkdf2Key(keyMaterial, saltBytes, iterations, 32);
       return webCryptoAesGcmDecrypt(biometricInfo.bundle, wrappingKey);
     }
 

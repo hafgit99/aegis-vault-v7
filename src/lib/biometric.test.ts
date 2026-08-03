@@ -20,6 +20,7 @@ import {
   biometricErrorCodes,
   disableBiometric,
   isBiometricEnabled,
+  isBiometricHardwareBound,
   isBiometricSupported,
   registerBiometric,
   hydrateBiometric,
@@ -143,7 +144,7 @@ describe('biometric master password wrapper', () => {
 
     expect(isBiometricEnabled()).toBe(true);
     expect(stored).toMatchObject({
-      version: 2,
+      version: 4,
       kdf: 'WebCrypto PBKDF2-SHA256',
       cipher: 'WebCrypto AES-256-GCM',
     });
@@ -361,5 +362,33 @@ describe('biometric master password wrapper', () => {
 
     await registerBiometric('master-pass', 'cross-platform');
     expect(getBiometricType()).toBe('cross-platform');
+  });
+
+  it('correctly assesses hardware-bound status for WebAuthn PRF and native secure storage', async () => {
+    expect(isBiometricHardwareBound()).toBe(false);
+
+    await registerBiometric('master-pass', 'platform');
+    const stored = await getStoredBiometricFromDB();
+    expect(stored.version).toBe(4);
+
+    const prfSecret = new Uint8Array(32).fill(42).buffer;
+    mockWebAuthn({
+      createCredential: {
+        rawId,
+        getClientExtensionResults: () => ({ prf: { results: { first: prfSecret } } }),
+      } as any,
+      getCredential: {
+        rawId,
+        getClientExtensionResults: () => ({ prf: { results: { first: prfSecret } } }),
+      } as any,
+    });
+
+    await registerBiometric('master-pass-prf', 'platform');
+    const storedPrf = await getStoredBiometricFromDB();
+    expect(storedPrf.version).toBe(4);
+    expect(storedPrf.prfSupported).toBe(true);
+    expect(isBiometricHardwareBound()).toBe(true);
+
+    await expect(authenticateBiometric()).resolves.toBe('master-pass-prf');
   });
 });

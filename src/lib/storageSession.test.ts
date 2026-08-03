@@ -237,10 +237,7 @@ describe('vault session storage', () => {
     expect(hasActiveMasterPassword()).toBe(true);
     expect(sessionStorage.getItem('aegis_session_master_pass')).toBeNull();
     expect(localStorage.getItem('aegis_is_setup')).toBe('true');
-    expect(sqliteOPFSInstance.reseedDemoWithKey).toHaveBeenCalledWith(
-      expect.any(Uint8Array),
-      expect.arrayContaining([expect.objectContaining({ id: '1', title: 'Demo Developer Portal' })]),
-    );
+    expect(sqliteOPFSInstance.reseedDemoWithKey).not.toHaveBeenCalled();
   });
 
   it('sets up a secret-key protected vault and can remember the second key locally', async () => {
@@ -258,10 +255,7 @@ describe('vault session storage', () => {
     expect(hasActiveMasterPassword()).toBe(true);
     expect(hasActiveBackupPassword()).toBe(true);
     expect(localStorage.getItem('aegis_is_setup')).toBe('true');
-    expect(sqliteOPFSInstance.reseedDemoWithKey).toHaveBeenCalledWith(
-      expect.any(Uint8Array),
-      expect.arrayContaining([expect.objectContaining({ id: '1', title: 'Demo Developer Portal' })]),
-    );
+    expect(sqliteOPFSInstance.reseedDemoWithKey).not.toHaveBeenCalled();
   });
 
   it('normalizes remembered secret keys and falls back to localStorage when secure storage rejects writes', () => {

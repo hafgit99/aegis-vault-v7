@@ -25,7 +25,7 @@ import {
   withActiveVaultEncryptionKey,
 } from './vaultSession';
 import { disableBiometric, hydrateBiometric } from './biometric';
-import { INITIAL_DEMO_ITEMS } from './storageDemoItems';
+import { createDemoItems } from './storageDemoItems';
 import {
   getSecureStorageItem,
   removeSecureStorageItem,
@@ -181,17 +181,18 @@ async function openDerivedVaultSession(credential: string, backupPassword: strin
 export async function verifyMasterPassword(password: string, secretKey?: string | null): Promise<boolean> {
   await initializeStorage();
   
+  const usableSecretKey = secretKey || getRememberedAccountSecretKey();
+  const credential = resolveVaultCredential(password, secretKey);
+
   if (isDesktopRuntime()) {
     const repo = getVaultStorageRepository();
     const salt = repo.getCurrentVaultEncryptionSalt ? await repo.getCurrentVaultEncryptionSalt() : 'aegis_vault_v7_db_encryption_salt';
     const kdfParams = repo.getKdfParams ? await repo.getKdfParams() : { memoryKiB: 32 * 1024, iterations: 3, parallelism: 1, hashLength: 32 };
     const argonHash = repo.getArgonHash ? await repo.getArgonHash() : '';
 
-    const usableSecretKey = secretKey || getRememberedAccountSecretKey();
-
     try {
       const vaultKeyBytes = await invoke<number[]>('open_rust_session', {
-        password,
+        password: credential,
         backupPassword: password,
         argonHash,
         salt,
@@ -218,7 +219,6 @@ export async function verifyMasterPassword(password: string, secretKey?: string 
       return false;
     }
   } else {
-    const credential = resolveVaultCredential(password, secretKey);
     const isCorrect = await getVaultStorageRepository().verifyPassword(credential);
     if (isCorrect) {
       let rawMasterPassword = password;
@@ -251,6 +251,7 @@ export async function setupMasterPassword(password: string): Promise<void> {
   await initializeStorage();
   
   if (isDesktopRuntime()) {
+    const credential = resolveVaultCredential(password);
     const salt = Array.from(crypto.getRandomValues(new Uint8Array(16)))
       .map((b) => b.toString(16).padStart(2, '0'))
       .join('');
@@ -261,7 +262,7 @@ export async function setupMasterPassword(password: string): Promise<void> {
       argonHash: string;
       salt: string;
     }>('setup_rust_session', {
-      password,
+      password: credential,
       backupPassword: password,
       secretKey: null,
       salt,
@@ -278,23 +279,10 @@ export async function setupMasterPassword(password: string): Promise<void> {
     }
     
     openVaultSession(vaultKeyBytes, { hasBackup: true, hasSecret: false });
-    
-    const seedKey = new Uint8Array(vaultKeyBytes);
-    try {
-      await getVaultStorageRepository().reseedDemoWithKey!(seedKey, INITIAL_DEMO_ITEMS);
-    } finally {
-      seedKey.fill(0);
-    }
   } else {
     const credential = resolveVaultCredential(password);
     await getVaultStorageRepository().setupMaster(credential);
     await openDerivedVaultSession(credential, password);
-    const seedKey = await getVaultStorageRepository().deriveEncryptionKey(credential);
-    try {
-      await getVaultStorageRepository().reseedDemoWithKey!(seedKey, INITIAL_DEMO_ITEMS);
-    } finally {
-      seedKey.fill(0);
-    }
   }
 
   try {
@@ -331,7 +319,7 @@ export async function setupMasterPasswordWithSecretKey(
       argonHash: string;
       salt: string;
     }>('setup_rust_session', {
-      password,
+      password: credential,
       backupPassword: password,
       secretKey: normalizedSecretKey,
       salt,
@@ -347,22 +335,9 @@ export async function setupMasterPasswordWithSecretKey(
     }
     
     openVaultSession(vaultKeyBytes, { hasBackup: true, hasSecret: true });
-    
-    const seedKey = new Uint8Array(vaultKeyBytes);
-    try {
-      await getVaultStorageRepository().reseedDemoWithKey!(seedKey, INITIAL_DEMO_ITEMS);
-    } finally {
-      seedKey.fill(0);
-    }
   } else {
     await getVaultStorageRepository().setupMaster(credential);
     await openDerivedVaultSession(credential, password);
-    const seedKey = await getVaultStorageRepository().deriveEncryptionKey(credential);
-    try {
-      await getVaultStorageRepository().reseedDemoWithKey!(seedKey, INITIAL_DEMO_ITEMS);
-    } finally {
-      seedKey.fill(0);
-    }
   }
 
   try {
@@ -398,12 +373,16 @@ export async function changeMasterPassword(oldPassword: string, newPassword: str
       .join('');
     const kdfParams = { memoryKiB: 32 * 1024, iterations: 3, parallelism: 1, hashLength: 32 };
 
+    const oldCredential = await resolveCurrentVaultCredential(oldPassword);
+    const newCredential = await resolveRotatedVaultCredential(newPassword);
+
     const result = await invoke<{
       newVaultKey: number[];
       newArgonHash: string;
     }>('rotate_rust_session', {
-      oldPassword,
-      newPassword,
+      oldPassword: oldCredential,
+      newPassword: newCredential,
+      backupPassword: newPassword,
       newSalt,
       kdfParams,
     });
@@ -675,5 +654,5 @@ export async function emptyTrashComplete(): Promise<VaultItem[]> {
  * Re-seeds the system with default demo items inside SQLite.
  */
 export async function reseedDemoData(): Promise<VaultItem[]> {
-  return withSessionVaultKey([], (vaultKey) => getVaultStorageRepository().reseedDemoWithKey!(vaultKey, INITIAL_DEMO_ITEMS));
+  return withSessionVaultKey([], (vaultKey) => getVaultStorageRepository().reseedDemoWithKey!(vaultKey, createDemoItems()));
 }

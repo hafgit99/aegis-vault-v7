@@ -98,6 +98,20 @@ pub struct RustRotationResult {
     pub new_argon_hash: String,
 }
 
+fn resolve_backup_password(password: &str, explicit_backup: Option<String>) -> String {
+    if let Some(bp) = explicit_backup {
+        bp
+    } else if password.starts_with("aegis-vault-v7:") {
+        if let Some(sep_idx) = password.find('\0') {
+            password["aegis-vault-v7:".len()..sep_idx].to_string()
+        } else {
+            password.to_string()
+        }
+    } else {
+        password.to_string()
+    }
+}
+
 #[tauri::command]
 pub fn open_rust_session(
     session: State<'_, CredentialSession>,
@@ -130,7 +144,7 @@ pub fn open_rust_session(
     state.clear();
 
     state.active_credential = Some(password.as_bytes().to_vec());
-    let bp = backup_password.unwrap_or_else(|| password.clone());
+    let bp = resolve_backup_password(&password, backup_password);
     state.active_backup_password = Some(bp.as_bytes().to_vec());
     if let Some(sk) = secret_key {
         state.active_account_secret_key = Some(sk.as_bytes().to_vec());
@@ -174,7 +188,7 @@ pub fn setup_rust_session(
     state.clear();
 
     state.active_credential = Some(password.as_bytes().to_vec());
-    let bp = backup_password.unwrap_or_else(|| password.clone());
+    let bp = resolve_backup_password(&password, backup_password);
     state.active_backup_password = Some(bp.as_bytes().to_vec());
     if let Some(sk) = secret_key {
         state.active_account_secret_key = Some(sk.as_bytes().to_vec());
@@ -193,6 +207,7 @@ pub fn rotate_rust_session(
     session: State<'_, CredentialSession>,
     old_password: String,
     new_password: String,
+    backup_password: Option<String>,
     new_salt: String,
     kdf_params: Option<RustArgon2idOptions>,
 ) -> Result<RustRotationResult, String> {
@@ -229,7 +244,8 @@ pub fn rotate_rust_session(
         .to_string();
 
     state.active_credential = Some(new_password.as_bytes().to_vec());
-    state.active_backup_password = Some(new_password.as_bytes().to_vec());
+    let bp = resolve_backup_password(&new_password, backup_password);
+    state.active_backup_password = Some(bp.as_bytes().to_vec());
     state.active_vault_key = Some(new_vault_key.clone());
 
     Ok(RustRotationResult {
@@ -312,4 +328,25 @@ pub fn update_rust_active_vault_key(
 pub fn has_rust_session(session: State<'_, CredentialSession>) -> Result<bool, String> {
     let state = session.state.lock().map_err(|e| e.to_string())?;
     Ok(state.active_credential.is_some() || state.active_vault_key.is_some())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_resolve_backup_password() {
+        assert_eq!(
+            resolve_backup_password("my-pass", None),
+            "my-pass"
+        );
+        assert_eq!(
+            resolve_backup_password("my-pass", Some("explicit-bp".into())),
+            "explicit-bp"
+        );
+        assert_eq!(
+            resolve_backup_password("aegis-vault-v7:my-pass\0A3-SECRET-KEY", None),
+            "my-pass"
+        );
+    }
 }
