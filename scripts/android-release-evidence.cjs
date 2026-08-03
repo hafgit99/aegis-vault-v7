@@ -17,7 +17,38 @@ const buildType = signed ? 'release' : 'debug';
 const manualSmokeChecklistPath = path.join(repoRoot, 'docs', 'ANDROID_MANUAL_SMOKE_CHECKLIST.md');
 const releaseRoot = path.join(repoRoot, 'release-local', 'android');
 const startedAt = new Date();
-const stamp = startedAt.toISOString().replace(/[:.]/g, '-');
+// Build the evidence directory stamp.
+//
+// All machine-readable artifacts (metadata.json, README, checksums) carry
+// the canonical ISO 8601 UTC timestamp, which is the only format CI tooling
+// reliably understands. The directory name itself, however, is what
+// engineers see when they `ls release-local/android/`, so we honour the
+// `TZ` environment variable when present: with `TZ=Europe/Istanbul` the
+// stamp reads `2026-08-03T15-42-22` instead of `2026-08-03T12-42-22Z`,
+// removing the mental UTC offset a developer has to apply by hand. When
+// `TZ` is unset we keep the previous UTC behaviour verbatim so existing
+// automation (CI logs, evidence collectors, downstream dashboards) keeps
+// matching directory names.
+function buildEvidenceStamp(now) {
+  if (!process.env.TZ) {
+    return now.toISOString().replace(/[:.]/g, '-');
+  }
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: process.env.TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(now);
+  const pick = (type) => parts.find((p) => p.type === type)?.value ?? '00';
+  const date = `${pick('year')}-${pick('month')}-${pick('day')}`;
+  const time = `${pick('hour')}-${pick('minute')}-${pick('second')}`;
+  return `${date}T${time}`;
+}
+const stamp = buildEvidenceStamp(startedAt);
 const outDir = path.join(releaseRoot, stamp);
 
 function run(command, args, options = {}) {
