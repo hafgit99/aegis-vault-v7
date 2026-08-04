@@ -58,6 +58,12 @@ Aegis Vault 7 enforces a strict local-first security architecture:
 5. **Screen & Privacy Protection**: `FLAG_SECURE` enabled on Android to block screenshots, screen recording, and task switcher preview leaks.
 6. **Air-Gap Network Policy**: Outbound network requests are strictly blocked by default. HIBP checks use 5-character SHA-1 prefix k-anonymity queries without disclosing account data.
 
+## Documentation
+
+- 🛠️ [Aegis CLI Usage Guide](CLI_USAGE.md) — Command-line interface for password generation and vault querying.
+- 🍏 [Safari Extension Guide](SAFARI_EXTENSION.md) — Safari Manifest V3 WebExtension and Xcode packaging.
+- 🦊 [Firefox Extension Guide](FIREFOX_XPI.md) — Firefox XPI build and signing instructions.
+
 ## Requirements
 
 - Node.js 22 or newer
