@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   isDesktopFileDialogSupported,
   isNativeFileDialogSupported,
+  MAX_ANDROID_PAYLOAD_BYTES,
   openDesktopImportFile,
   saveDesktopBinaryFile,
   saveDesktopExportFile,
@@ -190,5 +191,65 @@ describe('desktopFiles', () => {
     );
     await vi.advanceTimersByTimeAsync(120000);
     await importExpectation;
+  });
+
+  it('rejects Android text save exceeding the 25 MB payload limit', async () => {
+    window.__TAURI_INTERNALS__ = {};
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Linux; Android 14) AegisVault',
+    });
+
+    window.AegisAndroidFiles = {
+      saveTextFile: vi.fn(),
+      saveBase64File: vi.fn(),
+      openTextFile: vi.fn(),
+    };
+
+    const oversizedPayload = 'x'.repeat(MAX_ANDROID_PAYLOAD_BYTES + 1);
+    await expect(saveDesktopExportFile('backup.json', oversizedPayload)).rejects.toThrow(
+      'Android file bridge limit',
+    );
+    // The bridge should never be called when the payload is too large.
+    expect(window.AegisAndroidFiles.saveTextFile).not.toHaveBeenCalled();
+  });
+
+  it('rejects Android binary save exceeding the 25 MB payload limit', async () => {
+    window.__TAURI_INTERNALS__ = {};
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Linux; Android 14) AegisVault',
+    });
+
+    window.AegisAndroidFiles = {
+      saveTextFile: vi.fn(),
+      saveBase64File: vi.fn(),
+      openTextFile: vi.fn(),
+    };
+
+    const oversizedBytes = new Uint8Array(MAX_ANDROID_PAYLOAD_BYTES + 1);
+    await expect(saveDesktopBinaryFile('backup.aegis', oversizedBytes)).rejects.toThrow(
+      'Android file bridge limit',
+    );
+    expect(window.AegisAndroidFiles.saveBase64File).not.toHaveBeenCalled();
+  });
+
+  it('allows Android text save at exactly the 25 MB boundary', async () => {
+    window.__TAURI_INTERNALS__ = {};
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Linux; Android 14) AegisVault',
+    });
+
+    window.AegisAndroidFiles = {
+      saveTextFile: vi.fn((requestId) => window.__aegisAndroidFiles?.resolveSave(requestId, true, null)),
+      saveBase64File: vi.fn(),
+      openTextFile: vi.fn(),
+    };
+
+    // Exactly at the limit — should be accepted.
+    const boundaryPayload = 'x'.repeat(MAX_ANDROID_PAYLOAD_BYTES);
+    await expect(saveDesktopExportFile('backup.json', boundaryPayload)).resolves.toBe(true);
+    expect(window.AegisAndroidFiles.saveTextFile).toHaveBeenCalled();
   });
 });

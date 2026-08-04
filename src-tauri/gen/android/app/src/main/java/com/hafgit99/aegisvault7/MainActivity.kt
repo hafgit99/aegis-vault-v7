@@ -111,8 +111,14 @@ class MainActivity : TauriActivity() {
     }
 
     try {
-      contentResolver.openOutputStream(uri, "wt")?.use { output ->
-        output.write(save.bytes)
+      contentResolver.openOutputStream(uri, "wt")?.use { rawOutput ->
+        val output = java.io.BufferedOutputStream(rawOutput, STREAMING_BUFFER_SIZE)
+        var offset = 0
+        while (offset < save.bytes.size) {
+          val chunkLen = minOf(STREAMING_BUFFER_SIZE, save.bytes.size - offset)
+          output.write(save.bytes, offset, chunkLen)
+          offset += chunkLen
+        }
         output.flush()
       } ?: throw IllegalStateException("Selected destination could not be opened.")
 
@@ -138,8 +144,39 @@ class MainActivity : TauriActivity() {
     }
 
     try {
-      val contents = contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
-        ?: throw IllegalStateException("Selected file could not be opened.")
+      // Pre-check file size before reading to prevent OOM on large files.
+      val fileSize = try {
+        var size: Long = -1
+        contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { cursor ->
+          if (cursor.moveToFirst()) {
+            val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+            if (sizeIndex >= 0 && !cursor.isNull(sizeIndex)) {
+              size = cursor.getLong(sizeIndex)
+            }
+          }
+        }
+        size
+      } catch (_: Exception) { -1L }
+
+      if (fileSize > MAX_OPEN_FILE_BYTES) {
+        resolveOpen(requestId, null, "Selected file is too large (${fileSize / (1024 * 1024)} MB). Maximum allowed size is ${MAX_OPEN_FILE_BYTES / (1024 * 1024)} MB.")
+        return
+      }
+
+      val contents = contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { reader ->
+        val builder = StringBuilder()
+        val buffer = CharArray(STREAMING_BUFFER_SIZE)
+        var bytesRead = 0L
+        var charsRead: Int
+        while (reader.read(buffer).also { charsRead = it } != -1) {
+          bytesRead += charsRead
+          if (bytesRead > MAX_OPEN_FILE_BYTES) {
+            throw IllegalStateException("File exceeds the ${MAX_OPEN_FILE_BYTES / (1024 * 1024)} MB import size limit.")
+          }
+          builder.append(buffer, 0, charsRead)
+        }
+        builder.toString()
+      } ?: throw IllegalStateException("Selected file could not be opened.")
       resolveOpen(requestId, AndroidImportFile(displayNameForUri(uri), contents), null)
     } catch (error: Exception) {
       resolveOpen(requestId, null, "File could not be read: ${error.message ?: "unknown error"}")
@@ -321,7 +358,26 @@ class MainActivity : TauriActivity() {
           return@runOnUiThread
         }
 
-        pendingSave = PendingSave(requestId, contents.toByteArray(Charsets.UTF_8))
+        if (!ALLOWED_SAVE_MIME_TYPES.contains(mimeType)) {
+          resolveSave(requestId, false, "Unsupported MIME type: $mimeType")
+          return@runOnUiThread
+        }
+
+        // Guard against OOM: reject payloads exceeding the size limit before
+        // allocating the byte array. String.length is a lower bound for the
+        // UTF-8 byte count but sufficient for an early rejection check.
+        if (contents.length > MAX_SAVE_PAYLOAD_BYTES) {
+          resolveSave(requestId, false, "Payload size (${contents.length} chars) exceeds the ${MAX_SAVE_PAYLOAD_BYTES / (1024 * 1024)} MB limit.")
+          return@runOnUiThread
+        }
+
+        val bytes = contents.toByteArray(Charsets.UTF_8)
+        if (bytes.size > MAX_SAVE_PAYLOAD_BYTES) {
+          resolveSave(requestId, false, "Encoded payload size (${bytes.size} bytes) exceeds the ${MAX_SAVE_PAYLOAD_BYTES / (1024 * 1024)} MB limit.")
+          return@runOnUiThread
+        }
+
+        pendingSave = PendingSave(requestId, bytes)
         launchCreateDocument(requestId, defaultFilename, mimeType)
       }
     }
@@ -334,8 +390,26 @@ class MainActivity : TauriActivity() {
           return@runOnUiThread
         }
 
+        if (!ALLOWED_SAVE_MIME_TYPES.contains(mimeType)) {
+          resolveSave(requestId, false, "Unsupported MIME type: $mimeType")
+          return@runOnUiThread
+        }
+
+        // Estimate decoded size from base64 length (3 bytes per 4 chars)
+        // and reject before actually decoding to avoid the OOM allocation.
+        val estimatedDecodedBytes = (contentsBase64.length.toLong() * 3) / 4
+        if (estimatedDecodedBytes > MAX_SAVE_PAYLOAD_BYTES) {
+          resolveSave(requestId, false, "Payload size (~${estimatedDecodedBytes / (1024 * 1024)} MB) exceeds the ${MAX_SAVE_PAYLOAD_BYTES / (1024 * 1024)} MB limit.")
+          return@runOnUiThread
+        }
+
         try {
-          pendingSave = PendingSave(requestId, Base64.decode(contentsBase64, Base64.DEFAULT))
+          val decoded = Base64.decode(contentsBase64, Base64.DEFAULT)
+          if (decoded.size > MAX_SAVE_PAYLOAD_BYTES) {
+            resolveSave(requestId, false, "Decoded payload size (${decoded.size} bytes) exceeds the ${MAX_SAVE_PAYLOAD_BYTES / (1024 * 1024)} MB limit.")
+            return@runOnUiThread
+          }
+          pendingSave = PendingSave(requestId, decoded)
           launchCreateDocument(requestId, defaultFilename, mimeType)
         } catch (error: Exception) {
           resolveSave(requestId, false, "File payload could not be decoded: ${error.message ?: "unknown error"}")
@@ -795,6 +869,26 @@ class MainActivity : TauriActivity() {
     private const val SECURE_STORAGE_CIPHER = "AES/GCM/NoPadding"
     private const val AUTOFILL_REQUEST_MAX_AGE_MS = 5 * 60 * 1000L
     private const val AUTOFILL_LOG_TAG = "AegisAutofill"
+
+    /** Maximum payload size for save operations (25 MB). */
+    private const val MAX_SAVE_PAYLOAD_BYTES = 25 * 1024 * 1024
+
+    /** Maximum file size for open/import operations (25 MB). */
+    private const val MAX_OPEN_FILE_BYTES = 25L * 1024 * 1024
+
+    /** Buffer size for chunked streaming I/O (8 KB). */
+    private const val STREAMING_BUFFER_SIZE = 8192
+
+    /** MIME types allowed for save operations via the file bridge. */
+    private val ALLOWED_SAVE_MIME_TYPES = setOf(
+      "application/json",
+      "text/csv",
+      "text/comma-separated-values",
+      "application/csv",
+      "application/octet-stream",
+      "text/plain",
+    )
+
     private val ROOT_ARTIFACT_PATHS = arrayOf(
       "/system/app/Superuser.apk",
       "/system/bin/su",

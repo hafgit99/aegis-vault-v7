@@ -23,6 +23,16 @@ declare global {
 let androidFileRequestCounter = 0;
 const ANDROID_FILE_REQUEST_TIMEOUT_MS = 120000;
 
+/**
+ * Maximum payload size (in bytes) allowed for Android file bridge operations.
+ * Payloads exceeding this limit are rejected before being sent to the native
+ * Kotlin bridge to prevent OOM crashes on memory-constrained devices.
+ *
+ * 25 MB covers all realistic vault backup sizes while staying well within
+ * the typical Android WebView/JavascriptInterface transfer budget.
+ */
+export const MAX_ANDROID_PAYLOAD_BYTES = 25 * 1024 * 1024;
+
 type AndroidRequestTimeout = ReturnType<typeof setTimeout>;
 const androidSaveRequests = new Map<string, {
   resolve: (saved: boolean) => void;
@@ -133,6 +143,18 @@ function saveAndroidTextFile(defaultFilename: string, contents: string): Promise
     return Promise.reject(new Error('Android file picker is not available.'));
   }
 
+  // UTF-8 worst case: each JS char can expand to up to 4 bytes.
+  // Use the string length as a conservative lower-bound estimate;
+  // the actual byte size will be validated again on the Kotlin side.
+  if (contents.length > MAX_ANDROID_PAYLOAD_BYTES) {
+    return Promise.reject(
+      new Error(
+        `Payload size exceeds the ${MAX_ANDROID_PAYLOAD_BYTES} byte Android file bridge limit. ` +
+        `Split the export or reduce attachment count before saving.`,
+      ),
+    );
+  }
+
   const requestId = nextAndroidFileRequestId();
   return new Promise((resolve, reject) => {
     const timeout = createAndroidFileTimeout(requestId, androidSaveRequests);
@@ -151,6 +173,19 @@ function saveAndroidBase64File(defaultFilename: string, contentsBase64: string):
   const bridge = ensureAndroidFileBridge();
   if (!bridge) {
     return Promise.reject(new Error('Android file picker is not available.'));
+  }
+
+  // Estimate decoded binary size from base64 string length.
+  // Base64 encodes 3 bytes into 4 characters, so decoded ≈ length * 3/4.
+  const estimatedDecodedBytes = Math.ceil(contentsBase64.length * 3 / 4);
+  if (estimatedDecodedBytes > MAX_ANDROID_PAYLOAD_BYTES) {
+    return Promise.reject(
+      new Error(
+        `Payload size (~${Math.round(estimatedDecodedBytes / (1024 * 1024))} MB) exceeds the ` +
+        `${MAX_ANDROID_PAYLOAD_BYTES / (1024 * 1024)} MB Android file bridge limit. ` +
+        `Split the export or reduce attachment count before saving.`,
+      ),
+    );
   }
 
   const requestId = nextAndroidFileRequestId();
