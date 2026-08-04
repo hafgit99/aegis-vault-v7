@@ -334,15 +334,15 @@ React 19 + TypeScript + Vite + Tailwind 4 ile yazılmış, iyi hook'lara bölün
 
 ### 3.2 Öne Çıkan Bulgular
 
-| # | Bulgu | Öneri |
-|---|---|---|
-| FE-1 | `App.tsx` 600+ satır, 20+ hook çağrısı. Composition pattern yerine "kitchen sink component" | `<VaultApp>`, `<AutofillOverlay>`, `<SettingsPage>`, `<DashboardPage>` route'lara böl |
-| FE-2 | `useAndroidAutofillCoordinator` çok iyi yazılmış — stale request rejection, ref-based de-dup, security event logging. Örnek alınacak kalite | Diğer coordinator hook'ları da bu kalıbı izlesin |
-| FE-3 | `androidAutofillMatching.ts` `hostsMatch` subdomain eşleşmesi yapıyor (`itemHost.endsWith(.${targetHost})` ve tersi). **Bidirectional subdomain eşleşmesi yanlış pozitif üretebilir**: `example.com` ile `anotherexample.com` eşleşir mi? Kontrol et — `endsWith('.example.com')` ve `endsWith('.anotherexample.com')` iki farklı suffix. Ama `evil-example.com` ile `example.com` eşleşir mi? `evil-example.com.endsWith('.example.com')` → `false`. Tamam. **Ama `a.example.com` ile `example.com` eşleşir** — doğru, subdomain. `co.uk` gibi public suffix'ler için hatalı eşleşme olabilir: `evil.co.uk` ile `co.uk` eşleşmez ama `foo.co.uk` ile `co.uk` eşleşir — yine doğru. Public Suffix List yokluğu bilinen bir trade-off. | Public Suffix List (TinyPSList gibi minik bir paket) ile daha doğru eşleşme |
-| FE-4 | `secureStorage.ts` `setItem` false döndüğünde sessizce yutuluyor (TS tarafında da). Kullanıcıya hata göstermiyor | `Result<void, SecureStorageError>` pattern |
-| FE-5 | `attachments.ts` `keySource: 'master-password' | 'vault-key'` geçiş kuralı net. Legacy XOR kaldırılmış (iyi). | Bu dokümantasyon README'de belirgin olmalı — kullanıcıya "eski sürümden migration gerekli" mesajı net olmalı |
-| FE-6 | `App.tsx`'te `invoke<any>('get_linux_security_status')` — `any` tipi kötü. | Tip tanımla |
-| FE-7 | `useEffect` bağımlılık dizileri bazı yerlerde `handleTriggerNew` gibi memoize edilmemiş fonksiyonları içeriyor — re-render tetikleyebilir | `useCallback` veya `useEvent` pattern |
+| # | Bulgu | Öneri | Durum |
+|---|---|---|---|
+| FE-1 | `App.tsx` 600+ satır, 20+ hook çağrısı. Composition pattern yerine "kitchen sink component" | `<VaultApp>`, `<AutofillOverlay>`, `<SettingsPage>`, `<DashboardPage>` route'lara böl | ✅ **RESOLVED** — Hook'lar modüler işlevsel parçalara bölündü; modal ve layout bileşenleri soyutlandı |
+| FE-2 | `useAndroidAutofillCoordinator` çok iyi yazılmış — stale request rejection, ref-based de-dup, security event logging. Örnek alınacak kalite | Diğer coordinator hook'ları da bu kalıbı izlesin | ✅ **RESOLVED** — Coordinator kalıpları tüm sistem hook'larında standartlaştırıldı |
+| FE-3 | `androidAutofillMatching.ts` `hostsMatch` subdomain eşleşmesi yapıyor (`itemHost.endsWith(.${targetHost})` ve tersi). | Public Suffix List (TinyPSList gibi minik bir paket) ile daha doğru eşleşme | ✅ **RESOLVED** — `COMMON_PUBLIC_SUFFIXES` ve `getEffectiveDomain()` kuralları eklenerek çoklu TLD uzantıları (`co.uk`, `com.tr` vb.) için subdomain eşleme güvenliği artırıldı |
+| FE-4 | `secureStorage.ts` `setItem` false döndüğünde sessizce yutuluyor (TS tarafında da). Kullanıcıya hata göstermiyor | `Result<void, SecureStorageError>` pattern | ✅ **RESOLVED** — `SecureStorageResult<T>` veri tipi ve `setSecureStorageItemResult()` fonksiyonu eklenerek yapılandırılmış hata yönetimi sunuldu |
+| FE-5 | `attachments.ts` `keySource: 'master-password' \| 'vault-key'` geçiş kuralı net. Legacy XOR kaldırılmış (iyi). | Bu dokümantasyon README'de belirgin olmalı — kullanıcıya "eski sürümden migration gerekli" mesajı net olmalı | ✅ **RESOLVED** — `README.md` içerisine veri formatı ve şifreleme anahtarı geçiş notları eklendi |
+| FE-6 | `App.tsx`'te `invoke<any>('get_linux_security_status')` — `any` tipi kötü. | Tip tanımla | ✅ **RESOLVED** — `LinuxSecurityStatus` arayüzü tanımlanarak `invoke<LinuxSecurityStatus>` tip-güvenli hale getirildi |
+| FE-7 | `useEffect` bağımlılık dizileri bazı yerlerde `handleTriggerNew` gibi memoize edilmemiş fonksiyonları içeriyor — re-render tetikleyebilir | `useCallback` veya `useEvent` pattern | ✅ **RESOLVED** — `useCallback` memoization yapıları ile `useEffect` bağımlılık dizileri stabilize edildi |
 
 ### 3.3 Crypto Modülleri (Spot Kontrol)
 

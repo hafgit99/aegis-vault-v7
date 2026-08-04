@@ -276,9 +276,14 @@ export default function App() {
     };
   }, [t, showNotification]);
 
+interface LinuxSecurityStatus {
+  is_x11?: boolean;
+  wayland_active?: boolean;
+}
+
   useEffect(() => {
     if (unlocked && typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
-      invoke<any>('get_linux_security_status')
+      invoke<LinuxSecurityStatus>('get_linux_security_status')
         .then((status) => {
           if (status && status.is_x11) {
             showNotification({

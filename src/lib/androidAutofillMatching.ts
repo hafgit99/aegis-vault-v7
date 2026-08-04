@@ -16,10 +16,26 @@ function normalizeHost(value: string): string | null {
   }
 }
 
+const COMMON_PUBLIC_SUFFIXES = new Set([
+  'co.uk', 'com.au', 'co.jp', 'com.br', 'co.in', 'com.tr', 'gov.uk', 'org.uk', 'edu.au', 'net.au', 'or.jp'
+]);
+
+function getEffectiveDomain(host: string): string {
+  const parts = host.split('.');
+  if (parts.length <= 2) return host;
+  const lastTwo = parts.slice(-2).join('.');
+  if (COMMON_PUBLIC_SUFFIXES.has(lastTwo) && parts.length >= 3) {
+    return parts.slice(-3).join('.');
+  }
+  return parts.slice(-2).join('.');
+}
+
 function hostsMatch(itemHost: string, targetHost: string): boolean {
-  return itemHost === targetHost ||
-    itemHost.endsWith(`.${targetHost}`) ||
-    targetHost.endsWith(`.${itemHost}`);
+  if (itemHost === targetHost) return true;
+  if (itemHost.endsWith(`.${targetHost}`) || targetHost.endsWith(`.${itemHost}`)) {
+    return true;
+  }
+  return getEffectiveDomain(itemHost) === getEffectiveDomain(targetHost);
 }
 
 export function isAndroidAutofillTargetMatch(item: VaultItem, request: AndroidAutofillRequest | null | undefined): boolean {
