@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use tauri::{AppHandle, Manager, WebviewWindow};
 
 const VAULT_DATABASE_FILENAME: &str = "aegis_sqlite.db";
+#[allow(dead_code)]
 const FILE_DIALOG_BUFFER_LEN: usize = 32768;
 const MAX_VAULT_FILE_BYTES: u64 = 25 * 1024 * 1024; // 25 MB
 

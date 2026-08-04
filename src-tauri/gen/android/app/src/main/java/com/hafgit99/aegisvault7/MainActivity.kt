@@ -114,6 +114,7 @@ class MainActivity : TauriActivity() {
     }
   }
 
+  @Suppress("DEPRECATION")
   override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
     super.onActivityResult(requestCode, resultCode, data)
 
@@ -418,6 +419,7 @@ class MainActivity : TauriActivity() {
     }
   }
 
+  @Suppress("DEPRECATION")
   private fun openTextFile(requestId: String) {
     if (pendingSave != null || pendingOpenRequestId != null) {
       resolveOpen(requestId, null, "Another file operation is already in progress.")
@@ -462,6 +464,7 @@ class MainActivity : TauriActivity() {
     }
   }
 
+  @Suppress("DEPRECATION")
   private fun launchCreateDocument(requestId: String, defaultFilename: String, mimeType: String) {
     try {
       val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {

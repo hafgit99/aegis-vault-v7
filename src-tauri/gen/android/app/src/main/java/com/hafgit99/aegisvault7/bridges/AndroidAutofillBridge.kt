@@ -140,6 +140,7 @@ class AndroidAutofillBridge(
         return true
     }
 
+    @Suppress("DEPRECATION")
     @JavascriptInterface
     fun completePendingRequest(requestId: String, username: String, password: String, label: String): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
