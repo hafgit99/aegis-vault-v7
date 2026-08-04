@@ -344,14 +344,17 @@ React 19 + TypeScript + Vite + Tailwind 4 ile yazılmış, iyi hook'lara bölün
 | FE-6 | `App.tsx`'te `invoke<any>('get_linux_security_status')` — `any` tipi kötü. | Tip tanımla | ✅ **RESOLVED** — `LinuxSecurityStatus` arayüzü tanımlanarak `invoke<LinuxSecurityStatus>` tip-güvenli hale getirildi |
 | FE-7 | `useEffect` bağımlılık dizileri bazı yerlerde `handleTriggerNew` gibi memoize edilmemiş fonksiyonları içeriyor — re-render tetikleyebilir | `useCallback` veya `useEvent` pattern | ✅ **RESOLVED** — `useCallback` memoization yapıları ile `useEffect` bağımlılık dizileri stabilize edildi |
 
-### 3.3 Crypto Modülleri (Spot Kontrol)
+### 3.3 Crypto Modülleri (Spot Kontrol) — ✅ **RESOLVED**
 
 - `encryption.ts` — Argon2id parametreleri, AES-GCM IV üretimi, HKDF türetme — standart
 - `webcrypto.ts` — tarayıcıda Web Crypto API üzerinden AES-GCM
-- `argon2id.ts` — `argon2-browser` paketi
-- `secureStorage.ts` — TS köprüsü, error handling sığ
+- `argon2id.ts` — `argon2-browser` WASM fallback + Tauri Rust `argon2` native KDF
+- `secureStorage.ts` — TS köprüsü, `SecureStorageResult<T>` yapılandırılmış hata yönetimi
 
-**Soru:** Rust tarafında `argon2` crate'i (0.5.3) zaten var (`Cargo.toml`). Neden frontend `argon2-browser` (WASM) kullanıyor? Tauri tarafında `tauri-plugin-biometric` ile birlikte native Argon2 kullanılabilir. Hibrit yaklaşım savunulabilir ama tek doğruluk kaynağı (single source of truth) ilkesiyle Rust'a geçmek tutarlılık sağlar. **Dikkat:** Argon2 parametreleri (memory, iterations, parallelism) frontend ve Rust arasında birebir aynı olmalı yoksa kullanıcı ana şifresini değiştirince vault çözülemez.
+**Parametre Birebir Uyum ve Doğrulama:** ✅ **RESOLVED**
+- Rust `credential_handler.rs` ve `lib.rs` içerisindeki varsayılan Argon2id parametreleri (`32 MiB memoryKiB`, `3 iterations`, `1 parallelism`, `32-byte key_len`) frontend `DEFAULT_OPTIONS` ile %100 birebir eşitlendi.
+- Frontend `argon2id.ts` çağrılarında native IPC öncesi `resolveOptions()` çalıştırılarak hem Rust native KDF hem de WASM KDF katmanına **özdeş parametrelerin** iletilmesi garanti altına alındı.
+
 
 ### 3.4 Storage Mimari
 

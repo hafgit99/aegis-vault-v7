@@ -16,8 +16,8 @@ pub struct RustArgon2idOptions {
 
 impl RustArgon2idOptions {
     fn to_params(&self) -> Result<argon2::Params, String> {
-        let mem = self.memory_kib.unwrap_or(128 * 1024);
-        let time = self.iterations.unwrap_or(4);
+        let mem = self.memory_kib.unwrap_or(32 * 1024);
+        let time = self.iterations.unwrap_or(3);
         let lanes = self.parallelism.unwrap_or(1);
         let key_len = self.hash_length.unwrap_or(32);
 

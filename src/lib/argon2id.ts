@@ -89,7 +89,7 @@ export async function deriveArgon2idKey(
       const keyBytes = await invoke<number[]>('derive_argon2id_key', {
         password,
         salt,
-        options: options || null,
+        options: options ? resolveOptions(options) : null,
       });
       return new Uint8Array(keyBytes);
     } catch (error) {
@@ -167,7 +167,7 @@ export async function createArgon2idHash(
       return await invoke<string>('create_argon2id_hash', {
         password,
         salt,
-        options: options || null,
+        options: options ? resolveOptions(options) : null,
       });
     } catch (error) {
       console.error('Rust createArgon2idHash failed:', error);
