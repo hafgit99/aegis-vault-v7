@@ -34,7 +34,9 @@ function createAssetEntries(distDir) {
       file,
       path: path.relative(distDir, file).replace(/\\/g, '/'),
     }))
-    .filter((entry) => entry.path !== MANIFEST_FILENAME && !entry.path.endsWith('.map'))
+    // Tauri injects the configured CSP into index.html at runtime. Hash the
+    // static payloads only so WebView-side verification does not false-positive.
+    .filter((entry) => entry.path !== MANIFEST_FILENAME && entry.path !== 'index.html' && !entry.path.endsWith('.map'))
     .map((entry) => {
       const contents = fs.readFileSync(entry.file);
       return {

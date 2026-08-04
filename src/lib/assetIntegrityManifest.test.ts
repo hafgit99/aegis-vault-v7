@@ -34,7 +34,7 @@ describe('asset integrity manifest generator', () => {
     expect(buildIntegrityManifest([b, a]).rootSha256).toMatch(/^[a-f0-9]{64}$/);
   });
 
-  it('generates and validates all production assets without self-hashing the manifest', () => {
+  it('generates and validates static production assets without self-hashing the manifest', () => {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'aegis-integrity-'));
     temporaryDirectories.push(directory);
     fs.mkdirSync(path.join(directory, 'assets'));
@@ -44,7 +44,8 @@ describe('asset integrity manifest generator', () => {
     const { manifest, manifestPath } = generateIntegrityManifest(directory);
 
     expect(fs.existsSync(manifestPath)).toBe(true);
-    expect(manifest.assets).toHaveLength(2);
+    expect(manifest.assets).toHaveLength(1);
+    expect(manifest.assets[0]).toMatchObject({ path: 'assets/index.js' });
     expect(validateIntegrityManifest(manifest, directory)).toEqual([]);
   });
 
@@ -52,9 +53,10 @@ describe('asset integrity manifest generator', () => {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'aegis-integrity-'));
     temporaryDirectories.push(directory);
     fs.writeFileSync(path.join(directory, 'index.html'), 'original');
+    fs.writeFileSync(path.join(directory, 'assets.js'), 'original');
     const { manifest } = generateIntegrityManifest(directory);
 
-    fs.writeFileSync(path.join(directory, 'index.html'), 'tampered');
+    fs.writeFileSync(path.join(directory, 'assets.js'), 'tampered');
 
     expect(validateIntegrityManifest(manifest, directory)).toContain('integrity manifest root does not match dist assets');
   });
