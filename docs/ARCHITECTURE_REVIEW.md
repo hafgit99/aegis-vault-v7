@@ -302,28 +302,26 @@ private fun runtimeSecurityPosture(): JSONObject {
 - `AegisAndroidAutofill` için iki yönlü iletişim: JS'in `window.__aegisAndroidAutofill` callback'i + Kotlin'in `bridge.getPendingRequest()` pull pattern'i
 - Hardening defansif: FLAG_SECURE, root detection, instrumentation detection, WebView JavaScript interface kaldırma
 
-**Bölünmesi gereken yer:**
+**Mimari Yeniden Yapılandırma (Refactoring):** ✅ **RESOLVED**
 
-`MainActivity.kt` 712 satır, **4 inner class** + 6 lifecycle method + 12 private helper. İdeal olarak şu şekilde ayrılmalı:
+`MainActivity.kt` içerisindeki monolithic inner class yapıları, modüler paket mimarisine dönüştürüldü:
 
 ```
 com.hafgit99.aegisvault7/
-├── MainActivity.kt              → sadece lifecycle
-├── AegisApplication.kt          → global init
+├── MainActivity.kt              → Yaşam döngüsü & WebView SAF handlers
+├── AegisAutofillService.kt      → Android Autofill Service
 ├── bridges/
-│   ├── AndroidFileBridge.kt
-│   ├── AndroidSecureStorageBridge.kt
-│   ├── AndroidAutofillBridge.kt
-│   └── AndroidRuntimeSecurityBridge.kt
-├── services/
-│   └── AegisAutofillService.kt
+│   ├── AndroidFileBridge.kt            → Dosya I/O & streaming bridge
+│   ├── AndroidSecureStorageBridge.kt   → KeyStore şifreli preferences bridge
+│   ├── AndroidAutofillBridge.kt        → Autofill JS köprüsü & payload resolution
+│   └── AndroidRuntimeSecurityBridge.kt → Güvenlik posture bridge
 ├── crypto/
-│   └── SecureKeyStore.kt        → KeyStore wrapper
+│   └── SecureStorageKeyStore.kt        → AES-256-GCM donanım destekli KeyStore wrapper
 ├── security/
-│   ├── RuntimePosture.kt
-│   └── PrivacyShieldController.kt
-└── ui/
-    └── PrivacyOverlayView.kt
+│   ├── RuntimeSecurityPosture.kt       → Root / Frida / Debugger / Build posture tespiti
+│   └── SecureTempFileStorage.kt        → Şifreli geçici önbellek yönetimi
+└── model/
+    └── AutofillModels.kt              → Veri modelleri (Autofill, PendingSave)
 ```
 
 ---
