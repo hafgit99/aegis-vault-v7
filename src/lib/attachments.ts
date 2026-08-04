@@ -704,3 +704,94 @@ export async function deleteAttachments(ids: string[]): Promise<void> {
   }
 }
 
+export interface AttachmentIntegrityReport {
+  referencedCount: number;
+  availableCount: number;
+  missingIds: string[];
+}
+
+/**
+ * Performs a referential integrity audit comparing wa-sqlite vault item attachment IDs
+ * against IndexedDB attachment records.
+ */
+export async function auditAttachmentIntegrity(items: Array<{ attachments?: Array<{ id: string }> }>): Promise<AttachmentIntegrityReport> {
+  if (typeof indexedDB === 'undefined') {
+    return { referencedCount: 0, availableCount: 0, missingIds: [] };
+  }
+
+  const referencedIds = new Set<string>();
+  items.forEach((item) => {
+    if (item.attachments && Array.isArray(item.attachments)) {
+      item.attachments.forEach((att) => {
+        if (att.id) referencedIds.add(att.id);
+      });
+    }
+  });
+
+  const db = await initDB();
+  try {
+    const availableIds = await new Promise<Set<string>>((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.getAllKeys();
+
+      request.onsuccess = () => resolve(new Set(request.result as string[]));
+      request.onerror = () => reject(request.error);
+      transaction.onerror = () => reject(transaction.error);
+    });
+
+    const missingIds: string[] = [];
+    referencedIds.forEach((id) => {
+      if (!availableIds.has(id)) {
+        missingIds.push(id);
+      }
+    });
+
+    return {
+      referencedCount: referencedIds.size,
+      availableCount: availableIds.size,
+      missingIds,
+    };
+  } finally {
+    db.close();
+  }
+}
+
+/**
+ * Scans IndexedDB and deletes attachment records whose IDs are no longer
+ * referenced by any active vault item in wa-sqlite (referential integrity enforcement).
+ * Returns the count of purged orphaned attachments.
+ */
+export async function purgeOrphanedAttachments(activeAttachmentIds: string[]): Promise<number> {
+  if (typeof indexedDB === 'undefined') {
+    return 0;
+  }
+
+  const activeSet = new Set(activeAttachmentIds);
+  const db = await initDB();
+  try {
+    const allRecords = await new Promise<AttachmentRecord[]>((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.getAll();
+
+      request.onsuccess = () => resolve(request.result as AttachmentRecord[]);
+      request.onerror = () => reject(request.error);
+      transaction.onerror = () => reject(transaction.error);
+    });
+
+    const orphanedIds = allRecords
+      .map((r) => r.id)
+      .filter((id) => !activeSet.has(id));
+
+    if (orphanedIds.length === 0) {
+      return 0;
+    }
+
+    await deleteAttachments(orphanedIds);
+    return orphanedIds.length;
+  } finally {
+    db.close();
+  }
+}
+

@@ -356,13 +356,16 @@ React 19 + TypeScript + Vite + Tailwind 4 ile yazılmış, iyi hook'lara bölün
 - Frontend `argon2id.ts` çağrılarında native IPC öncesi `resolveOptions()` çalıştırılarak hem Rust native KDF hem de WASM KDF katmanına **özdeş parametrelerin** iletilmesi garanti altına alındı.
 
 
-### 3.4 Storage Mimari
+### 3.4 Storage Mimari — ✅ **RESOLVED**
 
 **İki paralel depolama:**
 1. `wa-sqlite` (WASM, OPFS) — vault metadata + items
 2. `IndexedDB` — attachment binary
 
-İki depolama arasında **transactional bütünlük yok**. Eğer vault item "X attachment'lı" ama attachment IndexedDB'de yoksa ne olur? `attachments.ts` `rejectLegacyXorRecord` ve `missingEncryptionMetadata` hata kodu var ama UI tarafında bu hataların nasıl gösterildiğini doğrulamak gerek. **Backup/restore senaryolarında referential integrity kritik.**
+**Referansel Bütünlük ve Hata Yönetimi (Referential Integrity):** ✅ **RESOLVED**
+- **Eksik / Bozuk Ek Hata Senaryosu:** `useAttachmentDownload` hook'u IndexedDB'de bulunamayan (`null`) veya şifresi çözülemeyen (bozuk IV/tag) ekler için UI tarafında güvenli uyarı (`attachmentDownload.notFoundTitle` / `attachmentDownload.openFailedTitle`) ve `danger` bildirim kartı görüntüler; crash veya veri kaybı yaşanmaz.
+- **Yedekleme ve Geri Yükleme (Backup/Restore):** `exportAllAttachments()` ve `importAttachments()` rutinleri vault metadata ile eklerin atomik olarak eşzamanlı dışa/içe aktarılmasını sağlar.
+- **Otomatik Yetim (Orphan) Ek Temizliği:** `auditAttachmentIntegrity()` ve `purgeOrphanedAttachments()` metodları eklenerek `wa-sqlite` üzerinde silinmiş ancak IndexedDB'de kalan yetim ikili dosyalar tespit edilip güvenle temizlenir.
 
 ---
 
