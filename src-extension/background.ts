@@ -6,12 +6,50 @@ interface NativeRequest {
 }
 
 let pendingCredential: any = null;
+let pendingTimer: any = null;
 let draftCredentials: { [tabId: number]: any } = {};
+
+function wipeObjectCredentials(obj: any) {
+  if (obj && typeof obj === 'object') {
+    if (typeof obj.password === 'string') obj.password = '';
+    if (typeof obj.username === 'string') obj.username = '';
+  }
+}
+
+function setPendingCredential(cred: any) {
+  if (pendingCredential) {
+    wipeObjectCredentials(pendingCredential);
+  }
+  pendingCredential = cred;
+  if (pendingTimer) {
+    clearTimeout(pendingTimer);
+  }
+  pendingTimer = setTimeout(() => {
+    if (pendingCredential) {
+      wipeObjectCredentials(pendingCredential);
+      pendingCredential = null;
+    }
+  }, 120000); // 120s transient memory retention
+}
+
+function clearPendingCredential() {
+  if (pendingTimer) {
+    clearTimeout(pendingTimer);
+    pendingTimer = null;
+  }
+  if (pendingCredential) {
+    wipeObjectCredentials(pendingCredential);
+    pendingCredential = null;
+  }
+}
 
 // Listen for messages from popup or content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'update_draft_credential') {
     if (sender.tab && sender.tab.id) {
+      if (draftCredentials[sender.tab.id]) {
+        wipeObjectCredentials(draftCredentials[sender.tab.id]);
+      }
       draftCredentials[sender.tab.id] = request.credential;
     }
     sendResponse({ status: 'ok' });
@@ -19,7 +57,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === 'set_pending_credential') {
-    pendingCredential = request.credential;
+    setPendingCredential(request.credential);
     sendResponse({ status: 'ok' });
     return false;
   }
@@ -30,7 +68,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === 'clear_pending_credential') {
-    pendingCredential = null;
+    clearPendingCredential();
     sendResponse({ status: 'ok' });
     return false;
   }
@@ -47,7 +85,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
       }
     );
-    pendingCredential = null;
+    clearPendingCredential();
     return true;
   }
 
@@ -133,11 +171,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 // Listen for tab navigation to promote draft credentials to pending
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (changeInfo.status === 'loading') {
     const draft = draftCredentials[tabId];
     if (draft) {
-      pendingCredential = draft;
+      setPendingCredential(draft);
       delete draftCredentials[tabId];
     }
   }
@@ -145,5 +183,8 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
 // Clean up draft credentials when tab is closed
 chrome.tabs.onRemoved.addListener((tabId) => {
-  delete draftCredentials[tabId];
+  if (draftCredentials[tabId]) {
+    wipeObjectCredentials(draftCredentials[tabId]);
+    delete draftCredentials[tabId];
+  }
 });

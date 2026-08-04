@@ -52,3 +52,64 @@ describe('extension secure password generator', () => {
   });
 });
 
+describe('extension popup secure clipboard copy', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    document.body.innerHTML = `
+      <div id="lockedScreen"></div>
+      <div id="credentialList"></div>
+      <div id="searchWrapper"></div>
+      <input id="searchInput" />
+      <div id="phishingBanner"></div>
+      <span id="phishingText"></span>
+      <select id="langSelect"><option value="en">en</option></select>
+      <button id="themeToggle"></button>
+      <div id="toast"></div>
+      <button id="focusAppBtn"></button>
+      <input type="checkbox" id="autoSubmitToggle" />
+      <label id="autoSubmitLabel"></label>
+      <h1 id="lockedTitle"></h1>
+      <p id="lockedDesc"></p>
+    `;
+    vi.stubGlobal('chrome', {
+      storage: {
+        local: {
+          get: vi.fn((_keys, callback) => callback?.({})),
+          set: vi.fn(),
+        },
+      },
+      runtime: {
+        sendMessage: vi.fn(),
+      },
+      tabs: {
+        query: vi.fn((_query, callback) => callback?.([])),
+      },
+    });
+    vi.stubGlobal('navigator', {
+      language: 'en',
+      clipboard: {
+        writeText: vi.fn(async () => undefined),
+        readText: vi.fn(async () => 'secret-copied-pass'),
+      },
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it('automatically clears sensitive copied passwords after 30 seconds', async () => {
+    const { copyToClipboardSecurely } = await import('./popup');
+
+    copyToClipboardSecurely('secret-copied-pass', true);
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('secret-copied-pass');
+
+    // Fast-forward 30 seconds
+    await vi.advanceTimersByTimeAsync(30000);
+
+    expect(navigator.clipboard.writeText).toHaveBeenLastCalledWith('');
+  });
+});
+

@@ -75,6 +75,30 @@ function showToast(messageKey: 'copied.feedback') {
   }, 1500);
 }
 
+// Clipboard copy helper with 30s auto-clear matching desktop policy
+let extensionClipboardTimer: ReturnType<typeof setTimeout> | null = null;
+
+export function copyToClipboardSecurely(text: string, isSensitive = true) {
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('copied.feedback');
+
+    if (isSensitive && text) {
+      if (extensionClipboardTimer) {
+        clearTimeout(extensionClipboardTimer);
+      }
+      extensionClipboardTimer = setTimeout(() => {
+        navigator.clipboard.readText().then((current) => {
+          if (current === text) {
+            navigator.clipboard.writeText('').catch(() => {});
+          }
+        }).catch(() => {
+          navigator.clipboard.writeText('').catch(() => {});
+        });
+      }, 30000); // 30s auto-clear policy
+    }
+  }).catch(() => {});
+}
+
 // Translate page static elements
 function applyTranslations() {
   lockedTitle.textContent = translate('locked.title', activeLanguage);
@@ -557,8 +581,7 @@ function renderItemsToList(items: CredentialItem[]) {
     copyUserBtn.title = translate('item.username', activeLanguage);
     copyUserBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      navigator.clipboard.writeText(item.username);
-      showToast('copied.feedback');
+      copyToClipboardSecurely(item.username, false);
     });
     actions.appendChild(copyUserBtn);
 
@@ -570,8 +593,7 @@ function renderItemsToList(items: CredentialItem[]) {
       copyPassBtn.title = translate('item.password', activeLanguage);
       copyPassBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        navigator.clipboard.writeText(item.password || '');
-        showToast('copied.feedback');
+        copyToClipboardSecurely(item.password || '', true);
       });
       actions.appendChild(copyPassBtn);
     }

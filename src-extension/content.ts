@@ -371,11 +371,241 @@ function checkContentPhishing(url: string, trustedDomains: string[] = []): any {
   return null;
 }
 
+let shadowHost: HTMLElement | null = null;
+let shadowRootRef: ShadowRoot | null = null;
+
+const EXTENSION_SHADOW_STYLES = `
+  :host {
+    all: initial !important;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  }
+  .aegis-dropdown {
+    position: absolute !important;
+    z-index: 2147483647 !important;
+    background: #0f172a !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5) !important;
+    padding: 6px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+    max-height: 280px !important;
+    overflow-y: auto !important;
+    backdrop-filter: blur(12px) !important;
+    font-size: 13px !important;
+    color: #f8fafc !important;
+    box-sizing: border-box !important;
+  }
+  .aegis-dropdown-item {
+    padding: 8px 10px !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    transition: background 0.15s ease !important;
+    color: #f8fafc !important;
+  }
+  .aegis-dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+  }
+  .aegis-dropdown-title {
+    font-weight: 600 !important;
+    color: #f8fafc !important;
+    font-size: 13px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+  .aegis-dropdown-user {
+    font-size: 11px !important;
+    color: #94a3b8 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+  .aegis-dropdown-locked {
+    padding: 10px !important;
+    text-align: center !important;
+    color: #94a3b8 !important;
+    font-size: 12px !important;
+  }
+  .aegis-phishing-alert-banner {
+    position: fixed !important;
+    top: 12px !important;
+    left: 50% !important;
+    transform: translateX(-50%) translateY(-20px) !important;
+    z-index: 2147483647 !important;
+    width: 90% !important;
+    max-width: 600px !important;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.95) 0%, rgba(185, 28, 28, 0.98) 100%) !important;
+    border: 1px solid #ef4444 !important;
+    border-radius: 12px !important;
+    padding: 12px 16px !important;
+    color: #ffffff !important;
+    box-shadow: 0 16px 40px rgba(239, 68, 68, 0.35) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    opacity: 0 !important;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    box-sizing: border-box !important;
+  }
+  .aegis-phishing-alert-banner.show {
+    transform: translateX(-50%) translateY(0) !important;
+    opacity: 1 !important;
+  }
+  .aegis-phishing-alert-icon {
+    font-size: 24px !important;
+    flex-shrink: 0 !important;
+  }
+  .aegis-phishing-alert-info {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    flex: 1 !important;
+  }
+  .aegis-phishing-alert-title {
+    font-weight: 700 !important;
+    font-size: 14px !important;
+    color: #ffffff !important;
+  }
+  .aegis-phishing-alert-desc {
+    font-size: 12px !important;
+    color: #fecdd3 !important;
+  }
+  .aegis-phishing-alert-domain {
+    font-family: monospace !important;
+    background: rgba(0, 0, 0, 0.2) !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+    font-size: 11px !important;
+    color: #fde047 !important;
+    display: inline-block !important;
+    margin-top: 4px !important;
+  }
+  .aegis-phishing-alert-btn {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    color: #ffffff !important;
+    padding: 6px 12px !important;
+    border-radius: 6px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    flex-shrink: 0 !important;
+  }
+  .aegis-phishing-alert-btn:hover {
+    background: rgba(255, 255, 255, 0.3) !important;
+  }
+  .aegis-banner {
+    position: fixed !important;
+    top: 12px !important;
+    right: 12px !important;
+    z-index: 2147483647 !important;
+    background: #0f172a !important;
+    border: 1px solid rgba(16, 185, 129, 0.4) !important;
+    border-radius: 12px !important;
+    padding: 12px 16px !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 16px !important;
+    color: #f8fafc !important;
+    transform: translateY(-20px) !important;
+    opacity: 0 !important;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    box-sizing: border-box !important;
+  }
+  .aegis-banner.show {
+    transform: translateY(0) !important;
+    opacity: 1 !important;
+  }
+  .aegis-banner-info {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+  }
+  .aegis-banner-logo {
+    width: 28px !important;
+    height: 28px !important;
+    background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%) !important;
+    border-radius: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-weight: bold !important;
+    color: white !important;
+    font-size: 14px !important;
+  }
+  .aegis-banner-text {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+  }
+  .aegis-banner-title {
+    font-weight: 700 !important;
+    font-size: 13px !important;
+    color: #f8fafc !important;
+  }
+  .aegis-banner-desc {
+    font-size: 11px !important;
+    color: #94a3b8 !important;
+  }
+  .aegis-banner-actions {
+    display: flex !important;
+    gap: 8px !important;
+  }
+  .aegis-banner-btn {
+    padding: 6px 12px !important;
+    border-radius: 6px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    border: none !important;
+  }
+  .aegis-banner-btn-save {
+    background: #10b981 !important;
+    color: white !important;
+  }
+  .aegis-banner-btn-save:hover {
+    background: #059669 !important;
+  }
+  .aegis-banner-btn-dismiss {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #94a3b8 !important;
+  }
+  .aegis-banner-btn-dismiss:hover {
+    background: rgba(255, 255, 255, 0.15) !important;
+    color: #f8fafc !important;
+  }
+`;
+
+function getAegisShadowRoot(): ShadowRoot {
+  if (!shadowHost || !shadowHost.isConnected) {
+    shadowHost = document.createElement('aegis-autofill-host');
+    shadowHost.id = 'aegis-root-host';
+    shadowHost.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; width: 0 !important; height: 0 !important; z-index: 2147483647 !important; pointer-events: none !important; border: none !important; margin: 0 !important; padding: 0 !important;';
+    
+    shadowRootRef = shadowHost.attachShadow({ mode: 'closed' });
+    
+    const styleEl = document.createElement('style');
+    styleEl.textContent = EXTENSION_SHADOW_STYLES;
+    shadowRootRef.appendChild(styleEl);
+    
+    (document.body || document.documentElement).appendChild(shadowHost);
+  }
+  return shadowRootRef!;
+}
+
 function showInPagePhishingBanner(result: any) {
-  if (document.querySelector('.aegis-phishing-alert-banner')) return;
+  const root = getAegisShadowRoot();
+  if (root.querySelector('.aegis-phishing-alert-banner')) return;
 
   const banner = document.createElement('div');
   banner.className = 'aegis-phishing-alert-banner';
+  banner.style.pointerEvents = 'auto';
 
   const icon = document.createElement('div');
   icon.className = 'aegis-phishing-alert-icon';
@@ -434,7 +664,7 @@ function showInPagePhishingBanner(result: any) {
   banner.appendChild(info);
   banner.appendChild(dismissBtn);
 
-  document.body.appendChild(banner);
+  root.appendChild(banner);
   setTimeout(() => {
     banner.classList.add('show');
   }, 100);
@@ -472,9 +702,20 @@ let activeDropdown: HTMLDivElement | null = null;
 let activeTargetInput: HTMLInputElement | null = null;
 let lastFilledCredential: { username: string; password: string; timestamp: number } | null = null;
 
-// Clean active dropdown on click elsewhere
+function wipeLastFilledCredential() {
+  if (lastFilledCredential) {
+    lastFilledCredential.username = '';
+    lastFilledCredential.password = '';
+    lastFilledCredential.timestamp = 0;
+    lastFilledCredential = null;
+  }
+}
+
+// Clean active dropdown on click elsewhere (inspecting composedPath for Shadow DOM elements)
 document.addEventListener('click', (e) => {
-  if (activeDropdown && !activeDropdown.contains(e.target as Node) && e.target !== activeTargetInput) {
+  const path = e.composedPath ? e.composedPath() : [];
+  const clickedInsideDropdown = activeDropdown && path.includes(activeDropdown);
+  if (activeDropdown && !clickedInsideDropdown && e.target !== activeTargetInput) {
     closeDropdown();
   }
 });
@@ -590,8 +831,8 @@ function triggerAutoSubmitIfEnabled(inputElement: HTMLInputElement) {
 
 function checkAndAutofillPendingPassword() {
   if (!lastFilledCredential) return;
-  if (Date.now() - lastFilledCredential.timestamp > 60000) {
-    lastFilledCredential = null;
+  if (Date.now() - lastFilledCredential.timestamp > 15000) {
+    wipeLastFilledCredential();
     return;
   }
   
@@ -603,7 +844,7 @@ function checkAndAutofillPendingPassword() {
       passInput.dispatchEvent(new Event('input', { bubbles: true }));
       passInput.dispatchEvent(new Event('change', { bubbles: true }));
       
-      lastFilledCredential = null;
+      wipeLastFilledCredential();
       triggerAutoSubmitIfEnabled(passInput);
     }
   });
@@ -611,6 +852,7 @@ function checkAndAutofillPendingPassword() {
 
 // Scan inputs and inject 'A' icon button
 function scanAndInject() {
+  if (typeof document === 'undefined' || !document.body) return;
   const inputs = document.querySelectorAll('input');
   inputs.forEach((inputEl) => {
     const input = inputEl as HTMLInputElement;
@@ -680,6 +922,7 @@ function showDropdown(targetInput: HTMLInputElement, response: any) {
   const rect = targetInput.getBoundingClientRect();
   const dropdown = document.createElement('div');
   dropdown.className = 'aegis-dropdown';
+  dropdown.style.pointerEvents = 'auto';
   
   // Set floating styles and absolute coordinates relative to the page viewport bounds
   dropdown.style.position = 'absolute';
@@ -785,7 +1028,8 @@ function showDropdown(targetInput: HTMLInputElement, response: any) {
 
   dropdown.appendChild(genOption);
 
-  document.body.appendChild(dropdown);
+  const root = getAegisShadowRoot();
+  root.appendChild(dropdown);
   activeDropdown = dropdown;
 }
 
@@ -828,6 +1072,7 @@ function fillPageCredentials(activeInput: HTMLInputElement, username: string, pa
       fillInput(usernameInput, username);
     }
     
+    wipeLastFilledCredential();
     triggerAutoSubmitIfEnabled(activeInput);
   } else {
     fillInput(activeInput, username);
@@ -843,6 +1088,7 @@ function fillPageCredentials(activeInput: HTMLInputElement, username: string, pa
     
     if (passwordInput) {
       fillInput(passwordInput, password);
+      wipeLastFilledCredential();
       triggerAutoSubmitIfEnabled(passwordInput);
     } else {
       triggerAutoSubmitIfEnabled(activeInput);
@@ -899,13 +1145,14 @@ export function generateSecurePassword(length = 16): string {
   return secureShuffle(passwordChars).join('');
 }
 
-// Show premium glassmorphic top prompt banner
+// Show premium glassmorphic top prompt banner inside isolated Shadow DOM
 function showSavePromptBanner(cred: any) {
-  // Check if banner already exists
-  if (document.querySelector('.aegis-banner')) return;
+  const root = getAegisShadowRoot();
+  if (root.querySelector('.aegis-banner')) return;
 
   const banner = document.createElement('div');
   banner.className = 'aegis-banner';
+  banner.style.pointerEvents = 'auto';
   
   const info = document.createElement('div');
   info.className = 'aegis-banner-info';
@@ -962,7 +1209,7 @@ function showSavePromptBanner(cred: any) {
   banner.appendChild(info);
   banner.appendChild(actions);
   
-  document.body.appendChild(banner);
+  root.appendChild(banner);
   
   // Animation delay
   setTimeout(() => {
@@ -1090,16 +1337,20 @@ setTimeout(() => {
 }, 800);
 
 // Setup mutation observer to scan for dynamically loaded SPA fields
-const observer = new MutationObserver(() => {
-  scanAndInject();
-});
-observer.observe(document.body, { 
-  childList: true, 
-  subtree: true,
-  attributes: true,
-  attributeFilter: ['class', 'style', 'hidden', 'type']
-});
+if (typeof document !== 'undefined' && document.body) {
+  const observer = new MutationObserver(() => {
+    scanAndInject();
+  });
+  observer.observe(document.body, { 
+    childList: true, 
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['class', 'style', 'hidden', 'type']
+  });
+}
 
 // Initial scan
-scanAndInject();
+if (typeof document !== 'undefined' && document.body) {
+  scanAndInject();
+}
 initializePhishingCheck();
