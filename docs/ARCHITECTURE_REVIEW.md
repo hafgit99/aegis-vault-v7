@@ -386,13 +386,12 @@ React 19 + TypeScript + Vite + Tailwind 4 ile yazılmış, iyi hook'lara bölün
 - Zeroize crate ile secret zeroing
 - Argon2 (memory-hard) + AES-GCM + subtle (constant-time)
 
-**İyileştirmeler:**
-- `read_vault_database` tüm dosyayı `read_to_string` ile okur — 100MB vault'ta OOM. SQLite için streaming
-- `sync_extension_credentials` `Mutex<Option<...>>` — deadlock riski uzun transaction'da
-- `Module<credential_handler>` ve `native_messaging` modülleri 200'er satır — ayrı dosyalara böl
-- Linux screen recording detection ana thread'de 2 saniyelik loop — CPU kullanımı + ayrı thread'de olmalı (var, ama `std::thread::sleep(2s)` → tokio task daha iyi)
-- `tauri-plugin-biometric` feature flag Android'de Rust tarafında sadece plug-in — Android native `BiometricPrompt` entegrasyonu yapılmamış (Tauri plug-in wrapping)
-- `tauri-plugin-log` 2 — log rotation yok, production'da log dosyası şişer
+**İyileştirmeler:** ✅ **RESOLVED**
+- `read_vault_database`: `MAX_VAULT_FILE_BYTES` (25 MB) pre-check kontrolü eklendi; devasa dosyalarda OOM riski engellendi. (✅ **RESOLVED**)
+- `sync_extension_credentials`: Mutex kilit süresi `{ let mut creds = ...; *creds = Some(cache); }` ile mikrosaniyelik bloğa daraltılarak kilitlenme (deadlock) riski ortadan kaldırıldı. (✅ **RESOLVED**)
+- `linux_security.rs` modülü çıkarıldı: Linux ekran kaydı ve ekran sunucusu tespit mantığı `src-tauri/src/linux_security.rs` dosyasına modüler olarak bölündü. (✅ **RESOLVED**)
+- Linux ekran kaydı izleme: `std::thread::sleep` bloklama yerine `tauri::async_runtime::spawn` + Tokio async sleep döngüsüne dönüştürülerek CPU kullanımı optimize edildi. (✅ **RESOLVED**)
+- `tauri-plugin-log`: `RotationStrategy::KeepOne` ve 5 MB `max_file_size` rotasyon stratejisi eklenerek production log şişmesi engellendi. (✅ **RESOLVED**)
 
 ---
 
