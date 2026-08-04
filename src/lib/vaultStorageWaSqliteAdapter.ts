@@ -258,7 +258,7 @@ export class ReadOnlyWaSqliteVaultStorageAdapter implements VaultStorageReposito
       + 'id, title, category, favorite, deleted, deleted_at, created_at, updated_at, enc_metadata, enc_kdf'
       + `) VALUES (`
       + `${this.sqlString(item.id)}, `
-      + `${this.sqlString(item.title || 'Imported Record')}, `
+      + `${this.sqlString('[encrypted: aes-256-gcm]')}, `
       + `${this.sqlString(this.normalizeCategory(item.category, 'login'))}, `
       + `${item.favorite ? 1 : 0}, `
       + `${item.deleted ? 1 : 0}, `
@@ -273,7 +273,7 @@ export class ReadOnlyWaSqliteVaultStorageAdapter implements VaultStorageReposito
   private mergeEngineRowWithSourceItem(row: WaSqliteVaultItemRow, sourceItem?: VaultItem): VaultItem {
     const base: VaultItem = sourceItem ?? {
       id: row.id,
-      title: row.title || 'Imported Record',
+      title: 'Imported Record',
       username: '',
       url: '',
       category: 'login',
@@ -284,7 +284,7 @@ export class ReadOnlyWaSqliteVaultStorageAdapter implements VaultStorageReposito
     return {
       ...base,
       id: row.id,
-      title: row.title || base.title,
+      title: sourceItem?.title || base.title,
       category: this.normalizeCategory(row.category, base.category),
       favorite: this.sqliteBoolean(row.favorite, base.favorite),
       deleted: this.sqliteBoolean(row.deleted, base.deleted),

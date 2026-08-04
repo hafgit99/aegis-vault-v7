@@ -437,7 +437,7 @@ FROM vault_items;
     const category = this.normalizeCategory(this.optionalString(row.category), 'login');
     const fallback: VaultItem = {
       id: this.optionalString(row.id) || '',
-      title: this.optionalString(row.title) || 'Imported Record',
+      title: 'Imported Record',
       username: '',
       url: '',
       category,
@@ -458,7 +458,7 @@ FROM vault_items;
       return {
         ...item,
         id: fallback.id,
-        title: fallback.title,
+        title: item.title || fallback.title,
         category,
         favorite: fallback.favorite,
         deleted: fallback.deleted,
@@ -492,7 +492,7 @@ FROM vault_items;
 
     return {
       id,
-      title: itemToEncrypt.title,
+      title: ENCRYPTED_MARKER,
       category,
       favorite: item.favorite ? 1 : 0,
       deleted: item.deleted ? 1 : 0,
@@ -510,7 +510,7 @@ FROM vault_items;
     return {
       ...((item ?? {}) as VaultItem),
       id: this.optionalString(row.id) || '',
-      title: this.optionalString(row.title) || item?.title || 'Imported Record',
+      title: item?.title || 'Imported Record',
       username: item?.username || '',
       url: item?.url || '',
       category: this.normalizeCategory(this.optionalString(row.category), item?.category || 'login'),

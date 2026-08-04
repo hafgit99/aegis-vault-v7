@@ -319,6 +319,7 @@ describe('wa-sqlite vault storage repository', () => {
 
     expect(engine.vaultRows).toHaveLength(1);
     const stored = engine.vaultRows[0];
+    expect(stored.title).toBe('[encrypted: aes-256-gcm]');
     expect(stored.username_db).toBe('[encrypted: aes-256-gcm]');
     expect(stored.enc_metadata).toContain('sealed:');
     expect(stored.enc_metadata).not.toContain('Secret-123!');
@@ -344,7 +345,7 @@ describe('wa-sqlite vault storage repository', () => {
     await expect(repository.saveVaultItem(createVaultItem({ title: 'Changed' }), 'valid-master')).rejects.toThrow('injected-upsert-failure');
 
     expect(engine.vaultRows).toHaveLength(1);
-    expect(engine.vaultRows[0].title).toBe('Example Login');
+    expect(engine.vaultRows[0].title).toBe('[encrypted: aes-256-gcm]');
     expect(engine.execute).toHaveBeenCalledWith('ROLLBACK;');
   });
 
@@ -529,6 +530,6 @@ describe('wa-sqlite vault storage repository', () => {
     await repository.saveVaultItem(createVaultItem({ id: "id'1", title: "Alice's Login" }), 'valid-master');
 
     expect(engine.vaultRows[0].id).toBe("id'1");
-    expect(engine.vaultRows[0].title).toBe("Alice's Login");
+    expect(engine.vaultRows[0].title).toBe('[encrypted: aes-256-gcm]');
   });
 });

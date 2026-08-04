@@ -117,7 +117,7 @@ describe('read-only wa-sqlite vault storage adapter', () => {
     expect(items).toEqual([
       {
         ...sourceItem,
-        title: 'Engine Title',
+        title: 'Example',
         category: 'secure_note',
         favorite: true,
         deleted: false,
@@ -181,7 +181,7 @@ describe('read-only wa-sqlite vault storage adapter', () => {
 
     expect(items).toEqual([{ ...sourceItem, favorite: true, deleted: false, deletedAt: undefined }]);
     expect(engine.selectObjects).toHaveBeenCalledTimes(2);
-    expect(executedSql).toContain("'Source''s Login'");
+    expect(executedSql).toContain("'[encrypted: aes-256-gcm]'");
     expect(executedSql).not.toContain('private-user');
     expect(executedSql).not.toContain('private-password');
     expect(adapter.getQueryLogs()[1].query).toBe('WA_SQLITE_MIRROR seed vault_items metadata from source;');

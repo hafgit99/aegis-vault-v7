@@ -128,7 +128,7 @@ describe('SQLite OPFS persistence engine', () => {
 
     expect(result).toEqual({
       columns: ['id', 'title', 'username'],
-      rows: [['item-login-1', 'Email Account', '[encrypted: aes-256-gcm]']],
+      rows: [['item-login-1', '[encrypted: aes-256-gcm]', '[encrypted: aes-256-gcm]']],
     });
 
     const blockedWrite = sqlite.executeCustomSQL('DELETE FROM vault_items;', 'master-pass');
@@ -156,7 +156,7 @@ describe('SQLite OPFS persistence engine', () => {
     expect(reseeded.map((item) => item.id)).toEqual(['active-item', 'trash-item']);
 
     const trashRows = sqlite.executeCustomSQL('SELECT id, title, deleted FROM vault_items WHERE deleted = 1', 'master-pass');
-    expect(trashRows.rows).toEqual([['trash-item', 'Trash Item', 1]]);
+    expect(trashRows.rows).toEqual([['trash-item', '[encrypted: aes-256-gcm]', 1]]);
 
     const afterDelete = await sqlite.deletePermanently('trash-item', 'master-pass');
     expect(afterDelete.map((item) => item.id)).toEqual(['active-item']);
@@ -519,7 +519,7 @@ describe('SQLite OPFS persistence engine', () => {
     ]);
     expect(allColumns.rows[0]).toEqual([
       generatedId,
-      'Updated Login',
+      '[encrypted: aes-256-gcm]',
       'login',
       0,
       0,
@@ -544,7 +544,7 @@ describe('SQLite OPFS persistence engine', () => {
     expect(sqlite.getQueryLogs()).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          query: expect.stringContaining('UPDATE vault_items SET title = "Updated Login"'),
+          query: expect.stringContaining('UPDATE vault_items SET title = "[encrypted: aes-256-gcm]"'),
           status: 'SUCCESS',
         }),
       ]),
@@ -558,7 +558,7 @@ describe('SQLite OPFS persistence engine', () => {
       vault_items: [
         {
           id: 'encrypted-row',
-          title: 'Encrypted Row',
+          title: '[encrypted: aes-256-gcm]',
           category: 'login',
           favorite: 0,
           deleted: 0,
@@ -582,7 +582,7 @@ describe('SQLite OPFS persistence engine', () => {
     await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual([
       expect.objectContaining({
         id: 'encrypted-row',
-        title: 'Encrypted Row',
+        title: '[encrypted: aes-256-gcm]',
         username: '[encrypted: aes-256-gcm]',
       }),
     ]);

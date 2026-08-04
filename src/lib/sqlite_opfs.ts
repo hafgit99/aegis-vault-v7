@@ -372,14 +372,14 @@ class SQLiteOPFS implements VaultStorageRepository {
 
           return {
             id: item.id,
-            title: item.title,
+            title: '[encrypted: aes-256-gcm]',
             category: item.category,
             favorite: item.favorite ? 1 : 0,
             deleted: item.deleted ? 1 : 0,
             deleted_at: item.deletedAt || null,
             created_at: item.createdAt,
             updated_at: item.updatedAt,
-            username: item.username || '',
+            username: '[encrypted: aes-256-gcm]',
             username_db: '[encrypted: aes-256-gcm]',
             password_db: '[encrypted: aes-256-gcm]',
             notes_db: item.notes ? '[encrypted: aes-256-gcm]' : '',
@@ -481,14 +481,14 @@ class SQLiteOPFS implements VaultStorageRepository {
 
         return {
           id: item.id || secureRandomToken(9),
-          title: item.title || 'Imported Record',
+          title: '[encrypted: aes-256-gcm]',
           category: item.category || 'login',
           favorite: item.favorite ? 1 : 0,
           deleted: item.deleted ? 1 : 0,
           deleted_at: item.deletedAt || null,
           created_at: item.createdAt || nowStr,
           updated_at: item.updatedAt || nowStr,
-          username: item.username || '',
+          username: '[encrypted: aes-256-gcm]',
           username_db: '[encrypted: aes-256-gcm]',
           password_db: '[encrypted: aes-256-gcm]',
           notes_db: item.notes ? '[encrypted: aes-256-gcm]' : '',
@@ -551,14 +551,14 @@ class SQLiteOPFS implements VaultStorageRepository {
 
         return {
           id: item.id || secureRandomToken(9),
-          title: item.title || 'Imported Record',
+          title: '[encrypted: aes-256-gcm]',
           category: item.category || 'login',
           favorite: item.favorite ? 1 : 0,
           deleted: item.deleted ? 1 : 0,
           deleted_at: item.deletedAt || null,
           created_at: item.createdAt || nowStr,
           updated_at: nowStr,
-          username: item.username || '',
+          username: '[encrypted: aes-256-gcm]',
           username_db: '[encrypted: aes-256-gcm]',
           password_db: '[encrypted: aes-256-gcm]',
           notes_db: item.notes ? '[encrypted: aes-256-gcm]' : '',
@@ -725,8 +725,8 @@ class SQLiteOPFS implements VaultStorageRepository {
           // Crypt key mismatch or corruption
           const fallbackItem: VaultItem = {
             id: row.id,
-            title: row.title,
-            username: row.username_db,
+            title: '[encrypted: aes-256-gcm]',
+            username: '[encrypted: aes-256-gcm]',
             url: '',
             category: row.category as any,
             createdAt: row.created_at,
@@ -748,7 +748,7 @@ class SQLiteOPFS implements VaultStorageRepository {
       const list: VaultItem[] = decryptedResults.map(({ row, item }) => ({
         ...item,
         id: row.id,
-        title: row.title,
+        title: item.title || 'Imported Record',
         category: row.category as any,
         favorite: row.favorite === 1,
         deleted: row.deleted === 1,
@@ -806,7 +806,7 @@ class SQLiteOPFS implements VaultStorageRepository {
 
       const row: SQLiteRow = {
         id: item.id || secureRandomToken(9),
-        title: item.title || 'Imported Record',
+        title: '[encrypted: aes-256-gcm]',
         category: category,
         favorite: item.favorite ? 1 : 0,
         deleted: item.deleted ? 1 : 0,
@@ -815,7 +815,7 @@ class SQLiteOPFS implements VaultStorageRepository {
         updated_at: nowStr,
 
         // Decrypted display properties
-        username: item.username || '',
+        username: '[encrypted: aes-256-gcm]',
 
         // SQLite visible values (completely masked for security)
         username_db: '[encrypted: aes-256-gcm]',
@@ -904,14 +904,14 @@ class SQLiteOPFS implements VaultStorageRepository {
 
               const row: SQLiteRow = {
                 id: item.id || secureRandomToken(9),
-                title: item.title || 'Imported Record',
+                title: '[encrypted: aes-256-gcm]',
                 category: category,
                 favorite: item.favorite ? 1 : 0,
                 deleted: item.deleted ? 1 : 0,
                 deleted_at: item.deletedAt || null,
                 created_at: item.createdAt || nowStr,
                 updated_at: nowStr,
-                username: item.username || '',
+                username: '[encrypted: aes-256-gcm]',
                 username_db: '[encrypted: aes-256-gcm]',
                 password_db: '[encrypted: aes-256-gcm]',
                 notes_db: item.notes ? '[encrypted: aes-256-gcm]' : '',
@@ -967,7 +967,7 @@ class SQLiteOPFS implements VaultStorageRepository {
         return {
           ...(cachedItem ?? {}),
           id: row.id,
-          title: row.title,
+          title: cachedItem?.title || 'Imported Record',
           username: cachedItem?.username || row.username || '',
           password: cachedItem?.password || '',
           url: cachedItem?.url || '',
@@ -1192,7 +1192,7 @@ class SQLiteOPFS implements VaultStorageRepository {
 
         return {
           id: item.id,
-          title: item.title,
+          title: '[encrypted: aes-256-gcm]',
           category: item.category,
           favorite: item.favorite ? 1 : 0,
           deleted: item.deleted ? 1 : 0,
