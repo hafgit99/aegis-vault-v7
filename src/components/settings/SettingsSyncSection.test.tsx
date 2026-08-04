@@ -25,6 +25,16 @@ describe('SettingsSyncSection', () => {
     setSyncUsername: vi.fn(),
     syncPassword: '',
     setSyncPassword: vi.fn(),
+    s3Endpoint: '',
+    setS3Endpoint: vi.fn(),
+    s3Region: '',
+    setS3Region: vi.fn(),
+    s3Bucket: '',
+    setS3Bucket: vi.fn(),
+    s3AccessKeyId: '',
+    setS3AccessKeyId: vi.fn(),
+    s3SecretAccessKey: '',
+    setS3SecretAccessKey: vi.fn(),
     syncStatus: 'idle' as const,
     syncMessage: null,
     syncLastAt: null,
@@ -49,8 +59,8 @@ describe('SettingsSyncSection', () => {
   it('calls setSyncProvider when provider selection changes', () => {
     render(<SettingsSyncSection {...defaultProps} />);
 
-    const select = screen.getByRole('combobox');
-    fireEvent.change(select, { target: { value: 'webdav' } });
+    const webdavBtn = screen.getByText('WebDAV / Nextcloud');
+    fireEvent.click(webdavBtn);
 
     expect(defaultProps.setSyncProvider).toHaveBeenCalledWith('webdav');
   });

@@ -92,8 +92,8 @@ Latest local verification metrics:
 | Metric | Status |
 | --- | --- |
 | **TypeScript Typecheck** | **0 errors (clean)** |
-| **Unit Test Files** | **145 passed (145)** |
-| **Unit Tests** | **1136 passed (1136)** |
+| **Unit Test Files** | **148 passed (148)** |
+| **Unit Tests** | **1152 passed (1152)** |
 | **Android Kotlin Unit Tests** | **Passed (`AutofillModelsTest.kt`)** |
 | **Statements Coverage** | **91.20%** |
 | **Branches Coverage** | **83.29%** |

@@ -3,17 +3,32 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Cloud, Wifi, Check, CloudOff, RotateCcw, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import React from 'react';
+import { Cloud, Wifi, Check, CloudOff, RotateCcw, CheckCircle, AlertCircle, RefreshCw, Server, Database } from 'lucide-react';
+import { SyncProviderType } from '../../lib/sync';
 
-interface SettingsSyncSectionProps {
-  syncProvider: 'disabled' | 'webdav';
-  setSyncProvider: (provider: 'disabled' | 'webdav') => void;
+export interface SettingsSyncSectionProps {
+  syncProvider: SyncProviderType;
+  setSyncProvider: (provider: SyncProviderType) => void;
+  // WebDAV fields
   syncUrl: string;
   setSyncUrl: (url: string) => void;
   syncUsername: string;
   setSyncUsername: (username: string) => void;
   syncPassword: string;
   setSyncPassword: (password: string) => void;
+  // S3 fields
+  s3Endpoint: string;
+  setS3Endpoint: (endpoint: string) => void;
+  s3Region: string;
+  setS3Region: (region: string) => void;
+  s3Bucket: string;
+  setS3Bucket: (bucket: string) => void;
+  s3AccessKeyId: string;
+  setS3AccessKeyId: (accessKeyId: string) => void;
+  s3SecretAccessKey: string;
+  setS3SecretAccessKey: (secretAccessKey: string) => void;
+  // State & Callbacks
   syncStatus: 'idle' | 'syncing' | 'success' | 'error' | 'conflict';
   syncMessage: string | null;
   syncLastAt: string | null;
@@ -36,6 +51,16 @@ export function SettingsSyncSection({
   setSyncUsername,
   syncPassword,
   setSyncPassword,
+  s3Endpoint,
+  setS3Endpoint,
+  s3Region,
+  setS3Region,
+  s3Bucket,
+  setS3Bucket,
+  s3AccessKeyId,
+  setS3AccessKeyId,
+  s3SecretAccessKey,
+  setS3SecretAccessKey,
   syncStatus,
   syncMessage,
   syncLastAt,
@@ -63,27 +88,58 @@ export function SettingsSyncSection({
         <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
           {t('settings.sync.provider.label')}
         </label>
-        <select
-          id="sync-provider-select"
-          value={syncProvider}
-          onChange={e => setSyncProvider(e.target.value as 'disabled' | 'webdav')}
-          className="w-full bg-surface-lowest border border-outline-variant/20 rounded-lg px-3 py-2 text-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-brand-primary"
-        >
-          <option value="disabled">{t('settings.sync.provider.disabled')}</option>
-          <option value="webdav">{t('settings.sync.provider.webdav')}</option>
-        </select>
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            type="button"
+            onClick={() => setSyncProvider('disabled')}
+            className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${
+              syncProvider === 'disabled'
+                ? 'border-brand-primary bg-brand-primary/10 text-brand-primary'
+                : 'border-outline-variant/20 bg-surface-lowest text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            <CloudOff className="w-3.5 h-3.5" />
+            <span>Devre Dışı</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSyncProvider('webdav')}
+            className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${
+              syncProvider === 'webdav'
+                ? 'border-brand-primary bg-brand-primary/10 text-brand-primary'
+                : 'border-outline-variant/20 bg-surface-lowest text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            <Server className="w-3.5 h-3.5" />
+            <span>WebDAV / Nextcloud</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSyncProvider('s3')}
+            className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${
+              syncProvider === 's3'
+                ? 'border-brand-primary bg-brand-primary/10 text-brand-primary'
+                : 'border-outline-variant/20 bg-surface-lowest text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            <Database className="w-3.5 h-3.5" />
+            <span>S3 / MinIO / R2</span>
+          </button>
+        </div>
       </div>
 
       {/* WebDAV Config Form */}
       {syncProvider === 'webdav' && (
-        <div className="space-y-3">
+        <div className="space-y-3 pt-2">
           <div className="space-y-1">
             <label className="block text-xs font-medium text-on-surface-variant">{t('settings.sync.configure.url')}</label>
             <input
               id="sync-webdav-url"
               type="url"
               value={syncUrl}
-              onChange={e => setSyncUrl(e.target.value)}
+              onChange={(e) => setSyncUrl(e.target.value)}
               placeholder={t('settings.sync.configure.urlPlaceholder')}
               className="w-full bg-surface-lowest border border-outline-variant/20 rounded-lg px-3 py-2 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:ring-1 focus:ring-brand-primary"
             />
@@ -96,7 +152,7 @@ export function SettingsSyncSection({
                 type="text"
                 autoComplete="username"
                 value={syncUsername}
-                onChange={e => setSyncUsername(e.target.value)}
+                onChange={(e) => setSyncUsername(e.target.value)}
                 placeholder={t('settings.sync.configure.usernamePlaceholder')}
                 className="w-full bg-surface-lowest border border-outline-variant/20 rounded-lg px-3 py-2 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:ring-1 focus:ring-brand-primary"
               />
@@ -108,13 +164,81 @@ export function SettingsSyncSection({
                 type="password"
                 autoComplete="current-password"
                 value={syncPassword}
-                onChange={e => setSyncPassword(e.target.value)}
+                onChange={(e) => setSyncPassword(e.target.value)}
                 placeholder={t('settings.sync.configure.passwordPlaceholder')}
                 className="w-full bg-surface-lowest border border-outline-variant/20 rounded-lg px-3 py-2 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:ring-1 focus:ring-brand-primary"
               />
             </div>
           </div>
+        </div>
+      )}
 
+      {/* S3 Config Form */}
+      {syncProvider === 's3' && (
+        <div className="space-y-3 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1 sm:col-span-2">
+              <label className="block text-xs font-medium text-on-surface-variant">S3 Endpoint URL</label>
+              <input
+                id="sync-s3-endpoint"
+                type="url"
+                value={s3Endpoint}
+                onChange={(e) => setS3Endpoint(e.target.value)}
+                placeholder="https://s3.us-east-1.amazonaws.com veya https://minio.example.com"
+                className="w-full bg-surface-lowest border border-outline-variant/20 rounded-lg px-3 py-2 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:ring-1 focus:ring-brand-primary"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-on-surface-variant">Region (Bölge)</label>
+              <input
+                id="sync-s3-region"
+                type="text"
+                value={s3Region}
+                onChange={(e) => setS3Region(e.target.value)}
+                placeholder="us-east-1 (varsayılan)"
+                className="w-full bg-surface-lowest border border-outline-variant/20 rounded-lg px-3 py-2 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:ring-1 focus:ring-brand-primary"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-on-surface-variant">Bucket Adı</label>
+              <input
+                id="sync-s3-bucket"
+                type="text"
+                value={s3Bucket}
+                onChange={(e) => setS3Bucket(e.target.value)}
+                placeholder="my-aegis-vault-bucket"
+                className="w-full bg-surface-lowest border border-outline-variant/20 rounded-lg px-3 py-2 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:ring-1 focus:ring-brand-primary"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-on-surface-variant">Access Key ID</label>
+              <input
+                id="sync-s3-access-key"
+                type="text"
+                value={s3AccessKeyId}
+                onChange={(e) => setS3AccessKeyId(e.target.value)}
+                placeholder="AKIAIOSFODNN7EXAMPLE"
+                className="w-full bg-surface-lowest border border-outline-variant/20 rounded-lg px-3 py-2 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:ring-1 focus:ring-brand-primary"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-on-surface-variant">Secret Access Key</label>
+              <input
+                id="sync-s3-secret-key"
+                type="password"
+                value={s3SecretAccessKey}
+                onChange={(e) => setS3SecretAccessKey(e.target.value)}
+                placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+                className="w-full bg-surface-lowest border border-outline-variant/20 rounded-lg px-3 py-2 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:ring-1 focus:ring-brand-primary"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Action Buttons for configured providers */}
+      {syncProvider !== 'disabled' && (
+        <div className="space-y-3 pt-2">
           {/* Test Connection */}
           <button
             id="sync-test-btn"
@@ -157,7 +281,7 @@ export function SettingsSyncSection({
       )}
 
       {/* Sync Now + Status */}
-      {syncProvider === 'webdav' && (
+      {syncProvider !== 'disabled' && (
         <div className="border-t border-outline-variant/10 pt-4 space-y-3">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">

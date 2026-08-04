@@ -5,7 +5,7 @@
 
 // ─── Core Sync Types ────────────────────────────────────────────────────────
 
-export type SyncProviderType = 'webdav' | 'disabled';
+export type SyncProviderType = 'webdav' | 's3' | 'disabled';
 
 export type SyncStatus = 'idle' | 'syncing' | 'success' | 'error' | 'conflict';
 
@@ -36,7 +36,24 @@ export interface WebDavSyncConfig {
   password: string;
 }
 
-export type SyncConfig = WebDavSyncConfig | { type: 'disabled' };
+/** Configuration for an S3-compatible sync provider (AWS S3, MinIO, Cloudflare R2) */
+export interface S3SyncConfig {
+  type: 's3';
+  /** Base URL / endpoint, e.g. https://s3.us-east-1.amazonaws.com or https://minio.example.com */
+  endpoint: string;
+  /** S3 region, e.g. us-east-1, auto, eu-central-1 */
+  region: string;
+  /** Bucket name */
+  bucket: string;
+  /** Access key ID */
+  accessKeyId: string;
+  /** Secret access key — stored encrypted */
+  secretAccessKey: string;
+  /** Optional custom path prefix inside bucket, e.g. "aegis-backup" */
+  prefix?: string;
+}
+
+export type SyncConfig = WebDavSyncConfig | S3SyncConfig | { type: 'disabled' };
 
 // ─── Provider Interface ──────────────────────────────────────────────────────
 
@@ -65,6 +82,9 @@ export interface SyncProvider {
    * Resolves normally on success, rejects with a SyncError otherwise.
    */
   testConnection(): Promise<void>;
+
+  /** Clean up resources and unregister network policy whitelist origins if applicable */
+  dispose?: () => void;
 }
 
 // ─── Result / Error Types ────────────────────────────────────────────────────

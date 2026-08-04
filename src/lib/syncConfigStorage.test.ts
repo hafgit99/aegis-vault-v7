@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -33,6 +33,7 @@ import {
   saveLastSyncTime,
   saveSyncConfig,
   validateWebDavConfig,
+  validateS3Config,
 } from './sync/syncConfigStorage';
 import { SyncError, syncErrorCodes, type SyncConfig } from './sync/syncTypes';
 
@@ -59,6 +60,26 @@ describe('syncConfigStorage', () => {
     expect(raw).toBeTruthy();
     expect(raw).not.toContain('app-token');
     expect(raw).not.toContain('alice');
+    expect(hasSyncConfig()).toBe(true);
+    await expect(loadSyncConfig('master-password')).resolves.toEqual(config);
+  });
+
+  it('round-trips encrypted S3 config and never stores plaintext credentials', async () => {
+    const config: SyncConfig = {
+      type: 's3',
+      endpoint: 'https://s3.us-east-1.amazonaws.com',
+      region: 'us-east-1',
+      bucket: 'my-bucket',
+      accessKeyId: 'AKIA1234567890',
+      secretAccessKey: 'secretKey1234567890',
+    };
+
+    await saveSyncConfig(config, 'master-password');
+
+    const raw = localStorage.getItem('aegis_sync_config_v1');
+    expect(raw).toBeTruthy();
+    expect(raw).not.toContain('AKIA1234567890');
+    expect(raw).not.toContain('secretKey1234567890');
     expect(hasSyncConfig()).toBe(true);
     await expect(loadSyncConfig('master-password')).resolves.toEqual(config);
   });
@@ -116,6 +137,17 @@ describe('syncConfigStorage', () => {
     expect(validateWebDavConfig({ url: 'http://localhost:8080/dav', username: 'u', password: 'p' })).toBeNull();
     expect(validateWebDavConfig({ url: 'http://192.168.1.5/dav', username: 'u', password: 'p' })).toBeNull();
     expect(validateWebDavConfig({ url: 'https://example.com/dav', username: 'u', password: 'p' })).toBeNull();
+  });
+
+  it('validates S3 config requirements and local HTTP exceptions', () => {
+    expect(validateS3Config({})).toBe('S3 Endpoint URL gereklidir.');
+    expect(validateS3Config({ endpoint: 'not a url' })).toBe('Ge\u00e7ersiz Endpoint URL format\u0131.');
+    expect(validateS3Config({ endpoint: 'http://s3.example.com' })).toBe('G\u00fcvenlik i\u00e7in HTTPS gereklidir (yerel a\u011f adresleri muaf tutulur).');
+    expect(validateS3Config({ endpoint: 'https://s3.example.com' })).toBe('Bucket ad\u0131 gereklidir.');
+    expect(validateS3Config({ endpoint: 'https://s3.example.com', bucket: 'b' })).toBe('Access Key ID gereklidir.');
+    expect(validateS3Config({ endpoint: 'https://s3.example.com', bucket: 'b', accessKeyId: 'ak' })).toBe('Secret Access Key gereklidir.');
+    expect(validateS3Config({ endpoint: 'http://127.0.0.1:9000', bucket: 'b', accessKeyId: 'ak', secretAccessKey: 'sk' })).toBeNull();
+    expect(validateS3Config({ endpoint: 'https://s3.us-east-1.amazonaws.com', bucket: 'b', accessKeyId: 'ak', secretAccessKey: 'sk' })).toBeNull();
   });
 });
 

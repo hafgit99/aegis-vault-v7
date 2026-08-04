@@ -25,6 +25,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-biometric",
  "tauri-plugin-log",
+ "tokio",
  "windows-sys 0.61.2",
  "zeroize",
 ]

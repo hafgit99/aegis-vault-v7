@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { SyncConfig, SyncError, syncErrorCodes, WebDavSyncConfig } from './syncTypes';
+import { S3SyncConfig, SyncConfig, SyncError, syncErrorCodes, WebDavSyncConfig } from './syncTypes';
 import { webCryptoAesGcmEncrypt, webCryptoAesGcmDecrypt, generateSafeIv, WebCryptoAesGcmPayload } from '../webcrypto';
 import { deriveArgon2idKey } from '../argon2id';
 import { secureRandomBytes } from '../random';
+import { isPrivateOrLoopbackHostname } from '../airgapNetworkPolicy';
 
 const CONFIG_STORAGE_KEY = 'aegis_sync_config_v1';
 
@@ -112,11 +113,7 @@ export function validateWebDavConfig(cfg: Partial<WebDavSyncConfig>): string | n
   if (!cfg.url || !cfg.url.trim()) return 'URL gereklidir.';
   try {
     const parsed = new URL(cfg.url);
-    const isLocal =
-      parsed.hostname === 'localhost' ||
-      parsed.hostname.startsWith('192.168.') ||
-      parsed.hostname.startsWith('10.') ||
-      parsed.hostname.startsWith('172.');
+    const isLocal = isPrivateOrLoopbackHostname(parsed.hostname);
     if (parsed.protocol !== 'https:' && !isLocal) {
       return 'Güvenlik için HTTPS gereklidir (yerel ağ adresleri muaf tutulur).';
     }
@@ -125,5 +122,23 @@ export function validateWebDavConfig(cfg: Partial<WebDavSyncConfig>): string | n
   }
   if (!cfg.username || !cfg.username.trim()) return 'Kullanıcı adı gereklidir.';
   if (!cfg.password || !cfg.password.trim()) return 'Şifre veya uygulama token gereklidir.';
+  return null;
+}
+
+/** Validates an S3 config object for completeness before saving. */
+export function validateS3Config(cfg: Partial<S3SyncConfig>): string | null {
+  if (!cfg.endpoint || !cfg.endpoint.trim()) return 'S3 Endpoint URL gereklidir.';
+  try {
+    const parsed = new URL(cfg.endpoint);
+    const isLocal = isPrivateOrLoopbackHostname(parsed.hostname);
+    if (parsed.protocol !== 'https:' && !isLocal) {
+      return 'Güvenlik için HTTPS gereklidir (yerel ağ adresleri muaf tutulur).';
+    }
+  } catch {
+    return 'Geçersiz Endpoint URL formatı.';
+  }
+  if (!cfg.bucket || !cfg.bucket.trim()) return 'Bucket adı gereklidir.';
+  if (!cfg.accessKeyId || !cfg.accessKeyId.trim()) return 'Access Key ID gereklidir.';
+  if (!cfg.secretAccessKey || !cfg.secretAccessKey.trim()) return 'Secret Access Key gereklidir.';
   return null;
 }

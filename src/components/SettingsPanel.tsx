@@ -74,13 +74,16 @@ import {
   getLastSyncTime,
   hasSyncConfig,
   validateWebDavConfig,
+  validateS3Config,
   WebDavSyncProvider,
+  S3SyncProvider,
   saveSyncConfig,
   clearSyncConfig,
   loadSyncConfig,
   createSyncProvider,
   performSync,
   saveLastSyncTime,
+  SyncProviderType,
 } from '../lib/sync';
 
 interface SettingsPanelProps {
@@ -182,15 +185,22 @@ export default function SettingsPanel({
   const [passkeyStatusKind, setPasskeyStatusKind] = useState<'success' | 'error' | 'info' | null>(null);
   const [passkeyBusy, setPasskeyBusy] = useState(false);
 
-  // â”€â”€ Extension Token Rotation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Extension Token Rotation ───────────────────────────────────────────
   const [tokenRotateStatus, setTokenRotateStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [tokenRotateMessage, setTokenRotateMessage] = useState<string | null>(null);
 
-  // â”€â”€ Cloud Sync (WebDAV E2EE) States â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  const [syncProvider, setSyncProvider] = useState<'disabled' | 'webdav'>('disabled');
+  // ─── Cloud Sync (WebDAV / S3 E2EE) States ──────────────────────────────
+  const [syncProvider, setSyncProvider] = useState<SyncProviderType>('disabled');
   const [syncUrl, setSyncUrl] = useState('');
   const [syncUsername, setSyncUsername] = useState('');
   const [syncPassword, setSyncPassword] = useState('');
+
+  const [s3Endpoint, setS3Endpoint] = useState('');
+  const [s3Region, setS3Region] = useState('');
+  const [s3Bucket, setS3Bucket] = useState('');
+  const [s3AccessKeyId, setS3AccessKeyId] = useState('');
+  const [s3SecretAccessKey, setS3SecretAccessKey] = useState('');
+
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error' | 'conflict'>('idle');
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [syncLastAt, setSyncLastAt] = useState<string | null>(null);
@@ -203,37 +213,115 @@ export default function SettingsPanel({
   useEffect(() => {
     setSyncLastAt(getLastSyncTime());
     if (hasSyncConfig()) {
-      setSyncProvider('webdav');
+      withActiveBackupPassword(async (backupPassword) => {
+        try {
+          const config = await loadSyncConfig(backupPassword);
+          if (config.type === 'webdav') {
+            setSyncProvider('webdav');
+            setSyncUrl(config.url);
+            setSyncUsername(config.username);
+            setSyncPassword(config.password);
+          } else if (config.type === 's3') {
+            setSyncProvider('s3');
+            setS3Endpoint(config.endpoint);
+            setS3Region(config.region);
+            setS3Bucket(config.bucket);
+            setS3AccessKeyId(config.accessKeyId);
+            setS3SecretAccessKey(config.secretAccessKey);
+          }
+        } catch {
+          setSyncProvider('disabled');
+        }
+      });
     }
   }, []);
 
   const handleSyncTest = async () => {
-    const err = validateWebDavConfig({ url: syncUrl, username: syncUsername, password: syncPassword });
-    if (err) { setSyncTestResult(`âŒ ${err}`); return; }
-    setSyncTestLoading(true);
-    setSyncTestResult(null);
-    try {
-      const provider = new WebDavSyncProvider(syncUrl, syncUsername, syncPassword);
-      await provider.testConnection();
-      setSyncTestResult(t('settings.sync.test.success'));
-    } catch (e: any) {
-      setSyncTestResult(t('settings.sync.test.failed') + (e?.message ? ` (${e.message})` : ''));
-    } finally {
-      setSyncTestLoading(false);
+    if (syncProvider === 'webdav') {
+      const err = validateWebDavConfig({ url: syncUrl, username: syncUsername, password: syncPassword });
+      if (err) { setSyncTestResult(`❌ ${err}`); return; }
+      setSyncTestLoading(true);
+      setSyncTestResult(null);
+      try {
+        const provider = new WebDavSyncProvider(syncUrl, syncUsername, syncPassword);
+        await provider.testConnection();
+        setSyncTestResult(t('settings.sync.test.success'));
+      } catch (e: any) {
+        setSyncTestResult(t('settings.sync.test.failed') + (e?.message ? ` (${e.message})` : ''));
+      } finally {
+        setSyncTestLoading(false);
+      }
+    } else if (syncProvider === 's3') {
+      const err = validateS3Config({
+        endpoint: s3Endpoint,
+        region: s3Region,
+        bucket: s3Bucket,
+        accessKeyId: s3AccessKeyId,
+        secretAccessKey: s3SecretAccessKey,
+      });
+      if (err) { setSyncTestResult(`❌ ${err}`); return; }
+      setSyncTestLoading(true);
+      setSyncTestResult(null);
+      try {
+        const provider = new S3SyncProvider({
+          type: 's3',
+          endpoint: s3Endpoint,
+          region: s3Region,
+          bucket: s3Bucket,
+          accessKeyId: s3AccessKeyId,
+          secretAccessKey: s3SecretAccessKey,
+        });
+        await provider.testConnection();
+        setSyncTestResult(t('settings.sync.test.success'));
+      } catch (e: any) {
+        setSyncTestResult(t('settings.sync.test.failed') + (e?.message ? ` (${e.message})` : ''));
+      } finally {
+        setSyncTestLoading(false);
+      }
     }
   };
 
   const handleSyncSave = async () => {
-    const err = validateWebDavConfig({ url: syncUrl, username: syncUsername, password: syncPassword });
-    if (err) { setSyncMessage(`Error: ${err}`); return; }
-    const saved = await withActiveBackupPassword(async (backupPassword) => {
-      await saveSyncConfig({ type: 'webdav', url: syncUrl, username: syncUsername, password: syncPassword }, backupPassword);
-      return true;
-    });
-    if (!saved) return;
-    setSyncMessage(t('settings.sync.configure.save'));
+    if (syncProvider === 'webdav') {
+      const err = validateWebDavConfig({ url: syncUrl, username: syncUsername, password: syncPassword });
+      if (err) { setSyncMessage(`Error: ${err}`); return; }
+      const saved = await withActiveBackupPassword(async (backupPassword) => {
+        await saveSyncConfig({ type: 'webdav', url: syncUrl, username: syncUsername, password: syncPassword }, backupPassword);
+        return true;
+      });
+      if (!saved) return;
+      setSyncMessage(t('settings.sync.configure.save'));
+    } else if (syncProvider === 's3') {
+      const err = validateS3Config({
+        endpoint: s3Endpoint,
+        region: s3Region,
+        bucket: s3Bucket,
+        accessKeyId: s3AccessKeyId,
+        secretAccessKey: s3SecretAccessKey,
+      });
+      if (err) { setSyncMessage(`Error: ${err}`); return; }
+      const saved = await withActiveBackupPassword(async (backupPassword) => {
+        await saveSyncConfig({
+          type: 's3',
+          endpoint: s3Endpoint,
+          region: s3Region,
+          bucket: s3Bucket,
+          accessKeyId: s3AccessKeyId,
+          secretAccessKey: s3SecretAccessKey,
+        }, backupPassword);
+        return true;
+      });
+      if (!saved) return;
+      setSyncMessage(t('settings.sync.configure.save'));
+    }
   };
+
   const handleSyncDisable = async () => {
+    clearSyncConfig();
+    setSyncProvider('disabled');
+    setSyncUrl(''); setSyncUsername(''); setSyncPassword('');
+    setS3Endpoint(''); setS3Region(''); setS3Bucket(''); setS3AccessKeyId(''); setS3SecretAccessKey('');
+    setSyncMessage(null); setSyncStatus('idle');
     clearSyncConfig();
     setSyncProvider('disabled');
     setSyncUrl(''); setSyncUsername(''); setSyncPassword('');
@@ -1522,6 +1610,16 @@ export default function SettingsPanel({
         setSyncUsername={setSyncUsername}
         syncPassword={syncPassword}
         setSyncPassword={setSyncPassword}
+        s3Endpoint={s3Endpoint}
+        setS3Endpoint={setS3Endpoint}
+        s3Region={s3Region}
+        setS3Region={setS3Region}
+        s3Bucket={s3Bucket}
+        setS3Bucket={setS3Bucket}
+        s3AccessKeyId={s3AccessKeyId}
+        setS3AccessKeyId={setS3AccessKeyId}
+        s3SecretAccessKey={s3SecretAccessKey}
+        setS3SecretAccessKey={setS3SecretAccessKey}
         syncStatus={syncStatus}
         syncMessage={syncMessage}
         syncLastAt={syncLastAt}
