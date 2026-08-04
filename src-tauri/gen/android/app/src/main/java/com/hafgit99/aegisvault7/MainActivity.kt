@@ -49,6 +49,19 @@ class MainActivity : TauriActivity() {
     super.onCreate(savedInstanceState)
   }
 
+  override fun onAttachedToWindow() {
+    super.onAttachedToWindow()
+    window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+  }
+
+  override fun onWindowFocusChanged(hasFocus: Boolean) {
+    super.onWindowFocusChanged(hasFocus)
+    if (hasFocus) {
+      window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+      dismissPrivacyShield()
+    }
+  }
+
   @Suppress("DEPRECATION")
   override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
@@ -78,12 +91,10 @@ class MainActivity : TauriActivity() {
     webView.addJavascriptInterface(AndroidSecureStorageBridge(), "AegisAndroidSecureStorage")
     webView.addJavascriptInterface(AndroidAutofillBridge(), "AegisAndroidAutofill")
     webView.addJavascriptInterface(AndroidRuntimeSecurityBridge(), "AegisAndroidSecurity")
-    webView.post { notifyAutofillIntent() }
-    webView.post { notifyAutofillSaveCandidate() }
-    webView.postDelayed({ notifyAutofillIntent() }, 250)
-    webView.postDelayed({ notifyAutofillSaveCandidate() }, 250)
-    webView.postDelayed({ notifyAutofillIntent() }, 1000)
-    webView.postDelayed({ notifyAutofillSaveCandidate() }, 1000)
+    webView.post {
+      notifyAutofillIntent()
+      notifyAutofillSaveCandidate()
+    }
   }
 
   override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -286,7 +297,17 @@ class MainActivity : TauriActivity() {
     )
   }
 
+  private fun purgeStaleAutofillRequests() {
+    pendingAutofillRequest?.let { req ->
+      if (!req.isFresh()) {
+        Log.i(AUTOFILL_LOG_TAG, "Purging stale autofill request requestId=${req.requestId}")
+        pendingAutofillRequest = null
+      }
+    }
+  }
+
   private fun notifyAutofillIntent() {
+    purgeStaleAutofillRequests()
     val payload = pendingAutofillRequest?.toJson()?.toString() ?: "null"
     val script = "window.__aegisAndroidAutofill && window.__aegisAndroidAutofill.onRequest($payload)"
     evaluateOnWebView(script)
@@ -303,13 +324,13 @@ class MainActivity : TauriActivity() {
   }
 
   /**
-   * Force-dispatch focus and visibilitychange events to the WebView so
-   * the JavaScript privacy-shield overlay is dismissed after Activity
+   * Dispatch focus and visibilitychange events to the WebView so
+   * the JavaScript privacy-shield overlay is safely dismissed after Activity
    * lifecycle transitions (especially during autofill flows).
    */
   private fun dismissPrivacyShield() {
     val webView = webViewRef ?: return
-    webView.postDelayed({
+    webView.post {
       webView.evaluateJavascript(
         """
         (function() {
@@ -323,19 +344,7 @@ class MainActivity : TauriActivity() {
         """.trimIndent(),
         null
       )
-    }, 150)
-    webView.postDelayed({
-      webView.evaluateJavascript(
-        """
-        (function() {
-          try {
-            window.dispatchEvent(new Event('focus'));
-          } catch(e) {}
-        })();
-        """.trimIndent(),
-        null
-      )
-    }, 500)
+    }
   }
 
   private fun Intent.autofillIdsExtra(name: String): ArrayList<AutofillId> {

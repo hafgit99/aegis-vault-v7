@@ -242,13 +242,13 @@ private fun runtimeSecurityPosture(): JSONObject {
 
 #### 2.3.6 Yaşam Döngüsü & Privacy Shield
 
-| # | Bulgu | Risk | Öneri |
-|---|---|---|---|
-| L-1 | **`dismissPrivacyShield` sentetik `focus` + `visibilitychange` event'leri dispatch ediyor.** Bu, gerçek DOM event'lerinin yerine geçiyor. Eğer WebView henüz page load etmediyse, document event listener'ları eklenmemiş olabilir. `try { ... } catch(e) {}` ile yutuluyor. | Orta | Activity lifecycle observer pattern'i: `onWindowFocusChanged(hasFocus: Boolean)` + `lifecycle.addObserver(webViewObserver)`. Privacy shield'i kaldırmak için sayfa event'ine değil, native lifecycle'a güven |
-| L-2 | **`postDelayed(150)` ve `postDelayed(500)` magic number'lar.** Bu süreler WebView'in paint'ini garanti etmiyor. | Düşük | `viewTreeObserver.addOnPreDrawListener` veya ilk `onPageFinished`'i bekle |
-| L-3 | **`onWebViewCreate` içinde 4 kez `postDelayed` ile autofill intent bildirimi:** `post { }`, `postDelayed(250)`, `postDelayed(1000)`. 1 saniye sonra tekrar notify — niye? Cold start'ta WebView 1 saniyeden geç gelirse request kaybolur mu? | Orta | Subscribe-based: WebView'in `onPageFinished` callback'inde bir kez notify, eğer hâlâ handled değilse tekrar |
-| L-4 | `onResume`'da `notifyAutofillIntent` + `notifyAutofillSaveCandidate` çağrılıyor ama `pendingAutofillRequest`'in freshness'i tekrar kontrol edilmiyor. | Düşük | `rejectStaleAutofillRequest` mantığını burada da çağır |
-| L-5 | **Hard-coded `setFlags(FLAG_SECURE, FLAG_SECURE)` `onCreate` içinde.** İyi, ama `Activity.onAttachedToWindow` veya `onWindowFocusChanged(true)` sonrası uygulanmazsa bazı OEM'lerde sızıntı olabilir. | Düşük | Hem `onCreate` hem `onWindowFocusChanged` içinde set et |
+| # | Bulgu | Risk | Öneri | Durum |
+|---|---|---|---|---|
+| L-1 | **`dismissPrivacyShield` sentetik `focus` + `visibilitychange` event'leri dispatch ediyor.** Bu, gerçek DOM event'lerinin yerine geçiyor. Eğer WebView henüz page load etmediyse, document event listener'ları eklenmemiş olabilir. `try { ... } catch(e) {}` ile yutuluyor. | Orta | Activity lifecycle observer pattern'i: `onWindowFocusChanged(hasFocus: Boolean)` + `lifecycle.addObserver(webViewObserver)`. Privacy shield'i kaldırmak için sayfa event'ine değil, native lifecycle'a güven | ✅ **RESOLVED** — Privacy shield yönetimi `onWindowFocusChanged(hasFocus: Boolean)` native Activity yaşam döngüsüne bağlandı |
+| L-2 | **`postDelayed(150)` ve `postDelayed(500)` magic number'lar.** Bu süreler WebView'in paint'ini garanti etmiyor. | Düşük | `viewTreeObserver.addOnPreDrawListener` veya ilk `onPageFinished`'i bekle | ✅ **RESOLVED** — Rastgele `postDelayed(150)` ve `postDelayed(500)` zamanlayıcıları kaldırıldı, tekil ve güvenli `webView.post { ... }` dispatch yapısına geçildi |
+| L-3 | **`onWebViewCreate` içinde 4 kez `postDelayed` ile autofill intent bildirimi:** `post { }`, `postDelayed(250)`, `postDelayed(1000)`. 1 saniye sonra tekrar notify — niye? Cold start'ta WebView 1 saniyeden geç gelirse request kaybolur mu? | Orta | Subscribe-based: WebView'in `onPageFinished` callback'inde bir kez notify, eğer hâlâ handled değilse tekrar | ✅ **RESOLVED** — `onWebViewCreate` içerisindeki 4 tekrarlı `postDelayed` zamanlayıcıları kaldırıldı, WebView hazır olduğunda tekil event yayımı sağlandı |
+| L-4 | `onResume`'da `notifyAutofillIntent` + `notifyAutofillSaveCandidate` çağrılıyor ama `pendingAutofillRequest`'in freshness'i tekrar kontrol edilmiyor. | Düşük | `rejectStaleAutofillRequest` mantığını burada da çağır | ✅ **RESOLVED** — `purgeStaleAutofillRequests()` fonksiyonu eklendi; `notifyAutofillIntent` öncesinde 2 dakikadan eski kalıntı istekler otomatik temizlenir |
+| L-5 | **Hard-coded `setFlags(FLAG_SECURE, FLAG_SECURE)` `onCreate` içinde.** İyi, ama `Activity.onAttachedToWindow` veya `onWindowFocusChanged(true)` sonrası uygulanmazsa bazı OEM'lerde sızıntı olabilir. | Düşük | Hem `onCreate` hem `onWindowFocusChanged` içinde set et | ✅ **RESOLVED** — `FLAG_SECURE` bayrağı `onCreate`, `onAttachedToWindow` ve `onWindowFocusChanged` yaşam döngüsü metodlarının tamamında zorunlu kılındı |
 
 ### 2.4 `AegisAutofillService.kt` Analizi
 
