@@ -30,9 +30,17 @@ android {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
         applicationId = "com.hafgit99.aegisvault7"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 35
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
         versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
+    }
+    splits {
+        abi {
+            isEnable = true
+            isUniversalApk = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86_64")
+        }
     }
     signingConfigs {
         if (releaseSigningConfigured) {
@@ -77,6 +85,8 @@ android {
             }
             if (releaseSigningConfigured) {
                 signingConfig = signingConfigs.getByName("aegisRelease")
+            } else {
+                logger.warn("Release signing environment variables are missing. Build output will be unsigned.")
             }
             proguardFiles(
                 *fileTree(".") { include("**/*.pro") }
@@ -103,6 +113,7 @@ dependencies {
     implementation("androidx.activity:activity-ktx:1.10.1")
     implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.lifecycle:lifecycle-process:2.10.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.4")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.0")

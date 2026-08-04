@@ -19,11 +19,18 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
-# JavaScript bridge method names are part of the WebView API contract.
--keepattributes RuntimeVisibleAnnotations,AnnotationDefault
--keepclassmembers,allowoptimization class com.hafgit99.aegisvault7.MainActivity$Android*Bridge {
+# Keep Aegis main activity, services, and JS bridge interfaces intact
+-keep class com.hafgit99.aegisvault7.** { *; }
+-keepclassmembers class com.hafgit99.aegisvault7.MainActivity$*Bridge {
+    @android.webkit.JavascriptInterface <methods>;
+}
+
+# Preserve WebKit, Autofill, and Tauri reflection hooks
+-keepattributes JavascriptInterface, RuntimeVisibleAnnotations, AnnotationDefault, Signature, InnerClasses, EnclosingMethod
+-keepclassmembers class * {
     @android.webkit.JavascriptInterface <methods>;
 }
 
 # Do not expose original Kotlin/Java source file names in release stack traces.
 -renamesourcefileattribute SourceFile
+

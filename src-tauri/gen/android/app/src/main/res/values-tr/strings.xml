@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Aegis Vault 7</string>
+    <string name="main_activity_title">Aegis Vault 7</string>
+    <string name="autofill_service_label">Aegis Vault Otomatik Doldurma</string>
+    <string name="autofill_unlock_prompt">Giriş bilgilerini doldurmak için Aegis Vault\'u açın</string>
+</resources>
