@@ -204,12 +204,12 @@ private fun getOrCreateSecureStorageKey(): SecretKey {
 
 #### 2.3.4 Autofill Bridge (`AndroidAutofillBridge` — satır 400-501)
 
-| # | Bulgu | Risk | Öneri |
-|---|---|---|---|
-| A-1 | `completePendingRequest` username ve password'ü doğrudan `AutofillValue.forText(...)` ile set ediyor. **Eğer kullanıcı "yanlış eşleşme" seçerse, başka uygulamanın alanına yanlış veri yazılabilir.** `Log.i` ile log atılıyor ama audit trail yetersiz. | Orta | `logAndroidAutofillSecurityEvent('completed', ...)` her zaman çağrıldığından emin ol (TS tarafında var, ama garanti için Android tarafında da `Log.i` audit ekle) |
-| A-2 | `clearPendingRequest` requestId uyuşmazsa `false` dönüyor — sessizce başarısız oluyor. | Düşük | Log ekle |
-| A-3 | `isFresh()` kontrolü `5 dakika`. **Bu süre autofill akışı için uzun.** Web cold start, network yok, deep freeze vs. için 5 dk makul ama stale request pending kalmaya devam edebilir. | Düşük | Webview'i dinle, autofill UI gösterildiğinde refetch + yeni freshness window |
-| A-4 | `openSettings` zincirleme fallback (Önce `ACTION_REQUEST_SET_AUTOFILL_SERVICE`, sonra `ACTION_SETTINGS`). İkinci fallback çok genel — kullanıcı ana ayarlara düşüyor. | Düşük | Spesifik bir ayar bulunamazsa bilinçli bir empty-state göster |
+| # | Bulgu | Risk | Öneri | Durum |
+|---|---|---|---|---|
+| A-1 | `completePendingRequest` username ve password'ü doğrudan `AutofillValue.forText(...)` ile set ediyor. **Eğer kullanıcı "yanlış eşleşme" seçerse, başka uygulamanın alanına yanlış veri yazılabilir.** `Log.i` ile log atılıyor ama audit trail yetersiz. | Orta | `logAndroidAutofillSecurityEvent('completed', ...)` her zaman çağrıldığından emin ol (TS tarafında var, ama garanti için Android tarafında da `Log.i` audit ekle) | ✅ **RESOLVED** — `completePendingRequest` içerisine hedef `appPackage` ve `webDomain` bilgilerini içeren ayrıntılı güvenlik denetim günlüğü (`Autofill audit event [COMPLETED] / [ERROR]`) eklendi |
+| A-2 | `clearPendingRequest` requestId uyuşmazsa `false` dönüyor — sessizce başarısız oluyor. | Düşük | Log ekle | ✅ **RESOLVED** — Request ID uyuşmazlığında Logcat uyarısı (`clearPendingRequest mismatch`) eklendi |
+| A-3 | `isFresh()` kontrolü `5 dakika`. **Bu süre autofill akışı için uzun.** Web cold start, network yok, deep freeze vs. için 5 dk makul ama stale request pending kalmaya devam edebilir. | Düşük | Webview'i dinle, autofill UI gösterildiğinde refetch + yeni freshness window | ✅ **RESOLVED** — `AUTOFILL_REQUEST_MAX_AGE_MS` 5 dakikadan **2 dakikaya** düşürüldü; `onResume` & `onNewIntent` WebView yenileme çağrıları ile tazelik sağlandı |
+| A-4 | `openSettings` zincirleme fallback (Önce `ACTION_REQUEST_SET_AUTOFILL_SERVICE`, sonra `ACTION_SETTINGS`). İkinci fallback çok genel — kullanıcı ana ayarlara düşüyor. | Düşük | Spesifik bir ayar bulunamazsa bilinçli bir empty-state göster | ✅ **RESOLVED** — Genel sistem ayarları yerine `Settings.ACTION_INPUT_METHOD_SETTINGS` (Dil ve Giriş Ayarları) hedefli fallback olarak ayarlandı; başarısızlık durumunda JS katmanına `false` dönülerek Toast/UI bildirimi sunulması sağlandı |
 
 #### 2.3.5 Runtime Security Bridge (`AndroidRuntimeSecurityBridge` — satır 517-543)
 

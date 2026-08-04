@@ -524,9 +524,10 @@ class MainActivity : TauriActivity() {
         true
       } catch (_: Exception) {
         try {
-          startActivity(Intent(Settings.ACTION_SETTINGS))
+          startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
           true
-        } catch (_: Exception) {
+        } catch (error: Exception) {
+          Log.w(AUTOFILL_LOG_TAG, "Failed to launch Android Autofill settings intent: ${error.message}")
           false
         }
       }
@@ -546,7 +547,13 @@ class MainActivity : TauriActivity() {
     @JavascriptInterface
     fun clearPendingRequest(requestId: String): Boolean {
       val current = pendingAutofillRequest ?: return true
-      if (current.requestId != requestId) return false
+      if (current.requestId != requestId) {
+        Log.w(
+          AUTOFILL_LOG_TAG,
+          "clearPendingRequest mismatch: pendingRequestId=${current.requestId}, requestedId=$requestId"
+        )
+        return false
+      }
       pendingAutofillRequest = null
       return true
     }
@@ -654,12 +661,17 @@ class MainActivity : TauriActivity() {
         setResult(Activity.RESULT_OK, result)
         Log.i(
           AUTOFILL_LOG_TAG,
-          "Returned authenticated Autofill response requestId=$requestId usernameFields=${current.usernameIds.size} passwordFields=${current.passwordIds.size}"
+          "Autofill audit event [COMPLETED]: requestId=$requestId appPackage=${current.appPackage ?: "unknown"} webDomain=${current.webDomain ?: "unknown"} usernameFields=${current.usernameIds.size} passwordFields=${current.passwordIds.size}"
         )
         pendingAutofillRequest = null
         finish()
         true
-      } catch (_: Exception) {
+      } catch (error: Exception) {
+        Log.e(
+          AUTOFILL_LOG_TAG,
+          "Autofill audit event [ERROR]: completePendingRequest failed for requestId=$requestId: ${error.message}",
+          error
+        )
         false
       }
     }
@@ -897,7 +909,7 @@ class MainActivity : TauriActivity() {
     private const val SECURE_STORAGE_KEY_ALIAS = "aegis_vault_v7_secure_storage"
     private const val SECURE_STORAGE_CIPHER = "AES/GCM/NoPadding"
     private const val SECURE_STORAGE_LOG_TAG = "AegisSecureStorage"
-    private const val AUTOFILL_REQUEST_MAX_AGE_MS = 5 * 60 * 1000L
+    private const val AUTOFILL_REQUEST_MAX_AGE_MS = 2 * 60 * 1000L
     private const val AUTOFILL_LOG_TAG = "AegisAutofill"
 
     /** Maximum payload size for save operations (25 MB). */
