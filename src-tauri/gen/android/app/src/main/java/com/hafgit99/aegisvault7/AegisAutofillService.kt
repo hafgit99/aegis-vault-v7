@@ -221,7 +221,9 @@ class AegisAutofillService : AutofillService() {
   private fun extractDomainFromNode(node: AssistStructure.ViewNode): String? {
     node.webDomain?.trim()?.takeIf { it.isNotBlank() }?.let { return it }
 
-    node.htmlInfo?.attributes?.forEach { (name, value) ->
+    node.htmlInfo?.attributes?.forEach { attr ->
+      val name = attr?.first ?: ""
+      val value = attr?.second ?: ""
       val key = name.lowercase()
       if (key == "host" || key == "domain" || key == "data-domain" || key == "action") {
         val parsed = parseHostFromUrl(value)
