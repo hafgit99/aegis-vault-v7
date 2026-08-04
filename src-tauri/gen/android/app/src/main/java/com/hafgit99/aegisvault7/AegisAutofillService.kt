@@ -24,6 +24,7 @@ import org.json.JSONObject
 
 @RequiresApi(Build.VERSION_CODES.O)
 class AegisAutofillService : AutofillService() {
+  private val requestCodeCounter = java.util.concurrent.atomic.AtomicInteger(1000)
   override fun onFillRequest(
     request: FillRequest,
     cancellationSignal: android.os.CancellationSignal,
@@ -175,8 +176,10 @@ class AegisAutofillService : AutofillService() {
     return candidate
   }
 
-  private fun traverseNode(node: AssistStructure.ViewNode, fields: LoginFields) {
-    val domain = node.webDomain?.trim()
+  private fun traverseNode(node: AssistStructure.ViewNode, fields: LoginFields, depth: Int = 0) {
+    if (depth > MAX_TRAVERSAL_DEPTH) return
+
+    val domain = extractDomainFromNode(node)
     if (fields.webDomain.isNullOrBlank() && !domain.isNullOrBlank()) {
       fields.webDomain = domain
     }
@@ -190,12 +193,14 @@ class AegisAutofillService : AutofillService() {
     }
 
     for (childIndex in 0 until node.childCount) {
-      traverseNode(node.getChildAt(childIndex), fields)
+      traverseNode(node.getChildAt(childIndex), fields, depth + 1)
     }
   }
 
-  private fun traverseSaveNode(node: AssistStructure.ViewNode, candidate: SaveCandidate) {
-    val domain = node.webDomain?.trim()
+  private fun traverseSaveNode(node: AssistStructure.ViewNode, candidate: SaveCandidate, depth: Int = 0) {
+    if (depth > MAX_TRAVERSAL_DEPTH) return
+
+    val domain = extractDomainFromNode(node)
     if (candidate.webDomain.isNullOrBlank() && !domain.isNullOrBlank()) {
       candidate.webDomain = domain
     }
@@ -209,30 +214,68 @@ class AegisAutofillService : AutofillService() {
     }
 
     for (childIndex in 0 until node.childCount) {
-      traverseSaveNode(node.getChildAt(childIndex), candidate)
+      traverseSaveNode(node.getChildAt(childIndex), candidate, depth + 1)
+    }
+  }
+
+  private fun extractDomainFromNode(node: AssistStructure.ViewNode): String? {
+    node.webDomain?.trim()?.takeIf { it.isNotBlank() }?.let { return it }
+
+    node.htmlInfo?.attributes?.forEach { (name, value) ->
+      val key = name.lowercase()
+      if (key == "host" || key == "domain" || key == "data-domain" || key == "action") {
+        val parsed = parseHostFromUrl(value)
+        if (!parsed.isNullOrBlank()) return parsed
+      }
+    }
+    return null
+  }
+
+  private fun parseHostFromUrl(raw: String): String? {
+    return try {
+      val uri = Uri.parse(if (raw.startsWith("http")) raw else "https://$raw")
+      uri.host?.trim()?.takeIf { it.isNotBlank() }
+    } catch (_: Exception) {
+      null
     }
   }
 
   private fun isPasswordField(node: AssistStructure.ViewNode): Boolean {
-    val tokens = node.searchTokens()
-    if (tokens.any { it.contains("password") || it == "passwd" || it == "pwd" }) return true
+    val hints = node.autofillHints?.map { it.lowercase() }.orEmpty()
+    if (hints.any { it.contains("password") || it.contains("credential") }) return true
 
     val variation = node.inputType and InputType.TYPE_MASK_VARIATION
-    return variation == InputType.TYPE_TEXT_VARIATION_PASSWORD ||
+    val isPasswordType = variation == InputType.TYPE_TEXT_VARIATION_PASSWORD ||
       variation == InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD ||
       variation == InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD ||
       variation == InputType.TYPE_NUMBER_VARIATION_PASSWORD
+
+    if (isPasswordType) return true
+
+    val tokens = node.searchTokens()
+    val negativeTokens = setOf("reset", "forgot", "link", "button", "change")
+    if (tokens.any { token -> negativeTokens.any { neg -> token == neg } }) return false
+
+    return tokens.any { it == "password" || it == "passwd" || it == "pwd" || it.contains("pass_word") }
   }
 
   private fun isUsernameField(node: AssistStructure.ViewNode): Boolean {
+    val hints = node.autofillHints?.map { it.lowercase() }.orEmpty()
+    if (hints.any { it.contains("username") || it.contains("email") }) return true
+
     val tokens = node.searchTokens()
+    val negativeTokens = setOf("agent", "profile", "avatar", "icon", "image", "button", "search", "header")
+    if (tokens.any { token -> negativeTokens.any { neg -> token.contains(neg) } }) return false
+
     return tokens.any {
-      it.contains("username") ||
+      it == "username" ||
         it == "user" ||
-        it.contains("email") ||
-        it.contains("e-mail") ||
-        it.contains("login") ||
-        it.contains("account")
+        it == "email" ||
+        it == "e-mail" ||
+        it == "login" ||
+        it == "account" ||
+        it.contains("user_name") ||
+        it.contains("email_address")
     }
   }
 
@@ -241,7 +284,12 @@ class AegisAutofillService : AutofillService() {
     values.addAll(autofillHints?.toList().orEmpty())
     values.add(hint?.toString().orEmpty())
     values.add(idEntry.orEmpty())
-    values.add(className?.toString().orEmpty())
+
+    val cls = className?.toString().orEmpty()
+    if (cls.contains("Edit", ignoreCase = true) || cls.contains("Input", ignoreCase = true)) {
+      values.add(cls)
+    }
+
     htmlInfo?.attributes?.forEach { attribute ->
       values.add(attribute.first.orEmpty())
       values.add(attribute.second.orEmpty())
@@ -266,7 +314,8 @@ class AegisAutofillService : AutofillService() {
     }
 
     val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-    return PendingIntent.getActivity(this, requestId.hashCode(), intent, flags)
+    val requestCode = requestCodeCounter.incrementAndGet()
+    return PendingIntent.getActivity(this, requestCode, intent, flags)
   }
 
   private fun createSaveInfo(loginFields: LoginFields): SaveInfo {
@@ -306,6 +355,7 @@ class AegisAutofillService : AutofillService() {
 
   companion object {
     private const val AUTOFILL_LOG_TAG = "AegisAutofill"
+    private const val MAX_TRAVERSAL_DEPTH = 50
     const val ACTION_AUTOFILL_AUTHENTICATE = "com.hafgit99.aegisvault7.action.AUTOFILL_AUTHENTICATE"
     const val ACTION_AUTOFILL_SAVE = "com.hafgit99.aegisvault7.action.AUTOFILL_SAVE"
     const val EXTRA_AUTOFILL_REQUEST_ID = "com.hafgit99.aegisvault7.extra.AUTOFILL_REQUEST_ID"
