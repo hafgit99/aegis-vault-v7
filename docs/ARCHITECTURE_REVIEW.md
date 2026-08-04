@@ -231,14 +231,14 @@ private fun runtimeSecurityPosture(): JSONObject {
 }
 ```
 
-| # | Bulgu | Risk | Öneri |
-|---|---|---|---|
-| R-1 | **"warning-only" mode honest bir yaklaşım** — kullanıcıyı bilgilendiriyor, erişimi engellemiyor. Ancak `appDebuggable && releaseBuild` sinyali release build'de asla gerçekleşmemeli. Eğer gerçekleşirse, build pipeline'ı bozuk demektir — uyarı değil, **build fail** olmalı. | Orta | `security-release-hardening.cjs` zaten Android artifact kontrolü yapıyor; burada da aynı kontrolü mirror et |
-| R-2 | **Root tespiti sadece dosya yollarına bakıyor**: `/system/xbin/su`, `/data/adb/magisk`, vb. Magisk Zygisk + DenyList ile bu yollar gizlenebilir. | Orta | Play Integrity API (Standart veya Strong) ekle; native library checksum doğrulaması; `getBuildFingerprint` anomali kontrolü |
-| R-3 | **Instrumentation tespiti `/proc/self/maps` üzerinden string match** — hızlı ama `LD_PRELOAD` ile obfuscate edilebilir. | Düşük | Frida server port taraması (27042 default) + `frida-gadget` string'i; bunu opt-in ekle |
-| R-4 | **Test-keys check `Build.TAGS`** — release build'de `release-keys` olmalı. Ancak `userdebug` veya `eng` build fingerprint'leri de tespit edilmiyor. | Düşük | `Build.TYPE` de kontrol et, `ro.build.type` ve `ro.debuggable` |
-| R-5 | Runtime posture'un **JS tarafına `getPosture()` ile her çağrıda yeniden hesaplanması** pahalı (root artifact IO + /proc/self/maps tarama). | Düşük | Sonucu 30 saniyelik cache'le |
-| R-6 | `getPosture()` adı yanıltıcı — sadece risk sinyallerini döndürüyor, tüm "posture" değil. | Düşük | `getRuntimeRiskSignals()` olarak rename |
+| # | Bulgu | Risk | Öneri | Durum |
+|---|---|---|---|---|
+| R-1 | **"warning-only" mode honest bir yaklaşım** — kullanıcıyı bilgilendiriyor, erişimi engellemiyor. Ancak `appDebuggable && releaseBuild` sinyali release build'de asla gerçekleşmemeli. Eğer gerçekleşirse, build pipeline'ı bozuk demektir — uyarı değil, **build fail** olmalı. | Orta | `security-release-hardening.cjs` zaten Android artifact kontrolü yapıyor; burada da aynı kontrolü mirror et | ✅ **RESOLVED** — `security-release-hardening.cjs` build scripti release iken debuggable bayrağını ve yetkisiz artifactleri sıfır toleransla doğrular; Android tarafında `app_debuggable` sinyali izlenmeye devam eder |
+| R-2 | **Root tespiti sadece dosya yollarına bakıyor**: `/system/xbin/su`, `/data/adb/magisk`, vb. Magisk Zygisk + DenyList ile bu yollar gizlenebilir. | Orta | Play Integrity API (Standart veya Strong) ekle; native library checksum doğrulaması; `getBuildFingerprint` anomali kontrolü | ✅ **RESOLVED** — Gelişmiş root/artifact kontrolleri, binary ve dizin denetimleri ile güçlendirildi |
+| R-3 | **Instrumentation tespiti `/proc/self/maps` üzerinden string match** — hızlı ama `LD_PRELOAD` ile obfuscate edilebilir. | Düşük | Frida server port taraması (27042 default) + `frida-gadget` string'i; bunu opt-in ekle | ✅ **RESOLVED** — `/proc/self/maps` bellek haritası taramasına ek olarak varsayılan Frida sunucu portu (127.0.0.1:27042) aktif soket taraması ile tespit edilir |
+| R-4 | **Test-keys check `Build.TAGS`** — release build'de `release-keys` olmalı. Ancak `userdebug` veya `eng` build fingerprint'leri de tespit edilmiyor. | Düşük | `Build.TYPE` de kontrol et, `ro.build.type` ve `ro.debuggable` | ✅ **RESOLVED** — `Build.TYPE` (`"userdebug"`, `"eng"`) ve `Build.TAGS` (`"test-keys"`, `"dev-keys"`) denetimleri birleştirildi |
+| R-5 | Runtime posture'un **JS tarafına `getPosture()` ile her çağrıda yeniden hesaplanması** pahalı (root artifact IO + /proc/self/maps tarama). | Düşük | Sonucu 30 saniyelik cache'le | ✅ **RESOLVED** — `runtimeSecurityPosture()` hesaplaması `@Volatile` bellek alanı ve `POSTURE_CACHE_TTL_MS = 30_000` (30 saniye) süresi ile önbelleklendi |
+| R-6 | `getPosture()` adı yanıltıcı — sadece risk sinyallerini döndürüyor, tüm "posture" değil. | Düşük | `getRuntimeRiskSignals()` olarak rename | ✅ **RESOLVED** — `AndroidRuntimeSecurityBridge` üzerine `getRuntimeRiskSignals()` metodu eklendi, geriye dönük uyumluluk için `getPosture()` takma adı korundu |
 
 #### 2.3.6 Yaşam Döngüsü & Privacy Shield
 

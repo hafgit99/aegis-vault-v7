@@ -693,10 +693,27 @@ class MainActivity : TauriActivity() {
 
   inner class AndroidRuntimeSecurityBridge {
     @JavascriptInterface
-    fun getPosture(): String = runtimeSecurityPosture().toString()
+    fun getPosture(): String = getRuntimeRiskSignals()
+
+    @JavascriptInterface
+    fun getRuntimeRiskSignals(): String = runtimeSecurityPosture().toString()
   }
 
+  @Volatile
+  private var cachedPostureJson: String? = null
+  @Volatile
+  private var cachedPostureTimestamp: Long = 0L
+
   private fun runtimeSecurityPosture(): JSONObject {
+    val now = System.currentTimeMillis()
+    if (now - cachedPostureTimestamp < POSTURE_CACHE_TTL_MS) {
+      cachedPostureJson?.let {
+        try {
+          return JSONObject(it)
+        } catch (_: Exception) {}
+      }
+    }
+
     val releaseBuild = !BuildConfig.DEBUG
     val appDebuggable = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
     val debuggerAttached = Debug.isDebuggerConnected() || Debug.waitingForDebugger()
@@ -704,19 +721,28 @@ class MainActivity : TauriActivity() {
 
     if (appDebuggable && releaseBuild) signals.add("app_debuggable")
     if (debuggerAttached && releaseBuild) signals.add("debugger_attached")
-    if (releaseBuild && Build.TAGS?.contains("test-keys", ignoreCase = true) == true) {
+
+    val isTestBuildType = Build.TYPE == "userdebug" || Build.TYPE == "eng"
+    val hasTestKeys = Build.TAGS?.contains("test-keys", ignoreCase = true) == true ||
+                      Build.TAGS?.contains("dev-keys", ignoreCase = true) == true
+    if (releaseBuild && (hasTestKeys || isTestBuildType)) {
       signals.add("test_keys")
     }
+
     if (releaseBuild && hasRootArtifactSignal()) signals.add("root_artifact")
     if (releaseBuild && hasInstrumentationSignal()) signals.add("instrumentation")
 
-    return JSONObject()
+    val result = JSONObject()
       .put("releaseBuild", releaseBuild)
       .put("appDebuggable", appDebuggable)
       .put("debuggerAttached", debuggerAttached)
       .put("riskDetected", releaseBuild && signals.isNotEmpty())
       .put("mode", "warning-only")
       .put("signals", JSONArray(signals.toList()))
+
+    cachedPostureJson = result.toString()
+    cachedPostureTimestamp = now
+    return result
   }
 
   private fun hasRootArtifactSignal(): Boolean {
@@ -730,13 +756,25 @@ class MainActivity : TauriActivity() {
   }
 
   private fun hasInstrumentationSignal(): Boolean {
-    return try {
+    val mapsSignal = try {
       java.io.File("/proc/self/maps").useLines { lines ->
         lines.any { line ->
           val normalized = line.lowercase()
           INSTRUMENTATION_MARKERS.any(normalized::contains)
         }
       }
+    } catch (_: Exception) {
+      false
+    }
+
+    if (mapsSignal) return true
+
+    // Check for active Frida server port on localhost (27042)
+    return try {
+      val socket = java.net.Socket()
+      socket.connect(java.net.InetSocketAddress("127.0.0.1", 27042), 15)
+      socket.close()
+      true
     } catch (_: Exception) {
       false
     }
@@ -919,6 +957,7 @@ class MainActivity : TauriActivity() {
     private const val MAX_OPEN_FILE_BYTES = 25L * 1024 * 1024
 
     /** Buffer size for chunked streaming I/O (8 KB). */
+    private const val POSTURE_CACHE_TTL_MS = 30_000L
     private const val STREAMING_BUFFER_SIZE = 8192
 
     /** MIME types allowed for save operations via the file bridge. */
