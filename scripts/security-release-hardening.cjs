@@ -212,13 +212,13 @@ function scanSourceConfiguration() {
   if (!/WebView\.setWebContentsDebuggingEnabled\(BuildConfig\.DEBUG\)/.test(mainActivity)) {
     fail(`${mainActivityPath}: WebView debugging must be tied to BuildConfig.DEBUG`);
   }
-  if (!/addJavascriptInterface\(AndroidRuntimeSecurityBridge\(\),\s*"AegisAndroidSecurity"\)/.test(mainActivity)) {
+  if (!/addJavascriptInterface\((?:AndroidRuntimeSecurityBridge\(.*?\)|securityBridge),\s*"AegisAndroidSecurity"\)/.test(mainActivity)) {
     fail(`${mainActivityPath}: warning-only Android runtime security bridge is missing`);
   }
 
   const proguardPath = 'src-tauri/gen/android/app/proguard-rules.pro';
   const proguard = readText(proguardPath);
-  if (!/MainActivity\$Android\*Bridge/.test(proguard) || !/@android\.webkit\.JavascriptInterface/.test(proguard)) {
+  if (!/(?:MainActivity\$|\.\*|bridges\.)Android\*Bridge/.test(proguard) || !/@android\.webkit\.JavascriptInterface/.test(proguard)) {
     fail(`${proguardPath}: JavaScript bridge method names are not protected from R8 renaming`);
   }
 }

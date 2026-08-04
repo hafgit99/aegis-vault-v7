@@ -24,6 +24,9 @@
 -keepclassmembers class com.hafgit99.aegisvault7.MainActivity$*Bridge {
     @android.webkit.JavascriptInterface <methods>;
 }
+-keepclassmembers class com.hafgit99.aegisvault7.bridges.Android*Bridge {
+    @android.webkit.JavascriptInterface <methods>;
+}
 
 # Preserve WebKit, Autofill, and Tauri reflection hooks
 -keepattributes JavascriptInterface, RuntimeVisibleAnnotations, AnnotationDefault, Signature, InnerClasses, EnclosingMethod
