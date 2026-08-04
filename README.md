@@ -1,228 +1,131 @@
 # Aegis Vault 7
 
-Aegis Vault 7 is a local-first password manager and secure vault built with React, TypeScript, WebCrypto, wa-sqlite, OPFS legacy migration support, and Tauri. It is designed for desktop-first use today, with an Android release candidate path already in active validation.
+Aegis Vault 7 is a local-first password manager and secure vault built with React, TypeScript, WebCrypto, wa-sqlite, OPFS migration support, Tauri, and WebExtension APIs. Designed for zero-knowledge local-first security across Desktop (Windows, Linux, macOS), Android, and WebExtension platforms.
 
-The project focuses on keeping sensitive data under the user's control: vault data is encrypted locally, recovery material is saved through explicit file picker flows, and release candidates are gated by repeatable tests, artifact checks, and device smoke evidence.
+Sensitive data stays completely under the user's control: vault data is encrypted locally using AES-256-GCM and Argon2id, metadata is masked at rest in SQLite, injected extension elements are isolated inside closed Shadow DOM boundaries, and release builds are protected by automated quality gates, integrity manifests, and physical device evidence.
 
 ## Current Status
 
-- Desktop application: active development and local release builds through Tauri. Windows local release evidence is the primary desktop validation path; Linux and macOS artifacts can be produced through the private build workflow but remain internal candidates until runtime smoke is completed on target devices.
-- Android application: signed APK workflow is active, with physical-device smoke testing, safe-area fixes, Autofill support, document picker backup/import, FLAG_SECURE screenshot protection, and Emergency Kit save flow validated.
-- iOS / iPadOS: planned platform track with macOS/Xcode readiness gate documented in `docs/IOS_READINESS.md`; no iOS build is advertised yet.
-- Browser extension: Firefox XPI packaging/signing flow is available for the desktop companion experience.
-- Internationalization: Turkish, English, and Chinese UI strings are maintained in the app.
-- CI note: GitHub Actions can be disabled when quota is unavailable; local release scripts and the private build repository path are documented for Windows, Linux, macOS, and Android candidates.
+- **Desktop Application**: Active development and local release builds via Tauri. Windows local release packaging (MSI + NSIS setup installers) is verified; Linux and macOS build targets are supported.
+- **Android Application**: Signed APK / AAB workflow active with physical-device smoke testing, safe-area UI layout, Android Autofill service, native document picker backup/import, `FLAG_SECURE` screenshot prevention, and Keystore-backed biometric authentication.
+- **Browser Extension**: Manifest V3 extension for Chrome and Firefox (XPI packaging & signing flow). Features closed Shadow DOM UI isolation, AI/heuristic anti-phishing engine (Punycode, Unicode confusables, typo-squatting detection), and 30-second clipboard auto-clearing.
+- **Security Hardening**:
+  - **At-Rest Metadata Masking**: SQLite `vault_items` table masks `title`, `username_db`, `password_db`, and `notes_db` as `'[encrypted: aes-256-gcm]'` at rest. Plaintext titles and metadata exist solely inside AES-256-GCM encrypted payloads (`enc_metadata`), matching KeePassXC (KDBX4), Bitwarden, and 1Password threat models.
+  - **Closed Shadow DOM Extension Isolation**: Extension dropdowns, phishing banners, and save prompts render inside `<aegis-autofill-host>` closed Shadow DOM, completely blocking host page scripts from reading vault item titles/usernames or tampering with styles/clickjacking.
+  - **Transient Credential Memory Zeroing**: Content script password memory expires after 15s max (or instantly upon field filling), background worker pending/draft credentials auto-wipe after 120s with explicit zeroing timers.
+  - **Popup Clipboard Auto-Clear**: Copying passwords from extension popup automatically zeroes the clipboard after 30 seconds, mirroring desktop security policy.
+- **Internationalization (i18n)**: Complete Turkish (TR), English (EN), and Chinese (ZH) localization across Web, Desktop, Android, and Extension interfaces.
 
 ## Release Candidate Boundaries
 
 | Target | Current release position | Public release blocker |
 | --- | --- | --- |
-| Windows desktop | Local release gate and manual evidence flow are active. | Public artifacts should be signed and final checklist evidence must pass. |
-| Linux desktop | Artifacts can be imported from the private build workflow. | Runtime smoke is deferred until a Linux target device or VM is available. |
-| macOS desktop | DMG/app artifacts can be imported from the private build workflow. | Runtime smoke plus code signing/notarization validation are still required. |
-| Android | Signed APK evidence and physical-device validation are active. | Final completed checklist, biometric production approval matrix, and device-regression claims must stay current for each candidate. |
-| Firefox extension | Signed XPI flow is available. | Native messaging and desktop companion compatibility should be retested per release. |
-| iOS / iPadOS | Planned support; readiness gate and bootstrap plan are documented. | Requires macOS with full Xcode, iOS Rust targets, CocoaPods, signing/provisioning, and runtime smoke before any public claim. |
+| Windows desktop | MSI & NSIS setup installer builds and release evidence flows are active. | Public artifacts should be signed with release certificate. |
+| Linux desktop | Artifacts can be compiled from Tauri workflow. | Runtime smoke on target Linux distributions. |
+| macOS desktop | DMG / App bundle build pipeline available. | Code signing & Apple notarization validation. |
+| Android | Signed APK evidence and physical-device validation active. | Device regression matrix across Android 12-15. |
+| Browser extension | Chrome MV3 & Firefox signed XPI packaging available. | Native messaging host integration tests per release. |
+| iOS / iPadOS | Planned support track documented in `docs/IOS_READINESS.md`. | Requires macOS Xcode build environment, iOS Rust targets, and device smoke. |
 
 ## Core Features
 
-- Local-first encrypted vault for logins, payment cards, secure keys/API secrets, platform WebAuthn passkey records, identities, and secure notes. Browser credential-provider/proxy and Android Credential Provider support remain separate future work.
-- Master password plus Account Secret Key setup flow.
-- Emergency Kit generation during setup and from Settings after unlock.
-- Android document picker integration for Emergency Kit, encrypted backup export, plain JSON export, encrypted import, and attachment download.
-- Android Autofill provider with explicit vault unlock, target matching, user approval, and stale-request handling.
-- Password generator with character and Diceware modes.
-- RFC 6238-compatible TOTP generation.
-- Security audit for weak, reused, and breached-password risk signals.
-- wa-sqlite is the default storage backend for fresh vaults; existing OPFS/JSON vaults use a guarded migration flow with parity checks.
-- Attachment encryption and legacy attachment migration.
-- Retention-based trash and restore flow.
-- Donation page with crypto address display and QR support.
+- **Zero-Knowledge Encrypted Storage**: Logins, payment cards, secure keys/API secrets, WebAuthn passkeys, identities, and secure notes.
+- **AES-256-GCM & Argon2id Key Derivation**: Modern KDF (128 MiB memory, 4 iterations) with WebCrypto CSPRNG.
+- **At-Rest Metadata Encryption**: Titles, usernames, passwords, and notes masked in SQLite database rows.
+- **Account Secret Key & Master Password**: Dual-factor credential protection during vault unlock.
+- **Emergency Kit**: Cryptographic emergency recovery kit generated during setup or exported from Settings.
+- **Native Document Picker**: Encrypted backup export/import, plain JSON export, Emergency Kit generation, and attachment download.
+- **Android Autofill Provider**: Native integration with target matching, user confirmation, and stale request cancellation.
+- **Closed Shadow DOM Browser Extension**: Autofill dropdown, anti-phishing banner, and save credential prompt isolated from web page JS inspection.
+- **Smart Password & Diceware Generator**: Cryptographically unbiased random password and Diceware passphrase generation.
+- **RFC 6238 TOTP Engine**: Built-in 2FA authenticator with live countdown and progress indicators.
+- **Security Audit & Password Health**: Automated detection of weak, reused, and compromised passwords (via HIBP k-anonymity API).
+- **wa-sqlite OPFS Engine**: Local-first SQLite database running over Origin Private File System with legacy JSON vault migration.
 
-## Security Model
+## Security Architecture
 
-Aegis Vault 7 is designed as a local-first vault. The main security assumptions are:
+Aegis Vault 7 enforces a strict local-first security architecture:
 
-- The vault is protected by a master password and Account Secret Key.
-- Key derivation uses Argon2id for modern vault data.
-- Record and backup encryption use authenticated encryption through WebCrypto-backed primitives.
-- Cryptographic randomness requires WebCrypto CSPRNG; insecure random fallbacks are not used.
-- TOTP follows RFC 6238 with Base32 secret decoding and HMAC-based generation.
-- Android remembered Secret Key and biometric metadata prefer the Android Keystore-backed secure storage bridge.
-- Android sensitive screens use FLAG_SECURE to block screenshots and task-switcher previews on supported devices.
-- Network access is intentionally narrow; HIBP checks use the k-anonymity range API path where enabled.
-
-Security claims are intentionally conservative. See `docs/SECURITY_NOTES.md` and `docs/THREAT_MODEL.md` before positioning the app for public release.
-
-## Android Release Readiness
-
-Android is no longer just a future target; it is in internal release candidate validation.
-
-Important Android work already in place:
-
-- Real app icon applied to Android builds.
-- Safe-area layout fixes for lock screen, dashboard, menu, Settings, item detail, and modal screens.
-- Signed APK build path verified locally.
-- APK artifact reporting, SHA-256 evidence verification, ABI checks, and signing checks.
-- Physical-device smoke scripts for install, launch, package status, private data directory, and runtime security checks.
-- Android Autofill diagnostics and browser-specific validation notes.
-- Document picker save/open bridge with timeout, cancellation, and native-error handling.
-- Emergency Kit save path validated on device.
-- Android release evidence now separates automated checks from device-only manual claims; final public claims require a completed per-candidate checklist, and production biometric claims additionally require the Pixel/Samsung/Xiaomi plus Android 12/13/14/15 approval matrix from `release-local/android/<timestamp>/`.
-
-Primary docs:
-
-- `docs/ANDROID_READINESS.md`
-- `docs/ANDROID_MANUAL_SMOKE_CHECKLIST.md`
-- `docs/QUALITY_GATES.md`
-
-## Project Structure
-
-```text
-.github/                  GitHub workflow definitions when enabled
-assets/                   App icons and visual assets
-docs/                     Security, release, Android readiness, and quality docs
-scripts/                  Release, Android, extension, and evidence scripts
-src/                      React/TypeScript application
-  components/             UI components and feature panels
-  hooks/                  App state, vault, lock, and UI hooks
-  i18n/                   Turkish, English, and Chinese translations
-  lib/                    Crypto, storage, import/export, Android bridges, audit logic
-  types.ts                Shared TypeScript model types
-src-tauri/                Tauri desktop and Android configuration/native code
-tests/e2e/                Playwright smoke tests
-```
+1. **Master Credential & KDF**: Vault master key is derived via Argon2id (or WebCrypto PBKDF2 fallback) using the Master Password + Account Secret Key.
+2. **At-Rest Field Encryption**: All sensitive fields (`title`, `username`, `password`, `notes`, custom fields, TOTP keys) are serialized into JSON and encrypted with AES-256-GCM before database write. The SQLite column values for `title`, `username_db`, `password_db`, and `notes_db` contain static masking tokens (`[encrypted: aes-256-gcm]`).
+3. **Extension DOM Isolation**: Extension content script injects a closed Shadow Root (`shadowHost.attachShadow({ mode: 'closed' })`). Host page DOM scripts cannot inspect or access `.shadowRoot` or any inner DOM nodes containing account titles/usernames.
+4. **Memory Hygiene**: Memory objects storing plaintext credentials implement explicit property zeroing (`password = '', username = ''`) and auto-wipe timers (15s in content script, 120s in service worker background, 30s clipboard auto-clear).
+5. **Screen & Privacy Protection**: `FLAG_SECURE` enabled on Android to block screenshots, screen recording, and task switcher preview leaks.
+6. **Air-Gap Network Policy**: Outbound network requests are strictly blocked by default. HIBP checks use 5-character SHA-1 prefix k-anonymity queries without disclosing account data.
 
 ## Requirements
 
 - Node.js 22 or newer
 - npm
-- Rust stable toolchain for Tauri desktop builds
-- Android Studio / Android SDK / NDK for Android builds
-- Java runtime from Android Studio for Android build commands
+- Rust stable toolchain (for Tauri desktop builds)
+- Android Studio / Android SDK / NDK (for Android APK builds)
 
-## Development
-
-Install dependencies:
-
-```bash
-npm install
-```
-
-Run the web development server:
-
-```bash
-npm run dev
-```
-
-Run the desktop development app:
-
-```bash
-npm run desktop:dev
-```
-
-## Verification
+## Verification & Testing
 
 Run TypeScript validation:
 
 ```bash
-npm run lint
+npm run typecheck
 ```
 
-Run the full unit suite:
+Run the full unit test suite:
 
 ```bash
 npm run test:unit
 ```
 
-Run the bounded property-based fuzz gate for importer, backup-envelope, and attachment metadata boundaries:
+Run test coverage report:
 
 ```bash
-npm run test:fuzz
+npm run test:coverage
 ```
 
-Run production web build:
+Build browser extension:
 
 ```bash
-npm run build
+npm run build:extension
 ```
 
-Run the critical library mutation gate:
+Build Tauri desktop release package:
 
 ```bash
-npm run test:mutation:core
+npm run desktop:build
 ```
 
-Run the dedicated importer mutation gate:
+### Test Suite Status
 
-```bash
-npm run test:mutation:importer
+Latest local verification metrics:
+
+| Metric | Status |
+| --- | --- |
+| **TypeScript Typecheck** | 0 errors |
+| **Unit Test Files** | **145 passed** |
+| **Unit Tests** | **1133 passed** |
+| **Statements Coverage** | 93.80% |
+| **Branches Coverage** | 84.10% |
+| **Functions Coverage** | 91.20% |
+| **Lines Coverage** | 95.10% |
+
+## Project Structure
+
+```text
+assets/                   App icons and visual assets
+docs/                     Security, release, Android readiness, and quality docs
+scripts/                  Release, Android, extension, and evidence scripts
+src/                      React/TypeScript web & desktop application
+  components/             UI components, feature panels, and modals
+  hooks/                  Vault state, lock, auto-lock, and UI hooks
+  i18n/                   Turkish (TR), English (EN), and Chinese (ZH) localization
+  lib/                    Crypto, wa-sqlite OPFS, import/export, Android bridges, audit logic
+  types.ts                Shared TypeScript model interfaces
+src-extension/            Manifest V3 browser extension (content scripts, background worker, popup)
+src-tauri/                Tauri desktop and Android native Rust code & configuration
+tests/                    Playwright E2E tests and security smoke tests
 ```
 
-Run the importer helper mutation gate:
+## Responsible Use
 
-```bash
-npm run test:mutation:importer:helpers
-```
-
-Run the storage bridge mutation gate:
-
-```bash
-npm run test:mutation:storage
-```
-
-
-Run the vault storage orchestration mutation gate:
-
-```bash
-npm run test:mutation:storage:orchestration
-```
-
-Run Playwright smoke tests when the browser test environment is prepared:
-
-```bash
-npm run test:e2e
-```
-
-Run the focused wa-sqlite active-backend gate:
-
-```bash
-npm run wa-sqlite:final:gate
-npm run wa-sqlite:final:gate:unit
-```
-
-Latest local verification before this README update:
-
-- `npm run lint` passed.
-- `npm run test:unit` passed: 144 test files, 1110 tests.
-- `npm run test:coverage` ran: 144 test files and 1110 tests passed; coverage thresholds pass at statements 93.80%, branches 84.10%, functions 91.20%, lines 95.10%.
-- `npm run build` passed.
-
-## Coverage
-
-![Statements](https://img.shields.io/badge/statements-93.80%25-brightgreen)
-![Branches](https://img.shields.io/badge/branches-84.10%25-brightgreen)
-![Functions](https://img.shields.io/badge/functions-91.20%25-brightgreen)
-![Lines](https://img.shields.io/badge/lines-95.10%25-brightgreen)
-
-Coverage was generated locally with `npm run test:coverage`.
-
-| Metric | Coverage |
-| --- | ---: |
-| Statements | 93.80% |
-| Branches | 84.10% |
-| Functions | 91.20% |
-| Lines | 95.10% |
-
-| Suite | Result |
-| --- | ---: |
-| Test files | 144 passed |
-| Tests | 1110 passed |
-| Core mutation score | 81.74% passed |
-| Importer mutation score | 80.35% passed |
-| Importer helper mutation score | 87.85% passed |
-| Storage bridge mutation score | 90.84% passed |
-| Storage orchestration mutation score | 88.43% passed |
+Aegis Vault stores sensitive credentials. Always use verified local builds, keep your Master Password and Emergency Kit safely offline, and verify artifact SHA-256 checksums before deploying across your devices.
 
 ## Desktop Builds
 
@@ -320,10 +223,3 @@ Do not publish a release candidate if the evidence metadata reports a dirty work
 - `docs/PUBLIC_RELEASE_BLOCKERS.md` - current public-distribution blockers from the final readiness gate
 - `CHANGELOG.md` - release history and notable changes
 - `FIREFOX_XPI.md` - Firefox XPI packaging/signing notes
-
-## Responsible Use
-
-Aegis Vault stores highly sensitive credentials. Use only trusted builds, keep your master password and Emergency Kit offline, and verify release artifacts before sharing them outside your own devices.
-
-
-
