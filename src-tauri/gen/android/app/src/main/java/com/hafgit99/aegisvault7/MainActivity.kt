@@ -469,7 +469,8 @@ class MainActivity : TauriActivity() {
       return try {
         val encryptedPayload = securePreferences().getString(preferenceKey(key), null) ?: return null
         decryptSecureValue(encryptedPayload)
-      } catch (_: Exception) {
+      } catch (error: Exception) {
+        Log.e(SECURE_STORAGE_LOG_TAG, "Failed to retrieve or decrypt secure item for key '$key': ${error.message}", error)
         null
       }
     }
@@ -477,12 +478,14 @@ class MainActivity : TauriActivity() {
     @JavascriptInterface
     fun setItem(key: String, value: String): Boolean {
       return try {
+        val encrypted = encryptSecureValue(value)
         securePreferences()
           .edit()
-          .putString(preferenceKey(key), encryptSecureValue(value))
+          .putString(preferenceKey(key), encrypted)
           .apply()
         true
-      } catch (_: Exception) {
+      } catch (error: Exception) {
+        Log.e(SECURE_STORAGE_LOG_TAG, "Failed to encrypt or store secure item for key '$key': ${error.message}", error)
         false
       }
     }
@@ -492,7 +495,8 @@ class MainActivity : TauriActivity() {
       return try {
         securePreferences().edit().remove(preferenceKey(key)).apply()
         true
-      } catch (_: Exception) {
+      } catch (error: Exception) {
+        Log.e(SECURE_STORAGE_LOG_TAG, "Failed to remove secure item for key '$key': ${error.message}", error)
         false
       }
     }
@@ -738,24 +742,38 @@ class MainActivity : TauriActivity() {
   private fun preferenceKey(key: String): String =
     "secure.$key"
 
+  @Volatile
+  private var cachedSecureStorageKey: SecretKey? = null
+
+  @Synchronized
   private fun getOrCreateSecureStorageKey(): SecretKey {
+    cachedSecureStorageKey?.let { return it }
+
     val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
     val existingKey = keyStore.getKey(SECURE_STORAGE_KEY_ALIAS, null)
-    if (existingKey is SecretKey) return existingKey
+    if (existingKey is SecretKey) {
+      cachedSecureStorageKey = existingKey
+      return existingKey
+    }
 
     val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
-    val keySpec = KeyGenParameterSpec.Builder(
+    val keySpecBuilder = KeyGenParameterSpec.Builder(
       SECURE_STORAGE_KEY_ALIAS,
       KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
     )
       .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
       .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
       .setRandomizedEncryptionRequired(true)
-      .setUserAuthenticationRequired(false)
-      .build()
 
-    keyGenerator.init(keySpec)
-    return keyGenerator.generateKey()
+    // On Android P (API 28+), require the device to be unlocked to access the KeyStore key
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+      keySpecBuilder.setUnlockedDeviceRequired(true)
+    }
+
+    keyGenerator.init(keySpecBuilder.build())
+    val generatedKey = keyGenerator.generateKey()
+    cachedSecureStorageKey = generatedKey
+    return generatedKey
   }
 
   private fun encryptSecureValue(value: String): String {
@@ -773,6 +791,17 @@ class MainActivity : TauriActivity() {
 
   private fun decryptSecureValue(payload: String): String? {
     val json = JSONObject(payload)
+    val version = json.optInt("version", 1)
+    return when (version) {
+      1 -> decryptV1Payload(json)
+      else -> {
+        Log.e(SECURE_STORAGE_LOG_TAG, "Unsupported secure storage payload version: $version")
+        null
+      }
+    }
+  }
+
+  private fun decryptV1Payload(json: JSONObject): String {
     val iv = Base64.decode(json.getString("iv"), Base64.NO_WRAP)
     val ciphertext = Base64.decode(json.getString("ciphertext"), Base64.NO_WRAP)
     val cipher = Cipher.getInstance(SECURE_STORAGE_CIPHER)
@@ -867,6 +896,7 @@ class MainActivity : TauriActivity() {
     private const val SECURE_PREFS_NAME = "aegis_secure_storage"
     private const val SECURE_STORAGE_KEY_ALIAS = "aegis_vault_v7_secure_storage"
     private const val SECURE_STORAGE_CIPHER = "AES/GCM/NoPadding"
+    private const val SECURE_STORAGE_LOG_TAG = "AegisSecureStorage"
     private const val AUTOFILL_REQUEST_MAX_AGE_MS = 5 * 60 * 1000L
     private const val AUTOFILL_LOG_TAG = "AegisAutofill"
 
