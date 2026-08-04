@@ -9,28 +9,34 @@ Sensitive data stays completely under the user's control: vault data is encrypte
 - **Desktop Application**: Active development and local release builds via Tauri. Windows local release packaging (MSI + NSIS setup installers) is verified; Linux and macOS build targets are supported.
 - **Android Application**: Signed APK / AAB workflow active with physical-device smoke testing, safe-area UI layout, Android Autofill service, native document picker backup/import, `FLAG_SECURE` screenshot prevention, and Keystore-backed biometric authentication.
 - **Browser Extension**: Manifest V3 extension for Chrome and Firefox (XPI packaging & signing flow). Features closed Shadow DOM UI isolation, AI/heuristic anti-phishing engine (Punycode, Unicode confusables, typo-squatting detection), and 30-second clipboard auto-clearing.
-- **Security Hardening**:
-  - **At-Rest Metadata Masking**: SQLite `vault_items` table masks `title`, `username_db`, `password_db`, and `notes_db` as `'[encrypted: aes-256-gcm]'` at rest. Plaintext titles and metadata exist solely inside AES-256-GCM encrypted payloads (`enc_metadata`), matching KeePassXC (KDBX4), Bitwarden, and 1Password threat models.
-  - **Closed Shadow DOM Extension Isolation**: Extension dropdowns, phishing banners, and save prompts render inside `<aegis-autofill-host>` closed Shadow DOM, completely blocking host page scripts from reading vault item titles/usernames or tampering with styles/clickjacking.
-  - **Transient Credential Memory Zeroing**: Content script password memory expires after 15s max (or instantly upon field filling), background worker pending/draft credentials auto-wipe after 120s with explicit zeroing timers.
-  - **Popup Clipboard Auto-Clear**: Copying passwords from extension popup automatically zeroes the clipboard after 30 seconds, mirroring desktop security policy.
-- **Internationalization (i18n)**: Complete Turkish (TR), English (EN), and Chinese (ZH) localization across Web, Desktop, Android, and Extension interfaces.
+- **Security Hardening & Recent Architecture Improvements**:
+  - **At-Rest Metadata Masking**: SQLite `vault_items` table masks `title`, `username_db`, `password_db`, and `notes_db` as `'[encrypted: aes-256-gcm]'` at rest. Plaintext titles and metadata exist solely inside AES-256-GCM encrypted payloads (`enc_metadata`).
+  - **Multi-ABI Android Native Packaging**: Configured ABI splits supporting `arm64-v8a`, `armeabi-v7a`, and `x86_64` for maximum device and emulator compatibility.
+  - **Modular Android Architecture**: Native Android bridge refactored into clean `bridges/`, `crypto/`, `security/`, and `model/` packages.
+  - **Encrypted Autofill Transport**: Parolası `AegisAutofillService` tarafından Intent extras yerine donanım destekli AES-256-GCM `SecureTempFileStorage` + `FileProvider` URI üzerinden güvenle aktarılır.
+  - **Argon2id KDF Parameter Parity**: Single source of truth parameters (32 MiB memoryKiB, 3 iterations, 1 parallelism, 32-byte key) strictly enforced across Rust native KDF and Web Crypto WASM engine.
+  - **Referential Storage Integrity**: Real-time referential integrity audit (`auditAttachmentIntegrity`) and orphan attachment purging (`purgeOrphanedAttachments`) between `wa-sqlite` and `IndexedDB`.
+  - **OOM Protection & Log Rotation**: 25 MB payload pre-check guards on file and database I/O, plus 5 MB size-capped log rotation strategy (`RotationStrategy::KeepOne`).
+  - **Closed Shadow DOM Extension Isolation**: Extension dropdowns, phishing banners, and save prompts render inside `<aegis-autofill-host>` closed Shadow DOM.
+  - **Transient Credential Memory Zeroing**: Content script password memory expires after 15s max, background worker credentials auto-wipe after 120s with explicit zeroing timers.
+  - **Popup Clipboard Auto-Clear**: Copying passwords from extension popup automatically zeroes the clipboard after 30 seconds.
+- **Internationalization (i18n)**: Complete Turkish (TR), English (EN), and Chinese (ZH) localization across Web, Desktop, Android (native `strings.xml`), and Extension interfaces.
 
 ## Release Candidate Boundaries
 
 | Target | Current release position | Public release blocker |
 | --- | --- | --- |
 | Windows desktop | MSI & NSIS setup installer builds and release evidence flows are active. | Public artifacts should be signed with release certificate. |
-| Linux desktop | Artifacts can be compiled from Tauri workflow. | Runtime smoke on target Linux distributions. |
+| Linux desktop | Artifacts can be compiled from Tauri workflow with PipeWire/D-Bus screen recording monitor. | Runtime smoke on target Linux distributions. |
 | macOS desktop | DMG / App bundle build pipeline available. | Code signing & Apple notarization validation. |
-| Android | Signed APK evidence and physical-device validation active. | Device regression matrix across Android 12-15. |
+| Android | Multi-ABI signed APK evidence and physical-device validation active across 64-bit and 32-bit devices. | Device regression matrix across Android 12-15. |
 | Browser extension | Chrome MV3 & Firefox signed XPI packaging available. | Native messaging host integration tests per release. |
 | iOS / iPadOS | Planned support track documented in `docs/IOS_READINESS.md`. | Requires macOS Xcode build environment, iOS Rust targets, and device smoke. |
 
 ## Core Features
 
 - **Zero-Knowledge Encrypted Storage**: Logins, payment cards, secure keys/API secrets, WebAuthn passkeys, identities, and secure notes.
-- **AES-256-GCM & Argon2id Key Derivation**: Modern KDF (128 MiB memory, 4 iterations) with WebCrypto CSPRNG.
+- **AES-256-GCM & Argon2id Key Derivation**: Modern KDF (32 MiB memory, 3 iterations) with WebCrypto CSPRNG and Rust native acceleration.
 - **At-Rest Metadata Encryption**: Titles, usernames, passwords, and notes masked in SQLite database rows.
 - **Account Secret Key & Master Password**: Dual-factor credential protection during vault unlock.
 - **Emergency Kit**: Cryptographic emergency recovery kit generated during setup or exported from Settings.
@@ -39,8 +45,7 @@ Sensitive data stays completely under the user's control: vault data is encrypte
 - **Closed Shadow DOM Browser Extension**: Autofill dropdown, anti-phishing banner, and save credential prompt isolated from web page JS inspection.
 - **Smart Password & Diceware Generator**: Cryptographically unbiased random password and Diceware passphrase generation.
 - **RFC 6238 TOTP Engine**: Built-in 2FA authenticator with live countdown and progress indicators.
-- **Security Audit & Password Health**: Automated detection of weak, reused, and compromised passwords (via HIBP k-anonymity API).
-- **wa-sqlite OPFS Engine**: Local-first SQLite database running over Origin Private File System with legacy JSON vault migration.
+- **wa-sqlite OPFS Engine**: Local-first SQLite database running over Origin Private File System with referential attachment integrity.
 
 ## Security Architecture
 
@@ -86,13 +91,14 @@ Latest local verification metrics:
 
 | Metric | Status |
 | --- | --- |
-| **TypeScript Typecheck** | 0 errors |
-| **Unit Test Files** | **145 passed** |
-| **Unit Tests** | **1133 passed** |
-| **Statements Coverage** | 91.20% |
-| **Branches Coverage** | 83.29% |
-| **Functions Coverage** | 88.07% |
-| **Lines Coverage** | 93.03% |
+| **TypeScript Typecheck** | **0 errors (clean)** |
+| **Unit Test Files** | **145 passed (145)** |
+| **Unit Tests** | **1136 passed (1136)** |
+| **Android Kotlin Unit Tests** | **Passed (`AutofillModelsTest.kt`)** |
+| **Statements Coverage** | **91.20%** |
+| **Branches Coverage** | **83.29%** |
+| **Functions Coverage** | **88.07%** |
+| **Lines Coverage** | **93.03%** |
 
 ## Desktop Builds
 
