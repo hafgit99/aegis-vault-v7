@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { useState } from 'react';
 import { Fingerprint, Key, Check, ShieldAlert } from 'lucide-react';
-import { getBiometricType } from '../../lib/biometric';
+import { getBiometricType, isBiometricAutofillRequireEnabled, setBiometricAutofillRequireEnabled } from '../../lib/biometric';
 
 interface SettingsBiometricCardProps {
   biometricEnabled: boolean;
@@ -24,6 +25,13 @@ export function SettingsBiometricCard({
   t,
 }: SettingsBiometricCardProps) {
   const biometricType = getBiometricType();
+  const [autofillRequire, setAutofillRequire] = useState(isBiometricAutofillRequireEnabled());
+
+  const handleToggleAutofillRequire = () => {
+    const next = !autofillRequire;
+    setBiometricAutofillRequireEnabled(next);
+    setAutofillRequire(next);
+  };
 
   return (
     <div className="glass-panel p-4 sm:p-6 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 items-center border border-outline-variant/10" id="biometric-settings-card">
@@ -88,6 +96,26 @@ export function SettingsBiometricCard({
             </div>
           )}
         </div>
+
+        {biometricEnabled && (
+          <div className="flex items-center justify-between p-3 bg-surface-low rounded-xl border border-outline-variant/10">
+            <div className="space-y-0.5">
+              <span className="text-xs font-bold text-on-surface block">
+                Otomatik Doldurma Öncesi Biyometrik Onay
+              </span>
+              <span className="text-[11px] text-on-surface-variant block">
+                Her doldurma işleminden önce biyometrik doğrulama iste.
+              </span>
+            </div>
+            <input
+              type="checkbox"
+              checked={autofillRequire}
+              onChange={handleToggleAutofillRequire}
+              aria-label="Otomatik Doldurma Öncesi Biyometrik Onay"
+              className="w-4 h-4 accent-brand-primary cursor-pointer"
+            />
+          </div>
+        )}
 
         {biometricSuccess && (
           <div className="p-3 bg-brand-tertiary/10 border border-brand-tertiary/20 rounded-lg text-brand-tertiary text-xs leading-relaxed animate-fade-in flex items-start gap-2">

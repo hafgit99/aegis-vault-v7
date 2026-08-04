@@ -11,6 +11,8 @@ import { SettingsBiometricCard } from './SettingsBiometricCard';
 // Mock biometric utility functions
 vi.mock('../../lib/biometric', () => ({
   getBiometricType: vi.fn(() => 'platform'),
+  isBiometricAutofillRequireEnabled: vi.fn(() => false),
+  setBiometricAutofillRequireEnabled: vi.fn(),
 }));
 
 import { getBiometricType } from '../../lib/biometric';

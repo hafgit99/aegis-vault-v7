@@ -508,3 +508,19 @@ export async function authenticateBiometric(): Promise<string> {
     throw new BiometricError(biometricErrorCodes.integrityMismatch);
   }
 }
+
+const BIOMETRIC_AUTOFILL_REQUIRE_KEY = 'aegis_biometric_autofill_require';
+
+export function isBiometricAutofillRequireEnabled(): boolean {
+  if (typeof localStorage === 'undefined') return false;
+  return localStorage.getItem(BIOMETRIC_AUTOFILL_REQUIRE_KEY) === 'true';
+}
+
+export function setBiometricAutofillRequireEnabled(enabled: boolean): void {
+  if (typeof localStorage === 'undefined') return;
+  if (enabled) {
+    localStorage.setItem(BIOMETRIC_AUTOFILL_REQUIRE_KEY, 'true');
+  } else {
+    localStorage.removeItem(BIOMETRIC_AUTOFILL_REQUIRE_KEY);
+  }
+}

@@ -85,6 +85,8 @@ vi.mock('../lib/biometric', () => ({
   isBiometricSupported: vi.fn(() => false),
   registerBiometric: vi.fn(),
   getBiometricType: vi.fn(() => 'platform'),
+  isBiometricAutofillRequireEnabled: vi.fn(() => false),
+  setBiometricAutofillRequireEnabled: vi.fn(),
 }));
 
 vi.mock('../lib/emergencyKit', () => ({

@@ -125,6 +125,31 @@ async function build() {
   if (firefoxJsonBackup) fs.writeFileSync(firefoxHostManifestPath, firefoxJsonBackup);
 
   console.log('Firefox-optimized extension build completed inside dist-extension-firefox/ !');
+
+  // Generate Safari-specific WebExtension build
+  const outDirSafari = path.resolve('dist-extension-safari');
+  if (fs.existsSync(outDirSafari)) {
+    fs.rmSync(outDirSafari, { recursive: true, force: true });
+  }
+  fs.mkdirSync(outDirSafari, { recursive: true });
+
+  copyFolderRecursive(outDir, outDirSafari);
+
+  const safariManifestPath = path.join(outDirSafari, 'manifest.json');
+  const safariManifest = JSON.parse(fs.readFileSync(safariManifestPath, 'utf8'));
+
+  // Safari MV3 manifest refinements
+  if (!safariManifest.browser_specific_settings) {
+    safariManifest.browser_specific_settings = {
+      safari: {
+        strict_min_version: '15.4',
+      },
+    };
+  }
+
+  fs.writeFileSync(safariManifestPath, JSON.stringify(safariManifest, null, 2));
+
+  console.log('Safari-optimized WebExtension build completed inside dist-extension-safari/ !');
 }
 
 build().catch((err) => {

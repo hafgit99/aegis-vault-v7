@@ -1,6 +1,9 @@
 node_modules/
 build/
 dist/
+dist-extension/
+dist-extension-firefox/
+dist-extension-safari/
 coverage/
 .DS_Store
 *.log

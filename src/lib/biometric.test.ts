@@ -26,6 +26,8 @@ import {
   hydrateBiometric,
   resetBiometricCacheForTesting,
   getBiometricType,
+  isBiometricAutofillRequireEnabled,
+  setBiometricAutofillRequireEnabled,
 } from './biometric';
 
 const rawId = new Uint8Array([1, 2, 3, 4]).buffer;
@@ -390,5 +392,15 @@ describe('biometric master password wrapper', () => {
     expect(isBiometricHardwareBound()).toBe(true);
 
     await expect(authenticateBiometric()).resolves.toBe('master-pass-prf');
+  });
+
+  it('manages biometric autofill requirement setting state', () => {
+    expect(isBiometricAutofillRequireEnabled()).toBe(false);
+
+    setBiometricAutofillRequireEnabled(true);
+    expect(isBiometricAutofillRequireEnabled()).toBe(true);
+
+    setBiometricAutofillRequireEnabled(false);
+    expect(isBiometricAutofillRequireEnabled()).toBe(false);
   });
 });
