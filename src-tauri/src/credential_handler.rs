@@ -336,10 +336,7 @@ mod tests {
 
     #[test]
     fn test_resolve_backup_password() {
-        assert_eq!(
-            resolve_backup_password("my-pass", None),
-            "my-pass"
-        );
+        assert_eq!(resolve_backup_password("my-pass", None), "my-pass");
         assert_eq!(
             resolve_backup_password("my-pass", Some("explicit-bp".into())),
             "explicit-bp"
