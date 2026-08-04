@@ -16,12 +16,29 @@ function isForbiddenDebugArtifact(artifactPath) {
     || normalized.endsWith('.map')
     || normalized.includes('.dsym/');
 }
+let AdmZip;
+try {
+  AdmZip = require('adm-zip');
+} catch (_) {}
+
 function archiveContainsForbiddenDebugArtifact(buffer) {
-  const contents = Buffer.isBuffer(buffer) ? buffer.toString('latin1').toLowerCase() : '';
-  return contents.includes('.pdb')
-    || contents.includes('.js.map')
-    || contents.includes('.css.map')
-    || contents.includes('.dsym/');
+  if (!Buffer.isBuffer(buffer)) return false;
+  if (AdmZip) {
+    try {
+      const zip = new AdmZip(buffer);
+      const entries = zip.getEntries();
+      for (const entry of entries) {
+        const name = (entry.entryName || '').toLowerCase();
+        if (name.endsWith('.js.map') || name.endsWith('.css.map') || name.endsWith('.pdb') || name.includes('.dsym/')) {
+          return true;
+        }
+      }
+      return false;
+    } catch (_) {}
+  }
+  const str = buffer.toString('binary');
+  return /\b[a-zA-Z0-9_\-\/\.]+\.(?:js\.map|css\.map|pdb)\b/i.test(str)
+    || /\b[a-zA-Z0-9_\-\/\.]+\.dsym\//i.test(str);
 }
 function signingCoverage(artifacts, platform, reportContents) {
   const required = artifacts.filter((artifact) => isSignableArtifact(artifact, platform)).length;

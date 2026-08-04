@@ -39,7 +39,7 @@ function copyCleanExtension(src, dest) {
   fs.mkdirSync(dest, { recursive: true });
 
   for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-    if (excludedNames.has(entry.name)) continue;
+    if (excludedNames.has(entry.name) || entry.name.endsWith('.map')) continue;
 
     const sourcePath = path.join(src, entry.name);
     const destinationPath = path.join(dest, entry.name);
