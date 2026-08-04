@@ -80,18 +80,6 @@ Run test coverage report:
 npm run test:coverage
 ```
 
-Build browser extension:
-
-```bash
-npm run build:extension
-```
-
-Build Tauri desktop release package:
-
-```bash
-npm run desktop:build
-```
-
 ### Test Suite Status
 
 Latest local verification metrics:
@@ -101,31 +89,10 @@ Latest local verification metrics:
 | **TypeScript Typecheck** | 0 errors |
 | **Unit Test Files** | **145 passed** |
 | **Unit Tests** | **1133 passed** |
-| **Statements Coverage** | 93.80% |
-| **Branches Coverage** | 84.10% |
-| **Functions Coverage** | 91.20% |
-| **Lines Coverage** | 95.10% |
-
-## Project Structure
-
-```text
-assets/                   App icons and visual assets
-docs/                     Security, release, Android readiness, and quality docs
-scripts/                  Release, Android, extension, and evidence scripts
-src/                      React/TypeScript web & desktop application
-  components/             UI components, feature panels, and modals
-  hooks/                  Vault state, lock, auto-lock, and UI hooks
-  i18n/                   Turkish (TR), English (EN), and Chinese (ZH) localization
-  lib/                    Crypto, wa-sqlite OPFS, import/export, Android bridges, audit logic
-  types.ts                Shared TypeScript model interfaces
-src-extension/            Manifest V3 browser extension (content scripts, background worker, popup)
-src-tauri/                Tauri desktop and Android native Rust code & configuration
-tests/                    Playwright E2E tests and security smoke tests
-```
-
-## Responsible Use
-
-Aegis Vault stores sensitive credentials. Always use verified local builds, keep your Master Password and Emergency Kit safely offline, and verify artifact SHA-256 checksums before deploying across your devices.
+| **Statements Coverage** | 91.20% |
+| **Branches Coverage** | 83.29% |
+| **Functions Coverage** | 88.07% |
+| **Lines Coverage** | 93.03% |
 
 ## Desktop Builds
 
@@ -154,7 +121,7 @@ npm run release:linux
 npm run release:macos
 ```
 
-The desktop release gate runs lint, version consistency checks, unit tests, web build, extension build, Tauri desktop build, release evidence collection, signing report generation, release notes generation, and evidence verification for the current host platform. Use `--skip-desktop-build` only when artifacts were produced by another trusted machine or workflow and you want to collect/check existing output. Linux and macOS artifacts can also be produced from the private build repository workflow when available; if target hardware is unavailable, mark runtime smoke as deferred and keep those artifacts internal-only.
+The desktop release gate runs lint, version consistency checks, unit tests, web build, extension build, Tauri desktop build, release evidence collection, signing report generation, release notes generation, and evidence verification for the current host platform.
 
 ## Android Builds
 
@@ -212,6 +179,23 @@ Release candidate evidence is written under `release-local/` and normally includ
 
 Do not publish a release candidate if the evidence metadata reports a dirty working tree unless it is an intentional internal-only diagnostic build.
 
+## Project Structure
+
+```text
+assets/                   App icons and visual assets
+docs/                     Security, release, Android readiness, and quality docs
+scripts/                  Release, Android, extension, and evidence scripts
+src/                      React/TypeScript web & desktop application
+  components/             UI components, feature panels, and modals
+  hooks/                  Vault state, lock, auto-lock, and UI hooks
+  i18n/                   Turkish (TR), English (EN), and Chinese (ZH) localization
+  lib/                    Crypto, wa-sqlite OPFS, import/export, Android bridges, audit logic
+  types.ts                Shared TypeScript model interfaces
+src-extension/            Manifest V3 browser extension (content scripts, background worker, popup)
+src-tauri/                Tauri desktop and Android native Rust code & configuration
+tests/                    Playwright E2E tests and security smoke tests
+```
+
 ## Documentation Index
 
 - `docs/ROADMAP.md` - current roadmap and completed phases
@@ -223,3 +207,7 @@ Do not publish a release candidate if the evidence metadata reports a dirty work
 - `docs/PUBLIC_RELEASE_BLOCKERS.md` - current public-distribution blockers from the final readiness gate
 - `CHANGELOG.md` - release history and notable changes
 - `FIREFOX_XPI.md` - Firefox XPI packaging/signing notes
+
+## Responsible Use
+
+Aegis Vault stores sensitive credentials. Always use verified local builds, keep your Master Password and Emergency Kit safely offline, and verify artifact SHA-256 checksums before deploying across your devices.
