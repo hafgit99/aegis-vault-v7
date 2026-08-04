@@ -46,7 +46,23 @@ function walk(dir, files = []) {
 }
 
 function ensureCleanDir(dir) {
-  fs.rmSync(dir, { recursive: true, force: true });
+  if (fs.existsSync(dir)) {
+    try {
+      fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+    } catch (error) {
+      if (error.code === 'EBUSY' || error.code === 'EPERM') {
+        for (const file of fs.readdirSync(dir)) {
+          try {
+            fs.rmSync(path.join(dir, file), { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+          } catch (_e) {
+            // Best effort removal for individual locked entries
+          }
+        }
+      } else {
+        throw error;
+      }
+    }
+  }
   fs.mkdirSync(dir, { recursive: true });
 }
 
