@@ -217,7 +217,7 @@ export function SettingsSyncSection({
                 type="text"
                 value={s3AccessKeyId}
                 onChange={(e) => setS3AccessKeyId(e.target.value)}
-                placeholder="AKIAIOSFODNN7EXAMPLE"
+                placeholder="Örn: your-access-key-id"
                 className="w-full bg-surface-lowest border border-outline-variant/20 rounded-lg px-3 py-2 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:ring-1 focus:ring-brand-primary"
               />
             </div>
