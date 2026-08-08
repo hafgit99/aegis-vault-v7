@@ -1,6 +1,7 @@
 export const secureStorageKeys = {
   rememberedSecretKey: 'aegis_account_secret_key_remembered',
   biometricInfo: 'aegis_biometric_info',
+  recoveryKeyBundle: 'aegis_recovery_key_bundle',
 } as const;
 
 interface AndroidSecureStorageBridge {

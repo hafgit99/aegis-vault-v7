@@ -7,6 +7,7 @@ export const EMERGENCY_KIT_PDF_FILENAME = 'aegis-vault-emergency-kit.pdf';
 
 interface EmergencyKitOptions {
   generatedAt?: Date;
+  recoveryWords?: string[];
 }
 
 export function buildEmergencyKitText(secretKey: string, options: EmergencyKitOptions = {}): string {
@@ -17,16 +18,30 @@ export function buildEmergencyKitText(secretKey: string, options: EmergencyKitOp
 
   const generatedAt = (options.generatedAt ?? new Date()).toISOString();
 
-  return [
+  const lines = [
     `${APP_NAME} Emergency Kit`,
     '',
     `Generated: ${generatedAt}`,
     `Account Secret Key: ${normalizedSecretKey}`,
-    '',
-    'Keep this file offline and outside the vault.',
-    'You need this secret key together with your master password to unlock this vault on a new device.',
-    `${APP_NAME} cannot recover the secret key or master password for you.`,
-  ].join('\n');
+  ];
+
+  if (options.recoveryWords && options.recoveryWords.length === 24) {
+    lines.push('');
+    lines.push('Recovery Key Words (24-word BIP-39 phrase):');
+    for (let i = 0; i < options.recoveryWords.length; i += 4) {
+      lines.push(options.recoveryWords.slice(i, i + 4).map((w, j) => `${i + j + 1}. ${w}`).join('  '));
+    }
+  }
+
+  lines.push('');
+  lines.push('Keep this file offline and outside the vault.');
+  lines.push('You need this secret key together with your master password to unlock this vault on a new device.');
+  if (options.recoveryWords && options.recoveryWords.length === 24) {
+    lines.push('If you forget your master password, use the 24 recovery words to unlock and reset your password.');
+  }
+  lines.push(`${APP_NAME} cannot recover the secret key or master password for you.`);
+
+  return lines.join('\n');
 }
 
 export function buildEmergencyKitPdfBytes(secretKey: string, options: EmergencyKitOptions = {}): Uint8Array {
@@ -42,11 +57,20 @@ export function buildEmergencyKitPdfBytes(secretKey: string, options: EmergencyK
     '',
     `Generated: ${generatedAt}`,
     `Account Secret Key: ${normalizedSecretKey}`,
-    '',
-    'Keep this file offline and outside the vault.',
-    'You need this secret key together with your master password to unlock this vault on a new device.',
-    `${APP_NAME} cannot recover the secret key or master password for you.`,
   ];
+
+  if (options.recoveryWords && options.recoveryWords.length === 24) {
+    lines.push('');
+    lines.push('Recovery Key Words (24-word phrase):');
+    for (let i = 0; i < options.recoveryWords.length; i += 4) {
+      lines.push(options.recoveryWords.slice(i, i + 4).map((w, j) => `${i + j + 1}.${w}`).join(' '));
+    }
+  }
+
+  lines.push('');
+  lines.push('Keep this file offline and outside the vault.');
+  lines.push('You need this secret key together with your master password to unlock this vault on a new device.');
+  lines.push(`${APP_NAME} cannot recover the secret key or master password for you.`);
 
   const objects: string[] = [];
   objects.push('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj');

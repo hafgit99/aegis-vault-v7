@@ -58,6 +58,7 @@ import { SettingsBiometricCard } from './settings/SettingsBiometricCard';
 import { SettingsAutofillCard } from './settings/SettingsAutofillCard';
 import { SettingsSyncSection } from './settings/SettingsSyncSection';
 import { SettingsBackupSection } from './settings/SettingsBackupSection';
+import { SettingsRecoverySection } from './settings/SettingsRecoverySection';
 import { SettingsDangerZone } from './settings/SettingsDangerZone';
 import { PasskeyManager } from './PasskeyManager';
 import {
@@ -1489,6 +1490,9 @@ export default function SettingsPanel({
         onToggleBiometric={handleToggleBiometric}
         t={t}
       />
+
+      {/* Recovery Options (Recovery Key & Password Hint) */}
+      <SettingsRecoverySection t={t} />
 
       {/* Android Autofill Settings Card */}
       {isAndroidAutofillSupported() && (
