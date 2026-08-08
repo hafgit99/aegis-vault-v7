@@ -138,10 +138,8 @@
     "jsdom": "^25.0.1",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
-    "typescript": "~5.8.2",
     "vite": "^6.2.3",
-    "vitest": "^4.1.9",
-    "web-ext": "^10.4.0"
+    "vitest": "^4.1.9"
   },
   "overrides": {
     "qs": "6.15.3",
