@@ -949,4 +949,6 @@ export const tr = {
     'lock.recoveryModal.newPasswordSuccess': 'Şifreniz başarıyla değiştirildi!',
 
   'settings.import.errorBackupTooLarge': 'Yedek dosyası boyutu 100MB sınırını aşıyor.',
+  'settings.biometric.autofillConfirmTitle': 'Otomatik Doldurma Öncesi Biyometrik Onay',
+  'settings.biometric.autofillConfirmDesc': 'Her doldurma işleminden önce biyometrik doğrulama iste.',
 } as const;

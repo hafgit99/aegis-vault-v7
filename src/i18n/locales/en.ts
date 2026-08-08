@@ -949,4 +949,6 @@ export const en = {
     'lock.recoveryModal.newPasswordSuccess': 'Password changed successfully!',
 
   'settings.import.errorBackupTooLarge': 'Backup file size exceeds 100MB limit.',
+  'settings.biometric.autofillConfirmTitle': 'Biometric Confirmation Before Autofill',
+  'settings.biometric.autofillConfirmDesc': 'Require biometric verification before every autofill operation.',
 } as const;

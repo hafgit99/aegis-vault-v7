@@ -944,4 +944,6 @@ export const it = {
   'lock.recoveryModal.newPasswordTitle': 'Imposta la nuova password principale',
   'lock.recoveryModal.newPasswordSuccess': 'Password modificata con successo!',
   'settings.import.errorBackupTooLarge': 'La dimensione del file di backup supera il limite di 100 MB.',
+  'settings.biometric.autofillConfirmTitle': 'Conferma Biometrica prima del Autocompletamento',
+  'settings.biometric.autofillConfirmDesc': 'Richiedi la verifica biometrica prima di ogni operazione di autocompletamento.',
 } as const;

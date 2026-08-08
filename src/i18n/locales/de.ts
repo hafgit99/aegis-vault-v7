@@ -944,4 +944,6 @@ export const de = {
   'lock.recoveryModal.newPasswordTitle': 'Legen Sie ein neues Master-Passwort fest',
   'lock.recoveryModal.newPasswordSuccess': 'Passwort erfolgreich geändert!',
   'settings.import.errorBackupTooLarge': 'Die Größe der Sicherungsdatei überschreitet die Grenze von 100 MB.',
+  'settings.biometric.autofillConfirmTitle': 'Biometrische Bestätigung vor dem Ausfüllen',
+  'settings.biometric.autofillConfirmDesc': 'Biometrische Verifizierung vor jedem Ausfüllvorgang anfordern.',
 } as const;

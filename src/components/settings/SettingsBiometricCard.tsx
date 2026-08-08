@@ -101,17 +101,17 @@ export function SettingsBiometricCard({
           <div className="flex items-center justify-between p-3 bg-surface-low rounded-xl border border-outline-variant/10">
             <div className="space-y-0.5">
               <span className="text-xs font-bold text-on-surface block">
-                Otomatik Doldurma Öncesi Biyometrik Onay
+                {t('settings.biometric.autofillConfirmTitle')}
               </span>
               <span className="text-[11px] text-on-surface-variant block">
-                Her doldurma işleminden önce biyometrik doğrulama iste.
+                {t('settings.biometric.autofillConfirmDesc')}
               </span>
             </div>
             <input
               type="checkbox"
               checked={autofillRequire}
               onChange={handleToggleAutofillRequire}
-              aria-label="Otomatik Doldurma Öncesi Biyometrik Onay"
+              aria-label={t('settings.biometric.autofillConfirmTitle')}
               className="w-4 h-4 accent-brand-primary cursor-pointer"
             />
           </div>

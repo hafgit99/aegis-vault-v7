@@ -944,4 +944,6 @@ export const ar = {
   'lock.recoveryModal.newPasswordTitle': 'تعيين كلمة مرور رئيسية جديدة',
   'lock.recoveryModal.newPasswordSuccess': 'تم تغيير كلمة المرور بنجاح!',
   'settings.import.errorBackupTooLarge': 'حجم ملف النسخ الاحتياطي يتجاوز الحد المسموح به وهو 100 ميجابايت.',
+  'settings.biometric.autofillConfirmTitle': 'التأكيد الحيوي قبل الإكمال التلقائي',
+  'settings.biometric.autofillConfirmDesc': 'طلب التحقق الحيوي قبل كل عملية إكمال تلقائي.',
 } as const;

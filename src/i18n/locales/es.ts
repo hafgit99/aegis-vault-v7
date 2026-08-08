@@ -944,4 +944,6 @@ export const es = {
   'lock.recoveryModal.newPasswordTitle': 'Establecer nueva contraseña maestra',
   'lock.recoveryModal.newPasswordSuccess': '¡La contraseña se cambió correctamente!',
   'settings.import.errorBackupTooLarge': 'El tamaño del archivo de copia de seguridad supera el límite de 100 MB.',
+  'settings.biometric.autofillConfirmTitle': 'Confirmación Biométrica antes del Autocompletado',
+  'settings.biometric.autofillConfirmDesc': 'Requerir verificación biométrica antes de cada operación de autocompletado.',
 } as const;

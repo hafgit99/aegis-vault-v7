@@ -949,4 +949,6 @@ export const zh = {
     'lock.recoveryModal.newPasswordSuccess': '密码重置成功！',
 
   'settings.import.errorBackupTooLarge': '备份文件大小超过 100MB 限制。',
+  'settings.biometric.autofillConfirmTitle': '自动填充前进行生物识别确认',
+  'settings.biometric.autofillConfirmDesc': '在每次自动填充操作 festival 之前要求进行生物识别验证。',
 } as const;

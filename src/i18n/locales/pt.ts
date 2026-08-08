@@ -944,4 +944,6 @@ export const pt = {
   'lock.recoveryModal.newPasswordTitle': 'Definir nova senha mestra',
   'lock.recoveryModal.newPasswordSuccess': 'Senha alterada com sucesso!',
   'settings.import.errorBackupTooLarge': 'O tamanho do arquivo de backup excede o limite de 100 MB.',
+  'settings.biometric.autofillConfirmTitle': 'Confirmação Biométrica antes do Preenchimento',
+  'settings.biometric.autofillConfirmDesc': 'Exigir verificação biométrica antes de cada operação de preenchimento.',
 } as const;

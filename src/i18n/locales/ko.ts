@@ -944,4 +944,6 @@ export const ko = {
   'lock.recoveryModal.newPasswordTitle': '새 마스터 비밀번호 설정',
   'lock.recoveryModal.newPasswordSuccess': '비밀번호가 성공적으로 변경되었습니다!',
   'settings.import.errorBackupTooLarge': '백업 파일 크기가 100MB 제한을 초과합니다.',
+  'settings.biometric.autofillConfirmTitle': '자동 채우기 전 생체 인식 확인',
+  'settings.biometric.autofillConfirmDesc': '모든 자동 채우기 작업 전에 생체 인식 검증을 요구합니다.',
 } as const;

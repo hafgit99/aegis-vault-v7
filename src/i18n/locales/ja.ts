@@ -944,4 +944,6 @@ export const ja = {
   'lock.recoveryModal.newPasswordTitle': '新しいマスターパスワードを設定する',
   'lock.recoveryModal.newPasswordSuccess': 'パスワードが正常に変更されました。',
   'settings.import.errorBackupTooLarge': 'バックアップ ファイルのサイズが 100MB の制限を超えています。',
+  'settings.biometric.autofillConfirmTitle': '自動入力前の生体認証確認',
+  'settings.biometric.autofillConfirmDesc': 'すべての自動入力操作の前に生体認証を要求します。',
 } as const;

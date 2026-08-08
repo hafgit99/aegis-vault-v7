@@ -944,4 +944,6 @@ export const ru = {
   'lock.recoveryModal.newPasswordTitle': 'Установить новый мастер-пароль',
   'lock.recoveryModal.newPasswordSuccess': 'Пароль успешно изменен!',
   'settings.import.errorBackupTooLarge': 'Размер файла резервной копии превышает ограничение в 100 МБ.',
+  'settings.biometric.autofillConfirmTitle': 'Биометрическое Подтверждение перед Автозаполнением',
+  'settings.biometric.autofillConfirmDesc': 'Запрашивать биометрическую проверку перед каждой операцией автозаполнения.',
 } as const;
