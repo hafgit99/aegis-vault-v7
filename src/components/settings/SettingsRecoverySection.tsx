@@ -31,6 +31,7 @@ import {
   clearPasswordHint,
 } from '../../lib/passwordHint';
 import { withActiveBackupPassword } from '../../lib/vaultSession';
+import { isNativeFileDialogSupported, saveDesktopExportFile } from '../../lib/desktopFiles';
 
 interface SettingsRecoverySectionProps {
   masterPassword?: string | null;
@@ -102,7 +103,7 @@ export function SettingsRecoverySection({ masterPassword, t }: SettingsRecoveryS
     }
   };
 
-  const handleDownloadWords = () => {
+  const handleDownloadWords = async () => {
     const content = [
       'Aegis Vault 7 Recovery Key',
       '',
@@ -116,11 +117,22 @@ export function SettingsRecoverySection({ masterPassword, t }: SettingsRecoveryS
       'Aegis Vault 7 cannot recover these words for you.',
     ].join('\n');
 
+    const filename = 'aegis-vault-recovery-key.txt';
+
+    try {
+      const savedWithNativeDialog = await saveDesktopExportFile(filename, content);
+      if (savedWithNativeDialog) return;
+      if (isNativeFileDialogSupported()) return;
+    } catch (err) {
+      console.error('Native save dialog error:', err);
+    }
+
+    // Web browser fallback
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'aegis-vault-recovery-key.txt';
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     a.remove();
