@@ -150,6 +150,7 @@ assertHostCanBuild(platform);
 
 const steps = [
   { command: 'npm', args: ['run', 'lint'] },
+  { command: 'npm', args: ['run', 'i18n:audit'] },
   { command: 'npm', args: ['run', 'rust:fmt:check'] },
   { command: 'npm', args: ['run', 'rust:test:native'] },
   { command: 'npm', args: ['run', 'security:no-js-master-string'] },

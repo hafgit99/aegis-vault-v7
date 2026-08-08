@@ -34,7 +34,7 @@ describe('SettingsLanguageCard', () => {
 
     // options count
     const options = screen.getAllByRole('option');
-    expect(options).toHaveLength(3);
+    expect(options).toHaveLength(12);
   });
 
   it('calls onLanguageChange when option is selected', () => {

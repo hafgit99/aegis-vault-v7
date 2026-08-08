@@ -4,7 +4,7 @@
  */
 
 import { Settings } from 'lucide-react';
-import { languageLabels, supportedLanguages, type LanguageCode, type TranslationKey } from '../../i18n/translations';
+import { languageFlags, languageLabels, supportedLanguages, type LanguageCode, type TranslationKey } from '../../i18n/translations';
 
 type TFunction = (key: TranslationKey) => string;
 
@@ -42,7 +42,7 @@ export function SettingsLanguageCard({ language, onLanguageChange, t }: Settings
         >
           {supportedLanguages.map((code) => (
             <option key={code} value={code}>
-              {languageLabels[code]}
+              {languageFlags[code]}  {languageLabels[code]}
             </option>
           ))}
         </select>

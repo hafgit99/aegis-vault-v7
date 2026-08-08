@@ -13,6 +13,7 @@
     "clean": "node -e \"const fs=require('fs'); for (const p of ['dist','coverage','server.js']) fs.rmSync(p,{recursive:true,force:true});\"",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
+    "i18n:audit": "node scripts/i18n-audit.cjs",
     "test:unit": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",

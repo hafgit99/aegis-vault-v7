@@ -35,7 +35,7 @@ import {
 import { authenticateBiometric, isBiometricEnabled, isBiometricSupported, getBiometricType } from '../lib/biometric';
 import { APP_NAME } from '../lib/branding';
 import { useLanguage } from '../i18n/LanguageContext';
-import { supportedLanguages, languageLabels, type LanguageCode } from '../i18n/translations';
+import { supportedLanguages, languageLabels, languageFlags, type LanguageCode } from '../i18n/translations';
 import {
   generateAccountSecretKey,
   isAccountSecretKeyFormatValid,
@@ -346,7 +346,7 @@ export default function LockScreen({ onUnlock, isAutofillPending = false, integr
           >
             {supportedLanguages.map((code) => (
               <option key={code} value={code} className="bg-surface-lowest text-on-surface">
-                {languageLabels[code]}
+                {languageFlags[code]}  {languageLabels[code]}
               </option>
             ))}
           </select>
