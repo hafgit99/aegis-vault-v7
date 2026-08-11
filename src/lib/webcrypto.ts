@@ -134,13 +134,16 @@ export async function webCryptoAesGcmDecrypt(
 }
 
 export async function webCryptoAesGcmEncryptBytes(
-  plaintext: ArrayBuffer,
+  plaintext: ArrayBuffer | ArrayBufferView,
   rawKey: Uint8Array,
   iv: Uint8Array,
 ): Promise<WebCryptoAesGcmBytesPayload> {
   const key = await importAesGcmKey(rawKey);
+  const dataToEncrypt = ArrayBuffer.isView(plaintext)
+    ? new Uint8Array(plaintext.buffer, plaintext.byteOffset, plaintext.byteLength)
+    : new Uint8Array(plaintext);
   const encrypted = new Uint8Array(
-    await crypto.subtle.encrypt({ name: 'AES-GCM', iv, tagLength: 128 }, key, plaintext),
+    await crypto.subtle.encrypt({ name: 'AES-GCM', iv, tagLength: 128 }, key, dataToEncrypt),
   );
   const ciphertext = encrypted.slice(0, encrypted.length - AUTH_TAG_BYTES);
   const tag = encrypted.slice(encrypted.length - AUTH_TAG_BYTES);
