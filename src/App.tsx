@@ -12,7 +12,8 @@ import SidebarNavigation from './components/SidebarNavigation';
 import TopBar from './components/TopBar';
 import MainContent from './components/MainContent';
 import FloatingVaultAction from './components/FloatingVaultAction';
-import { Check, ShieldAlert } from 'lucide-react';
+import { PrivacyShieldBackdrop } from './components/PrivacyShieldBackdrop';
+import { CopiedToastNotification } from './components/CopiedToastNotification';
 import AppModals from './components/AppModals';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -643,28 +644,10 @@ interface LinuxSecurityStatus {
 
       <FloatingVaultAction onNewItem={handleTriggerNew} />
 
-      {privacyShieldVisible && (
-        <div
-          aria-hidden="true"
-          className="fixed inset-0 z-[300] flex items-center justify-center bg-[#080a09] text-[#e2e3df]"
-        >
-          <div className="text-center px-8">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-md border border-[#84cc16]/40 bg-[#172012]">
-              {screenRecordingDetected ? (
-                <ShieldAlert size={24} className="text-red-500 animate-pulse" />
-              ) : (
-                <Check size={24} className="text-[#a3e635]" />
-              )}
-            </div>
-            <p className="text-sm font-semibold tracking-[0.18em] uppercase">Aegis Vault</p>
-            <p className="mt-2 text-xs text-[#aeb5aa]">
-              {screenRecordingDetected
-                ? t('security.screenCaptureDetected')
-                : 'Secure display shield active'}
-            </p>
-          </div>
-        </div>
-      )}
+      <PrivacyShieldBackdrop
+        visible={privacyShieldVisible}
+        screenRecordingDetected={screenRecordingDetected}
+      />
 
       <AppModals
         isVaultFormOpen={isVaultFormOpen}
@@ -690,20 +673,7 @@ interface LinuxSecurityStatus {
         onImportShare={handleImportShare}
       />
 
-      {/* Floating Toast Notification for Copied Fields */}
-      {copiedField && (
-        <div 
-          data-testid="copy-toast-notification"
-          className="fixed bottom-6 right-6 z-[110] flex items-center gap-2.5 bg-[#1a1c1a] px-4 py-3 rounded-xl border border-brand-primary/10 shadow-2xl animate-fade-in"
-        >
-          <div className="w-5 h-5 rounded-full bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center text-brand-primary">
-            <Check className="w-3 h-3" />
-          </div>
-          <span className="text-xs font-semibold text-on-surface">
-            {t('top.copied')}
-          </span>
-        </div>
-      )}
+      <CopiedToastNotification copiedField={copiedField} />
     </div>
   );
 }

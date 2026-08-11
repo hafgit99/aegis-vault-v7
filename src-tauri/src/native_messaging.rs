@@ -7,8 +7,8 @@ use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 use subtle::ConstantTimeEq;
 
-pub const TCP_PORT: u16 = 49155;
 pub const TOKEN_FILENAME: &str = "aegis_ipc_token.bin";
+pub const PORT_FILENAME: &str = "aegis_ipc_port.txt";
 
 struct ConnectionRateLimiter {
     connection_times: Mutex<std::collections::VecDeque<std::time::Instant>>,
@@ -149,21 +149,44 @@ pub fn credential_lease_expires_at(ttl_ms: u64) -> u64 {
     now_ms.saturating_add(ttl_ms.min(EXTENSION_CREDENTIAL_LEASE_MS))
 }
 
+pub const DEFAULT_TCP_PORT: u16 = 49155;
+
+fn bind_dynamic_tcp_listener() -> io::Result<(TcpListener, u16)> {
+    if let Ok(listener) = TcpListener::bind(format!("127.0.0.1:{}", DEFAULT_TCP_PORT)) {
+        return Ok((listener, DEFAULT_TCP_PORT));
+    }
+
+    for port in 49156..=49165 {
+        if let Ok(listener) = TcpListener::bind(format!("127.0.0.1:{}", port)) {
+            return Ok((listener, port));
+        }
+    }
+
+    let listener = TcpListener::bind("127.0.0.1:0")?;
+    let bound_port = listener.local_addr()?.port();
+    Ok((listener, bound_port))
+}
+
 pub fn start_tcp_server(
     app_handle: tauri::AppHandle,
     pairing_token: Arc<Mutex<String>>,
     credentials: Arc<Mutex<Option<ExtensionCredentialCache>>>,
 ) {
     thread::spawn(move || {
-        let listener = match TcpListener::bind(format!("127.0.0.1:{}", TCP_PORT)) {
-            Ok(l) => l,
+        let (listener, bound_port) = match bind_dynamic_tcp_listener() {
+            Ok(res) => res,
             Err(e) => {
-                log::error!("Failed to bind TCP server to port {}: {}", TCP_PORT, e);
+                log::error!("Failed to bind TCP server to dynamic port: {}", e);
                 return;
             }
         };
 
-        log::info!("TCP IPC server bound to port {}", TCP_PORT);
+        if let Some(app_dir) = get_app_data_dir() {
+            let port_path = app_dir.join(PORT_FILENAME);
+            let _ = write_pairing_token_file(&port_path, &bound_port.to_string());
+        }
+
+        log::info!("TCP IPC server bound dynamically to port {}", bound_port);
 
         let limiter = Arc::new(ConnectionRateLimiter::new());
 
@@ -249,10 +272,75 @@ fn parse_url(url_str: &str) -> ParsedUrl {
     ParsedUrl { host, port, path }
 }
 
+const PUBLIC_SUFFIXES: &[&str] = &[
+    "co.uk",
+    "org.uk",
+    "gov.uk",
+    "ac.uk",
+    "me.uk",
+    "com.tr",
+    "org.tr",
+    "net.tr",
+    "gov.tr",
+    "edu.tr",
+    "co.jp",
+    "ne.jp",
+    "or.jp",
+    "go.jp",
+    "ac.jp",
+    "com.au",
+    "net.au",
+    "org.au",
+    "edu.au",
+    "gov.au",
+    "co.nz",
+    "net.nz",
+    "org.nz",
+    "com.br",
+    "net.br",
+    "org.br",
+    "com.de",
+    "co.at",
+    "or.at",
+    "github.io",
+    "gitlab.io",
+    "vercel.app",
+    "netlify.app",
+];
+
+pub fn extract_etld_plus_one(host: &str) -> String {
+    let mut clean_host = host.trim().to_lowercase();
+    if clean_host.starts_with("www.") {
+        clean_host = clean_host[4..].to_string();
+    }
+
+    let parts: Vec<&str> = clean_host.split('.').collect();
+    if parts.len() <= 2 {
+        return clean_host;
+    }
+
+    for suffix in PUBLIC_SUFFIXES {
+        if clean_host.ends_with(suffix) {
+            let suffix_parts: Vec<&str> = suffix.split('.').collect();
+            let keep_count = suffix_parts.len() + 1;
+            if parts.len() >= keep_count {
+                return parts[parts.len() - keep_count..].join(".");
+            }
+        }
+    }
+
+    parts[parts.len() - 2..].join(".")
+}
+
 fn match_credentials(active: &ParsedUrl, item: &ParsedUrl) -> Option<u32> {
-    // 1. Host matching
+    let active_etld = extract_etld_plus_one(&active.host);
+    let item_etld = extract_etld_plus_one(&item.host);
+
+    // 1. Host matching with Public Suffix List (eTLD+1) support
     let host_score = if active.host == item.host {
         100 // Exact host match
+    } else if active_etld == item_etld {
+        85 // eTLD+1 domain match (e.g. login.example.co.uk and example.co.uk)
     } else if active.host.ends_with(&format!(".{}", item.host)) {
         80 // Subdomain match (e.g. active is sub.domain.com, item is domain.com)
     } else if item.host.ends_with(&format!(".{}", active.host)) {
@@ -505,26 +593,47 @@ fn write_message(msg: &serde_json::Value) -> io::Result<()> {
 
 pub fn run_host() {
     let app_dir = get_app_data_dir();
-    let pairing_token = app_dir.and_then(|dir| {
+    let pairing_token = app_dir.as_ref().and_then(|dir| {
         let token_path = dir.join(TOKEN_FILENAME);
         fs::read_to_string(&token_path).ok()
     });
 
+    let target_port: u16 = app_dir
+        .as_ref()
+        .and_then(|dir| {
+            let port_path = dir.join(PORT_FILENAME);
+            fs::read_to_string(&port_path).ok()
+        })
+        .and_then(|s| s.trim().parse::<u16>().ok())
+        .unwrap_or(DEFAULT_TCP_PORT);
+
+    let candidate_ports = vec![
+        target_port,
+        DEFAULT_TCP_PORT,
+        49156,
+        49157,
+        49158,
+        49159,
+        49160,
+    ];
     let mut stream = None;
     if let Some(ref token) = pairing_token {
-        if let Ok(mut s) = TcpStream::connect(format!("127.0.0.1:{}", TCP_PORT)) {
-            let token_bytes = token.as_bytes();
-            let token_len = token_bytes.len() as u32;
-            let handshake_success = s.write_all(&token_len.to_be_bytes()).is_ok()
-                && s.write_all(token_bytes).is_ok()
-                && s.flush().is_ok()
-                && {
-                    let mut handshake_res = [0u8; 2];
-                    s.read_exact(&mut handshake_res).is_ok() && &handshake_res == b"OK"
-                };
+        for port in candidate_ports {
+            if let Ok(mut s) = TcpStream::connect(format!("127.0.0.1:{}", port)) {
+                let token_bytes = token.as_bytes();
+                let token_len = token_bytes.len() as u32;
+                let handshake_success = s.write_all(&token_len.to_be_bytes()).is_ok()
+                    && s.write_all(token_bytes).is_ok()
+                    && s.flush().is_ok()
+                    && {
+                        let mut handshake_res = [0u8; 2];
+                        s.read_exact(&mut handshake_res).is_ok() && &handshake_res == b"OK"
+                    };
 
-            if handshake_success {
-                stream = Some(s);
+                if handshake_success {
+                    stream = Some(s);
+                    break;
+                }
             }
         }
     }
@@ -627,6 +736,16 @@ mod tests {
 
         assert!(short > 0);
         assert!(long.saturating_sub(short) <= EXTENSION_CREDENTIAL_LEASE_MS);
+    }
+
+    #[test]
+    fn test_extract_etld_plus_one() {
+        assert_eq!(
+            extract_etld_plus_one("login.example.co.uk"),
+            "example.co.uk"
+        );
+        assert_eq!(extract_etld_plus_one("sub.domain.com.tr"), "domain.com.tr");
+        assert_eq!(extract_etld_plus_one("www.aegis.org"), "aegis.org");
     }
 
     #[test]
