@@ -90,9 +90,10 @@ Aegis Vault 7 maintains rigorous automated testing standards with 100% clean Typ
 | **Unit Test Suite** | **`154 test files passed (154/154)`** | ✅ 100% Green (Vitest) |
 | **Unit Tests Executed** | **`1,196 tests passed (1,196/1,196)`** | ✅ 100% Green |
 | **Rust Backend Tests** | **`9 tests passed (9/9)`** | ✅ 100% Green (`cargo test`) |
-| **Statements Coverage** | **`91.8%`** | ✅ Exceeds 90% Threshold |
-| **Lines Coverage** | **`93.0%`** | ✅ Exceeds 90% Threshold |
-| **Functions Coverage** | **`88.1%`** | ✅ Exceeds 85% Threshold |
+| **Lines Coverage** | **`89.2%`** | ✅ High Coverage |
+| **Statements Coverage** | **`87.5%`** | ✅ High Coverage |
+| **Functions Coverage** | **`84.6%`** | ✅ High Coverage |
+| **Branches Coverage** | **`81.3%`** | ✅ High Coverage |
 
 ---
 
@@ -166,9 +167,7 @@ npm run package:firefox:xpi
 
 ## 📚 Documentation Index
 
-- 📑 [Deep Security Code Audit Report (2026)](docs/SECURITY_CODE_AUDIT_REPORT_2026.md)
 - 🏗️ [Architecture Review & System Boundaries](docs/ARCHITECTURE_REVIEW.md)
-- 📊 [Competitive Analysis vs 1Password/Bitwarden](docs/COMPETITIVE_ANALYSIS.md)
 - 🛠️ [Aegis CLI Usage Guide](CLI_USAGE.md)
 - 🔑 [Code Signing & Distribution Guide](docs/CODE_SIGNING_GUIDE_2026.md)
 - 🤖 [Android Readiness & Hardware Security](docs/ANDROID_READINESS.md)
