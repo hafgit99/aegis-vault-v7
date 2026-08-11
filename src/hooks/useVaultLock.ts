@@ -24,12 +24,6 @@ export function useVaultLock({
     clearCopiedField();
   }, [clearCopiedField, resetReveals]);
 
-  const unlock = useCallback(() => {
-    if (!hasActiveVaultSession()) {
-      openVaultSession('session-unlocked');
-    }
-  }, []);
-
   useAutoLock({
     unlocked,
     durationSeconds: autoLockDuration,
@@ -38,7 +32,7 @@ export function useVaultLock({
 
   return {
     unlocked,
-    unlock,
     lock,
   };
 }
+

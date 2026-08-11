@@ -110,7 +110,7 @@ function getBiometricUnlockErrorMessage(err: any, t: ReturnType<typeof useLangua
 }
 
 interface LockScreenProps {
-  onUnlock: () => void;
+  onUnlock?: () => void;
   isAutofillPending?: boolean;
   integrityWarning?: boolean;
 }

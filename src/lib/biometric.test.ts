@@ -79,12 +79,18 @@ function deleteBiometricDatabase(): Promise<void> {
   });
 }
 
+const defaultPrfResult = {
+  getClientExtensionResults: () => ({
+    prf: { results: { first: new Uint8Array(32).buffer } },
+  }),
+};
+
 function mockWebAuthn({
-  createCredential = { rawId },
-  getCredential = { rawId },
+  createCredential = { rawId, ...defaultPrfResult },
+  getCredential = { rawId, ...defaultPrfResult },
 }: {
-  createCredential?: { rawId: ArrayBuffer } | null;
-  getCredential?: { rawId: ArrayBuffer } | null;
+  createCredential?: any;
+  getCredential?: any;
 } = {}) {
   Object.defineProperty(window, 'PublicKeyCredential', {
     configurable: true,
@@ -147,7 +153,7 @@ describe('biometric master password wrapper', () => {
     expect(isBiometricEnabled()).toBe(true);
     expect(stored).toMatchObject({
       version: 4,
-      kdf: 'WebCrypto PBKDF2-SHA256',
+      kdf: 'WebAuthn PRF + PBKDF2-SHA256',
       cipher: 'WebCrypto AES-256-GCM',
     });
     expect(stored.bundle).toEqual(

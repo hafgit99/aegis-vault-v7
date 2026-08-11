@@ -114,7 +114,7 @@ describe('LoginDetail', () => {
     expect(screen.getByText(/OTP kurulumu aktif değil/)).toBeTruthy();
   });
 
-  it('shows an explicit warning for unsupported TOTP settings without exposing a copy action', () => {
+  it('shows an explicit warning for unsupported TOTP settings without exposing a copy action', async () => {
     const onCopyText = vi.fn();
 
     render(
@@ -128,8 +128,8 @@ describe('LoginDetail', () => {
       />,
     );
 
-    expect(screen.getByText(/TOTP ayar/)).toBeTruthy();
-    expect(screen.queryByTitle('Do?rulama Kodunu Kopyala')).toBeNull();
+    expect(await screen.findByText(/TOTP ayar/)).toBeTruthy();
+    expect(screen.queryByTitle('Doğrulama Kodunu Kopyala')).toBeNull();
     expect(onCopyText).not.toHaveBeenCalled();
   });
 

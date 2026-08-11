@@ -8,9 +8,21 @@ import {
   webCryptoAesGcmEncryptBytes,
   generateSafeIv,
   getImportedAesGcmKeyCacheSizeForTest,
+  derivePerItemKey,
 } from './webcrypto';
 
 describe('WebCrypto AES-GCM adapter', () => {
+  it('derives unique per-item keys for different item IDs using HKDF-SHA256', async () => {
+    const masterKey = new Uint8Array(32).fill(7);
+    const key1 = await derivePerItemKey(masterKey, 'item-id-1');
+    const key2 = await derivePerItemKey(masterKey, 'item-id-2');
+    const key1Again = await derivePerItemKey(masterKey, 'item-id-1');
+
+    expect(key1).toHaveLength(32);
+    expect(key2).toHaveLength(32);
+    expect(key1).toEqual(key1Again);
+    expect(key1).not.toEqual(key2);
+  });
   it('roundtrips plaintext and exposes detached tag metadata', async () => {
     const key = new Uint8Array(32).fill(9);
     const iv = new Uint8Array(12).fill(3);

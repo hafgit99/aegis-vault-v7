@@ -119,8 +119,6 @@ export async function deriveArgon2idKey(
   const FALLBACK_PROFILES: Required<Argon2idOptions>[] = [
     { memoryKiB: 16 * 1024, iterations: 3, parallelism: 1, hashLength: 32 },
     { memoryKiB: 8 * 1024, iterations: 3, parallelism: 1, hashLength: 32 },
-    { memoryKiB: 4 * 1024, iterations: 3, parallelism: 1, hashLength: 32 },
-    { memoryKiB: 2 * 1024, iterations: 2, parallelism: 1, hashLength: 32 },
   ];
 
   const requested = resolveOptions(options);

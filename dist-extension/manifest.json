@@ -18,6 +18,13 @@
     "tabs",
     "storage"
   ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  },
   "background": {
     "service_worker": "background.js",
     "type": "module"

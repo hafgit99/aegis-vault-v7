@@ -146,7 +146,6 @@ export default function App() {
 
   const {
     unlocked,
-    unlock: handleUnlock,
     lock: handleLock,
   } = useVaultLock({
     autoLockDuration,
@@ -518,7 +517,6 @@ interface LinuxSecurityStatus {
   if (!unlocked) {
     return (
       <LockScreen
-        onUnlock={handleUnlock}
         isAutofillPending={Boolean(pendingAutofillRequest)}
         integrityWarning={Boolean(assetIntegrityFailure)}
       />

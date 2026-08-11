@@ -613,6 +613,14 @@ mod tests {
     }
 
     #[test]
+    fn pairing_token_validation_uses_constant_time_comparison() {
+        let token = generate_token();
+        assert!(is_pairing_token_valid(&token, &token));
+        assert!(!is_pairing_token_valid(&token, "invalid_token"));
+        assert!(!is_pairing_token_valid("short", &token));
+    }
+
+    #[test]
     fn credential_lease_is_capped_to_the_default_window() {
         let short = credential_lease_expires_at(1_000);
         let long = credential_lease_expires_at(EXTENSION_CREDENTIAL_LEASE_MS * 10);

@@ -836,10 +836,6 @@ pub fn run() {
             credential_handler::setup_rust_session,
             credential_handler::rotate_rust_session,
             credential_handler::close_rust_session,
-            credential_handler::get_rust_active_credential,
-            credential_handler::get_rust_active_backup_password,
-            credential_handler::get_rust_active_account_secret_key,
-            credential_handler::get_rust_active_vault_key,
             credential_handler::update_rust_active_vault_key,
             credential_handler::has_rust_session
         ])

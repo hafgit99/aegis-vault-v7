@@ -171,3 +171,29 @@ export async function webCryptoAesGcmDecryptBytes(
 export function generateSafeIv(): Uint8Array {
   return secureRandomBytes(12);
 }
+
+/**
+ * Derives an isolated per-item key using HKDF-SHA256.
+ * HKDF(masterKey, salt=itemId, info="aegis-item-key-v7") -> 32-byte per-item AES key
+ */
+export async function derivePerItemKey(
+  masterKey: Uint8Array,
+  itemId: string,
+): Promise<Uint8Array> {
+  const ikm = await crypto.subtle.importKey('raw', masterKey, 'HKDF', false, ['deriveBits']);
+  const salt = new TextEncoder().encode(itemId);
+  const info = new TextEncoder().encode('aegis-item-key-v7');
+
+  const bits = await crypto.subtle.deriveBits(
+    {
+      name: 'HKDF',
+      hash: 'SHA-256',
+      salt,
+      info,
+    },
+    ikm,
+    256,
+  );
+
+  return new Uint8Array(bits);
+}

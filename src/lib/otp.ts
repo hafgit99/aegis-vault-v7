@@ -107,7 +107,7 @@ function parseOtpAuthUri(value: string): { secret: string; options: Partial<TOTP
 /**
  * Generates an RFC 6238 TOTP code using Base32 secrets and HMAC-SHA1/256/512.
  */
-export function generateTOTP(secret: string, options: TOTPOptions = {}): string {
+export async function generateTOTP(secret: string, options: TOTPOptions = {}): Promise<string> {
   if (!secret) return '000 000';
 
   try {
@@ -127,7 +127,7 @@ export function generateTOTP(secret: string, options: TOTPOptions = {}): string 
     if (key.length === 0) return '000 000';
 
     const counter = Math.floor(Math.floor(timestampMs / 1000) / periodSeconds);
-    const digest = digestTotp(key, counterToBytes(counter), algorithm);
+    const digest = await digestTotp(key, counterToBytes(counter), algorithm);
     const offset = digest[digest.length - 1] & 0x0f;
     const binary =
       ((digest[offset] & 0x7f) << 24) |

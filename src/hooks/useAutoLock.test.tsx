@@ -84,7 +84,7 @@ describe('useAutoLock', () => {
     expect(onLock).toHaveBeenCalledTimes(1);
   });
 
-  it('does not lock when disabled with duration zero', () => {
+  it('enforces the 30-minute maximum auto-lock ceiling when duration is set to zero', () => {
     vi.useFakeTimers();
     const onLock = vi.fn();
 
@@ -96,7 +96,10 @@ describe('useAutoLock', () => {
       }),
     );
 
-    vi.advanceTimersByTime(60_000);
+    vi.advanceTimersByTime(1799 * 1000);
     expect(onLock).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(1000);
+    expect(onLock).toHaveBeenCalledTimes(1);
   });
 });

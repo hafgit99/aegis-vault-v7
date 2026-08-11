@@ -262,56 +262,6 @@ pub fn close_rust_session(session: State<'_, CredentialSession>) -> Result<(), S
 }
 
 #[tauri::command]
-pub fn get_rust_active_credential(
-    session: State<'_, CredentialSession>,
-) -> Result<Option<String>, String> {
-    let state = session.state.lock().map_err(|e| e.to_string())?;
-    if let Some(ref bytes) = state.active_credential {
-        String::from_utf8(bytes.clone())
-            .map(Some)
-            .map_err(|e| e.to_string())
-    } else {
-        Ok(None)
-    }
-}
-
-#[tauri::command]
-pub fn get_rust_active_backup_password(
-    session: State<'_, CredentialSession>,
-) -> Result<Option<String>, String> {
-    let state = session.state.lock().map_err(|e| e.to_string())?;
-    if let Some(ref bytes) = state.active_backup_password {
-        String::from_utf8(bytes.clone())
-            .map(Some)
-            .map_err(|e| e.to_string())
-    } else {
-        Ok(None)
-    }
-}
-
-#[tauri::command]
-pub fn get_rust_active_account_secret_key(
-    session: State<'_, CredentialSession>,
-) -> Result<Option<String>, String> {
-    let state = session.state.lock().map_err(|e| e.to_string())?;
-    if let Some(ref bytes) = state.active_account_secret_key {
-        String::from_utf8(bytes.clone())
-            .map(Some)
-            .map_err(|e| e.to_string())
-    } else {
-        Ok(None)
-    }
-}
-
-#[tauri::command]
-pub fn get_rust_active_vault_key(
-    session: State<'_, CredentialSession>,
-) -> Result<Option<Vec<u8>>, String> {
-    let state = session.state.lock().map_err(|e| e.to_string())?;
-    Ok(state.active_vault_key.clone())
-}
-
-#[tauri::command]
 pub fn update_rust_active_vault_key(
     session: State<'_, CredentialSession>,
     new_vault_key: Vec<u8>,

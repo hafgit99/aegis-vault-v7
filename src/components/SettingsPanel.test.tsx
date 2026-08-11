@@ -158,15 +158,7 @@ function dropZone(container: HTMLElement): HTMLElement {
 
 beforeEach(() => {
   invoke.mockReset();
-  invoke.mockImplementation(async (cmd, args) => {
-    if (cmd === 'get_rust_active_backup_password') {
-      return 'master-pass';
-    }
-    if (cmd === 'get_rust_active_credential') {
-      return 'master-pass';
-    }
-    return null;
-  });
+  invoke.mockImplementation(async () => null);
 
   Object.defineProperty(window.navigator, 'userAgent', {
     configurable: true,

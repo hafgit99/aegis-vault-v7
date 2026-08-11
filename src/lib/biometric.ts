@@ -27,8 +27,8 @@ export const biometricErrorCodes = {
 export type BiometricErrorCode = (typeof biometricErrorCodes)[keyof typeof biometricErrorCodes];
 
 export class BiometricError extends Error {
-  constructor(public readonly code: BiometricErrorCode) {
-    super(code);
+  constructor(public readonly code: BiometricErrorCode, message?: string) {
+    super(message || code);
     this.name = 'BiometricError';
   }
 }
@@ -364,18 +364,20 @@ async function registerWebAuthnBiometric(masterPassword: string, type: 'platform
   const rawIdBytes = new Uint8Array(credential.rawId);
   const salt = secureRandomBytes(16);
 
-  let prfSupported = false;
-  let keyMaterial: Uint8Array = rawIdBytes;
-
   const clientExtResults = (credential as any).getClientExtensionResults ? (credential as any).getClientExtensionResults() : null;
   const prfResult = clientExtResults?.prf?.results?.first;
-  if (prfResult) {
-    const prfSecret = new Uint8Array(prfResult);
-    keyMaterial = new Uint8Array(prfSecret.length + rawIdBytes.length);
-    keyMaterial.set(prfSecret);
-    keyMaterial.set(rawIdBytes, prfSecret.length);
-    prfSupported = true;
+  if (!prfResult) {
+    throw new BiometricError(
+      biometricErrorCodes.unsupported,
+      'WebAuthn PRF (pseudo-random function) extension is required for biometric authentication.',
+    );
   }
+
+  const prfSecret = new Uint8Array(prfResult);
+  const keyMaterial = new Uint8Array(prfSecret.length + rawIdBytes.length);
+  keyMaterial.set(prfSecret);
+  keyMaterial.set(rawIdBytes, prfSecret.length);
+  const prfSupported = true;
 
   const wrappingKey = await deriveWebCryptoPbkdf2Key(keyMaterial, salt, BIOMETRIC_PBKDF2_ITERATIONS, 32);
   const bundle = await webCryptoAesGcmEncrypt(masterPassword, wrappingKey, generateSafeIv());

@@ -78,6 +78,8 @@ class SQLiteOPFS implements VaultStorageRepository {
 
   // Decrypted items cache Map: row.id -> { enc_metadata: string, item: VaultItem }
   private decryptedItemsCache = new Map<string, { enc_metadata: string; item: VaultItem }>();
+  private lastCacheTimestamp = Date.now();
+  private readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes TTL
 
   constructor() {
     this.hydratePromise = this.loadFromPersistentStorage();
@@ -88,6 +90,13 @@ class SQLiteOPFS implements VaultStorageRepository {
 
   public async hydrate(): Promise<void> {
     await this.hydratePromise;
+  }
+
+  private checkCacheTtl(): void {
+    if (Date.now() - this.lastCacheTimestamp > this.CACHE_TTL_MS) {
+      this.decryptedItemsCache.clear();
+      this.lastCacheTimestamp = Date.now();
+    }
   }
 
   private areByteArraysEqual(a: Uint8Array | null, b: Uint8Array | null): boolean {
@@ -112,6 +121,7 @@ class SQLiteOPFS implements VaultStorageRepository {
     this.cachedKeySalt = null;
     this.cachedKeyBytes = null;
     this.decryptedItemsCache.clear();
+    this.lastCacheTimestamp = Date.now();
   }
 
 

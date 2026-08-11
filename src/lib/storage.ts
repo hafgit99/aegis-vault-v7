@@ -395,7 +395,7 @@ export async function changeMasterPassword(oldPassword: string, newPassword: str
 
     let rotatedAttachmentCount = 0;
     try {
-      const oldCredential = await invoke<string | null>('get_rust_active_credential') || '';
+      const oldCredential = (await withActiveSessionSecrets((masterPassword) => masterPassword)) || '';
       rotatedAttachmentCount = await reencryptAttachmentsForVaultKeyChange(
         oldVaultKey,
         newVaultKey,
@@ -411,13 +411,13 @@ export async function changeMasterPassword(oldPassword: string, newPassword: str
       if (repo.changeMasterPasswordWithHash) {
         await repo.changeMasterPasswordWithHash(result.newArgonHash, newSalt, kdfParams, oldVaultKey, newVaultKey);
       } else {
-        const oldCredential = await invoke<string | null>('get_rust_active_credential') || '';
+        const oldCredential = (await withActiveSessionSecrets((masterPassword) => masterPassword)) || '';
         const newCredential = await resolveRotatedVaultCredential(newPassword);
         await repo.changeMasterPassword(oldCredential, newCredential);
       }
     } catch (err) {
       if (rotatedAttachmentCount > 0) {
-        const oldCredential = await invoke<string | null>('get_rust_active_credential') || '';
+        const oldCredential = (await withActiveSessionSecrets((masterPassword) => masterPassword)) || '';
         await reencryptAttachmentsForVaultKeyChange(newVaultKey, oldVaultKey, oldCredential).catch(() => {});
       }
       oldVaultKey.fill(0);

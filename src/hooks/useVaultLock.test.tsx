@@ -15,7 +15,7 @@ afterEach(() => {
 });
 
 describe('useVaultLock', () => {
-  it('starts locked and unlocks on request', () => {
+  it('starts locked and reflects active vault session status', () => {
     const { result } = renderHook(() =>
       useVaultLock({
         autoLockDuration: 300,
@@ -26,7 +26,9 @@ describe('useVaultLock', () => {
 
     expect(result.current.unlocked).toBe(false);
 
-    act(() => result.current.unlock());
+    act(() => {
+      openVaultSession('master-pass');
+    });
 
     expect(result.current.unlocked).toBe(true);
   });
@@ -43,7 +45,7 @@ describe('useVaultLock', () => {
       }),
     );
 
-    act(() => result.current.unlock());
+    expect(result.current.unlocked).toBe(true);
     act(() => result.current.lock());
 
     expect(result.current.unlocked).toBe(false);
@@ -65,7 +67,7 @@ describe('useVaultLock', () => {
       }),
     );
 
-    act(() => result.current.unlock());
+    expect(result.current.unlocked).toBe(true);
     act(() => vi.advanceTimersByTime(5_000));
 
     expect(result.current.unlocked).toBe(false);

@@ -58,12 +58,35 @@ export function registerOnCloseSession(cb: () => void): void {
   onCloseCallbacks.push(cb);
 }
 
+let failedUnlockAttemptCount = 0;
+let lastFailedAttemptTimestamp = 0;
+
+export function recordFailedUnlockAttempt(): number {
+  failedUnlockAttemptCount += 1;
+  lastFailedAttemptTimestamp = Date.now();
+  return getUnlockAttemptLockoutDelayMs();
+}
+
+export function getUnlockAttemptLockoutDelayMs(): number {
+  if (failedUnlockAttemptCount < 3) return 0;
+  const backoffSeconds = Math.min(30, Math.pow(2, failedUnlockAttemptCount - 3));
+  const elapsedMs = Date.now() - lastFailedAttemptTimestamp;
+  const remainingMs = backoffSeconds * 1000 - elapsedMs;
+  return remainingMs > 0 ? Math.ceil(remainingMs) : 0;
+}
+
+export function resetFailedUnlockAttempts(): void {
+  failedUnlockAttemptCount = 0;
+  lastFailedAttemptTimestamp = 0;
+}
+
 export function openVaultSession(
   masterPasswordOrKey: string | Uint8Array,
   backupPassword?: string | { hasBackup?: boolean; hasSecret?: boolean },
   vaultEncryptionKey?: Uint8Array,
 ): void {
   closeVaultSession(true);
+  resetFailedUnlockAttempts();
 
   if (masterPasswordOrKey instanceof Uint8Array) {
     // Desktop runtime / key-only path
@@ -160,42 +183,23 @@ export function withActiveVaultEncryptionKey<T>(callback: (vaultEncryptionKey: U
 }
 
 export async function withActiveAccountSecretKey<T>(callback: (secretKey: string) => Promise<T> | T): Promise<T | null> {
-  if (isDesktopRuntime()) {
-    const secretKey = await invoke<string | null>('get_rust_active_account_secret_key');
-    if (!secretKey) return null;
-    return await callback(secretKey);
-  } else {
-    const secretKey = decodeSecret(fallbackAccountSecretKeyBytes);
-    if (!secretKey) return null;
-    return await callback(secretKey);
-  }
+  const secretKey = decodeSecret(fallbackAccountSecretKeyBytes);
+  if (!secretKey) return null;
+  return await callback(secretKey);
 }
 
 export async function withActiveBackupPassword<T>(callback: (backupPassword: string) => Promise<T> | T): Promise<T | null> {
-  if (isDesktopRuntime()) {
-    const backupPassword = await invoke<string | null>('get_rust_active_backup_password');
-    if (!backupPassword) return null;
-    return await callback(backupPassword);
-  } else {
-    const backupPassword = decodeSecret(fallbackBackupPasswordBytes);
-    if (!backupPassword) return null;
-    return await callback(backupPassword);
-  }
+  const backupPassword = decodeSecret(fallbackBackupPasswordBytes);
+  if (!backupPassword) return null;
+  return await callback(backupPassword);
 }
 
 export async function withActiveSessionSecrets<T>(
   callback: (masterPassword: string, backupPassword: string) => Promise<T> | T,
 ): Promise<T | null> {
-  if (isDesktopRuntime()) {
-    const masterPassword = await invoke<string | null>('get_rust_active_credential');
-    const backupPassword = await invoke<string | null>('get_rust_active_backup_password');
-    if (!masterPassword || !backupPassword) return null;
-    return await callback(masterPassword, backupPassword);
-  } else {
-    const masterPassword = decodeSecret(fallbackCredentialBytes);
-    const backupPassword = decodeSecret(fallbackBackupPasswordBytes);
-    if (!masterPassword || !backupPassword) return null;
-    return await callback(masterPassword, backupPassword);
-  }
+  const masterPassword = decodeSecret(fallbackCredentialBytes);
+  const backupPassword = decodeSecret(fallbackBackupPasswordBytes);
+  if (!masterPassword || !backupPassword) return null;
+  return await callback(masterPassword, backupPassword);
 }
 

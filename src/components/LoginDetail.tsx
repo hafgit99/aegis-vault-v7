@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Check, Copy, Eye, EyeOff } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
@@ -22,20 +23,38 @@ export default function LoginDetail({
   onCopyText,
 }: LoginDetailProps) {
   const { t } = useLanguage();
+  const [totpCode, setTotpCode] = useState<string>('');
+  const [hasTotpValidationError, setHasTotpValidationError] = useState<boolean>(false);
+
+  useEffect(() => {
+    let active = true;
+    if (item.category === 'login' && item.totpSecret) {
+      generateTOTP(item.totpSecret)
+        .then((code) => {
+          if (active) {
+            setTotpCode(code);
+            setHasTotpValidationError(false);
+          }
+        })
+        .catch((error) => {
+          if (active) {
+            const isValidationError = error instanceof TOTPValidationError || (error && (error as any).name === 'TOTPValidationError');
+            setHasTotpValidationError(Boolean(isValidationError));
+            if (isValidationError) {
+              setTotpCode('000 000');
+            }
+          }
+        });
+    } else {
+      setTotpCode('');
+      setHasTotpValidationError(false);
+    }
+    return () => {
+      active = false;
+    };
+  }, [item.category, item.totpSecret, totpCountdown]);
 
   if (item.category !== 'login') return null;
-
-  let totpCode = '';
-  let hasTotpValidationError = false;
-
-  if (item.totpSecret) {
-    try {
-      totpCode = generateTOTP(item.totpSecret);
-    } catch (error) {
-      hasTotpValidationError = error instanceof TOTPValidationError;
-      if (!hasTotpValidationError) throw error;
-    }
-  }
 
   return (
     <div className="space-y-4">

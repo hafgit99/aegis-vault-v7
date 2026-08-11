@@ -8,10 +8,16 @@ interface UseAutoLockOptions {
 
 const ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'] as const;
 
+export const MAXIMUM_AUTO_LOCK_DURATION_SECONDS = 1800; // 30 minutes maximum ceiling
+
 export function useAutoLock({ unlocked, durationSeconds, onLock }: UseAutoLockOptions) {
+  const effectiveDurationSeconds =
+    durationSeconds > 0 && durationSeconds <= MAXIMUM_AUTO_LOCK_DURATION_SECONDS
+      ? durationSeconds
+      : MAXIMUM_AUTO_LOCK_DURATION_SECONDS;
+
   useEffect(() => {
     if (!unlocked) return;
-    if (durationSeconds === 0) return;
 
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
@@ -25,7 +31,7 @@ export function useAutoLock({ unlocked, durationSeconds, onLock }: UseAutoLockOp
     const resetTimer = () => {
       clearTimer();
       if (document.hidden) return;
-      timeoutId = setTimeout(onLock, durationSeconds * 1000);
+      timeoutId = setTimeout(onLock, effectiveDurationSeconds * 1000);
     };
 
     const handleVisibilityChange = () => {

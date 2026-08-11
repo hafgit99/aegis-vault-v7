@@ -44,5 +44,13 @@
     "android": {
       "debugApplicationIdSuffix": ".debug"
     }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IGFlZ2lzLXZhdWx0LXY3IHB1YmxpYyBrZXkKUlRTV1Yyb1dDMUJldUoxdVZwQk03LytPZHkwTGlZcGsyMEZWV1FNS2hCdkxidGZCVVZOTVhJc1gK",
+      "endpoints": [
+        "https://releases.aegisvault.app/update/{{target}}/{{current_version}}"
+      ]
+    }
   }
 }
