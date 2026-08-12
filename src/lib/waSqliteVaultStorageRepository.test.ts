@@ -305,8 +305,8 @@ describe('wa-sqlite vault storage repository', () => {
 
     expect(engine.execute).toHaveBeenCalledWith('BEGIN IMMEDIATE;');
     expect(engine.execute).toHaveBeenCalledWith('COMMIT;');
-    expect(engine.userSecretHash).toBe('$argon2id$fixedsalt$valid-master');
-    expect(engine.metadata.get('vault_encryption_salt')).toBe('11111111111111111111111111111111');
+    expect(engine.userSecretHash).toBe('$argon2id$11111111111111111111111111111111$valid-master');
+    expect(engine.metadata.get('vault_encryption_salt')).toBe('12121212121212121212121212121212');
     await expect(repository.verifyPassword('valid-master')).resolves.toBe(true);
     await expect(repository.verifyPassword('wrong-master')).resolves.toBe(false);
     expect(repository.getQueryLogs().some((entry) => entry.query.includes('valid-master'))).toBe(false);
@@ -433,7 +433,7 @@ describe('wa-sqlite vault storage repository', () => {
 
     await repository.changeMasterPassword('valid-master', 'new-master');
 
-    expect(engine.userSecretHash).toBe('$argon2id$fixedsalt$new-master');
+    expect(engine.userSecretHash).toBe('$argon2id$14141414141414141414141414141414$new-master');
     expect(engine.metadata.get('vault_encryption_salt')).not.toBe(oldSalt);
     expect(engine.vaultRows.map((row) => String(row.enc_metadata))).not.toEqual(oldCiphertexts);
     await expect(repository.verifyPassword('valid-master')).resolves.toBe(false);

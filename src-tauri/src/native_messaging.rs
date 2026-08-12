@@ -135,7 +135,21 @@ pub fn write_pairing_token_file(path: &PathBuf, token: &str) -> io::Result<()> {
         return Ok(());
     }
 
-    #[cfg(not(unix))]
+    #[cfg(windows)]
+    {
+        fs::write(path, token)?;
+        if let Some(path_str) = path.to_str() {
+            if let Ok(username) = std::env::var("USERNAME") {
+                let user_grant = format!("{}:(F)", username);
+                let _ = std::process::Command::new("icacls")
+                    .args(&[path_str, "/inheritance:r", "/grant:r", &user_grant])
+                    .output();
+            }
+        }
+        Ok(())
+    }
+
+    #[cfg(not(any(unix, windows)))]
     {
         fs::write(path, token)
     }
@@ -526,6 +540,9 @@ fn handle_client(
                 }
             }
             "list_credentials" => {
+                let url = req["url"].as_str().unwrap_or("");
+                let active_parsed = parse_url(url);
+
                 let mut creds_guard = credentials.lock().unwrap();
                 let now_ms = credential_lease_expires_at(0);
                 if creds_guard
@@ -536,7 +553,23 @@ fn handle_client(
                 }
 
                 if let Some(ref cache) = *creds_guard {
-                    serde_json::json!({ "locked": false, "credentials": cache.credentials })
+                    if !active_parsed.host.is_empty() {
+                        let mut scored_credentials: Vec<(u32, ExtensionCredential)> = Vec::new();
+                        for item in &cache.credentials {
+                            let item_parsed = parse_url(&item.url);
+                            if let Some(score) = match_credentials(&active_parsed, &item_parsed) {
+                                scored_credentials.push((score, item.clone()));
+                            }
+                        }
+                        scored_credentials.sort_by(|a, b| b.0.cmp(&a.0));
+                        let matching: Vec<ExtensionCredential> = scored_credentials
+                            .into_iter()
+                            .map(|(_, cred)| cred)
+                            .collect();
+                        serde_json::json!({ "locked": false, "credentials": matching })
+                    } else {
+                        serde_json::json!({ "locked": false, "credentials": cache.credentials })
+                    }
                 } else {
                     serde_json::json!({ "locked": true, "credentials": [] })
                 }

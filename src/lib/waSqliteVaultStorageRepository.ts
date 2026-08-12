@@ -127,7 +127,7 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
 
   public async setupMaster(password: string): Promise<void> {
     await this.hydrate();
-    const argonHash = await createArgon2idHash(password, secureRandomToken(16));
+    const argonHash = await createArgon2idHash(password, this.createVaultEncryptionSalt());
     const salt = this.createVaultEncryptionSalt();
 
     await this.runTransaction(async () => {
@@ -162,7 +162,7 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
 
     const newSalt = this.createVaultEncryptionSalt();
     const newKey = await deriveArgon2idKey(newPassword, newSalt, DEFAULT_KDF_PARAMS);
-    const newArgonHash = await createArgon2idHash(newPassword, secureRandomToken(16));
+    const newArgonHash = await createArgon2idHash(newPassword, this.createVaultEncryptionSalt());
     const rekeyedRows = await Promise.all(items.map((item) => this.createEncryptedRow(item, newKey)));
 
     await this.runTransaction(async () => {

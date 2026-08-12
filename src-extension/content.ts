@@ -671,7 +671,7 @@ function showInPagePhishingBanner(result: any) {
 }
 
 function initializePhishingCheck() {
-  chrome.runtime.sendMessage({ action: 'list_credentials' }, (response) => {
+  chrome.runtime.sendMessage({ action: 'query_credentials', url: window.location.href }, (response) => {
     if (response && response.credentials) {
       const trustedDomains: string[] = [];
       response.credentials.forEach((item: any) => {
@@ -1001,6 +1001,33 @@ function showDropdown(targetInput: HTMLInputElement, response: any) {
   
   genOption.appendChild(genTitle);
 
+let extensionClipboardTimer: any = null;
+
+function copyToClipboardWithAutoClear(text: string, timeoutMs = 30000) {
+  if (extensionClipboardTimer) {
+    clearTimeout(extensionClipboardTimer);
+    extensionClipboardTimer = null;
+  }
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      extensionClipboardTimer = setTimeout(() => {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          navigator.clipboard.readText().then((current) => {
+            if (current === text) {
+              navigator.clipboard.writeText('').catch(() => {});
+            }
+          }).catch(() => {
+            navigator.clipboard.writeText('').catch(() => {});
+          });
+        } else {
+          navigator.clipboard.writeText('').catch(() => {});
+        }
+      }, timeoutMs);
+    }).catch(() => {});
+  }
+}
+
   genOption.addEventListener('click', (e) => {
     e.stopPropagation();
     const generated = generateSecurePassword(18);
@@ -1009,7 +1036,7 @@ function showDropdown(targetInput: HTMLInputElement, response: any) {
     targetInput.dispatchEvent(new Event('input', { bubbles: true }));
     targetInput.dispatchEvent(new Event('change', { bubbles: true }));
 
-    navigator.clipboard.writeText(generated);
+    copyToClipboardWithAutoClear(generated, 30000);
 
     const form = targetInput.form || targetInput.closest('form');
     if (form) {

@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { logSecurityEvent } from './securityEvents';
 
 export interface Argon2idOptions {
   memoryKiB?: number;
@@ -165,6 +166,12 @@ export async function deriveArgon2idKey(
       if (!/memory access out of bounds|out of memory|wasm|RangeError/i.test(message)) {
         throw error;
       }
+      logSecurityEvent(
+        'security.legacyCryptoWarning' as any,
+        `WASM Argon2id memory limit encountered (${profile.memoryKiB} KiB). Degrading profile parameters.`,
+        'warning',
+        { requestedMemoryKiB: requested.memoryKiB, fallbackMemoryKiB: profile.memoryKiB }
+      );
       // try the next (smaller) profile
     }
   }

@@ -48,9 +48,21 @@ interface CacheEntry {
 
 // Cache for imported WebCrypto keys to avoid heavy importKey microtasks during bulk operations.
 const importedKeysCache = new Map<string, CacheEntry>();
+let sessionCacheSalt: Uint8Array | null = null;
+
+function getSessionCacheSalt(): Uint8Array {
+  if (!sessionCacheSalt) {
+    sessionCacheSalt = secureRandomBytes(16);
+  }
+  return sessionCacheSalt;
+}
 
 export function clearImportedAesGcmKeyCache(): void {
   importedKeysCache.clear();
+  if (sessionCacheSalt) {
+    sessionCacheSalt.fill(0);
+    sessionCacheSalt = null;
+  }
 }
 
 export function getImportedAesGcmKeyCacheSizeForTest(): number {
@@ -60,7 +72,12 @@ export function getImportedAesGcmKeyCacheSizeForTest(): number {
 registerOnCloseSession(clearImportedAesGcmKeyCache);
 
 async function importAesGcmKey(rawKey: Uint8Array): Promise<CryptoKey> {
-  const hashBuffer = await crypto.subtle.digest('SHA-256', rawKey);
+  const salt = getSessionCacheSalt();
+  const saltedKeyData = new Uint8Array(salt.length + rawKey.length);
+  saltedKeyData.set(salt, 0);
+  saltedKeyData.set(rawKey, salt.length);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', saltedKeyData);
+  saltedKeyData.fill(0);
   const cacheKey = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
   
   const cachedEntry = importedKeysCache.get(cacheKey);

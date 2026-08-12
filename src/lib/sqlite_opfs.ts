@@ -365,7 +365,7 @@ class SQLiteOPFS implements VaultStorageRepository {
     if (isSetup && legacyPass && legacyItemsStr) {
       try {
         const passwordPlain = atob(legacyPass);
-        const argonHash = await createArgon2idHash(passwordPlain, secureRandomToken(16));
+        const argonHash = await createArgon2idHash(passwordPlain, this.createVaultEncryptionSalt());
 
         this.state.user_secrets = [{
           username: 'owner',
@@ -436,7 +436,7 @@ class SQLiteOPFS implements VaultStorageRepository {
    */
   public async setupMaster(password: string): Promise<void> {
     await this.hydrate();
-    const argonHash = await createArgon2idHash(password, secureRandomToken(16));
+    const argonHash = await createArgon2idHash(password, this.createVaultEncryptionSalt());
     this.state.encryption_salt = this.createVaultEncryptionSalt();
     this.state.kdfParams = NEW_VAULT_ITEM_KDF_PARAMS;
     this.state.user_secrets = [{
@@ -475,7 +475,7 @@ class SQLiteOPFS implements VaultStorageRepository {
     const previousDecryptedItemsCache = this.cloneDecryptedItemsCache();
 
     try {
-      const argonHash = await createArgon2idHash(newPassword, secureRandomToken(16));
+      const argonHash = await createArgon2idHash(newPassword, this.createVaultEncryptionSalt());
       this.clearDerivedKeyCache();
       this.state.encryption_salt = this.createVaultEncryptionSalt();
       this.state.kdfParams = NEW_VAULT_ITEM_KDF_PARAMS;
