@@ -69,8 +69,26 @@ function ensureCleanDir(dir) {
 function copyFile(source, fileName) {
   const destination = path.join(outputDir, fileName);
   fs.mkdirSync(path.dirname(destination), { recursive: true });
-  fs.copyFileSync(source, destination);
-  return destination;
+
+  const MAX_RETRIES = 5;
+  const BASE_DELAY_MS = 500;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      fs.copyFileSync(source, destination);
+      return destination;
+    } catch (error) {
+      const isRetryable = error.code === 'EBUSY' || error.code === 'EPERM';
+      if (isRetryable && attempt < MAX_RETRIES) {
+        const delay = BASE_DELAY_MS * Math.pow(2, attempt);
+        console.log(`  ⏳ File locked (${error.code}), retrying in ${delay}ms... (attempt ${attempt + 1}/${MAX_RETRIES})`);
+        const start = Date.now();
+        while (Date.now() - start < delay) { /* busy-wait (sync context) */ }
+      } else {
+        throw error;
+      }
+    }
+  }
 }
 
 function copyDirectory(source, dirName) {
