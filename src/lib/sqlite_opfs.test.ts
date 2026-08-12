@@ -27,6 +27,7 @@ vi.mock('./argon2id', () => ({
     return new Uint8Array(bytes);
   }),
   verifyArgon2idHash: vi.fn(async (password: string, encoded: string) => encoded.endsWith(`$${password}`)),
+  enforceMinimumKdfFloor: vi.fn((opts: any) => ({ memoryKiB: 32768, iterations: 3, parallelism: 1, hashLength: 32, ...opts })),
 }));
 
 vi.mock('./indexedDbStorage', () => ({

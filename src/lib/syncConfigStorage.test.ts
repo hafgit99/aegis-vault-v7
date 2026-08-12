@@ -9,10 +9,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('./argon2id', () => ({
   deriveArgon2idKey: async (password: string) => new TextEncoder().encode(password.padEnd(32, '.')).slice(0, 32),
+  enforceMinimumKdfFloor: (opts: any) => ({ memoryKiB: 32768, iterations: 3, parallelism: 1, hashLength: 32, ...opts }),
 }));
 
 vi.mock('./webcrypto', () => ({
   generateSafeIv: () => '00'.repeat(12),
+  derivePerItemKey: async (key: Uint8Array) => new Uint8Array(32).fill(key[0] || 7),
   webCryptoAesGcmEncrypt: async (plaintext: string, key: Uint8Array, iv: string) => ({
     iv,
     tag: Array.from(key).map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 32),

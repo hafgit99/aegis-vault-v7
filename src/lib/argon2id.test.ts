@@ -55,8 +55,8 @@ describe('argon2id adapter', () => {
         salt: 'salt',
         type: 2,
         hashLen: 16,
-        time: 2,
-        mem: 1024,
+        time: 3,
+        mem: 8192,
         parallelism: 1,
       }),
     );
@@ -68,7 +68,7 @@ describe('argon2id adapter', () => {
       iterations: 3,
     });
 
-    expect(encoded).toBe('$argon2id$v=19$m=2048,t=3,p=1$salt$mocked');
+    expect(encoded).toBe('$argon2id$v=19$m=8192,t=3,p=1$salt$mocked');
   });
 
   it('verifies encoded hashes with failure isolation', async () => {

@@ -12,9 +12,9 @@ import {
   type VaultDatabaseRow,
   type VersionedVaultDatabaseState,
 } from './vaultDatabaseFormat';
-import { createArgon2idHash, verifyArgon2idHash } from './argon2id';
+import { createArgon2idHash, verifyArgon2idHash, enforceMinimumKdfFloor, type Argon2idOptions } from './argon2id';
 import { deriveArgon2idKey as deriveVettedArgon2idKey } from './argon2id';
-import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, generateSafeIv, type WebCryptoAesGcmPayload } from './webcrypto';
+import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, generateSafeIv, derivePerItemKey, type WebCryptoAesGcmPayload } from './webcrypto';
 import {
   getNativeVaultStorageScope,
   readDesktopVaultDatabase,
@@ -601,8 +601,9 @@ class SQLiteOPFS implements VaultStorageRepository {
     }
   }
 
-  public getKdfParams() {
-    return this.state.kdfParams || LEGACY_VAULT_ITEM_KDF_PARAMS;
+  public getKdfParams(): Required<Argon2idOptions> {
+    const raw = this.state.kdfParams || LEGACY_VAULT_ITEM_KDF_PARAMS;
+    return enforceMinimumKdfFloor(raw);
   }
 
   /**
@@ -711,13 +712,22 @@ class SQLiteOPFS implements VaultStorageRepository {
                 throw new Error('legacy-custom-crypto-row-unsupported');
               }
               const encryptedPayload: WebCryptoAesGcmPayload = JSON.parse(row.enc_metadata);
-              decryptedJson = await webCryptoAesGcmDecrypt(encryptedPayload, derivedKey);
+              const itemKey = await derivePerItemKey(derivedKey, row.id);
+              try {
+                decryptedJson = await webCryptoAesGcmDecrypt(encryptedPayload, itemKey);
+              } catch {
+                decryptedJson = await webCryptoAesGcmDecrypt(encryptedPayload, derivedKey);
+              } finally {
+                itemKey.fill(0);
+              }
             }
 
             const originalItem: VaultItem = JSON.parse(decryptedJson);
 
             if (isLegacyRow || shouldMigrateStaticSalt || shouldMigrateKdf) {
-              const encrypted = await webCryptoAesGcmEncrypt(decryptedJson, migrationKey, generateSafeIv());
+              const itemMigrationKey = await derivePerItemKey(migrationKey, row.id);
+              const encrypted = await webCryptoAesGcmEncrypt(decryptedJson, itemMigrationKey, generateSafeIv());
+              itemMigrationKey.fill(0);
               row.enc_metadata = JSON.stringify(encrypted);
               row.enc_kdf = VAULT_ITEM_KDF;
               migratedLegacyRows = true;
@@ -806,10 +816,12 @@ class SQLiteOPFS implements VaultStorageRepository {
       this.ensureVaultEncryptionSalt();
       const index = this.state.vault_items.findIndex(x => x.id === item.id);
 
-      // Build fresh serialized payload
-      const rawSensitive = JSON.stringify(item);
-      // Uses separate secure 12-byte IV for this encryption action automatically inside aes256GcmEncrypt!
-      const encrypted = await webCryptoAesGcmEncrypt(rawSensitive, derivedKey, generateSafeIv());
+      const itemId = item.id || secureRandomToken(9);
+      const itemToSave = { ...item, id: itemId };
+      const rawSensitive = JSON.stringify(itemToSave);
+      const perItemKey = await derivePerItemKey(derivedKey, itemId);
+      const encrypted = await webCryptoAesGcmEncrypt(rawSensitive, perItemKey, generateSafeIv());
+      perItemKey.fill(0);
 
       const nowStr = new Date().toISOString().split('T')[0];
       const category = item.category || 'login';

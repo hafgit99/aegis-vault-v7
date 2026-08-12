@@ -1,4 +1,4 @@
-﻿import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { deriveArgon2idKey } from './argon2id';
 import {
@@ -13,6 +13,7 @@ const testKey = new Uint8Array(32).fill(7);
 
 vi.mock('./argon2id', () => ({
   deriveArgon2idKey: vi.fn(async () => testKey),
+  enforceMinimumKdfFloor: (opts: any) => ({ memoryKiB: 32768, iterations: 3, parallelism: 1, hashLength: 32, ...opts }),
 }));
 
 describe('secure encrypted backup envelope', () => {

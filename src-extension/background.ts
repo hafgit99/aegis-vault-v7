@@ -16,11 +16,29 @@ function wipeObjectCredentials(obj: any) {
   }
 }
 
-function setPendingCredential(cred: any) {
+let pendingOrigin: string | null = null;
+
+function extractOrigin(url?: string): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    return parsed.origin;
+  } catch {
+    return null;
+  }
+}
+
+function isValidTabUrl(url?: string): boolean {
+  if (!url) return false;
+  return url.startsWith('http://') || url.startsWith('https://');
+}
+
+function setPendingCredential(cred: any, originUrl?: string) {
   if (pendingCredential) {
     wipeObjectCredentials(pendingCredential);
   }
   pendingCredential = cred;
+  pendingOrigin = extractOrigin(originUrl);
   if (pendingTimer) {
     clearTimeout(pendingTimer);
   }
@@ -28,6 +46,7 @@ function setPendingCredential(cred: any) {
     if (pendingCredential) {
       wipeObjectCredentials(pendingCredential);
       pendingCredential = null;
+      pendingOrigin = null;
     }
   }, 120000); // 120s transient memory retention
 }
@@ -40,11 +59,24 @@ function clearPendingCredential() {
   if (pendingCredential) {
     wipeObjectCredentials(pendingCredential);
     pendingCredential = null;
+    pendingOrigin = null;
   }
 }
 
 // Listen for messages from popup or content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  // 1. Verify extension sender identity
+  if (sender.id && sender.id !== chrome.runtime.id) {
+    sendResponse({ error: 'unauthorized_sender_id' });
+    return false;
+  }
+
+  // 2. Content script tab URL security check
+  if (sender.tab && sender.tab.url && !isValidTabUrl(sender.tab.url)) {
+    sendResponse({ error: 'unauthorized_tab_scheme' });
+    return false;
+  }
+
   if (request.action === 'update_draft_credential') {
     if (sender.tab && sender.tab.id) {
       if (draftCredentials[sender.tab.id]) {
@@ -57,12 +89,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === 'set_pending_credential') {
-    setPendingCredential(request.credential);
+    setPendingCredential(request.credential, sender.tab?.url);
     sendResponse({ status: 'ok' });
     return false;
   }
 
   if (request.action === 'get_pending_credential') {
+    if (sender.tab && sender.tab.url && pendingOrigin) {
+      const senderOrigin = extractOrigin(sender.tab.url);
+      if (senderOrigin !== pendingOrigin) {
+        sendResponse({ credential: null, error: 'origin_mismatch' });
+        return false;
+      }
+    }
     sendResponse({ credential: pendingCredential });
     return false;
   }
@@ -90,12 +129,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === 'query_credentials') {
-    const url = request.url || '';
+    // If sent from a content script tab, restrict query URL to the active tab's URL
+    const targetUrl = sender.tab?.url || request.url || '';
     
     // Send message to native messaging host
     chrome.runtime.sendNativeMessage(
       HOST_NAME,
-      { action: 'get_credentials', url: url } as NativeRequest,
+      { action: 'get_credentials', url: targetUrl } as NativeRequest,
       (response) => {
         if (chrome.runtime.lastError) {
           console.warn('Native messaging error:', chrome.runtime.lastError.message);
@@ -109,6 +149,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === 'list_credentials') {
+    // Content scripts are blocked from invoking list_credentials (full vault list)
+    if (sender.tab) {
+      sendResponse({ locked: true, credentials: [], error: 'unauthorized_content_script_call' });
+      return false;
+    }
+
     chrome.runtime.sendNativeMessage(
       HOST_NAME,
       { action: 'list_credentials' } as NativeRequest,

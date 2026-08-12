@@ -14,6 +14,7 @@ vi.mock('./argon2id', () => ({
     }
     return key;
   }),
+  enforceMinimumKdfFloor: (opts: any) => ({ memoryKiB: 32768, iterations: 3, parallelism: 1, hashLength: 32, ...opts }),
 }));
 
 

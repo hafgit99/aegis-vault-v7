@@ -51,6 +51,9 @@ export function isDesktopRuntime(): boolean {
 // the Aegis Vault backup WASM memory hardening). 32 MiB is a conservative,
 // widely portable default that still meets the OWASP password storage
 // recommendation when paired with 3+ iterations and AES-256-GCM at rest.
+export const MIN_ARGON2ID_MEMORY_KIB = 8192; // 8 MiB floor
+export const MIN_ARGON2ID_ITERATIONS = 3;
+
 const DEFAULT_OPTIONS: Required<Argon2idOptions> = {
   memoryKiB: 32 * 1024,
   iterations: 3,
@@ -58,13 +61,27 @@ const DEFAULT_OPTIONS: Required<Argon2idOptions> = {
   hashLength: 32,
 };
 
+export function enforceMinimumKdfFloor(options: Argon2idOptions = {}): Required<Argon2idOptions> {
+  const memoryKiB = Math.max(MIN_ARGON2ID_MEMORY_KIB, options.memoryKiB ?? DEFAULT_OPTIONS.memoryKiB);
+  const iterations = Math.max(MIN_ARGON2ID_ITERATIONS, options.iterations ?? DEFAULT_OPTIONS.iterations);
+  const parallelism = Math.max(1, options.parallelism ?? DEFAULT_OPTIONS.parallelism);
+  const hashLength = options.hashLength ?? DEFAULT_OPTIONS.hashLength;
+
+  return {
+    memoryKiB,
+    iterations,
+    parallelism,
+    hashLength,
+  };
+}
+
 let argon2ModulePromise: Promise<Argon2BrowserModule> | null = null;
 
 function resolveOptions(options: Argon2idOptions = {}): Required<Argon2idOptions> {
-  return {
+  return enforceMinimumKdfFloor({
     ...DEFAULT_OPTIONS,
     ...options,
-  };
+  });
 }
 
 async function loadArgon2(): Promise<Argon2BrowserModule> {

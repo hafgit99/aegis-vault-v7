@@ -33,6 +33,7 @@ vi.mock('./argon2id', () => ({
     return new Uint8Array(hash);
   }),
   isDesktopRuntime: vi.fn(() => false),
+  enforceMinimumKdfFloor: (opts: any) => ({ memoryKiB: 32768, iterations: 3, parallelism: 1, hashLength: 32, ...opts }),
 }));
 
 import {

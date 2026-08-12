@@ -9,6 +9,7 @@ import {
 
 vi.mock('./argon2id', () => ({
   deriveArgon2idKey: vi.fn(async () => new Uint8Array(32).fill(7)),
+  enforceMinimumKdfFloor: (opts: any) => ({ memoryKiB: 32768, iterations: 3, parallelism: 1, hashLength: 32, ...opts }),
 }));
 
 const fuzzConfig = { numRuns: 120, seed: 0xAE612 };

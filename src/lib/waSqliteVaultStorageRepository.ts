@@ -4,7 +4,7 @@
  */
 
 import type { VaultItem } from '../types';
-import { createArgon2idHash, deriveArgon2idKey, verifyArgon2idHash, type Argon2idOptions } from './argon2id';
+import { createArgon2idHash, deriveArgon2idKey, enforceMinimumKdfFloor, verifyArgon2idHash, type Argon2idOptions } from './argon2id';
 import { secureRandomBytes, secureRandomToken } from './random';
 import type {
   SQLCommandLog,
@@ -14,6 +14,7 @@ import type {
 } from './vaultStorageRepository';
 import { createWaSqliteEngine, type WaSqliteEngine } from './waSqliteEngine';
 import {
+  derivePerItemKey,
   generateSafeIv,
   webCryptoAesGcmDecrypt,
   webCryptoAesGcmEncrypt,
@@ -453,7 +454,16 @@ FROM vault_items;
     }
 
     try {
-      const decryptedJson = await webCryptoAesGcmDecrypt(JSON.parse(metadata) as WebCryptoAesGcmPayload, key);
+      const perItemKey = await derivePerItemKey(key, fallback.id);
+      let decryptedJson: string;
+      try {
+        decryptedJson = await webCryptoAesGcmDecrypt(JSON.parse(metadata) as WebCryptoAesGcmPayload, perItemKey);
+      } catch {
+        decryptedJson = await webCryptoAesGcmDecrypt(JSON.parse(metadata) as WebCryptoAesGcmPayload, key);
+      } finally {
+        perItemKey.fill(0);
+      }
+
       const item = JSON.parse(decryptedJson) as VaultItem;
       return {
         ...item,
@@ -488,7 +498,9 @@ FROM vault_items;
       createdAt,
       updatedAt,
     };
-    const encrypted = await webCryptoAesGcmEncrypt(JSON.stringify(itemToEncrypt), key, generateSafeIv());
+    const perItemKey = await derivePerItemKey(key, id);
+    const encrypted = await webCryptoAesGcmEncrypt(JSON.stringify(itemToEncrypt), perItemKey, generateSafeIv());
+    perItemKey.fill(0);
 
     return {
       id,
@@ -571,16 +583,17 @@ FROM vault_items;
   public async getKdfParams(): Promise<Required<Argon2idOptions>> {
     const rawParams = await this.getStorageMetadata(VAULT_KDF_PARAMS_KEY);
     if (!rawParams) {
-      return DEFAULT_KDF_PARAMS;
+      return enforceMinimumKdfFloor(DEFAULT_KDF_PARAMS);
     }
 
     try {
-      return {
+      const parsed = JSON.parse(rawParams);
+      return enforceMinimumKdfFloor({
         ...DEFAULT_KDF_PARAMS,
-        ...JSON.parse(rawParams),
-      };
+        ...parsed,
+      });
     } catch {
-      return DEFAULT_KDF_PARAMS;
+      return enforceMinimumKdfFloor(DEFAULT_KDF_PARAMS);
     }
   }
 

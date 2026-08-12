@@ -24,6 +24,7 @@ vi.mock('./argon2id', () => ({
   createArgon2idHash: vi.fn(async (password: string, salt: string) => `$argon2id$${salt}$${password}`),
   verifyArgon2idHash: vi.fn(async (password: string, encodedHash: string) => encodedHash.endsWith(`$${password}`)),
   deriveArgon2idKey: vi.fn(async () => new Uint8Array(32).fill(7)),
+  enforceMinimumKdfFloor: vi.fn((opts: any) => ({ memoryKiB: 32768, iterations: 3, parallelism: 1, hashLength: 32, ...opts })),
 }));
 
 vi.mock('./random', () => ({
@@ -33,6 +34,7 @@ vi.mock('./random', () => ({
 
 vi.mock('./webcrypto', () => ({
   generateSafeIv: vi.fn(() => new Uint8Array(12).fill(1)),
+  derivePerItemKey: vi.fn(async (key: Uint8Array) => new Uint8Array(32).fill(key[0] || 7)),
   webCryptoAesGcmEncrypt: vi.fn(async (plaintext: string) => ({
     iv: '010101010101010101010101',
     tag: '02020202020202020202020202020202',

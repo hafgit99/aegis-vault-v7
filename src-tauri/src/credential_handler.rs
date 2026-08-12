@@ -16,10 +16,10 @@ pub struct RustArgon2idOptions {
 
 impl RustArgon2idOptions {
     fn to_params(&self) -> Result<argon2::Params, String> {
-        let mem = self.memory_kib.unwrap_or(32 * 1024);
-        let time = self.iterations.unwrap_or(3);
-        let lanes = self.parallelism.unwrap_or(1);
-        let key_len = self.hash_length.unwrap_or(32);
+        let mem = self.memory_kib.unwrap_or(32 * 1024).max(8192);
+        let time = self.iterations.unwrap_or(3).max(3);
+        let lanes = self.parallelism.unwrap_or(1).max(1);
+        let key_len = self.hash_length.unwrap_or(32).max(32);
 
         argon2::Params::new(mem, time, lanes, Some(key_len as usize))
             .map_err(|e| format!("invalid Argon2id parameters: {e}"))
