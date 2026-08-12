@@ -61,6 +61,7 @@ import { SettingsSyncSection } from './settings/SettingsSyncSection';
 import { SettingsBackupSection } from './settings/SettingsBackupSection';
 import { SettingsRecoverySection } from './settings/SettingsRecoverySection';
 import { SettingsDangerZone } from './settings/SettingsDangerZone';
+import PasswordConfirmModal from './PasswordConfirmModal';
 import { PasskeyManager } from './PasskeyManager';
 import {
   authenticatePasskey,
@@ -175,6 +176,10 @@ export default function SettingsPanel({
   const [biometricError, setBiometricError] = useState<string | null>(null);
   const [biometricSuccess, setBiometricSuccess] = useState<string | null>(null);
   const [biometricLoading, setBiometricLoading] = useState(false);
+  const [isPasswordPromptOpen, setIsPasswordPromptOpen] = useState(false);
+  const [pendingBiometricType, setPendingBiometricType] = useState<'platform' | 'cross-platform'>('platform');
+  const [passwordPromptError, setPasswordPromptError] = useState<string | null>(null);
+  const [isConfirmingBiometricPassword, setIsConfirmingBiometricPassword] = useState(false);
   const [autofillEnabled, setAutofillEnabled] = useState(isAndroidAutofillEnabled());
   const [autofillMessage, setAutofillMessage] = useState<string | null>(null);
   const [autofillError, setAutofillError] = useState<string | null>(null);
@@ -614,13 +619,35 @@ export default function SettingsPanel({
     setDecryptPasswordInput('');
   };
 
+  const handleConfirmBiometricPassword = async (password: string) => {
+    setIsConfirmingBiometricPassword(true);
+    setPasswordPromptError(null);
+    try {
+      const isValid = await verifyMasterPassword(password);
+      if (!isValid) {
+        setPasswordPromptError(t('settings.password.error.current'));
+        setIsConfirmingBiometricPassword(false);
+        return;
+      }
+
+      await registerBiometric(password, pendingBiometricType);
+      setIsPasswordPromptOpen(false);
+      setBiometricEnabled(true);
+      setBiometricSuccess(t('settings.biometric.enabledSuccess'));
+    } catch (err: any) {
+      setPasswordPromptError(getBiometricSettingsErrorMessage(err, t));
+    } finally {
+      setIsConfirmingBiometricPassword(false);
+    }
+  };
+
   // Handle Toggle Biometric Lock status
   const handleToggleBiometric = async (type: 'platform' | 'cross-platform' = 'platform') => {
     setBiometricError(null);
     setBiometricSuccess(null);
-    setBiometricLoading(true);
 
     if (biometricEnabled) {
+      setBiometricLoading(true);
       try {
         disableBiometric();
         setBiometricEnabled(false);
@@ -636,35 +663,24 @@ export default function SettingsPanel({
           throw new Error(t('settings.biometric.unsupportedError'));
         }
         
-        let registered = false;
         const autoPassword = await withActiveBackupPassword((backupPassword) => backupPassword);
 
         if (autoPassword) {
-          await registerBiometric(autoPassword, type);
-          registered = true;
-        } else {
-          const inputPassword = typeof window !== 'undefined' && typeof window.prompt === 'function'
-            ? window.prompt(t('settings.biometric.promptMasterPassword'))
-            : null;
-          if (inputPassword) {
-            const isValid = await verifyMasterPassword(inputPassword);
-            if (!isValid) {
-              throw new Error(t('settings.password.error.current'));
-            }
-            await registerBiometric(inputPassword, type);
-            registered = true;
+          setBiometricLoading(true);
+          try {
+            await registerBiometric(autoPassword, type);
+            setBiometricEnabled(true);
+            setBiometricSuccess(t('settings.biometric.enabledSuccess'));
+          } finally {
+            setBiometricLoading(false);
           }
+        } else {
+          setPendingBiometricType(type);
+          setPasswordPromptError(null);
+          setIsPasswordPromptOpen(true);
         }
-
-        if (!registered) {
-          throw new Error(t('settings.biometric.missingSessionError'));
-        }
-        setBiometricEnabled(true);
-        setBiometricSuccess(t('settings.biometric.enabledSuccess'));
       } catch (err: any) {
         setBiometricError(getBiometricSettingsErrorMessage(err, t));
-      } finally {
-        setBiometricLoading(false);
       }
     }
   };
@@ -1690,6 +1706,18 @@ export default function SettingsPanel({
       <SettingsDangerZone
         onResetAll={triggerResetAll}
         t={t}
+      />
+
+      {/* Biometric Master Password Confirmation Modal */}
+      <PasswordConfirmModal
+        isOpen={isPasswordPromptOpen}
+        isLoading={isConfirmingBiometricPassword}
+        errorMessage={passwordPromptError}
+        onConfirm={handleConfirmBiometricPassword}
+        onCancel={() => {
+          setIsPasswordPromptOpen(false);
+          setPasswordPromptError(null);
+        }}
       />
     </div>
   );

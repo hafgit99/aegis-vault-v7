@@ -701,14 +701,14 @@ describe('SettingsPanel biometric controls', () => {
     });
   });
 
-  it('shows a missing-session error when biometric registration has no active master password', async () => {
+  it('opens master password confirmation modal when biometric registration has no cached password string', async () => {
     vi.mocked(isBiometricSupported).mockReturnValue(true);
-    const { container } = renderSettings();
+    renderSettings();
 
     fireEvent.click(screen.getByRole('button', { name: /Touch ID/ }));
 
     await waitFor(() => {
-      expect(container.textContent).toContain('Oturum');
+      expect(screen.getByPlaceholderText('••••••••••••')).toBeDefined();
     });
     expect(registerBiometric).not.toHaveBeenCalled();
   });
