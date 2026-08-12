@@ -1,5 +1,6 @@
 export const zh = {
 
+    'app.initializingVault': '正在初始化安全保险库...',
     'nav.localFirst': '本地优先安全',
     'nav.vault': '保险库',
     'nav.audit': '安全审计',

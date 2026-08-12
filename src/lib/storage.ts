@@ -66,8 +66,10 @@ export async function initializeStorage(): Promise<void> {
   await restoreOrActivateDefaultVaultStorageBackend({
     hasLegacyOpfsVaultData: isMasterPasswordSet,
   });
-  await getVaultStorageRepository().hydrate();
-  await hydrateBiometric();
+  await Promise.all([
+    getVaultStorageRepository().hydrate(),
+    hydrateBiometric(),
+  ]);
   migrateRememberedSecretKeyToSecureStorage();
 }
 

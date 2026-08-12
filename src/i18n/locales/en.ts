@@ -1,5 +1,6 @@
 export const en = {
 
+    'app.initializingVault': 'Initializing Secure Vault...',
     'nav.localFirst': 'Local-First Secure',
     'nav.vault': 'Vault',
     'nav.audit': 'Security Audit',

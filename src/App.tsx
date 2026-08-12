@@ -49,6 +49,8 @@ import {
 } from './hooks/useOrganisation';
 import { syncExtensionCredentials, clearExtensionCredentials } from './lib/desktopStorage';
 import { decryptShareUrl, type DecryptedSharePayload } from './lib/share';
+import { AppSplashLoader } from './components/AppSplashLoader';
+import { initializeStorage } from './lib/storage';
 
 const MIN_BACKGROUND_LOCK_DELAY_MS = 60_000;
 const MAX_BACKGROUND_LOCK_DELAY_MS = 15 * 60_000;
@@ -62,6 +64,20 @@ function backgroundLockDelayFromAutoLock(autoLockDurationSeconds: number): numbe
 }
 
 export default function App() {
+  const [isStorageReady, setIsStorageReady] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    initializeStorage().finally(() => {
+      if (isMounted) {
+        setIsStorageReady(true);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const { t } = useLanguage();
   const { copiedField, copyText: handleCopyText, clearCopiedField } = useClipboardFeedback();
   const { revealed, toggleReveal, resetReveals } = useSensitiveReveal();
@@ -513,6 +529,10 @@ interface LinuxSecurityStatus {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [unlocked, handleTriggerNew, handleLock]);
+
+  if (!isStorageReady) {
+    return <AppSplashLoader />;
+  }
 
   // If locked, return the beautiful LockScreen UI
   if (!unlocked) {

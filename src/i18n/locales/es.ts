@@ -1,4 +1,5 @@
 export const es = {
+  'app.initializingVault': 'Inicializando bóveda segura...',
   'nav.localFirst': 'Seguridad local primero',
   'nav.vault': 'Bóveda',
   'nav.audit': 'Auditoría de seguridad',

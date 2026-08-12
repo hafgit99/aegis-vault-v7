@@ -1,4 +1,5 @@
 export const ja = {
+  'app.initializingVault': '安全な保管庫を初期化しています...',
   'nav.localFirst': 'ローカルファーストの安全性',
   'nav.vault': '保管庫',
   'nav.audit': 'セキュリティ監査',

@@ -1,4 +1,5 @@
 export const ko = {
+  'app.initializingVault': '보안 금고를 초기화하는 중...',
   'nav.localFirst': '로컬 우선 보안',
   'nav.vault': '둥근 천장',
   'nav.audit': '보안 감사',

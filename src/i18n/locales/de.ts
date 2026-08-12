@@ -1,4 +1,5 @@
 export const de = {
+  'app.initializingVault': 'Sicherer Tresor wird initialisiert...',
   'nav.localFirst': 'Local-First Secure',
   'nav.vault': 'Gewölbe',
   'nav.audit': 'Sicherheitsaudit',

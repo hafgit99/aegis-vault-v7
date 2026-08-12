@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="tr" class="dark">
+<html lang="tr" class="dark" style="background-color: #121412; color-scheme: dark;">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -13,8 +13,19 @@
     <link rel="icon" type="image/png" href="/assets/aegis-app-icon.png" />
     <title>Aegis Vault 7 | Local-First Secure Vault</title>
   </head>
-  <body class="bg-[#121412] text-[#e2e3df]">
-    <div id="root"></div>
+  <body class="bg-[#121412] text-[#e2e3df]" style="background-color: #121412; margin: 0; padding: 0;">
+    <div id="root">
+      <div style="position: fixed; inset: 0; background-color: #121412; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: system-ui, -apple-system, sans-serif; color: #e2e3df; z-index: 99999;">
+        <div style="width: 64px; height: 64px; margin-bottom: 20px; border-radius: 16px; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.25); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 25px rgba(34, 197, 94, 0.15);">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>
+            <path d="m9 12 2 2 4-4"/>
+          </svg>
+        </div>
+        <div style="font-size: 18px; font-weight: 700; letter-spacing: 0.05em; color: #f3f4f1; margin-bottom: 6px;">AEGIS VAULT 7</div>
+        <div style="font-size: 12px; color: #9ca3af; letter-spacing: 0.02em;">Güvenli Kasa Başlatılıyor...</div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

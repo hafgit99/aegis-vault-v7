@@ -1,4 +1,5 @@
 export const ru = {
+  'app.initializingVault': 'Инициализация защищенного хранилища...',
   'nav.localFirst': 'Локальная безопасность',
   'nav.vault': 'Сейф',
   'nav.audit': 'Аудит безопасности',

@@ -1,4 +1,5 @@
 export const ar = {
+  'app.initializingVault': 'جاري تهيئة الخزنة الآمنة...',
   'nav.localFirst': 'محلي-أولاً آمن',
   'nav.vault': 'قبو',
   'nav.audit': 'التدقيق الأمني',

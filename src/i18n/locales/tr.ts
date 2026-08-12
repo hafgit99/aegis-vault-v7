@@ -1,5 +1,6 @@
 export const tr = {
 
+    'app.initializingVault': 'Güvenli Kasa Başlatılıyor...',
     'nav.localFirst': 'Local-First Secure',
     'nav.vault': 'Kasa (Vault)',
     'nav.audit': 'Güvenlik Analizi',

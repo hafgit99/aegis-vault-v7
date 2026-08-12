@@ -1,4 +1,5 @@
 export const it = {
+  'app.initializingVault': 'Inizializzazione della cassaforte sicura...',
   'nav.localFirst': 'Local-First sicuro',
   'nav.vault': 'Volta',
   'nav.audit': 'Controllo di sicurezza',

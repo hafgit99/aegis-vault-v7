@@ -1,4 +1,5 @@
 export const pt = {
+  'app.initializingVault': 'Inicializando o cofre seguro...',
   'nav.localFirst': 'Segurança local primeiro',
   'nav.vault': 'Cofre',
   'nav.audit': 'Auditoria de segurança',
