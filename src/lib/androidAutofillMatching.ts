@@ -17,7 +17,40 @@ function normalizeHost(value: string): string | null {
 }
 
 const COMMON_PUBLIC_SUFFIXES = new Set([
-  'co.uk', 'com.au', 'co.jp', 'com.br', 'co.in', 'com.tr', 'gov.uk', 'org.uk', 'edu.au', 'net.au', 'or.jp'
+  'co.uk', 'org.uk', 'gov.uk', 'ac.uk', 'me.uk', 'ltd.uk', 'plc.uk', 'net.uk',
+  'com.tr', 'org.tr', 'net.tr', 'gov.tr', 'edu.tr', 'bel.tr', 'k12.tr', 'av.tr', 'dr.tr', 'biz.tr', 'info.tr', 'tv.tr', 'gen.tr', 'name.tr',
+  'co.jp', 'ne.jp', 'or.jp', 'go.jp', 'ac.jp', 'ad.jp', 'ed.jp', 'gr.jp', 'lg.jp',
+  'com.au', 'net.au', 'org.au', 'edu.au', 'gov.au', 'id.au', 'asn.au', 'csiro.au',
+  'co.nz', 'net.nz', 'org.nz', 'govt.nz', 'ac.nz', 'school.nz', 'iwi.nz',
+  'com.br', 'net.br', 'org.br', 'gov.br', 'edu.br', 'ind.br', 'inf.br', 'tur.br', 'b.br',
+  'com.de', 'co.at', 'or.at', 'gv.at', 'ac.at', 'co.ch',
+  'com.mx', 'org.mx', 'net.mx', 'edu.mx', 'gob.mx',
+  'com.ar', 'org.ar', 'net.ar', 'gov.ar', 'edu.ar',
+  'co.in', 'net.in', 'org.in', 'gen.in', 'firm.in', 'ind.in', 'nic.in', 'ac.in', 'edu.in', 'res.in', 'gov.in',
+  'com.cn', 'net.cn', 'org.cn', 'gov.cn', 'edu.cn',
+  'com.hk', 'org.hk', 'net.hk', 'edu.hk', 'gov.hk', 'idv.hk',
+  'com.sg', 'org.sg', 'net.sg', 'edu.sg', 'gov.sg', 'per.sg',
+  'co.kr', 'ne.kr', 'or.kr', 're.kr', 'pe.kr', 'go.kr', 'ac.kr',
+  'com.tw', 'org.tw', 'net.tw', 'edu.tw', 'gov.tw', 'idv.tw',
+  'co.za', 'net.za', 'org.za', 'gov.za', 'edu.za',
+  'com.eg', 'edu.eg', 'gov.eg', 'org.eg',
+  'com.sa', 'net.sa', 'org.sa', 'gov.sa', 'edu.sa',
+  'com.ae', 'net.ae', 'org.ae', 'gov.ae', 'ac.ae',
+  'co.il', 'org.il', 'net.il', 'ac.il', 'gov.il', 'k12.il',
+  'com.ca', 'co.ca', 'ab.ca', 'bc.ca', 'mb.ca', 'nb.ca', 'nl.ca', 'ns.ca', 'nt.ca', 'nu.ca', 'on.ca', 'pe.ca', 'qc.ca', 'sk.ca', 'yk.ca',
+  'com.es', 'nom.es', 'org.es', 'gob.es', 'edu.es',
+  'com.fr', 'asso.fr', 'gouv.fr',
+  'co.it', 'gov.it',
+  'com.nl', 'co.nl',
+  'co.no', 'org.no',
+  'com.se', 'org.se',
+  'com.fi', 'co.fi',
+  'com.dk', 'co.dk',
+  'com.pl', 'net.pl', 'org.pl', 'biz.pl', 'info.pl',
+  'com.ru', 'net.ru', 'org.ru', 'pp.ru',
+  'com.ua', 'net.ua', 'org.ua', 'gov.ua', 'edu.ua',
+  'com.co', 'net.co', 'nom.co',
+  'github.io', 'gitlab.io', 'vercel.app', 'netlify.app', 'cloudflare.dev', 'fly.dev', 'render.com', 'azurewebsites.net', 'cloudapp.net', 's3.amazonaws.com', 'pages.dev'
 ]);
 
 function getEffectiveDomain(host: string): string {

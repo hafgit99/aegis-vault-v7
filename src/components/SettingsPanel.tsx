@@ -48,6 +48,7 @@ import { isAccountSecretKeyFormatValid } from '../lib/secretKey';
 import { useLanguage } from '../i18n/LanguageContext';
 import { progressWidthClass } from '../lib/progressWidth';
 import { validateMasterPassword } from '../lib/security';
+import { logSecurityEvent, securityEventCodes } from '../lib/securityEvents';
 import type { LanguageCode } from '../i18n/translations';
 import { SettingsLanguageCard } from './settings/SettingsLanguageCard';
 import { SettingsThemeCard } from './settings/SettingsThemeCard';
@@ -788,6 +789,11 @@ export default function SettingsPanel({
 
   const executePlainExport = async () => {
     try {
+      logSecurityEvent(
+        securityEventCodes.securityLegacyCryptoWarning,
+        'Exported unencrypted plaintext JSON backup. Plaintext exports expose passwords if stored on unsecured media.',
+        'warning',
+      );
       const latestItems = await getVaultItems();
       setItems(latestItems);
       const attachments = await exportAllAttachments();

@@ -30,6 +30,18 @@ jobs:
       - name: ESLint Check
         run: npm run lint
 
+      - name: Build Web Extensions
+        run: npm run build:extension
+
+      - name: Security Gate - No JS Master String
+        run: npm run security:no-js-master-string
+
+      - name: Security Gate - CSP Hardening Check
+        run: npm run security:csp
+
+      - name: Security Gate - Asset Integrity Manifest
+        run: npm run security:asset-integrity
+
       - name: Run Unit Tests
         run: npm run test:unit
 

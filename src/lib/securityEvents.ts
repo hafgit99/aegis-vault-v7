@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { secureRandomToken } from './random';
+
 export type SecurityEventSeverity = 'info' | 'warning' | 'critical';
 
 export const securityEventCodes = {
@@ -22,6 +24,7 @@ export const securityEventCodes = {
   androidAutofillFailed: 'android.autofill.failed',
   androidRuntimeRiskDetected: 'android.runtime.riskDetected',
   assetIntegrityFailed: 'application.assetIntegrity.failed',
+  securityLegacyCryptoWarning: 'security.legacyCryptoWarning',
 } as const;
 
 export type SecurityEventCode = (typeof securityEventCodes)[keyof typeof securityEventCodes];
@@ -117,7 +120,7 @@ export function logSecurityEvent(
     }
 
     const event: BlockedNetworkEvent = {
-      id: Math.random().toString(36).substring(2, 11),
+      id: secureRandomToken(12),
       timestamp: new Date().toLocaleTimeString(),
       url: rawUrl,
       protocol,

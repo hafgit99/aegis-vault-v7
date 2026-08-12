@@ -247,7 +247,7 @@ export function getAuditScoreHistory(): { date: string; score: number }[] {
     const dateStr = d.toISOString().split('T')[0];
     mockHistory.push({
       date: dateStr,
-      score: 60 + (4 - i) * 8 + Math.round(Math.random() * 5),
+      score: 60 + (4 - i) * 8 + secureRandomIndex(6),
     });
   }
   return mockHistory;
