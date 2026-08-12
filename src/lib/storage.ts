@@ -55,23 +55,34 @@ interface AccountSecretProfile {
 }
 
 export async function initializeStorage(): Promise<void> {
+  // Phase 1: IndexedDB cache must be ready before anything reads setup flags,
+  // but biometric hydrate is completely independent — run them together.
+  const biometricPromise = hydrateBiometric();
   await initializeIndexedDbStorage();
-  if (isDesktopRuntime()) {
-    try {
-      await sqliteOPFSInstance.hydrate();
-    } catch (e) {
-      console.error('Failed to pre-hydrate sqliteOPFSInstance:', e);
-    }
-  }
-  await restoreOrActivateDefaultVaultStorageBackend({
-    hasLegacyOpfsVaultData: isMasterPasswordSet,
-  });
+
+  // Phase 2: OPFS pre-hydrate (desktop only) and backend restore run concurrently.
+  const opfsPromise = isDesktopRuntime()
+    ? sqliteOPFSInstance.hydrate().catch((e: unknown) => {
+        console.error('Failed to pre-hydrate sqliteOPFSInstance:', e);
+      })
+    : Promise.resolve();
+
+  await Promise.all([
+    opfsPromise,
+    restoreOrActivateDefaultVaultStorageBackend({
+      hasLegacyOpfsVaultData: isMasterPasswordSet,
+    }),
+  ]);
+
+  // Phase 3: Vault repo hydrate + wait for biometric (should already be done).
   await Promise.all([
     getVaultStorageRepository().hydrate(),
-    hydrateBiometric(),
+    biometricPromise,
   ]);
+
   migrateRememberedSecretKeyToSecureStorage();
 }
+
 
 /**
  * Checks if a master password has already been set up in SQLite database.

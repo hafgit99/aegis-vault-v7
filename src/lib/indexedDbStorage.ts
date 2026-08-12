@@ -125,8 +125,8 @@ export async function clearAllSetupFlags(): Promise<void> {
 
 /**
  * Initializes the setup flags storage by reading all known keys from IndexedDB
- * and populating the synchronous in-memory cache. Performs migration of legacy
- * localStorage values if found.
+ * in a single transaction and populating the synchronous in-memory cache.
+ * Performs migration of legacy localStorage values if found.
  */
 export async function initializeIndexedDbStorage(): Promise<void> {
   const keys = [
@@ -137,21 +137,59 @@ export async function initializeIndexedDbStorage(): Promise<void> {
     'aegis_vault_storage_active_backend'
   ];
 
+  // Batch-read all keys in a single IndexedDB transaction
+  let dbValues: Map<string, string | null>;
+  try {
+    const db = await initSetupDB();
+    dbValues = await new Promise<Map<string, string | null>>((resolve, reject) => {
+      const results = new Map<string, string | null>();
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+
+      for (const key of keys) {
+        const request = store.get(key);
+        request.onsuccess = () => {
+          results.set(key, request.result !== undefined ? request.result : null);
+        };
+      }
+
+      transaction.oncomplete = () => {
+        db.close();
+        resolve(results);
+      };
+      transaction.onerror = () => {
+        db.close();
+        reject(transaction.error);
+      };
+    });
+  } catch (err) {
+    console.error('Failed to batch-read IndexedDB keys:', err);
+    dbValues = new Map(keys.map(k => [k, null]));
+  }
+
+  // Populate in-memory cache and migrate legacy localStorage values
+  const migrationWrites: Promise<void>[] = [];
   for (const key of keys) {
-    const dbVal = await getIndexedDbItem(key);
+    const dbVal = dbValues.get(key) ?? null;
     if (dbVal !== null) {
       inMemoryCache[key] = dbVal;
     } else {
-      // Check legacy localStorage
       const legacyVal = typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
       if (legacyVal !== null) {
-        await setIndexedDbItem(key, legacyVal);
+        migrationWrites.push(setIndexedDbItem(key, legacyVal));
         inMemoryCache[key] = legacyVal;
         localStorage.removeItem(key);
       } else {
         inMemoryCache[key] = null;
       }
     }
+  }
+
+  // Fire-and-forget legacy migration writes (they go to IDB in background)
+  if (migrationWrites.length > 0) {
+    Promise.all(migrationWrites).catch((err) => {
+      console.error('Legacy localStorage migration writes failed:', err);
+    });
   }
 }
 

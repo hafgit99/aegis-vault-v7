@@ -158,9 +158,10 @@ describe('vault session storage', () => {
     expect(restoreOrActivateDefaultVaultStorageBackend.mock.invocationCallOrder[0]).toBeLessThan(
       getVaultStorageRepository.mock.invocationCallOrder[0],
     );
-    expect(sqliteOPFSInstance.hydrate.mock.invocationCallOrder[0]).toBeLessThan(
-      hydrateBiometric.mock.invocationCallOrder[0],
-    );
+    // hydrateBiometric and vault repo hydrate now run concurrently,
+    // so we only assert both were called (no strict ordering).
+    expect(sqliteOPFSInstance.hydrate).toHaveBeenCalledTimes(1);
+    expect(hydrateBiometric).toHaveBeenCalledTimes(1);
     expect(window.AegisAndroidSecureStorage.setItem).toHaveBeenCalledWith(
       'aegis_account_secret_key_remembered',
       'A3-LEGACY-SECRET',
