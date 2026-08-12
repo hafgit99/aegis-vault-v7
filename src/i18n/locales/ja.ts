@@ -402,6 +402,7 @@ export const ja = {
   'settings.biometric.disabledSuccess': '生体認証によるロック解除 (Touch ID / Face ID / Windows Hello) が無効になっています。',
   'settings.biometric.unsupportedError': 'このデバイスまたはブラウザでは、生体認証によるロック解除 (WebAuthn / PublicKeyCredential) がサポートされていないか、無効になっています。',
   'settings.biometric.missingSessionError': 'セッション検証がありません。ページを更新して再度サインインしてください。',
+  'settings.biometric.promptMasterPassword': '生体認証を有効にするにはマスターパスワードを入力してください：',
   'settings.biometric.enabledSuccess': '✓ 生体認証によるロック解除が正常に有効になりました。次回のログインでは、マスター パスワードを入力する代わりに、OS 生体認証 (Windows Hello、Touch ID、Face ID) を使用できます。',
   'settings.biometric.registerFailed': '生体認証によるロック解除の登録に失敗しました。',
   'settings.biometric.genericError': '操作中にエラーが発生しました。',

@@ -402,6 +402,7 @@ export const fr = {
   'settings.biometric.disabledSuccess': 'Le déverrouillage biométrique (Touch ID / Face ID / Windows Hello) a été désactivé.',
   'settings.biometric.unsupportedError': 'Le déverrouillage biométrique (WebAuthn / PublicKeyCredential) n\'est pas pris en charge ou est désactivé sur cet appareil ou navigateur.',
   'settings.biometric.missingSessionError': 'La vérification de la session est manquante. Veuillez actualiser la page et vous reconnecter.',
+  'settings.biometric.promptMasterPassword': 'Veuillez saisir votre mot de passe maître pour activer le déverrouillage biométrique :',
   'settings.biometric.enabledSuccess': '✓ Le déverrouillage biométrique a été activé avec succès ! Lors de votre prochaine connexion, vous pourrez utiliser la biométrie du système d\'exploitation (Windows Hello, Touch ID, Face ID) au lieu de saisir votre mot de passe principal.',
   'settings.biometric.registerFailed': 'L\'enregistrement du déverrouillage biométrique a échoué.',
   'settings.biometric.genericError': 'Une erreur s\'est produite lors de l\'opération.',

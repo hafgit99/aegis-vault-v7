@@ -402,6 +402,7 @@ export const ko = {
   'settings.biometric.disabledSuccess': '생체 인식 잠금 해제(Touch ID/Face ID/Windows Hello)가 비활성화되었습니다.',
   'settings.biometric.unsupportedError': '이 장치 또는 브라우저에서는 생체 인식 잠금 해제(WebAuthn / PublicKeyCredential)가 지원되지 않거나 비활성화되어 있습니다.',
   'settings.biometric.missingSessionError': '세션 확인이 누락되었습니다. 페이지를 새로고침하고 다시 로그인하세요.',
+  'settings.biometric.promptMasterPassword': '생체 인증을 활성화하려면 마스터 비밀번호를 입력하세요:',
   'settings.biometric.enabledSuccess': '✓ 생체 인식 잠금 해제가 성공적으로 활성화되었습니다! 다음 로그인 시에는 마스터 비밀번호를 입력하는 대신 OS 생체인식(Windows Hello, Touch ID, Face ID)을 사용할 수 있습니다.',
   'settings.biometric.registerFailed': '생체 인식 잠금 해제 등록에 실패했습니다.',
   'settings.biometric.genericError': '작업 중 오류가 발생했습니다.',

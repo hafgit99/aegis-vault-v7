@@ -402,6 +402,7 @@ export const de = {
   'settings.biometric.disabledSuccess': 'Die biometrische Entsperrung (Touch ID / Face ID / Windows Hello) wurde deaktiviert.',
   'settings.biometric.unsupportedError': 'Die biometrische Entsperrung (WebAuthn/PublicKeyCredential) wird auf diesem Gerät oder Browser nicht unterstützt oder ist deaktiviert.',
   'settings.biometric.missingSessionError': 'Sitzungsüberprüfung fehlt. Bitte aktualisieren Sie die Seite und melden Sie sich erneut an.',
+  'settings.biometric.promptMasterPassword': 'Bitte geben Sie Ihr Master-Passwort ein, um die biometrische Entsperrung zu aktivieren:',
   'settings.biometric.enabledSuccess': '✓ Die biometrische Entsperrung wurde erfolgreich aktiviert! Bei Ihrer nächsten Anmeldung können Sie die Biometrie des Betriebssystems (Windows Hello, Touch ID, Face ID) verwenden, anstatt Ihr Master-Passwort einzugeben.',
   'settings.biometric.registerFailed': 'Die Registrierung der biometrischen Entsperrung ist fehlgeschlagen.',
   'settings.biometric.genericError': 'Während des Vorgangs ist ein Fehler aufgetreten.',

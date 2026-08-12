@@ -403,6 +403,7 @@ export const zh = {
     'settings.biometric.disabledSuccess': '生物识别解锁（Touch ID / Face ID / Windows Hello）已禁用。',
     'settings.biometric.unsupportedError': '此设备或浏览器不支持或已禁用生物识别解锁（WebAuthn / PublicKeyCredential）。',
     'settings.biometric.missingSessionError': '缺少会话验证。请刷新页面并重新登录。',
+    'settings.biometric.promptMasterPassword': '请输入主密码以启用生物识别解锁：',
     'settings.biometric.enabledSuccess': '✓ 生物识别解锁已成功启用！下次登录时，您可以使用操作系统生物识别（Windows Hello、Touch ID、Face ID），无需输入主密码。',
     'settings.biometric.registerFailed': '生物识别解锁注册失败。',
     'settings.biometric.genericError': '操作过程中发生错误。',

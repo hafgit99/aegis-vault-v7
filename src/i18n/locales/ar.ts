@@ -402,6 +402,7 @@ export const ar = {
   'settings.biometric.disabledSuccess': 'تم تعطيل فتح القفل البيومتري (Touch ID / Face ID / Windows Hello).',
   'settings.biometric.unsupportedError': 'إلغاء القفل البيومتري (WebAuthn / PublicKeyCredential) غير مدعوم أو تم تعطيله على هذا الجهاز أو المتصفح.',
   'settings.biometric.missingSessionError': 'التحقق من الجلسة مفقود. يرجى تحديث الصفحة وتسجيل الدخول مرة أخرى.',
+  'settings.biometric.promptMasterPassword': 'يرجى إدخال كلمة المرور الرئيسية لتمكين البصمة / Face ID:',
   'settings.biometric.enabledSuccess': '✓ تم تمكين فتح القفل البيومتري بنجاح! عند تسجيل الدخول التالي، يمكنك استخدام القياسات الحيوية لنظام التشغيل (Windows Hello وTouch ID وFace ID) بدلاً من إدخال كلمة المرور الرئيسية.',
   'settings.biometric.registerFailed': 'فشل تسجيل فتح القفل البيومتري.',
   'settings.biometric.genericError': 'حدث خطأ أثناء العملية.',

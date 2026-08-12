@@ -402,6 +402,7 @@ export const ru = {
   'settings.biometric.disabledSuccess': 'Биометрическая разблокировка (Touch ID/Face ID/Windows Hello) отключена.',
   'settings.biometric.unsupportedError': 'Биометрическая разблокировка (WebAuthn/PublicKeyCredential) не поддерживается или отключена на этом устройстве или в браузере.',
   'settings.biometric.missingSessionError': 'Проверка сеанса отсутствует. Пожалуйста, обновите страницу и войдите снова.',
+  'settings.biometric.promptMasterPassword': 'Введите мастер-пароль для включения биометрической разблокировки:',
   'settings.biometric.enabledSuccess': '✓ Биометрическая разблокировка успешно включена! При следующем входе в систему вы можете использовать биометрические данные ОС (Windows Hello, Touch ID, Face ID) вместо ввода главного пароля.',
   'settings.biometric.registerFailed': 'Регистрация биометрической разблокировки не удалась.',
   'settings.biometric.genericError': 'Во время операции произошла ошибка.',

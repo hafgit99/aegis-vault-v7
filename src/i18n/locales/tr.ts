@@ -403,6 +403,7 @@ export const tr = {
     'settings.biometric.disabledSuccess': 'Biyometrik kilit açma (Touch ID / Face ID / Windows Hello) devre dışı bırakıldı.',
     'settings.biometric.unsupportedError': 'Cihazınızda veya tarayıcınızda biyometrik kilit açma özelliği (WebAuthn / PublicKeyCredential) desteklenmiyor veya devre dışı.',
     'settings.biometric.missingSessionError': 'Oturum doğrulaması eksik. Lütfen sayfayı yenileyip tekrar giriş yapın.',
+    'settings.biometric.promptMasterPassword': 'Biyometrik (Face ID / Touch ID) kilidini aktifleştirmek için lütfen Ana Parolanızı girin:',
     'settings.biometric.enabledSuccess': '✓ Biyometrik kilit başarıyla aktifleştirildi! Bir sonraki girişte ana şifrenizi girmek yerine OS biyometrisini (Windows Hello, Touch ID, Face ID) kullanabilirsiniz.',
     'settings.biometric.registerFailed': 'Biyometrik kilit kaydı başarısız oldu.',
     'settings.biometric.genericError': 'İşlem sırasında bir hata oluştu.',

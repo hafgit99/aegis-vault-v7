@@ -636,10 +636,26 @@ export default function SettingsPanel({
           throw new Error(t('settings.biometric.unsupportedError'));
         }
         
-        const registered = await withActiveBackupPassword(async (backupPassword) => {
-          await registerBiometric(backupPassword, type);
-          return true;
-        });
+        let registered = false;
+        const autoPassword = await withActiveBackupPassword((backupPassword) => backupPassword);
+
+        if (autoPassword) {
+          await registerBiometric(autoPassword, type);
+          registered = true;
+        } else {
+          const inputPassword = typeof window !== 'undefined' && typeof window.prompt === 'function'
+            ? window.prompt(t('settings.biometric.promptMasterPassword'))
+            : null;
+          if (inputPassword) {
+            const isValid = await verifyMasterPassword(inputPassword);
+            if (!isValid) {
+              throw new Error(t('settings.password.error.current'));
+            }
+            await registerBiometric(inputPassword, type);
+            registered = true;
+          }
+        }
+
         if (!registered) {
           throw new Error(t('settings.biometric.missingSessionError'));
         }

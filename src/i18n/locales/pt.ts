@@ -402,6 +402,7 @@ export const pt = {
   'settings.biometric.disabledSuccess': 'O desbloqueio biométrico (Touch ID/Face ID/Windows Hello) foi desativado.',
   'settings.biometric.unsupportedError': 'O desbloqueio biométrico (WebAuthn/PublicKeyCredential) não é compatível ou está desativado neste dispositivo ou navegador.',
   'settings.biometric.missingSessionError': 'A verificação da sessão está faltando. Atualize a página e faça login novamente.',
+  'settings.biometric.promptMasterPassword': 'Digite sua senha mestre para ativar o desbloqueio biométrico:',
   'settings.biometric.enabledSuccess': '✓ O desbloqueio biométrico foi ativado com sucesso! No seu próximo login, você pode usar a biometria do sistema operacional (Windows Hello, Touch ID, Face ID) em vez de inserir sua senha mestra.',
   'settings.biometric.registerFailed': 'Falha no registro de desbloqueio biométrico.',
   'settings.biometric.genericError': 'Ocorreu um erro durante a operação.',

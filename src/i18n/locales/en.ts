@@ -403,6 +403,7 @@ export const en = {
     'settings.biometric.disabledSuccess': 'Biometric unlock (Touch ID / Face ID / Windows Hello) has been disabled.',
     'settings.biometric.unsupportedError': 'Biometric unlock (WebAuthn / PublicKeyCredential) is not supported or is disabled on this device or browser.',
     'settings.biometric.missingSessionError': 'Session verification is missing. Please refresh the page and sign in again.',
+    'settings.biometric.promptMasterPassword': 'Please enter your Master Password to enable Biometric (Face ID / Touch ID) unlock:',
     'settings.biometric.enabledSuccess': '✓ Biometric unlock was enabled successfully! On your next login, you can use OS biometrics (Windows Hello, Touch ID, Face ID) instead of entering your master password.',
     'settings.biometric.registerFailed': 'Biometric unlock registration failed.',
     'settings.biometric.genericError': 'An error occurred during the operation.',
