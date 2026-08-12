@@ -39,6 +39,9 @@ jobs:
       - name: Security Gate - CSP Hardening Check
         run: npm run security:csp
 
+      - name: Build Web Application
+        run: npm run build
+
       - name: Security Gate - Asset Integrity Manifest
         run: npm run security:asset-integrity
 
