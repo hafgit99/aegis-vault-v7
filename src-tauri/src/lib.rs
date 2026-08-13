@@ -784,6 +784,14 @@ pub fn run() {
     let builder = builder.plugin(tauri_plugin_biometric::init());
 
     let app = builder
+        .on_page_load(|webview, payload| {
+            if matches!(
+                payload.event(),
+                tauri::webview::PageLoadEvent::Finished
+            ) {
+                let _ = webview.window().show();
+            }
+        })
         .setup(move |app| {
             if let Err(error) = apply_screen_capture_protection(app.handle()) {
                 log::warn!("failed to enable screen capture protection: {error}");
