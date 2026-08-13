@@ -214,7 +214,7 @@ export async function verifyMasterPassword(password: string, secretKey?: string 
       });
 
       const sessionVaultEncryptionKey = new Uint8Array(vaultKeyBytes);
-      openVaultSession(sessionVaultEncryptionKey, { hasBackup: true, hasSecret: usableSecretKey !== null });
+      openVaultSession(credential, password, sessionVaultEncryptionKey);
       
       try {
         await migrateLegacyAttachmentsToAesGcm();
@@ -291,7 +291,7 @@ export async function setupMasterPassword(password: string): Promise<void> {
       await repo.setupMaster(credential);
     }
     
-    openVaultSession(vaultKeyBytes, { hasBackup: true, hasSecret: false });
+    openVaultSession(credential, password, vaultKeyBytes);
   } else {
     const credential = resolveVaultCredential(password);
     await getVaultStorageRepository().setupMaster(credential);
@@ -347,7 +347,7 @@ export async function setupMasterPasswordWithSecretKey(
       await repo.setupMaster(credential);
     }
     
-    openVaultSession(vaultKeyBytes, { hasBackup: true, hasSecret: true });
+    openVaultSession(credential, password, vaultKeyBytes);
   } else {
     await getVaultStorageRepository().setupMaster(credential);
     await openDerivedVaultSession(credential, password);
@@ -438,7 +438,7 @@ export async function changeMasterPassword(oldPassword: string, newPassword: str
       throw err;
     }
 
-    openVaultSession(newVaultKey);
+    openVaultSession(newCredential, newPassword, newVaultKey);
 
     oldVaultKey.fill(0);
     newVaultKey.fill(0);
