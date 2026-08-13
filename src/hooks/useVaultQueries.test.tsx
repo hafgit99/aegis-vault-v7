@@ -135,5 +135,46 @@ describe('useVaultQueries', () => {
 
     expect(result.current.filteredItems.map((item) => item.id)).toEqual(['b']);
   });
+
+  it('filters by folder and tags', () => {
+    const folderItems: VaultItem[] = [
+      item({ id: 'f1', title: 'Folder 1 Item', folderId: 'folder-abc', tags: ['work'] } as any),
+      item({ id: 'root', title: 'Root Item', folderId: undefined, tags: ['personal'] } as any),
+    ];
+
+    const { result: rootResult } = renderHook(() =>
+      useVaultQueries({
+        items: folderItems,
+        searchQuery: '',
+        favoritesOnly: false,
+        selectedCategory: 'all',
+        selectedFolderId: '__root__',
+      }),
+    );
+    expect(rootResult.current.filteredItems.map((i) => i.id)).toEqual(['root']);
+
+    const { result: folderResult } = renderHook(() =>
+      useVaultQueries({
+        items: folderItems,
+        searchQuery: '',
+        favoritesOnly: false,
+        selectedCategory: 'all',
+        selectedFolderId: 'folder-abc',
+        folders: [{ id: 'folder-abc', name: 'Work Folder', createdAt: '2026-01-01', parentId: null, color: 'emerald' as const, icon: 'folder' }],
+      }),
+    );
+    expect(folderResult.current.filteredItems.map((i) => i.id)).toEqual(['f1']);
+
+    const { result: tagResult } = renderHook(() =>
+      useVaultQueries({
+        items: folderItems,
+        searchQuery: '',
+        favoritesOnly: false,
+        selectedCategory: 'all',
+        selectedTags: ['work'],
+      }),
+    );
+    expect(tagResult.current.filteredItems.map((i) => i.id)).toEqual(['f1']);
+  });
 });
 

@@ -146,4 +146,23 @@ describe('emergencyKit', () => {
     expect(removeSpy).toHaveBeenCalledTimes(1);
     expect(revokeObjectUrlSpy).toHaveBeenCalledWith(createdUrl);
   });
+
+  it('builds text and PDF emergency kits with 24 recovery words', () => {
+    const recoveryWords = Array(24).fill('abandon');
+    const text = buildEmergencyKitText(secretKey, {
+      generatedAt: new Date('2026-06-20T12:00:00.000Z'),
+      recoveryWords,
+    });
+    expect(text).toContain('Recovery Key Words (24-word BIP-39 phrase):');
+    expect(text).toContain('1. abandon');
+
+    const pdfBytes = buildEmergencyKitPdfBytes(secretKey, {
+      generatedAt: new Date('2026-06-20T12:00:00.000Z'),
+      recoveryWords,
+    });
+    const pdfText = new TextDecoder().decode(pdfBytes);
+    expect(pdfText).toContain('Recovery Key Words');
+
+    expect(() => buildEmergencyKitPdfBytes('invalid-key')).toThrow('Invalid account secret key format.');
+  });
 });

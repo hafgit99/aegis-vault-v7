@@ -195,4 +195,45 @@ describe('SettingsSyncSection', () => {
     rerender(<SettingsSyncSection {...propsSuccess} />);
     expect(screen.getByText('settings.sync.status.success')).toBeTruthy();
   });
+
+  it('renders S3 fields when provider is s3 and handles inputs', () => {
+    const props = {
+      ...defaultProps,
+      syncProvider: 's3' as const,
+      s3Endpoint: 'https://s3.amazonaws.com',
+      s3Region: 'us-east-1',
+      s3Bucket: 'vault-bucket',
+      s3AccessKeyId: 'AKIAIOSFODNN7EXAMPLE',
+      s3SecretAccessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
+    };
+
+    render(<SettingsSyncSection {...props} />);
+
+    const endpointInput = screen.getByPlaceholderText('https://s3.us-east-1.amazonaws.com veya https://minio.example.com') as HTMLInputElement;
+    const regionInput = screen.getByPlaceholderText('us-east-1 (varsayılan)') as HTMLInputElement;
+    const bucketInput = screen.getByPlaceholderText('my-aegis-vault-bucket') as HTMLInputElement;
+    const accessKeyInput = screen.getByPlaceholderText('Örn: your-access-key-id') as HTMLInputElement;
+    const secretKeyInput = screen.getByPlaceholderText('wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY') as HTMLInputElement;
+
+    expect(endpointInput.value).toBe('https://s3.amazonaws.com');
+    expect(regionInput.value).toBe('us-east-1');
+    expect(bucketInput.value).toBe('vault-bucket');
+    expect(accessKeyInput.value).toBe('AKIAIOSFODNN7EXAMPLE');
+    expect(secretKeyInput.value).toBe('wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY');
+
+    fireEvent.change(endpointInput, { target: { value: 'https://minio.local' } });
+    expect(props.setS3Endpoint).toHaveBeenCalledWith('https://minio.local');
+
+    fireEvent.change(regionInput, { target: { value: 'eu-central-1' } });
+    expect(props.setS3Region).toHaveBeenCalledWith('eu-central-1');
+
+    fireEvent.change(bucketInput, { target: { value: 'new-bucket' } });
+    expect(props.setS3Bucket).toHaveBeenCalledWith('new-bucket');
+
+    fireEvent.change(accessKeyInput, { target: { value: 'NEWKEYID' } });
+    expect(props.setS3AccessKeyId).toHaveBeenCalledWith('NEWKEYID');
+
+    fireEvent.change(secretKeyInput, { target: { value: 'NEWSECRET' } });
+    expect(props.setS3SecretAccessKey).toHaveBeenCalledWith('NEWSECRET');
+  });
 });

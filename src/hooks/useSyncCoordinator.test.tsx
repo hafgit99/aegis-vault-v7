@@ -5,10 +5,11 @@
 
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useSyncCoordinator } from './useSyncCoordinator';
 import * as syncModule from '../lib/sync';
+import * as attSyncModule from '../lib/sync/attachmentSyncEngine';
 
 vi.mock('../lib/sync', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../lib/sync')>();
@@ -26,6 +27,10 @@ vi.mock('../lib/sync', async (importOriginal) => {
     })),
   };
 });
+
+vi.mock('../lib/sync/attachmentSyncEngine', () => ({
+  performAttachmentSync: vi.fn(async () => {}),
+}));
 
 describe('useSyncCoordinator', () => {
   beforeEach(() => {
@@ -90,5 +95,77 @@ describe('useSyncCoordinator', () => {
 
     expect(result.current.syncStatus).toBe('idle');
     expect(result.current.syncError).toBeNull();
+  });
+
+  it('handles manual triggerSync and conflict status', async () => {
+    vi.mocked(syncModule.hasSyncConfig).mockReturnValue(true);
+    vi.mocked(syncModule.loadSyncConfig).mockResolvedValue({
+      type: 'webdav',
+      url: 'https://dav.example.com',
+      username: 'u',
+      password: 'p',
+    });
+    const conflictMock: syncModule.SyncConflictItem = {
+      id: '1',
+      title: 'Local item',
+      localUpdatedAt: '2026-01-01',
+      remoteUpdatedAt: '2026-01-02',
+    };
+    vi.mocked(syncModule.performSync).mockResolvedValue({
+      status: 'conflict',
+      conflicts: [conflictMock],
+      mergedCount: 1,
+      mergedItems: [],
+    });
+
+    const onVaultMerged = vi.fn();
+    const { result } = renderHook(() =>
+      useSyncCoordinator({
+        items: [],
+        masterPassword: 'password123',
+        onVaultMerged,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.syncStatus).toBe('conflict');
+    });
+    expect(result.current.conflicts).toHaveLength(1);
+
+    // Manually trigger
+    await act(async () => {
+      await result.current.triggerSync();
+    });
+    expect(syncModule.performSync).toHaveBeenCalledTimes(2);
+  });
+
+  it('handles sync when config is disabled', async () => {
+    vi.mocked(syncModule.hasSyncConfig).mockReturnValue(true);
+    vi.mocked(syncModule.loadSyncConfig).mockResolvedValue({
+      type: 'disabled',
+    });
+
+    const { result } = renderHook(() =>
+      useSyncCoordinator({ items: [], masterPassword: 'password123' }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.isConfigured).toBe(false);
+    });
+    expect(result.current.syncStatus).toBe('idle');
+  });
+
+  it('handles sync when loadSyncConfig throws', async () => {
+    vi.mocked(syncModule.hasSyncConfig).mockReturnValue(true);
+    vi.mocked(syncModule.loadSyncConfig).mockRejectedValue(new Error('Corrupt config'));
+
+    const { result } = renderHook(() =>
+      useSyncCoordinator({ items: [], masterPassword: 'password123' }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.syncStatus).toBe('error');
+    });
+    expect(result.current.syncError).toBeDefined();
   });
 });

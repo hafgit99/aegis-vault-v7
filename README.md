@@ -8,7 +8,8 @@
 
 [![CI Pipeline](https://github.com/kodbest/AegisV7/actions/workflows/ci.yml/badge.svg)](https://github.com/kodbest/AegisV7/actions)
 ![Security Score](https://img.shields.io/badge/Security_Audit-92%2F100_(A%2B)-brightgreen?style=flat-square&logo=shield)
-![Tests](https://img.shields.io/badge/Unit_Tests-1196_Passed-success?style=flat-square&logo=vitest)
+![Tests](https://img.shields.io/badge/Unit_Tests-1223_Passed-success?style=flat-square&logo=vitest)
+![Coverage](https://img.shields.io/badge/Coverage-90.4%25_Lines-brightgreen?style=flat-square&logo=vitest)
 ![TypeScript](https://img.shields.io/badge/TypeScript-0_Errors-blue?style=flat-square&logo=typescript)
 ![License](https://img.shields.io/badge/License-Apache_2.0-orange?style=flat-square)
 ![i18n](https://img.shields.io/badge/i18n-12_Languages-purple?style=flat-square)
@@ -87,13 +88,13 @@ Aegis Vault 7 maintains rigorous automated testing standards with 100% clean Typ
 | Metric | Result | Status |
 |---|---|---|
 | **TypeScript Typecheck** | **`0 errors`** | ✅ 100% Clean (`tsc --noEmit`) |
-| **Unit Test Suite** | **`154 test files passed (154/154)`** | ✅ 100% Green (Vitest) |
-| **Unit Tests Executed** | **`1,196 tests passed (1,196/1,196)`** | ✅ 100% Green |
+| **Unit Test Suite** | **`159 test files passed (159/159)`** | ✅ 100% Green (Vitest) |
+| **Unit Tests Executed** | **`1,223 tests passed (1,223/1,223)`** | ✅ 100% Green |
 | **Rust Backend Tests** | **`9 tests passed (9/9)`** | ✅ 100% Green (`cargo test`) |
-| **Lines Coverage** | **`89.2%`** | ✅ High Coverage |
-| **Statements Coverage** | **`87.5%`** | ✅ High Coverage |
-| **Functions Coverage** | **`84.6%`** | ✅ High Coverage |
-| **Branches Coverage** | **`81.3%`** | ✅ High Coverage |
+| **Lines Coverage** | **`90.4%`** | ✅ Exceeds Global Threshold (≥ 90%) |
+| **Statements Coverage** | **`88.7%`** | ✅ Exceeds Global Threshold (≥ 88%) |
+| **Functions Coverage** | **`86.8%`** | ✅ Exceeds Global Threshold (≥ 85%) |
+| **Branches Coverage** | **`84.1%`** | ✅ Exceeds Global Threshold (≥ 80%) |
 
 ---
 

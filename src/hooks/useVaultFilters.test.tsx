@@ -83,6 +83,28 @@ describe('useVaultFilters', () => {
     act(() => result.current.removeRecentEntry('github'));
 
     expect(result.current.recentSearches.map((entry) => entry.query)).toEqual(['gmail']);
+
+    act(() => result.current.clearRecent());
+    expect(result.current.recentSearches).toEqual([]);
+  });
+
+  it('resets all advanced filters', () => {
+    const { result } = renderHook(() => useVaultFilters());
+
+    act(() => {
+      result.current.toggleTag('work');
+      result.current.updateDateRange({ from: '2025-01-01', to: '2025-12-31' });
+      result.current.setFuzzyEnabled(false);
+    });
+
+    expect(result.current.selectedTags).toEqual(['work']);
+    expect(result.current.fuzzyEnabled).toBe(false);
+
+    act(() => result.current.resetAdvancedFilters());
+
+    expect(result.current.selectedTags).toEqual([]);
+    expect(result.current.dateRange).toEqual({ from: null, to: null });
+    expect(result.current.fuzzyEnabled).toBe(true);
   });
 });
 

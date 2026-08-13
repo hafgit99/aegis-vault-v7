@@ -10,6 +10,7 @@ import {
   removeSecureStorageItem,
   secureStorageKeys,
   setSecureStorageItem,
+  setSecureStorageItemResult,
 } from './secureStorage';
 
 afterEach(() => {
@@ -78,5 +79,41 @@ describe('secure storage bridge', () => {
     expect(getSecureStorageItem(secureStorageKeys.biometricInfo)).toBeNull();
     expect(setSecureStorageItem(secureStorageKeys.biometricInfo, '{}')).toBe(false);
     expect(removeSecureStorageItem(secureStorageKeys.biometricInfo)).toBe(false);
+  });
+
+  it('handles setSecureStorageItemResult across available, error, and throwing scenarios', () => {
+    // Missing bridge
+    delete window.AegisAndroidSecureStorage;
+    const res1 = setSecureStorageItemResult(secureStorageKeys.rememberedSecretKey, 'secret');
+    expect(res1.success).toBe(false);
+
+    // Bridge with setItem returning true
+    window.AegisAndroidSecureStorage = {
+      getItem: vi.fn(() => null),
+      setItem: vi.fn(() => true),
+      removeItem: vi.fn(() => true),
+    };
+    const res2 = setSecureStorageItemResult(secureStorageKeys.rememberedSecretKey, 'secret');
+    expect(res2.success).toBe(true);
+
+    // Bridge with setItem returning false
+    window.AegisAndroidSecureStorage = {
+      getItem: vi.fn(() => null),
+      setItem: vi.fn(() => false),
+      removeItem: vi.fn(() => false),
+    };
+    const res3 = setSecureStorageItemResult(secureStorageKeys.rememberedSecretKey, 'secret');
+    expect(res3.success).toBe(false);
+
+    // Bridge throwing
+    window.AegisAndroidSecureStorage = {
+      getItem: vi.fn(() => null),
+      setItem: vi.fn(() => {
+        throw new Error('Disk full');
+      }),
+      removeItem: vi.fn(() => false),
+    };
+    const res4 = setSecureStorageItemResult(secureStorageKeys.rememberedSecretKey, 'secret');
+    expect(res4.success).toBe(false);
   });
 });
