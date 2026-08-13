@@ -148,6 +148,15 @@ npm run desktop:release:gate
 # Build Multi-ABI Debug APK
 npm run android:build:apk:debug:aarch64
 
+# Build Production Release APK (Signed Release Candidate for ARM64 / aarch64)
+npm run android:build:apk:aarch64
+
+# Build Universal Release APK (All ABIs: arm64-v8a, armeabi-v7a, x86_64)
+npm run android:build:apk
+
+# Run Android Release Gate (18-step automated release candidate verification)
+npm run android:release:gate
+
 # Run Android Device Doctor & Security Diagnostics
 npm run android:device:doctor
 npm run android:device:smoke
