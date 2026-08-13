@@ -1,6 +1,5 @@
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
-import App from './App.tsx';
 import './index.css';
 import {LanguageProvider} from './i18n/LanguageContext';
 import {ThemeProvider} from './context/ThemeContext';
@@ -24,14 +23,18 @@ if (import.meta.env.PROD) {
 
 const root = createRoot(document.getElementById('root')!);
 
-root.render(
-  <StrictMode>
-    <LanguageProvider>
-      <ThemeProvider>
-        <App />
-      </ThemeProvider>
-    </LanguageProvider>
-  </StrictMode>,
-);
+requestAnimationFrame(() => {
+  revealNativeWindowAfterFirstPaint();
 
-revealNativeWindowAfterFirstPaint();
+  void import('./App.tsx').then(({ default: App }) => {
+    root.render(
+      <StrictMode>
+        <LanguageProvider>
+          <ThemeProvider>
+            <App />
+          </ThemeProvider>
+        </LanguageProvider>
+      </StrictMode>,
+    );
+  });
+});
