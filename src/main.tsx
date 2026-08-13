@@ -21,3 +21,20 @@ root.render(
     </LanguageProvider>
   </StrictMode>,
 );
+
+// Close Tauri native splashscreen and show main window after React mounts
+if (window.__TAURI_INTERNALS__) {
+  import('@tauri-apps/api/webviewWindow').then(async ({ WebviewWindow }) => {
+    const mainWindow = await WebviewWindow.getByLabel('main');
+    const splashWindow = await WebviewWindow.getByLabel('splashscreen');
+
+    if (mainWindow) {
+      await mainWindow.show();
+      await mainWindow.setFocus();
+    }
+    if (splashWindow) {
+      await splashWindow.close();
+    }
+  }).catch(() => {});
+}
+

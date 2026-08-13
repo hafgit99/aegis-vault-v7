@@ -12,6 +12,7 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "Aegis Vault 7",
         "width": 1280,
         "height": 800,
@@ -19,6 +20,20 @@
         "minHeight": 640,
         "resizable": true,
         "fullscreen": false,
+        "visible": false,
+        "backgroundColor": "#121412"
+      },
+      {
+        "label": "splashscreen",
+        "title": "Aegis Vault 7",
+        "url": "splashscreen.html",
+        "width": 400,
+        "height": 320,
+        "resizable": false,
+        "decorations": false,
+        "transparent": false,
+        "center": true,
+        "alwaysOnTop": true,
         "backgroundColor": "#121412"
       }
     ],
