@@ -1,9 +1,19 @@
 const path = require('path');
+const os = require('os');
 const { spawnSync } = require('child_process');
 
 const rootDir = path.resolve(__dirname, '..');
 const args = process.argv.slice(2);
 const isWindows = process.platform === 'win32';
+
+if (
+  isWindows &&
+  !process.env.CARGO_TARGET_DIR &&
+  rootDir.toLowerCase().includes(`${path.sep}onedrive${path.sep}`)
+) {
+  process.env.CARGO_TARGET_DIR = path.join(os.tmpdir(), 'aegis-vault-v7-tauri-target');
+  console.log('Using a local Cargo target directory to avoid OneDrive build locks: ' + process.env.CARGO_TARGET_DIR);
+}
 
 const platform = getArgValue('--platform') || detectPlatform();
 const dryRun = hasFlag('--dry-run');

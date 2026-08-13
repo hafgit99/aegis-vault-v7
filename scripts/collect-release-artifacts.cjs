@@ -4,7 +4,9 @@ const crypto = require('crypto');
 const { execFileSync } = require('child_process');
 
 const rootDir = path.resolve(__dirname, '..');
-const targetDir = path.join(rootDir, 'src-tauri', 'target');
+const targetDir = process.env.CARGO_TARGET_DIR
+  ? path.resolve(process.env.CARGO_TARGET_DIR)
+  : path.join(rootDir, 'src-tauri', 'target');
 const releaseLocalDir = path.join(rootDir, 'release-local');
 const packageJson = require(path.join(rootDir, 'package.json'));
 
