@@ -785,10 +785,7 @@ pub fn run() {
 
     let app = builder
         .on_page_load(|webview, payload| {
-            if matches!(
-                payload.event(),
-                tauri::webview::PageLoadEvent::Finished
-            ) {
+            if matches!(payload.event(), tauri::webview::PageLoadEvent::Finished) {
                 let _ = webview.window().show();
             }
         })
