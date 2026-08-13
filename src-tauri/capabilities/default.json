@@ -3,14 +3,11 @@
   "identifier": "default",
   "description": "enables the default permissions",
   "windows": [
-    "main",
-    "splashscreen"
+    "main"
   ],
   "permissions": [
     "core:default",
-    "core:window:default",
-    "core:webview:default",
     "biometric:default"
   ]
-
 }
+
