@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   Unlock, 
   ShieldAlert, 
@@ -11,20 +11,13 @@ import {
   Eye, 
   EyeOff, 
   Trash2,
-  KeyRound,
-  Download,
-  Languages,
-  AlertTriangle,
-  RotateCcw,
-  Smartphone,
-  Key,
-  HelpCircle,
-  X,
-  Lightbulb,
-  Check,
+  KeyRound, 
+  Download, 
+  RotateCcw, 
+  Smartphone, 
+  HelpCircle 
 } from 'lucide-react';
 import {
-  changeMasterPassword,
   getRememberedAccountSecretKey,
   isAccountSecretKeyRequired,
   isMasterPasswordSet,
@@ -35,7 +28,6 @@ import {
 import { authenticateBiometric, isBiometricEnabled, isBiometricSupported, getBiometricType } from '../lib/biometric';
 import { APP_NAME } from '../lib/branding';
 import { useLanguage } from '../i18n/LanguageContext';
-import { supportedLanguages, languageLabels, languageFlags, type LanguageCode } from '../i18n/translations';
 import {
   generateAccountSecretKey,
   isAccountSecretKeyFormatValid,
@@ -43,10 +35,12 @@ import {
 import aegisLogo from '../../assets/aegis-app-icon.png';
 import { saveEmergencyKit } from '../lib/emergencyKit';
 import { validateMasterPassword } from '../lib/security';
-import { isRecoveryKeySetup, recoverWithRecoveryKey } from '../lib/recoveryKey';
-import { getPasswordHint } from '../lib/passwordHint';
+import { LockScreenHeader } from './lock/LockScreenHeader';
+import { LockScreenSecretKeySection } from './lock/LockScreenSecretKeySection';
+import { LockScreenBiometricSection } from './lock/LockScreenBiometricSection';
+import { LockScreenResetModal } from './lock/LockScreenResetModal';
+import { LockScreenRecoveryModal } from './lock/LockScreenRecoveryModal';
 
-const MIN_MASTER_PASSWORD_LENGTH = 12;
 const LOCKOUT_STORAGE_KEY = 'aegis_lockout_state';
 const MAX_LOCKOUT_MS = 5 * 60 * 1000;
 
@@ -115,8 +109,8 @@ interface LockScreenProps {
   integrityWarning?: boolean;
 }
 
-export default function LockScreen({ onUnlock, isAutofillPending = false, integrityWarning = false }: LockScreenProps) {
-  const { language, setLanguage, t } = useLanguage();
+export default function LockScreen({ onUnlock = () => {}, isAutofillPending = false, integrityWarning = false }: LockScreenProps) {
+  const { t } = useLanguage();
   const isSetup = isMasterPasswordSet();
   const requiresSecretKey = isAccountSecretKeyRequired();
   const rememberedSecretKey = getRememberedAccountSecretKey();
@@ -134,86 +128,17 @@ export default function LockScreen({ onUnlock, isAutofillPending = false, integr
   // Biometric Unlock States
   const [biometricError, setBiometricError] = useState<string | null>(null);
   const [biometricLoading, setBiometricLoading] = useState(false);
-  const isBiometricPendingRef = React.useRef(false);
-  const hasAutoTriggeredRef = React.useRef(false);
+  const isBiometricPendingRef = useRef(false);
+  const hasAutoTriggeredRef = useRef(false);
 
   // Password Recovery Center States
   const [showRecoveryModal, setShowRecoveryModal] = useState(false);
-  const [activeRecoveryTab, setActiveRecoveryTab] = useState<'key' | 'hint' | 'biometric'>('key');
-  const [recoveryInputWords, setRecoveryInputWords] = useState('');
-  const [recoveredMasterPassword, setRecoveredMasterPassword] = useState<string | null>(null);
-  const [recoveryNewPassword, setRecoveryNewPassword] = useState('');
-  const [recoveryConfirmPassword, setRecoveryConfirmPassword] = useState('');
-  const [recoveryModalError, setRecoveryModalError] = useState<string | null>(null);
-  const [recoveryModalSuccess, setRecoveryModalSuccess] = useState<string | null>(null);
-  const [recoveryModalLoading, setRecoveryModalLoading] = useState(false);
-
-  const handleRecoverWithKey = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setRecoveryModalError(null);
-    setRecoveryModalLoading(true);
-
-    const words = recoveryInputWords.trim().split(/\s+/);
-    try {
-      const decryptedMaster = await recoverWithRecoveryKey(words);
-      setRecoveredMasterPassword(decryptedMaster);
-      setRecoveryModalError(null);
-    } catch (err) {
-      setRecoveryModalError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setRecoveryModalLoading(false);
-    }
-  };
-
-  const handleRecoverWithBiometric = async () => {
-    setRecoveryModalError(null);
-    setRecoveryModalLoading(true);
-    try {
-      const decryptedMaster = await authenticateBiometric();
-      setRecoveredMasterPassword(decryptedMaster);
-      setRecoveryModalError(null);
-    } catch (err: any) {
-      setRecoveryModalError(getBiometricUnlockErrorMessage(err, t));
-    } finally {
-      setRecoveryModalLoading(false);
-    }
-  };
-
-  const handleApplyNewPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!recoveredMasterPassword) return;
-
-    if (!validateMasterPassword(recoveryNewPassword)) {
-      setRecoveryModalError(t('lock.error.complexity'));
-      return;
-    }
-    if (recoveryNewPassword !== recoveryConfirmPassword) {
-      setRecoveryModalError(t('lock.error.confirmationMismatch'));
-      return;
-    }
-
-    setRecoveryModalLoading(true);
-    setRecoveryModalError(null);
-
-    try {
-      await changeMasterPassword(recoveredMasterPassword, recoveryNewPassword);
-      setRecoveryModalSuccess(t('lock.recoveryModal.newPasswordSuccess'));
-      clearLockoutState();
-      setTimeout(() => {
-        onUnlock();
-      }, 800);
-    } catch (err) {
-      setRecoveryModalError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setRecoveryModalLoading(false);
-    }
-  };
 
   const isBioEnabled = isBiometricEnabled();
   const lockoutRemainingSeconds = Math.ceil(lockoutRemainingMs / 1000);
   const isLockedOut = lockoutRemainingMs > 0;
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isLockedOut) return;
 
     const interval = window.setInterval(() => {
@@ -226,7 +151,7 @@ export default function LockScreen({ onUnlock, isAutofillPending = false, integr
   const getRateLimitMessage = (remainingSeconds: number) =>
     `${t('lock.error.rateLimitedPrefix')} ${remainingSeconds} ${t('lock.error.rateLimitedSuffix')}`;
 
-  const handleBiometricUnlock = React.useCallback(async () => {
+  const handleBiometricUnlock = useCallback(async () => {
     if (isBiometricPendingRef.current) return;
     isBiometricPendingRef.current = true;
     
@@ -253,7 +178,7 @@ export default function LockScreen({ onUnlock, isAutofillPending = false, integr
   }, [onUnlock, rememberedSecretKey, t]);
 
   // Auto trigger biometric prompt on lock screen if enabled
-  React.useEffect(() => {
+  useEffect(() => {
     if (isSetup && isBioEnabled && !hasAutoTriggeredRef.current) {
       hasAutoTriggeredRef.current = true;
       const timer = setTimeout(() => {
@@ -328,6 +253,26 @@ export default function LockScreen({ onUnlock, isAutofillPending = false, integr
     }
   };
 
+  const handleConfirmReset = async () => {
+    setResetLoading(true);
+    try {
+      await resetSystem();
+      clearLockoutState();
+      setShowResetConfirm(false);
+      setPassword('');
+      setConfirmPassword('');
+      setError(null);
+      // Force full page reload to reset all in-memory state
+      window.location.reload();
+    } catch (err) {
+      console.error('[AegisVault] Reset failed:', err);
+      setError(err instanceof Error ? err.message : String(err));
+      setShowResetConfirm(false);
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <div className="safe-screen bg-brand-bg text-on-surface flex flex-col justify-between relative overflow-hidden select-none">
       <div className="absolute inset-0 bg-[linear-gradient(rgba(220,225,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(220,225,255,0.025)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
@@ -335,23 +280,7 @@ export default function LockScreen({ onUnlock, isAutofillPending = false, integr
       <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-brand-tertiary/5 blur-[120px] rounded-full pointer-events-none" />
 
       {/* Top Bar with Language Selector */}
-      <header className="absolute top-[max(env(safe-area-inset-top),0.5rem)] right-[max(env(safe-area-inset-right),1rem)] sm:right-[max(env(safe-area-inset-right),1.5rem)] z-50">
-        <div className="flex items-center gap-2 bg-surface-low/60 backdrop-blur-md rounded-lg px-3 py-1.5 border border-outline-variant/10">
-          <Languages className="w-4 h-4 text-brand-primary" />
-          <select
-            data-testid="lock-language-select"
-            value={language}
-            onChange={(e) => setLanguage(e.target.value as LanguageCode)}
-            className="bg-transparent text-xs font-bold text-on-surface focus:outline-none cursor-pointer pr-1"
-          >
-            {supportedLanguages.map((code) => (
-              <option key={code} value={code} className="bg-surface-lowest text-on-surface">
-                {languageFlags[code]}  {languageLabels[code]}
-              </option>
-            ))}
-          </select>
-        </div>
-      </header>
+      <LockScreenHeader />
 
       {integrityWarning && (
         <div
@@ -368,6 +297,7 @@ export default function LockScreen({ onUnlock, isAutofillPending = false, integr
           </div>
         </div>
       )}
+
       <div className="flex-1 w-full max-w-6xl mx-auto px-4 py-1 sm:py-2 flex items-center justify-center relative z-10">
         <div className="w-full flex items-center justify-center">
           <div className="w-full flex flex-col lg:flex-row items-center lg:items-stretch gap-6 lg:gap-10">
@@ -563,57 +493,16 @@ export default function LockScreen({ onUnlock, isAutofillPending = false, integr
                   </div>
                 )}
 
-                {(!isSetup || requiresSecretKey) && (
-                  <div className="rounded-2xl glass-panel p-3 sm:p-4 space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center text-brand-primary shrink-0">
-                        <KeyRound className="w-4.5 h-4.5" />
-                      </div>
-                      <div className="text-left">
-                        <p className="text-xs font-bold text-on-surface">{t('lock.secret.title')}</p>
-                      </div>
-                    </div>
-
-                    <label className="block">
-                      <span className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase mb-2">
-                        {t('lock.secret.label')}
-                      </span>
-                      <input
-                        data-testid="lock-secret-key-input"
-                        type="text"
-                        value={secretKey}
-                        onChange={(e) => setSecretKey(e.target.value)}
-                        readOnly={!isSetup}
-                        className="w-full bg-surface-lowest border border-outline-variant/30 rounded-xl px-3 py-2.5 sm:py-3 text-on-surface focus:ring-2 focus:ring-brand-primary/20 focus:outline-none transition-all text-center tracking-wider text-xs font-mono"
-                        placeholder="A3-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
-                        required={requiresSecretKey}
-                      />
-                    </label>
-
-                    <label className="flex items-start gap-2 text-left text-[11px] text-on-surface-variant cursor-pointer">
-                      <input
-                        data-testid="lock-remember-secret-key-checkbox"
-                        type="checkbox"
-                        checked={rememberSecretKey}
-                        onChange={(e) => setRememberSecretKey(e.target.checked)}
-                        className="mt-0.5 accent-brand-primary"
-                      />
-                      <span>{t('lock.secret.rememberThisDevice')}</span>
-                    </label>
-
-                    {!isSetup && (
-                      <button
-                        data-testid="lock-emergency-kit-button"
-                        type="button"
-                        onClick={handleDownloadEmergencyKit}
-                        className="w-full flex items-center justify-center gap-2 text-xs font-bold border border-brand-primary/25 bg-brand-primary/10 hover:bg-brand-primary/15 text-brand-primary py-2.5 sm:py-3 rounded-xl transition-all cursor-pointer"
-                      >
-                        <Download className="w-4 h-4" />
-                        <span>{t('lock.secret.downloadEmergencyKit')}</span>
-                      </button>
-                    )}
-                  </div>
-                )}
+                {/* Secret Key Section */}
+                <LockScreenSecretKeySection
+                  secretKey={secretKey}
+                  setSecretKey={setSecretKey}
+                  isSetup={isSetup}
+                  requiresSecretKey={requiresSecretKey}
+                  rememberSecretKey={rememberSecretKey}
+                  setRememberSecretKey={setRememberSecretKey}
+                  onDownloadEmergencyKit={handleDownloadEmergencyKit}
+                />
 
                 {/* CTA Action button */}
                 <button
@@ -636,27 +525,13 @@ export default function LockScreen({ onUnlock, isAutofillPending = false, integr
                 </button>
 
                 {/* Biometric Trigger Button */}
-                {isSetup && isBioEnabled && (
-                  <button
-                    type="button"
-                    disabled={biometricLoading}
-                    onClick={handleBiometricUnlock}
-                    className="w-full flex items-center justify-center gap-2.5 bg-brand-primary/10 border border-brand-primary/30 hover:bg-brand-primary/20 text-brand-primary py-3.5 rounded-xl font-bold transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer animate-fade-in"
-                  >
-                    {getBiometricType() === 'cross-platform' ? (
-                      <Key className={`w-4.5 h-4.5 text-brand-primary ${biometricLoading ? 'animate-ping' : 'animate-pulse'}`} />
-                    ) : (
-                      <Fingerprint className={`w-4.5 h-4.5 text-brand-primary ${biometricLoading ? 'animate-ping' : 'animate-pulse'}`} />
-                    )}
-                    <span>
-                      {biometricLoading 
-                        ? t('lock.action.biometricLoading') 
-                        : getBiometricType() === 'cross-platform'
-                          ? t('lock.action.biometricFido2')
-                          : t('lock.action.biometricPlatform')}
-                    </span>
-                  </button>
-                )}
+                <LockScreenBiometricSection
+                  isSetup={isSetup}
+                  isBioEnabled={isBioEnabled}
+                  biometricLoading={biometricLoading}
+                  biometricType={getBiometricType()}
+                  onBiometricUnlock={handleBiometricUnlock}
+                />
               </form>
 
               {/* Recovery Options & Reset Vault - only shown when vault is already set up */}
@@ -665,12 +540,7 @@ export default function LockScreen({ onUnlock, isAutofillPending = false, integr
                   <button
                     data-testid="lock-forgot-password-button"
                     type="button"
-                    onClick={() => {
-                      setShowRecoveryModal(true);
-                      setRecoveredMasterPassword(null);
-                      setRecoveryModalError(null);
-                      setRecoveryModalSuccess(null);
-                    }}
+                    onClick={() => setShowRecoveryModal(true)}
                     className="w-full flex items-center justify-center gap-2 text-xs font-bold text-brand-primary hover:text-brand-primary/80 py-2.5 rounded-xl transition-all cursor-pointer bg-brand-primary/5 border border-brand-primary/10 hover:bg-brand-primary/10"
                   >
                     <HelpCircle className="w-4 h-4" />
@@ -696,293 +566,20 @@ export default function LockScreen({ onUnlock, isAutofillPending = false, integr
       </div>
 
       {/* Reset Confirmation Modal */}
-      {showResetConfirm && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-sm mx-4 surface-panel rounded-2xl p-6 space-y-5 animate-fade-in">
-            <div className="flex flex-col items-center text-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-red-400" />
-              </div>
-              <h2 className="font-display text-lg font-bold text-on-surface">{t('lock.reset.title')}</h2>
-              <p className="text-xs text-on-surface-variant leading-relaxed">
-                {t('lock.reset.description')}
-              </p>
-            </div>
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-red-500/5 border border-red-500/15">
-              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-              <p className="text-[11px] text-red-400 font-medium leading-relaxed">
-                {t('lock.reset.warning')}
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                data-testid="lock-reset-cancel-button"
-                type="button"
-                onClick={() => setShowResetConfirm(false)}
-                disabled={resetLoading}
-                className="flex-1 py-3 rounded-xl border border-outline-variant/20 text-on-surface text-xs font-bold hover:bg-surface-low transition-all cursor-pointer"
-              >
-                {t('lock.reset.cancel')}
-              </button>
-              <button
-                data-testid="lock-reset-confirm-button"
-                type="button"
-                disabled={resetLoading}
-                onClick={async () => {
-                  setResetLoading(true);
-                  try {
-                    await resetSystem();
-                    clearLockoutState();
-                    setShowResetConfirm(false);
-                    setPassword('');
-                    setConfirmPassword('');
-                    setError(null);
-                    // Force full page reload to reset all in-memory state
-                    window.location.reload();
-                  } catch (err) {
-                    console.error('[AegisVault] Reset failed:', err);
-                    setError(err instanceof Error ? err.message : String(err));
-                    setShowResetConfirm(false);
-                  } finally {
-                    setResetLoading(false);
-                  }
-                }}
-                className="flex-1 py-3 rounded-xl bg-red-500/90 hover:bg-red-500 text-white text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2"
-              >
-                {resetLoading ? (
-                  <RotateCcw className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <Trash2 className="w-3.5 h-3.5" />
-                )}
-                <span>{resetLoading ? t('lock.reset.resetting') : t('lock.reset.confirm')}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <LockScreenResetModal
+        isOpen={showResetConfirm}
+        onClose={() => setShowResetConfirm(false)}
+        onConfirmReset={handleConfirmReset}
+        resetLoading={resetLoading}
+      />
 
       {/* Password Recovery Center Modal */}
-      {showRecoveryModal && (
-        <div data-testid="lock-recovery-modal" className="fixed inset-0 z-[200] flex items-center justify-center bg-black/75 backdrop-blur-md animate-fade-in p-4 overflow-y-auto">
-          <div className="w-full max-w-lg surface-panel rounded-2xl p-6 space-y-5 my-8 relative border border-outline-variant/15">
-            <button
-              data-testid="lock-recovery-modal-close"
-              type="button"
-              onClick={() => setShowRecoveryModal(false)}
-              className="absolute top-4 right-4 p-2 text-on-surface-variant hover:text-on-surface rounded-lg cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="space-y-1 pr-8">
-              <div className="flex items-center gap-2">
-                <HelpCircle className="w-5 h-5 text-brand-primary" />
-                <h2 className="font-display text-lg font-bold text-on-surface">
-                  {t('lock.recoveryModal.title')}
-                </h2>
-              </div>
-              <p className="text-xs text-on-surface-variant leading-relaxed">
-                {t('lock.recoveryModal.subtitle')}
-              </p>
-            </div>
-
-            {/* Recovery Method Tabs */}
-            {!recoveredMasterPassword && (
-              <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-surface-lowest border border-outline-variant/15 text-xs font-bold">
-                <button
-                  data-testid="lock-recovery-tab-key"
-                  type="button"
-                  onClick={() => { setActiveRecoveryTab('key'); setRecoveryModalError(null); }}
-                  className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    activeRecoveryTab === 'key'
-                      ? 'bg-brand-primary/15 text-brand-primary border border-brand-primary/20 shadow-sm'
-                      : 'text-on-surface-variant hover:text-on-surface'
-                  }`}
-                >
-                  <KeyRound className="w-3.5 h-3.5" />
-                  <span>{t('lock.recoveryModal.tabKey')}</span>
-                </button>
-
-                <button
-                  data-testid="lock-recovery-tab-hint"
-                  type="button"
-                  onClick={() => { setActiveRecoveryTab('hint'); setRecoveryModalError(null); }}
-                  className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    activeRecoveryTab === 'hint'
-                      ? 'bg-brand-primary/15 text-brand-primary border border-brand-primary/20 shadow-sm'
-                      : 'text-on-surface-variant hover:text-on-surface'
-                  }`}
-                >
-                  <Lightbulb className="w-3.5 h-3.5" />
-                  <span>{t('lock.recoveryModal.tabHint')}</span>
-                </button>
-
-                <button
-                  data-testid="lock-recovery-tab-biometric"
-                  type="button"
-                  onClick={() => { setActiveRecoveryTab('biometric'); setRecoveryModalError(null); }}
-                  className={`py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    activeRecoveryTab === 'biometric'
-                      ? 'bg-brand-primary/15 text-brand-primary border border-brand-primary/20 shadow-sm'
-                      : 'text-on-surface-variant hover:text-on-surface'
-                  }`}
-                >
-                  <Fingerprint className="w-3.5 h-3.5" />
-                  <span>{t('lock.recoveryModal.tabBiometric')}</span>
-                </button>
-              </div>
-            )}
-
-            {/* Error / Success Banners */}
-            {recoveryModalError && (
-              <div data-testid="lock-recovery-error" className="flex items-start gap-2.5 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-400">
-                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>{recoveryModalError}</span>
-              </div>
-            )}
-            {recoveryModalSuccess && (
-              <div data-testid="lock-recovery-success" className="flex items-start gap-2.5 p-3 rounded-xl bg-brand-tertiary/10 border border-brand-tertiary/20 text-xs text-brand-tertiary">
-                <Check className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>{recoveryModalSuccess}</span>
-              </div>
-            )}
-
-            {/* Tab 1: Recovery Key */}
-            {!recoveredMasterPassword && activeRecoveryTab === 'key' && (
-              <div className="space-y-4">
-                {!isRecoveryKeySetup() ? (
-                  <p className="text-xs text-on-surface-variant/60 py-4 text-center">
-                    {t('lock.recoveryModal.noKey')}
-                  </p>
-                ) : (
-                  <form onSubmit={handleRecoverWithKey} className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-bold text-on-surface mb-1.5">
-                        {t('lock.recoveryModal.enterWords')}
-                      </label>
-                      <textarea
-                        data-testid="lock-recovery-words-input"
-                        value={recoveryInputWords}
-                        onChange={(e) => setRecoveryInputWords(e.target.value)}
-                        placeholder="abandon ability able about above absent absorb abstract absurd abuse access accident..."
-                        className="w-full h-28 bg-surface-lowest border border-outline-variant/20 rounded-xl p-3 text-xs font-mono text-on-surface placeholder-on-surface-variant/30 focus:outline-none focus:ring-1 focus:ring-brand-primary"
-                        required
-                      />
-                    </div>
-                    <button
-                      data-testid="lock-recovery-submit-button"
-                      type="submit"
-                      disabled={recoveryModalLoading}
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-brand-primary text-brand-on-primary text-xs font-bold hover:brightness-110 transition-all cursor-pointer"
-                    >
-                      {recoveryModalLoading ? <RotateCcw className="w-4 h-4 animate-spin" /> : <Unlock className="w-4 h-4" />}
-                      <span>{t('lock.recoveryModal.verifyWords')}</span>
-                    </button>
-                  </form>
-                )}
-              </div>
-            )}
-
-            {/* Tab 2: Password Hint */}
-            {!recoveredMasterPassword && activeRecoveryTab === 'hint' && (
-              <div className="space-y-3 py-2">
-                {getPasswordHint() ? (
-                  <div data-testid="lock-recovery-hint-content" className="p-4 rounded-xl bg-surface-lowest border border-outline-variant/20 space-y-2">
-                    <p className="text-xs font-bold text-amber-400 flex items-center gap-2">
-                      <Lightbulb className="w-4 h-4" />
-                      {t('lock.recoveryModal.hintText')}
-                    </p>
-                    <p className="text-sm font-medium text-on-surface bg-surface-low p-3 rounded-lg border border-outline-variant/10">
-                      "{getPasswordHint()}"
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-xs text-on-surface-variant/60 py-4 text-center">
-                    {t('lock.recoveryModal.noHint')}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Tab 3: Biometric Recovery */}
-            {!recoveredMasterPassword && activeRecoveryTab === 'biometric' && (
-              <div className="space-y-4 py-2">
-                {!isBioEnabled ? (
-                  <p className="text-xs text-on-surface-variant/60 py-4 text-center">
-                    {t('lock.recoveryModal.noBiometric')}
-                  </p>
-                ) : (
-                  <div className="space-y-4 text-center">
-                    <p className="text-xs text-on-surface-variant leading-relaxed">
-                      {t('lock.recoveryModal.biometricPrompt')}
-                    </p>
-                    <button
-                      data-testid="lock-recovery-biometric-button"
-                      type="button"
-                      onClick={handleRecoverWithBiometric}
-                      disabled={recoveryModalLoading}
-                      className="w-full flex items-center justify-center gap-2.5 bg-brand-primary/10 border border-brand-primary/30 hover:bg-brand-primary/20 text-brand-primary py-3.5 rounded-xl font-bold transition-all cursor-pointer"
-                    >
-                      <Fingerprint className="w-5 h-5 text-brand-primary" />
-                      <span>{t('lock.recoveryModal.biometricButton')}</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Step 2: Set New Password (after key or biometric decryption) */}
-            {recoveredMasterPassword && (
-              <form onSubmit={handleApplyNewPassword} className="space-y-4 animate-fade-in">
-                <div className="p-3 rounded-xl bg-brand-tertiary/10 border border-brand-tertiary/20 text-xs text-brand-tertiary font-bold flex items-center gap-2">
-                  <Check className="w-4 h-4 shrink-0" />
-                  <span>{t('lock.recoveryModal.newPasswordTitle')}</span>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">
-                    {t('lock.field.newMasterPassword')}
-                  </label>
-                  <input
-                    data-testid="lock-recovery-new-password"
-                    type="password"
-                    value={recoveryNewPassword}
-                    onChange={(e) => setRecoveryNewPassword(e.target.value)}
-                    className="w-full bg-surface-lowest border border-outline-variant/20 rounded-xl px-4 py-3 text-sm text-on-surface font-mono"
-                    placeholder="••••••••"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-on-surface-variant uppercase mb-1">
-                    {t('lock.field.confirmPassword')}
-                  </label>
-                  <input
-                    data-testid="lock-recovery-confirm-password"
-                    type="password"
-                    value={recoveryConfirmPassword}
-                    onChange={(e) => setRecoveryConfirmPassword(e.target.value)}
-                    className="w-full bg-surface-lowest border border-outline-variant/20 rounded-xl px-4 py-3 text-sm text-on-surface font-mono"
-                    placeholder="••••••••"
-                    required
-                  />
-                </div>
-
-                <button
-                  data-testid="lock-recovery-apply-button"
-                  type="submit"
-                  disabled={recoveryModalLoading}
-                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-brand-primary text-brand-on-primary font-bold text-xs hover:brightness-110 transition-all cursor-pointer"
-                >
-                  {recoveryModalLoading ? <RotateCcw className="w-4 h-4 animate-spin" /> : <Unlock className="w-4 h-4" />}
-                  <span>{t('lock.action.unlock')}</span>
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
+      <LockScreenRecoveryModal
+        isOpen={showRecoveryModal}
+        onClose={() => setShowRecoveryModal(false)}
+        onUnlockedAfterRecovery={onUnlock}
+        onClearLockoutState={clearLockoutState}
+      />
 
       {/* Futuristic clean footer */}
       <footer className="hidden w-full border-t border-outline-variant/5 py-4 bg-surface-lowest/40 text-center text-[10px] text-on-surface-variant/30 font-mono flex-col sm:flex-row items-center justify-between px-6 gap-2">

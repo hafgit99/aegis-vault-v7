@@ -61,6 +61,10 @@ import { SettingsSyncSection } from './settings/SettingsSyncSection';
 import { SettingsBackupSection } from './settings/SettingsBackupSection';
 import { SettingsRecoverySection } from './settings/SettingsRecoverySection';
 import { SettingsDangerZone } from './settings/SettingsDangerZone';
+import { SettingsEmergencyKitCard } from './settings/SettingsEmergencyKitCard';
+import { SettingsAutoLockCard } from './settings/SettingsAutoLockCard';
+import { SettingsStorageMigrationCard } from './settings/SettingsStorageMigrationCard';
+import { SettingsExtensionTokenCard } from './settings/SettingsExtensionTokenCard';
 import PasswordConfirmModal from './PasswordConfirmModal';
 import { PasskeyManager } from './PasskeyManager';
 import {
@@ -1428,96 +1432,22 @@ export default function SettingsPanel({
       </div>
 
       {/* Emergency Kit Card */}
-      <div data-testid="settings-emergency-kit-card" className="glass-panel p-4 sm:p-6 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 items-center border border-outline-variant/10" id="emergency-kit-settings-card">
-        <div className="md:col-span-1 space-y-1.5">
-          <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2">
-            <Download className="w-4 h-4 text-brand-secondary" />
-            <span>{t('settings.emergencyKit.title')}</span>
-          </h3>
-          <p className="hidden sm:block text-xs text-on-surface-variant leading-relaxed">
-            {t('settings.emergencyKit.description')}
-          </p>
-        </div>
-
-        <div className="md:col-span-2 space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end bg-surface-low p-3 sm:p-4 rounded-xl border border-outline-variant/10">
-            <div>
-              <label className="block text-[10px] font-bold text-on-surface-variant/85 uppercase mb-1.5">
-                {t('settings.emergencyKit.secretKeyLabel')}
-              </label>
-              <input
-                data-testid="settings-emergency-secret-key-input"
-                type="password"
-                value={emergencySecretKey}
-                onChange={(e) => setEmergencySecretKey(e.target.value)}
-                className="w-full bg-surface-lowest border border-outline-variant/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 text-on-surface"
-                placeholder={t('settings.emergencyKit.secretKeyPlaceholder')}
-                autoComplete="off"
-                spellCheck={false}
-              />
-              <p className="mt-1.5 text-[11px] text-on-surface-variant leading-relaxed">
-                {t('settings.emergencyKit.rememberedHint')}
-              </p>
-            </div>
-            <button
-              data-testid="settings-emergency-kit-download-button"
-              type="button"
-              onClick={handleDownloadEmergencyKitFromSettings}
-              className="px-5 py-2.5 rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 shrink-0 bg-brand-secondary text-black hover:brightness-110 shadow-md shadow-brand-secondary/10"
-            >
-              <Download className="w-4 h-4" />
-              <span>{t('settings.emergencyKit.download')}</span>
-            </button>
-          </div>
-
-          {emergencyKitSuccess && (
-            <div data-testid="settings-emergency-kit-success" className="p-3 bg-brand-tertiary/10 border border-brand-tertiary/20 rounded-lg text-brand-tertiary text-xs leading-relaxed animate-fade-in flex items-start gap-2">
-              <Check className="w-4 h-4 shrink-0 text-brand-tertiary mt-0.5" />
-              <span>{emergencyKitSuccess}</span>
-            </div>
-          )}
-
-          {emergencyKitError && (
-            <div data-testid="settings-emergency-kit-error" className="p-3 bg-brand-error/10 border border-brand-error/20 rounded-lg text-brand-error text-xs leading-relaxed animate-fade-in flex items-start gap-2">
-              <ShieldAlert className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
-              <span>{emergencyKitError}</span>
-            </div>
-          )}
-        </div>
-      </div>
+      <SettingsEmergencyKitCard
+        emergencySecretKey={emergencySecretKey}
+        onEmergencySecretKeyChange={setEmergencySecretKey}
+        emergencyKitSuccess={emergencyKitSuccess}
+        emergencyKitError={emergencyKitError}
+        onDownloadEmergencyKit={handleDownloadEmergencyKitFromSettings}
+        t={t}
+      />
 
       {/* Dynamic Auto-Lock Interval Card */}
-      <div className="glass-panel p-4 sm:p-6 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 items-center" id="auto-lock-settings-card">
-        <div className="md:col-span-1 space-y-1.5">
-          <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2">
-            <Clock className="w-4 h-4 text-amber-400" />
-            <span>{t('settings.autoLock.title')}</span>
-          </h3>
-          <p className="hidden sm:block text-xs text-on-surface-variant">
-            {t('settings.autoLock.description')}
-          </p>
-        </div>
-        
-        <div className="md:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {lockOptions.map((opt) => {
-            const isSelected = autoLockDuration === opt.value;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => onAutoLockDurationChange(opt.value)}
-                className={`py-3 px-2 rounded-xl text-xs font-bold text-center border transition-all cursor-pointer ${
-                  isSelected
-                    ? 'border-brand-primary bg-brand-primary/15 text-brand-primary shadow-md'
-                    : 'border-outline-variant/15 bg-surface-low hover:bg-surface-container text-on-surface-variant hover:text-on-surface'
-                }`}
-              >
-                {opt.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <SettingsAutoLockCard
+        autoLockDuration={autoLockDuration}
+        lockOptions={lockOptions}
+        onAutoLockDurationChange={onAutoLockDurationChange}
+        t={t}
+      />
 
       {/* Biometric Lock Settings Card */}
       <SettingsBiometricCard
@@ -1592,55 +1522,12 @@ export default function SettingsPanel({
       />
 
       {/* Storage Backend Migration Section */}
-      <div className="p-4 sm:p-6 bg-surface-elevated border border-white/5 rounded-2xl space-y-4" id="storage-backend-section">
-        <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2 border-b border-white/10 pb-2">
-          <Database className="w-4 h-4 text-brand-primary" />
-          <span>{t('settings.storageMigration.title')}</span>
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-start">
-          <div className="space-y-3">
-            <p className="text-xs text-on-surface-variant leading-relaxed">
-              {t('settings.storageMigration.description')}
-            </p>
-            <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-wider font-semibold">
-              <span className="px-2.5 py-1 rounded-full border border-white/10 bg-surface text-on-surface-variant">
-                {t('settings.storageMigration.current')}
-              </span>
-              <span className="px-2.5 py-1 rounded-full border border-brand-primary/30 bg-brand-primary/10 text-brand-primary">
-                {t('settings.storageMigration.target')}
-              </span>
-            </div>
-          </div>
-          <button
-            data-testid="wa-sqlite-migration-button"
-            onClick={handleWaSqliteMigration}
-            disabled={storageMigrationStatus === 'running'}
-            className="flex min-h-11 items-center justify-center gap-2 rounded-lg bg-brand-primary px-4 py-2.5 text-xs font-bold text-brand-on-primary transition-all hover:opacity-90 disabled:opacity-60 cursor-pointer"
-          >
-            {storageMigrationStatus === 'running' ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
-            ) : (
-              <Database className="w-4 h-4" />
-            )}
-            <span>{storageMigrationStatus === 'running' ? t('settings.storageMigration.running') : t('settings.storageMigration.button')}</span>
-          </button>
-        </div>
-        {storageMigrationMessage && (
-          <div
-            data-testid="wa-sqlite-migration-message"
-            className={`flex items-start gap-2 rounded-lg border p-3 text-xs ${
-              storageMigrationStatus === 'promoted'
-                ? 'border-brand-tertiary/20 bg-brand-tertiary/10 text-brand-tertiary'
-                : storageMigrationStatus === 'blocked'
-                  ? 'border-yellow-500/20 bg-yellow-500/10 text-yellow-200'
-                  : 'border-brand-error/20 bg-brand-error/10 text-brand-error'
-            }`}
-          >
-            {storageMigrationStatus === 'promoted' ? <CheckCircle className="mt-0.5 w-3.5 h-3.5" /> : <AlertCircle className="mt-0.5 w-3.5 h-3.5" />}
-            <span>{storageMigrationMessage}</span>
-          </div>
-        )}
-      </div>
+      <SettingsStorageMigrationCard
+        storageMigrationStatus={storageMigrationStatus}
+        storageMigrationMessage={storageMigrationMessage}
+        onMigrate={handleWaSqliteMigration}
+        t={t}
+      />
 
       {/* Cloud Sync (E2EE) Section */}
       <SettingsSyncSection
@@ -1675,32 +1562,13 @@ export default function SettingsPanel({
         t={t}
       />
 
-      {/* Extension Token Rotation â€” desktop only */}
-      {typeof window !== 'undefined' && window.__TAURI_INTERNALS__ && (
-        <div className="p-4 sm:p-6 bg-brand-surface-container rounded-2xl border border-white/8 space-y-3" id="extension-token-section">
-          <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2 border-b border-white/5 pb-2">
-            <RefreshCw className="w-4 h-4 text-brand-primary" />
-            <span>{t('settings.extension.title')}</span>
-          </h3>
-          <p className="text-xs text-on-surface-variant leading-relaxed">
-            {t('settings.extension.description')}
-          </p>
-          <button
-            id="rotate-extension-token-btn"
-            onClick={handleRotatePairingToken}
-            disabled={tokenRotateStatus === 'loading'}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-brand-primary/40 hover:bg-brand-primary/10 text-brand-primary font-semibold text-xs transition-all disabled:opacity-50 cursor-pointer"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${tokenRotateStatus === 'loading' ? 'animate-spin' : ''}`} />
-            <span>{tokenRotateStatus === 'loading' ? t('settings.extension.rotating') : t('settings.extension.rotateBtn')}</span>
-          </button>
-          {tokenRotateMessage && (
-            <p className={`text-xs px-1 ${tokenRotateStatus === 'success' ? 'text-green-400' : 'text-red-400'}`}>
-              {tokenRotateMessage}
-            </p>
-          )}
-        </div>
-      )}
+      {/* Extension Token Rotation — desktop only */}
+      <SettingsExtensionTokenCard
+        tokenRotateStatus={tokenRotateStatus}
+        tokenRotateMessage={tokenRotateMessage}
+        onRotateToken={handleRotatePairingToken}
+        t={t}
+      />
 
       {/* Extreme Danger Zone */}
       <SettingsDangerZone

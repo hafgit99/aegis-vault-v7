@@ -6,40 +6,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
-  Wand2, 
-  Shield, 
-  User, 
-  Globe, 
-  KeyRound, 
-  StickyNote, 
-  Lock, 
-  Eye, 
-  EyeOff, 
-  CreditCard, 
-  Fingerprint, 
-  FileText, 
-  UploadCloud, 
-  File, 
-  Trash2, 
-  Download, 
   AlertTriangle, 
   CheckCircle2, 
   Loader2, 
-  Sparkles,
-  Calendar,
-  Layers,
-  Sparkle
+  Layers 
 } from 'lucide-react';
 import { AppNotification, TagDefinition, VaultFolder, VaultItem } from '../types';
 import { generatePassword } from '../lib/security';
 import { saveAttachment, getAttachmentBlob } from '../lib/attachments';
 import { secureRandomIndex, secureRandomToken } from '../lib/random';
-import { formatFileSize } from '../lib/display';
 import { useLanguage } from '../i18n/LanguageContext';
-import { progressWidthClass } from '../lib/progressWidth';
 import { VaultFormCategoryTabs, type VaultFormCategory } from './vault-form/VaultFormCategoryTabs';
 import { VaultFormGeneralFields } from './vault-form/VaultFormGeneralFields';
-import TagPicker from './TagPicker';
+import { VaultFormFolderTagsSection } from './vault-form/VaultFormFolderTagsSection';
+import { VaultFormLoginFields } from './vault-form/VaultFormLoginFields';
+import { VaultFormCardFields } from './vault-form/VaultFormCardFields';
+import { VaultFormIdentityFields } from './vault-form/VaultFormIdentityFields';
+import { VaultFormPasskeyFields } from './vault-form/VaultFormPasskeyFields';
+import { VaultFormNoteFields } from './vault-form/VaultFormNoteFields';
+import { VaultFormAttachmentSection } from './vault-form/VaultFormAttachmentSection';
 
 interface VaultFormModalProps {
   isOpen: boolean;
@@ -443,536 +428,93 @@ export default function VaultFormModal({
           />
 
           {/* Folder & Tags Section */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-surface-low/40 p-4 rounded-2xl border border-outline-variant/15 text-left animate-fade-in">
-            <div>
-              <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                {t('organisation.folders')}
-              </label>
-              <select
-                data-testid="vault-item-folder-select"
-                value={folderId}
-                onChange={(e) => setFolderId(e.target.value)}
-                className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl px-3 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface cursor-pointer"
-              >
-                <option value="">{t('bulk.noFolder') || 'No Folder / Klasör Yok'}</option>
-                {folders.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <VaultFormFolderTagsSection
+            folderId={folderId}
+            onFolderIdChange={setFolderId}
+            folders={folders}
+            itemTags={itemTags}
+            onItemTagsChange={setItemTags}
+            tags={tags}
+          />
 
-            <div>
-              <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                {t('organisation.tags')}
-              </label>
-              <TagPicker
-                selected={itemTags}
-                library={tags}
-                onChange={setItemTags}
-                compact={true}
-              />
-            </div>
-          </div>
-
-          {/* Dynamic view category 1: login credentials */}
+          {/* Category-Specific Form Fields */}
           {category === 'login' && (
-            <div className="space-y-4 animate-fade-in text-left">
-              <div className="border-l-2 border-brand-primary pl-3.5 py-0.5">
-                <h4 className="text-xs font-bold text-on-surface">{t('vaultForm.login.title')}</h4>
-                <p className="text-[10px] text-on-surface-variant">{t('vaultForm.login.description')}</p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                    {t('vaultForm.login.username')}
-                  </label>
-                  <div className="relative">
-                    <User className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
-                    <input
-                      data-testid="vault-item-username-input"
-                      type="text"
-                      required={category === 'login'}
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface"
-                      placeholder={t('vaultForm.login.usernamePlaceholder')}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5 flex justify-between items-center">
-                    <span>{t('vaultForm.login.password')}</span>
-                    <button
-                      type="button"
-                      onClick={handleAutoGenerate}
-                      className="text-[9px] text-brand-primary hover:underline flex items-center gap-0.5"
-                    >
-                      <Wand2 className="w-3 h-3" />
-                      <span>{t('vaultForm.login.generateStrong')}</span>
-                    </button>
-                  </label>
-                  <div className="relative">
-                    <KeyRound className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
-                    <input
-                      data-testid="vault-item-password-input"
-                      type={isPasswordVisible ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-20 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
-                      placeholder={t('vaultForm.login.passwordPlaceholder')}
-                    />
-                    <div className="absolute right-3 top-2 flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setIsPasswordVisible(!isPasswordVisible)}
-                        className="text-on-surface-variant hover:text-brand-primary transition-colors p-1.5"
-                        title={isPasswordVisible ? t('vaultForm.login.hide') : t('vaultForm.login.show')}
-                      >
-                        {isPasswordVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleAutoGenerate}
-                        className="text-on-surface-variant hover:text-brand-primary transition-colors p-1.5"
-                        title={t('vaultForm.login.generatePasswordTitle')}
-                      >
-                        <Wand2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                  {t('vaultForm.login.totp')}
-                </label>
-                <div className="relative">
-                  <KeyRound className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
-                  <input
-                    type="text"
-                    value={totpSecret}
-                    onChange={(e) => setTotpSecret(e.target.value)}
-                    className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface uppercase font-mono"
-                    placeholder={t('vaultForm.login.totpPlaceholder')}
-                  />
-                </div>
-              </div>
-            </div>
+            <VaultFormLoginFields
+              username={username}
+              onUsernameChange={setUsername}
+              password={password}
+              onPasswordChange={setPassword}
+              isPasswordVisible={isPasswordVisible}
+              onTogglePasswordVisibility={() => setIsPasswordVisible(!isPasswordVisible)}
+              onAutoGeneratePassword={handleAutoGenerate}
+              totpSecret={totpSecret}
+              onTotpSecretChange={setTotpSecret}
+            />
           )}
 
-          {/* Dynamic view category 2: credit card */}
           {category === 'card' && (
-            <div className="space-y-4 animate-fade-in text-left">
-              <div className="border-l-2 border-brand-primary pl-3.5 py-0.5">
-                <h4 className="text-xs font-bold text-on-surface">{t('vaultForm.card.title')}</h4>
-                <p className="text-[10px] text-on-surface-variant">{t('vaultForm.card.description')}</p>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                  {t('vaultForm.card.cardholder')}
-                </label>
-                <div className="relative">
-                  <User className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
-                  <input
-                    type="text"
-                    value={cardholderName}
-                    onChange={(e) => setCardholderName(e.target.value)}
-                    className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface"
-                    placeholder={t('vaultForm.card.cardholderPlaceholder')}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="sm:col-span-2">
-                  <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                    {t('vaultForm.card.number')}
-                  </label>
-                  <div className="relative">
-                    <CreditCard className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
-                    <input
-                      type="text"
-                      value={cardNumber}
-                      onChange={(e) => setCardNumber(e.target.value)}
-                      className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
-                      placeholder={t('vaultForm.card.numberPlaceholder')}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                    {t('vaultForm.card.expiry')}
-                  </label>
-                  <div className="relative">
-                    <Calendar className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
-                    <input
-                      type="text"
-                      value={cardExpiry}
-                      onChange={(e) => setCardExpiry(e.target.value)}
-                      className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
-                      placeholder={t('vaultForm.card.expiryPlaceholder')}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                    {t('vaultForm.card.cvv')}
-                  </label>
-                  <div className="relative">
-                    <Lock className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
-                    <input
-                      type="password"
-                      maxLength={4}
-                      value={cardCvv}
-                      onChange={(e) => setCardCvv(e.target.value)}
-                      className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
-                      placeholder={t('vaultForm.card.cvvPlaceholder')}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                    {t('vaultForm.card.pin')}
-                  </label>
-                  <div className="relative">
-                    <KeyRound className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
-                    <input
-                      type="password"
-                      maxLength={6}
-                      value={cardPin}
-                      onChange={(e) => setCardPin(e.target.value)}
-                      className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
-                      placeholder={t('vaultForm.card.pinPlaceholder')}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
+            <VaultFormCardFields
+              cardholderName={cardholderName}
+              onCardholderNameChange={setCardholderName}
+              cardNumber={cardNumber}
+              onCardNumberChange={setCardNumber}
+              cardExpiry={cardExpiry}
+              onCardExpiryChange={setCardExpiry}
+              cardCvv={cardCvv}
+              onCardCvvChange={setCardCvv}
+              cardPin={cardPin}
+              onCardPinChange={setCardPin}
+            />
           )}
 
-          {/* DYNAMIC VIEW CATEGORY 3: PASSKEY & API (PASSKEY) */}
           {category === 'passkey' && (
-            <div className="space-y-4 animate-fade-in text-left">
-              <div className="border-l-2 border-brand-primary pl-3.5 py-0.5">
-                <h4 className="text-xs font-bold text-on-surface">{t('vaultForm.passkey.title')}</h4>
-                <p className="text-[10px] text-on-surface-variant">{t('vaultForm.passkey.description')}</p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                    {t('vaultForm.passkey.service')}
-                  </label>
-                  <div className="relative">
-                    <Fingerprint className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
-                    <input
-                      type="text"
-                      value={passkeyService}
-                      onChange={(e) => setPasskeyService(e.target.value)}
-                      className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface"
-                      placeholder={t('vaultForm.passkey.servicePlaceholder')}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                    {t('vaultForm.passkey.publicId')}
-                  </label>
-                  <div className="relative">
-                    <User className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
-                    <input
-                      type="text"
-                      value={passkeyPublicId}
-                      onChange={(e) => setPasskeyPublicId(e.target.value)}
-                      className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
-                      placeholder={t('vaultForm.passkey.publicIdPlaceholder')}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5 flex justify-between items-center">
-                  <span>{t('vaultForm.passkey.privateExponent')}</span>
-                  <button
-                    type="button"
-                    onClick={handleAutoGeneratePrivateExponent}
-                    className="text-[9px] text-brand-primary hover:underline flex items-center gap-0.5"
-                    title={t('vaultForm.passkey.generateTitle')}
-                  >
-                    <Wand2 className="w-3 h-3" />
-                    <span>{t('vaultForm.passkey.generate')}</span>
-                  </button>
-                </label>
-                <div className="relative">
-                  <KeyRound className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
-                  <textarea
-                    rows={2}
-                    value={passkeyPrivateExponent}
-                    onChange={(e) => setPasskeyPrivateExponent(e.target.value)}
-                    className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono resize-none text-[11px]"
-                    placeholder={t('vaultForm.passkey.privateExponentPlaceholder')}
-                  />
-                </div>
-              </div>
-            </div>
+            <VaultFormPasskeyFields
+              passkeyService={passkeyService}
+              onPasskeyServiceChange={setPasskeyService}
+              passkeyPublicId={passkeyPublicId}
+              onPasskeyPublicIdChange={setPasskeyPublicId}
+              passkeyPrivateExponent={passkeyPrivateExponent}
+              onPasskeyPrivateExponentChange={setPasskeyPrivateExponent}
+              onAutoGeneratePrivateExponent={handleAutoGeneratePrivateExponent}
+            />
           )}
 
-          {/* Dynamic view category 4: identity */}
           {category === 'identity' && (
-            <div className="space-y-4 animate-fade-in text-left">
-              <div className="border-l-2 border-brand-primary pl-3.5 py-0.5">
-                <h4 className="text-xs font-bold text-on-surface">{t('vaultForm.identity.title')}</h4>
-                <p className="text-[10px] text-on-surface-variant">{t('vaultForm.identity.description')}</p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                    {t('vaultForm.identity.documentNumber')}
-                  </label>
-                  <div className="relative">
-                    <Lock className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
-                    <input
-                      type="text"
-                      value={idNumber}
-                      onChange={(e) => setIdNumber(e.target.value)}
-                      className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-semibold font-mono"
-                      placeholder={t('vaultForm.identity.documentNumberPlaceholder')}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                    {t('vaultForm.identity.fullName')}
-                  </label>
-                  <div className="relative">
-                    <User className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
-                    <input
-                      type="text"
-                      value={idFullName}
-                      onChange={(e) => setIdFullName(e.target.value)}
-                      className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-semibold"
-                      placeholder={t('vaultForm.identity.fullNamePlaceholder')}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                    {t('vaultForm.identity.birthDate')}
-                  </label>
-                  <div className="relative">
-                    <Calendar className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
-                    <input
-                      type="date"
-                      value={idBirthDate}
-                      onChange={(e) => setIdBirthDate(e.target.value)}
-                      className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2 px-2 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                    {t('vaultForm.identity.expiryDate')}
-                  </label>
-                  <div className="relative">
-                    <Calendar className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
-                    <input
-                      type="date"
-                      value={idExpiryDate}
-                      onChange={(e) => setIdExpiryDate(e.target.value)}
-                      className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2 px-2 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-                    {t('vaultForm.identity.gender')}
-                  </label>
-                  <select
-                    value={idGender}
-                    onChange={(e) => setIdGender(e.target.value)}
-                    className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl px-3 py-2 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface"
-                  >
-                    <option value="Male">{t('vaultForm.identity.genderMale')}</option>
-                    <option value="Female">{t('vaultForm.identity.genderFemale')}</option>
-                    <option value="Other">{t('vaultForm.identity.genderOther')}</option>
-                  </select>
-                </div>
-              </div>
-            </div>
+            <VaultFormIdentityFields
+              idNumber={idNumber}
+              onIdNumberChange={setIdNumber}
+              idFullName={idFullName}
+              onIdFullNameChange={setIdFullName}
+              idBirthDate={idBirthDate}
+              onIdBirthDateChange={setIdBirthDate}
+              idExpiryDate={idExpiryDate}
+              onIdExpiryDateChange={setIdExpiryDate}
+              idGender={idGender}
+              onIdGenderChange={setIdGender}
+            />
           )}
 
-          {/* Dynamic view category 5: secure note */}
-          {category === 'secure_note' && (
-            <div className="space-y-4 animate-fade-in text-left">
-              <div className="border-l-2 border-brand-primary pl-3.5 py-0.5">
-                <h4 className="text-xs font-bold text-on-surface">{t('vaultForm.secureNote.title')}</h4>
-                <p className="text-[10px] text-on-surface-variant">{t('vaultForm.secureNote.description')}</p>
-              </div>
-              <p className="text-[11px] text-amber-400">{t('vaultForm.secureNote.warning')}</p>
-            </div>
-          )}
+          {/* Secure Notes Section */}
+          <VaultFormNoteFields
+            category={category}
+            notes={notes}
+            onNotesChange={setNotes}
+          />
 
-          {/* SECURE NOTES FIELD (AVAILABLE FOR ALL, RENDERED LARGER FOR SECURE NOTE CATEGORY) */}
-          <div className="text-left">
-            <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-1.5">
-              {category === 'secure_note' ? t('vaultForm.notes.secureLabel') : t('vaultForm.notes.extraLabel')}
-            </label>
-            <div className="relative">
-              <StickyNote className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
-              <textarea
-                data-testid="vault-item-notes-input"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={category === 'secure_note' ? 8 : 3}
-                className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface resize-none font-sans leading-relaxed"
-                placeholder={category === 'secure_note' ? t('vaultForm.notes.securePlaceholder') : t('vaultForm.notes.extraPlaceholder')}
-              />
-            </div>
-          </div>
-
-          {/* 250MB EMBEDDED MILITARY-GRADE LOCAL FILE ENCRYPTION CONTAINER */}
-          <div className="bg-surface-low/60 p-4 sm:p-5 rounded-2xl border border-outline-variant/15 space-y-4 text-left">
-            <div className="flex items-center justify-between border-b border-outline-variant/5 pb-2">
-              <h4 className="text-[10px] font-bold text-brand-primary tracking-widest uppercase flex items-center gap-2">
-                <UploadCloud className="w-4.5 h-4.5 text-brand-primary" />
-                <span>{t('vaultForm.attachment.title')}</span>
-              </h4>
-              <span className="text-[9px] text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-0.5 rounded border border-emerald-500/15 font-mono">{t('vaultForm.attachment.protected')}</span>
-            </div>
-
-            {/* Display status or progress if uploading */}
-            {isUploading ? (
-              <div className="flex flex-col items-center justify-center py-6 space-y-3 bg-surface-lowest rounded-xl border border-outline-variant/5">
-                <Loader2 className="w-8 h-8 text-brand-primary animate-spin" />
-                <div className="text-center">
-                  <p className="text-xs font-bold text-on-surface">{t('vaultForm.attachment.encrypting')}</p>
-                  <p className="text-[10px] text-on-surface-variant mt-1">{t('vaultForm.attachment.encryptingDescription')}</p>
-                </div>
-                <div className="w-48 bg-surface-low h-1.5 rounded-full overflow-hidden relative">
-                  <div className={`bg-brand-primary h-full transition-all duration-300 ${progressWidthClass(uploadProgress)}`} />
-                </div>
-                <span className="text-[10px] font-mono text-brand-primary">%{uploadProgress}</span>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                
-                {/* 1. Existing Attachment inside Database */}
-                {existingAttachment && (
-                  <div data-testid="vault-item-existing-attachment" className="flex items-center justify-between p-3.5 bg-brand-primary/5 hover:bg-brand-primary/10 border border-brand-primary/20 rounded-xl transition-all">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary shrink-0">
-                        <File className="w-5 h-5 animate-pulse" />
-                      </div>
-                      <div className="min-w-0">
-                        <p data-testid="vault-item-existing-attachment-name" className="font-bold text-xs text-on-surface truncate pr-2">{existingAttachment.name}</p>
-                        <p className="text-[9px] text-[#059669] font-bold font-mono uppercase flex items-center gap-1 mt-0.5">
-                          <span>{formatFileSize(existingAttachment.size)}</span>
-                          <span>•</span>
-                          <span>{t('vaultForm.attachment.encrypted')}</span>
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        data-testid="vault-item-existing-attachment-download-button"
-                        onClick={handleDownloadExistingAttachment}
-                        className="p-2 bg-surface-lowest hover:bg-[#1c1e1c] border border-outline-variant/15 text-brand-primary rounded-lg transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center"
-                        title={t('vaultForm.attachment.downloadTitle')}
-                      >
-                        <Download className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        data-testid="vault-item-existing-attachment-remove-button"
-                        onClick={handleRemoveExistingAttachment}
-                        className="p-2 bg-surface-lowest hover:bg-red-500/10 border border-outline-variant/15 text-red-400 hover:text-red-300 rounded-lg transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center"
-                        title={t('vaultForm.attachment.deleteTitle')}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* 2. Newly targeted upload file */}
-                {selectedFile ? (
-                  <div data-testid="vault-item-selected-attachment" className="flex items-center justify-between p-3.5 bg-brand-secondary/5 border border-brand-secondary/20 rounded-xl animate-fade-in">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 shrink-0">
-                        <File className="w-5 h-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <p data-testid="vault-item-selected-attachment-name" className="font-bold text-xs text-on-surface truncate pr-2">{selectedFile.name}</p>
-                        <p className="text-[10px] text-on-surface-variant font-mono mt-0.5 font-bold flex items-center gap-1">
-                          <span>{formatFileSize(selectedFile.size)}</span>
-                          <span className="text-brand-primary bg-brand-primary/10 px-1 py-0.2 rounded text-[9px] uppercase">{t('vaultForm.attachment.ready')}</span>
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      data-testid="vault-item-selected-attachment-remove-button"
-                      onClick={handleRemoveSelectedFile}
-                      className="p-2 bg-surface-lowest hover:bg-red-500/10 border border-outline-variant/15 text-red-400 hover:text-red-300 rounded-lg transition-all hover:scale-105 active:scale-95 cursor-pointer"
-                      title={t('vaultForm.attachment.cancelSelection')}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  /* 3. Drop Zone Area */
-                  !existingAttachment && (
-                    <div 
-                      data-testid="vault-item-attachment-dropzone"
-                      onDragOver={handleDragOver}
-                      onDrop={handleDrop}
-                      onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-outline-variant/20 hover:border-brand-primary/40 bg-surface-lowest hover:bg-surface-low rounded-2xl p-4 sm:p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 group"
-                    >
-                      <input 
-                        type="file"
-                        data-testid="vault-item-attachment-input"
-                        ref={fileInputRef}
-                        onChange={handleFileChange}
-                        className="hidden"
-                      />
-                      <div className="w-11 h-11 rounded-xl bg-brand-primary/10 border border-brand-primary/15 flex items-center justify-center text-brand-primary mb-3.5 group-hover:scale-110 transition-transform duration-300">
-                        <UploadCloud className="w-5.5 h-5.5" />
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-bold text-on-surface">{t('vaultForm.attachment.dropTitle')}</p>
-                        <p className="text-[10px] text-on-surface-variant leading-relaxed max-w-xs">
-                          {t('vaultForm.attachment.dropDescription')}
-                        </p>
-                      </div>
-                    </div>
-                  )
-                )}
-
-              </div>
-            )}
-          </div>
+          {/* 250MB Embedded File Encryption Section */}
+          <VaultFormAttachmentSection
+            isUploading={isUploading}
+            uploadProgress={uploadProgress}
+            existingAttachment={existingAttachment}
+            selectedFile={selectedFile}
+            fileInputRef={fileInputRef}
+            onFileChange={handleFileChange}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onRemoveSelectedFile={handleRemoveSelectedFile}
+            onRemoveExistingAttachment={handleRemoveExistingAttachment}
+            onDownloadExistingAttachment={handleDownloadExistingAttachment}
+          />
 
           {/* Footer Action buttons row */}
           <div className="sticky bottom-0 z-10 flex justify-end gap-3 pt-3 sm:pt-4 border-t border-outline-variant/10 bg-surface-container/95 p-4 sm:p-6 -mx-4 sm:-mx-6 -mb-4 sm:-mb-6 safe-bottom">
