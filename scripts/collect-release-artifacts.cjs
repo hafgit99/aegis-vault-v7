@@ -75,11 +75,22 @@ function copyFile(source, fileName) {
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
+      if (fs.existsSync(destination)) {
+        try {
+          fs.unlinkSync(destination);
+        } catch (_) {}
+      }
       fs.copyFileSync(source, destination);
       return destination;
     } catch (error) {
       const isRetryable = error.code === 'EBUSY' || error.code === 'EPERM';
       if (isRetryable && attempt < MAX_RETRIES) {
+        if (process.platform === 'win32' && attempt >= 1) {
+          const destName = path.basename(destination);
+          try {
+            require('child_process').execSync(`taskkill /F /IM "${destName}"`, { stdio: 'ignore' });
+          } catch (_) {}
+        }
         const delay = BASE_DELAY_MS * Math.pow(2, attempt);
         console.log(`  ⏳ File locked (${error.code}), retrying in ${delay}ms... (attempt ${attempt + 1}/${MAX_RETRIES})`);
         const start = Date.now();
@@ -90,6 +101,7 @@ function copyFile(source, fileName) {
     }
   }
 }
+
 
 function copyDirectory(source, dirName) {
   const destination = path.join(outputDir, dirName);
