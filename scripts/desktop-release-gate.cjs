@@ -111,11 +111,24 @@ function commandLabel(command, commandArgs) {
   return (command + ' ' + commandArgs.join(' ')).trim();
 }
 
+function killRunningProcessesOnWindows() {
+  if (process.platform === 'win32' && !dryRun) {
+    try {
+      require('child_process').execSync('taskkill /F /IM aegis-vault-v7.exe', { stdio: 'ignore' });
+    } catch (_) {}
+  }
+}
+
 function run(command, commandArgs) {
+  if (command === 'npx' && commandArgs.includes('build')) {
+    killRunningProcessesOnWindows();
+  }
+
   if (dryRun) {
     console.log('\n[dry-run] ' + commandLabel(command, commandArgs));
     return;
   }
+
 
   console.log('\n> ' + commandLabel(command, commandArgs));
 
