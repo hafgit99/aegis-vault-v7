@@ -24,17 +24,36 @@ root.render(
 
 // Close Tauri native splashscreen and show main window after React mounts
 if (window.__TAURI_INTERNALS__) {
-  import('@tauri-apps/api/webviewWindow').then(async ({ WebviewWindow }) => {
-    const mainWindow = await WebviewWindow.getByLabel('main');
-    const splashWindow = await WebviewWindow.getByLabel('splashscreen');
+  (async () => {
+    try {
+      const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+      const mainWindow = await WebviewWindow.getByLabel('main');
+      const splashWindow = await WebviewWindow.getByLabel('splashscreen');
 
-    if (mainWindow) {
-      await mainWindow.show();
-      await mainWindow.setFocus();
+      if (mainWindow) {
+        await mainWindow.show();
+        await mainWindow.setFocus();
+      }
+      if (splashWindow) {
+        await splashWindow.close();
+      }
+    } catch (err) {
+      console.warn('[Splashscreen] WebviewWindow approach failed, trying Window API:', err);
+      try {
+        const { Window } = await import('@tauri-apps/api/window');
+        const mainWindow = await Window.getByLabel('main');
+        const splashWindow = await Window.getByLabel('splashscreen');
+
+        if (mainWindow) {
+          await mainWindow.show();
+          await mainWindow.setFocus();
+        }
+        if (splashWindow) {
+          await splashWindow.close();
+        }
+      } catch (fallbackErr) {
+        console.error('[Splashscreen] Failed to manage windows:', fallbackErr);
+      }
     }
-    if (splashWindow) {
-      await splashWindow.close();
-    }
-  }).catch(() => {});
+  })();
 }
-
