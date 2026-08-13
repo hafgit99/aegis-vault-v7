@@ -69,6 +69,15 @@ async function build() {
     legalComments: 'none',
   });
 
+  // Sync tokens.css from src/styles/tokens.css to src-extension and outDir
+  const sourceTokensPath = path.resolve('src/styles/tokens.css');
+  if (fs.existsSync(sourceTokensPath)) {
+    fs.copyFileSync(sourceTokensPath, path.join(srcDir, 'tokens.css'));
+    fs.copyFileSync(sourceTokensPath, path.join(outDir, 'tokens.css'));
+  } else if (fs.existsSync(path.join(srcDir, 'tokens.css'))) {
+    fs.copyFileSync(path.join(srcDir, 'tokens.css'), path.join(outDir, 'tokens.css'));
+  }
+
   // Copy HTML, CSS, Manifest
   fs.copyFileSync(path.join(srcDir, 'popup.html'), path.join(outDir, 'popup.html'));
   fs.copyFileSync(path.join(srcDir, 'styles.css'), path.join(outDir, 'styles.css'));

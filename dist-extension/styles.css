@@ -1,18 +1,20 @@
+@import "./tokens.css";
+
 :root {
-  --bg-gradient: linear-gradient(135deg, #0f172a 0%, #020617 100%);
-  --panel-bg: rgba(15, 23, 42, 0.65);
-  --border-color: rgba(255, 255, 255, 0.08);
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --accent-color: #10b981;
-  --accent-gradient: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
-  --accent-hover: #059669;
+  --bg-gradient: linear-gradient(135deg, var(--surface-low) 0%, var(--surface-lowest) 100%);
+  --panel-bg: var(--glass-bg);
+  --border-color: var(--glass-border);
+  --text-primary: var(--on-surface);
+  --text-secondary: var(--on-surface-variant);
+  --accent-color: var(--brand-primary);
+  --accent-gradient: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
+  --accent-hover: var(--brand-on-primary);
   --warning-bg: rgba(239, 68, 68, 0.15);
   --warning-border: rgba(239, 68, 68, 0.3);
-  --warning-text: #ef4444;
-  --card-bg: rgba(30, 41, 59, 0.4);
+  --warning-text: var(--brand-error);
+  --card-bg: var(--surface-card-bg);
   --card-hover: rgba(30, 41, 59, 0.7);
-  --shadow-elevation: 0 12px 32px rgba(0, 0, 0, 0.4);
+  --shadow-elevation: var(--shadow-elevation, 0 12px 32px rgba(0, 0, 0, 0.4));
 }
 
 body.light {
