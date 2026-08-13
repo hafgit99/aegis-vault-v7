@@ -114,10 +114,14 @@ function commandLabel(command, commandArgs) {
 function killRunningProcessesOnWindows() {
   if (process.platform === 'win32' && !dryRun) {
     try {
-      require('child_process').execSync('taskkill /F /IM aegis-vault-v7.exe', { stdio: 'ignore' });
+      require('child_process').execSync(
+        `powershell -NoProfile -Command "Get-Process | Where-Object { $_.ProcessName -like '*aegis*' -or $_.ProcessName -like '*vault*' } | Stop-Process -Force"`,
+        { stdio: 'ignore' }
+      );
     } catch (_) {}
   }
 }
+
 
 function run(command, commandArgs) {
   if (command === 'npx' && commandArgs.includes('build')) {
