@@ -102,22 +102,38 @@ describe('share URL fuzz tests', () => {
     await fc.assert(
       fc.asyncProperty(
         arbitraryVaultItem,
-        fc.integer({ min: 0, max: 20 }),
-        async (item, corruptIndex) => {
+        fc.constantFrom('key', 'ciphertext', 'tag', 'iv', 'truncated'),
+        async (item, tamperTarget) => {
           const url = await generateShareUrl(item, 24);
           const hash = url.slice(url.indexOf('#'));
           const params = new URLSearchParams(hash.replace(/^#/, ''));
           const originalD = params.get('share') || '';
           const originalK = params.get('k') || '';
 
-          // Corrupt share payload by flipping a character (guaranteed mutation)
-          const originalChar = originalD[corruptIndex] ?? '';
-          const replacementChar = originalChar === 'X' ? 'Y' : 'X';
-          const corruptedD = originalD.length > corruptIndex
-            ? originalD.slice(0, corruptIndex) + replacementChar + originalD.slice(corruptIndex + 1)
-            : originalD + 'X';
+          let corruptedHash = '';
+          if (tamperTarget === 'key') {
+            const corruptedK = originalK.startsWith('AAAA')
+              ? 'BBBB' + originalK.slice(4)
+              : 'AAAA' + originalK.slice(4);
+            corruptedHash = `#share=${originalD}&k=${corruptedK}`;
+          } else if (tamperTarget === 'truncated') {
+            corruptedHash = `#share=${originalD.slice(0, 12)}&k=${originalK}`;
+          } else {
+            const bundleBytes = base64urlDecode(originalD);
+            const bundle = JSON.parse(new TextDecoder().decode(bundleBytes)) as { i: string; t: string; c: string };
+            if (tamperTarget === 'ciphertext') {
+              bundle.c = bundle.c.length > 4
+                ? bundle.c.slice(0, -4) + (bundle.c.endsWith('AAAA') ? 'BBBB' : 'AAAA')
+                : 'AAAA';
+            } else if (tamperTarget === 'tag') {
+              bundle.t = (bundle.t.startsWith('00') ? 'ff' : '00') + bundle.t.slice(2);
+            } else if (tamperTarget === 'iv') {
+              bundle.i = (bundle.i.startsWith('00') ? 'ff' : '00') + bundle.i.slice(2);
+            }
+            const corruptedD = base64urlEncode(new TextEncoder().encode(JSON.stringify(bundle)));
+            corruptedHash = `#share=${corruptedD}&k=${originalK}`;
+          }
 
-          const corruptedHash = `#share=${corruptedD}&k=${originalK}`;
           const result = await decryptShareUrl(corruptedHash);
           expect(result).toBeNull();
         },
