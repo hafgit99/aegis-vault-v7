@@ -168,6 +168,7 @@ export default function ShareModal({ isOpen, onClose, item }: ShareModalProps) {
           {/* Copy URL Input Group */}
           <div className="flex gap-2">
             <input
+              data-testid="share-modal-url-input"
               type="text"
               readOnly
               value={shareUrl}
@@ -175,6 +176,7 @@ export default function ShareModal({ isOpen, onClose, item }: ShareModalProps) {
               className="flex-1 bg-[#161816] border border-outline-variant/20 rounded-xl px-3 py-2 text-[10px] text-on-surface-variant font-mono focus:outline-none focus:ring-1 focus:ring-brand-primary/30"
             />
             <button
+              data-testid="share-modal-copy-button"
               onClick={handleCopy}
               className={`px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none active:scale-95 ${
                 copied
@@ -200,6 +202,7 @@ export default function ShareModal({ isOpen, onClose, item }: ShareModalProps) {
         {/* Footer */}
         <div className="px-5 py-3 border-t border-outline-variant/10 bg-[#0c0d0c]/95 flex justify-end">
           <button
+            data-testid="share-modal-close-button"
             onClick={onClose}
             className="px-4 py-2 bg-[#1b1d1b] hover:bg-[#232623] border border-outline-variant/15 rounded-xl font-bold text-xs text-on-surface transition-colors cursor-pointer focus:outline-none"
           >

@@ -48,6 +48,7 @@ export function VaultFormCardFields({
         <div className="relative">
           <User className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
           <input
+            data-testid="vault-item-cardholder-input"
             type="text"
             value={cardholderName}
             onChange={(e) => onCardholderNameChange(e.target.value)}
@@ -65,6 +66,7 @@ export function VaultFormCardFields({
           <div className="relative">
             <CreditCard className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
             <input
+              data-testid="vault-item-cardnumber-input"
               type="text"
               value={cardNumber}
               onChange={(e) => onCardNumberChange(e.target.value)}
@@ -81,6 +83,7 @@ export function VaultFormCardFields({
           <div className="relative">
             <Calendar className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
             <input
+              data-testid="vault-item-cardexpiry-input"
               type="text"
               value={cardExpiry}
               onChange={(e) => onCardExpiryChange(e.target.value)}
@@ -99,6 +102,7 @@ export function VaultFormCardFields({
           <div className="relative">
             <Lock className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
             <input
+              data-testid="vault-item-cardcvv-input"
               type="password"
               maxLength={4}
               value={cardCvv}
@@ -116,6 +120,7 @@ export function VaultFormCardFields({
           <div className="relative">
             <KeyRound className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
             <input
+              data-testid="vault-item-cardpin-input"
               type="password"
               maxLength={6}
               value={cardPin}

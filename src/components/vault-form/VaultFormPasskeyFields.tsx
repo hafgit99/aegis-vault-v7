@@ -43,6 +43,7 @@ export function VaultFormPasskeyFields({
           <div className="relative">
             <Fingerprint className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
             <input
+              data-testid="vault-item-passkey-service-input"
               type="text"
               value={passkeyService}
               onChange={(e) => onPasskeyServiceChange(e.target.value)}
@@ -59,6 +60,7 @@ export function VaultFormPasskeyFields({
           <div className="relative">
             <User className="w-4 h-4 absolute left-3 top-3.5 text-on-surface-variant/40" />
             <input
+              data-testid="vault-item-passkey-id-input"
               type="text"
               value={passkeyPublicId}
               onChange={(e) => onPasskeyPublicIdChange(e.target.value)}

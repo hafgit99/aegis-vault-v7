@@ -207,12 +207,14 @@ export default function ReceiveShareModal({ isOpen, onClose, payload, onImport }
         {/* Footer */}
         <div className="px-5 py-3 border-t border-outline-variant/10 bg-[#0c0d0c]/95 flex justify-end gap-2.5">
           <button
+            data-testid="receive-share-cancel-button"
             onClick={onClose}
             className="px-4 py-2 bg-[#1b1d1b] hover:bg-[#232623] border border-outline-variant/15 rounded-xl font-bold text-xs text-on-surface transition-colors cursor-pointer focus:outline-none"
           >
             {t('share.cancel') || 'Cancel / İptal'}
           </button>
           <button
+            data-testid="receive-share-save-button"
             onClick={handleImport}
             disabled={isExpired}
             className="px-5 py-2 bg-brand-primary text-brand-on-primary rounded-xl font-bold text-xs hover:brightness-110 active:scale-95 transition-all cursor-pointer shadow-lg shadow-brand-primary/10 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none"

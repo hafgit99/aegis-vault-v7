@@ -83,6 +83,7 @@ export default function VaultItemDetailHeader({
           <Edit className="w-4.5 h-4.5" />
         </button>
         <button
+          data-testid="secure-share-button"
           onClick={onSecureShare}
           className="p-2.5 rounded-lg bg-surface-high text-on-surface-variant hover:text-brand-primary hover:bg-[#202220] transition-all cursor-pointer border border-outline-variant/10"
           title={t('detail.header.secureShare') || 'Secure Share / Güvenli Paylaş'}

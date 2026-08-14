@@ -95,6 +95,7 @@ Aegis Vault 7 maintains rigorous automated testing standards with defense-in-dep
 | **Unit Test Suite** | **`159 test files passed (159/159)`** | ✅ 100% Green | Vitest 4.1 |
 | **Unit Tests Executed** | **`1,223 tests passed (1,223/1,223)`** | ✅ 100% Green | Vitest / React Testing Library |
 | **Property-Based Fuzz Tests** | **`33 tests across 8 files passed`** | ✅ 100% Green | `fast-check` v4 |
+| **End-to-End (E2E) Suites** | **`3 Comprehensive Specs`** | ✅ Ready & Verified | Playwright (Desktop & Mobile) |
 | **Mutation Testing** | **`7 Specialized Stryker Suites`** | ✅ Ready & Verified | `@stryker-mutator/core` v9 |
 | **Rust Backend Tests** | **`9 tests passed (9/9)`** | ✅ 100% Green | `cargo test` (Tauri 2) |
 | **Lines Coverage** | **`90.4%`** | ✅ Exceeds Global Target (≥ 90%) | Vitest V8 Coverage |
@@ -168,7 +169,14 @@ npm run test:coverage
 # ── 3. Property-Based Fuzz Testing ─────────────────────────────────
 npm run test:fuzz
 
-# ── 4. Mutation Testing (Stryker) ──────────────────────────────────
+# ── 4. End-to-End (E2E) Browser Testing ────────────────────────────
+# Run all E2E specs across Desktop & Mobile
+npm run test:e2e
+
+# Run E2E tests on Chromium only (fast smoke check)
+npm run test:e2e:chromium
+
+# ── 5. Mutation Testing (Stryker) ──────────────────────────────────
 # Run Security modules mutation test
 npm run test:mutation:security
 
@@ -188,7 +196,7 @@ npm run test:mutation:importer
 npm run test:mutation:security:dry
 npm run test:mutation:search:dry
 
-# ── 5. Native Rust Backend Tests ───────────────────────────────────
+# ── 6. Native Rust Backend Tests ───────────────────────────────────
 cd src-tauri && cargo test && cd ..
 ```
 
