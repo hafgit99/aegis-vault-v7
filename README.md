@@ -9,7 +9,9 @@
 [![CI Pipeline](https://github.com/kodbest/AegisV7/actions/workflows/ci.yml/badge.svg)](https://github.com/kodbest/AegisV7/actions)
 ![Security Score](https://img.shields.io/badge/Security_Audit-92%2F100_(A%2B)-brightgreen?style=flat-square&logo=shield)
 ![Tests](https://img.shields.io/badge/Unit_Tests-1223_Passed-success?style=flat-square&logo=vitest)
+![Fuzz Tests](https://img.shields.io/badge/Fuzz_Tests-33_Passed-success?style=flat-square&logo=vitest)
 ![Coverage](https://img.shields.io/badge/Coverage-90.4%25_Lines-brightgreen?style=flat-square&logo=vitest)
+![Mutation Testing](https://img.shields.io/badge/Mutation_Testing-Stryker_Ready-blue?style=flat-square&logo=stryker)
 ![TypeScript](https://img.shields.io/badge/TypeScript-0_Errors-blue?style=flat-square&logo=typescript)
 ![License](https://img.shields.io/badge/License-Apache_2.0-orange?style=flat-square)
 ![i18n](https://img.shields.io/badge/i18n-12_Languages-purple?style=flat-square)
@@ -81,20 +83,55 @@ Full localization across 12 languages:
 
 ---
 
-## 📊 Verification & Test Suite Status
+## 📊 Verification, Testing & Quality Gates
 
-Aegis Vault 7 maintains rigorous automated testing standards with 100% clean TypeScript validation and zero regression tolerance.
+Aegis Vault 7 maintains rigorous automated testing standards with defense-in-depth verification spanning Unit Testing, Component Decomposition Suites, Property-Based Fuzz Testing, Mutation Testing, and Rust Native Test Harnesses.
 
-| Metric | Result | Status |
+### Test Metrics Summary
+
+| Metric | Result | Status | Framework / Tool |
+|---|---|---|---|
+| **TypeScript Typecheck** | **`0 errors`** | ✅ 100% Clean | `tsc --noEmit` |
+| **Unit Test Suite** | **`159 test files passed (159/159)`** | ✅ 100% Green | Vitest 4.1 |
+| **Unit Tests Executed** | **`1,223 tests passed (1,223/1,223)`** | ✅ 100% Green | Vitest / React Testing Library |
+| **Property-Based Fuzz Tests** | **`33 tests across 8 files passed`** | ✅ 100% Green | `fast-check` v4 |
+| **Mutation Testing** | **`7 Specialized Stryker Suites`** | ✅ Ready & Verified | `@stryker-mutator/core` v9 |
+| **Rust Backend Tests** | **`9 tests passed (9/9)`** | ✅ 100% Green | `cargo test` (Tauri 2) |
+| **Lines Coverage** | **`90.4%`** | ✅ Exceeds Global Target (≥ 90%) | Vitest V8 Coverage |
+| **Statements Coverage** | **`88.7%`** | ✅ Exceeds Global Target (≥ 88%) | Vitest V8 Coverage |
+| **Functions Coverage** | **`86.8%`** | ✅ Exceeds Global Target (≥ 85%) | Vitest V8 Coverage |
+| **Branches Coverage** | **`84.1%`** | ✅ Exceeds Global Target (≥ 80%) | Vitest V8 Coverage |
+
+---
+
+### 🌪️ Property-Based Fuzz Testing (`fast-check`)
+
+Fuzz testing executes hundreds of randomized, property-bounded iterations per test run to uncover edge-case security failures, parser panics, encoding flaws, and ReDoS vulnerabilities:
+
+| Fuzz Suite | Target Module | Security Boundaries Tested |
 |---|---|---|
-| **TypeScript Typecheck** | **`0 errors`** | ✅ 100% Clean (`tsc --noEmit`) |
-| **Unit Test Suite** | **`159 test files passed (159/159)`** | ✅ 100% Green (Vitest) |
-| **Unit Tests Executed** | **`1,223 tests passed (1,223/1,223)`** | ✅ 100% Green |
-| **Rust Backend Tests** | **`9 tests passed (9/9)`** | ✅ 100% Green (`cargo test`) |
-| **Lines Coverage** | **`90.4%`** | ✅ Exceeds Global Threshold (≥ 90%) |
-| **Statements Coverage** | **`88.7%`** | ✅ Exceeds Global Threshold (≥ 88%) |
-| **Functions Coverage** | **`86.8%`** | ✅ Exceeds Global Threshold (≥ 85%) |
-| **Branches Coverage** | **`84.1%`** | ✅ Exceeds Global Threshold (≥ 80%) |
+| `share.fuzz.test.ts` | `src/lib/share.ts` | Base64URL round-trips, AES-GCM share URLs, corrupted hash fragments, tampered payloads |
+| `otp.fuzz.test.ts` | `src/lib/otp.ts` | Base32 decoding resilience, HMAC-SHA1/256/512, 6/7/8 digits, 15-300s period limits, URI parsing |
+| `recoveryKey.fuzz.test.ts` | `src/lib/recoveryKey.ts` | 24-word BIP-39 phrase validity, 8-bit SHA-256 checksum detection, bit-flip mutant detection |
+| `fuzzySearch.fuzz.test.ts` | `src/lib/fuzzySearch.ts` | Unicode normalization, diacritic stripping, Damerau-Levenshtein metric axioms, ReDoS safety |
+| `backupValidation.fuzz.test.ts` | `src/lib/backupValidation.ts` | >100MB file size rejection, non-object JSON rejection, arbitrary object schema parsing |
+| `encryption.fuzz.test.ts` | `src/lib/encryption.ts` | Arbitrary JSON envelopes, malformed KDF params, portable memory floor enforcement |
+| `importer.fuzz.test.ts` | `src/lib/importer.ts` | CSV & Universal JSON round-trip import integrity, malformed array normalization |
+| `attachments.fuzz.test.ts` | `src/lib/attachments.ts` | Non AES-256-GCM algorithms rejection, missing cryptographic metadata handling |
+
+---
+
+### 🧬 Mutation Testing (`Stryker Mutator`)
+
+Mutation testing introduces deliberate faults (mutants) into source code to verify that the test suite actively detects and catches implementation regressions:
+
+- **`stryker.security.conf.mjs`**: Tests `share.ts`, `recoveryKey.ts`, `backupValidation.ts`, `vaultDatabaseFormat.ts`
+- **`stryker.search.conf.mjs`**: Tests `fuzzySearch.ts`, `recentSearches.ts`, `tags.ts`, `smartFolders.ts`
+- **`stryker.conf.mjs` (Core)**: Tests `diceware.ts`, `emergencyKit.ts`, `otp.ts`, `random.ts`, `secretKey.ts`, `securityEvents.ts`
+- **`stryker.storage.conf.mjs`**: Tests `desktopStorage.ts`, `secureStorage.ts`
+- **`stryker.storage-orchestration.conf.mjs`**: Tests `storage.ts`
+- **`stryker.importer.conf.mjs`**: Tests `importer.ts`
+- **`stryker.importer-helpers.conf.mjs`**: Tests `csvParser.ts`, `fileDecoder.ts`
 
 ---
 
@@ -120,16 +157,38 @@ npm ci
 ### Verification & Testing
 
 ```bash
-# Run TypeScript Typecheck
+# ── 1. Typecheck & Linting ──────────────────────────────────────────
 npm run typecheck
-
-# Run Linter
 npm run lint
 
-# Run Unit Test Suite
+# ── 2. Unit Testing & Code Coverage ────────────────────────────────
 npm run test:unit
+npm run test:coverage
 
-# Run Rust Backend Tests
+# ── 3. Property-Based Fuzz Testing ─────────────────────────────────
+npm run test:fuzz
+
+# ── 4. Mutation Testing (Stryker) ──────────────────────────────────
+# Run Security modules mutation test
+npm run test:mutation:security
+
+# Run Search & Filtering modules mutation test
+npm run test:mutation:search
+
+# Run Core cryptographic modules mutation test
+npm run test:mutation:core
+
+# Run Storage modules mutation test
+npm run test:mutation:storage
+
+# Run Importer modules mutation test
+npm run test:mutation:importer
+
+# Dry-run mode for any mutation suite (instant test setup verification)
+npm run test:mutation:security:dry
+npm run test:mutation:search:dry
+
+# ── 5. Native Rust Backend Tests ───────────────────────────────────
 cd src-tauri && cargo test && cd ..
 ```
 

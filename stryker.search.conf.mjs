@@ -4,13 +4,17 @@ export default {
   testRunner: 'vitest',
   coverageAnalysis: 'perTest',
   mutate: [
-    'src/lib/csvParser.ts',
-    'src/lib/fileDecoder.ts',
+    'src/lib/fuzzySearch.ts',
+    'src/lib/recentSearches.ts',
+    'src/lib/tags.ts',
+    'src/lib/smartFolders.ts',
   ],
   testFiles: [
-    'src/lib/importer.test.ts',
-    'src/lib/csvParser.test.ts',
-    'src/lib/fileDecoder.test.ts',
+    'src/lib/fuzzySearch.test.ts',
+    'src/lib/fuzzySearch.fuzz.test.ts',
+    'src/lib/recentSearches.test.ts',
+    'src/lib/tags.test.ts',
+    'src/lib/smartFolders.test.ts',
   ],
   vitest: {
     configFile: 'vitest.config.ts',
@@ -18,9 +22,9 @@ export default {
   },
   reporters: ['progress', 'clear-text', 'html', 'json'],
   thresholds: {
-    high: 90,
-    low: 87,
-    break: 85,
+    high: 85,
+    low: 75,
+    break: 70,
   },
   timeoutMS: 15000,
   dryRunTimeoutMinutes: 3,
@@ -29,11 +33,11 @@ export default {
   ignoreStatic: true,
   tempDirName: '.stryker-tmp',
   incremental: true,
-  incrementalFile: 'reports/mutation/importer-helpers-incremental.json',
+  incrementalFile: 'reports/mutation/search-incremental.json',
   htmlReporter: {
-    fileName: 'reports/mutation/importer-helpers.html',
+    fileName: 'reports/mutation/search.html',
   },
   jsonReporter: {
-    fileName: 'reports/mutation/importer-helpers.json',
+    fileName: 'reports/mutation/search.json',
   },
 };

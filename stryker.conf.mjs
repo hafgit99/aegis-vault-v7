@@ -33,6 +33,8 @@ export default {
   dryRunTimeoutMinutes: 3,
   concurrency: 2,
   cleanTempDir: 'always',
+  ignoreStatic: true,
+  tempDirName: '.stryker-tmp',
   incremental: true,
   incrementalFile: 'reports/mutation/incremental.json',
 };

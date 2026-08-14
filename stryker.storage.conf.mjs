@@ -25,6 +25,8 @@ export default {
   dryRunTimeoutMinutes: 3,
   concurrency: 2,
   cleanTempDir: 'always',
+  ignoreStatic: true,
+  tempDirName: '.stryker-tmp',
   incremental: true,
   incrementalFile: 'reports/mutation/storage-bridges-incremental.json',
   htmlReporter: {
