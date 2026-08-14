@@ -8,7 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const VERSION = '7.0.1.0';
+const VERSION = '7.0.2.0';
 
 // ─── Help & Version ──────────────────────────────────────────────────────────
 
