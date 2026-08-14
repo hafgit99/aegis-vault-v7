@@ -128,7 +128,7 @@ describe('LockScreen', () => {
     expect(screen.getByText('Android Autofill isteği bekliyor')).toBeTruthy();
   });
 
-  it('sets up the master password and unlocks when confirmation matches', async () => {
+  it('requires accepting terms of service and privacy policy during setup', async () => {
     const onUnlock = vi.fn();
     render(<LockScreen onUnlock={onUnlock} />);
 
@@ -136,6 +136,50 @@ describe('LockScreen', () => {
     const confirmation = confirmationInput();
     fireEvent.change(password, { target: { value: 'strong-pass-12' } });
     fireEvent.change(confirmation, { target: { value: 'strong-pass-12' } });
+    
+    // Submit without checking the terms checkbox
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement);
+
+    expect(screen.getByText(/Kullanım Koşulları ve Gizlilik Politikası/i)).toBeTruthy();
+    expect(setupMasterPasswordWithSecretKey).not.toHaveBeenCalled();
+    expect(onUnlock).not.toHaveBeenCalled();
+
+    // Open terms modal by clicking the terms link
+    fireEvent.click(screen.getByTestId('lock-terms-link'));
+    expect(screen.getByTestId('legal-terms-modal')).toBeTruthy();
+    expect(screen.getByText(/Zero-Knowledge Security/i)).toBeTruthy();
+
+    // Switch to privacy tab in modal
+    fireEvent.click(screen.getByTestId('legal-terms-tab-privacy'));
+    expect(screen.getByTestId('legal-terms-tab-privacy')).toBeTruthy();
+
+    // Close the modal
+    fireEvent.click(screen.getByTestId('legal-terms-modal-confirm-btn'));
+    expect(screen.queryByTestId('legal-terms-modal')).toBeNull();
+
+    // Check the terms checkbox and submit
+    fireEvent.click(screen.getByTestId('lock-terms-checkbox'));
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement);
+
+    await waitFor(() => {
+      expect(setupMasterPasswordWithSecretKey).toHaveBeenCalledWith(
+        'strong-pass-12',
+        expect.stringMatching(/^A3-/),
+        false,
+      );
+      expect(onUnlock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('sets up the master password and unlocks when confirmation matches and terms accepted', async () => {
+    const onUnlock = vi.fn();
+    render(<LockScreen onUnlock={onUnlock} />);
+
+    const password = passwordInput();
+    const confirmation = confirmationInput();
+    fireEvent.change(password, { target: { value: 'strong-pass-12' } });
+    fireEvent.change(confirmation, { target: { value: 'strong-pass-12' } });
+    fireEvent.click(screen.getByTestId('lock-terms-checkbox'));
     fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 
     await waitFor(() => {
@@ -154,6 +198,7 @@ describe('LockScreen', () => {
 
     fireEvent.change(passwordInput(), { target: { value: 'strong-pass-12' } });
     fireEvent.change(confirmationInput(), { target: { value: 'strong-pass-12' } });
+    fireEvent.click(screen.getByTestId('lock-terms-checkbox'));
     fireEvent.click(screen.getByTestId('lock-remember-secret-key-checkbox'));
     fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 

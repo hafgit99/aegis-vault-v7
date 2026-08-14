@@ -40,6 +40,7 @@ import { LockScreenSecretKeySection } from './lock/LockScreenSecretKeySection';
 import { LockScreenBiometricSection } from './lock/LockScreenBiometricSection';
 import { LockScreenResetModal } from './lock/LockScreenResetModal';
 import { LockScreenRecoveryModal } from './lock/LockScreenRecoveryModal';
+import { LegalTermsModal, LegalTermsTab } from './lock/LegalTermsModal';
 
 const LOCKOUT_STORAGE_KEY = 'aegis_lockout_state';
 const MAX_LOCKOUT_MS = 5 * 60 * 1000;
@@ -131,8 +132,10 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
   const isBiometricPendingRef = useRef(false);
   const hasAutoTriggeredRef = useRef(false);
 
-  // Password Recovery Center States
   const [showRecoveryModal, setShowRecoveryModal] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [showLegalModal, setShowLegalModal] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState<LegalTermsTab>('terms');
 
   const isBioEnabled = isBiometricEnabled();
   const lockoutRemainingSeconds = Math.ceil(lockoutRemainingMs / 1000);
@@ -206,6 +209,10 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
         }
         if (!isAccountSecretKeyFormatValid(secretKey)) {
           setError(t('lock.error.secretKeyInvalid'));
+          return;
+        }
+        if (!termsAccepted) {
+          setError(t('lock.terms.errorRequired'));
           return;
         }
         await setupMasterPasswordWithSecretKey(password, secretKey, rememberSecretKey);
@@ -507,6 +514,52 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
                   onDownloadEmergencyKit={handleDownloadEmergencyKit}
                 />
 
+                {/* Terms of Service & Privacy Policy Consent for First-Time Setup */}
+                {!isSetup && (
+                  <div className="pt-1 pb-0.5">
+                    <label className="flex items-start gap-2.5 cursor-pointer text-xs text-on-surface-variant/90 select-none group">
+                      <input
+                        data-testid="lock-terms-checkbox"
+                        type="checkbox"
+                        checked={termsAccepted}
+                        onChange={(e) => setTermsAccepted(e.target.checked)}
+                        className="mt-0.5 w-4 h-4 rounded border-outline-variant/30 text-brand-primary focus:ring-brand-primary/20 accent-brand-primary cursor-pointer shrink-0"
+                      />
+                      <span className="leading-relaxed text-[11px] sm:text-xs">
+                        {t('lock.terms.agreePrefix') ? `${t('lock.terms.agreePrefix')} ` : ''}
+                        <button
+                          data-testid="lock-terms-link"
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setLegalModalTab('terms');
+                            setShowLegalModal(true);
+                          }}
+                          className="text-brand-primary underline hover:text-brand-primary/80 font-bold cursor-pointer inline p-0 bg-transparent border-none"
+                        >
+                          {t('lock.terms.termsLink')}
+                        </button>
+                        {` ${t('lock.terms.and')} `}
+                        <button
+                          data-testid="lock-privacy-link"
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setLegalModalTab('privacy');
+                            setShowLegalModal(true);
+                          }}
+                          className="text-brand-primary underline hover:text-brand-primary/80 font-bold cursor-pointer inline p-0 bg-transparent border-none"
+                        >
+                          {t('lock.terms.privacyLink')}
+                        </button>
+                        {t('lock.terms.agreeSuffix') ? `${t('lock.terms.agreeSuffix')}` : ''}
+                      </span>
+                    </label>
+                  </div>
+                )}
+
                 {/* CTA Action button */}
                 <button
                   data-testid="lock-submit-button"
@@ -582,6 +635,13 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
         onClose={() => setShowRecoveryModal(false)}
         onUnlockedAfterRecovery={onUnlock}
         onClearLockoutState={clearLockoutState}
+      />
+
+      {/* Legal Terms & Privacy Policy Modal */}
+      <LegalTermsModal
+        isOpen={showLegalModal}
+        onClose={() => setShowLegalModal(false)}
+        initialTab={legalModalTab}
       />
 
       {/* Futuristic clean footer */}
