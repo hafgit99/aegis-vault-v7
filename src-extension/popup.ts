@@ -25,16 +25,32 @@ const langSelect = document.getElementById('langSelect') as HTMLSelectElement;
 const themeToggle = document.getElementById('themeToggle') as HTMLButtonElement;
 const toast = document.getElementById('toast') as HTMLDivElement;
 const focusAppBtn = document.getElementById('focusAppBtn') as HTMLButtonElement;
-const autoSubmitToggle = document.getElementById('autoSubmitToggle') as HTMLInputElement;
-const autoSubmitLabel = document.getElementById('autoSubmitLabel') as HTMLLabelElement;
+const autoSubmitBtn = document.getElementById('autoSubmitBtn') as HTMLButtonElement;
+const autoSubmitText = document.getElementById('autoSubmitText') as HTMLSpanElement;
+
+// Helper to update auto-submit button visual state
+function updateAutoSubmitState(isEnabled: boolean) {
+  if (autoSubmitBtn) {
+    autoSubmitBtn.classList.toggle('active', isEnabled);
+    autoSubmitBtn.setAttribute('aria-pressed', String(isEnabled));
+  }
+}
 
 // Load auto-submit setting
 chrome.storage.local.get(['autoSubmit'], (res) => {
-  autoSubmitToggle.checked = res.autoSubmit === true;
+  updateAutoSubmitState(res.autoSubmit === true);
 });
-autoSubmitToggle.addEventListener('change', (e) => {
-  chrome.storage.local.set({ autoSubmit: (e.target as HTMLInputElement).checked });
-});
+
+if (autoSubmitBtn) {
+  autoSubmitBtn.addEventListener('click', () => {
+    chrome.storage.local.get(['autoSubmit'], (res) => {
+      const nextState = !(res.autoSubmit === true);
+      chrome.storage.local.set({ autoSubmit: nextState }, () => {
+        updateAutoSubmitState(nextState);
+      });
+    });
+  });
+}
 
 // Text Elements for translation
 const lockedTitle = document.getElementById('lockedTitle') as HTMLHeadingElement;
@@ -101,12 +117,19 @@ export function copyToClipboardSecurely(text: string, isSensitive = true) {
 
 // Translate page static elements
 function applyTranslations() {
+  document.documentElement.dir = activeLanguage === 'ar' ? 'rtl' : 'ltr';
+  document.documentElement.lang = activeLanguage;
   lockedTitle.textContent = translate('locked.title', activeLanguage);
   lockedDesc.textContent = translate('locked.description', activeLanguage);
   focusAppBtn.textContent = translate('btn.openApp', activeLanguage);
   searchInput.placeholder = translate('search.placeholder', activeLanguage);
   phishingText.textContent = translate('phishing.warning', activeLanguage);
-  autoSubmitLabel.title = translate('settings.autoSubmit', activeLanguage);
+  if (autoSubmitText) {
+    autoSubmitText.textContent = translate('settings.autoSubmitCompact' as any, activeLanguage);
+  }
+  if (autoSubmitBtn) {
+    autoSubmitBtn.title = translate('settings.autoSubmitTooltip' as any, activeLanguage) || translate('settings.autoSubmit', activeLanguage);
+  }
 }
 
 // ─── Advanced Phishing Detection Engine ───────────────────────────────────────
@@ -563,7 +586,7 @@ function renderItemsToList(items: CredentialItem[]) {
     // Autofill button
     const fillBtn = document.createElement('button');
     fillBtn.className = 'btn-fill';
-    fillBtn.textContent = activeLanguage === 'tr' ? 'Doldur' : activeLanguage === 'zh' ? '自动填充' : 'Fill';
+    fillBtn.textContent = translate('btn.fill', activeLanguage);
     fillBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       chrome.runtime.sendMessage({

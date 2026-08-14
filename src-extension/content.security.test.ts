@@ -66,8 +66,8 @@ describe('extension popup secure clipboard copy', () => {
       <button id="themeToggle"></button>
       <div id="toast"></div>
       <button id="focusAppBtn"></button>
-      <input type="checkbox" id="autoSubmitToggle" />
-      <label id="autoSubmitLabel"></label>
+      <button type="button" id="autoSubmitBtn"></button>
+      <span id="autoSubmitText"></span>
       <h1 id="lockedTitle"></h1>
       <p id="lockedDesc"></p>
     `;

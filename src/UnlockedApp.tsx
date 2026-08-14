@@ -511,7 +511,7 @@ export default function UnlockedApp({
         onLock={handleLock}
       />
 
-      <main className="lg:ml-[280px] ml-0 flex-1 flex flex-col min-h-0 bg-brand-bg">
+      <main className="lg:ml-[280px] ml-0 flex-1 flex flex-col min-h-0 min-w-0 max-w-full overflow-hidden bg-brand-bg">
         <TopBar
           activeTab={activeTab}
           searchQuery={searchQuery}

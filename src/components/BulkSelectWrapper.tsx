@@ -53,7 +53,7 @@ export default function BulkSelectWrapper({
   };
 
   return (
-    <div className="flex items-center gap-2 w-full group/bulk">
+    <div className="flex items-center gap-2 w-full min-w-0 max-w-full group/bulk overflow-hidden">
       {isSelectionMode && (
         <input
           type="checkbox"
@@ -61,10 +61,10 @@ export default function BulkSelectWrapper({
           checked={isSelected}
           onChange={handleCheckboxChange}
           onClick={(event) => event.stopPropagation()}
-          className="w-4 h-4 rounded border-outline-variant/30 text-brand-primary focus:ring-brand-primary/40 cursor-pointer"
+          className="w-4 h-4 rounded border-outline-variant/30 text-brand-primary focus:ring-brand-primary/40 cursor-pointer shrink-0"
         />
       )}
-      <div className="flex-1 min-w-0" onClick={handleClick}>
+      <div className="flex-1 min-w-0 max-w-full overflow-hidden" onClick={handleClick}>
         {children}
       </div>
     </div>

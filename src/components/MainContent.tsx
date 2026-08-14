@@ -202,7 +202,7 @@ export function MainContentComponent({
   };
 
   return (
-    <div className="flex flex-1 overflow-hidden relative">
+    <div className="flex flex-1 overflow-hidden relative min-w-0 max-w-full w-full">
       <AnimatePresence mode="wait">
         <motion.div
           key={activeTab}
@@ -210,7 +210,7 @@ export function MainContentComponent({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -15 }}
           transition={{ duration: 0.18, ease: 'easeInOut' }}
-          className="flex-1 flex overflow-hidden min-h-0"
+          className="flex-1 flex overflow-hidden min-h-0 min-w-0 max-w-full w-full"
         >
           {activeTab === 'vault' && (
             <>

@@ -61,7 +61,7 @@ function VaultListItemContent({
       onDragEnd={() => {
         setIsDragging(false);
       }}
-      className={`group p-3 rounded-lg border flex items-center gap-3 cursor-pointer transition-all ${
+      className={`group p-3 rounded-lg border flex items-center gap-3 cursor-pointer transition-all w-full min-w-0 max-w-full overflow-hidden ${
         isDragging ? 'opacity-40 scale-[0.98]' : ''
       } ${
         isSelected

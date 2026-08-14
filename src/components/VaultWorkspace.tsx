@@ -225,7 +225,7 @@ export function VaultWorkspaceContent({
   return (
     <>
       <section
-        className={`w-full lg:w-[480px] xl:w-[540px] border-r border-outline-variant/15 flex flex-col bg-surface-lowest/55 h-full ${
+        className={`w-full min-w-0 max-w-full lg:max-w-[480px] xl:max-w-[540px] lg:w-[480px] xl:w-[540px] border-r border-outline-variant/15 flex flex-col bg-surface-lowest/55 h-full overflow-hidden shrink-0 ${
           mobileActiveView === 'detail' ? 'hidden lg:flex' : 'flex'
         }`}
       >
@@ -435,7 +435,7 @@ export function VaultWorkspaceContent({
         </div>
 
         <div
-          className="flex-1 overflow-y-auto p-3 pt-0 space-y-1.5 scrollbar-hide"
+          className="flex-1 overflow-y-auto overflow-x-hidden p-3 pt-0 space-y-1.5 scrollbar-hide min-w-0 max-w-full"
         >
           {displayedItems.length === 0 ? (
             <div
@@ -454,11 +454,11 @@ export function VaultWorkspaceContent({
               {displayedItems.map((item) => (
                 <motion.div
                   key={item.id}
-                  layout
-                  initial={{ opacity: 0, y: 8 }}
+                  initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.15 }}
+                  transition={{ duration: 0.12 }}
+                  className="w-full min-w-0 max-w-full overflow-hidden"
                 >
                   <BulkSelectWrapper
                     id={item.id}
