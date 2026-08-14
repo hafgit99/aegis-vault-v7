@@ -195,7 +195,7 @@ export async function verifyMasterPassword(password: string, secretKey?: string 
   await initializeStorage();
   
   const usableSecretKey = secretKey || getRememberedAccountSecretKey();
-  const credential = resolveVaultCredential(password, secretKey);
+  const credential = resolveVaultCredential(password, usableSecretKey);
 
   if (isDesktopRuntime()) {
     const repo = getVaultStorageRepository();

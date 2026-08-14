@@ -31,7 +31,7 @@ export default function PasskeyDetail({
           {t('passkeyDetail.service')}
         </label>
         <div className="flex items-center justify-between">
-          <span className="font-bold text-base text-on-surface">{item.passkeyService || t('passkeyDetail.defaultService')}</span>
+          <span data-testid="passkey-service-value" className="font-bold text-base text-on-surface">{item.passkeyService || t('passkeyDetail.defaultService')}</span>
         </div>
       </div>
 
@@ -40,7 +40,7 @@ export default function PasskeyDetail({
           {t('passkeyDetail.publicId')}
         </label>
         <div className="flex items-center justify-between">
-          <span className="font-mono text-sm text-on-surface break-all">{item.username || t('passkeyDetail.emptyPublicId')}</span>
+          <span data-testid="passkey-username-value" className="font-mono text-sm text-on-surface break-all">{item.username || t('passkeyDetail.emptyPublicId')}</span>
           <button
             onClick={() => onCopyText(item.username || '', 'passkeyPublicId')}
             className="text-on-surface-variant hover:text-brand-primary transition-colors focus:outline-none p-1.5 hover:bg-[#1a1c1a]/50 rounded-lg cursor-pointer ml-2 shrink-0"
@@ -60,7 +60,7 @@ export default function PasskeyDetail({
           {t('passkeyDetail.privateExponent')}
         </label>
         <div className="flex items-start justify-between">
-          <span className="font-mono text-xs text-on-surface-variant select-all break-all leading-relaxed whitespace-pre bg-[#151715] p-3 rounded-lg border border-outline-variant/10 flex-1 mr-3 h-20 overflow-y-auto">
+          <span data-testid="passkey-public-id-value" className="font-mono text-xs text-on-surface-variant select-all break-all leading-relaxed whitespace-pre bg-[#151715] p-3 rounded-lg border border-outline-variant/10 flex-1 mr-3 h-20 overflow-y-auto">
             {isPrivateExponentRevealed ? item.passkeyPrivateExponent || t('passkeyDetail.emptyPrivateExponent') : HIDDEN_SECRET}
           </span>
           <div className="flex flex-col gap-1.5 shrink-0">

@@ -164,7 +164,8 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
         throw new Error(t('lock.error.biometricUnsupported'));
       }
       const decryptedMaster = await authenticateBiometric();
-      if (await verifyMasterPassword(decryptedMaster, rememberedSecretKey)) {
+      const currentRemembered = getRememberedAccountSecretKey();
+      if (await verifyMasterPassword(decryptedMaster, currentRemembered)) {
         onUnlock();
       } else {
         throw new Error(t('lock.error.biometricIntegrity'));
@@ -175,7 +176,7 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
       setBiometricLoading(false);
       isBiometricPendingRef.current = false;
     }
-  }, [onUnlock, rememberedSecretKey, t]);
+  }, [onUnlock, t]);
 
   // Auto trigger biometric prompt on lock screen if enabled
   useEffect(() => {
@@ -218,8 +219,10 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
           return;
         }
 
-        const submittedSecretKey = requiresSecretKey ? secretKey : null;
-        if (requiresSecretKey && !rememberedSecretKey && !isAccountSecretKeyFormatValid(submittedSecretKey || '')) {
+        const currentRemembered = getRememberedAccountSecretKey();
+        const currentRequires = isAccountSecretKeyRequired();
+        const submittedSecretKey = currentRequires ? (currentRemembered || secretKey) : null;
+        if (currentRequires && !currentRemembered && !isAccountSecretKeyFormatValid(submittedSecretKey || '')) {
           setError(t('lock.error.secretKeyRequired'));
           return;
         }

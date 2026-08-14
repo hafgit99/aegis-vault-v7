@@ -38,38 +38,15 @@ export interface SecureBuffer {
 }
 
 export function createSecureBuffer(size: number): SecureBuffer {
-  if (!isWasmZeroizerAvailable()) {
-    const array = new Uint8Array(size);
-    return {
-      array,
-      offset: 0,
-      length: size,
-      zeroize: () => {
-        array.fill(0);
-      }
-    };
-  }
-
-  const memoryBuffer = wasmMemory!.buffer;
-  if (nextOffset + size > memoryBuffer.byteLength) {
-    nextOffset = 0;
-  }
-
-  const offset = nextOffset;
-  nextOffset += size;
-
-  const array = new Uint8Array(memoryBuffer, offset, size);
-  array.fill(0);
-
+  const array = new Uint8Array(size);
   let zeroed = false;
 
   return {
     array,
-    offset,
+    offset: 0,
     length: size,
     zeroize: () => {
       if (zeroed) return;
-      zeroizeFunc!(offset, size);
       array.fill(0);
       zeroed = true;
     }
@@ -77,10 +54,5 @@ export function createSecureBuffer(size: number): SecureBuffer {
 }
 
 export function wasmZeroizeArray(array: Uint8Array): void {
-  if (wasmMemory && array.buffer === wasmMemory.buffer) {
-    const offset = array.byteOffset;
-    const len = array.byteLength;
-    zeroizeFunc!(offset, len);
-  }
   array.fill(0);
 }

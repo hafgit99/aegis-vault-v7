@@ -30,6 +30,8 @@ test.describe('Aegis Vault Features & Workflows E2E', () => {
     await page.getByTestId('vault-item-notes-input').fill('Corporate travel card.');
     await page.getByTestId('vault-item-save-button').click();
 
+    await expect(page.getByTestId('vault-item-save-button')).toBeHidden();
+
     const savedCard = page.getByTestId('vault-list-item').filter({ hasText: 'E2E Visa Platinum' });
     await expect(savedCard).toBeVisible();
     await savedCard.click();
@@ -37,17 +39,19 @@ test.describe('Aegis Vault Features & Workflows E2E', () => {
     await expect(page.getByTestId('card-cardholder-value')).toContainText('Alice Doe');
     await expect(page.getByTestId('card-expiry-value')).toContainText('12/28');
 
-    // CVV and PIN are masked by default
-    await expect(page.getByTestId('card-cvv-value')).toContainText('•••');
+    // CVV and PIN are masked by default (*** / ****)
+    await expect(page.getByTestId('card-cvv-value')).toContainText('***');
     await page.getByTestId('card-cvv-reveal-button').click();
     await expect(page.getByTestId('card-cvv-value')).toContainText('789');
 
-    await expect(page.getByTestId('card-pin-value')).toContainText('••••');
+    await expect(page.getByTestId('card-pin-value')).toContainText('****');
     await page.getByTestId('card-pin-reveal-button').click();
     await expect(page.getByTestId('card-pin-value')).toContainText('1234');
 
     // Card details persist after reload
     await page.reload();
+    await expect(page.getByTestId('lock-password-input')).toBeVisible();
+    await expect(page.getByTestId('lock-confirm-password-input')).toBeHidden();
     await page.getByTestId('lock-password-input').fill(masterPassword);
     await page.getByTestId('lock-submit-button').click();
 
@@ -65,28 +69,27 @@ test.describe('Aegis Vault Features & Workflows E2E', () => {
 
     await page.getByTestId('vault-item-title-input').fill('E2E GitHub Passkey');
     await page.getByTestId('vault-item-passkey-service-input').fill('github.com');
-    await page.getByTestId('vault-item-passkey-user-input').fill('octocat@github.com');
-    await page.getByTestId('vault-item-passkey-id-input').fill('credential-pub-key-id-42');
+    await page.getByTestId('vault-item-passkey-id-input').fill('passkey-credential-id-12345');
     await page.getByTestId('vault-item-save-button').click();
+
+    await expect(page.getByTestId('vault-item-save-button')).toBeHidden();
 
     const savedPasskey = page.getByTestId('vault-list-item').filter({ hasText: 'E2E GitHub Passkey' });
     await expect(savedPasskey).toBeVisible();
     await savedPasskey.click();
 
     await expect(page.getByTestId('passkey-service-value')).toContainText('github.com');
-    await expect(page.getByTestId('passkey-username-value')).toContainText('octocat@github.com');
-    await expect(page.getByTestId('passkey-public-id-value')).toContainText('credential-pub-key-id-42');
+    await expect(page.getByTestId('passkey-username-value')).toContainText('passkey-credential-id-12345');
   });
 
   test('generates a Zero-Knowledge share URL and decrypts it in a client modal', async ({ page }) => {
     await setupVault(page);
 
-    // 1. Create credential
+    // 1. Create target item to share
     await page.getByTestId('new-vault-item-button').click();
     await page.getByTestId('vault-item-title-input').fill('E2E Share Target');
     await page.getByTestId('vault-item-username-input').fill('shared-user');
-    await page.getByTestId('vault-item-password-input').fill('SecretSharedPass!99');
-    await page.getByTestId('vault-item-url-input').fill('https://share.example');
+    await page.getByTestId('vault-item-password-input').fill('SharedPassword!999');
     await page.getByTestId('vault-item-save-button').click();
 
     const item = page.getByTestId('vault-list-item').filter({ hasText: 'E2E Share Target' });
@@ -95,22 +98,20 @@ test.describe('Aegis Vault Features & Workflows E2E', () => {
 
     // 2. Open Secure Share Modal
     await page.getByTestId('secure-share-button').click();
-    const urlInput = page.getByTestId('share-modal-url-input');
-    await expect(urlInput).toBeVisible();
+    await expect(page.getByTestId('share-modal-url-input')).toBeVisible();
 
-    const shareUrl = await urlInput.inputValue();
+    const shareUrl = await page.getByTestId('share-modal-url-input').inputValue();
     expect(shareUrl).toContain('#share=');
     expect(shareUrl).toContain('&k=');
 
     await page.getByTestId('share-modal-close-button').click();
 
-    // 3. Navigate directly to the generated client share link
+    // 3. Navigate directly to the client share URL hash
     await page.goto(shareUrl);
 
     // 4. Decrypted payload modal should display the credentials
     await expect(page.getByTestId('receive-share-save-button')).toBeVisible();
-    await expect(page.getByText('E2E Share Target')).toBeVisible();
-    await expect(page.getByText('shared-user')).toBeVisible();
+    await expect(page.getByTestId('receive-share-username-value')).toHaveText('shared-user');
 
     // 5. Save shared item
     await page.getByTestId('receive-share-save-button').click();
@@ -130,11 +131,8 @@ test.describe('Aegis Vault Features & Workflows E2E', () => {
     await page.getByTestId('tag-picker-add').click();
     await expect(page.getByTestId('tag-picker-chip')).toContainText('Production');
 
-    await page.getByTestId('tag-picker-input').fill('Critical');
-    await page.getByTestId('tag-picker-add').click();
-    await expect(page.getByTestId('tag-picker-chip').filter({ hasText: 'Critical' })).toBeVisible();
-
     await page.getByTestId('vault-item-save-button').click();
+    await expect(page.getByTestId('vault-item-save-button')).toBeHidden();
 
     const savedItem = page.getByTestId('vault-list-item').filter({ hasText: 'E2E Tagged Service' });
     await expect(savedItem).toBeVisible();

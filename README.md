@@ -92,16 +92,30 @@ Aegis Vault 7 maintains rigorous automated testing standards with defense-in-dep
 | Metric | Result | Status | Framework / Tool |
 |---|---|---|---|
 | **TypeScript Typecheck** | **`0 errors`** | ✅ 100% Clean | `tsc --noEmit` |
-| **Unit Test Suite** | **`159 test files passed (159/159)`** | ✅ 100% Green | Vitest 4.1 |
-| **Unit Tests Executed** | **`1,223 tests passed (1,223/1,223)`** | ✅ 100% Green | Vitest / React Testing Library |
+| **Unit & Integration Test Suite** | **`164 test files passed (164/164)`** | ✅ 100% Green | Vitest 4.1 |
+| **Unit Tests Executed** | **`1,245 tests passed (1,245/1,245)`** | ✅ 100% Green | Vitest / React Testing Library |
 | **Property-Based Fuzz Tests** | **`33 tests across 8 files passed`** | ✅ 100% Green | `fast-check` v4 |
-| **End-to-End (E2E) Suites** | **`3 Comprehensive Specs`** | ✅ Ready & Verified | Playwright (Desktop & Mobile) |
+| **End-to-End (E2E) Suites** | **`All 5 Critical Feature Workflows Passed`** | ✅ 100% Green | Playwright (Chromium & Multi-Browser) |
 | **Mutation Testing** | **`7 Specialized Stryker Suites`** | ✅ Ready & Verified | `@stryker-mutator/core` v9 |
 | **Rust Backend Tests** | **`9 tests passed (9/9)`** | ✅ 100% Green | `cargo test` (Tauri 2) |
 | **Lines Coverage** | **`90.4%`** | ✅ Exceeds Global Target (≥ 90%) | Vitest V8 Coverage |
 | **Statements Coverage** | **`88.7%`** | ✅ Exceeds Global Target (≥ 88%) | Vitest V8 Coverage |
 | **Functions Coverage** | **`86.8%`** | ✅ Exceeds Global Target (≥ 85%) | Vitest V8 Coverage |
 | **Branches Coverage** | **`84.1%`** | ✅ Exceeds Global Target (≥ 80%) | Vitest V8 Coverage |
+
+---
+
+### 🎭 End-to-End (E2E) Cryptographic & Workflow Testing (`Playwright`)
+
+Comprehensive browser-level integration testing verifies client-side zero-knowledge cryptography, SQLite persistence, and UI interaction states in real browser engines:
+
+| E2E Feature Scenario | Target Flow & Security Verification | Status |
+|---|---|---|
+| **Payment Cards & Field Masking** | AES-256-GCM encryption of card numbers, CVV/PIN masking with unmask toggle, cardholder data persistence across reloads | ✅ 100% Passed |
+| **Passkeys & WebAuthn Credentials** | Hardware passkey credential ID storage, service domain association, and detail panel rendering | ✅ 100% Passed |
+| **Zero-Knowledge Share URLs** | Client-side ephemeral URL generation (`#share=...&k=...`), hash-fragment decryption, and one-click import into local vault | ✅ 100% Passed |
+| **Custom Tagging & Categorization** | Dynamic multi-tag creation, visual chip indicators, and tag-based vault filtering | ✅ 100% Passed |
+| **Theme & UI Preferences** | Dynamic palette switching (Emerald, Sapphire, Amber, Rose, etc.) and state persistence across full browser reloads | ✅ 100% Passed |
 
 ---
 

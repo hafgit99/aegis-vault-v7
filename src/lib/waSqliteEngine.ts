@@ -123,7 +123,7 @@ async function loadDefaultWaSqliteRuntime(
   ]);
   const module = await SQLiteESMFactory(createWaSqliteModuleConfig(options));
   return {
-    sqlite3: SQLite.Factory(module),
+    sqlite3: options.asyncRuntime ? (SQLite as any).AsyncFactory(module) : SQLite.Factory(module),
     module,
   };
 }

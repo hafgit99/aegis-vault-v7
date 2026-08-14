@@ -131,7 +131,7 @@ export default function ReceiveShareModal({ isOpen, onClose, payload, onImport }
                 {t('share.fieldTitle') || 'Title / Başlık'}
               </label>
               <div className="text-sm font-bold text-on-surface flex items-center gap-2">
-                <span>{payload.title}</span>
+                <span data-testid="receive-share-title-value">{payload.title}</span>
                 <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full border border-brand-primary/20 bg-brand-primary/10 text-brand-primary uppercase">
                   {payload.category}
                 </span>
@@ -146,7 +146,7 @@ export default function ReceiveShareModal({ isOpen, onClose, payload, onImport }
                 </label>
                 <div className="text-xs text-on-surface flex items-center gap-1.5 font-mono">
                   <User className="w-3.5 h-3.5 text-on-surface-variant/40" />
-                  <span>{payload.username}</span>
+                  <span data-testid="receive-share-username-value">{payload.username}</span>
                 </div>
               </div>
             )}

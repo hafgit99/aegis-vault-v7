@@ -301,6 +301,10 @@ export default function UnlockedApp({
   }, [unlocked, items]);
 
   useEffect(() => {
+    if (typeof window === 'undefined' || !window.__TAURI_INTERNALS__) {
+      return;
+    }
+
     let unlistenFn: (() => void) | null = null;
 
     listen<any>('add-credential-from-extension', (event) => {

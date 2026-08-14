@@ -613,7 +613,7 @@ class SQLiteOPFS implements VaultStorageRepository {
     const passwordBytes = new TextEncoder().encode(password);
     if (this.areByteArraysEqual(this.cachedPasswordBytes, passwordBytes) && this.cachedKeySalt === salt && this.cachedKeyBytes) {
       passwordBytes.fill(0);
-      return this.cachedKeyBytes;
+      return new Uint8Array(this.cachedKeyBytes);
     }
     const key = await deriveVettedArgon2idKey(password, salt, this.getKdfParams());
     if (this.cachedPasswordBytes) {
@@ -621,8 +621,8 @@ class SQLiteOPFS implements VaultStorageRepository {
     }
     this.cachedPasswordBytes = passwordBytes;
     this.cachedKeySalt = salt;
-    this.cachedKeyBytes = key;
-    return key;
+    this.cachedKeyBytes = new Uint8Array(key);
+    return new Uint8Array(key);
   }
 
   /**
@@ -827,7 +827,7 @@ class SQLiteOPFS implements VaultStorageRepository {
       const category = item.category || 'login';
 
       const row: SQLiteRow = {
-        id: item.id || secureRandomToken(9),
+        id: itemId,
         title: '[encrypted: aes-256-gcm]',
         category: category,
         favorite: item.favorite ? 1 : 0,
@@ -924,8 +924,9 @@ class SQLiteOPFS implements VaultStorageRepository {
               const encrypted = await webCryptoAesGcmEncrypt(rawSensitive, derivedKey, generateSafeIv());
               const category = item.category || 'login';
 
+              const itemId = item.id || secureRandomToken(9);
               const row: SQLiteRow = {
-                id: item.id || secureRandomToken(9),
+                id: itemId,
                 title: '[encrypted: aes-256-gcm]',
                 category: category,
                 favorite: item.favorite ? 1 : 0,
