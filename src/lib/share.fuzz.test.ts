@@ -110,9 +110,11 @@ describe('share URL fuzz tests', () => {
           const originalD = params.get('share') || '';
           const originalK = params.get('k') || '';
 
-          // Corrupt share payload or key by flipping a character
+          // Corrupt share payload by flipping a character (guaranteed mutation)
+          const originalChar = originalD[corruptIndex] ?? '';
+          const replacementChar = originalChar === 'X' ? 'Y' : 'X';
           const corruptedD = originalD.length > corruptIndex
-            ? originalD.slice(0, corruptIndex) + 'X' + originalD.slice(corruptIndex + 1)
+            ? originalD.slice(0, corruptIndex) + replacementChar + originalD.slice(corruptIndex + 1)
             : originalD + 'X';
 
           const corruptedHash = `#share=${corruptedD}&k=${originalK}`;
