@@ -60,6 +60,8 @@
     "release:collect": "node scripts/collect-release-artifacts.cjs",
     "build:extension": "node scripts/build-extension.js",
     "build:extension:debug": "node scripts/build-extension.js --debug",
+    "package:chrome:zip": "node scripts/chrome-zip.cjs",
+    "package:edge:zip": "node scripts/chrome-zip.cjs",
     "extension:safari": "node scripts/safari-extension.cjs",
     "package:firefox:xpi": "node scripts/firefox-xpi.cjs",
     "sign:firefox:xpi": "node scripts/firefox-xpi.cjs --sign",

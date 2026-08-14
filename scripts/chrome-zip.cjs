@@ -1,0 +1,111 @@
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+
+const rootDir = path.resolve(__dirname, '..');
+const chromeDistDir = path.join(rootDir, 'dist-extension');
+const stagingDir = path.join(rootDir, '.tmp', 'chrome-zip');
+const artifactsDir = path.join(rootDir, 'release-local', 'chrome');
+const edgeArtifactsDir = path.join(rootDir, 'release-local', 'edge');
+const packageJson = require(path.join(rootDir, 'package.json'));
+
+const args = new Set(process.argv.slice(2));
+const skipBuild = args.has('--skip-build');
+const zipName = `aegis-vault-7-chrome-v${packageJson.version}.zip`;
+const edgeZipName = `aegis-vault-7-edge-v${packageJson.version}.zip`;
+
+const excludedNames = new Set([
+  'aegis-host.bat',
+  'com.hafgit99.aegisvault7.json',
+  'chromium-extension.rar',
+]);
+
+function run(command, commandArgs, options = {}) {
+  console.log(`\n> ${command} ${commandArgs.join(' ')}`);
+  const result = spawnSync(command, commandArgs, {
+    cwd: rootDir,
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+    ...options,
+  });
+
+  if (result.status !== 0) {
+    process.exit(result.status || 1);
+  }
+}
+
+function copyCleanExtension(src, dest) {
+  fs.rmSync(dest, { recursive: true, force: true });
+  fs.mkdirSync(dest, { recursive: true });
+
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    if (excludedNames.has(entry.name) || entry.name.endsWith('.map') || entry.name.endsWith('.rar')) continue;
+
+    const sourcePath = path.join(src, entry.name);
+    const destinationPath = path.join(dest, entry.name);
+
+    if (entry.isDirectory()) {
+      copyCleanExtension(sourcePath, destinationPath);
+    } else {
+      fs.copyFileSync(sourcePath, destinationPath);
+    }
+  }
+}
+
+function assertChromeManifest() {
+  const manifestPath = path.join(stagingDir, 'manifest.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+
+  if (manifest.manifest_version !== 3) {
+    throw new Error('Chrome manifest must be manifest_version 3');
+  }
+
+  if (!manifest.background?.service_worker) {
+    throw new Error('Chrome MV3 build must use background.service_worker');
+  }
+}
+
+function createZip(sourceDirectory, destinationZipPath) {
+  let AdmZip;
+  try {
+    AdmZip = require('adm-zip');
+  } catch {
+    // fallback if AdmZip not found directly
+  }
+
+  if (AdmZip) {
+    const zip = new AdmZip();
+    zip.addLocalFolder(sourceDirectory, '');
+    zip.writeZip(destinationZipPath);
+  } else {
+    // PowerShell Compress-Archive fallback
+    const psCommand = `Compress-Archive -Path '${sourceDirectory}\\*' -DestinationPath '${destinationZipPath}' -Force`;
+    spawnSync('powershell', ['-NoProfile', '-Command', psCommand], { stdio: 'inherit' });
+  }
+}
+
+if (!skipBuild) {
+  run('npm', ['run', 'build:extension']);
+}
+
+if (!fs.existsSync(chromeDistDir)) {
+  throw new Error('dist-extension does not exist. Run npm run build:extension first.');
+}
+
+fs.mkdirSync(artifactsDir, { recursive: true });
+fs.mkdirSync(edgeArtifactsDir, { recursive: true });
+
+copyCleanExtension(chromeDistDir, stagingDir);
+assertChromeManifest();
+
+const chromeZipPath = path.join(artifactsDir, zipName);
+const edgeZipPath = path.join(edgeArtifactsDir, edgeZipName);
+
+if (fs.existsSync(chromeZipPath)) fs.unlinkSync(chromeZipPath);
+if (fs.existsSync(edgeZipPath)) fs.unlinkSync(edgeZipPath);
+
+createZip(stagingDir, chromeZipPath);
+fs.copyFileSync(chromeZipPath, edgeZipPath);
+
+console.log(`\nChrome Web Store package ready: ${chromeZipPath}`);
+console.log(`Microsoft Edge Addons package ready: ${edgeZipPath}`);
