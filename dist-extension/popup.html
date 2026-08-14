@@ -15,14 +15,24 @@
         <div class="logo-text">Aegis Vault</div>
       </div>
       <div class="header-controls">
-        <label class="toggle-switch" id="autoSubmitLabel" title="Auto-Submit">
-          <input type="checkbox" id="autoSubmitToggle">
-          <span class="slider"></span>
-        </label>
-        <select id="langSelect" class="lang-select">
+        <button type="button" id="autoSubmitBtn" class="auto-submit-pill" title="Otomatik Gönder" aria-pressed="false">
+          <span class="auto-submit-icon">⚡</span>
+          <span class="auto-submit-text" id="autoSubmitText">Oto-Gönder</span>
+          <span class="auto-submit-indicator"></span>
+        </button>
+        <select id="langSelect" class="lang-select" title="Dil Seçimi">
           <option value="tr">TR</option>
           <option value="en">EN</option>
+          <option value="de">DE</option>
+          <option value="es">ES</option>
+          <option value="fr">FR</option>
+          <option value="it">IT</option>
+          <option value="pt">PT</option>
+          <option value="ru">RU</option>
           <option value="zh">ZH</option>
+          <option value="ja">JA</option>
+          <option value="ko">KO</option>
+          <option value="ar">AR</option>
         </select>
         <button id="themeToggle" class="btn-icon" title="Tema Değiştir">
           🌙
