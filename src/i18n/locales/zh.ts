@@ -969,4 +969,13 @@ export const zh = {
   'settings.import.errorBackupTooLarge': '备份文件大小超过 100MB 限制。',
   'settings.biometric.autofillConfirmTitle': '自动填充前进行生物识别确认',
   'settings.biometric.autofillConfirmDesc': '在每次自动填充操作 festival 之前要求进行生物识别验证。',
+  'vaultList.viewMode.density': '显示密度',
+  'vaultList.viewMode.comfortable': '宽松视图',
+  'vaultList.viewMode.compact': '紧凑视图',
+  'vaultList.viewMode.grid': '网格视图',
+  'vaultList.viewMode.list': '列表视图',
+  'cardDetail.holder': '持卡人',
+  'cardDetail.expires': '有效期',
+  'secureNoteDetail.words': '字数',
+  'secureNoteDetail.chars': '字符',
 } as const;

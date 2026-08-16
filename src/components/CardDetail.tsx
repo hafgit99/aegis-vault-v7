@@ -2,6 +2,7 @@ import { Check, Copy, Eye, EyeOff } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { VaultItem } from '../types';
+import { RealisticCreditCard } from './cards/RealisticCreditCard';
 
 interface CardDetailProps {
   item: VaultItem;
@@ -36,6 +37,18 @@ export default function CardDetail({
 
   return (
     <div className="space-y-4">
+      {/* 3D Realistic Credit Card Preview */}
+      <div className="flex justify-center pb-2">
+        <RealisticCreditCard
+          item={item}
+          isRevealed={isCardNumberRevealed}
+          isCvvRevealed={isCvvRevealed}
+          isPinRevealed={isPinRevealed}
+          onToggleReveal={onToggleReveal}
+          onCopy={onCopyText}
+        />
+      </div>
+
       <div className="glass-panel p-5 rounded-xl">
         <label className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase mb-2">
           {t('cardDetail.cardholder')}

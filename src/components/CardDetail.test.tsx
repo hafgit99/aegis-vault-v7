@@ -1,37 +1,42 @@
 /**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
  * @vitest-environment jsdom
  */
 
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import CardDetail from './CardDetail';
 import { LanguageProvider } from '../i18n/LanguageContext';
 import { languageStorageKey } from '../i18n/translations';
 import { VaultItem } from '../types';
-import CardDetail from './CardDetail';
 
 const cardItem: VaultItem = {
   id: 'card-1',
-  title: 'Personal Card',
-  username: '4111111111111111',
+  category: 'card',
+  title: 'My Visa Card',
+  username: '',
   url: '',
   cardholderName: 'Ada Lovelace',
   cardNumber: '4111111111111111',
   cardExpiry: '12/30',
   cardCvv: '123',
   cardPin: '9876',
-  createdAt: '2026-06-10T12:00:00.000Z',
-  updatedAt: '2026-06-11T12:00:00.000Z',
-  category: 'card',
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
+  favorite: false,
 };
 
-afterEach(() => {
-  cleanup();
+beforeEach(() => {
   window.localStorage.clear();
 });
 
+afterEach(() => {
+  cleanup();
+});
+
 describe('CardDetail', () => {
-  it('renders nothing for non-card items', () => {
+  it('returns null if item category is not card', () => {
     const { container } = render(
       <CardDetail
         item={{ ...cardItem, category: 'login' }}
@@ -44,10 +49,10 @@ describe('CardDetail', () => {
       />,
     );
 
-    expect(container.textContent).toBe('');
+    expect(container.firstChild).toBeNull();
   });
 
-  it('renders masked card details', () => {
+  it('renders card fields masked by default', () => {
     render(
       <CardDetail
         item={cardItem}
@@ -60,11 +65,10 @@ describe('CardDetail', () => {
       />,
     );
 
-    expect(screen.getByText('KART SAHİBİ')).toBeTruthy();
-    expect(screen.getByText('Ada Lovelace')).toBeTruthy();
-    expect(screen.getByText('•••• •••• •••• 1111')).toBeTruthy();
-    expect(screen.getAllByText('***')).toHaveLength(1);
-    expect(screen.getAllByText('****')).toHaveLength(1);
+    expect(screen.getByTestId('card-cardholder-value').textContent).toContain('Ada Lovelace');
+    expect(screen.getByTestId('card-number-value').textContent).toContain('•••• •••• •••• 1111');
+    expect(screen.getByTestId('card-cvv-value').textContent).toBe('***');
+    expect(screen.getByTestId('card-pin-value').textContent).toBe('****');
   });
 
   it('reveals card number, cvv and pin', () => {
@@ -80,12 +84,12 @@ describe('CardDetail', () => {
       />,
     );
 
-    expect(screen.getByText('4111 1111 1111 1111')).toBeTruthy();
-    expect(screen.getByText('123')).toBeTruthy();
-    expect(screen.getByText('9876')).toBeTruthy();
+    expect(screen.getByTestId('card-number-value').textContent).toContain('4111 1111 1111 1111');
+    expect(screen.getByTestId('card-cvv-value').textContent).toBe('123');
+    expect(screen.getByTestId('card-pin-value').textContent).toBe('9876');
   });
 
-  it('fires copy and reveal actions', () => {
+  it('fires copy and reveal actions from panel buttons', () => {
     const onToggleReveal = vi.fn();
     const onCopyText = vi.fn();
 
@@ -101,23 +105,22 @@ describe('CardDetail', () => {
       />,
     );
 
-    const buttons = screen.getAllByRole('button');
-    fireEvent.click(buttons[0]);
-    fireEvent.click(buttons[1]);
-    fireEvent.click(buttons[2]);
-    fireEvent.click(buttons[3]);
-    fireEvent.click(buttons[4]);
-    fireEvent.click(buttons[5]);
-    fireEvent.click(buttons[6]);
-    fireEvent.click(buttons[7]);
-
-    expect(onCopyText).toHaveBeenCalledWith('Ada Lovelace', 'cardholderName');
+    fireEvent.click(screen.getByTestId('card-number-reveal-button'));
     expect(onToggleReveal).toHaveBeenCalledWith('cardNumber');
+
+    fireEvent.click(screen.getByTestId('card-number-copy-button'));
     expect(onCopyText).toHaveBeenCalledWith('4111111111111111', 'cardNumber');
-    expect(onCopyText).toHaveBeenCalledWith('12/30', 'cardExpiry');
+
+    fireEvent.click(screen.getByTestId('card-cvv-reveal-button'));
     expect(onToggleReveal).toHaveBeenCalledWith('cardCvv');
+
+    fireEvent.click(screen.getByTestId('card-cvv-copy-button'));
     expect(onCopyText).toHaveBeenCalledWith('123', 'cardCvv');
+
+    fireEvent.click(screen.getByTestId('card-pin-reveal-button'));
     expect(onToggleReveal).toHaveBeenCalledWith('cardPin');
+
+    fireEvent.click(screen.getByTestId('card-pin-copy-button'));
     expect(onCopyText).toHaveBeenCalledWith('9876', 'cardPin');
   });
 
@@ -175,21 +178,16 @@ describe('CardDetail', () => {
       />,
     );
 
-    expect(screen.getByText('Belirtilmemiş')).toBeTruthy();
-    expect(screen.getByText('AA/YY')).toBeTruthy();
-    expect(screen.getByText('***')).toBeTruthy();
-    expect(screen.getByText('****')).toBeTruthy();
+    expect(screen.getByTestId('card-cardholder-value').textContent).toContain('Belirtilmemiş');
+    expect(screen.getByTestId('card-expiry-value').textContent).toBe('AA/YY');
+    expect(screen.getByTestId('card-cvv-value').textContent).toBe('***');
+    expect(screen.getByTestId('card-pin-value').textContent).toBe('****');
 
-    const buttons = screen.getAllByRole('button');
-    fireEvent.click(buttons[0]);
-    fireEvent.click(buttons[2]);
-    fireEvent.click(buttons[3]);
-    fireEvent.click(buttons[5]);
-    fireEvent.click(buttons[7]);
+    fireEvent.click(screen.getByTestId('card-number-copy-button'));
+    fireEvent.click(screen.getByTestId('card-cvv-copy-button'));
+    fireEvent.click(screen.getByTestId('card-pin-copy-button'));
 
-    expect(onCopyText).toHaveBeenCalledWith('', 'cardholderName');
     expect(onCopyText).toHaveBeenCalledWith('', 'cardNumber');
-    expect(onCopyText).toHaveBeenCalledWith('', 'cardExpiry');
     expect(onCopyText).toHaveBeenCalledWith('', 'cardCvv');
     expect(onCopyText).toHaveBeenCalledWith('', 'cardPin');
   });

@@ -1,5 +1,5 @@
 import React, { Fragment, useCallback, useState, useEffect, useRef, useReducer, memo } from 'react';
-import { ArrowLeft, CreditCard, FileText, Fingerprint, Heart, KeyRound, Layers, LayoutDashboard, Lock, Plus, Search, Smartphone, User, X } from 'lucide-react';
+import { AlignJustify, ArrowLeft, CreditCard, FileText, Fingerprint, Heart, KeyRound, Layers, LayoutDashboard, Lock, Plus, Rows, Search, Smartphone, User, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import type { VaultCategoryFilter } from '../hooks/useVaultFilters';
@@ -21,7 +21,8 @@ import DashboardQuickActions from './DashboardQuickActions';
 import DashboardSecurityScoreCard from './DashboardSecurityScoreCard';
 import RecentVaultPanel from './RecentVaultPanel';
 import VaultItemDetailPanel from './VaultItemDetailPanel';
-import VaultListItem from './VaultListItem';
+import VaultListItem, { ViewDensity } from './VaultListItem';
+import { StickyNoteCard } from './notes/StickyNoteCard';
 import BulkActionBar from './BulkActionBar';
 import BulkSelectWrapper from './BulkSelectWrapper';
 
@@ -152,6 +153,22 @@ export function VaultWorkspaceContent({
     dispatchPagination({ type: 'reset', totalCount: filteredItems.length });
   }, [filteredItems.length]);
   const [dragOverCategory, setDragOverCategory] = useState<VaultCategoryFilter | null>(null);
+  const [density, setDensity] = useState<ViewDensity>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('aegis_vault_view_density') as ViewDensity) || 'comfortable';
+    }
+    return 'comfortable';
+  });
+
+  const toggleDensity = useCallback(() => {
+    setDensity((prev) => {
+      const next: ViewDensity = prev === 'comfortable' ? 'compact' : 'comfortable';
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aegis_vault_view_density', next);
+      }
+      return next;
+    });
+  }, []);
 
   // Sentinel ref. The sentinel is the last <button> inside the scrollable
   // container; an IntersectionObserver attached to it is the only thing
@@ -250,14 +267,30 @@ export function VaultWorkspaceContent({
               </button>
               <span>{t('vaultList.title')}</span>
             </div>
-            <button
-              data-testid="new-vault-item-button"
-              onClick={onNewItem}
-              className="toolbar-button cursor-pointer"
-              title={t('vaultList.newItem')}
-            >
-              <Plus className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                data-testid="vault-density-toggle-button"
+                type="button"
+                onClick={toggleDensity}
+                className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                  density === 'compact'
+                    ? 'bg-brand-primary/15 text-brand-primary border-brand-primary/30'
+                    : 'text-on-surface-variant/70 border-outline-variant/15 hover:text-on-surface hover:bg-surface-low'
+                }`}
+                title={density === 'comfortable' ? t('vaultList.viewMode.compact') : t('vaultList.viewMode.comfortable')}
+                aria-label={density === 'comfortable' ? t('vaultList.viewMode.compact') : t('vaultList.viewMode.comfortable')}
+              >
+                {density === 'compact' ? <AlignJustify className="w-4 h-4" /> : <Rows className="w-4 h-4" />}
+              </button>
+              <button
+                data-testid="new-vault-item-button"
+                onClick={onNewItem}
+                className="toolbar-button cursor-pointer"
+                title={t('vaultList.newItem')}
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+            </div>
           </h2>
 
           <div className="flex bg-surface-low p-1 rounded-lg border border-outline-variant/15 text-xs">
@@ -476,13 +509,23 @@ export function VaultWorkspaceContent({
                       }
                     }}
                   >
-                    <VaultListItem
-                      item={item}
-                      isSelected={selectedItem?.id === item.id}
-                      onSelect={onSelectItem}
-                      autofillRecommended={isAutofillMode && isAndroidAutofillTargetMatch(item, autofillRequest)}
-                      match={matchByItemId.get(item.id) ?? null}
-                    />
+                    {selectedCategory === 'secure_note' && density === 'comfortable' ? (
+                      <StickyNoteCard
+                        item={item}
+                        isSelected={selectedItem?.id === item.id}
+                        onSelect={onSelectItem}
+                        onCopyNote={(text) => onCopyText(text, 'secure_notes_copy')}
+                      />
+                    ) : (
+                      <VaultListItem
+                        item={item}
+                        isSelected={selectedItem?.id === item.id}
+                        onSelect={onSelectItem}
+                        autofillRecommended={isAutofillMode && isAndroidAutofillTargetMatch(item, autofillRequest)}
+                        match={matchByItemId.get(item.id) ?? null}
+                        density={density}
+                      />
+                    )}
                   </BulkSelectWrapper>
                 </motion.div>
               ))}

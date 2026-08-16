@@ -964,4 +964,13 @@ export const ru = {
   'settings.import.errorBackupTooLarge': 'Размер файла резервной копии превышает ограничение в 100 МБ.',
   'settings.biometric.autofillConfirmTitle': 'Биометрическое Подтверждение перед Автозаполнением',
   'settings.biometric.autofillConfirmDesc': 'Запрашивать биометрическую проверку перед каждой операцией автозаполнения.',
+  'vaultList.viewMode.density': 'Плотность отображения',
+  'vaultList.viewMode.comfortable': 'Просторный вид',
+  'vaultList.viewMode.compact': 'Компактный вид',
+  'vaultList.viewMode.grid': 'Сетка',
+  'vaultList.viewMode.list': 'Список',
+  'cardDetail.holder': 'Владелец',
+  'cardDetail.expires': 'Действ. до',
+  'secureNoteDetail.words': 'слов',
+  'secureNoteDetail.chars': 'симв.',
 } as const;

@@ -964,4 +964,13 @@ export const ja = {
   'settings.import.errorBackupTooLarge': 'バックアップ ファイルのサイズが 100MB の制限を超えています。',
   'settings.biometric.autofillConfirmTitle': '自動入力前の生体認証確認',
   'settings.biometric.autofillConfirmDesc': 'すべての自動入力操作の前に生体認証を要求します。',
+  'vaultList.viewMode.density': '表示密度',
+  'vaultList.viewMode.comfortable': '標準表示',
+  'vaultList.viewMode.compact': 'コンパクト表示',
+  'vaultList.viewMode.grid': 'グリッド表示',
+  'vaultList.viewMode.list': 'リスト表示',
+  'cardDetail.holder': '名義人',
+  'cardDetail.expires': '有効期限',
+  'secureNoteDetail.words': '単語',
+  'secureNoteDetail.chars': '文字',
 } as const;

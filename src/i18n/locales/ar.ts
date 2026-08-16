@@ -964,4 +964,13 @@ export const ar = {
   'settings.import.errorBackupTooLarge': 'حجم ملف النسخ الاحتياطي يتجاوز الحد المسموح به وهو 100 ميجابايت.',
   'settings.biometric.autofillConfirmTitle': 'التأكيد الحيوي قبل الإكمال التلقائي',
   'settings.biometric.autofillConfirmDesc': 'طلب التحقق الحيوي قبل كل عملية إكمال تلقائي.',
+  'vaultList.viewMode.density': 'كثافة العرض',
+  'vaultList.viewMode.comfortable': 'عرض مريح',
+  'vaultList.viewMode.compact': 'عرض مدمج',
+  'vaultList.viewMode.grid': 'عرض الشبكة',
+  'vaultList.viewMode.list': 'عرض القائمة',
+  'cardDetail.holder': 'حامل البطاقة',
+  'cardDetail.expires': 'تاريخ الانتهاء',
+  'secureNoteDetail.words': 'كلمات',
+  'secureNoteDetail.chars': 'حرف',
 } as const;

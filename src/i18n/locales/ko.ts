@@ -964,4 +964,13 @@ export const ko = {
   'settings.import.errorBackupTooLarge': '백업 파일 크기가 100MB 제한을 초과합니다.',
   'settings.biometric.autofillConfirmTitle': '자동 채우기 전 생체 인식 확인',
   'settings.biometric.autofillConfirmDesc': '모든 자동 채우기 작업 전에 생체 인식 검증을 요구합니다.',
+  'vaultList.viewMode.density': '보기 밀도',
+  'vaultList.viewMode.comfortable': '넓은 보기',
+  'vaultList.viewMode.compact': '컴팩트 보기',
+  'vaultList.viewMode.grid': '격자 보기',
+  'vaultList.viewMode.list': '목록 보기',
+  'cardDetail.holder': '카드 명의자',
+  'cardDetail.expires': '만료일',
+  'secureNoteDetail.words': '단어',
+  'secureNoteDetail.chars': '자',
 } as const;

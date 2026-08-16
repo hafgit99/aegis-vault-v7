@@ -969,4 +969,13 @@ export const en = {
   'settings.import.errorBackupTooLarge': 'Backup file size exceeds 100MB limit.',
   'settings.biometric.autofillConfirmTitle': 'Biometric Confirmation Before Autofill',
   'settings.biometric.autofillConfirmDesc': 'Require biometric verification before every autofill operation.',
+  'vaultList.viewMode.density': 'View Density',
+  'vaultList.viewMode.comfortable': 'Comfortable View',
+  'vaultList.viewMode.compact': 'Compact View',
+  'vaultList.viewMode.grid': 'Grid View',
+  'vaultList.viewMode.list': 'List View',
+  'cardDetail.holder': 'Cardholder',
+  'cardDetail.expires': 'Expires',
+  'secureNoteDetail.words': 'words',
+  'secureNoteDetail.chars': 'chars',
 } as const;

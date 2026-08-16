@@ -964,4 +964,13 @@ export const pt = {
   'settings.import.errorBackupTooLarge': 'O tamanho do arquivo de backup excede o limite de 100 MB.',
   'settings.biometric.autofillConfirmTitle': 'Confirmação Biométrica antes do Preenchimento',
   'settings.biometric.autofillConfirmDesc': 'Exigir verificação biométrica antes de cada operação de preenchimento.',
+  'vaultList.viewMode.density': 'Densidade de visualização',
+  'vaultList.viewMode.comfortable': 'Visualização confortável',
+  'vaultList.viewMode.compact': 'Visualização compacta',
+  'vaultList.viewMode.grid': 'Visualização em grade',
+  'vaultList.viewMode.list': 'Visualização em lista',
+  'cardDetail.holder': 'Titular',
+  'cardDetail.expires': 'Validade',
+  'secureNoteDetail.words': 'palavras',
+  'secureNoteDetail.chars': 'caracteres',
 } as const;

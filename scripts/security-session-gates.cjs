@@ -31,6 +31,7 @@ function lineOf(text, index) {
 const authorizedFiles = [
   path.normalize('src/lib/storage.ts'),
   path.normalize('src/components/SettingsPanel.tsx'),
+  path.normalize('src/components/settings/SettingsRecoverySection.tsx'),
   path.normalize('src/lib/vaultSession.ts')
 ];
 

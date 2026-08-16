@@ -969,4 +969,13 @@ export const tr = {
   'settings.import.errorBackupTooLarge': 'Yedek dosyası boyutu 100MB sınırını aşıyor.',
   'settings.biometric.autofillConfirmTitle': 'Otomatik Doldurma Öncesi Biyometrik Onay',
   'settings.biometric.autofillConfirmDesc': 'Her doldurma işleminden önce biyometrik doğrulama iste.',
+  'vaultList.viewMode.density': 'Görünüm Yoğunluğu',
+  'vaultList.viewMode.comfortable': 'Rahat Görünüm',
+  'vaultList.viewMode.compact': 'Kompakt Görünüm',
+  'vaultList.viewMode.grid': 'Izgara Görünümü',
+  'vaultList.viewMode.list': 'Liste Görünümü',
+  'cardDetail.holder': 'Kart Sahibi',
+  'cardDetail.expires': 'SKT',
+  'secureNoteDetail.words': 'kelime',
+  'secureNoteDetail.chars': 'kr',
 } as const;

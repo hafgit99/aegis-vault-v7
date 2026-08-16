@@ -964,4 +964,13 @@ export const de = {
   'settings.import.errorBackupTooLarge': 'Die Größe der Sicherungsdatei überschreitet die Grenze von 100 MB.',
   'settings.biometric.autofillConfirmTitle': 'Biometrische Bestätigung vor dem Ausfüllen',
   'settings.biometric.autofillConfirmDesc': 'Biometrische Verifizierung vor jedem Ausfüllvorgang anfordern.',
+  'vaultList.viewMode.density': 'Ansichtsdichte',
+  'vaultList.viewMode.comfortable': 'Komfortable Ansicht',
+  'vaultList.viewMode.compact': 'Kompakte Ansicht',
+  'vaultList.viewMode.grid': 'Rasteransicht',
+  'vaultList.viewMode.list': 'Listenansicht',
+  'cardDetail.holder': 'Karteninhaber',
+  'cardDetail.expires': 'Gültig bis',
+  'secureNoteDetail.words': 'Wörter',
+  'secureNoteDetail.chars': 'Zeichen',
 } as const;
