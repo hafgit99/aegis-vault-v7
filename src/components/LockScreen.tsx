@@ -15,7 +15,11 @@ import {
   Download, 
   RotateCcw, 
   Smartphone, 
-  HelpCircle 
+  HelpCircle,
+  ArrowUpSquare,
+  ShieldCheck,
+  Cpu,
+  GlobeLock
 } from 'lucide-react';
 import {
   getRememberedAccountSecretKey,
@@ -41,6 +45,7 @@ import { LockScreenBiometricSection } from './lock/LockScreenBiometricSection';
 import { LockScreenResetModal } from './lock/LockScreenResetModal';
 import { LockScreenRecoveryModal } from './lock/LockScreenRecoveryModal';
 import { LegalTermsModal, LegalTermsTab } from './lock/LegalTermsModal';
+import { PasswordStrengthMeter } from './common/PasswordStrengthMeter';
 
 const LOCKOUT_STORAGE_KEY = 'aegis_lockout_state';
 const MAX_LOCKOUT_MS = 5 * 60 * 1000;
@@ -126,6 +131,10 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
 
+  // Micro-interaction UI states
+  const [isShaking, setIsShaking] = useState(false);
+  const [isCapsLockOn, setIsCapsLockOn] = useState(false);
+
   // Biometric Unlock States
   const [biometricError, setBiometricError] = useState<string | null>(null);
   const [biometricLoading, setBiometricLoading] = useState(false);
@@ -140,6 +149,11 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
   const isBioEnabled = isBiometricEnabled();
   const lockoutRemainingSeconds = Math.ceil(lockoutRemainingMs / 1000);
   const isLockedOut = lockoutRemainingMs > 0;
+
+  const triggerShake = () => {
+    setIsShaking(true);
+    setTimeout(() => setIsShaking(false), 500);
+  };
 
   useEffect(() => {
     if (!isLockedOut) return;
@@ -171,6 +185,7 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
       if (await verifyMasterPassword(decryptedMaster, currentRemembered)) {
         onUnlock();
       } else {
+        triggerShake();
         throw new Error(t('lock.error.biometricIntegrity'));
       }
     } catch (err: any) {
@@ -200,18 +215,22 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
     try {
       if (!isSetup) {
         if (!validateMasterPassword(password)) {
+          triggerShake();
           setError(t('lock.error.complexity'));
           return;
         }
         if (password !== confirmPassword) {
+          triggerShake();
           setError(t('lock.error.confirmationMismatch'));
           return;
         }
         if (!isAccountSecretKeyFormatValid(secretKey)) {
+          triggerShake();
           setError(t('lock.error.secretKeyInvalid'));
           return;
         }
         if (!termsAccepted) {
+          triggerShake();
           setError(t('lock.terms.errorRequired'));
           return;
         }
@@ -221,6 +240,7 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
       } else {
         const remainingMs = getLockoutRemainingMs();
         if (remainingMs > 0) {
+          triggerShake();
           setLockoutRemainingMs(remainingMs);
           setError(getRateLimitMessage(Math.ceil(remainingMs / 1000)));
           return;
@@ -230,6 +250,7 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
         const currentRequires = isAccountSecretKeyRequired();
         const submittedSecretKey = currentRequires ? (currentRemembered || secretKey) : null;
         if (currentRequires && !currentRemembered && !isAccountSecretKeyFormatValid(submittedSecretKey || '')) {
+          triggerShake();
           setError(t('lock.error.secretKeyRequired'));
           return;
         }
@@ -238,6 +259,7 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
           setLockoutRemainingMs(0);
           onUnlock();
         } else {
+          triggerShake();
           const lockout = recordFailedUnlockAttempt();
           const remainingSeconds = Math.ceil((lockout.lockedUntil - Date.now()) / 1000);
           setLockoutRemainingMs(Math.max(0, lockout.lockedUntil - Date.now()));
@@ -245,6 +267,7 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
         }
       }
     } catch (err) {
+      triggerShake();
       console.error('[AegisVault] Unlock/setup error:', err);
       const message = err instanceof Error ? err.message : String(err);
       setError(`${t('lock.error.cryptoFailed') || 'Vault initialization failed.'} (${message})`);
@@ -268,114 +291,103 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
     try {
       await resetSystem();
       clearLockoutState();
-      setShowResetConfirm(false);
-      setPassword('');
-      setConfirmPassword('');
-      setError(null);
-      // Force full page reload to reset all in-memory state
       window.location.reload();
     } catch (err) {
-      console.error('[AegisVault] Reset failed:', err);
-      setError(err instanceof Error ? err.message : String(err));
+      console.error('[AegisVault] Reset error:', err);
+      const message = err instanceof Error ? err.message : String(err);
+      setError(`${t('lock.error.resetFailed')} (${message})`);
       setShowResetConfirm(false);
     } finally {
       setResetLoading(false);
     }
   };
 
+  const features = [
+    {
+      icon: (
+        <svg className="w-5 h-5 text-brand-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          <path d="m9 12 2 2 4-4" />
+        </svg>
+      ),
+      titleKey: 'lock.feature.encryptionTitle',
+      descKey: 'lock.feature.encryptionDesc',
+    },
+    {
+      icon: (
+        <svg className="w-5 h-5 text-brand-secondary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+      ),
+      titleKey: 'lock.feature.zeroKnowledgeTitle',
+      descKey: 'lock.feature.zeroKnowledgeDesc',
+    },
+    {
+      icon: (
+        <svg className="w-5 h-5 text-brand-tertiary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg>
+      ),
+      titleKey: 'lock.feature.autoLockTitle',
+      descKey: 'lock.feature.autoLockDesc',
+    },
+  ];
+
   return (
-    <div className="safe-screen bg-brand-bg text-on-surface flex flex-col justify-between relative overflow-hidden select-none">
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(220,225,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(220,225,255,0.025)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
-      <div className="absolute -top-40 -left-40 w-96 h-96 bg-brand-primary/5 blur-[120px] rounded-full pointer-events-none animate-pulse" />
-      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-brand-tertiary/5 blur-[120px] rounded-full pointer-events-none" />
+    <div className="safe-screen bg-brand-bg text-on-surface flex flex-col justify-between selection:bg-brand-primary/30 selection:text-white relative overflow-hidden">
+      {/* Background ambient lighting */}
+      <div className="absolute top-1/4 -left-48 w-96 h-96 bg-brand-primary/10 rounded-full blur-[128px] pointer-events-none -z-10" />
+      <div className="absolute bottom-1/4 -right-48 w-96 h-96 bg-brand-secondary/10 rounded-full blur-[128px] pointer-events-none -z-10" />
 
-      {/* Top Bar with Language Selector */}
-      <LockScreenHeader />
+      {/* Cyber ambient grid lines */}
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:48px_48px] opacity-40 -z-10" />
 
-      {integrityWarning && (
-        <div
-          data-testid="asset-integrity-warning"
-          role="alert"
-          className="relative z-40 mx-auto mt-[calc(max(env(safe-area-inset-top),0.5rem)+3.25rem)] w-[calc(100%-2rem)] max-w-3xl border border-red-500/40 bg-red-950/95 px-4 py-3 text-red-50 shadow-2xl"
-        >
-          <div className="flex items-start gap-3">
-            <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-red-400" />
-            <div className="min-w-0">
-              <p className="text-sm font-bold">{t('security.assetIntegrityTitle')}</p>
-              <p className="mt-1 text-xs leading-relaxed text-red-100/85">{t('security.assetIntegrityMessage')}</p>
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-6 flex-1 flex flex-col">
+        {/* Top bar with Language Switcher */}
+        <LockScreenHeader />
 
-      <div className="flex-1 w-full max-w-6xl mx-auto px-4 py-1 sm:py-2 flex items-center justify-center relative z-10">
-        <div className="w-full flex items-center justify-center">
-          <div className="w-full flex flex-col lg:flex-row items-center lg:items-stretch gap-6 lg:gap-10">
-
-            {/* Left Panel — Branding, Description & Feature Cards (Desktop only) */}
-            <div className="hidden lg:flex flex-col justify-center flex-1 max-w-2xl space-y-8 pr-4">
-              {/* Title & Description */}
-              <div className="space-y-5">
-                <div className="flex items-center gap-4 mb-1">
-                  <div className="w-16 h-16 rounded-2xl bg-brand-primary/5 border border-brand-primary/20 flex items-center justify-center shadow-[0_0_25px_rgba(220,225,255,0.07)] overflow-hidden">
-                    <img src={aegisLogo} alt="Aegis Vault Logo" className="w-14 h-14 object-contain" />
+        {/* Main Content: Split Grid on Desktop */}
+        <div className="flex-1 flex items-center justify-center py-4 lg:py-0">
+          <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
+            
+            {/* Left Panel — Brand Showcase (Desktop only) */}
+            <div className="hidden lg:flex flex-col justify-between h-full py-4 space-y-8 animate-fade-in text-left">
+              <div>
+                {/* Brand Logo and Title */}
+                <div className="flex items-center gap-3.5 mb-6">
+                  <div className="w-12 h-12 rounded-xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center shadow-[0_0_20px_rgba(220,225,255,0.08)] overflow-hidden group">
+                    <img src={aegisLogo} alt="Aegis Vault Logo" className="w-10 h-10 object-contain group-hover:scale-105 transition-transform duration-300" />
                   </div>
-                  <span className="font-display text-2xl font-bold text-on-surface tracking-tight">{APP_NAME}</span>
+                  <div>
+                    <h2 className="font-display text-2xl font-bold tracking-tight text-on-surface">
+                      {APP_NAME}
+                    </h2>
+                    <span className="text-xs font-mono font-bold text-brand-primary/90 tracking-wider">
+                      {t('lock.brand.suite')}
+                    </span>
+                  </div>
                 </div>
-                <h2 className="font-display text-4xl font-bold text-on-surface leading-snug tracking-tight">
-                  {isSetup ? t('lock.panel.unlockTitle') : t('lock.panel.setupTitle')}
-                </h2>
-                <p className="text-lg text-on-surface-variant/70 leading-relaxed">
-                  {isSetup
-                    ? t('lock.panel.unlockDescription')
-                    : `${APP_NAME} ${t('lock.panel.setupDescriptionSuffix')}`}
+
+                {/* Hero Tagline */}
+                <h3 className="font-display text-3xl xl:text-4xl font-extrabold text-on-surface leading-tight tracking-tight mb-4">
+                  {t('lock.brand.heroTitle1')}<br />
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-primary via-emerald-400 to-brand-secondary">
+                    {t('lock.brand.heroTitle2')}
+                  </span>
+                </h3>
+                <p className="text-base text-on-surface-variant/70 leading-relaxed max-w-md">
+                  {t('lock.brand.heroDescription')}
                 </p>
               </div>
 
-              {/* Security Badges */}
-              <div className="flex flex-wrap gap-3">
-                {[
-                  { icon: '🛡️', label: 'AES-256-GCM' },
-                  { icon: '🔑', label: 'Argon2id KDF' },
-                  { icon: '✈️', label: isSetup ? 'Offline-First' : 'Zero-Knowledge' },
-                ].map((badge) => (
-                  <span
-                    key={badge.label}
-                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-brand-primary/5 border border-brand-primary/10 text-sm font-bold text-brand-primary/80 tracking-wide uppercase"
-                  >
-                    <span>{badge.icon}</span>
-                    {badge.label}
-                  </span>
-                ))}
-              </div>
-
-              {/* Feature Cards */}
-              <div className="grid grid-cols-2 gap-5">
-                {([
-                  {
-                    icon: <ShieldAlert className="w-6 h-6 text-brand-primary" />,
-                    titleKey: 'lock.feature.zeroKnowledge.title' as const,
-                    descKey: 'lock.feature.zeroKnowledge.description' as const,
-                  },
-                  {
-                    icon: <KeyRound className="w-6 h-6 text-brand-primary" />,
-                    titleKey: 'lock.feature.crypto.title' as const,
-                    descKey: 'lock.feature.crypto.description' as const,
-                  },
-                  {
-                    icon: <Download className="w-6 h-6 text-brand-primary" />,
-                    titleKey: 'lock.feature.localControl.title' as const,
-                    descKey: 'lock.feature.localControl.description' as const,
-                  },
-                  {
-                    icon: <Trash2 className="w-6 h-6 text-brand-primary" />,
-                    titleKey: 'lock.feature.trash.title' as const,
-                    descKey: 'lock.feature.trash.description' as const,
-                  },
-                ] as const).map((feat) => (
+              {/* Feature Cards Grid */}
+              <div className="space-y-3.5 max-w-md">
+                {features.map((feat) => (
                   <div
                     key={feat.titleKey}
-                    className="group rounded-2xl glass-panel p-5 space-y-2.5 transition-all duration-300 hover:border-brand-primary/20 hover:shadow-brand-primary/5"
+                    className="p-4 rounded-xl glass-panel space-y-1.5 transition-all duration-300 hover:border-brand-primary/20 hover:translate-x-1 group"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-11 h-11 rounded-xl bg-brand-primary/10 border border-brand-primary/15 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-300">
@@ -397,252 +409,320 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
               </div>
             </div>
 
-            {/* Right Panel — Login Form */}
-            <div className="w-full max-w-md surface-panel rounded-xl p-5 relative z-10 transition-all duration-300 hover:border-brand-primary/15 hover:shadow-brand-primary/5">
-              <div className="flex flex-col items-center text-center mb-4 sm:mb-6">
-                <div className="w-12 h-12 rounded-xl bg-brand-primary/5 border border-brand-primary/20 flex items-center justify-center mb-3 sm:mb-4 shadow-[0_0_15px_rgba(220,225,255,0.05)] overflow-hidden group lg:hidden">
-                  <img src={aegisLogo} alt="Aegis Vault Logo" className="w-10 h-10 object-contain group-hover:scale-105 transition-transform duration-300" />
-                </div>
-                <h1 className="font-display text-2xl font-bold text-on-surface leading-tight tracking-tight lg:hidden">
-                  {isSetup ? t('lock.panel.unlockTitle') : t('lock.panel.setupTitle')}
-                </h1>
-                {/* Desktop form header */}
-                <h1 className="hidden lg:block font-display text-xl font-bold text-on-surface leading-tight tracking-tight">
-                  {isSetup ? t('lock.action.unlock') : t('lock.action.setup')}
-                </h1>
-                <p className="hidden lg:block text-xs text-on-surface-variant/60 mt-1.5 leading-relaxed max-w-xs">
-                  {isSetup
-                    ? t('lock.panel.unlockDescription')
-                    : `${APP_NAME} ${t('lock.panel.setupDescriptionSuffix')}`}
-                </p>
-              </div>
+            {/* Right Panel — Login Form Container */}
+            <div className="relative w-full max-w-md mx-auto">
+              {/* Ambient Glow Aura */}
+              <div className="absolute -inset-1.5 bg-gradient-to-r from-brand-primary/25 via-emerald-500/15 to-brand-secondary/25 rounded-2xl blur-xl opacity-60 animate-ambient-glow -z-10 pointer-events-none" />
 
-              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
-                {isAutofillPending && isSetup && (
+              <div className={`w-full surface-panel rounded-2xl p-5 sm:p-6 relative z-10 transition-all duration-300 hover:border-brand-primary/30 hover:shadow-brand-primary/5 ${isShaking ? 'animate-shake border-red-500/50 ring-2 ring-red-500/20' : ''}`}>
+                <div className="flex flex-col items-center text-center mb-4 sm:mb-6">
+                  <div className="w-12 h-12 rounded-xl bg-brand-primary/5 border border-brand-primary/20 flex items-center justify-center mb-3 sm:mb-4 shadow-[0_0_15px_rgba(220,225,255,0.05)] overflow-hidden group lg:hidden">
+                    <img src={aegisLogo} alt="Aegis Vault Logo" className="w-10 h-10 object-contain group-hover:scale-105 transition-transform duration-300" />
+                  </div>
+                  <h1 className="font-display text-2xl font-bold text-on-surface leading-tight tracking-tight lg:hidden">
+                    {isSetup ? t('lock.panel.unlockTitle') : t('lock.panel.setupTitle')}
+                  </h1>
+                  {/* Desktop form header */}
+                  <h1 className="hidden lg:block font-display text-xl font-bold text-on-surface leading-tight tracking-tight">
+                    {isSetup ? t('lock.action.unlock') : t('lock.action.setup')}
+                  </h1>
+                  <p className="hidden lg:block text-xs text-on-surface-variant/60 mt-1.5 leading-relaxed max-w-xs">
+                    {isSetup
+                      ? t('lock.panel.unlockDescription')
+                      : `${APP_NAME} ${t('lock.panel.setupDescriptionSuffix')}`}
+                  </p>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+                  {integrityWarning && (
                   <div
-                    data-testid="lock-autofill-pending-banner"
-                    className="flex items-start gap-3 p-4 rounded-xl bg-brand-primary/10 border border-brand-primary/20 text-brand-primary text-xs leading-relaxed animate-fade-in"
+                    data-testid="asset-integrity-warning"
+                    className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-300 text-xs leading-relaxed animate-fade-in text-left"
                   >
-                    <Smartphone className="w-5 h-5 shrink-0 text-brand-primary mt-0.5" />
-                    <div className="text-left">
-                      <span className="block font-bold text-on-surface">{t('lock.autofill.title')}</span>
-                      <span className="block mt-1 text-on-surface-variant">{t('lock.autofill.description')}</span>
+                    <ShieldAlert className="w-5 h-5 shrink-0 text-amber-400 mt-0.5" />
+                    <div>
+                      <span className="block font-bold text-on-surface">
+                        {t('security.assetIntegrityTitle')}
+                      </span>
+                      <span className="block mt-1 text-on-surface-variant/80">
+                        {t('security.assetIntegrityMessage')}
+                      </span>
                     </div>
                   </div>
                 )}
 
-                {error && (
-                  <div className="flex items-start gap-3 p-4 rounded-xl bg-brand-error/10 border border-brand-error/20 text-brand-error text-xs leading-relaxed animate-fade-in">
-                    <ShieldAlert className="w-5 h-5 shrink-0 text-red-400 mt-0.5" />
-                    <span>{error}</span>
-                  </div>
-                )}
-
-                {biometricError && (
-                  <div className="flex items-start gap-3 p-4 rounded-xl bg-brand-error/10 border border-brand-error/20 text-red-400 text-xs leading-relaxed animate-fade-in">
-                    <Fingerprint className="w-5 h-5 shrink-0 text-red-400 mt-0.5" />
-                    <span>{biometricError}</span>
-                  </div>
-                )}
-
-                {/* Primary Password Input Container */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase">
-                      {isSetup ? t('lock.field.masterPassword') : t('lock.field.newMasterPassword')}
-                    </label>
-                    <span className="text-[10px] text-zinc-500 font-medium">{t('lock.field.minimumLength')}</span>
-                  </div>
-                  <div className="relative">
-                    <input
-                      data-testid="lock-password-input"
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 focus:border-brand-primary/30 rounded-xl pl-4 pr-11 py-3 sm:py-3.5 text-on-surface placeholder-on-surface-variant/20 focus:ring-2 focus:ring-brand-primary/10 focus:shadow-[0_0_15px_rgba(220,225,255,0.06)] focus:outline-none transition-all duration-300 text-center tracking-widest text-lg font-mono"
-                      placeholder="••••••••"
-                      required
-                      autoFocus
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 text-on-surface-variant/60 hover:text-on-surface rounded-md focus:outline-none cursor-pointer"
-                      title={showPassword ? t('lock.action.hide') : t('lock.action.show')}
+                {isAutofillPending && isSetup && (
+                    <div
+                      data-testid="lock-autofill-pending-banner"
+                      className="flex items-start gap-3 p-4 rounded-xl bg-brand-primary/10 border border-brand-primary/20 text-brand-primary text-xs leading-relaxed animate-fade-in"
                     >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
+                      <Smartphone className="w-5 h-5 shrink-0 text-brand-primary mt-0.5" />
+                      <div className="text-left">
+                        <span className="block font-bold text-on-surface">{t('lock.autofill.title')}</span>
+                        <span className="block mt-1 text-on-surface-variant">{t('lock.autofill.description')}</span>
+                      </div>
+                    </div>
+                  )}
 
-                {/* Setup Mode: Password Confirmation */}
-                {!isSetup && (
-                  <div>
-                    <label className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase mb-2">
-                      {t('lock.field.confirmPassword')}
-                    </label>
+                  {error && (
+                    <div className="flex items-start gap-3 p-4 rounded-xl bg-brand-error/10 border border-brand-error/20 text-brand-error text-xs leading-relaxed animate-fade-in text-left">
+                      <ShieldAlert className="w-5 h-5 shrink-0 text-red-400 mt-0.5" />
+                      <span>{error}</span>
+                    </div>
+                  )}
+
+                  {biometricError && (
+                    <div className="flex items-start gap-3 p-4 rounded-xl bg-brand-error/10 border border-brand-error/20 text-red-400 text-xs leading-relaxed animate-fade-in text-left">
+                      <Fingerprint className="w-5 h-5 shrink-0 text-red-400 mt-0.5" />
+                      <span>{biometricError}</span>
+                    </div>
+                  )}
+
+                  {/* Primary Password Input Container */}
+                  <div className="text-left">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase">
+                        {isSetup ? t('lock.field.masterPassword') : t('lock.field.newMasterPassword')}
+                      </label>
+                      <span className="text-[10px] text-zinc-500 font-medium">{t('lock.field.minimumLength')}</span>
+                    </div>
                     <div className="relative">
                       <input
-                        data-testid="lock-confirm-password-input"
-                        type={showConfirmPassword ? 'text' : 'password'}
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        data-testid="lock-password-input"
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (typeof e.getModifierState === 'function') {
+                            setIsCapsLockOn(Boolean(e.getModifierState('CapsLock')));
+                          }
+                        }}
+                        onKeyUp={(e) => {
+                          if (typeof e.getModifierState === 'function') {
+                            setIsCapsLockOn(Boolean(e.getModifierState('CapsLock')));
+                          }
+                        }}
+                        onBlur={() => setIsCapsLockOn(false)}
                         className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 focus:border-brand-primary/30 rounded-xl pl-4 pr-11 py-3 sm:py-3.5 text-on-surface placeholder-on-surface-variant/20 focus:ring-2 focus:ring-brand-primary/10 focus:shadow-[0_0_15px_rgba(220,225,255,0.06)] focus:outline-none transition-all duration-300 text-center tracking-widest text-lg font-mono"
                         placeholder="••••••••"
                         required
+                        autoFocus
                       />
                       <button
                         type="button"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 text-on-surface-variant/60 hover:text-on-surface rounded-md focus:outline-none cursor-pointer"
-                        title={showConfirmPassword ? t('lock.action.hide') : t('lock.action.show')}
+                        title={showPassword ? t('lock.action.hide') : t('lock.action.show')}
                       >
-                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
+
+                    {/* Caps Lock Detector Warning */}
+                    {isCapsLockOn && (
+                      <div
+                        data-testid="caps-lock-warning"
+                        className="flex items-center gap-1.5 text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/25 px-2.5 py-1 rounded-lg mt-2 animate-fade-in"
+                      >
+                        <ArrowUpSquare className="w-3.5 h-3.5 shrink-0" />
+                        <span>{t('lock.capsLockOn', 'BÜYÜK HARF AÇIK (Caps Lock)')}</span>
+                      </div>
+                    )}
+
+                    {/* Setup Mode: Real-time Password Strength Meter */}
+                    {!isSetup && password && (
+                      <PasswordStrengthMeter password={password} />
+                    )}
                   </div>
-                )}
 
-                {/* Secret Key Section */}
-                <LockScreenSecretKeySection
-                  secretKey={secretKey}
-                  setSecretKey={setSecretKey}
-                  isSetup={isSetup}
-                  requiresSecretKey={requiresSecretKey}
-                  rememberSecretKey={rememberSecretKey}
-                  setRememberSecretKey={setRememberSecretKey}
-                  onDownloadEmergencyKit={handleDownloadEmergencyKit}
-                />
-
-                {/* Terms of Service & Privacy Policy Consent for First-Time Setup */}
-                {!isSetup && (
-                  <div className="pt-1 pb-0.5">
-                    <label className="flex items-start gap-2.5 cursor-pointer text-xs text-on-surface-variant/90 select-none group">
-                      <input
-                        data-testid="lock-terms-checkbox"
-                        type="checkbox"
-                        checked={termsAccepted}
-                        onChange={(e) => setTermsAccepted(e.target.checked)}
-                        className="mt-0.5 w-4 h-4 rounded border-outline-variant/30 text-brand-primary focus:ring-brand-primary/20 accent-brand-primary cursor-pointer shrink-0"
-                      />
-                      <span className="leading-relaxed text-[11px] sm:text-xs">
-                        {t('lock.terms.agreePrefix') ? `${t('lock.terms.agreePrefix')} ` : ''}
+                  {/* Setup Mode: Password Confirmation */}
+                  {!isSetup && (
+                    <div className="text-left">
+                      <label className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase mb-2">
+                        {t('lock.field.confirmPassword')}
+                      </label>
+                      <div className="relative">
+                        <input
+                          data-testid="lock-confirm-password-input"
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          onKeyDown={(e) => setIsCapsLockOn(e.getModifierState('CapsLock'))}
+                          onKeyUp={(e) => setIsCapsLockOn(e.getModifierState('CapsLock'))}
+                          onBlur={() => setIsCapsLockOn(false)}
+                          className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 focus:border-brand-primary/30 rounded-xl pl-4 pr-11 py-3 sm:py-3.5 text-on-surface placeholder-on-surface-variant/20 focus:ring-2 focus:ring-brand-primary/10 focus:shadow-[0_0_15px_rgba(220,225,255,0.06)] focus:outline-none transition-all duration-300 text-center tracking-widest text-lg font-mono"
+                          placeholder="••••••••"
+                          required
+                        />
                         <button
-                          data-testid="lock-terms-link"
                           type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setLegalModalTab('terms');
-                            setShowLegalModal(true);
-                          }}
-                          className="text-brand-primary underline hover:text-brand-primary/80 font-bold cursor-pointer inline p-0 bg-transparent border-none"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 text-on-surface-variant/60 hover:text-on-surface rounded-md focus:outline-none cursor-pointer"
+                          title={showConfirmPassword ? t('lock.action.hide') : t('lock.action.show')}
                         >
-                          {t('lock.terms.termsLink')}
+                          {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
-                        {` ${t('lock.terms.and')} `}
-                        <button
-                          data-testid="lock-privacy-link"
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setLegalModalTab('privacy');
-                            setShowLegalModal(true);
-                          }}
-                          className="text-brand-primary underline hover:text-brand-primary/80 font-bold cursor-pointer inline p-0 bg-transparent border-none"
-                        >
-                          {t('lock.terms.privacyLink')}
-                        </button>
-                        {t('lock.terms.agreeSuffix') ? `${t('lock.terms.agreeSuffix')}` : ''}
-                      </span>
-                    </label>
-                  </div>
-                )}
-
-                {/* CTA Action button */}
-                <button
-                  data-testid="lock-submit-button"
-                  type="submit"
-                  disabled={isSetup && isLockedOut}
-                  className="w-full flex items-center justify-center gap-2.5 bg-brand-primary text-brand-on-primary py-3.5 sm:py-4 rounded-xl font-bold transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-lg shadow-brand-primary/10 hover:brightness-110"
-                >
-                  {isSetup ? (
-                    <>
-                      <Unlock className="w-4.5 h-4.5" />
-                      <span>{isLockedOut ? `${lockoutRemainingSeconds}s` : t('lock.action.unlock')}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Fingerprint className="w-4.5 h-4.5" />
-                      <span>{t('lock.action.setup')}</span>
-                    </>
+                      </div>
+                    </div>
                   )}
-                </button>
 
-                {/* Biometric Trigger Button */}
-                <LockScreenBiometricSection
-                  isSetup={isSetup}
-                  isBioEnabled={isBioEnabled}
-                  biometricLoading={biometricLoading}
-                  biometricType={getBiometricType()}
-                  onBiometricUnlock={handleBiometricUnlock}
-                />
-              </form>
+                  {/* Secret Key Section */}
+                  <LockScreenSecretKeySection
+                    secretKey={secretKey}
+                    setSecretKey={setSecretKey}
+                    isSetup={isSetup}
+                    requiresSecretKey={requiresSecretKey}
+                    rememberSecretKey={rememberSecretKey}
+                    setRememberSecretKey={setRememberSecretKey}
+                    onDownloadEmergencyKit={handleDownloadEmergencyKit}
+                  />
 
-              {/* Recovery Options & Reset Vault - only shown when vault is already set up */}
-              {isSetup && (
-                <div className="mt-5 pt-5 border-t border-outline-variant/10 space-y-2">
+                  {/* Terms of Service & Privacy Policy Consent for First-Time Setup */}
+                  {!isSetup && (
+                    <div className="pt-1 pb-0.5 text-left">
+                      <label className="flex items-start gap-2.5 cursor-pointer text-xs text-on-surface-variant/90 select-none group">
+                        <input
+                          data-testid="lock-terms-checkbox"
+                          type="checkbox"
+                          checked={termsAccepted}
+                          onChange={(e) => setTermsAccepted(e.target.checked)}
+                          className="mt-0.5 w-4 h-4 rounded border-outline-variant/30 text-brand-primary focus:ring-brand-primary/20 accent-brand-primary cursor-pointer shrink-0"
+                        />
+                        <span className="leading-relaxed text-[11px] sm:text-xs">
+                          {t('lock.terms.agreePrefix') ? `${t('lock.terms.agreePrefix')} ` : ''}
+                          <button
+                            data-testid="lock-terms-link"
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setLegalModalTab('terms');
+                              setShowLegalModal(true);
+                            }}
+                            className="text-brand-primary underline hover:text-brand-primary/80 font-bold cursor-pointer inline p-0 bg-transparent border-none"
+                          >
+                            {t('lock.terms.termsLink')}
+                          </button>
+                          {` ${t('lock.terms.and')} `}
+                          <button
+                            data-testid="lock-privacy-link"
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setLegalModalTab('privacy');
+                              setShowLegalModal(true);
+                            }}
+                            className="text-brand-primary underline hover:text-brand-primary/80 font-bold cursor-pointer inline p-0 bg-transparent border-none"
+                          >
+                            {t('lock.terms.privacyLink')}
+                          </button>
+                          {t('lock.terms.agreeSuffix') ? `${t('lock.terms.agreeSuffix')}` : ''}
+                        </span>
+                      </label>
+                    </div>
+                  )}
+
+                  {/* CTA Action button */}
                   <button
-                    data-testid="lock-forgot-password-button"
-                    type="button"
-                    onClick={() => setShowRecoveryModal(true)}
-                    className="w-full flex items-center justify-center gap-2 text-xs font-bold text-brand-primary hover:text-brand-primary/80 py-2.5 rounded-xl transition-all cursor-pointer bg-brand-primary/5 border border-brand-primary/10 hover:bg-brand-primary/10"
+                    data-testid="lock-submit-button"
+                    type="submit"
+                    disabled={isSetup && isLockedOut}
+                    className="w-full flex items-center justify-center gap-2.5 bg-brand-primary text-brand-on-primary py-3.5 sm:py-4 rounded-xl font-bold transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer shadow-lg shadow-brand-primary/10 hover:brightness-110"
                   >
-                    <HelpCircle className="w-4 h-4" />
-                    <span>{t('lock.forgotPassword')}</span>
+                    {isSetup ? (
+                      <>
+                        <Unlock className="w-4.5 h-4.5" />
+                        <span>{isLockedOut ? `${lockoutRemainingSeconds}s` : t('lock.action.unlock')}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Fingerprint className="w-4.5 h-4.5" />
+                        <span>{t('lock.action.setup')}</span>
+                      </>
+                    )}
                   </button>
 
-                  <button
-                    data-testid="lock-reset-vault-button"
-                    type="button"
-                    onClick={() => setShowResetConfirm(true)}
-                    className="w-full flex items-center justify-center gap-2 text-[11px] font-medium text-on-surface-variant/50 hover:text-red-400 py-2 rounded-xl transition-all cursor-pointer hover:bg-red-500/5"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>{t('lock.action.resetVault')}</span>
-                  </button>
+                  {/* Biometric Trigger Button */}
+                  <LockScreenBiometricSection
+                    isSetup={isSetup}
+                    isBioEnabled={isBioEnabled}
+                    biometricLoading={biometricLoading}
+                    biometricType={getBiometricType()}
+                    onBiometricUnlock={handleBiometricUnlock}
+                  />
+                </form>
+
+                {/* Recovery Options & Reset Vault - only shown when vault is already set up */}
+                {isSetup && (
+                  <div className="mt-5 pt-5 border-t border-outline-variant/10 space-y-2">
+                    <button
+                      data-testid="lock-forgot-password-button"
+                      type="button"
+                      onClick={() => setShowRecoveryModal(true)}
+                      className="w-full flex items-center justify-center gap-2 text-xs font-bold text-brand-primary hover:text-brand-primary/80 py-2.5 rounded-xl transition-all cursor-pointer bg-brand-primary/5 border border-brand-primary/10 hover:bg-brand-primary/10"
+                    >
+                      <HelpCircle className="w-3.5 h-3.5" />
+                      <span>{t('lock.action.forgotPassword')}</span>
+                    </button>
+
+                    <button
+                      data-testid="lock-reset-vault-button"
+                      type="button"
+                      onClick={() => setShowResetConfirm(true)}
+                      className="w-full flex items-center justify-center gap-2 text-[11px] font-medium text-on-surface-variant/50 hover:text-red-400 py-2 rounded-xl transition-all cursor-pointer hover:bg-red-500/5"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>{t('lock.action.resetVault')}</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Zero-Knowledge Security Trust Badges */}
+                <div className="mt-4 pt-4 border-t border-outline-variant/10 flex items-center justify-between text-[9px] sm:text-[10px] font-mono text-on-surface-variant/60 select-none">
+                  <div className="flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3 text-brand-primary" />
+                    <span>{t('lock.badge.aes', 'AES-256-GCM')}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Cpu className="w-3 h-3 text-brand-secondary" />
+                    <span>{t('lock.badge.argon2', 'Argon2id KDF')}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <GlobeLock className="w-3 h-3 text-brand-tertiary" />
+                    <span>{t('lock.badge.offline', '%100 Çevrimdışı')}</span>
+                  </div>
                 </div>
-              )}
 
+              </div>
             </div>
+
           </div>
-
         </div>
+
+        {/* Reset Confirmation Modal */}
+        <LockScreenResetModal
+          isOpen={showResetConfirm}
+          onClose={() => setShowResetConfirm(false)}
+          onConfirmReset={handleConfirmReset}
+          resetLoading={resetLoading}
+        />
+
+        {/* Password Recovery Center Modal */}
+        <LockScreenRecoveryModal
+          isOpen={showRecoveryModal}
+          onClose={() => setShowRecoveryModal(false)}
+          onUnlockedAfterRecovery={onUnlock}
+          onClearLockoutState={clearLockoutState}
+        />
+
+        {/* Legal Terms & Privacy Policy Modal */}
+        <LegalTermsModal
+          isOpen={showLegalModal}
+          onClose={() => setShowLegalModal(false)}
+          initialTab={legalModalTab}
+        />
       </div>
-
-      {/* Reset Confirmation Modal */}
-      <LockScreenResetModal
-        isOpen={showResetConfirm}
-        onClose={() => setShowResetConfirm(false)}
-        onConfirmReset={handleConfirmReset}
-        resetLoading={resetLoading}
-      />
-
-      {/* Password Recovery Center Modal */}
-      <LockScreenRecoveryModal
-        isOpen={showRecoveryModal}
-        onClose={() => setShowRecoveryModal(false)}
-        onUnlockedAfterRecovery={onUnlock}
-        onClearLockoutState={clearLockoutState}
-      />
-
-      {/* Legal Terms & Privacy Policy Modal */}
-      <LegalTermsModal
-        isOpen={showLegalModal}
-        onClose={() => setShowLegalModal(false)}
-        initialTab={legalModalTab}
-      />
 
       {/* Futuristic clean footer */}
       <footer className="hidden w-full border-t border-outline-variant/5 py-4 bg-surface-lowest/40 text-center text-[10px] text-on-surface-variant/30 font-mono flex-col sm:flex-row items-center justify-between px-6 gap-2">

@@ -442,4 +442,44 @@ describe('LockScreen', () => {
     expect(select.value).toBe('en');
     expect(screen.getAllByText('Set Up Your Secure Vault').length).toBeGreaterThanOrEqual(1);
   });
+
+  it('detects Caps Lock activation and displays warning badge', () => {
+    render(
+      <LanguageProvider>
+        <LockScreen onUnlock={vi.fn()} />
+      </LanguageProvider>,
+    );
+
+    const input = passwordInput();
+    expect(screen.queryByTestId('caps-lock-warning')).toBeNull();
+
+    // Trigger keydown with CapsLock modifier active
+    fireEvent.keyDown(input, {
+      key: 'A',
+      modifierCapsLock: true,
+    });
+
+    expect(screen.getByTestId('caps-lock-warning')).toBeTruthy();
+
+    // Blur clears the warning
+    fireEvent.blur(input);
+    expect(screen.queryByTestId('caps-lock-warning')).toBeNull();
+  });
+
+  it('renders real-time PasswordStrengthMeter during first-time master password setup', () => {
+    vi.mocked(isMasterPasswordSet).mockReturnValue(false);
+
+    render(
+      <LanguageProvider>
+        <LockScreen onUnlock={vi.fn()} />
+      </LanguageProvider>,
+    );
+
+    const input = passwordInput();
+    expect(screen.queryByTestId('password-strength-meter')).toBeNull();
+
+    // Enter a password to trigger strength evaluation
+    fireEvent.change(input, { target: { value: 'MasterPass123!@#' } });
+    expect(screen.getByTestId('password-strength-meter')).toBeTruthy();
+  });
 });

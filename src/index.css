@@ -281,6 +281,27 @@
     animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
+/* Shake animation on invalid authentication */
+@keyframes shake-error {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-8px); }
+  40%, 80% { transform: translateX(8px); }
+}
+
+.animate-shake {
+  animation: shake-error 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* Ambient glow breathing animation */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.35; transform: scale(0.98); }
+  50% { opacity: 0.7; transform: scale(1.02); }
+}
+
+.animate-ambient-glow {
+  animation: pulse-glow 5s ease-in-out infinite;
+}
+
 @media (max-width: 640px) {
   .safe-screen {
     padding-top: max(env(safe-area-inset-top), 24px);

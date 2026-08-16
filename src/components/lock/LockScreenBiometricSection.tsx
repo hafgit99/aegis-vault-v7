@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Fingerprint, Key } from 'lucide-react';
+import { Fingerprint, Key, Sparkles } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 interface LockScreenBiometricSectionProps {
@@ -31,22 +31,27 @@ export function LockScreenBiometricSection({
   return (
     <button
       type="button"
+      data-testid="lock-biometric-button"
       disabled={biometricLoading}
       onClick={onBiometricUnlock}
-      className="w-full flex items-center justify-center gap-2.5 bg-brand-primary/10 border border-brand-primary/30 hover:bg-brand-primary/20 text-brand-primary py-3.5 rounded-xl font-bold transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer animate-fade-in"
+      className="w-full relative flex items-center justify-center gap-2.5 bg-gradient-to-r from-brand-primary/15 via-emerald-500/10 to-brand-primary/15 border border-brand-primary/40 hover:border-brand-primary hover:shadow-[0_0_20px_rgba(0,255,178,0.25)] text-brand-primary py-3.5 rounded-xl font-bold transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] cursor-pointer animate-fade-in group overflow-hidden"
     >
+      {/* Subtle shine highlight */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
       {biometricType === 'cross-platform' ? (
-        <Key className={`w-4.5 h-4.5 text-brand-primary ${biometricLoading ? 'animate-ping' : 'animate-pulse'}`} />
+        <Key className={`w-5 h-5 text-brand-primary transition-transform duration-300 group-hover:scale-110 ${biometricLoading ? 'animate-ping' : ''}`} />
       ) : (
-        <Fingerprint className={`w-4.5 h-4.5 text-brand-primary ${biometricLoading ? 'animate-ping' : 'animate-pulse'}`} />
+        <Fingerprint className={`w-5 h-5 text-brand-primary transition-transform duration-300 group-hover:scale-110 ${biometricLoading ? 'animate-ping' : ''}`} />
       )}
-      <span>
+      <span className="tracking-wide">
         {biometricLoading 
           ? t('lock.action.biometricLoading') 
           : biometricType === 'cross-platform'
             ? t('lock.action.biometricFido2')
             : t('lock.action.biometricPlatform')}
       </span>
+      <Sparkles className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity text-brand-primary" />
     </button>
   );
 }
