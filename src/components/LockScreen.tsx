@@ -304,22 +304,22 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
 
   const features = [
     {
-      icon: <ShieldAlert className="w-4.5 h-4.5 text-brand-primary" />,
+      icon: <ShieldAlert className="w-5 h-5 text-brand-primary" />,
       titleKey: 'lock.feature.zeroKnowledge.title',
       descKey: 'lock.feature.zeroKnowledge.description',
     },
     {
-      icon: <KeyRound className="w-4.5 h-4.5 text-brand-secondary" />,
+      icon: <KeyRound className="w-5 h-5 text-brand-secondary" />,
       titleKey: 'lock.feature.crypto.title',
       descKey: 'lock.feature.crypto.description',
     },
     {
-      icon: <Download className="w-4.5 h-4.5 text-brand-tertiary" />,
+      icon: <Download className="w-5 h-5 text-brand-tertiary" />,
       titleKey: 'lock.feature.localControl.title',
       descKey: 'lock.feature.localControl.description',
     },
     {
-      icon: <Trash2 className="w-4.5 h-4.5 text-brand-primary" />,
+      icon: <Trash2 className="w-5 h-5 text-brand-primary" />,
       titleKey: 'lock.feature.trash.title',
       descKey: 'lock.feature.trash.description',
     },
@@ -340,38 +340,38 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
 
         {/* Main Content: Split Grid on Desktop */}
         <div className="flex-1 flex items-center justify-center py-4 lg:py-0">
-          <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
+          <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-14 items-center">
             
             {/* Left Panel — Brand Showcase (Desktop only) */}
-            <div className="hidden lg:flex flex-col justify-between h-full py-4 space-y-6 animate-fade-in text-left">
-              <div>
+            <div className="hidden lg:flex flex-col justify-center h-full py-4 space-y-6 animate-fade-in text-left pr-2">
+              <div className="space-y-4">
                 {/* Brand Logo and Title */}
-                <div className="flex items-center gap-3.5 mb-5">
-                  <div className="w-12 h-12 rounded-xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center shadow-[0_0_20px_rgba(220,225,255,0.08)] overflow-hidden group">
-                    <img src={aegisLogo} alt="Aegis Vault Logo" className="w-10 h-10 object-contain group-hover:scale-105 transition-transform duration-300" />
+                <div className="flex items-center gap-4 mb-2">
+                  <div className="w-14 h-14 rounded-2xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center shadow-[0_0_25px_rgba(220,225,255,0.08)] overflow-hidden group">
+                    <img src={aegisLogo} alt="Aegis Vault Logo" className="w-12 h-12 object-contain group-hover:scale-105 transition-transform duration-300" />
                   </div>
                   <div>
-                    <h2 className="font-display text-2xl font-bold tracking-tight text-on-surface">
+                    <h2 className="font-display text-3xl font-bold tracking-tight text-on-surface">
                       {APP_NAME}
                     </h2>
-                    <span className="text-xs font-mono font-bold text-brand-primary/90 tracking-wider">
+                    <span className="text-xs font-mono font-bold text-brand-primary/90 tracking-wider uppercase">
                       {isSetup ? t('lock.panel.unlockTitle') : t('lock.panel.setupTitle')}
                     </span>
                   </div>
                 </div>
 
                 {/* Hero Title & Description */}
-                <h3 className="font-display text-2xl xl:text-3xl font-extrabold text-on-surface leading-tight tracking-tight mb-3">
+                <h3 className="font-display text-2xl xl:text-3xl font-extrabold text-on-surface leading-tight tracking-tight">
                   {isSetup ? t('lock.panel.unlockTitle') : t('lock.panel.setupTitle')}
                 </h3>
-                <p className="text-sm text-on-surface-variant/70 leading-relaxed max-w-md">
+                <p className="text-base text-on-surface-variant/70 leading-relaxed max-w-lg">
                   {isSetup
                     ? t('lock.panel.unlockDescription')
                     : `${APP_NAME} ${t('lock.panel.setupDescriptionSuffix')}`}
                 </p>
 
                 {/* Security Badges */}
-                <div className="flex flex-wrap gap-2 mt-4">
+                <div className="flex flex-wrap gap-2.5 pt-1">
                   {[
                     { icon: '🛡️', label: 'AES-256-GCM' },
                     { icon: '🧠', label: 'Argon2id KDF' },
@@ -379,7 +379,7 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
                   ].map((badge) => (
                     <span
                       key={badge.label}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-brand-primary/5 border border-brand-primary/15 text-xs font-bold text-brand-primary/80 font-mono"
+                      className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-brand-primary/5 border border-brand-primary/15 text-xs font-bold text-brand-primary/90 font-mono tracking-wide uppercase shadow-sm"
                     >
                       <span>{badge.icon}</span>
                       {badge.label}
@@ -388,28 +388,28 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
                 </div>
               </div>
 
-              {/* Feature Cards Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg">
+              {/* Feature Cards Grid - Restored generous comfortable size */}
+              <div className="grid grid-cols-2 gap-4 max-w-xl pt-2">
                 {features.map((feat) => (
                   <div
                     key={feat.titleKey}
-                    className="p-3.5 rounded-xl glass-panel space-y-1 transition-all duration-300 hover:border-brand-primary/20 hover:translate-x-0.5 group"
+                    className="p-4 rounded-2xl glass-panel space-y-2 transition-all duration-300 hover:border-brand-primary/30 hover:scale-[1.02] hover:shadow-brand-primary/5 group"
                   >
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-brand-primary/10 border border-brand-primary/15 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-300">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-brand-primary/10 border border-brand-primary/15 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
                         {feat.icon}
                       </div>
-                      <span className="text-xs font-bold text-on-surface leading-tight">{t(feat.titleKey as any)}</span>
+                      <span className="text-sm font-bold text-on-surface leading-snug">{t(feat.titleKey as any)}</span>
                     </div>
-                    <p className="text-[11px] text-on-surface-variant/60 leading-relaxed line-clamp-2">
+                    <p className="text-xs text-on-surface-variant/70 leading-relaxed line-clamp-3">
                       {t(feat.descKey as any)}
                     </p>
                   </div>
                 ))}
               </div>
 
-              {/* Footer badges */}
-              <div className="flex items-center gap-5 pt-1">
+              {/* Footer copyright */}
+              <div className="flex items-center gap-5 pt-2">
                 <span className="text-xs text-on-surface-variant/40 font-mono">© 2026 {t('lock.footer.name')}</span>
               </div>
             </div>
@@ -668,7 +668,7 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
                       className="w-full flex items-center justify-center gap-2 text-xs font-bold text-brand-primary hover:text-brand-primary/80 py-2.5 rounded-xl transition-all cursor-pointer bg-brand-primary/5 border border-brand-primary/10 hover:bg-brand-primary/10"
                     >
                       <HelpCircle className="w-3.5 h-3.5" />
-                      <span>{t('lock.action.forgotPassword')}</span>
+                      <span>{t('lock.forgotPassword')}</span>
                     </button>
 
                     <button
