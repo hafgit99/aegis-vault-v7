@@ -6,6 +6,7 @@
 import React from 'react';
 import { User, KeyRound, Wand2, Eye, EyeOff } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { PasswordStrengthMeter } from '../common/PasswordStrengthMeter';
 
 interface VaultFormLoginFieldsProps {
   username: string;
@@ -64,7 +65,7 @@ export function VaultFormLoginFields({
             <button
               type="button"
               onClick={onAutoGeneratePassword}
-              className="text-[9px] text-brand-primary hover:underline flex items-center gap-0.5"
+              className="text-[9px] text-brand-primary hover:underline flex items-center gap-0.5 cursor-pointer"
             >
               <Wand2 className="w-3 h-3" />
               <span>{t('vaultForm.login.generateStrong')}</span>
@@ -84,7 +85,7 @@ export function VaultFormLoginFields({
               <button
                 type="button"
                 onClick={onTogglePasswordVisibility}
-                className="text-on-surface-variant hover:text-brand-primary transition-colors p-1.5"
+                className="text-on-surface-variant hover:text-brand-primary transition-colors p-1.5 cursor-pointer"
                 title={isPasswordVisible ? t('vaultForm.login.hide') : t('vaultForm.login.show')}
               >
                 {isPasswordVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -92,13 +93,15 @@ export function VaultFormLoginFields({
               <button
                 type="button"
                 onClick={onAutoGeneratePassword}
-                className="text-on-surface-variant hover:text-brand-primary transition-colors p-1.5"
+                className="text-on-surface-variant hover:text-brand-primary transition-colors p-1.5 cursor-pointer"
                 title={t('vaultForm.login.generatePasswordTitle')}
               >
                 <Wand2 className="w-4 h-4" />
               </button>
             </div>
           </div>
+          {/* Dynamic Real-time Password Strength Meter */}
+          {password && <PasswordStrengthMeter password={password} />}
         </div>
       </div>
 
