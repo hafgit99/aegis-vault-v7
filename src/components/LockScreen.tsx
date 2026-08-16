@@ -304,34 +304,24 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
 
   const features = [
     {
-      icon: (
-        <svg className="w-5 h-5 text-brand-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          <path d="m9 12 2 2 4-4" />
-        </svg>
-      ),
-      titleKey: 'lock.feature.encryptionTitle',
-      descKey: 'lock.feature.encryptionDesc',
+      icon: <ShieldAlert className="w-4.5 h-4.5 text-brand-primary" />,
+      titleKey: 'lock.feature.zeroKnowledge.title',
+      descKey: 'lock.feature.zeroKnowledge.description',
     },
     {
-      icon: (
-        <svg className="w-5 h-5 text-brand-secondary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-        </svg>
-      ),
-      titleKey: 'lock.feature.zeroKnowledgeTitle',
-      descKey: 'lock.feature.zeroKnowledgeDesc',
+      icon: <KeyRound className="w-4.5 h-4.5 text-brand-secondary" />,
+      titleKey: 'lock.feature.crypto.title',
+      descKey: 'lock.feature.crypto.description',
     },
     {
-      icon: (
-        <svg className="w-5 h-5 text-brand-tertiary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10" />
-          <polyline points="12 6 12 12 16 14" />
-        </svg>
-      ),
-      titleKey: 'lock.feature.autoLockTitle',
-      descKey: 'lock.feature.autoLockDesc',
+      icon: <Download className="w-4.5 h-4.5 text-brand-tertiary" />,
+      titleKey: 'lock.feature.localControl.title',
+      descKey: 'lock.feature.localControl.description',
+    },
+    {
+      icon: <Trash2 className="w-4.5 h-4.5 text-brand-primary" />,
+      titleKey: 'lock.feature.trash.title',
+      descKey: 'lock.feature.trash.description',
     },
   ];
 
@@ -353,10 +343,10 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
           <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
             
             {/* Left Panel — Brand Showcase (Desktop only) */}
-            <div className="hidden lg:flex flex-col justify-between h-full py-4 space-y-8 animate-fade-in text-left">
+            <div className="hidden lg:flex flex-col justify-between h-full py-4 space-y-6 animate-fade-in text-left">
               <div>
                 {/* Brand Logo and Title */}
-                <div className="flex items-center gap-3.5 mb-6">
+                <div className="flex items-center gap-3.5 mb-5">
                   <div className="w-12 h-12 rounded-xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center shadow-[0_0_20px_rgba(220,225,255,0.08)] overflow-hidden group">
                     <img src={aegisLogo} alt="Aegis Vault Logo" className="w-10 h-10 object-contain group-hover:scale-105 transition-transform duration-300" />
                   </div>
@@ -365,38 +355,54 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
                       {APP_NAME}
                     </h2>
                     <span className="text-xs font-mono font-bold text-brand-primary/90 tracking-wider">
-                      {t('lock.brand.suite')}
+                      {isSetup ? t('lock.panel.unlockTitle') : t('lock.panel.setupTitle')}
                     </span>
                   </div>
                 </div>
 
-                {/* Hero Tagline */}
-                <h3 className="font-display text-3xl xl:text-4xl font-extrabold text-on-surface leading-tight tracking-tight mb-4">
-                  {t('lock.brand.heroTitle1')}<br />
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-primary via-emerald-400 to-brand-secondary">
-                    {t('lock.brand.heroTitle2')}
-                  </span>
+                {/* Hero Title & Description */}
+                <h3 className="font-display text-2xl xl:text-3xl font-extrabold text-on-surface leading-tight tracking-tight mb-3">
+                  {isSetup ? t('lock.panel.unlockTitle') : t('lock.panel.setupTitle')}
                 </h3>
-                <p className="text-base text-on-surface-variant/70 leading-relaxed max-w-md">
-                  {t('lock.brand.heroDescription')}
+                <p className="text-sm text-on-surface-variant/70 leading-relaxed max-w-md">
+                  {isSetup
+                    ? t('lock.panel.unlockDescription')
+                    : `${APP_NAME} ${t('lock.panel.setupDescriptionSuffix')}`}
                 </p>
+
+                {/* Security Badges */}
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {[
+                    { icon: '🛡️', label: 'AES-256-GCM' },
+                    { icon: '🧠', label: 'Argon2id KDF' },
+                    { icon: '🔒', label: isSetup ? 'Offline-First' : 'Zero-Knowledge' },
+                  ].map((badge) => (
+                    <span
+                      key={badge.label}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-brand-primary/5 border border-brand-primary/15 text-xs font-bold text-brand-primary/80 font-mono"
+                    >
+                      <span>{badge.icon}</span>
+                      {badge.label}
+                    </span>
+                  ))}
+                </div>
               </div>
 
               {/* Feature Cards Grid */}
-              <div className="space-y-3.5 max-w-md">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg">
                 {features.map((feat) => (
                   <div
                     key={feat.titleKey}
-                    className="p-4 rounded-xl glass-panel space-y-1.5 transition-all duration-300 hover:border-brand-primary/20 hover:translate-x-1 group"
+                    className="p-3.5 rounded-xl glass-panel space-y-1 transition-all duration-300 hover:border-brand-primary/20 hover:translate-x-0.5 group"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-xl bg-brand-primary/10 border border-brand-primary/15 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-300">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-brand-primary/10 border border-brand-primary/15 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-300">
                         {feat.icon}
                       </div>
-                      <span className="text-base font-bold text-on-surface leading-tight">{t(feat.titleKey)}</span>
+                      <span className="text-xs font-bold text-on-surface leading-tight">{t(feat.titleKey as any)}</span>
                     </div>
-                    <p className="text-sm text-on-surface-variant/60 leading-relaxed line-clamp-3">
-                      {t(feat.descKey)}
+                    <p className="text-[11px] text-on-surface-variant/60 leading-relaxed line-clamp-2">
+                      {t(feat.descKey as any)}
                     </p>
                   </div>
                 ))}
@@ -404,8 +410,7 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
 
               {/* Footer badges */}
               <div className="flex items-center gap-5 pt-1">
-                <span className="text-sm text-on-surface-variant/30 font-mono">© 2026 {t('lock.footer.name')}</span>
-                <span className="text-sm text-on-surface-variant/30 font-mono">{t('lock.footer.crypto')}</span>
+                <span className="text-xs text-on-surface-variant/40 font-mono">© 2026 {t('lock.footer.name')}</span>
               </div>
             </div>
 

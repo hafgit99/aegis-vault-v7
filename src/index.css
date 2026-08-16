@@ -29,6 +29,21 @@
   --color-on-surface-variant: var(--on-surface-variant);
 }
 
+/* Disable native duplicate browser password reveal icons (Edge / Windows WebView2 / Chromium) */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  pointer-events: none !important;
+}
+
+input::-webkit-credentials-auto-fill-button {
+  visibility: hidden;
+  position: absolute;
+  right: 0;
+}
+
 @layer utilities {
   .safe-screen {
     min-height: 100vh;
