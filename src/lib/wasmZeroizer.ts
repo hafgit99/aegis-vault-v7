@@ -37,7 +37,35 @@ export interface SecureBuffer {
   zeroize: () => void;
 }
 
+const WASM_PAGE_SIZE = 65536;
+
 export function createSecureBuffer(size: number): SecureBuffer {
+  if (
+    isWasmZeroizerAvailable() &&
+    wasmMemory &&
+    zeroizeFunc &&
+    nextOffset + size <= (wasmMemory.buffer?.byteLength || WASM_PAGE_SIZE)
+  ) {
+    const offset = nextOffset;
+    nextOffset += size;
+    const array = new Uint8Array(wasmMemory.buffer, offset, size);
+    let zeroed = false;
+
+    return {
+      array,
+      offset,
+      length: size,
+      zeroize: () => {
+        if (zeroed) return;
+        try {
+          zeroizeFunc!(offset, size);
+        } catch {}
+        array.fill(0);
+        zeroed = true;
+      },
+    };
+  }
+
   const array = new Uint8Array(size);
   let zeroed = false;
 
@@ -49,7 +77,7 @@ export function createSecureBuffer(size: number): SecureBuffer {
       if (zeroed) return;
       array.fill(0);
       zeroed = true;
-    }
+    },
   };
 }
 

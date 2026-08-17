@@ -16,8 +16,9 @@ coverage/
 keystore.properties
 key.properties
 
-# Command Code local tool state (per-session scratchpad, plan files, etc.)
+# Local tool states
 .commandcode/
+.kilo/
 
 # Desktop / mobile build outputs
 src-tauri/target/

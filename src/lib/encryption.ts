@@ -1,10 +1,10 @@
-﻿/**
+/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
 
 import { secureRandomBytes } from './random';
-import { deriveArgon2idKey } from './argon2id';
+import { deriveArgon2idKey, MIN_ARGON2ID_MEMORY_KIB } from './argon2id';
 import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, generateSafeIv } from './webcrypto';
 
 // Aegis Vault 7 cross-platform secure backup KDF profile.
@@ -124,7 +124,7 @@ export async function decryptDataWithPasswordSecure(envelopeJsonStr: string, pas
     throw new SecureBackupError(secureBackupErrorCodes.weakKdfParams);
   }
   const { memoryKiB, iterations } = parsed.kdfParams;
-  if (typeof memoryKiB !== 'number' || typeof iterations !== 'number' || memoryKiB < 1024 || iterations < 3) {
+  if (typeof memoryKiB !== 'number' || typeof iterations !== 'number' || memoryKiB < MIN_ARGON2ID_MEMORY_KIB || iterations < 3) {
     throw new SecureBackupError(secureBackupErrorCodes.weakKdfParams);
   }
 

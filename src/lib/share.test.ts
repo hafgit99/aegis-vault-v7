@@ -73,4 +73,17 @@ describe('Password Sharing Library', () => {
     expect(await decryptShareUrl('#share=invalid&k=invalid')).toBeNull();
     expect(await decryptShareUrl('#share=e30&k=e30')).toBeNull();
   });
+
+  it('rejects expired share URLs', async () => {
+    const shareUrl = await generateShareUrl(testItem, 2);
+    const hash = shareUrl.substring(shareUrl.indexOf('#'));
+    
+    // Simulate future time beyond 2 hours
+    const futureTime = Date.now() + 3 * 60 * 60 * 1000;
+    const dateSpy = vi.spyOn(Date, 'now').mockReturnValue(futureTime);
+
+    const decrypted = await decryptShareUrl(hash);
+    expect(decrypted).toBeNull();
+    dateSpy.mockRestore();
+  });
 });

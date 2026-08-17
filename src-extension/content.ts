@@ -1371,8 +1371,6 @@ if (typeof document !== 'undefined' && document.body) {
   observer.observe(document.body, { 
     childList: true, 
     subtree: true,
-    attributes: true,
-    attributeFilter: ['class', 'style', 'hidden', 'type']
   });
 }
 

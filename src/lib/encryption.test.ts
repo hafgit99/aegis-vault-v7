@@ -14,6 +14,7 @@ vi.mock('./argon2id', () => ({
     }
     return key;
   }),
+  MIN_ARGON2ID_MEMORY_KIB: 8192,
   enforceMinimumKdfFloor: (opts: any) => ({ memoryKiB: 32768, iterations: 3, parallelism: 1, hashLength: 32, ...opts }),
 }));
 

@@ -55,12 +55,23 @@ export function isDesktopRuntime(): boolean {
 export const MIN_ARGON2ID_MEMORY_KIB = 8192; // 8 MiB floor
 export const MIN_ARGON2ID_ITERATIONS = 3;
 
-const DEFAULT_OPTIONS: Required<Argon2idOptions> = {
+/** High-security profile for desktop native runtime (64 MiB, 4 iter, 2 lanes) */
+export const DESKTOP_NATIVE_KDF_PROFILE: Required<Argon2idOptions> = {
+  memoryKiB: 64 * 1024,
+  iterations: 4,
+  parallelism: 2,
+  hashLength: 32,
+};
+
+/** Portable cross-platform profile for Web/WASM/backups (32 MiB, 3 iter, 1 lane) */
+export const CROSS_PLATFORM_KDF_PROFILE: Required<Argon2idOptions> = {
   memoryKiB: 32 * 1024,
   iterations: 3,
   parallelism: 1,
   hashLength: 32,
 };
+
+const DEFAULT_OPTIONS: Required<Argon2idOptions> = CROSS_PLATFORM_KDF_PROFILE;
 
 export function enforceMinimumKdfFloor(options: Argon2idOptions = {}): Required<Argon2idOptions> {
   const memoryKiB = Math.max(MIN_ARGON2ID_MEMORY_KIB, options.memoryKiB ?? DEFAULT_OPTIONS.memoryKiB);

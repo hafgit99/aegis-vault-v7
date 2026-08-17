@@ -469,12 +469,12 @@ FROM vault_items;
         ...item,
         id: fallback.id,
         title: item.title || fallback.title,
-        category,
-        favorite: fallback.favorite,
-        deleted: fallback.deleted,
-        deletedAt: fallback.deletedAt,
-        createdAt: fallback.createdAt,
-        updatedAt: fallback.updatedAt,
+        category: item.category || category,
+        favorite: item.favorite !== undefined ? item.favorite : fallback.favorite,
+        deleted: item.deleted !== undefined ? item.deleted : fallback.deleted,
+        deletedAt: item.deletedAt !== undefined ? item.deletedAt : fallback.deletedAt,
+        createdAt: item.createdAt || fallback.createdAt,
+        updatedAt: item.updatedAt || fallback.updatedAt,
       };
     } catch (error) {
       this.logQuery(`WA_SQLITE_REPOSITORY decrypt vault_items row failed id=${this.sanitizeLogValue(fallback.id)}: ${this.errorMessage(error)};`, 'ERROR', 0);
@@ -495,6 +495,9 @@ FROM vault_items;
       username: item.username || '',
       url: item.url || '',
       category,
+      favorite: item.favorite ?? false,
+      deleted: item.deleted ?? false,
+      deletedAt: item.deletedAt,
       createdAt,
       updatedAt,
     };

@@ -9,7 +9,7 @@ import { ShieldCheck, AlertTriangle, AlertCircle, Sparkles, ArrowRight, User, Wi
 import { useLanguage } from '../i18n/LanguageContext';
 import { VaultItem } from '../types';
 import { runVaultAudit, calculatePasswordScore, getPasswordAgeInDays, isUnsecureHttpUrl, supportsTwoFactor, getAuditScoreHistory } from '../lib/security';
-import { checkPasswordAgainstHibp } from '../lib/hibp';
+import { checkPasswordAgainstHibp, isHibpCheckEnabled, setHibpCheckEnabled } from '../lib/hibp';
 
 interface SecurityAuditProps {
   items: VaultItem[];
@@ -18,11 +18,29 @@ interface SecurityAuditProps {
 
 export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProps) {
   const { t } = useLanguage();
+  const [hibpEnabled, setHibpEnabled] = React.useState<boolean>(() => isHibpCheckEnabled());
   const [pwnedByPassword, setPwnedByPassword] = React.useState<Map<string, number>>(new Map());
   const [hibpStatus, setHibpStatus] = React.useState<'idle' | 'checking' | 'complete' | 'unavailable'>('idle');
   const audit = runVaultAudit(items);
 
+  const handleToggleHibp = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = !hibpEnabled;
+    setHibpEnabled(next);
+    setHibpCheckEnabled(next);
+    if (!next) {
+      setPwnedByPassword(new Map());
+      setHibpStatus('idle');
+    }
+  };
+
   React.useEffect(() => {
+    if (!hibpEnabled) {
+      setPwnedByPassword(new Map());
+      setHibpStatus('idle');
+      return;
+    }
+
     let cancelled = false;
     const uniquePasswords = [...new Set(items.map((item) => item.password || '').filter(Boolean))];
 
@@ -57,7 +75,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
     return () => {
       cancelled = true;
     };
-  }, [items]);
+  }, [items, hibpEnabled]);
 
   // Group items by security status
   const weakItems = items.filter((i) => {
@@ -95,27 +113,12 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
   const tooltipRef = React.useRef<HTMLDivElement>(null);
   const rawHistory = getAuditScoreHistory();
 
-  // If only 1 data point, generate 4 weekly trailing history points to make the trend look beautiful
+  // Use strictly authentic recorded history; if none exists yet, display current audit score
   const history = React.useMemo(() => {
-    if (rawHistory.length > 1) return rawHistory;
-    if (rawHistory.length === 0) return [];
-    
-    const singlePoint = rawHistory[0];
-    const baseScore = singlePoint.score;
-    const result = [];
-    const now = new Date(singlePoint.date + 'T00:00:00');
-    
-    for (let i = 4; i >= 1; i--) {
-      const d = new Date(now);
-      d.setDate(now.getDate() - i * 7);
-      const dateStr = d.toISOString().split('T')[0];
-      const step = 25 - i * 5;
-      const calculatedScore = Math.max(20, Math.min(100, baseScore - step + Math.round(Math.sin(i) * 3)));
-      result.push({ date: dateStr, score: calculatedScore });
-    }
-    result.push(singlePoint);
-    return result;
-  }, [rawHistory]);
+    if (rawHistory.length > 0) return rawHistory;
+    const today = new Date().toISOString().split('T')[0];
+    return [{ date: today, score: audit.score }];
+  }, [rawHistory, audit.score]);
 
   // Map history values to SVG viewBox coordinates (400 width x 100 height)
   const points = React.useMemo(() => {
@@ -375,24 +378,47 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
           </div>
         </div>
 
-        <div className="glass-panel p-4 sm:p-5 rounded-xl bg-red-500/5 border border-red-500/10">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold tracking-wider text-on-surface-variant uppercase">{t('securityAudit.pwnedPasswords')}</span>
-            {hibpStatus === 'unavailable' ? (
-              <WifiOff className="w-5 h-5 text-amber-300" />
-            ) : (
-              <AlertCircle className="w-5 h-5 text-red-300" />
-            )}
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span data-testid="security-audit-pwned-count" className="text-3xl font-bold font-sans text-red-300">{pwnedItems.length}</span>
-            <span className="text-xs text-on-surface-variant">
-              {hibpStatus === 'checking'
-                ? t('securityAudit.pwnedChecking')
-                : hibpStatus === 'unavailable'
-                  ? t('securityAudit.pwnedUnavailable')
-                  : t('securityAudit.pwnedDescription')}
-            </span>
+        <div className="glass-panel p-4 sm:p-5 rounded-xl bg-red-500/5 border border-red-500/10 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold tracking-wider text-on-surface-variant uppercase">{t('securityAudit.pwnedPasswords')}</span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  data-testid="security-audit-hibp-toggle"
+                  onClick={handleToggleHibp}
+                  title={hibpEnabled ? 'HIBP K-Anonymity aktif (Kapatmak için tıklayın)' : 'HIBP kapalı (Etkinleştirmek için tıklayın)'}
+                  className={`text-[9px] font-bold px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
+                    hibpEnabled
+                      ? 'bg-brand-primary/20 text-brand-primary border-brand-primary/30'
+                      : 'bg-outline-variant/10 text-on-surface-variant border-outline-variant/20'
+                  }`}
+                >
+                  {hibpEnabled ? 'OPT-IN ON' : 'OFFLINE'}
+                </button>
+                {hibpEnabled && (
+                  hibpStatus === 'unavailable' ? (
+                    <WifiOff className="w-4 h-4 text-amber-300" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-red-300" />
+                  )
+                )}
+              </div>
+            </div>
+            <div className="mt-3 flex items-baseline gap-2">
+              <span data-testid="security-audit-pwned-count" className="text-3xl font-bold font-sans text-red-300">
+                {hibpEnabled ? pwnedItems.length : '—'}
+              </span>
+              <span className="text-xs text-on-surface-variant">
+                {!hibpEnabled
+                  ? (t('securityAudit.pwnedDisabled') || 'Offline (HIBP Kapalı)')
+                  : hibpStatus === 'checking'
+                    ? t('securityAudit.pwnedChecking')
+                    : hibpStatus === 'unavailable'
+                      ? t('securityAudit.pwnedUnavailable')
+                      : t('securityAudit.pwnedDescription')}
+              </span>
+            </div>
           </div>
         </div>
       </div>

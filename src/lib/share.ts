@@ -109,9 +109,12 @@ export async function decryptShareUrl(hash: string): Promise<DecryptedSharePaylo
     const plaintext = await webCryptoAesGcmDecrypt(payload, rawKey);
     const decrypted = JSON.parse(plaintext) as DecryptedSharePayload;
 
+    if (decrypted.expiresAt && Date.now() > decrypted.expiresAt) {
+      return null;
+    }
+
     return decrypted;
-  } catch (error) {
-    console.error('Failed to decrypt share URL:', error);
+  } catch {
     return null;
   }
 }

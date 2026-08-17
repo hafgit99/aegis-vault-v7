@@ -165,6 +165,21 @@ export default function ShareModal({ isOpen, onClose, item }: ShareModalProps) {
             </div>
           </div>
 
+          {/* TOTP Warning if present */}
+          {item.totpSecret && (
+            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2.5 text-left">
+              <AlertTriangle className="w-4.5 h-4.5 text-amber-400 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <h4 className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">
+                  {t('share.totpIncludedTitle') || '2FA / TOTP Key Included'}
+                </h4>
+                <p className="text-[9px] text-on-surface-variant leading-relaxed">
+                  {t('share.totpIncludedDesc') || 'This credential contains a 2FA authentication secret. Only share this link with trusted recipients.'}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Copy URL Input Group */}
           <div className="flex gap-2">
             <input

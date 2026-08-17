@@ -123,7 +123,10 @@ export function updateActiveVaultEncryptionKey(vaultEncryptionKey: Uint8Array): 
   activeVaultKeyBytes = cloneBytes(vaultEncryptionKey);
   if (isDesktopRuntime()) {
     invoke('update_rust_active_vault_key', { newVaultKey: Array.from(vaultEncryptionKey) })
-      .catch(e => console.error('Failed to update vault key in Rust:', e));
+      .catch(e => {
+        console.error('Failed to update vault key in Rust, closing session for security:', e);
+        closeVaultSession();
+      });
   }
   notifySubscribers();
 }

@@ -603,38 +603,7 @@ fn open_import_file() -> Result<Option<ImportFilePayload>, String> {
     Ok(Some(ImportFilePayload { name, contents }))
 }
 
-#[derive(serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct RustArgon2idOptions {
-    #[serde(alias = "memoryKiB")]
-    memory_kib: Option<u32>,
-    iterations: Option<u32>,
-    parallelism: Option<u32>,
-    #[serde(alias = "hashLength")]
-    hash_length: Option<u32>,
-}
-
-impl RustArgon2idOptions {
-    fn to_params(&self) -> Result<argon2::Params, String> {
-        let mem = self.memory_kib.unwrap_or(32 * 1024);
-        let time = self.iterations.unwrap_or(3);
-        let lanes = self.parallelism.unwrap_or(1);
-        let key_len = self.hash_length.unwrap_or(32);
-
-        argon2::Params::new(mem, time, lanes, Some(key_len as usize))
-            .map_err(|e| format!("invalid Argon2id parameters: {e}"))
-    }
-}
-
-fn get_params(options: Option<RustArgon2idOptions>) -> Result<argon2::Params, String> {
-    let opts = options.unwrap_or(RustArgon2idOptions {
-        memory_kib: None,
-        iterations: None,
-        parallelism: None,
-        hash_length: None,
-    });
-    opts.to_params()
-}
+use credential_handler::{get_params, RustArgon2idOptions};
 
 #[tauri::command]
 fn derive_argon2id_key(

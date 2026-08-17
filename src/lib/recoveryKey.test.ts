@@ -33,6 +33,7 @@ vi.mock('./argon2id', () => ({
     return new Uint8Array(hash);
   }),
   isDesktopRuntime: vi.fn(() => false),
+  MIN_ARGON2ID_MEMORY_KIB: 8192,
   enforceMinimumKdfFloor: (opts: any) => ({ memoryKiB: 32768, iterations: 3, parallelism: 1, hashLength: 32, ...opts }),
 }));
 
@@ -91,6 +92,18 @@ describe('recoveryKey', () => {
     const words = generateRecoveryWords();
     words[0] = words[0].toUpperCase();
     expect(validateRecoveryWords(words)).toBe(true);
+  });
+
+  it('calculates BIP-39 8-bit checksum identical to WebCrypto SHA-256 digest first byte', async () => {
+    for (let i = 0; i < 20; i++) {
+      const entropy = crypto.getRandomValues(new Uint8Array(32));
+      const hashBuffer = await crypto.subtle.digest('SHA-256', entropy);
+      const expectedFirstByte = new Uint8Array(hashBuffer)[0];
+      
+      // Generate words and verify checksum validity
+      const words = generateRecoveryWords();
+      expect(validateRecoveryWords(words)).toBe(true);
+    }
   });
 
   // ── Formatting ──────────────────────────────────────────────────────

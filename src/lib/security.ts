@@ -133,7 +133,7 @@ export function calculatePasswordScore(password: string): number {
 
 /**
  * Categorizes a password according to its strength score.
- * Uses fastPasswordScore to prevent rendering freezes in lists.
+ * Uses cached zxcvbn calculatePasswordScore for consistent scoring across the application.
  */
 export function getStrengthLabel(password: string): {
   label: 'WEAK' | 'MEDIUM' | 'STRONG' | 'SECURE';
@@ -143,7 +143,7 @@ export function getStrengthLabel(password: string): {
     return { label: 'WEAK', colorClass: 'bg-brand-error/20 text-brand-error' };
   }
 
-  const score = fastPasswordScore(password);
+  const score = calculatePasswordScore(password);
   if (score >= 90) {
     return { label: 'SECURE', colorClass: 'bg-brand-tertiary/20 text-brand-tertiary border border-brand-tertiary/20' };
   } else if (score >= 70) {
@@ -233,24 +233,19 @@ export function getAuditScoreHistory(): { date: string; score: number }[] {
       const historyJson = localStorage.getItem('aegis-vault-v7-audit-history');
       if (historyJson) {
         const history = JSON.parse(historyJson);
-        if (Array.isArray(history) && history.length > 0) return history;
+        if (Array.isArray(history) && history.length > 0) {
+          return history.filter(
+            (item): item is { date: string; score: number } =>
+              typeof item === 'object' &&
+              item !== null &&
+              typeof item.date === 'string' &&
+              typeof item.score === 'number',
+          );
+        }
       }
     } catch {}
   }
-  
-  // Default fallback mock history for beautiful visualization
-  const mockHistory = [];
-  const now = new Date();
-  for (let i = 4; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(now.getDate() - i * 7);
-    const dateStr = d.toISOString().split('T')[0];
-    mockHistory.push({
-      date: dateStr,
-      score: 60 + (4 - i) * 8 + secureRandomIndex(6),
-    });
-  }
-  return mockHistory;
+  return [];
 }
 
 /**

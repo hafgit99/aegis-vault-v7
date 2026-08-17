@@ -24,6 +24,7 @@ vi.mock('./argon2id', () => ({
   createArgon2idHash: vi.fn(async (password: string, salt: string) => `$argon2id$${salt}$${password}`),
   verifyArgon2idHash: vi.fn(async (password: string, encodedHash: string) => encodedHash.endsWith(`$${password}`)),
   deriveArgon2idKey: vi.fn(async () => new Uint8Array(32).fill(7)),
+  MIN_ARGON2ID_MEMORY_KIB: 8192,
   enforceMinimumKdfFloor: vi.fn((opts: any) => ({ memoryKiB: 32768, iterations: 3, parallelism: 1, hashLength: 32, ...opts })),
 }));
 

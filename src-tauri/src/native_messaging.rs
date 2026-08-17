@@ -141,9 +141,17 @@ pub fn write_pairing_token_file(path: &PathBuf, token: &str) -> io::Result<()> {
         if let Some(path_str) = path.to_str() {
             if let Ok(username) = std::env::var("USERNAME") {
                 let user_grant = format!("{}:(F)", username);
-                let _ = std::process::Command::new("icacls")
+                let output = std::process::Command::new("icacls")
                     .args(&[path_str, "/inheritance:r", "/grant:r", &user_grant])
                     .output();
+                if let Ok(out) = output {
+                    if !out.status.success() {
+                        eprintln!(
+                            "[Aegis IPC Warning] Failed to restrict pairing token ACL: {}",
+                            String::from_utf8_lossy(&out.stderr)
+                        );
+                    }
+                }
             }
         }
         Ok(())
@@ -735,7 +743,7 @@ fn handle_client(
                             .collect();
                         serde_json::json!({ "locked": false, "credentials": matching })
                     } else {
-                        serde_json::json!({ "locked": false, "credentials": cache.credentials })
+                        serde_json::json!({ "locked": false, "credentials": [] })
                     }
                 } else {
                     serde_json::json!({ "locked": true, "credentials": [] })

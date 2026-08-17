@@ -26,7 +26,7 @@ impl RustArgon2idOptions {
     }
 }
 
-fn get_params(options: Option<RustArgon2idOptions>) -> Result<argon2::Params, String> {
+pub fn get_params(options: Option<RustArgon2idOptions>) -> Result<argon2::Params, String> {
     let opts = options.unwrap_or(RustArgon2idOptions {
         memory_kib: None,
         iterations: None,

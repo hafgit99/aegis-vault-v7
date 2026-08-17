@@ -9,6 +9,7 @@ import {
 
 vi.mock('./argon2id', () => ({
   deriveArgon2idKey: vi.fn(async () => new Uint8Array(32).fill(7)),
+  MIN_ARGON2ID_MEMORY_KIB: 8192,
   enforceMinimumKdfFloor: (opts: any) => ({ memoryKiB: 32768, iterations: 3, parallelism: 1, hashLength: 32, ...opts }),
 }));
 
@@ -17,8 +18,8 @@ const weakOrMalformedKdfParams = fc.oneof(
   fc.constant(undefined),
   fc.constant(null),
   fc.record({
-    // The encryption layer rejects memoryKiB below the 1 MiB portable floor.
-    memoryKiB: fc.oneof(fc.integer({ min: -2048, max: 1023 }), fc.string({ maxLength: 12 }), fc.constant(null)),
+    // The encryption layer rejects memoryKiB below the 8 MiB floor.
+    memoryKiB: fc.oneof(fc.integer({ min: -2048, max: 8191 }), fc.string({ maxLength: 12 }), fc.constant(null)),
     iterations: fc.oneof(fc.integer({ min: -16, max: 2 }), fc.string({ maxLength: 12 }), fc.constant(null)),
   }, { requiredKeys: [] }),
 );

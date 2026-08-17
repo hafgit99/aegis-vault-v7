@@ -13,6 +13,7 @@ const testKey = new Uint8Array(32).fill(7);
 
 vi.mock('./argon2id', () => ({
   deriveArgon2idKey: vi.fn(async () => testKey),
+  MIN_ARGON2ID_MEMORY_KIB: 8192,
   enforceMinimumKdfFloor: (opts: any) => ({ memoryKiB: 32768, iterations: 3, parallelism: 1, hashLength: 32, ...opts }),
 }));
 

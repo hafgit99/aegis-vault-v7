@@ -13,6 +13,8 @@ import { checkPasswordAgainstHibp } from '../lib/hibp';
 
 vi.mock('../lib/hibp', () => ({
   checkPasswordAgainstHibp: vi.fn(async () => ({ status: 'clean', count: 0 })),
+  isHibpCheckEnabled: vi.fn(() => true),
+  setHibpCheckEnabled: vi.fn(),
 }));
 
 afterEach(() => {
@@ -206,5 +208,33 @@ describe('SecurityAudit', () => {
     expect(screen.getByText(/REUSED PASSWORDS \(0\)/)).toBeTruthy();
     expect(screen.getByText('Open and Fix')).toBeTruthy();
     expect(screen.getByText('There are no conflicting reused passwords in your vault.')).toBeTruthy();
+  });
+
+  it('allows user to toggle HIBP check offline/online', () => {
+    render(
+      <LanguageProvider>
+        <SecurityAudit
+          items={[
+            makeItem({
+              id: 'weak',
+              title: 'Legacy Admin',
+              username: 'admin',
+              password: '123',
+            }),
+          ]}
+          onSelectItem={vi.fn()}
+        />
+      </LanguageProvider>,
+    );
+
+    const toggleBtn = screen.getByTestId('security-audit-hibp-toggle');
+    expect(toggleBtn).toBeTruthy();
+    expect(toggleBtn.textContent).toBe('OPT-IN ON');
+
+    fireEvent.click(toggleBtn);
+    expect(toggleBtn.textContent).toBe('OFFLINE');
+
+    fireEvent.click(toggleBtn);
+    expect(toggleBtn.textContent).toBe('OPT-IN ON');
   });
 });
