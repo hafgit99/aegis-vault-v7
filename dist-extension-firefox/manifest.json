@@ -17,7 +17,6 @@
   "permissions": [
     "nativeMessaging",
     "activeTab",
-    "tabs",
     "storage"
   ],
   "host_permissions": [
