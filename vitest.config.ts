@@ -2,7 +2,8 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    exclude: ['node_modules/**', 'dist/**', 'tests/e2e/**', '.stryker-tmp/**'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}', 'src-extension/**/*.{test,spec}.{ts,tsx}'],
+    exclude: ['node_modules/**', 'dist/**', 'tests/e2e/**', '.stryker-tmp/**', '.kilo/**', '**/.kilo/**', '.commandcode/**', '**/.commandcode/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary', 'html'],
