@@ -63,7 +63,7 @@ const baseline = {
     'getActiveMasterPassword': 0,
     'masterPasswordPlain': 8,
     'passwordPlain': 9,
-    'deriveEncryptionKey': 9,
+    'deriveEncryptionKey': 10,
     'activeCredentialBytes': 0,
     'activeBackupPasswordBytes': 0,
     'activeAccountSecretKeyBytes': 0

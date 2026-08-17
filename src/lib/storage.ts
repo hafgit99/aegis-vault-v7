@@ -4,6 +4,7 @@
  */
 
 import { VaultItem } from '../types';
+import { getDefaultKdfProfile } from './argon2id';
 import { migrateLegacyAttachmentsToAesGcm, reencryptAttachmentsForVaultKeyChange } from './attachments';
 import {
   combineMasterPasswordAndSecretKey,
@@ -28,6 +29,7 @@ import { disableBiometric, hydrateBiometric } from './biometric';
 import { createDemoItems } from './storageDemoItems';
 import {
   getSecureStorageItem,
+  isSecureStorageAvailable,
   removeSecureStorageItem,
   secureStorageKeys,
   setSecureStorageItem,
@@ -116,9 +118,23 @@ export function isAccountSecretKeyRequired(): boolean {
   return readSecretProfile() !== null;
 }
 
+export function isRememberSecretKeySupported(): boolean {
+  return isSecureStorageAvailable();
+}
+
 export function getRememberedAccountSecretKey(): string | null {
-  return getSecureStorageItem(secureStorageKeys.rememberedSecretKey)
-    ?? getIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
+  const secureValue = getSecureStorageItem(secureStorageKeys.rememberedSecretKey);
+  if (secureValue) return secureValue;
+
+  const legacyValue = getIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
+  if (legacyValue) {
+    if (setSecureStorageItem(secureStorageKeys.rememberedSecretKey, legacyValue)) {
+      removeIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
+    }
+    return legacyValue;
+  }
+
+  return null;
 }
 
 export function rememberAccountSecretKey(secretKey: string): boolean {
@@ -128,8 +144,9 @@ export function rememberAccountSecretKey(secretKey: string): boolean {
     return true;
   }
 
-  setIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY, normalizedSecretKey);
-  return true;
+  // Security fix Y4: In pure browser/web context without secure hardware storage,
+  // never fall back to plaintext IndexedDB storage.
+  return false;
 }
 
 export function forgetRememberedAccountSecretKey(): void {
@@ -269,7 +286,7 @@ export async function setupMasterPassword(password: string): Promise<void> {
     const salt = Array.from(crypto.getRandomValues(new Uint8Array(16)))
       .map((b) => b.toString(16).padStart(2, '0'))
       .join('');
-    const kdfParams = { memoryKiB: 32 * 1024, iterations: 3, parallelism: 1, hashLength: 32 };
+    const kdfParams = getDefaultKdfProfile();
     
     const result = await invoke<{
       vaultEncryptionKey: number[];
@@ -326,7 +343,7 @@ export async function setupMasterPasswordWithSecretKey(
     const salt = Array.from(crypto.getRandomValues(new Uint8Array(16)))
       .map((b) => b.toString(16).padStart(2, '0'))
       .join('');
-    const kdfParams = { memoryKiB: 32 * 1024, iterations: 3, parallelism: 1, hashLength: 32 };
+    const kdfParams = getDefaultKdfProfile();
     
     const result = await invoke<{
       vaultEncryptionKey: number[];
@@ -385,7 +402,7 @@ export async function changeMasterPassword(oldPassword: string, newPassword: str
     const newSalt = Array.from(crypto.getRandomValues(new Uint8Array(16)))
       .map((b) => b.toString(16).padStart(2, '0'))
       .join('');
-    const kdfParams = { memoryKiB: 32 * 1024, iterations: 3, parallelism: 1, hashLength: 32 };
+    const kdfParams = getDefaultKdfProfile();
 
     const oldCredential = await resolveCurrentVaultCredential(oldPassword);
     const newCredential = await resolveRotatedVaultCredential(newPassword);

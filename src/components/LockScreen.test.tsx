@@ -25,6 +25,7 @@ import LockScreen from './LockScreen';
 vi.mock('../lib/storage', () => ({
   getRememberedAccountSecretKey: vi.fn(() => null),
   isAccountSecretKeyRequired: vi.fn(() => false),
+  isRememberSecretKeySupported: vi.fn(() => true),
   isMasterPasswordSet: vi.fn(),
   setupMasterPasswordWithSecretKey: vi.fn(async () => undefined),
   verifyMasterPassword: vi.fn(),

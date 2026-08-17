@@ -93,6 +93,17 @@ function redactMeta(meta?: Record<string, unknown>): Record<string, unknown> | u
   );
 }
 
+function sanitizeSecurityMessage(msg: string): string {
+  if (typeof msg !== 'string') return '';
+  return msg
+    .replace(/(bearer\s+)[a-zA-Z0-9_\-\.]+/gi, '$1[redacted]')
+    .replace(/(password[:=\s]+)[^\s,;]+/gi, '$1[redacted]')
+    .replace(/(secret_?key[:=\s]+)[^\s,;]+/gi, '$1[redacted]')
+    .replace(/(token[:=\s]+)[^\s,;]+/gi, '$1[redacted]')
+    .replace(/[\r\n\t]/g, ' ')
+    .slice(0, 300);
+}
+
 export function logSecurityEvent(
   code: SecurityEventCode,
   message: string,
@@ -103,7 +114,7 @@ export function logSecurityEvent(
     source: 'AegisSecurity',
     code,
     severity,
-    message,
+    message: sanitizeSecurityMessage(message),
     meta: redactMeta(meta),
   };
 

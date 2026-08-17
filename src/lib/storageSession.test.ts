@@ -242,6 +242,13 @@ describe('vault session storage', () => {
   });
 
   it('sets up a secret-key protected vault and can remember the second key locally', async () => {
+    const storageMap = new Map<string, string>();
+    window.AegisAndroidSecureStorage = {
+      getItem: vi.fn((key) => storageMap.get(key) ?? null),
+      setItem: vi.fn((key, val) => { storageMap.set(key, val); return true; }),
+      removeItem: vi.fn((key) => { storageMap.delete(key); return true; }),
+    };
+
     await setupMasterPasswordWithSecretKey(
       'master-pass',
       'A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
@@ -259,23 +266,22 @@ describe('vault session storage', () => {
     expect(sqliteOPFSInstance.reseedDemoWithKey).not.toHaveBeenCalled();
   });
 
-  it('normalizes remembered secret keys and falls back to localStorage when secure storage rejects writes', () => {
+  it('refuses to store secret keys in plaintext when secure storage rejects writes (Y4 security fix)', () => {
     window.AegisAndroidSecureStorage = {
       getItem: vi.fn(() => null),
       setItem: vi.fn(() => false),
       removeItem: vi.fn(() => false),
     };
 
-    rememberAccountSecretKey('  a3-abcd-efgh-ijkl-mnop-qrst-uvwx-yz23-4567  ');
+    const stored = rememberAccountSecretKey('  a3-abcd-efgh-ijkl-mnop-qrst-uvwx-yz23-4567  ');
 
     expect(window.AegisAndroidSecureStorage.setItem).toHaveBeenCalledWith(
       'aegis_account_secret_key_remembered',
       'A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
     );
-    expect(localStorage.getItem('aegis_account_secret_key_remembered')).toBe(
-      'A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
-    );
-    expect(getRememberedAccountSecretKey()).toBe('A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567');
+    expect(stored).toBe(false);
+    expect(localStorage.getItem('aegis_account_secret_key_remembered')).toBeNull();
+    expect(getRememberedAccountSecretKey()).toBeNull();
   });
 
   it('removes remembered secret keys from both secure storage and the legacy fallback', () => {

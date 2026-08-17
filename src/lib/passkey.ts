@@ -475,6 +475,14 @@ export async function unwrapPasskeyPrivateKey(record: PasskeyRecord): Promise<Js
   });
 }
 
+export function incrementPasskeySignCount(record: PasskeyRecord): PasskeyRecord {
+  return {
+    ...record,
+    signCount: (record.signCount || 0) + 1,
+    lastUsedAt: new Date().toISOString(),
+  };
+}
+
 export function recordToVaultFields(record: PasskeyRecord): VaultPasskeyFields {
   return {
     passkeyCredentialId: record.credentialId,
@@ -533,33 +541,31 @@ export async function reWrapPasskeyBundle(
  *
  * @returns Number of passkey bundles successfully re-wrapped
  */
-export async function reWrapPasskeysInVaultItems(
-  items: Array<Record<string, unknown>>,
+export async function reWrapPasskeysInVaultItems<T>(
+  items: T[],
   oldVaultKey: Uint8Array,
   newVaultKey: Uint8Array,
-): Promise<number> {
-  let count = 0;
+): Promise<T[]> {
   for (const item of items) {
-    if (item.passkeyPrivateKeyBundle && typeof item.passkeyPrivateKeyBundle === 'object') {
-      item.passkeyPrivateKeyBundle = await reWrapPasskeyBundle(
-        item.passkeyPrivateKeyBundle as WebCryptoAesGcmPayload,
+    const raw = item as Record<string, any>;
+    if (raw.passkeyPrivateKeyBundle && typeof raw.passkeyPrivateKeyBundle === 'object') {
+      raw.passkeyPrivateKeyBundle = await reWrapPasskeyBundle(
+        raw.passkeyPrivateKeyBundle as WebCryptoAesGcmPayload,
         oldVaultKey,
         newVaultKey,
       );
-      count++;
     }
-    if (item.customFields && Array.isArray(item.customFields)) {
-      for (const field of item.customFields) {
+    if (raw.customFields && Array.isArray(raw.customFields)) {
+      for (const field of raw.customFields) {
         if (field && field.name === 'passkeyPrivateKeyBundle' && field.value) {
           try {
             const parsed = typeof field.value === 'string' ? JSON.parse(field.value) : field.value;
             const reWrapped = await reWrapPasskeyBundle(parsed, oldVaultKey, newVaultKey);
             field.value = typeof field.value === 'string' ? JSON.stringify(reWrapped) : reWrapped;
-            count++;
           } catch {}
         }
       }
     }
   }
-  return count;
+  return items;
 }

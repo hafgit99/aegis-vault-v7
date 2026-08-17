@@ -12,8 +12,9 @@ import {
   type VaultDatabaseRow,
   type VersionedVaultDatabaseState,
 } from './vaultDatabaseFormat';
-import { createArgon2idHash, verifyArgon2idHash, enforceMinimumKdfFloor, type Argon2idOptions } from './argon2id';
+import { createArgon2idHash, verifyArgon2idHash, enforceMinimumKdfFloor, getDefaultKdfProfile, type Argon2idOptions } from './argon2id';
 import { deriveArgon2idKey as deriveVettedArgon2idKey } from './argon2id';
+import { reWrapPasskeysInVaultItems } from './passkey';
 import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, generateSafeIv, derivePerItemKey, type WebCryptoAesGcmPayload } from './webcrypto';
 import {
   getNativeVaultStorageScope,
@@ -57,12 +58,7 @@ const LEGACY_VAULT_ITEM_KDF_PARAMS = {
   parallelism: 1,
   hashLength: 32,
 };
-const NEW_VAULT_ITEM_KDF_PARAMS = {
-  memoryKiB: 32 * 1024,
-  iterations: 3,
-  parallelism: 1,
-  hashLength: 32,
-};
+const NEW_VAULT_ITEM_KDF_PARAMS: Required<Argon2idOptions> = getDefaultKdfProfile();
 
 class SQLiteOPFS implements VaultStorageRepository {
   private state: VersionedVaultDatabaseState = createEmptyVaultDatabaseState();
@@ -408,7 +404,7 @@ class SQLiteOPFS implements VaultStorageRepository {
           localStorage.removeItem('aegis_vault_items');
           localStorage.removeItem('aegis_is_setup');
           logSecurityEvent(
-            securityEventCodes.storageLegacyMigrationSuccess,
+            securityEventCodes.storageLegacyDataPurged,
             'Legacy plaintext localStorage keys purged after successful migration.',
             'info',
           );
@@ -457,7 +453,7 @@ class SQLiteOPFS implements VaultStorageRepository {
           localStorage.removeItem('aegis_vault_items');
           localStorage.removeItem('aegis_is_setup');
           logSecurityEvent(
-            securityEventCodes.storageLegacyMigrationSuccess,
+            securityEventCodes.storageLegacyDataPurged,
             'Stale legacy plaintext localStorage keys purged (post-migration cleanup).',
             'info',
           );
@@ -540,8 +536,12 @@ class SQLiteOPFS implements VaultStorageRepository {
         argon_hash: argonHash,
       }];
 
+      const oldDerivedKey = await this.deriveEncryptionKey(oldPassword);
       const derivedKey = await this.deriveEncryptionKey(newPassword);
-      this.state.vault_items = await Promise.all(items.map(async (item) => {
+      const reWrappedItems = await reWrapPasskeysInVaultItems(items, oldDerivedKey, derivedKey);
+      oldDerivedKey.fill(0);
+
+      this.state.vault_items = await Promise.all(reWrappedItems.map(async (item) => {
         const encrypted = await webCryptoAesGcmEncrypt(JSON.stringify(item), derivedKey, generateSafeIv());
         const nowStr = new Date().toISOString().split('T')[0];
 
@@ -880,8 +880,21 @@ class SQLiteOPFS implements VaultStorageRepository {
     try {
       this.ensureVaultEncryptionSalt();
       const index = this.state.vault_items.findIndex(x => x.id === item.id);
-
+      const existingRow = index > -1 ? this.state.vault_items[index] : undefined;
       const itemId = item.id || secureRandomToken(9);
+
+      // Security fix Y5: Prevent un-decrypted placeholder items from overwriting raw ciphertext
+      const isPlaceholderItem = item.title === '[encrypted: aes-256-gcm]' && item.username === '[encrypted: aes-256-gcm]';
+      if (isPlaceholderItem && existingRow && existingRow.enc_metadata) {
+        logSecurityEvent(
+          securityEventCodes.storageLegacyMigrationFailed,
+          `Blocked saving un-decrypted placeholder item ${itemId} over existing raw ciphertext.`,
+          'warning',
+          { itemId },
+        );
+        return this.getVaultItemsWithKey(derivedKey);
+      }
+
       const itemToSave = { ...item, id: itemId };
       const rawSensitive = JSON.stringify(itemToSave);
       const perItemKey = await derivePerItemKey(derivedKey, itemId);
@@ -987,11 +1000,17 @@ class SQLiteOPFS implements VaultStorageRepository {
         const chunkRows = await Promise.all(
           chunk.map(async (item) => {
             try {
+              const itemId = item.id || secureRandomToken(9);
+              const existingRow = this.state.vault_items.find(x => x.id === itemId);
+              const isPlaceholderItem = item.title === '[encrypted: aes-256-gcm]' && item.username === '[encrypted: aes-256-gcm]';
+              if (isPlaceholderItem && existingRow && existingRow.enc_metadata) {
+                return existingRow;
+              }
+
               const rawSensitive = JSON.stringify(item);
               const encrypted = await webCryptoAesGcmEncrypt(rawSensitive, derivedKey, generateSafeIv());
               const category = item.category || 'login';
 
-              const itemId = item.id || secureRandomToken(9);
               const row: SQLiteRow = {
                 id: itemId,
                 title: '[encrypted: aes-256-gcm]',

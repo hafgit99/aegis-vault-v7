@@ -6,6 +6,7 @@
 import React from 'react';
 import { KeyRound, Download } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { isRememberSecretKeySupported } from '../../lib/storage';
 
 interface LockScreenSecretKeySectionProps {
   secretKey: string;
@@ -27,6 +28,7 @@ export function LockScreenSecretKeySection({
   onDownloadEmergencyKit,
 }: LockScreenSecretKeySectionProps) {
   const { t } = useLanguage();
+  const isSecureSupported = isRememberSecretKeySupported();
 
   if (isSetup && !requiresSecretKey) {
     return null;
@@ -59,15 +61,23 @@ export function LockScreenSecretKeySection({
         />
       </label>
 
-      <label className="flex items-start gap-2 text-left text-[11px] text-on-surface-variant cursor-pointer">
+      <label className={`flex items-start gap-2 text-left text-[11px] ${isSecureSupported ? 'text-on-surface-variant cursor-pointer' : 'text-on-surface-variant/50 cursor-not-allowed'}`}>
         <input
           data-testid="lock-remember-secret-key-checkbox"
           type="checkbox"
-          checked={rememberSecretKey}
+          checked={isSecureSupported && rememberSecretKey}
+          disabled={!isSecureSupported}
           onChange={(e) => setRememberSecretKey(e.target.checked)}
           className="mt-0.5 accent-brand-primary"
         />
-        <span>{t('lock.secret.rememberThisDevice')}</span>
+        <span>
+          {t('lock.secret.rememberThisDevice')}
+          {!isSecureSupported && (
+            <span className="block text-[10px] text-amber-500/80 mt-0.5">
+              (Güvenli donanım/masaüstü köprüsü gerektirir)
+            </span>
+          )}
+        </span>
       </label>
 
       {!isSetup && (

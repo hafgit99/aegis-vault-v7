@@ -26,6 +26,7 @@ vi.mock('./argon2id', () => ({
   deriveArgon2idKey: vi.fn(async () => new Uint8Array(32).fill(7)),
   MIN_ARGON2ID_MEMORY_KIB: 8192,
   enforceMinimumKdfFloor: vi.fn((opts: any) => ({ memoryKiB: 32768, iterations: 3, parallelism: 1, hashLength: 32, ...opts })),
+  getDefaultKdfProfile: vi.fn(() => ({ memoryKiB: 32768, iterations: 3, parallelism: 1, hashLength: 32 })),
 }));
 
 vi.mock('./random', () => ({
@@ -434,7 +435,7 @@ describe('wa-sqlite vault storage repository', () => {
 
     await repository.changeMasterPassword('valid-master', 'new-master');
 
-    expect(engine.userSecretHash).toBe('$argon2id$14141414141414141414141414141414$new-master');
+    expect(engine.userSecretHash).toBe('$argon2id$13131313131313131313131313131313$new-master');
     expect(engine.metadata.get('vault_encryption_salt')).not.toBe(oldSalt);
     expect(engine.vaultRows.map((row) => String(row.enc_metadata))).not.toEqual(oldCiphertexts);
     await expect(repository.verifyPassword('valid-master')).resolves.toBe(false);

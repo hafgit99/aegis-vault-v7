@@ -13,6 +13,7 @@ import type {
   VaultStorageRepository,
 } from './vaultStorageRepository';
 import { createWaSqliteEngine, type WaSqliteEngine } from './waSqliteEngine';
+import { reWrapPasskeysInVaultItems } from './passkey';
 import {
   derivePerItemKey,
   generateSafeIv,
@@ -162,8 +163,9 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
 
     const newSalt = this.createVaultEncryptionSalt();
     const newKey = await deriveArgon2idKey(newPassword, newSalt, DEFAULT_KDF_PARAMS);
-    const newArgonHash = await createArgon2idHash(newPassword, this.createVaultEncryptionSalt());
-    const rekeyedRows = await Promise.all(items.map((item) => this.createEncryptedRow(item, newKey)));
+    const newArgonHash = await createArgon2idHash(newPassword, newSalt);
+    const reWrappedItems = await reWrapPasskeysInVaultItems(items, oldKey, newKey);
+    const rekeyedRows = await Promise.all(reWrappedItems.map((item) => this.createEncryptedRow(item, newKey)));
 
     await this.runTransaction(async () => {
       await this.executeRequired('DELETE FROM user_secrets;');
@@ -220,7 +222,8 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
     newVaultKey: Uint8Array,
   ): Promise<void> {
     const items = await this.getVaultItemsWithKey(oldVaultKey);
-    const rekeyedRows = await Promise.all(items.map((item) => this.createEncryptedRow(item, newVaultKey)));
+    const reWrappedItems = await reWrapPasskeysInVaultItems(items, oldVaultKey, newVaultKey);
+    const rekeyedRows = await Promise.all(reWrappedItems.map((item) => this.createEncryptedRow(item, newVaultKey)));
 
     await this.runTransaction(async () => {
       await this.executeRequired('DELETE FROM user_secrets;');
