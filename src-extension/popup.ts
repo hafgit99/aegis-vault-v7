@@ -1,4 +1,5 @@
 import { translate, getPreferredLanguage, savePreferredLanguage, ExtensionLanguage } from './i18n';
+import { extractRegistrableDomain, extractRegistrableDomainFromUrl } from './psl-utils';
 
 // Interfaces for response credentials
 interface CredentialItem {
@@ -83,12 +84,12 @@ themeToggle.addEventListener('click', () => {
 });
 
 // Toast Helper
-function showToast(messageKey: 'copied.feedback') {
-  toast.textContent = translate(messageKey, activeLanguage);
+function showToast(message: string) {
+  toast.textContent = message;
   toast.classList.add('show');
   setTimeout(() => {
     toast.classList.remove('show');
-  }, 1500);
+  }, 2000);
 }
 
 // Clipboard copy helper with 30s auto-clear matching desktop policy
@@ -177,11 +178,7 @@ interface PhishingResult {
   details?: string;
 }
 
-function extractRegistrableDomain(hostname: string): string {
-  const parts = hostname.replace(/^www\./, '').toLowerCase().split('.');
-  if (parts.length <= 2) return parts.join('.');
-  return parts.slice(-2).join('.');
-}
+// extractRegistrableDomain is now imported from './psl-utils' (PSL-based, security fix Y1/Y2)
 
 function normalizeConfusables(text: string): string {
   return [...text].map(ch => CONFUSABLE_MAP[ch] || ch).join('');
@@ -583,17 +580,13 @@ function renderItemsToList(items: CredentialItem[]) {
     const actions = document.createElement('div');
     actions.className = 'credential-actions';
 
-    // Autofill button
+    // Autofill button — with domain validation gate (security fix Y1)
     const fillBtn = document.createElement('button');
     fillBtn.className = 'btn-fill';
     fillBtn.textContent = translate('btn.fill', activeLanguage);
     fillBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      chrome.runtime.sendMessage({
-        action: 'autofill_page',
-        username: item.username,
-        password: item.password || ''
-      });
+      validateAndAutofill(item);
     });
     actions.appendChild(fillBtn);
 
@@ -623,16 +616,156 @@ function renderItemsToList(items: CredentialItem[]) {
 
     card.appendChild(actions);
     
-    // Clicking card fills automatically
+    // Clicking card fills automatically — with domain validation gate (security fix Y1)
     card.addEventListener('click', () => {
-      chrome.runtime.sendMessage({
-        action: 'autofill_page',
-        username: item.username,
-        password: item.password || ''
-      });
+      validateAndAutofill(item);
     });
 
     credentialList.appendChild(card);
+  });
+}
+
+/**
+ * Security gate: Validates that the credential's domain matches the active tab's
+ * domain before allowing autofill. Prevents phishing attacks where a user manually
+ * selects a credential and fills it into a malicious page. (Security fix Y1)
+ */
+function validateAndAutofill(item: CredentialItem): void {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const activeTab = tabs[0];
+    const tabUrl = activeTab?.url || '';
+
+    // If no URL available (e.g., chrome:// pages), block autofill entirely
+    if (!tabUrl || (!tabUrl.startsWith('http://') && !tabUrl.startsWith('https://'))) {
+      showToast('⚠️ Autofill not available on this page.');
+      return;
+    }
+
+    const tabDomain = extractRegistrableDomainFromUrl(tabUrl);
+    const credDomain = item.url ? extractRegistrableDomainFromUrl(
+      item.url.startsWith('http') ? item.url : `https://${item.url}`
+    ) : '';
+
+    // If credential has no URL or domains match → proceed directly
+    if (!credDomain || tabDomain === credDomain) {
+      sendAutofillMessage(item);
+      return;
+    }
+
+    // Domain mismatch detected — show confirmation warning
+    showDomainMismatchWarning(item, tabDomain, credDomain);
+  });
+}
+
+/**
+ * Shows a domain mismatch warning overlay in the popup.
+ * User must explicitly confirm to proceed with autofill. (Security fix Y1)
+ */
+function showDomainMismatchWarning(item: CredentialItem, tabDomain: string, credDomain: string): void {
+  // Remove any existing warning
+  const existing = document.getElementById('domainMismatchOverlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'domainMismatchOverlay';
+  overlay.style.cssText = `
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+  `;
+
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    background: var(--bg-card, #1e1e2e); border-radius: 12px;
+    padding: 20px; max-width: 320px; width: 100%;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    border: 1px solid var(--border, rgba(255,255,255,0.1));
+  `;
+
+  const icon = document.createElement('div');
+  icon.textContent = '⚠️';
+  icon.style.cssText = 'font-size: 32px; text-align: center; margin-bottom: 12px;';
+
+  const title = document.createElement('div');
+  title.textContent = activeLanguage === 'tr' ? 'Alan Adı Uyuşmazlığı' : 'Domain Mismatch';
+  title.style.cssText = `
+    font-size: 15px; font-weight: 700; text-align: center;
+    color: var(--text-primary, #fff); margin-bottom: 8px;
+  `;
+
+  const desc = document.createElement('div');
+  desc.style.cssText = `
+    font-size: 12px; color: var(--text-secondary, #aaa);
+    text-align: center; line-height: 1.5; margin-bottom: 16px;
+  `;
+  const warningText = activeLanguage === 'tr'
+    ? 'Kaydın alan adı mevcut sayfa ile eşleşmiyor. Bu bir oltalama (phishing) saldırısı olabilir.'
+    : 'The credential domain does not match the current page. This could be a phishing attempt.';
+  const credLabel = activeLanguage === 'tr' ? 'Kayıt' : 'Credential';
+  const pageLabel = activeLanguage === 'tr' ? 'Mevcut sayfa' : 'Current page';
+
+  desc.innerHTML = `
+    ${warningText}
+    <br><br>
+    <strong style="color: var(--accent-green, #10b981);">${credLabel}:</strong> ${credDomain}<br>
+    <strong style="color: var(--accent-red, #ef4444);">${pageLabel}:</strong> ${tabDomain}
+  `;
+
+  const btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display: flex; gap: 8px;';
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = activeLanguage === 'tr' ? 'İptal' : 'Cancel';
+  cancelBtn.style.cssText = `
+    flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border, rgba(255,255,255,0.15));
+    background: transparent; color: var(--text-primary, #fff); cursor: pointer;
+    font-size: 13px; font-weight: 600;
+  `;
+  cancelBtn.addEventListener('click', () => overlay.remove());
+
+  const proceedBtn = document.createElement('button');
+  proceedBtn.textContent = activeLanguage === 'tr' ? 'Yine de Doldur' : 'Fill Anyway';
+  proceedBtn.style.cssText = `
+    flex: 1; padding: 10px; border-radius: 8px; border: none;
+    background: #ef4444; color: #fff; cursor: pointer;
+    font-size: 13px; font-weight: 600;
+  `;
+  proceedBtn.addEventListener('click', () => {
+    overlay.remove();
+    sendAutofillMessage(item);
+  });
+
+  btnRow.appendChild(cancelBtn);
+  btnRow.appendChild(proceedBtn);
+  dialog.appendChild(icon);
+  dialog.appendChild(title);
+  dialog.appendChild(desc);
+  dialog.appendChild(btnRow);
+  overlay.appendChild(dialog);
+
+  // Click outside to cancel
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+
+  document.body.appendChild(overlay);
+}
+
+/**
+ * Sends the autofill message to background, which forwards to the active tab's content script.
+ * Includes the credential's target domain for background-side validation. (Security fix Y1)
+ */
+function sendAutofillMessage(item: CredentialItem): void {
+  const credDomain = item.url ? extractRegistrableDomainFromUrl(
+    item.url.startsWith('http') ? item.url : `https://${item.url}`
+  ) : '';
+
+  chrome.runtime.sendMessage({
+    action: 'autofill_page',
+    username: item.username,
+    password: item.password || '',
+    targetDomain: credDomain,
   });
 }
 

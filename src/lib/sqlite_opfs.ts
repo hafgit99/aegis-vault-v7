@@ -399,7 +399,30 @@ class SQLiteOPFS implements VaultStorageRepository {
         }));
 
         this.logQuery('CREATE TABLE vault_items (id TEXT PRIMARY KEY, title TEXT, category TEXT, favorite INTEGER, deleted INTEGER, username_db TEXT, password_db TEXT, enc_metadata TEXT);', 'SUCCESS', this.state.vault_items.length);
+
+        // Security fix Y3: Purge legacy plaintext keys after successful migration.
+        // These contain base64-encoded master password and unencrypted vault items.
+        // Only delete AFTER migration succeeds to preserve rollback safety.
+        try {
+          localStorage.removeItem('aegis_master_password');
+          localStorage.removeItem('aegis_vault_items');
+          localStorage.removeItem('aegis_is_setup');
+          logSecurityEvent(
+            securityEventCodes.storageLegacyMigrationSuccess,
+            'Legacy plaintext localStorage keys purged after successful migration.',
+            'info',
+          );
+        } catch (purgeErr) {
+          // Non-fatal: log but don't block the migration
+          logSecurityEvent(
+            securityEventCodes.storageLegacyMigrationFailed,
+            'Failed to purge legacy localStorage keys after migration.',
+            'warning',
+            { error: purgeErr instanceof Error ? purgeErr.message : String(purgeErr) },
+          );
+        }
       } catch (e) {
+        // Migration failed — do NOT delete legacy keys (rollback safety)
         logSecurityEvent(
           securityEventCodes.storageLegacyMigrationFailed,
           'Legacy localStorage vault migration failed.',
@@ -407,9 +430,42 @@ class SQLiteOPFS implements VaultStorageRepository {
           { error: e instanceof Error ? e.message : String(e) },
         );
       }
+    } else {
+      // Security fix Y3: One-time cleanup for users who previously migrated
+      // but never had the plaintext purge applied. If SQLite state already
+      // has vault items (migration was done before), clean up stale keys.
+      this.purgeStaleLegacyLocalStorageKeys();
     }
 
     this.state = normalizeVaultDatabaseState(this.state);
+  }
+
+  /**
+   * Security fix Y3: Purge stale legacy plaintext localStorage keys.
+   * For users who migrated in a previous version without the cleanup,
+   * this removes any remaining plaintext data if the SQLite store is populated.
+   */
+  private purgeStaleLegacyLocalStorageKeys(): void {
+    try {
+      const hasLegacyPassword = localStorage.getItem('aegis_master_password');
+      const hasLegacyItems = localStorage.getItem('aegis_vault_items');
+
+      if (hasLegacyPassword || hasLegacyItems) {
+        // Only purge if we already have vault data in SQLite (i.e., migration happened before)
+        if (this.state.vault_items.length > 0 || this.state.user_secrets.length > 0) {
+          localStorage.removeItem('aegis_master_password');
+          localStorage.removeItem('aegis_vault_items');
+          localStorage.removeItem('aegis_is_setup');
+          logSecurityEvent(
+            securityEventCodes.storageLegacyMigrationSuccess,
+            'Stale legacy plaintext localStorage keys purged (post-migration cleanup).',
+            'info',
+          );
+        }
+      }
+    } catch {
+      // Silently ignore — localStorage may not be available in all contexts
+    }
   }
 
   /**
@@ -661,6 +717,8 @@ class SQLiteOPFS implements VaultStorageRepository {
   ): Promise<VaultItem[]> {
     const queryStr = 'SELECT id, title, category, favorite, deleted, username_db, enc_metadata FROM vault_items;';
 
+    this.checkCacheTtl();
+
     if (this.state.vault_items.length === 0) {
       this.logQuery(queryStr, 'SUCCESS', 0);
       return [];
@@ -675,7 +733,7 @@ class SQLiteOPFS implements VaultStorageRepository {
       if (shouldMigrateStaticSalt || shouldMigrateKdf) {
         logSecurityEvent(
           'security.legacyCryptoWarning' as any,
-          'Legacy SQLite database encryption parameters detected. Migrating to secure Argon2id (128 MiB, 4 iterations).',
+          'Legacy SQLite database encryption parameters detected. Migrating to secure Argon2id (64 MiB, 4 iterations).',
           'warning'
         );
       }
@@ -742,7 +800,13 @@ class SQLiteOPFS implements VaultStorageRepository {
             decryptCount++;
           }
         } catch (e) {
-          // Crypt key mismatch or corruption
+          const errorMessage = e instanceof Error ? e.message : String(e);
+          logSecurityEvent(
+            securityEventCodes.storageLegacyMigrationFailed,
+            `Decryption failed for vault item ${row.id}: ${errorMessage}`,
+            'warning',
+            { itemId: row.id, error: errorMessage },
+          );
           const fallbackItem: VaultItem = {
             id: row.id,
             title: '[encrypted: aes-256-gcm]',
@@ -809,6 +873,7 @@ class SQLiteOPFS implements VaultStorageRepository {
   }
 
   public async saveVaultItemWithKey(item: VaultItem, derivedKey: Uint8Array): Promise<VaultItem[]> {
+    this.checkCacheTtl();
     const previousState = this.cloneState();
     const previousDecryptedItemsCache = this.cloneDecryptedItemsCache();
 
@@ -905,6 +970,7 @@ class SQLiteOPFS implements VaultStorageRepository {
     derivedKey: Uint8Array,
     onProgress?: (count: number) => void
   ): Promise<VaultItem[]> {
+    this.checkCacheTtl();
     const previousState = this.cloneState();
     const previousDecryptedItemsCache = this.cloneDecryptedItemsCache();
 
@@ -913,6 +979,7 @@ class SQLiteOPFS implements VaultStorageRepository {
       const nowStr = new Date().toISOString().split('T')[0];
 
       const allRows: SQLiteRow[] = [];
+      const failedItems: Array<{ id: string; error: string }> = []; // Security fix Y7
       const CHUNK_SIZE = 50;
 
       for (let i = 0; i < items.length; i += CHUNK_SIZE) {
@@ -949,15 +1016,18 @@ class SQLiteOPFS implements VaultStorageRepository {
 
               return row;
             } catch (e) {
+              // Security fix Y7: Track failed items instead of silently dropping them.
               console.error('Encryption error for item:', item.id, e);
-              return null;
+              return { __failed: true, id: item.id, error: e instanceof Error ? e.message : String(e) } as any;
             }
           })
         );
 
         for (const row of chunkRows) {
-          if (row) {
+          if (row && !row.__failed) {
             allRows.push(row);
+          } else if (row && row.__failed) {
+            failedItems.push({ id: row.id, error: row.error });
           }
         }
 
@@ -983,7 +1053,17 @@ class SQLiteOPFS implements VaultStorageRepository {
         throw new Error('vault-items-persist-failed');
       }
 
-      this.logQuery(`INSERT OR REPLACE INTO vault_items (${items.length} records);`, 'SUCCESS', items.length);
+      // Security fix Y7: Report actual saved count, not requested count.
+      // Also log any failed items for auditing.
+      if (failedItems.length > 0) {
+        logSecurityEvent(
+          securityEventCodes.storageLegacyMigrationFailed,
+          `Bulk save completed with ${failedItems.length} encryption failures out of ${items.length} items.`,
+          'warning',
+          { failedCount: failedItems.length, failedIds: failedItems.map(f => f.id) },
+        );
+      }
+      this.logQuery(`INSERT OR REPLACE INTO vault_items (${items.length} records);`, 'SUCCESS', allRows.length);
 
       return allRows.map((row) => {
         const cachedItem = this.decryptedItemsCache.get(row.id)?.item;

@@ -161,9 +161,43 @@ function normalizeWaSqliteValue(value: WaSqliteCompatibleValue): unknown {
   return value;
 }
 
+/**
+ * Security fix O1: Hardened read-only SQL validation.
+ *
+ * The original `parts.startsWith('select ')` check could be bypassed with
+ * multi-statement SQL like `select 1; delete from vault_items;` since
+ * wa-sqlite's `exec()` processes all statements sequentially.
+ *
+ * This version:
+ * 1. Checks that the SQL starts with SELECT or WITH (as before).
+ * 2. Strips string literals to prevent false positives from semicolons in strings.
+ * 3. Rejects any SQL containing a semicolon outside of string literals (multi-statement).
+ * 4. Rejects known dangerous keywords that shouldn't appear in read-only queries.
+ */
 function isReadOnlySelect(sql: string): boolean {
   const normalizedSql = sql.trim().replace(/^--.*$/gm, '').trim().toLowerCase();
-  return normalizedSql.startsWith('select ') || normalizedSql.startsWith('with ');
+
+  // Must start with SELECT or WITH
+  if (!normalizedSql.startsWith('select ') && !normalizedSql.startsWith('with ')) {
+    return false;
+  }
+
+  // Strip string literals (single-quoted) to avoid false positives from ';' in strings
+  const withoutStrings = normalizedSql.replace(/'[^']*'/g, '').trim();
+
+  // Strip optional trailing semicolon, then check if any internal semicolons remain (multi-statement)
+  const withoutTrailingSemicolon = withoutStrings.replace(/;+$/, '').trim();
+  if (withoutTrailingSemicolon.includes(';')) {
+    return false;
+  }
+
+  // Reject dangerous DML/DDL keywords that should never appear in read-only queries
+  const dangerousKeywords = /\b(insert|update|delete|drop|alter|create|truncate|replace|attach|detach|pragma)\b/;
+  if (dangerousKeywords.test(withoutTrailingSemicolon)) {
+    return false;
+  }
+
+  return true;
 }
 
 function rowsToObjects(result: VaultStorageQueryResult): Array<Record<string, unknown>> {

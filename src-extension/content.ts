@@ -1,4 +1,5 @@
 import { translate, getPreferredLanguage } from './i18n';
+import { extractRegistrableDomain } from './psl-utils';
 
 const activeLanguage = getPreferredLanguage();
 
@@ -284,11 +285,7 @@ const CONFUSABLE_MAP: Record<string, string> = {
   '0': 'o', '1': 'l', '!': 'i',
 };
 
-function extractRegistrableDomain(hostname: string): string {
-  const parts = hostname.replace(/^www\./, '').toLowerCase().split('.');
-  if (parts.length <= 2) return parts.join('.');
-  return parts.slice(-2).join('.');
-}
+// extractRegistrableDomain is now imported from './psl-utils' (PSL-based, security fix Y1/Y2)
 
 function normalizeConfusables(text: string): string {
   return [...text].map(ch => CONFUSABLE_MAP[ch] || ch).join('');
@@ -1018,10 +1015,8 @@ function copyToClipboardWithAutoClear(text: string, timeoutMs = 30000) {
               navigator.clipboard.writeText('').catch(() => {});
             }
           }).catch(() => {
-            navigator.clipboard.writeText('').catch(() => {});
+            // Security fix D1: Do NOT wipe clipboard if reading fails (preserves user's other data)
           });
-        } else {
-          navigator.clipboard.writeText('').catch(() => {});
         }
       }, timeoutMs);
     }).catch(() => {});
@@ -1069,7 +1064,13 @@ function fillPageCredentials(activeInput: HTMLInputElement, username: string, pa
   lastFilledCredential = { username, password, timestamp: Date.now() };
 
   const fillInput = (el: HTMLInputElement, val: string) => {
-    el.value = val;
+    // Security fix D2: Call native HTMLInputElement.prototype value setter to protect against prototype tampering
+    const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+    if (nativeSetter) {
+      nativeSetter.call(el, val);
+    } else {
+      el.value = val;
+    }
     el.dispatchEvent(new Event('input', { bubbles: true }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
   };

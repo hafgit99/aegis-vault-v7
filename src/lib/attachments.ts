@@ -4,7 +4,7 @@
  */
 
 import { secureRandomBytes } from './random';
-import { withActiveVaultEncryptionKey } from './vaultSession';
+import { withActiveVaultEncryptionKey, withActiveSessionSecrets } from './vaultSession';
 import { webCryptoAesGcmDecryptBytes, webCryptoAesGcmEncryptBytes, generateSafeIv } from './webcrypto';
 import { logSecurityEvent } from './securityEvents';
 
@@ -324,7 +324,7 @@ export async function migrateLegacyAttachmentsToAesGcm(): Promise<number> {
 
       request.onsuccess = () => {
         resolve((request.result as AttachmentRecord[]).filter((record) => 
-          record.algorithm !== 'AES-256-GCM' || record.kdf !== 'HKDF-SHA-256'
+          record.algorithm !== 'AES-256-GCM' || record.kdf !== 'HKDF-SHA-256' || record.keySource !== 'vault-key'
         ));
       };
 
@@ -628,6 +628,12 @@ export async function exportAllAttachments(): Promise<AttachmentBackupRecord[]> 
         });
       } catch (err) {
         console.error(`Failed to decrypt attachment ${record.id} for export:`, err);
+        logSecurityEvent(
+          'security.attachmentExportFailed' as any,
+          `Failed to decrypt attachment ${record.id} for export.`,
+          'warning',
+          { attachmentId: record.id, error: err instanceof Error ? err.message : String(err) }
+        );
       }
     }
     return backupRecords;

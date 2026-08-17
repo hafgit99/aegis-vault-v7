@@ -71,13 +71,16 @@ export const CROSS_PLATFORM_KDF_PROFILE: Required<Argon2idOptions> = {
   hashLength: 32,
 };
 
-const DEFAULT_OPTIONS: Required<Argon2idOptions> = CROSS_PLATFORM_KDF_PROFILE;
+export function getDefaultKdfProfile(): Required<Argon2idOptions> {
+  return isDesktopRuntime() ? DESKTOP_NATIVE_KDF_PROFILE : CROSS_PLATFORM_KDF_PROFILE;
+}
 
 export function enforceMinimumKdfFloor(options: Argon2idOptions = {}): Required<Argon2idOptions> {
-  const memoryKiB = Math.max(MIN_ARGON2ID_MEMORY_KIB, options.memoryKiB ?? DEFAULT_OPTIONS.memoryKiB);
-  const iterations = Math.max(MIN_ARGON2ID_ITERATIONS, options.iterations ?? DEFAULT_OPTIONS.iterations);
-  const parallelism = Math.max(1, options.parallelism ?? DEFAULT_OPTIONS.parallelism);
-  const hashLength = options.hashLength ?? DEFAULT_OPTIONS.hashLength;
+  const defaultProfile = getDefaultKdfProfile();
+  const memoryKiB = Math.max(MIN_ARGON2ID_MEMORY_KIB, options.memoryKiB ?? defaultProfile.memoryKiB);
+  const iterations = Math.max(MIN_ARGON2ID_ITERATIONS, options.iterations ?? defaultProfile.iterations);
+  const parallelism = Math.max(1, options.parallelism ?? defaultProfile.parallelism);
+  const hashLength = options.hashLength ?? defaultProfile.hashLength;
 
   return {
     memoryKiB,
@@ -91,7 +94,7 @@ let argon2ModulePromise: Promise<Argon2BrowserModule> | null = null;
 
 function resolveOptions(options: Argon2idOptions = {}): Required<Argon2idOptions> {
   return enforceMinimumKdfFloor({
-    ...DEFAULT_OPTIONS,
+    ...getDefaultKdfProfile(),
     ...options,
   });
 }

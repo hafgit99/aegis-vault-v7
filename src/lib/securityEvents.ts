@@ -12,6 +12,8 @@ export const securityEventCodes = {
   storageDesktopWriteFailed: 'storage.desktop.writeFailed',
   storageLocalFallbackUsed: 'storage.localFallback.used',
   storageLegacyMigrationFailed: 'storage.legacyMigration.failed',
+  storageLegacyMigrationSuccess: 'storage.legacyMigration.success',
+  storageLegacyDataPurged: 'storage.legacyData.purged',
   attachmentLegacyMigrationFailed: 'attachment.legacyMigration.failed',
   networkBlocked: 'network.blocked',
   passkeyCreateFailed: 'passkey.create.failed',
@@ -76,11 +78,15 @@ function redactMeta(meta?: Record<string, unknown>): Record<string, unknown> | u
 
   return Object.fromEntries(
     Object.entries(meta).map(([key, value]) => {
-      if (/password|secret|token|key|hash|metadata|payload/i.test(key)) {
+      if (/password|secret|token|key|hash|metadata|payload|credential|pin|cvv|totp|auth|cookie|session/i.test(key)) {
         return [key, '[redacted]'];
       }
       if (typeof value === 'string') {
-        return [key, value.replace(/[\r\n\t]/g, ' ').slice(0, 160)];
+        const sanitized = value
+          .replace(/(bearer\s+)[a-zA-Z0-9_\-\.]+/gi, '$1[redacted]')
+          .replace(/[\r\n\t]/g, ' ')
+          .slice(0, 160);
+        return [key, sanitized];
       }
       return [key, value];
     }),

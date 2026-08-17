@@ -197,6 +197,7 @@ function deleteBiometricFromIndexedDB(): Promise<void> {
 }
 
 let cachedBiometricInfo: BiometricInfo | null = null;
+export let biometricV2UpgradeRequired = false;
 let isHydrated = false;
 
 export async function hydrateBiometric(): Promise<void> {
@@ -207,6 +208,17 @@ export async function hydrateBiometric(): Promise<void> {
     if (!secureStorageInfo && cachedBiometricInfo && saveBiometricToSecureStorage(cachedBiometricInfo)) {
       await deleteBiometricFromIndexedDB();
     }
+
+    // Security fix Y6: Detect and remove insecure v2 biometric registrations.
+    // v2 uses the public credentialId (rawId) as wrapping key material without PRF.
+    // Anyone with access to IndexedDB/secure storage can reconstruct the wrapping key
+    // from credentialId + salt + bundle + iterations without biometric authentication.
+    if (cachedBiometricInfo && cachedBiometricInfo.version === 2) {
+      console.warn('[AegisVault Security] Insecure biometric v2 registration detected. Removing and requiring re-registration.');
+      disableBiometric();
+      biometricV2UpgradeRequired = true;
+    }
+
     isHydrated = true;
   } catch (e) {
     console.error('Failed to load biometric config from IndexedDB', e);
@@ -293,11 +305,32 @@ export function isBiometricHardwareBound(): boolean {
   return false;
 }
 
+async function deleteBiometricFromIndexedDBWithRetry(retries = 3): Promise<void> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      await deleteBiometricFromIndexedDB();
+      return;
+    } catch (err) {
+      if (attempt === retries) throw err;
+      await new Promise((r) => setTimeout(r, 50 * attempt));
+    }
+  }
+}
+
 export function disableBiometric(): void {
   cachedBiometricInfo = null;
   removeSecureStorageItem(secureStorageKeys.biometricInfo);
   removeSecureStorageItem(secureStorageKeys.biometricWrappingSecret);
-  void deleteBiometricFromIndexedDB();
+  void deleteBiometricFromIndexedDBWithRetry().catch((err) => {
+    console.error('Failed to delete biometric from IndexedDB after retries:', err);
+  });
+}
+
+export async function disableBiometricAsync(): Promise<void> {
+  cachedBiometricInfo = null;
+  removeSecureStorageItem(secureStorageKeys.biometricInfo);
+  removeSecureStorageItem(secureStorageKeys.biometricWrappingSecret);
+  await deleteBiometricFromIndexedDBWithRetry();
 }
 
 export async function registerBiometric(masterPassword: string, type: 'platform' | 'cross-platform' = 'platform'): Promise<void> {

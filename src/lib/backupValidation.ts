@@ -28,12 +28,13 @@ const MAX_ATTACHMENT_SIZE = 250 * 1024 * 1024; // 250 MB
 export const MAX_BACKUP_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
 
 /**
- * Validates a base64 string format.
+ * Validates a base64 string format strictly conforming to RFC 4648.
+ * Security fix D4: Ensures padding '=' characters can only appear at the end
+ * in valid configurations (== or =), never in the middle.
  */
 function isValidBase64(str: string): boolean {
-  if (typeof str !== 'string' || !str) return false;
-  // Basic regex for base64 characters
-  return /^[A-Za-z0-9+/]*={0,2}$/.test(str) && str.length % 4 === 0;
+  if (typeof str !== 'string' || !str || str.length % 4 !== 0) return false;
+  return /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(str);
 }
 
 /**

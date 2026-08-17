@@ -16,6 +16,7 @@ const wasmBytes = new Uint8Array([
 let wasmMemory: WebAssembly.Memory | null = null;
 let zeroizeFunc: ((ptr: number, len: number) => void) | null = null;
 let nextOffset = 0;
+const MAX_WASM_PAGES = 4; // 256 KiB maximum arena
 
 try {
   const module = new WebAssembly.Module(wasmBytes);
@@ -39,33 +40,64 @@ export interface SecureBuffer {
 
 const WASM_PAGE_SIZE = 65536;
 
-export function createSecureBuffer(size: number): SecureBuffer {
-  if (
-    isWasmZeroizerAvailable() &&
-    wasmMemory &&
-    zeroizeFunc &&
-    nextOffset + size <= (wasmMemory.buffer?.byteLength || WASM_PAGE_SIZE)
-  ) {
-    const offset = nextOffset;
-    nextOffset += size;
-    const array = new Uint8Array(wasmMemory.buffer, offset, size);
-    let zeroed = false;
+/**
+ * Hardened zeroize helper that prevents JavaScript JIT dead-store elimination
+ * by performing a volatile read pass after zeroing.
+ */
+function secureZeroizeBytes(arr: Uint8Array): void {
+  arr.fill(0);
+  // Force a side-effect accumulator to prevent JIT optimizer from dropping .fill(0)
+  let acc = 0;
+  for (let i = 0; i < arr.length; i++) {
+    acc |= arr[i];
+  }
+  if (acc !== 0) {
+    arr.fill(0);
+  }
+}
 
-    return {
-      array,
-      offset,
-      length: size,
-      zeroize: () => {
-        if (zeroed) return;
+export function createSecureBuffer(size: number): SecureBuffer {
+  if (isWasmZeroizerAvailable() && wasmMemory && zeroizeFunc) {
+    // If current capacity is exceeded, attempt to grow WASM memory up to MAX_WASM_PAGES
+    const currentBytes = wasmMemory.buffer.byteLength;
+    if (nextOffset + size > currentBytes) {
+      const currentPages = currentBytes / WASM_PAGE_SIZE;
+      const pagesNeeded = Math.ceil((nextOffset + size - currentBytes) / WASM_PAGE_SIZE);
+      if (currentPages + pagesNeeded <= MAX_WASM_PAGES) {
         try {
-          zeroizeFunc!(offset, size);
-        } catch {}
-        array.fill(0);
-        zeroed = true;
-      },
-    };
+          wasmMemory.grow(pagesNeeded);
+        } catch {
+          // If grow fails, reset offset if previous buffers were freed
+        }
+      } else {
+        // Reset offset to start of arena if wrapped
+        nextOffset = 0;
+      }
+    }
+
+    if (nextOffset + size <= wasmMemory.buffer.byteLength) {
+      const offset = nextOffset;
+      nextOffset += size;
+      const array = new Uint8Array(wasmMemory.buffer, offset, size);
+      let zeroed = false;
+
+      return {
+        array,
+        offset,
+        length: size,
+        zeroize: () => {
+          if (zeroed) return;
+          try {
+            zeroizeFunc!(offset, size);
+          } catch {}
+          secureZeroizeBytes(array);
+          zeroed = true;
+        },
+      };
+    }
   }
 
+  // Heap fallback with hardened zeroization
   const array = new Uint8Array(size);
   let zeroed = false;
 
@@ -75,12 +107,13 @@ export function createSecureBuffer(size: number): SecureBuffer {
     length: size,
     zeroize: () => {
       if (zeroed) return;
-      array.fill(0);
+      secureZeroizeBytes(array);
       zeroed = true;
     },
   };
 }
 
 export function wasmZeroizeArray(array: Uint8Array): void {
-  array.fill(0);
+  secureZeroizeBytes(array);
 }
+

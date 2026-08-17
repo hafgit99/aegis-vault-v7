@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -515,5 +515,51 @@ export function vaultFieldsToRecord(itemId: string, fields: VaultPasskeyFields):
   };
 }
 
+/**
+ * Security fix O4: Re-wraps an encrypted passkey private key bundle with a new vault key.
+ * Used during master password change / vault key rotation.
+ */
+export async function reWrapPasskeyBundle(
+  bundle: WebCryptoAesGcmPayload,
+  oldVaultKey: Uint8Array,
+  newVaultKey: Uint8Array,
+): Promise<WebCryptoAesGcmPayload> {
+  const jwk = await unwrapPrivateKeyJwk(bundle, oldVaultKey);
+  return wrapPrivateKeyJwk(jwk, newVaultKey);
+}
 
-
+/**
+ * Re-wraps all passkey private key bundles embedded in vault items.
+ *
+ * @returns Number of passkey bundles successfully re-wrapped
+ */
+export async function reWrapPasskeysInVaultItems(
+  items: Array<Record<string, unknown>>,
+  oldVaultKey: Uint8Array,
+  newVaultKey: Uint8Array,
+): Promise<number> {
+  let count = 0;
+  for (const item of items) {
+    if (item.passkeyPrivateKeyBundle && typeof item.passkeyPrivateKeyBundle === 'object') {
+      item.passkeyPrivateKeyBundle = await reWrapPasskeyBundle(
+        item.passkeyPrivateKeyBundle as WebCryptoAesGcmPayload,
+        oldVaultKey,
+        newVaultKey,
+      );
+      count++;
+    }
+    if (item.customFields && Array.isArray(item.customFields)) {
+      for (const field of item.customFields) {
+        if (field && field.name === 'passkeyPrivateKeyBundle' && field.value) {
+          try {
+            const parsed = typeof field.value === 'string' ? JSON.parse(field.value) : field.value;
+            const reWrapped = await reWrapPasskeyBundle(parsed, oldVaultKey, newVaultKey);
+            field.value = typeof field.value === 'string' ? JSON.stringify(reWrapped) : reWrapped;
+            count++;
+          } catch {}
+        }
+      }
+    }
+  }
+  return count;
+}

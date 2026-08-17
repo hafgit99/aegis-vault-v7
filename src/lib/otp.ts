@@ -145,9 +145,11 @@ export async function generateTOTP(secret: string, options: TOTPOptions = {}): P
 }
 
 /**
- * Returns the remaining seconds in the current 30-second cycle.
+ * Returns the remaining seconds in the current cycle for a given period (default: 30s).
  */
-export function getTOTPTimeRemaining(): number {
-  const ms = Date.now() % 30000;
-  return Math.ceil((30000 - ms) / 1000);
+export function getTOTPTimeRemaining(period = 30): number {
+  const safePeriod = Math.max(1, period);
+  const cycleMs = safePeriod * 1000;
+  const ms = Date.now() % cycleMs;
+  return Math.ceil((cycleMs - ms) / 1000);
 }

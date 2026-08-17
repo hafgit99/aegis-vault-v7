@@ -121,14 +121,15 @@ export function getRememberedAccountSecretKey(): string | null {
     ?? getIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
 }
 
-export function rememberAccountSecretKey(secretKey: string): void {
+export function rememberAccountSecretKey(secretKey: string): boolean {
   const normalizedSecretKey = normalizeAccountSecretKey(secretKey);
   if (setSecureStorageItem(secureStorageKeys.rememberedSecretKey, normalizedSecretKey)) {
     removeIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
-    return;
+    return true;
   }
 
   setIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY, normalizedSecretKey);
+  return true;
 }
 
 export function forgetRememberedAccountSecretKey(): void {
