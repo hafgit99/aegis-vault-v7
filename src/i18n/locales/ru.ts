@@ -615,7 +615,7 @@ export const ru = {
   'dashboard.crypto.clientSecurity': 'Безопасность клиента',
   'dashboard.crypto.clientSecurityValue': 'Нулевое знание на стороне клиента',
   'dashboard.crypto.hashDepth': 'Ключевое происхождение',
-  'dashboard.crypto.hashDepthValue': 'Argon2id: 128 МБ, 4 прохода',
+  'dashboard.crypto.hashDepthValue': 'Argon2id: 64 МБ, 4 прохода',
   'dashboard.crypto.securityStatus': 'Статус безопасности',
   'dashboard.crypto.securityStatusValue': 'Защита щита Эгиды',
   'dashboard.guard.titleSuffix': 'Отчет о безопасности',

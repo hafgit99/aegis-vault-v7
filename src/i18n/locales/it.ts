@@ -615,7 +615,7 @@ export const it = {
   'dashboard.crypto.clientSecurity': 'Sicurezza del cliente',
   'dashboard.crypto.clientSecurityValue': 'Conoscenza zero lato client',
   'dashboard.crypto.hashDepth': 'Derivazione chiave',
-  'dashboard.crypto.hashDepthValue': 'Argon2id: 128 MiB, 4 passaggi',
+  'dashboard.crypto.hashDepthValue': 'Argon2id: 64 MiB, 4 passaggi',
   'dashboard.crypto.securityStatus': 'Stato di sicurezza',
   'dashboard.crypto.securityStatusValue': 'Protezione dello scudo dell\'egida',
   'dashboard.guard.titleSuffix': 'Rapporto sulla sicurezza',

@@ -615,7 +615,7 @@ export const ko = {
   'dashboard.crypto.clientSecurity': '클라이언트 보안',
   'dashboard.crypto.clientSecurityValue': '클라이언트 측 영지식',
   'dashboard.crypto.hashDepth': '키 파생',
-  'dashboard.crypto.hashDepthValue': 'Argon2id: 128MiB, 4패스',
+  'dashboard.crypto.hashDepthValue': 'Argon2id: 64MiB, 4패스',
   'dashboard.crypto.securityStatus': '보안상태',
   'dashboard.crypto.securityStatusValue': '이지스 쉴드 보호',
   'dashboard.guard.titleSuffix': '보안 보고서',

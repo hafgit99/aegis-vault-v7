@@ -615,7 +615,7 @@ export const ja = {
   'dashboard.crypto.clientSecurity': 'クライアントセキュリティ',
   'dashboard.crypto.clientSecurityValue': 'クライアント側のゼロナレッジ',
   'dashboard.crypto.hashDepth': 'キーの導出',
-  'dashboard.crypto.hashDepthValue': 'Argon2id: 128 MiB、4 パス',
+  'dashboard.crypto.hashDepthValue': 'Argon2id: 64 MiB、4 パス',
   'dashboard.crypto.securityStatus': 'セキュリティステータス',
   'dashboard.crypto.securityStatusValue': 'イージスシールドプロテクト',
   'dashboard.guard.titleSuffix': 'セキュリティレポート',

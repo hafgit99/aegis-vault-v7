@@ -615,7 +615,7 @@ export const ar = {
   'dashboard.crypto.clientSecurity': 'أمن العميل',
   'dashboard.crypto.clientSecurityValue': 'المعرفة الصفرية من جانب العميل',
   'dashboard.crypto.hashDepth': 'اشتقاق المفتاح',
-  'dashboard.crypto.hashDepthValue': 'Argon2id: 128 ميجابايت، 4 تمريرات',
+  'dashboard.crypto.hashDepthValue': 'Argon2id: 64 ميجابايت، 4 تمريرات',
   'dashboard.crypto.securityStatus': 'الحالة الأمنية',
   'dashboard.crypto.securityStatusValue': 'حماية درع إيجيس',
   'dashboard.guard.titleSuffix': 'تقرير الأمن',

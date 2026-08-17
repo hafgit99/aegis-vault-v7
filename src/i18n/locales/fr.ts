@@ -615,7 +615,7 @@ export const fr = {
   'dashboard.crypto.clientSecurity': 'Sécurité des clients',
   'dashboard.crypto.clientSecurityValue': 'Zero-Knowledge côté client',
   'dashboard.crypto.hashDepth': 'Dérivation clé',
-  'dashboard.crypto.hashDepthValue': 'Argon2id : 128 Mio, 4 passes',
+  'dashboard.crypto.hashDepthValue': 'Argon2id: 64 Mio, 4 passes',
   'dashboard.crypto.securityStatus': 'Statut de sécurité',
   'dashboard.crypto.securityStatusValue': 'Protection du bouclier d\'égide',
   'dashboard.guard.titleSuffix': 'Rapport de sécurité',

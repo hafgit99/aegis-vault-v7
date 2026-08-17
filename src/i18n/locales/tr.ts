@@ -617,7 +617,7 @@ export const tr = {
     'dashboard.crypto.clientSecurity': 'İstemci Güvenliği',
     'dashboard.crypto.clientSecurityValue': 'Yerel Zero-Knowledge',
     'dashboard.crypto.hashDepth': 'Anahtar Türetme',
-    'dashboard.crypto.hashDepthValue': 'Argon2id: 128 MiB, 4 geçiş',
+    'dashboard.crypto.hashDepthValue': 'Argon2id: 64 MiB, 4 geçiş',
     'dashboard.crypto.securityStatus': 'Güvenlik Durumu',
     'dashboard.crypto.securityStatusValue': 'Aegis Kalkanı Koruyor',
     'dashboard.guard.titleSuffix': 'Güvenlik Raporu',

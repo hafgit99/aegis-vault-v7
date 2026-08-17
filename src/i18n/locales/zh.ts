@@ -617,7 +617,7 @@ export const zh = {
     'dashboard.crypto.clientSecurity': '客户端安全',
     'dashboard.crypto.clientSecurityValue': '客户端零知识',
     'dashboard.crypto.hashDepth': '密钥派生',
-    'dashboard.crypto.hashDepthValue': 'Argon2id：128 MiB，4 次传递',
+    'dashboard.crypto.hashDepthValue': 'Argon2id：64 MiB，4 次传递',
     'dashboard.crypto.securityStatus': '安全状态',
     'dashboard.crypto.securityStatusValue': 'Aegis 防护正在保护',
     'dashboard.guard.titleSuffix': '安全报告',
