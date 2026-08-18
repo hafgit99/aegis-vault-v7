@@ -684,7 +684,10 @@ describe('SettingsPanel biometric controls', () => {
     fireEvent.click(screen.getByRole('button', { name: /Touch ID/ }));
 
     await waitFor(() => {
-      expect(registerBiometric).toHaveBeenCalledWith('master-pass', 'platform');
+      expect(registerBiometric).toHaveBeenCalledWith(
+        { masterPassword: 'master-pass', secretKey: null },
+        'platform',
+      );
       expect(container.textContent).toContain('AKT');
     });
   });
@@ -698,7 +701,10 @@ describe('SettingsPanel biometric controls', () => {
     fireEvent.click(screen.getByRole('button', { name: /YubiKey/ }));
 
     await waitFor(() => {
-      expect(registerBiometric).toHaveBeenCalledWith('master-pass', 'cross-platform');
+      expect(registerBiometric).toHaveBeenCalledWith(
+        { masterPassword: 'master-pass', secretKey: null },
+        'cross-platform',
+      );
       expect(container.textContent).toContain('AKT');
     });
   });

@@ -25,12 +25,14 @@ import {
   getRememberedAccountSecretKey,
   isAccountSecretKeyRequired,
   isMasterPasswordSet,
+  rememberAccountSecretKey,
   resetSystem,
   setupMasterPasswordWithSecretKey,
   verifyMasterPassword,
 } from '../lib/storage';
 import {
   authenticateBiometric,
+  authenticateBiometricCredentials,
   isBiometricEnabled,
   isBiometricSupported,
   isBiometricV2UpgradeRequired,
@@ -128,7 +130,9 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
   const rememberedSecretKey = getRememberedAccountSecretKey();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [secretKey, setSecretKey] = useState(() => rememberedSecretKey || generateAccountSecretKey());
+  const [secretKey, setSecretKey] = useState(() => (
+    rememberedSecretKey || (isSetup ? '' : generateAccountSecretKey())
+  ));
   const [rememberSecretKey, setRememberSecretKey] = useState(Boolean(rememberedSecretKey));
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -191,9 +195,10 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
       if (!isBiometricSupported()) {
         throw new Error(t('lock.error.biometricUnsupported'));
       }
-      const decryptedMaster = await authenticateBiometric();
+      const { masterPassword: decryptedMaster, secretKey: bioSecretKey } = await authenticateBiometricCredentials();
       const currentRemembered = getRememberedAccountSecretKey();
-      if (await verifyMasterPassword(decryptedMaster, currentRemembered)) {
+      const effectiveSecretKey = bioSecretKey || currentRemembered;
+      if (await verifyMasterPassword(decryptedMaster, effectiveSecretKey)) {
         onUnlock();
       } else {
         triggerShake();
@@ -260,12 +265,15 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
         const currentRemembered = getRememberedAccountSecretKey();
         const currentRequires = isAccountSecretKeyRequired();
         const submittedSecretKey = currentRequires ? (currentRemembered || secretKey) : null;
-        if (currentRequires && !currentRemembered && !isAccountSecretKeyFormatValid(submittedSecretKey || '')) {
+        if (currentRequires && !currentRemembered && (!submittedSecretKey || !isAccountSecretKeyFormatValid(submittedSecretKey))) {
           triggerShake();
           setError(t('lock.error.secretKeyRequired'));
           return;
         }
         if (await verifyMasterPassword(password, submittedSecretKey)) {
+          if (rememberSecretKey && submittedSecretKey && !currentRemembered) {
+            rememberAccountSecretKey(submittedSecretKey);
+          }
           clearLockoutState();
           setLockoutRemainingMs(0);
           onUnlock();

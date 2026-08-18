@@ -9,6 +9,7 @@ import { LanguageProvider } from '../i18n/LanguageContext';
 import { languageStorageKey } from '../i18n/translations';
 import {
   authenticateBiometric,
+  authenticateBiometricCredentials,
   isBiometricEnabled,
   isBiometricSupported,
   getBiometricType,
@@ -33,6 +34,7 @@ vi.mock('../lib/storage', () => ({
 
 vi.mock('../lib/biometric', () => ({
   authenticateBiometric: vi.fn(),
+  authenticateBiometricCredentials: vi.fn(async () => ({ masterPassword: 'bio-master', secretKey: null })),
   isBiometricEnabled: vi.fn(() => false),
   isBiometricSupported: vi.fn(() => false),
   getBiometricType: vi.fn(() => 'platform'),
@@ -342,7 +344,7 @@ describe('LockScreen', () => {
     vi.mocked(isMasterPasswordSet).mockReturnValue(true);
     vi.mocked(isBiometricEnabled).mockReturnValue(true);
     vi.mocked(isBiometricSupported).mockReturnValue(true);
-    vi.mocked(authenticateBiometric).mockResolvedValueOnce('bio-master');
+    vi.mocked(authenticateBiometricCredentials).mockResolvedValueOnce({ masterPassword: 'bio-master', secretKey: null });
     vi.mocked(verifyMasterPassword).mockResolvedValue(true);
     const onUnlock = vi.fn();
 
@@ -351,7 +353,7 @@ describe('LockScreen', () => {
     fireEvent.click(screen.getByText(/OS/));
 
     await waitFor(() => {
-      expect(authenticateBiometric).toHaveBeenCalled();
+      expect(authenticateBiometricCredentials).toHaveBeenCalled();
       expect(verifyMasterPassword).toHaveBeenCalledWith('bio-master', null);
       expect(onUnlock).toHaveBeenCalled();
     });
@@ -362,7 +364,7 @@ describe('LockScreen', () => {
     vi.mocked(isBiometricEnabled).mockReturnValue(true);
     vi.mocked(isBiometricSupported).mockReturnValue(true);
     vi.mocked(getBiometricType).mockReturnValue('cross-platform');
-    vi.mocked(authenticateBiometric).mockResolvedValueOnce('bio-master');
+    vi.mocked(authenticateBiometricCredentials).mockResolvedValueOnce({ masterPassword: 'bio-master', secretKey: null });
     vi.mocked(verifyMasterPassword).mockResolvedValue(true);
     const onUnlock = vi.fn();
 
@@ -371,7 +373,7 @@ describe('LockScreen', () => {
     fireEvent.click(screen.getByText(/FIDO2/));
 
     await waitFor(() => {
-      expect(authenticateBiometric).toHaveBeenCalled();
+      expect(authenticateBiometricCredentials).toHaveBeenCalled();
       expect(verifyMasterPassword).toHaveBeenCalledWith('bio-master', null);
       expect(onUnlock).toHaveBeenCalled();
     });
@@ -381,7 +383,7 @@ describe('LockScreen', () => {
     vi.mocked(isMasterPasswordSet).mockReturnValue(true);
     vi.mocked(isBiometricEnabled).mockReturnValue(true);
     vi.mocked(isBiometricSupported).mockReturnValue(true);
-    vi.mocked(authenticateBiometric).mockResolvedValueOnce('stale-master');
+    vi.mocked(authenticateBiometricCredentials).mockResolvedValueOnce({ masterPassword: 'stale-master', secretKey: null });
     vi.mocked(verifyMasterPassword).mockResolvedValueOnce(false);
 
     render(<LockScreen onUnlock={vi.fn()} />);
@@ -399,7 +401,7 @@ describe('LockScreen', () => {
     vi.mocked(isBiometricSupported).mockReturnValue(true);
     const permissionError = new Error('cancelled');
     permissionError.name = 'NotAllowedError';
-    vi.mocked(authenticateBiometric).mockRejectedValueOnce(permissionError);
+    vi.mocked(authenticateBiometricCredentials).mockRejectedValueOnce(permissionError);
 
     render(<LockScreen onUnlock={vi.fn()} />);
 
@@ -415,7 +417,7 @@ describe('LockScreen', () => {
     vi.mocked(isMasterPasswordSet).mockReturnValue(true);
     vi.mocked(isBiometricEnabled).mockReturnValue(true);
     vi.mocked(isBiometricSupported).mockReturnValue(true);
-    vi.mocked(authenticateBiometric).mockResolvedValueOnce('auto-master');
+    vi.mocked(authenticateBiometricCredentials).mockResolvedValueOnce({ masterPassword: 'auto-master', secretKey: null });
     vi.mocked(verifyMasterPassword).mockResolvedValue(true);
     const onUnlock = vi.fn();
 
@@ -425,7 +427,7 @@ describe('LockScreen', () => {
       await vi.advanceTimersByTimeAsync(800);
     });
 
-    expect(authenticateBiometric).toHaveBeenCalledTimes(1);
+    expect(authenticateBiometricCredentials).toHaveBeenCalledTimes(1);
     expect(onUnlock).toHaveBeenCalledTimes(1);
   });
 

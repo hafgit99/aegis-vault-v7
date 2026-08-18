@@ -38,7 +38,7 @@ import { exportAllAttachments, importAttachments, deleteAttachments } from '../l
 import { validateBackupPayload } from '../lib/backupValidation';
 import { secureRandomToken } from '../lib/random';
 import { registerBiometric, isBiometricEnabled, disableBiometric, isBiometricSupported, getBiometricType } from '../lib/biometric';
-import { withActiveBackupPassword } from '../lib/vaultSession';
+import { withActiveAccountSecretKey, withActiveBackupPassword } from '../lib/vaultSession';
 import { isNativeFileDialogSupported, openDesktopImportFile, saveDesktopExportFile } from '../lib/desktopFiles';
 import { isAndroidRuntime } from '../lib/desktopStorage';
 import { isAndroidAutofillEnabled, isAndroidAutofillSupported, openAndroidAutofillSettings } from '../lib/androidAutofill';
@@ -627,14 +627,21 @@ export default function SettingsPanel({
     setIsConfirmingBiometricPassword(true);
     setPasswordPromptError(null);
     try {
-      const isValid = await verifyMasterPassword(password);
+      const activeSecretKey = await withActiveAccountSecretKey((sk) => sk);
+      const rememberedSk = getRememberedAccountSecretKey();
+      const effectiveSk = activeSecretKey || rememberedSk;
+
+      const isValid = await verifyMasterPassword(password, effectiveSk);
       if (!isValid) {
         setPasswordPromptError(t('settings.password.error.current'));
         setIsConfirmingBiometricPassword(false);
         return;
       }
 
-      await registerBiometric(password, pendingBiometricType);
+      await registerBiometric({
+        masterPassword: password,
+        secretKey: effectiveSk,
+      }, pendingBiometricType);
       setIsPasswordPromptOpen(false);
       setBiometricEnabled(true);
       setBiometricSuccess(t('settings.biometric.enabledSuccess'));
@@ -668,11 +675,17 @@ export default function SettingsPanel({
         }
         
         const autoPassword = await withActiveBackupPassword((backupPassword) => backupPassword);
+        const activeSecretKey = await withActiveAccountSecretKey((secretKey) => secretKey);
+        const rememberedSk = getRememberedAccountSecretKey();
+        const effectiveSk = activeSecretKey || rememberedSk;
 
         if (autoPassword) {
           setBiometricLoading(true);
           try {
-            await registerBiometric(autoPassword, type);
+            await registerBiometric({
+              masterPassword: autoPassword,
+              secretKey: effectiveSk,
+            }, type);
             setBiometricEnabled(true);
             setBiometricSuccess(t('settings.biometric.enabledSuccess'));
           } finally {

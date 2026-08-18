@@ -15,6 +15,7 @@ vi.mock('@tauri-apps/plugin-biometric', () => ({
 
 import {
   authenticateBiometric,
+  authenticateBiometricCredentials,
   BIOMETRIC_PBKDF2_ITERATIONS,
   BiometricError,
   biometricErrorCodes,
@@ -398,6 +399,32 @@ describe('biometric master password wrapper', () => {
     expect(isBiometricHardwareBound()).toBe(true);
 
     await expect(authenticateBiometric()).resolves.toBe('master-pass-prf');
+  });
+
+  it('registers and recovers master password with secret key envelope', async () => {
+    const prfSecret = new Uint8Array(32).fill(77).buffer;
+    mockWebAuthn({
+      createCredential: {
+        rawId,
+        getClientExtensionResults: () => ({ prf: { results: { first: prfSecret } } }),
+      } as any,
+      getCredential: {
+        rawId,
+        getClientExtensionResults: () => ({ prf: { results: { first: prfSecret } } }),
+      } as any,
+    });
+
+    await registerBiometric({
+      masterPassword: 'my-super-secret-master-password',
+      secretKey: 'A3-1234-5678-9012-3456-7890-1234-5678-9012',
+    }, 'platform');
+
+    const creds = await authenticateBiometricCredentials();
+    expect(creds.masterPassword).toBe('my-super-secret-master-password');
+    expect(creds.secretKey).toBe('A3-1234-5678-9012-3456-7890-1234-5678-9012');
+
+    // Also verify backward compatible authenticateBiometric() returns master password
+    await expect(authenticateBiometric()).resolves.toBe('my-super-secret-master-password');
   });
 
   it('manages biometric autofill requirement setting state', () => {

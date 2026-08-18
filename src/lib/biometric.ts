@@ -342,25 +342,75 @@ export async function disableBiometricAsync(): Promise<void> {
   await deleteBiometricFromIndexedDBWithRetry();
 }
 
-export async function registerBiometric(masterPassword: string, type: 'platform' | 'cross-platform' = 'platform'): Promise<void> {
+export interface BiometricCredentialsPayload {
+  masterPassword: string;
+  secretKey?: string | null;
+}
+
+export type BiometricRegistrationInput = string | BiometricCredentialsPayload;
+
+function serializeBiometricPayload(input: BiometricRegistrationInput): string {
+  if (typeof input === 'string') {
+    return input;
+  }
+  return JSON.stringify({
+    masterPassword: input.masterPassword,
+    secretKey: input.secretKey || null,
+  });
+}
+
+function parseBiometricPayload(decryptedRaw: string): BiometricCredentialsPayload {
+  try {
+    if (decryptedRaw.startsWith('{')) {
+      const parsed = JSON.parse(decryptedRaw);
+      if (parsed && typeof parsed.masterPassword === 'string') {
+        return {
+          masterPassword: parsed.masterPassword,
+          secretKey: parsed.secretKey || null,
+        };
+      }
+    } else if (decryptedRaw.startsWith('aegis-vault-v7:')) {
+      const sepIdx = decryptedRaw.indexOf('\0');
+      if (sepIdx !== -1) {
+        return {
+          masterPassword: decryptedRaw.substring('aegis-vault-v7:'.length, sepIdx),
+          secretKey: decryptedRaw.substring(sepIdx + 1),
+        };
+      }
+    }
+  } catch {
+    // Ignore parse errors, fallback to raw string
+  }
+  return {
+    masterPassword: decryptedRaw,
+    secretKey: null,
+  };
+}
+
+export async function registerBiometric(
+  input: BiometricRegistrationInput,
+  type: 'platform' | 'cross-platform' = 'platform',
+): Promise<void> {
   if (isTauriAndroidRuntime() && !isSecureStorageAvailable()) {
     throw new BiometricError(biometricErrorCodes.unsupported);
   }
 
+  const payload = serializeBiometricPayload(input);
+
   if (hasWebAuthnSupport()) {
-    await registerWebAuthnBiometric(masterPassword, type);
+    await registerWebAuthnBiometric(payload, type);
     return;
   }
 
   if (await isNativeBiometricAvailable()) {
-    await registerNativeBiometric(masterPassword);
+    await registerNativeBiometric(payload);
     return;
   }
 
   throw new BiometricError(biometricErrorCodes.unsupported);
 }
 
-async function registerWebAuthnBiometric(masterPassword: string, type: 'platform' | 'cross-platform'): Promise<void> {
+async function registerWebAuthnBiometric(payload: string, type: 'platform' | 'cross-platform'): Promise<void> {
   const challenge = secureRandomBytes(32);
   const prfSalt = secureRandomBytes(32);
   const salt = secureRandomBytes(16);
@@ -421,7 +471,7 @@ async function registerWebAuthnBiometric(masterPassword: string, type: 'platform
   prfSupported = true;
 
   const wrappingKey = await deriveWebCryptoPbkdf2Key(keyMaterial, salt, BIOMETRIC_PBKDF2_ITERATIONS, 32);
-  const bundle = await webCryptoAesGcmEncrypt(masterPassword, wrappingKey, generateSafeIv());
+  const bundle = await webCryptoAesGcmEncrypt(payload, wrappingKey, generateSafeIv());
 
   const biometricInfo: BiometricInfoV4 = {
     version: 4,
@@ -444,7 +494,7 @@ async function registerWebAuthnBiometric(masterPassword: string, type: 'platform
   }
 }
 
-async function registerNativeBiometric(masterPassword: string): Promise<void> {
+async function registerNativeBiometric(payload: string): Promise<void> {
   if (!isSecureStorageAvailable()) {
     throw new BiometricError(biometricErrorCodes.unsupported);
   }
@@ -457,7 +507,7 @@ async function registerNativeBiometric(masterPassword: string): Promise<void> {
 
   const salt = secureRandomBytes(16);
   const wrappingKey = await deriveWebCryptoPbkdf2Key(wrappingSecret, salt, BIOMETRIC_PBKDF2_ITERATIONS, 32);
-  const bundle = await webCryptoAesGcmEncrypt(masterPassword, wrappingKey, generateSafeIv());
+  const bundle = await webCryptoAesGcmEncrypt(payload, wrappingKey, generateSafeIv());
 
   const biometricInfo: NativeBiometricInfoV3 = {
     version: 3,
@@ -477,7 +527,7 @@ async function registerNativeBiometric(masterPassword: string): Promise<void> {
   await deleteBiometricFromIndexedDB();
 }
 
-export async function authenticateBiometric(): Promise<string> {
+async function authenticateBiometricRaw(): Promise<string> {
   const biometricInfo = cachedBiometricInfo;
   if (!biometricInfo) {
     throw new BiometricError(biometricErrorCodes.missingBundle);
@@ -554,6 +604,16 @@ export async function authenticateBiometric(): Promise<string> {
   } catch (e) {
     throw new BiometricError(biometricErrorCodes.integrityMismatch);
   }
+}
+
+export async function authenticateBiometricCredentials(): Promise<BiometricCredentialsPayload> {
+  const decryptedRaw = await authenticateBiometricRaw();
+  return parseBiometricPayload(decryptedRaw);
+}
+
+export async function authenticateBiometric(): Promise<string> {
+  const { masterPassword } = await authenticateBiometricCredentials();
+  return masterPassword;
 }
 
 const BIOMETRIC_AUTOFILL_REQUIRE_KEY = 'aegis_biometric_autofill_require';
