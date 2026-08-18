@@ -225,8 +225,17 @@ export async function hydrateBiometric(): Promise<void> {
   }
 }
 
+export function isBiometricV2UpgradeRequired(): boolean {
+  return biometricV2UpgradeRequired;
+}
+
+export function dismissBiometricV2UpgradeNotification(): void {
+  biometricV2UpgradeRequired = false;
+}
+
 export function resetBiometricCacheForTesting(): void {
   cachedBiometricInfo = null;
+  biometricV2UpgradeRequired = false;
   isHydrated = false;
 }
 

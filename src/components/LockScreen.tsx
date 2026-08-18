@@ -29,7 +29,13 @@ import {
   setupMasterPasswordWithSecretKey,
   verifyMasterPassword,
 } from '../lib/storage';
-import { authenticateBiometric, isBiometricEnabled, isBiometricSupported, getBiometricType } from '../lib/biometric';
+import {
+  authenticateBiometric,
+  isBiometricEnabled,
+  isBiometricSupported,
+  isBiometricV2UpgradeRequired,
+  getBiometricType,
+} from '../lib/biometric';
 import { APP_NAME } from '../lib/branding';
 import { useLanguage } from '../i18n/LanguageContext';
 import {
@@ -136,7 +142,12 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
   const [isCapsLockOn, setIsCapsLockOn] = useState(false);
 
   // Biometric Unlock States
-  const [biometricError, setBiometricError] = useState<string | null>(null);
+  const [biometricError, setBiometricError] = useState<string | null>(() => {
+    if (isBiometricV2UpgradeRequired()) {
+      return t('lock.error.biometricV2Upgrade');
+    }
+    return null;
+  });
   const [biometricLoading, setBiometricLoading] = useState(false);
   const isBiometricPendingRef = useRef(false);
   const hasAutoTriggeredRef = useRef(false);

@@ -483,6 +483,22 @@ export function incrementPasskeySignCount(record: PasskeyRecord): PasskeyRecord 
   };
 }
 
+export async function authenticateAndIncrementPasskey(
+  record: PasskeyRecord,
+  options: Partial<AuthenticatePasskeyInput> = {}
+): Promise<{ assertion: AuthenticatePasskeyResult; updatedRecord: PasskeyRecord }> {
+  const assertion = await authenticatePasskey({
+    rpId: record.rpId,
+    credentialIds: [record.credentialId],
+    ...options,
+  });
+  if (assertion.credentialId !== record.credentialId) {
+    throw new PasskeyError(passkeyErrorCodes.invalidCredentialId);
+  }
+  const updatedRecord = incrementPasskeySignCount(record);
+  return { assertion, updatedRecord };
+}
+
 export function recordToVaultFields(record: PasskeyRecord): VaultPasskeyFields {
   return {
     passkeyCredentialId: record.credentialId,

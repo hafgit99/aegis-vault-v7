@@ -68,6 +68,7 @@ import { SettingsExtensionTokenCard } from './settings/SettingsExtensionTokenCar
 import PasswordConfirmModal from './PasswordConfirmModal';
 import { PasskeyManager } from './PasskeyManager';
 import {
+  authenticateAndIncrementPasskey,
   authenticatePasskey,
   passkeyErrorCodes,
   PasskeyError,
@@ -394,15 +395,14 @@ export default function SettingsPanel({
     setPasskeyBusy(true);
     setPasskeyStatusKey(null);
     try {
-      const assertion = await authenticatePasskey({ rpId: record.rpId, credentialIds: [record.credentialId] });
-      if (assertion.credentialId !== record.credentialId) throw new PasskeyError(passkeyErrorCodes.invalidCredentialId);
+      const { updatedRecord } = await authenticateAndIncrementPasskey(record);
       const latestItems = await getVaultItems();
-      const now = new Date().toISOString();
+      const now = updatedRecord.lastUsedAt || new Date().toISOString();
       const updatedItems = latestItems.map((item) => {
         if (item.id !== record.itemId) return item;
         return {
           ...item,
-          passkeySignCount: (item.passkeySignCount ?? record.signCount ?? 0) + 1,
+          passkeySignCount: updatedRecord.signCount,
           passkeyLastUsedAt: now,
           updatedAt: now,
         };

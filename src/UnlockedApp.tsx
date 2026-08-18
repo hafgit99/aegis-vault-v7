@@ -21,6 +21,7 @@ import { useVaultSelection } from './hooks/useVaultSelection';
 import { useProfileSettings } from './hooks/useProfileSettings';
 import { useConfirmModal } from './hooks/useConfirmModal';
 import { useTotpCountdown } from './hooks/useTotpCountdown';
+import { getTotpPeriod } from './lib/otp';
 import { useVaultData } from './hooks/useVaultData';
 import { useAttachmentDownload } from './hooks/useAttachmentDownload';
 import { useTrashActions } from './hooks/useTrashActions';
@@ -71,7 +72,18 @@ export default function UnlockedApp({
   const isPinRevealed = revealed.cardPin;
   const isPasskeyExpRevealed = revealed.passkeyPrivateExponent;
 
-  const totpCountdown = useTotpCountdown();
+  const {
+    items,
+    selectedItem,
+    setItems,
+    setSelectedItem,
+    refreshDatabase,
+    saveItem: handleSaveItem,
+    saveItems: handleSaveItems,
+    toggleFavorite: handleToggleFavorite,
+  } = useVaultData();
+
+  const totpCountdown = useTotpCountdown(getTotpPeriod(selectedItem?.totpSecret));
 
   const {
     activeTab,
@@ -91,17 +103,6 @@ export default function UnlockedApp({
     openEditItemForm,
     closeVaultForm: handleCloseVaultForm,
   } = useVaultFormState();
-
-  const {
-    items,
-    selectedItem,
-    setItems,
-    setSelectedItem,
-    refreshDatabase,
-    saveItem: handleSaveItem,
-    saveItems: handleSaveItems,
-    toggleFavorite: handleToggleFavorite,
-  } = useVaultData();
 
   const {
     mobileActiveView,

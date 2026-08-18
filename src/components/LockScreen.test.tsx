@@ -36,6 +36,8 @@ vi.mock('../lib/biometric', () => ({
   isBiometricEnabled: vi.fn(() => false),
   isBiometricSupported: vi.fn(() => false),
   getBiometricType: vi.fn(() => 'platform'),
+  isBiometricV2UpgradeRequired: vi.fn(() => false),
+  dismissBiometricV2UpgradeNotification: vi.fn(),
 }));
 
 function passwordInput(): HTMLInputElement {

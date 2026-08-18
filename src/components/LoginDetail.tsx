@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Check, Copy, Eye, EyeOff } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
-import { generateTOTP, TOTPValidationError } from '../lib/otp';
+import { generateTOTP, getTotpPeriod, TOTPValidationError } from '../lib/otp';
 import { VaultItem } from '../types';
 import { TotpCountdownRing } from './totp/TotpCountdownRing';
 
@@ -26,6 +26,7 @@ export default function LoginDetail({
   const { t } = useLanguage();
   const [totpCode, setTotpCode] = useState<string>('');
   const [hasTotpValidationError, setHasTotpValidationError] = useState<boolean>(false);
+  const totpPeriod = getTotpPeriod(item.totpSecret);
 
   useEffect(() => {
     let active = true;
@@ -138,7 +139,7 @@ export default function LoginDetail({
                   {totpCode}
                 </span>
                 <div className="flex items-center gap-2.5">
-                  <TotpCountdownRing secondsLeft={totpCountdown} />
+                  <TotpCountdownRing secondsLeft={totpCountdown} totalDuration={totpPeriod} />
                   <button
                     data-testid="login-totp-copy-button"
                     onClick={() => onCopyText(totpCode.replace(' ', ''), 'totp')}

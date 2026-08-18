@@ -580,11 +580,13 @@ export interface AttachmentBackupRecord {
 
 export function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
+  const CHUNK_SIZE = 0x8000; // 32 KiB chunks to avoid call stack limits and excessive string concatenation
+  const chunks: string[] = [];
+  for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+    const chunk = bytes.subarray(i, i + CHUNK_SIZE);
+    chunks.push(String.fromCharCode.apply(null, Array.from(chunk)));
   }
-  return btoa(binary);
+  return btoa(chunks.join(''));
 }
 
 export function base64ToArrayBuffer(value: string): ArrayBuffer {

@@ -13,6 +13,7 @@ vi.mock('../../lib/biometric', () => ({
   getBiometricType: vi.fn(() => 'platform'),
   isBiometricAutofillRequireEnabled: vi.fn(() => false),
   setBiometricAutofillRequireEnabled: vi.fn(),
+  isBiometricV2UpgradeRequired: vi.fn(() => false),
 }));
 
 import { getBiometricType } from '../../lib/biometric';

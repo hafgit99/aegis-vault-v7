@@ -212,7 +212,11 @@ export async function setupRecoveryKey(masterPassword: string, recoveryWords: st
 
   const serialised = JSON.stringify(recoveryBundle);
 
-  // Prefer secure storage (Tauri keychain), fall back to IndexedDB
+  // Security Note (D11 / D-A4g): Prefer secure OS-level keychain storage (Tauri).
+  // In pure web environments where native keychains are unavailable, fall back to IndexedDB.
+  // The bundle is cryptographically sealed with AES-256-GCM using an Argon2id key derived from
+  // 256-bit BIP-39 recovery entropy, ensuring the master password cannot be retrieved offline
+  // without the 24 recovery words.
   if (!setSecureStorageItem(secureStorageKeys.recoveryKeyBundle ?? RECOVERY_STORAGE_KEY, serialised)) {
     setIndexedDbItemSync(RECOVERY_STORAGE_KEY, serialised);
   }

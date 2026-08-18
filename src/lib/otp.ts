@@ -145,6 +145,26 @@ export async function generateTOTP(secret: string, options: TOTPOptions = {}): P
 }
 
 /**
+ * Returns the period in seconds configured for a TOTP secret (default: 30s).
+ */
+export function getTotpPeriod(secret?: string): number {
+  if (!secret) return 30;
+  try {
+    const parsedUri = parseOtpAuthUri(secret);
+    if (
+      parsedUri?.options?.periodSeconds &&
+      parsedUri.options.periodSeconds >= MIN_TOTP_PERIOD_SECONDS &&
+      parsedUri.options.periodSeconds <= MAX_TOTP_PERIOD_SECONDS
+    ) {
+      return parsedUri.options.periodSeconds;
+    }
+  } catch {
+    // Fall back to default period
+  }
+  return 30;
+}
+
+/**
  * Returns the remaining seconds in the current cycle for a given period (default: 30s).
  */
 export function getTOTPTimeRemaining(period = 30): number {

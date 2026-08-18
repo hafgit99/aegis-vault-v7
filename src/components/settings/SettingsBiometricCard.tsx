@@ -4,8 +4,8 @@
  */
 
 import { useState } from 'react';
-import { Fingerprint, Key, Check, ShieldAlert } from 'lucide-react';
-import { getBiometricType, isBiometricAutofillRequireEnabled, setBiometricAutofillRequireEnabled } from '../../lib/biometric';
+import { Fingerprint, Key, Check, ShieldAlert, AlertTriangle } from 'lucide-react';
+import { getBiometricType, isBiometricAutofillRequireEnabled, isBiometricV2UpgradeRequired, setBiometricAutofillRequireEnabled } from '../../lib/biometric';
 
 interface SettingsBiometricCardProps {
   biometricEnabled: boolean;
@@ -26,6 +26,7 @@ export function SettingsBiometricCard({
 }: SettingsBiometricCardProps) {
   const biometricType = getBiometricType();
   const [autofillRequire, setAutofillRequire] = useState(isBiometricAutofillRequireEnabled());
+  const v2UpgradeRequired = isBiometricV2UpgradeRequired();
 
   const handleToggleAutofillRequire = () => {
     const next = !autofillRequire;
@@ -46,6 +47,13 @@ export function SettingsBiometricCard({
       </div>
       
       <div className="md:col-span-2 space-y-4 min-w-0">
+        {v2UpgradeRequired && !biometricEnabled && (
+          <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-300 text-xs leading-relaxed animate-fade-in flex items-start gap-2.5">
+            <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400 mt-0.5" />
+            <span className="break-words">{t('settings.biometric.v2UpgradeNotice')}</span>
+          </div>
+        )}
+
         <div className="space-y-3 bg-surface-low p-3 sm:p-4 rounded-xl border border-outline-variant/10 min-w-0">
           <div className="min-w-0 w-full">
             <span className="text-xs font-bold text-on-surface block uppercase leading-snug whitespace-normal">
