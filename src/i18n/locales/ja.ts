@@ -777,6 +777,7 @@ export const ja = {
   'lock.secret.unlockDescription': 'このボールトは 2 番目のキーによって保護されています。このデバイスに記憶されていない場合は、ロックを解除するために入力する必要があります。',
   'lock.secret.label': 'アカウントの秘密キー',
   'lock.secret.rememberThisDevice': 'この秘密キーをこのコンピュータに記憶させてください',
+  'lock.secret.secureHardwareRequired': '(安全なハードウェア/デスクトップブリッジが必要です)',
   'lock.secret.downloadEmergencyKit': '緊急キットをダウンロード',
   'lock.error.biometricUnsupported': '生体認証によるロック解除 (WebAuthn) は、お使いのデバイスまたはブラウザーではサポートされていません。',
   'lock.error.biometricIntegrity': 'マスターパスワードの整合性検証に失敗しました。手動でサインインしてください。',

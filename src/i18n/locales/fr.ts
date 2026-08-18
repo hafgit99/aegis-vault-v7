@@ -777,6 +777,7 @@ export const fr = {
   'lock.secret.unlockDescription': 'Ce coffre-fort est protégé par une seconde clé. S\'il n\'est pas mémorisé sur cet appareil, vous devez le saisir pour le déverrouiller.',
   'lock.secret.label': 'Clé secrète du compte',
   'lock.secret.rememberThisDevice': 'Mémoriser cette clé secrète sur cet ordinateur',
+  'lock.secret.secureHardwareRequired': '(Nécessite une passerelle matérielle/de bureau sécurisée)',
   'lock.secret.downloadEmergencyKit': 'Télécharger le kit d\'urgence',
   'lock.error.biometricUnsupported': 'Le déverrouillage biométrique (WebAuthn) n\'est pas pris en charge sur votre appareil ou votre navigateur.',
   'lock.error.biometricIntegrity': 'La vérification de l\'intégrité du mot de passe principal a échoué. Veuillez vous connecter manuellement.',

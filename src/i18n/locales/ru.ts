@@ -777,6 +777,7 @@ export const ru = {
   'lock.secret.unlockDescription': 'Это хранилище защищено вторым ключом. Если он не запоминается на этом устройстве, необходимо ввести его для разблокировки.',
   'lock.secret.label': 'Секретный ключ учетной записи',
   'lock.secret.rememberThisDevice': 'Запомните этот секретный ключ на этом компьютере.',
+  'lock.secret.secureHardwareRequired': '(Требуется безопасный аппаратный/десктопный мост)',
   'lock.secret.downloadEmergencyKit': 'Скачать аварийный комплект',
   'lock.error.biometricUnsupported': 'Биометрическая разблокировка (WebAuthn) не поддерживается на вашем устройстве или в браузере.',
   'lock.error.biometricIntegrity': 'Проверка целостности главного пароля не удалась. Пожалуйста, войдите вручную.',

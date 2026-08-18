@@ -74,7 +74,7 @@ export function LockScreenSecretKeySection({
           {t('lock.secret.rememberThisDevice')}
           {!isSecureSupported && (
             <span className="block text-[10px] text-amber-500/80 mt-0.5">
-              (Güvenli donanım/masaüstü köprüsü gerektirir)
+              {t('lock.secret.secureHardwareRequired')}
             </span>
           )}
         </span>

@@ -777,6 +777,7 @@ export const ar = {
   'lock.secret.unlockDescription': 'هذا القبو محمي بمفتاح ثانٍ. إذا لم يتم تذكره على هذا الجهاز، فيجب عليك إدخاله لفتحه.',
   'lock.secret.label': 'مفتاح الحساب السري',
   'lock.secret.rememberThisDevice': 'تذكر هذا المفتاح السري على هذا الكمبيوتر',
+  'lock.secret.secureHardwareRequired': '(يتطلب جسر أجهزة/سطح مكتب آمن)',
   'lock.secret.downloadEmergencyKit': 'تحميل عدة الطوارئ',
   'lock.error.biometricUnsupported': 'إلغاء القفل البيومتري (WebAuthn) غير مدعوم على جهازك أو متصفحك.',
   'lock.error.biometricIntegrity': 'فشل التحقق من سلامة كلمة المرور الرئيسية. الرجاء تسجيل الدخول يدويا.',

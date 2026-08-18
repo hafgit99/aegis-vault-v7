@@ -779,6 +779,7 @@ export const en = {
     'lock.secret.unlockDescription': 'This vault is protected by a second key. If it is not remembered on this device, you must enter it to unlock.',
     'lock.secret.label': 'Account Secret Key',
     'lock.secret.rememberThisDevice': 'Remember this secret key on this computer',
+    'lock.secret.secureHardwareRequired': '(Requires secure hardware/desktop bridge)',
     'lock.secret.downloadEmergencyKit': 'Download Emergency Kit',
     'lock.error.biometricUnsupported': 'Biometric unlock (WebAuthn) is not supported on your device or browser.',
     'lock.error.biometricIntegrity': 'Master password integrity verification failed. Please sign in manually.',

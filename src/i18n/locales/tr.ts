@@ -779,6 +779,7 @@ export const tr = {
     'lock.secret.unlockDescription': 'Bu kasa ikinci anahtar ile korunuyor. Anahtar bu cihazda hatırlanmıyorsa giriş için tekrar girmeniz gerekir.',
     'lock.secret.label': 'Hesap Secret Key',
     'lock.secret.rememberThisDevice': 'Bu secret key anahtarını bu bilgisayarda hatırla',
+    'lock.secret.secureHardwareRequired': '(Güvenli donanım/masaüstü köprüsü gerektirir)',
     'lock.secret.downloadEmergencyKit': 'Acil Durum Kitini İndir',
     'lock.error.biometricUnsupported': 'Cihazınızda veya tarayıcınızda biyometrik kilit açma (WebAuthn) desteklenmiyor.',
     'lock.error.biometricIntegrity': 'Ana şifre bütünlük doğrulaması başarısız! Lütfen manuel olarak giriş yapın.',

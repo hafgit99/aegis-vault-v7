@@ -777,6 +777,7 @@ export const it = {
   'lock.secret.unlockDescription': 'Questo caveau è protetto da una seconda chiave. Se non è ricordato su questo dispositivo, è necessario inserirlo per sbloccarlo.',
   'lock.secret.label': 'Chiave segreta dell\'account',
   'lock.secret.rememberThisDevice': 'Ricorda questa chiave segreta su questo computer',
+  'lock.secret.secureHardwareRequired': '(Richiede un bridge hardware/desktop sicuro)',
   'lock.secret.downloadEmergencyKit': 'Scarica Kit di emergenza',
   'lock.error.biometricUnsupported': 'Lo sblocco biometrico (WebAuthn) non è supportato sul tuo dispositivo o browser.',
   'lock.error.biometricIntegrity': 'La verifica dell\'integrità della password principale non è riuscita. Per favore accedi manualmente.',

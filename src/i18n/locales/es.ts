@@ -777,6 +777,7 @@ export const es = {
   'lock.secret.unlockDescription': 'Esta bóveda está protegida por una segunda llave. Si no se recuerda en este dispositivo, deberás ingresarlo para desbloquearlo.',
   'lock.secret.label': 'Clave secreta de cuenta',
   'lock.secret.rememberThisDevice': 'Recuerda esta clave secreta en esta computadora',
+  'lock.secret.secureHardwareRequired': '(Requiere puente de hardware/escritorio seguro)',
   'lock.secret.downloadEmergencyKit': 'Descargar kit de emergencia',
   'lock.error.biometricUnsupported': 'El desbloqueo biométrico (WebAuthn) no es compatible con su dispositivo o navegador.',
   'lock.error.biometricIntegrity': 'Error en la verificación de la integridad de la contraseña maestra. Por favor inicia sesión manualmente.',

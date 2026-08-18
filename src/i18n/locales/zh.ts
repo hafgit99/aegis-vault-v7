@@ -779,6 +779,7 @@ export const zh = {
     'lock.secret.unlockDescription': '此保险库受第二密钥保护。如果此设备未记住该密钥，您需要输入它才能解锁。',
     'lock.secret.label': '账户 Secret Key',
     'lock.secret.rememberThisDevice': '在这台电脑上记住此 secret key',
+    'lock.secret.secureHardwareRequired': '(需要安全硬件/桌面桥接)',
     'lock.secret.downloadEmergencyKit': '下载应急工具包',
     'lock.error.biometricUnsupported': '您的设备或浏览器不支持生物识别解锁 (WebAuthn)。',
     'lock.error.biometricIntegrity': '主密码完整性验证失败。请手动登录。',
