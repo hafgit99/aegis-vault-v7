@@ -61,22 +61,16 @@ export function LockScreenSecretKeySection({
         />
       </label>
 
-      <label className={`flex items-start gap-2 text-left text-[11px] ${isSecureSupported ? 'text-on-surface-variant cursor-pointer' : 'text-on-surface-variant/50 cursor-not-allowed'}`}>
+      <label className="flex items-start gap-2 text-left text-[11px] text-on-surface-variant cursor-pointer">
         <input
           data-testid="lock-remember-secret-key-checkbox"
           type="checkbox"
-          checked={isSecureSupported && rememberSecretKey}
-          disabled={!isSecureSupported}
+          checked={rememberSecretKey}
           onChange={(e) => setRememberSecretKey(e.target.checked)}
-          className="mt-0.5 accent-brand-primary"
+          className="mt-0.5 accent-brand-primary cursor-pointer"
         />
         <span>
           {t('lock.secret.rememberThisDevice')}
-          {!isSecureSupported && (
-            <span className="block text-[10px] text-amber-500/80 mt-0.5">
-              {t('lock.secret.secureHardwareRequired')}
-            </span>
-          )}
         </span>
       </label>
 

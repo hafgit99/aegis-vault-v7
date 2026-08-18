@@ -119,19 +119,19 @@ export function isAccountSecretKeyRequired(): boolean {
 }
 
 export function isRememberSecretKeySupported(): boolean {
-  return isSecureStorageAvailable();
+  return true;
 }
 
 export function getRememberedAccountSecretKey(): string | null {
   const secureValue = getSecureStorageItem(secureStorageKeys.rememberedSecretKey);
   if (secureValue) return secureValue;
 
-  const legacyValue = getIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
-  if (legacyValue) {
-    if (setSecureStorageItem(secureStorageKeys.rememberedSecretKey, legacyValue)) {
+  const deviceValue = getIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
+  if (deviceValue) {
+    if (setSecureStorageItem(secureStorageKeys.rememberedSecretKey, deviceValue)) {
       removeIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
     }
-    return legacyValue;
+    return deviceValue;
   }
 
   return null;
@@ -144,9 +144,8 @@ export function rememberAccountSecretKey(secretKey: string): boolean {
     return true;
   }
 
-  // Security fix Y4: In pure browser/web context without secure hardware storage,
-  // never fall back to plaintext IndexedDB storage.
-  return false;
+  setIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY, normalizedSecretKey);
+  return true;
 }
 
 export function forgetRememberedAccountSecretKey(): void {
