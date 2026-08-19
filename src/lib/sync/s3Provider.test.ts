@@ -120,6 +120,18 @@ describe('S3SyncProvider', () => {
     const result404 = await provider.getRemoteMetadata();
     expect(result404).toBeNull();
 
+    // Invalid JSON returns null
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response('not-json', { status: 200 }));
+    expect(await provider.getRemoteMetadata()).toBeNull();
+
+    // Network error throws SyncError
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('S3 down'));
+    await expect(provider.getRemoteMetadata()).rejects.toThrow(/Network error/);
+
+    // HTTP 500 throws SyncError
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response('Server Error', { status: 500 }));
+    await expect(provider.getRemoteMetadata()).rejects.toThrow(/Failed to fetch metadata/);
+
     provider.dispose();
   });
 });

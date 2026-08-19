@@ -50,10 +50,40 @@ describe('attachmentSyncEngine', () => {
         updatedAt: '2026-01-01T00:00:00Z',
         attachmentId: 'att-1',
       },
+      {
+        id: 'item-2',
+        title: 'Deleted Doc',
+        username: '',
+        url: '',
+        category: 'login',
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+        deleted: true,
+        attachmentId: 'att-2',
+      },
+      {
+        id: 'item-3',
+        title: 'No attachment',
+        username: '',
+        url: '',
+        category: 'login',
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+      },
     ];
 
     const res = await performAttachmentSync(provider, items);
     expect(res.uploaded).toBe(1);
     expect(res.purged).toBe(0);
+  });
+
+  it('uploadAttachmentsToSync returns 0 when no attachments exist', async () => {
+    const { exportAllAttachments } = await import('../attachments');
+    vi.mocked(exportAllAttachments).mockResolvedValueOnce([]);
+
+    const provider = makeProvider();
+    const count = await uploadAttachmentsToSync(provider, []);
+    expect(count).toBe(0);
+    expect(provider.uploadVault).not.toHaveBeenCalled();
   });
 });

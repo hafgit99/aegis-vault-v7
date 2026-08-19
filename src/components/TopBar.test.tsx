@@ -200,4 +200,64 @@ describe('TopBar', () => {
       expect(refreshButton.disabled).toBe(false);
     });
   });
+
+  it('opens advanced search dropdown, handles fuzzy toggle and recent search selection', () => {
+    const onCommitSearch = vi.fn();
+    const onSearchChange = vi.fn();
+    const onToggleFuzzy = vi.fn();
+
+    render(
+      <TopBar
+        activeTab="vault"
+        searchQuery="test query"
+        profileName="Ada"
+        profileAvatar="linear-gradient(135deg, #10b981 0%, #059669 100%)"
+        onSearchChange={onSearchChange}
+        onOpenSidebar={vi.fn()}
+        onRefresh={vi.fn()}
+        onOpenVaultStatus={vi.fn()}
+        onOpenProfile={vi.fn()}
+        onLock={vi.fn()}
+        fuzzyEnabled={true}
+        onToggleFuzzy={onToggleFuzzy}
+        selectedTags={[]}
+        onToggleTag={vi.fn()}
+        onClearTags={vi.fn()}
+        dateRange={{ from: null, to: null }}
+        dateField="updatedAt"
+        onDateFieldChange={vi.fn()}
+        onChangeDateRange={vi.fn()}
+        onClearDateRange={vi.fn()}
+        onResetAdvancedFilters={vi.fn()}
+        recentSearches={[{ query: 'recent-1', lastUsedAt: '2026-01-01T00:00:00Z' }]}
+        onRemoveRecentEntry={vi.fn()}
+        onClearRecentSearches={vi.fn()}
+        onCommitSearch={onCommitSearch}
+      />,
+    );
+
+    // Commit search with Enter
+    const input = screen.getByTestId('vault-search-input');
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onCommitSearch).toHaveBeenCalledWith('test query');
+
+    // ArrowDown opens advanced panel
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    expect(screen.getByTestId('advanced-search-panel')).toBeTruthy();
+
+    // Click outside closes panel
+    fireEvent.mouseDown(document.body);
+
+    // Open advanced search panel
+    const advancedToggle = screen.getByTestId('topbar-advanced-search-toggle');
+    fireEvent.click(advancedToggle);
+
+    // Click recent search chip
+    const chip = screen.getByText('recent-1');
+    fireEvent.click(chip);
+    expect(onSearchChange).toHaveBeenCalledWith('recent-1');
+
+    // Close panel with Escape
+    fireEvent.keyDown(document, { key: 'Escape' });
+  });
 });

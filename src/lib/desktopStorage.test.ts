@@ -168,4 +168,54 @@ describe('desktopStorage', () => {
 
     expect(invoke).toHaveBeenCalledWith('clear_extension_credentials');
   });
+
+  it('runs desktop setupMasterPassword, verifyMasterPassword and changeMasterPassword', async () => {
+    window.__TAURI_INTERNALS__ = {};
+    const {
+      setupMasterPasswordWithSecretKey,
+      verifyMasterPassword,
+      changeMasterPassword,
+    } = await import('./storage');
+    const {
+      hasActiveMasterPassword,
+      closeVaultSession,
+    } = await import('./vaultSession');
+
+    invoke.mockImplementation(async (cmd: string) => {
+      if (cmd === 'setup_rust_session') {
+        return {
+          vaultEncryptionKey: Array.from(new Uint8Array(32).fill(5)),
+          argonHash: '$argon2id$mock-setup',
+          salt: 'mock-salt-12345678',
+        };
+      }
+      if (cmd === 'open_rust_session') {
+        return Array.from(new Uint8Array(32).fill(5));
+      }
+      if (cmd === 'rotate_rust_session') {
+        return {
+          newVaultKey: Array.from(new Uint8Array(32).fill(6)),
+          newArgonHash: '$argon2id$mock-rotated',
+        };
+      }
+      return undefined;
+    });
+
+    // 1. Setup
+    const secretKey = 'A3-TEST1-TEST2-TEST3-TEST4-TEST5-TEST6';
+    await setupMasterPasswordWithSecretKey('desktop-master-pass', secretKey, true);
+    expect(hasActiveMasterPassword()).toBe(true);
+
+    // 2. Change password
+    await changeMasterPassword('desktop-master-pass', 'desktop-new-master-1234');
+    expect(hasActiveMasterPassword()).toBe(true);
+
+    // 3. Verify
+    closeVaultSession();
+    const verified = await verifyMasterPassword('desktop-new-master-1234', secretKey);
+    expect(verified).toBe(true);
+    expect(hasActiveMasterPassword()).toBe(true);
+
+    closeVaultSession();
+  });
 });

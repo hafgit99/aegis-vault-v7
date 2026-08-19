@@ -70,4 +70,36 @@ describe('useVaultFormState', () => {
     expect(result.current.isVaultFormOpen).toBe(false);
     expect(result.current.editingItem).toEqual(selected);
   });
+
+  it('handles prefill with explicit values and fallbacks', () => {
+    const { result } = renderHook(() => useVaultFormState());
+
+    // Explicit values
+    act(() => result.current.openNewItemForm({
+      title: 'Prefill Title',
+      username: 'prefill_user',
+      password: 'prefill_pass',
+      url: 'https://example.com',
+      category: 'card',
+    }));
+
+    expect(result.current.isVaultFormOpen).toBe(true);
+    expect(result.current.editingItem).toMatchObject({
+      title: 'Prefill Title',
+      username: 'prefill_user',
+      password: 'prefill_pass',
+      url: 'https://example.com',
+      category: 'card',
+    });
+
+    // Empty prefill object
+    act(() => result.current.openNewItemForm({}));
+    expect(result.current.editingItem).toMatchObject({
+      title: '',
+      username: '',
+      password: '',
+      url: '',
+      category: 'login',
+    });
+  });
 });

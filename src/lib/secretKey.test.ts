@@ -11,12 +11,16 @@ describe('account secret key helpers', () => {
     vi.clearAllMocks();
   });
 
-  it('generates a grouped A3 secret key from 20 random bytes', async () => {
+  it('generates a grouped A3 secret key from 20 random bytes and handles trailing bits', async () => {
     secureRandomBytes.mockReturnValue(new Uint8Array(20));
     const { generateAccountSecretKey } = await import('./secretKey');
 
     expect(generateAccountSecretKey()).toBe('A3-AAAA-AAAA-AAAA-AAAA-AAAA-AAAA-AAAA-AAAA');
     expect(secureRandomBytes).toHaveBeenCalledWith(20);
+
+    // Non-multiple of 5 bytes to trigger bits > 0
+    secureRandomBytes.mockReturnValueOnce(new Uint8Array([255, 255]));
+    expect(generateAccountSecretKey()).toBeTruthy();
   });
 
   it('normalizes user-entered secret keys without preserving unsafe characters', async () => {

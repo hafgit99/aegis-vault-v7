@@ -30,6 +30,7 @@ vi.mock('../lib/storage', () => ({
   isMasterPasswordSet: vi.fn(),
   setupMasterPasswordWithSecretKey: vi.fn(async () => undefined),
   verifyMasterPassword: vi.fn(),
+  resetSystem: vi.fn(async () => undefined),
 }));
 
 vi.mock('../lib/biometric', () => ({
@@ -486,5 +487,33 @@ describe('LockScreen', () => {
     // Enter a password to trigger strength evaluation
     fireEvent.change(input, { target: { value: 'MasterPass123!@#' } });
     expect(screen.getByTestId('password-strength-meter')).toBeTruthy();
+  });
+
+  it('opens recovery modal, reset modal and legal modal', async () => {
+    vi.mocked(isMasterPasswordSet).mockReturnValue(true);
+    Object.defineProperty(window, 'location', {
+      value: { reload: vi.fn() },
+      writable: true,
+      configurable: true,
+    });
+
+    render(
+      <LanguageProvider>
+        <LockScreen onUnlock={vi.fn()} />
+      </LanguageProvider>,
+    );
+
+    // Open Forgot Password modal
+    const forgotBtn = screen.getByTestId('lock-forgot-password-button');
+    fireEvent.click(forgotBtn);
+    expect(screen.getByTestId('lock-recovery-modal')).toBeTruthy();
+
+    // Open Reset modal
+    const resetBtn = screen.getByTestId('lock-reset-vault-button');
+    fireEvent.click(resetBtn);
+    expect(screen.getByTestId('lock-reset-cancel-button')).toBeTruthy();
+
+    const resetConfirmBtn = screen.getByTestId('lock-reset-confirm-button');
+    fireEvent.click(resetConfirmBtn);
   });
 });

@@ -173,4 +173,15 @@ describe('Folders Library', () => {
     const list = readFolderLibrary();
     expect(list).toEqual([]);
   });
+
+  it('sorts children by custom order and ignores root delete', () => {
+    const f1 = { id: 'f-1', name: 'Zebra', parentId: null, order: 2, color: 'emerald' as const, icon: 'folder' as const, createdAt: '' };
+    const f2 = { id: 'f-2', name: 'Apple', parentId: null, order: 1, color: 'emerald' as const, icon: 'folder' as const, createdAt: '' };
+
+    const children = childrenOf([f1, f2], null);
+    expect(children[0]!.id).toBe('f-2');
+    expect(children[1]!.id).toBe('f-1');
+
+    expect(deleteFolder(ROOT_FOLDER_ID)).toEqual([]);
+  });
 });

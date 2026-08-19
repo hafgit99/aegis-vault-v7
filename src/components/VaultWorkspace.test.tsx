@@ -263,4 +263,40 @@ describe('VaultWorkspace', () => {
 
     expect(props.onBackToList).toHaveBeenCalledTimes(1);
   });
+
+  it('renders secure note card view when secure_note category is active', () => {
+    const noteItem: VaultItem = {
+      id: 'note-1',
+      title: 'Server Keys',
+      username: '',
+      url: 'https://notes.example.com',
+      notes: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQAB...',
+      createdAt: '2026-01-01',
+      updatedAt: '2026-01-01',
+      category: 'secure_note',
+    };
+
+    renderWorkspace({
+      selectedCategory: 'secure_note',
+      filteredItems: [noteItem],
+      activeItems: [noteItem],
+    });
+
+    expect(screen.getByTestId('sticky-note-title')).toBeTruthy();
+  });
+
+  it('handles folder sidebar button and secure share trigger', () => {
+    const onOpenFolderSidebar = vi.fn();
+    const onSecureShare = vi.fn();
+
+    renderWorkspace({
+      selectedItem: activeItems[0],
+      onOpenFolderSidebar,
+      onSecureShare,
+    });
+
+    const folderBtn = screen.getByTitle('Kasa Organizasyonu');
+    fireEvent.click(folderBtn);
+    expect(onOpenFolderSidebar).toHaveBeenCalledTimes(1);
+  });
 });

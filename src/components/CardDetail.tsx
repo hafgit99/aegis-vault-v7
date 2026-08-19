@@ -56,6 +56,7 @@ export default function CardDetail({
         <div className="flex items-center justify-between">
           <span data-testid="card-cardholder-value" className="font-bold text-base text-on-surface uppercase">{item.cardholderName || t('cardDetail.unspecified')}</span>
           <button
+            data-testid="card-cardholder-copy-button"
             onClick={() => onCopyText(item.cardholderName || '', 'cardholderName')}
             className="text-on-surface-variant hover:text-brand-primary transition-colors focus:outline-none p-1.5 hover:bg-[#1a1c1a]/50 rounded-lg cursor-pointer ml-2 shrink-0"
             title={t('cardDetail.copy')}
@@ -109,7 +110,12 @@ export default function CardDetail({
           </label>
           <div className="flex items-center justify-between">
             <span data-testid="card-expiry-value" className="font-mono font-bold text-sm text-on-surface">{item.cardExpiry || t('cardDetail.expiryFallback')}</span>
-            <button onClick={() => onCopyText(item.cardExpiry || '', 'cardExpiry')} className="text-on-surface-variant hover:text-brand-primary transition-colors p-1" title={t('cardDetail.copy')}>
+            <button
+              data-testid="card-expiry-copy-button"
+              onClick={() => onCopyText(item.cardExpiry || '', 'cardExpiry')}
+              className="text-on-surface-variant hover:text-brand-primary transition-colors p-1"
+              title={t('cardDetail.copy')}
+            >
               {copiedField === 'cardExpiry' ? '✓' : <Copy className="w-3.5 h-3.5" />}
             </button>
           </div>

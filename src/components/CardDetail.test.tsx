@@ -122,6 +122,14 @@ describe('CardDetail', () => {
 
     fireEvent.click(screen.getByTestId('card-pin-copy-button'));
     expect(onCopyText).toHaveBeenCalledWith('9876', 'cardPin');
+
+    // Copy cardholder
+    fireEvent.click(screen.getByTestId('card-cardholder-copy-button'));
+    expect(onCopyText).toHaveBeenCalledWith('Ada Lovelace', 'cardholderName');
+
+    // Copy expiry
+    fireEvent.click(screen.getByTestId('card-expiry-copy-button'));
+    expect(onCopyText).toHaveBeenCalledWith('12/30', 'cardExpiry');
   });
 
   it('renders copied states for each copyable card field', () => {

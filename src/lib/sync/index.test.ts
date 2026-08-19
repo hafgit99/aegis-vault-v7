@@ -41,4 +41,13 @@ describe('sync index factory', () => {
     const config = { type: 'future-provider' } as unknown as SyncConfig;
     expect(createSyncProvider(config)).toBeNull();
   });
+
+  it('instantiates SyncError with default code fallback and custom message', async () => {
+    const { SyncError, syncErrorCodes } = await import('./syncTypes');
+    const errWithoutMsg = new SyncError(syncErrorCodes.authFailed);
+    expect(errWithoutMsg.message).toBe(syncErrorCodes.authFailed);
+
+    const errWithMsg = new SyncError(syncErrorCodes.uploadFailed, 'Upload timed out');
+    expect(errWithMsg.message).toBe('Upload timed out');
+  });
 });

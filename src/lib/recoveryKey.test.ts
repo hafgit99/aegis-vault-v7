@@ -166,4 +166,21 @@ describe('recoveryKey', () => {
     disableRecoveryKey();
     expect(isRecoveryKeySetup()).toBe(false);
   });
+
+  it('handles invalid recovery words and malformed or version-mismatched recovery bundles', async () => {
+    // 1. Invalid words array during recover
+    await expect(recoverWithRecoveryKey(['not', 'enough', 'words'])).rejects.toThrow('Invalid recovery words');
+
+    // 2. Corrupted JSON in storage
+    store.set('aegis_recovery_key_bundle', 'not valid json');
+    expect(isRecoveryKeySetup()).toBe(false);
+    expect(getRecoveryKeyCreatedAt()).toBeNull();
+
+    // 3. Version mismatch or missing bundle
+    store.set('aegis_recovery_key_bundle', JSON.stringify({ version: 99, bundle: 'xyz' }));
+    expect(isRecoveryKeySetup()).toBe(false);
+
+    store.set('aegis_recovery_key_bundle', JSON.stringify({ version: 1 }));
+    expect(isRecoveryKeySetup()).toBe(false);
+  });
 });

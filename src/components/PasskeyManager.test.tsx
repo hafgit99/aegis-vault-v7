@@ -193,4 +193,27 @@ describe('PasskeyManager', () => {
     expect(onAuthenticatePasskey).toHaveBeenCalledWith(SAMPLE_RECORD);
     expect(onDeletePasskey).toHaveBeenCalledWith(SAMPLE_RECORD);
   });
+
+  it('creates a passkey excluding existing credential IDs', async () => {
+    const onCreatePasskey = vi.fn(async () => undefined);
+    render(
+      <LanguageProvider>
+        <PasskeyManager records={[SAMPLE_RECORD]} t={(key) => key as string} onCreatePasskey={onCreatePasskey} />
+      </LanguageProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('passkey.status.platform')).toBeTruthy();
+    });
+
+    fireEvent.change(screen.getByTestId('passkey-rp-id-input'), { target: { value: 'site.com' } });
+    fireEvent.change(screen.getByTestId('passkey-user-name-input'), { target: { value: 'bob' } });
+    fireEvent.click(screen.getByTestId('passkey-create-button'));
+
+    await waitFor(() => {
+      expect(onCreatePasskey).toHaveBeenCalledWith(expect.objectContaining({
+        excludeCredentialIds: [SAMPLE_RECORD.credentialId],
+      }));
+    });
+  });
 });

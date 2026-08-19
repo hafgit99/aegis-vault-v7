@@ -277,5 +277,15 @@ describe('PasswordGenerator', () => {
     expect(screen.getByText('Word Separator Type')).toBeTruthy();
     expect(screen.getByText('Word Dictionary')).toBeTruthy();
     expect(screen.getByText('Why Use Diceware Word Passwords?')).toBeTruthy();
+
+    // Switch Diceware language to TR
+    const trBtn = screen.getByText('TR');
+    fireEvent.click(trBtn);
+    expect(generateDiceware).toHaveBeenCalled();
+
+    // Switch Diceware language to EN
+    const enBtn = screen.getByText('EN');
+    fireEvent.click(enBtn);
+    expect(generateDiceware).toHaveBeenCalled();
   });
 });

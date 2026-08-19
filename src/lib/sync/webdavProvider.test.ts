@@ -191,6 +191,18 @@ describe('WebDavSyncProvider.getRemoteMetadata', () => {
     const result = await buildProvider().getRemoteMetadata();
     expect(result).toBeNull();
   });
+
+  it('throws downloadFailed on network error and HTTP 500 in getRemoteMetadata', async () => {
+    mockFetch(() => { throw new TypeError('offline'); });
+    await expect(buildProvider().getRemoteMetadata()).rejects.toMatchObject({
+      code: syncErrorCodes.downloadFailed,
+    });
+
+    mockFetch(() => makeResponse(500));
+    await expect(buildProvider().getRemoteMetadata()).rejects.toMatchObject({
+      code: syncErrorCodes.downloadFailed,
+    });
+  });
 });
 
 // ─── Auth Header Tests ────────────────────────────────────────────────────────

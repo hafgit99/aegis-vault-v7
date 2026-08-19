@@ -35,4 +35,16 @@ describe('SearchHighlight', () => {
     const mark = container.querySelector('mark');
     expect(mark?.textContent).toBe('GitHub');
   });
+
+  it('highlights unicode text with combining accents properly', () => {
+    const { container } = render(
+      <SearchHighlight
+        text="Şifre Kasası Özeti"
+        matchStart={0}
+        matchEnd={5}
+      />,
+    );
+    const mark = container.querySelector('mark');
+    expect(mark?.textContent).toBe('Şifre');
+  });
 });

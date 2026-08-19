@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -10,7 +10,23 @@ import type { AuditReport, VaultItem } from '../types';
 import MainContent from './MainContent';
 
 vi.mock('./VaultWorkspace', () => ({
-  default: () => <div>Vault Workspace Mock</div>,
+  default: (props: any) => (
+    <div>
+      <span>Vault Workspace Mock</span>
+      <button data-testid="test-open-folder-sidebar" onClick={props.onOpenFolderSidebar}>Open Folder</button>
+      <button data-testid="test-apply-bulk" onClick={() => props.onApplyBulkAction({ kind: 'delete' })}>Bulk Delete</button>
+    </div>
+  ),
+}));
+
+vi.mock('./OrganisationSidebar', () => ({
+  default: (props: any) => (
+    <div>
+      <span>Organisation Sidebar Mock</span>
+      <button data-testid="test-select-folder" onClick={() => props.onSelectFolder('f-1')}>Select Folder</button>
+      <button data-testid="test-select-smart-folder" onClick={() => props.onSelectSmartFolder('sf-1')}>Select Smart Folder</button>
+    </div>
+  ),
 }));
 
 vi.mock('./SecurityAudit', () => ({
@@ -142,5 +158,31 @@ describe('MainContent', () => {
   it('renders the trash tab', () => {
     renderMainContent({ activeTab: 'trash' });
     expect(screen.getByText('Trash Workspace Mock')).toBeTruthy();
+  });
+
+  it('handles folder selection and smart folder selection callbacks', () => {
+    const onSelectFolder = vi.fn();
+    const onSelectSmartFolder = vi.fn();
+    const onItemsChange = vi.fn();
+
+    renderMainContent({
+      activeTab: 'vault',
+      onSelectFolder,
+      onSelectSmartFolder,
+      onItemsChange,
+      folders: [{ id: 'f-1', name: 'Work', parentId: null, color: 'emerald', icon: 'folder', createdAt: '' }],
+      smartFolders: [{ id: 'sf-1', name: 'Weak', icon: 'shield', color: 'rose', rules: [{ kind: 'weakPassword' }], builtIn: true, createdAt: '' }],
+    });
+
+    expect(screen.getByText('Vault Workspace Mock')).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId('test-open-folder-sidebar'));
+    fireEvent.click(screen.getByTestId('test-select-folder'));
+    expect(onSelectFolder).toHaveBeenCalledWith('f-1');
+
+    fireEvent.click(screen.getByTestId('test-select-smart-folder'));
+    expect(onSelectSmartFolder).toHaveBeenCalledWith('sf-1');
+
+    fireEvent.click(screen.getByTestId('test-apply-bulk'));
   });
 });

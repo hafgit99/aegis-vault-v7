@@ -436,4 +436,46 @@ describe('biometric master password wrapper', () => {
     setBiometricAutofillRequireEnabled(false);
     expect(isBiometricAutofillRequireEnabled()).toBe(false);
   });
+
+  it('registers and authenticates native biometrics (version 3)', async () => {
+    (window as any).AegisAndroidSecureStorage = {
+      isBiometricAvailable: vi.fn(() => true),
+      authenticateBiometric: vi.fn(() => true),
+      setItem: vi.fn(),
+      getItem: vi.fn(() => 'c2VjcmV0'),
+      removeItem: vi.fn(),
+    };
+
+    await registerBiometric('native-pass', 'platform');
+
+    const creds = await authenticateBiometricCredentials();
+    expect(creds.masterPassword).toBe('native-pass');
+  });
+
+  it('throws integrityMismatch when biometric bundle is corrupted', async () => {
+    disableBiometric();
+    (window as any).AegisAndroidSecureStorage = {
+      isBiometricAvailable: vi.fn(() => true),
+      authenticateBiometric: vi.fn(() => true),
+      setItem: vi.fn(),
+      getItem: vi.fn((key) => {
+        if (key === 'aegis_biometric_info') {
+          return JSON.stringify({
+            version: 3,
+            provider: 'Tauri Native Biometric',
+            wrappingSecret: 'c2VjcmV0',
+            salt: 'c2FsdA==',
+            bundle: 'corrupted-data',
+            pbkdf2Iterations: 1000,
+          });
+        }
+        return 'c2VjcmV0';
+      }),
+      removeItem: vi.fn(),
+    };
+
+    await expect(authenticateBiometricCredentials()).rejects.toMatchObject({
+      code: biometricErrorCodes.missingBundle,
+    });
+  });
 });

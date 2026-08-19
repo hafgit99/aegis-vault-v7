@@ -81,12 +81,20 @@ describe('Tags Library', () => {
   });
 
   it('covers remaining branches', () => {
-    const initial = ensureTagsExist(['Social']);
+    const initial = ensureTagsExist(['Social', '   ']);
     const second = ensureTagsExist(['Social']);
     expect(second.length).toBe(initial.length);
 
     const written = writeTagLibrary(initial);
     expect(written).toEqual(initial);
+
+    // Update with color only, leaving name unchanged
+    const t = initial[0]!;
+    const updated = updateTag(t.id, { color: 'amber' });
+    expect(updated.find(x => x.id === t.id)?.color).toBe('amber');
+
+    // Resolve color with explicit custom library
+    expect(resolveTagColor('Custom', [{ id: '1', name: 'Custom', slug: 'custom', color: 'purple', createdAt: '' }])).toBe('purple');
 
     localStorage.setItem(TAG_LIBRARY_STORAGE_KEY, 'invalid-json-{');
     const list = readTagLibrary();

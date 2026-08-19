@@ -64,4 +64,45 @@ describe('vault database format migrations', () => {
       vault_items: [],
     });
   });
+
+  it('returns empty state for null, undefined, and non-object inputs', () => {
+    expect(normalizeVaultDatabaseState(null).vault_items).toEqual([]);
+    expect(normalizeVaultDatabaseState(undefined).vault_items).toEqual([]);
+    expect(normalizeVaultDatabaseState('not-an-object').vault_items).toEqual([]);
+  });
+
+  it('uses version field when schemaVersion is absent', () => {
+    const result = normalizeVaultDatabaseState({ version: 2 });
+    expect(result.migratedFrom).toBe(2);
+  });
+
+  it('normalizes kdfParams with partial or missing fields', () => {
+    const result = normalizeVaultDatabaseState({
+      kdfParams: { memoryKiB: 16384 },
+    });
+    expect(result.kdfParams).toEqual({
+      memoryKiB: 16384,
+      iterations: 3,
+      parallelism: 1,
+      hashLength: 32,
+    });
+  });
+
+  it('preserves encryption_salt when present as a string', () => {
+    const result = normalizeVaultDatabaseState({
+      encryption_salt: 'abc123',
+    });
+    expect(result.encryption_salt).toBe('abc123');
+
+    const noSalt = normalizeVaultDatabaseState({ encryption_salt: 42 });
+    expect(noSalt.encryption_salt).toBeUndefined();
+  });
+
+  it('does not set migratedFrom when schemaVersion matches current', () => {
+    const result = normalizeVaultDatabaseState({
+      schemaVersion: CURRENT_VAULT_DB_SCHEMA_VERSION,
+      migratedFrom: 1,
+    });
+    expect(result.migratedFrom).toBe(1);
+  });
 });

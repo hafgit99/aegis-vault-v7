@@ -210,6 +210,27 @@ describe('SecurityAudit', () => {
     expect(screen.getByText('There are no conflicting reused passwords in your vault.')).toBeTruthy();
   });
 
+  it('renders and selects unsecure HTTP items', () => {
+    const httpItem = makeItem({
+      id: 'http-1',
+      title: 'Insecure Portal',
+      username: 'user',
+      password: 'StrongPass123!@#',
+      url: 'http://insecure.example.com',
+    });
+    const onSelectItem = vi.fn();
+
+    render(
+      <LanguageProvider>
+        <SecurityAudit items={[httpItem]} onSelectItem={onSelectItem} />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByText('Insecure Portal')).toBeTruthy();
+    fireEvent.click(screen.getByText('Insecure Portal'));
+    expect(onSelectItem).toHaveBeenCalledWith(httpItem);
+  });
+
   it('allows user to toggle HIBP check offline/online', () => {
     render(
       <LanguageProvider>
@@ -236,5 +257,23 @@ describe('SecurityAudit', () => {
 
     fireEvent.click(toggleBtn);
     expect(toggleBtn.textContent).toBe('OPT-IN ON');
+  });
+
+  it('renders and selects missing TOTP and old password items', () => {
+    const onSelectItem = vi.fn();
+    const oldDate = new Date(Date.now() - 150 * 24 * 60 * 60 * 1000).toISOString();
+
+    const itemWithNoTotp = makeItem({
+      id: 'no-totp',
+      title: 'No TOTP Service',
+      category: 'login',
+      updatedAt: oldDate,
+    });
+
+    render(<SecurityAudit items={[itemWithNoTotp]} onSelectItem={onSelectItem} />);
+
+    expect(screen.getByText('No TOTP Service')).toBeTruthy();
+    fireEvent.click(screen.getByText('No TOTP Service'));
+    expect(onSelectItem).toHaveBeenCalledWith(itemWithNoTotp);
   });
 });

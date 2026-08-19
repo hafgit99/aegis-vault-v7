@@ -159,4 +159,15 @@ describe('HIBP password checks', () => {
     await checkPasswordAgainstHibp('different_password_0');
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it('manages HIBP enabled setting state in storage', async () => {
+    const { isHibpCheckEnabled, setHibpCheckEnabled } = await import('./hibp');
+    expect(isHibpCheckEnabled()).toBe(true);
+
+    setHibpCheckEnabled(false);
+    expect(isHibpCheckEnabled()).toBe(false);
+
+    setHibpCheckEnabled(true);
+    expect(isHibpCheckEnabled()).toBe(true);
+  });
 });

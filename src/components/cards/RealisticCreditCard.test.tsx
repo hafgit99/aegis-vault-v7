@@ -92,6 +92,10 @@ describe('RealisticCreditCard', () => {
       const copyBtn = screen.getByTestId('card-copy-number-btn');
       fireEvent.click(copyBtn);
       expect(onCopy).toHaveBeenCalledWith('4532112233445566', 'cardNumber');
+
+      const cvvToggleBtn = screen.getByTestId('card-toggle-cvv-btn');
+      fireEvent.click(cvvToggleBtn);
+      expect(onToggleReveal).toHaveBeenCalledWith('cardCvv');
     });
   });
 });

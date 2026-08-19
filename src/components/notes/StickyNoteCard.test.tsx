@@ -69,4 +69,32 @@ describe('StickyNoteCard', () => {
     fireEvent.click(copyBtn);
     expect(onCopyNote).toHaveBeenCalledWith(mockNoteItem.notes);
   });
+
+  it('renders various note colors and handles clipboard fallback', () => {
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+      writable: true,
+      configurable: true,
+    });
+
+    const colors = ['amber', 'emerald', 'blue', 'purple', 'rose', 'slate'] as const;
+    colors.forEach((color, idx) => {
+      const item: VaultItem = {
+        ...mockNoteItem,
+        id: `note-${idx}`,
+        tags: [color],
+      };
+      const { unmount } = render(
+        <LanguageProvider>
+          <StickyNoteCard item={item} onSelect={vi.fn()} />
+        </LanguageProvider>,
+      );
+
+      const copyBtn = screen.getByTestId('sticky-note-copy-btn');
+      fireEvent.click(copyBtn);
+      unmount();
+    });
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalled();
+  });
 });

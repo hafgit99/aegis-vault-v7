@@ -225,4 +225,28 @@ describe('performSync', () => {
     expect(result.status).toBe('conflict');
     expect(result.conflicts?.length).toBeGreaterThan(0);
   });
+
+  it('handles corrupted remote envelope and items without updatedAt', async () => {
+    // 1. Corrupted remote envelope (triggers parseSyncEnvelope generic error)
+    const provider = makeProvider({
+      getRemoteMetadata: vi.fn().mockResolvedValue({
+        updatedAt: '2099-01-01T00:00:00Z',
+        deviceId: 'remote-device',
+        vaultVersion: '7.0',
+        checksum: 'a'.repeat(64),
+        itemCount: 1,
+      } as SyncMetadata),
+      downloadVault: vi.fn().mockResolvedValue('invalid-envelope-not-json'),
+    });
+
+    const localItemWithoutUpdatedAt: any = {
+      id: 'a',
+      title: 'Item A',
+      username: 'user',
+      createdAt: '2024-01-01T00:00:00.000Z',
+    };
+
+    const result = await performSync(provider, [localItemWithoutUpdatedAt], MASTER_PW);
+    expect(result.status).toBe('error');
+  });
 });

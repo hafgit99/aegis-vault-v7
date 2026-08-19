@@ -101,4 +101,50 @@ describe('VaultListItem', () => {
 
     expect(screen.getByText('安全')).toBeTruthy();
   });
+
+  it('handles drag start and drag end events', () => {
+    render(<VaultListItem item={vaultItem} isSelected={false} onSelect={vi.fn()} />);
+
+    const element = screen.getByTestId('vault-list-item');
+    const dataTransfer = { setData: vi.fn(), effectAllowed: '' };
+
+    fireEvent.dragStart(element, { dataTransfer });
+    expect(dataTransfer.setData).toHaveBeenCalledWith('text/plain', 'item-1');
+
+    fireEvent.dragEnd(element);
+  });
+
+  it('renders compact mode and search highlighting with tags', () => {
+    const taggedItem: VaultItem = {
+      ...vaultItem,
+      tags: ['Work', 'Finance'],
+      category: 'card',
+      cardNumber: '4111222233334444',
+    };
+
+    render(
+      <VaultListItem
+        item={taggedItem}
+        isSelected={false}
+        onSelect={vi.fn()}
+        density="compact"
+        match={{ score: 100, matchStart: 9, matchEnd: 13, matchedField: 'title' }}
+      />,
+    );
+
+    expect(screen.getByTestId('vault-list-item')).toBeTruthy();
+  });
+
+  it('renders username highlight when match is on username', () => {
+    render(
+      <VaultListItem
+        item={vaultItem}
+        isSelected={false}
+        onSelect={vi.fn()}
+        match={{ score: 100, matchStart: 0, matchEnd: 4, matchedField: 'username' }}
+      />,
+    );
+
+    expect(screen.getByTestId('vault-list-item')).toBeTruthy();
+  });
 });

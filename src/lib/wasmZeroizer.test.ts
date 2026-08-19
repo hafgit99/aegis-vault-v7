@@ -47,4 +47,20 @@ describe('wasmZeroizer (N1 fix & buffer security)', () => {
     wasmZeroizeArray(arr);
     expect(arr.every((b) => b === 0)).toBe(true);
   });
+
+  it('double-zeroize is idempotent for both WASM and heap buffers', () => {
+    // WASM buffer double-zeroize
+    const wasmBuf = createSecureBuffer(16);
+    wasmBuf.array.set([0xff, 0xfe, 0xfd]);
+    wasmBuf.zeroize();
+    wasmBuf.zeroize(); // second call should be a no-op
+    expect(wasmBuf.array[0]).toBe(0);
+
+    // Heap fallback double-zeroize
+    const heapBuf = createSecureBuffer(300 * 1024);
+    heapBuf.array[0] = 0xaa;
+    heapBuf.zeroize();
+    heapBuf.zeroize(); // second call should be a no-op
+    expect(heapBuf.array[0]).toBe(0);
+  });
 });

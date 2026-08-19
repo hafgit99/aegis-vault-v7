@@ -106,5 +106,37 @@ describe('useVaultFilters', () => {
     expect(result.current.dateRange).toEqual({ from: null, to: null });
     expect(result.current.fuzzyEnabled).toBe(true);
   });
+
+  it('covers category, date field, empty toggleTag, empty commitSearch, date normalisation and storage event', () => {
+    const { result } = renderHook(() => useVaultFilters());
+
+    act(() => {
+      result.current.setSelectedCategory('secure_note');
+      result.current.setDateField('createdAt');
+      result.current.toggleTag('  ');
+      result.current.commitSearch('  ');
+    });
+
+    expect(result.current.selectedCategory).toBe('secure_note');
+    expect(result.current.dateField).toBe('createdAt');
+    expect(result.current.selectedTags).toEqual([]);
+
+    // Date range with whitespace normalisation and duplicate update (rangesEqual branch)
+    act(() => {
+      result.current.updateDateRange({ from: ' 2026-01-01 ', to: ' 2026-06-01 ' });
+    });
+    expect(result.current.dateRange).toEqual({ from: '2026-01-01', to: '2026-06-01' });
+
+    act(() => {
+      result.current.updateDateRange({ from: '2026-01-01', to: '2026-06-01' });
+    });
+    expect(result.current.dateRange).toEqual({ from: '2026-01-01', to: '2026-06-01' });
+
+    // Storage events
+    act(() => {
+      window.dispatchEvent(new StorageEvent('storage', { key: 'other-key' }));
+      window.dispatchEvent(new StorageEvent('storage', { key: 'aegis-vault-v7-recent-searches' }));
+    });
+  });
 });
 

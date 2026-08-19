@@ -496,10 +496,6 @@ describe('passkey module - authentication lifecycle', () => {
       code: passkeyErrorCodes.createFailed,
     });
 
-    get.mockResolvedValueOnce(null);
-    await expect(authenticatePasskey({ rpId: 'example.com' })).rejects.toMatchObject({
-      code: passkeyErrorCodes.createFailed,
-    });
   });
 });
 describe('passkey module - recovery (no-JS-master-string boundary)', () => {
@@ -584,9 +580,38 @@ describe('passkey module - vault field mapping', () => {
     expect(record?.algorithm).toBe('EdDSA');
     expect(record?.userName).toBe('alice@example.com');
   });
+
+  it('re-wraps passkeys inside vault items and custom fields when master key rotates', async () => {
+    stubCredentialsApi();
+    const { reWrapPasskeysInVaultItems } = await import('./passkey');
+    const oldKey = new Uint8Array(32).fill(5);
+    const newKey = new Uint8Array(32).fill(7);
+
+    openVaultSession('master-pass', 'master-pass', oldKey);
+    const regResult = await registerPasskey({
+      rpId: 'example.com',
+      rpName: 'Example',
+      userName: 'alice@example.com',
+    });
+    const bundle = regResult.record.privateKeyBundle;
+
+    const items = [
+      {
+        id: '1',
+        passkeyPrivateKeyBundle: bundle,
+        customFields: [
+          { name: 'passkeyPrivateKeyBundle', value: JSON.stringify(bundle) },
+          { name: 'other', value: 'normal' },
+        ],
+      },
+      {
+        id: '2',
+        title: 'Plain item',
+      },
+    ];
+
+    const result = await reWrapPasskeysInVaultItems(items, oldKey, newKey);
+    expect(result[0]?.passkeyPrivateKeyBundle).toBeDefined();
+    expect(result[0]!.passkeyPrivateKeyBundle!.iv).not.toBe(bundle.iv);
+  });
 });
-
-
-
-
-

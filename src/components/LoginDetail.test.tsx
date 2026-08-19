@@ -43,7 +43,7 @@ describe('LoginDetail', () => {
     expect(container.textContent).toBe('');
   });
 
-  it('renders username, masked password and TOTP countdown', () => {
+  it('renders username, masked password and TOTP countdown', async () => {
     render(
       <LoginDetail
         item={loginItem}
@@ -60,6 +60,8 @@ describe('LoginDetail', () => {
     expect(screen.getByText('••••••••••••••••')).toBeTruthy();
     expect(screen.getByText('17 sn kaldı')).toBeTruthy();
     expect(screen.getByText('mfa yetkin')).toBeTruthy();
+
+    await screen.findByTitle('Doğrulama Kodunu Kopyala');
   });
 
   it('reveals password when requested', () => {

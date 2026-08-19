@@ -113,4 +113,24 @@ describe('scoreMultiField', () => {
     const result = scoreMultiField(fields, 'unknown query that does not match anything');
     expect(isFuzzyMatch(result)).toBe(false);
   });
+
+  it('matches subsequence in longer strings', () => {
+    // Subsequence match: 'gthb' in 'github'
+    const result = scoreField('github', 'gthb');
+    expect(result.score).toBeGreaterThan(0);
+  });
+
+  it('matches prefix tokens correctly across spaces', () => {
+    const result = scoreField('alpha beta gamma', 'gam');
+    expect(result.score).toBeGreaterThan(0);
+  });
+
+  it('returns default match for empty query and verifies isFuzzyMatch helper', () => {
+    const emptyMatch = scoreField('some text', '');
+    expect(emptyMatch.score).toBe(1);
+    expect(isFuzzyMatch(emptyMatch)).toBe(true);
+
+    const zeroMatch = scoreField('some text', 'nomatchpossibleatallxyz');
+    expect(isFuzzyMatch(zeroMatch)).toBe(false);
+  });
 });

@@ -129,6 +129,7 @@ afterEach(() => {
   vi.useRealTimers();
   closeVaultSession();
   delete window.AegisAndroidSecureStorage;
+  delete (window as any).__TAURI_INTERNALS__;
   localStorage.clear();
   sessionStorage.clear();
   vi.clearAllMocks();
@@ -539,6 +540,54 @@ describe('vault session storage', () => {
 
     expect(runWaSqliteActiveBackendMigration).toHaveBeenCalledWith(combinedCredential);
     expect(localStorage.getItem('aegis_is_setup')).toBeNull();
+  });
+
+  it('handles reencryptAttachments error during changeMasterPassword', async () => {
+    sqliteOPFSInstance.verifyPassword.mockResolvedValueOnce(true);
+    reencryptAttachmentsForVaultKeyChange.mockRejectedValueOnce(new Error('reencrypt failed'));
+    openVaultSession('old-pass', 'old-pass', testVaultKey);
+
+    await expect(changeMasterPassword('old-pass', 'new-pass-1234')).rejects.toThrow('reencrypt failed');
+  });
+
+  it('handles missing old vault key and derive key failure during changeMasterPassword', async () => {
+    // Missing old vault key (no session)
+    sqliteOPFSInstance.verifyPassword.mockResolvedValueOnce(true);
+    await expect(changeMasterPassword('old-pass', 'new-pass-1234')).rejects.toThrow(
+      'vault-storage-active-migration-session-required',
+    );
+
+    // Derive key error
+    sqliteOPFSInstance.verifyPassword.mockResolvedValueOnce(true);
+    sqliteOPFSInstance.deriveEncryptionKey.mockRejectedValueOnce(new Error('derive failed'));
+    openVaultSession('old-pass', 'old-pass', testVaultKey);
+
+    await expect(changeMasterPassword('old-pass', 'new-pass-1234')).rejects.toThrow('derive failed');
+  });
+
+  it('handles wa-sqlite active migration errors including android runtime and wasm memory error', async () => {
+    // Android runtime check
+    (window as any).__TAURI_INTERNALS__ = {};
+    const originalUserAgent = navigator.userAgent;
+    Object.defineProperty(navigator, 'userAgent', { value: 'Mozilla/5.0 (Linux; Android 14; Pixel 8)', configurable: true });
+    openVaultSession('master-pass', 'master-pass', testVaultKey);
+
+    await expect(migrateActiveVaultStorageToWaSqlite()).rejects.toThrow(
+      'wa-sqlite-android-webview-wasm-memory-unsupported',
+    );
+
+    delete (window as any).__TAURI_INTERNALS__;
+    Object.defineProperty(navigator, 'userAgent', { value: originalUserAgent, configurable: true });
+
+    // WASM memory error
+    runWaSqliteActiveBackendMigration.mockRejectedValueOnce(new Error('memory access out of bounds in wasm'));
+    await expect(migrateActiveVaultStorageToWaSqlite()).rejects.toThrow(
+      'wa-sqlite-webview-wasm-memory-unsupported',
+    );
+
+    // General migration error
+    runWaSqliteActiveBackendMigration.mockRejectedValueOnce(new Error('custom migration failure'));
+    await expect(migrateActiveVaultStorageToWaSqlite()).rejects.toThrow('custom migration failure');
   });
 
   it('detects setup from the versioned sqlite fallback before using the legacy setup flag', () => {

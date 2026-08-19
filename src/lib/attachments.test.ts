@@ -20,6 +20,8 @@ import {
   exportAllAttachments,
   importAttachments,
   deleteAttachments,
+  auditAttachmentIntegrity,
+  purgeOrphanedAttachments,
   type AttachmentRecord,
 } from './attachments';
 import { closeVaultSession, openVaultSession } from './vaultSession';
@@ -588,5 +590,30 @@ describe('attachment encryption', () => {
     expect(consoleSpy).toHaveBeenCalled();
 
     consoleSpy.mockRestore();
+  });
+
+  it('audits attachment referential integrity and detects missing records', async () => {
+    openTestVaultSession();
+    await saveAttachment('att-exist', new File([bytes('test')], 'test.txt', { type: 'text/plain' }));
+
+    const report = await auditAttachmentIntegrity([
+      { attachments: [{ id: 'att-exist' }, { id: 'att-missing' }] },
+      { attachments: [] },
+    ]);
+
+    expect(report.referencedCount).toBe(2);
+    expect(report.missingIds).toEqual(['att-missing']);
+  });
+
+  it('purges orphaned attachments not present in active vault items', async () => {
+    openTestVaultSession();
+    await saveAttachment('att-active', new File([bytes('test 1')], 'test1.txt', { type: 'text/plain' }));
+    await saveAttachment('att-orphan', new File([bytes('test 2')], 'test2.txt', { type: 'text/plain' }));
+
+    const purgedCount = await purgeOrphanedAttachments(['att-active']);
+    expect(purgedCount).toBe(1);
+
+    const remaining = await exportAllAttachments();
+    expect(remaining.map((r) => r.id)).toEqual(['att-active']);
   });
 });
