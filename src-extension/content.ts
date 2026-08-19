@@ -1255,53 +1255,112 @@ function showSavePromptBanner(cred: any) {
 let lastActiveUsername = '';
 let lastActivePassword = '';
 
-// Helper to find the best matching username input associated with a password input
-function findAssociatedUsernameInput(passwordInput: HTMLInputElement): HTMLInputElement | null {
-  const USERNAME_SELECTORS = [
-    'input[autocomplete="username"]',
-    'input[autocomplete="email"]',
-    'input[type="email"]',
-    'input[name*="user" i]',
-    'input[name*="login" i]',
-    'input[name*="email" i]',
-    'input[name*="identifier" i]',
-    'input[id*="user" i]',
-    'input[id*="login" i]',
-    'input[id*="email" i]',
-    'input[id*="identifier" i]',
-    'input[type="text"]'
+function isNonUsernameInput(el: HTMLInputElement): boolean {
+  if (!el || el.type === 'password' || el.type === 'hidden' || el.type === 'submit' || el.type === 'button' || el.type === 'search' || el.type === 'checkbox' || el.type === 'radio' || el.type === 'file') {
+    return true;
+  }
+  if (el.disabled || el.readOnly) return true;
+  if (!isElementVisible(el)) return true;
+
+  const combined = `${el.name || ''} ${el.id || ''} ${el.className || ''} ${el.getAttribute('placeholder') || ''} ${el.getAttribute('aria-label') || ''}`.toLowerCase();
+  
+  const ignoredKeywords = [
+    'search', 'query', 'arama', 'filter', 'filtre', 'captcha', 'recaptcha',
+    'csrf', 'xsrf', 'token', 'otp', 'totp', '2fa', 'pin', 'coupon', 'promo', 'discount',
+    'indirim', 'comment', 'yorum', 'msg', 'message', 'mesaj', 'cvv', 'cvc', 'card', 'kart',
+    'phone', 'tel', 'telefon', 'mobile', 'address', 'adres', 'city', 'sehir', 'zip', 'postakodu'
   ];
 
-  // 1. Search inside the enclosing form
-  if (passwordInput.form) {
-    for (const selector of USERNAME_SELECTORS) {
-      const match = passwordInput.form.querySelector(selector) as HTMLInputElement;
-      if (match && match !== passwordInput && match.type !== 'hidden') {
-        return match;
-      }
+  for (const kw of ignoredKeywords) {
+    if (el.name.toLowerCase() === kw || el.id.toLowerCase() === kw) return true;
+    if (combined.includes(kw) && !combined.includes('user') && !combined.includes('login') && !combined.includes('email') && !combined.includes('kullanici') && !combined.includes('kullanıcı')) {
+      return true;
     }
+  }
+
+  return false;
+}
+
+function scoreUsernameCandidate(el: HTMLInputElement, passwordInput: HTMLInputElement): number {
+  if (isNonUsernameInput(el)) return -1;
+
+  let score = 0;
+  const name = (el.name || '').toLowerCase();
+  const id = (el.id || '').toLowerCase();
+  const placeholder = (el.getAttribute('placeholder') || '').toLowerCase();
+  const autocomplete = (el.getAttribute('autocomplete') || '').toLowerCase();
+  const ariaLabel = (el.getAttribute('aria-label') || '').toLowerCase();
+
+  // Autocomplete standard attribute
+  if (autocomplete === 'username' || autocomplete === 'email') score += 100;
+  else if (autocomplete.includes('username') || autocomplete.includes('email')) score += 80;
+
+  // Type email
+  if (el.type === 'email') score += 90;
+
+  // Strong keyword matches
+  const highKeywords = ['username', 'login', 'email', 'user_id', 'userid', 'loginfmt', 'identifier', 'user_name', 'eposta', 'kullanici', 'kullanıcı'];
+  for (const kw of highKeywords) {
+    if (name === kw || id === kw) score += 85;
+    else if (name.includes(kw) || id.includes(kw)) score += 70;
+    if (placeholder.includes(kw) || ariaLabel.includes(kw)) score += 60;
+  }
+
+  // Preceding closeness bonus (closer to password input in DOM is more likely to be username)
+  if ((el.compareDocumentPosition(passwordInput) & Node.DOCUMENT_POSITION_PRECEDING) !== 0) {
+    score += 20;
+  }
+
+  // If the input has a non-empty value, major priority boost
+  if (el.value && el.value.trim().length > 0) {
+    score += 50;
+  }
+
+  return score;
+}
+
+function pickBestUsernameCandidate(inputs: HTMLInputElement[], passwordInput: HTMLInputElement): HTMLInputElement | null {
+  let bestInput: HTMLInputElement | null = null;
+  let bestScore = 0;
+
+  for (const input of inputs) {
+    if (input === passwordInput) continue;
+    const score = scoreUsernameCandidate(input, passwordInput);
+    if (score > bestScore) {
+      bestScore = score;
+      bestInput = input;
+    }
+  }
+
+  return bestInput;
+}
+
+// Helper to find the best matching username input associated with a password input
+function findAssociatedUsernameInput(passwordInput: HTMLInputElement): HTMLInputElement | null {
+  // 1. Search inside the enclosing form
+  const form = passwordInput.form || passwordInput.closest('form');
+  if (form) {
+    const inputs = Array.from(form.querySelectorAll('input')) as HTMLInputElement[];
+    const best = pickBestUsernameCandidate(inputs, passwordInput);
+    if (best) return best;
   }
 
   // 2. Search upwards through ancestor containers (up to 6 levels)
   let parent = passwordInput.parentElement;
   let depth = 0;
   while (parent && depth < 6 && parent !== document.body) {
-    for (const selector of USERNAME_SELECTORS) {
-      const match = parent.querySelector(selector) as HTMLInputElement;
-      if (match && match !== passwordInput && match.type !== 'hidden') {
-        return match;
-      }
-    }
+    const inputs = Array.from(parent.querySelectorAll('input')) as HTMLInputElement[];
+    const best = pickBestUsernameCandidate(inputs, passwordInput);
+    if (best) return best;
     parent = parent.parentElement;
     depth++;
   }
 
   // 3. Fallback: Search all preceding visible text/email inputs in document order
-  const allInputs = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([type="password"]):not([type="submit"]):not([type="button"])')) as HTMLInputElement[];
-  const preceding = allInputs.filter(input => (input.compareDocumentPosition(passwordInput) & Node.DOCUMENT_POSITION_PRECEDING) !== 0 && input.value);
-  if (preceding.length > 0) {
-    return preceding[preceding.length - 1]!;
-  }
+  const allInputs = Array.from(document.querySelectorAll('input')) as HTMLInputElement[];
+  const preceding = allInputs.filter(input => (input.compareDocumentPosition(passwordInput) & Node.DOCUMENT_POSITION_PRECEDING) !== 0);
+  const bestPreceding = pickBestUsernameCandidate(preceding, passwordInput);
+  if (bestPreceding) return bestPreceding;
 
   return null;
 }
@@ -1340,19 +1399,29 @@ function updateDraftCredential(inputEl: HTMLInputElement) {
   if (inputEl.type === 'password') {
     password = inputEl.value;
     const userInput = findAssociatedUsernameInput(inputEl);
-    username = userInput ? userInput.value.trim() : lastActiveUsername;
+    username = userInput?.value ? userInput.value.trim() : (lastActiveUsername || '');
   } else {
-    username = inputEl.value.trim();
-    if (username) {
-      lastActiveUsername = username;
+    // If user is typing in a non-password field:
+    // Ignore search bars, comments, captcha, etc.
+    if (isNonUsernameInput(inputEl)) {
+      return;
     }
+
+    const val = inputEl.value.trim();
+    if (val && isLoginInput(inputEl)) {
+      lastActiveUsername = val;
+      username = val;
+    } else if (val) {
+      username = val;
+    }
+
     const pwInput = findPasswordInput(inputEl.form || inputEl.parentElement);
     if (pwInput) {
       password = pwInput.value;
     }
   }
 
-  if (username) lastActiveUsername = username;
+  if (username && isLoginInput(inputEl)) lastActiveUsername = username;
   if (password) lastActivePassword = password;
 
   if (password.length < 4) return;
@@ -1377,7 +1446,7 @@ function handleFormSubmit(formOrEl?: HTMLElement | null) {
   let username = '';
   if (passwordInput) {
     const userInput = findAssociatedUsernameInput(passwordInput);
-    username = userInput ? userInput.value.trim() : '';
+    username = userInput?.value ? userInput.value.trim() : '';
   }
   if (!username) {
     username = lastActiveUsername;
