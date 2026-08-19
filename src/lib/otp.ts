@@ -128,12 +128,17 @@ export async function generateTOTP(secret: string, options: TOTPOptions = {}): P
 
     const counter = Math.floor(Math.floor(timestampMs / 1000) / periodSeconds);
     const digest = await digestTotp(key, counterToBytes(counter), algorithm);
-    const offset = digest[digest.length - 1] & 0x0f;
+    const lastByte = digest[digest.length - 1] ?? 0;
+    const offset = lastByte & 0x0f;
+    const b0 = digest[offset] ?? 0;
+    const b1 = digest[offset + 1] ?? 0;
+    const b2 = digest[offset + 2] ?? 0;
+    const b3 = digest[offset + 3] ?? 0;
     const binary =
-      ((digest[offset] & 0x7f) << 24) |
-      ((digest[offset + 1] & 0xff) << 16) |
-      ((digest[offset + 2] & 0xff) << 8) |
-      (digest[offset + 3] & 0xff);
+      ((b0 & 0x7f) << 24) |
+      ((b1 & 0xff) << 16) |
+      ((b2 & 0xff) << 8) |
+      (b3 & 0xff);
     const modulo = 10 ** digits;
     const code = (binary % modulo).toString().padStart(digits, '0');
 

@@ -240,14 +240,14 @@ describe('LockScreen', () => {
     expect(password.type).toBe('password');
     expect(confirmation.type).toBe('password');
 
-    fireEvent.click(toggleButtons[0]);
-    fireEvent.click(toggleButtons[1]);
+    fireEvent.click(toggleButtons[0]!);
+    fireEvent.click(toggleButtons[1]!);
 
     expect(password.type).toBe('text');
     expect(confirmation.type).toBe('text');
 
-    fireEvent.click(toggleButtons[0]);
-    fireEvent.click(toggleButtons[1]);
+    fireEvent.click(toggleButtons[0]!);
+    fireEvent.click(toggleButtons[1]!);
 
     expect(password.type).toBe('password');
     expect(confirmation.type).toBe('password');

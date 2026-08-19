@@ -89,8 +89,8 @@ The first practical mutation gate runs against critical library helpers with:
 The same gate validates the native-anchored asset integrity manifest: all production files are hashed with SHA-256, the canonical root is embedded by the Rust build script, and the runtime verifier compares every served asset against that root. This is defense in depth for detecting modified packages, not a replacement for Windows/macOS code signing, Android APK signing, or trusted distribution checksums.
 
 ```bash
-npm run test:mutation:core:dry
-npm run test:mutation:core
+npm run test:mutation:dry
+npm run test:mutation
 ```
 
 Current mutation scope:
@@ -422,7 +422,7 @@ Recently improved:
 ## Next Gates
 
 - Add Android release gate:
-  - `npm run lint`
+  - `npm run typecheck`
   - `npm run test:unit`
   - `npm run build`
   - `npm run android:release:version:check`

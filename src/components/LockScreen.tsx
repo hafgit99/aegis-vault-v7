@@ -31,7 +31,6 @@ import {
   verifyMasterPassword,
 } from '../lib/storage';
 import {
-  authenticateBiometric,
   authenticateBiometricCredentials,
   isBiometricEnabled,
   isBiometricSupported,
@@ -52,7 +51,8 @@ import { LockScreenSecretKeySection } from './lock/LockScreenSecretKeySection';
 import { LockScreenBiometricSection } from './lock/LockScreenBiometricSection';
 import { LockScreenResetModal } from './lock/LockScreenResetModal';
 import { LockScreenRecoveryModal } from './lock/LockScreenRecoveryModal';
-import { LegalTermsModal, LegalTermsTab } from './lock/LegalTermsModal';
+import type { LegalTermsTab } from './lock/LegalTermsModal';
+import { LegalTermsModal } from './lock/LegalTermsModal';
 import { PasswordStrengthMeter } from './common/PasswordStrengthMeter';
 
 const LOCKOUT_STORAGE_KEY = 'aegis_lockout_state';
@@ -289,7 +289,7 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
       triggerShake();
       console.error('[AegisVault] Unlock/setup error:', err);
       const message = err instanceof Error ? err.message : String(err);
-      setError(`${t('lock.error.cryptoFailed') || 'Vault initialization failed.'} (${message})`);
+      setError(`${t('lock.error.cryptoFailed', 'Vault initialization failed.')} (${message})`);
     }
   };
 

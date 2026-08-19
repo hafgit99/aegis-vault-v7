@@ -8,10 +8,9 @@ import {
   X, 
   AlertTriangle, 
   CheckCircle2, 
-  Loader2, 
   Layers 
 } from 'lucide-react';
-import { AppNotification, TagDefinition, VaultFolder, VaultItem } from '../types';
+import type { AppNotification, TagDefinition, VaultFolder, VaultItem } from '../types';
 import { generatePassword } from '../lib/security';
 import { saveAttachment, getAttachmentBlob } from '../lib/attachments';
 import { secureRandomIndex, secureRandomToken } from '../lib/random';
@@ -25,6 +24,8 @@ import { VaultFormIdentityFields } from './vault-form/VaultFormIdentityFields';
 import { VaultFormPasskeyFields } from './vault-form/VaultFormPasskeyFields';
 import { VaultFormNoteFields } from './vault-form/VaultFormNoteFields';
 import { VaultFormAttachmentSection } from './vault-form/VaultFormAttachmentSection';
+import { Modal } from './ui/Modal';
+import { Button } from './ui/Button';
 
 interface VaultFormModalProps {
   isOpen: boolean;
@@ -210,14 +211,14 @@ export default function VaultFormModal({
     e.preventDefault();
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      handleFileSelected(files[0]);
+      handleFileSelected(files[0]!);
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      handleFileSelected(files[0]);
+      handleFileSelected(files[0]!);
     }
   };
 
@@ -333,8 +334,8 @@ export default function VaultFormModal({
       url: url.trim(),
       totpSecret: totpSecret.trim(),
       notes: notes.trim(),
-      createdAt: editingItem?.createdAt || new Date().toISOString().split('T')[0],
-      updatedAt: new Date().toISOString().split('T')[0],
+      createdAt: editingItem?.createdAt || (new Date().toISOString().split('T')[0] ?? ''),
+      updatedAt: new Date().toISOString().split('T')[0] ?? '',
       category,
       favorite: editingItem?.favorite || false,
 
@@ -374,7 +375,7 @@ export default function VaultFormModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center safe-modal bg-black/75 backdrop-blur-md overflow-hidden select-none">
+    <Modal open={isOpen} onClose={onClose} zIndex={100} className="safe-modal">
       <div className="w-full max-w-2xl max-h-[calc(100dvh-56px)] sm:max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-24px)] bg-surface-container border border-outline-variant/30 rounded-2xl overflow-hidden custom-shadow relative flex flex-col">
         
         {/* Header styling streak */}
@@ -518,36 +519,36 @@ export default function VaultFormModal({
 
           {/* Footer Action buttons row */}
           <div className="sticky bottom-0 z-10 flex justify-end gap-3 pt-3 sm:pt-4 border-t border-outline-variant/10 bg-surface-container/95 p-4 sm:p-6 -mx-4 sm:-mx-6 -mb-4 sm:-mb-6 safe-bottom">
-            <button
+            <Button
               type="button"
               onClick={onClose}
               disabled={isUploading}
-              className="px-5 py-2.5 bg-surface-lowest hover:bg-surface-low border border-outline-variant/15 rounded-xl font-bold text-xs text-on-surface transition-colors cursor-pointer focus:outline-none disabled:opacity-50"
+              variant="secondary"
+              size="md"
             >
               {t('vaultForm.footer.cancel')}
-            </button>
-            <button
+            </Button>
+            <Button
               data-testid="vault-item-save-button"
               type="submit"
               disabled={isUploading}
-              className="px-6 py-2.5 bg-brand-primary text-brand-on-primary rounded-xl font-bold text-xs hover:brightness-110 active:scale-95 transition-all cursor-pointer shadow-lg shadow-brand-primary/10 flex items-center gap-1.5 focus:outline-none disabled:opacity-50"
+              variant="primary"
+              size="md"
+              loading={isUploading}
             >
               {isUploading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>{t('vaultForm.footer.processing')}</span>
-                </>
+                <span>{t('vaultForm.footer.processing')}</span>
               ) : (
                 <>
                   <CheckCircle2 className="w-4 h-4" />
                   <span>{t('vaultForm.footer.save')}</span>
                 </>
               )}
-            </button>
+            </Button>
           </div>
 
         </form>
       </div>
-    </div>
+    </Modal>
   );
 }

@@ -3,6 +3,8 @@ import { X, Upload, User, Image as ImageIcon, Check } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { AVATAR_GRADIENT_PRESETS, avatarClassNameForValue, isAvatarGradient } from '../lib/avatarStyles';
+import { Modal } from './ui/Modal';
+import { Button } from './ui/Button';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -70,7 +72,7 @@ export default function ProfileModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
+    <Modal open={isOpen} onClose={onClose} zIndex={50}>
       <div className="w-full max-w-md bg-surface-lowest border border-outline-variant/15 rounded-2xl shadow-2xl relative overflow-hidden">
         {/* Top visual style */}
         <div className="h-2 bg-brand-primary w-full" />
@@ -192,22 +194,26 @@ export default function ProfileModal({
 
           {/* Form Actions */}
           <div className="flex items-center gap-3 pt-2">
-            <button
+            <Button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl border border-outline-variant/15 bg-surface-high hover:bg-[#202220] font-bold text-xs text-on-surface hover:text-brand-primary active:scale-95 transition-all cursor-pointer"
+              variant="secondary"
+              size="md"
+              className="flex-1"
             >
               {t('profile.cancel')}
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="flex-1 py-2.5 bg-brand-primary hover:bg-brand-primary/90 text-brand-on-primary font-bold text-xs rounded-xl active:scale-95 transition-all cursor-pointer shadow-md"
+              variant="primary"
+              size="md"
+              className="flex-1"
             >
               {t('profile.save')}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
-    </div>
+    </Modal>
   );
 }

@@ -4,10 +4,11 @@
  */
 
 import { Trash2 } from 'lucide-react';
+import type { TFunction } from '../../i18n/LanguageContext';
 
 interface SettingsDangerZoneProps {
   onResetAll: () => void;
-  t: (key: string) => string;
+  t: TFunction;
 }
 
 export function SettingsDangerZone({ onResetAll, t }: SettingsDangerZoneProps) {

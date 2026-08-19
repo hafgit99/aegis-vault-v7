@@ -1,5 +1,5 @@
 import { useLanguage } from '../i18n/LanguageContext';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 
 interface SecureNoteDetailProps {
   item: VaultItem;

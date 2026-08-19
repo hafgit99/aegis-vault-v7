@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 
 type MobileActiveView = 'list' | 'detail';
 

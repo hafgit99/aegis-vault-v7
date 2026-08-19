@@ -2,7 +2,7 @@ import { Clock } from 'lucide-react';
 import React from 'react';
 
 import { useLanguage } from '../i18n/LanguageContext';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 import RecentVaultItem from './RecentVaultItem';
 
 interface RecentVaultPanelProps {

@@ -5,7 +5,7 @@
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 import { getVaultItems, saveVaultItem } from '../lib/storage';
 import { useVaultData } from './useVaultData';
 

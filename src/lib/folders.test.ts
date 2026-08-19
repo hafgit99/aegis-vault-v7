@@ -129,7 +129,7 @@ describe('Folders Library', () => {
 
     const kids = childrenOf(library, f1.id);
     expect(kids.length).toBe(1);
-    expect(kids[0].id).toBe(f2.id);
+    expect(kids[0]!.id).toBe(f2.id);
 
     const ancestors = ancestorsOf(library, f3.id);
     expect(ancestors.map(f => f.id)).toContain(f1.id);

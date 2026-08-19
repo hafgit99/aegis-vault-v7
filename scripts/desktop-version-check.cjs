@@ -1,30 +1,12 @@
 const fs = require('fs');
 const path = require('path');
+const { normalizeVersion, readJson, pass, failExit: fail } = require('./release-utils.cjs');
 
 const repoRoot = path.resolve(__dirname, '..');
 const packageJsonPath = path.join(repoRoot, 'package.json');
 const tauriConfigPath = path.join(repoRoot, 'src-tauri', 'tauri.conf.json');
 const cargoTomlPath = path.join(repoRoot, 'src-tauri', 'Cargo.toml');
 const cargoLockPath = path.join(repoRoot, 'src-tauri', 'Cargo.lock');
-
-function normalizeVersion(version) {
-  const parts = String(version || '')
-    .trim()
-    .split('.')
-    .map((part) => Number.parseInt(part, 10));
-
-  if (parts.some((part) => !Number.isFinite(part))) return String(version || '').trim();
-
-  while (parts.length > 3 && parts[parts.length - 1] === 0) {
-    parts.pop();
-  }
-
-  return parts.join('.');
-}
-
-function readJson(file) {
-  return JSON.parse(fs.readFileSync(file, 'utf8'));
-}
 
 function readCargoPackageVersion(file) {
   const contents = fs.readFileSync(file, 'utf8');
@@ -42,15 +24,6 @@ function readCargoLockPackageVersion(file, packageName) {
     return section.match(/(?:^|\n)version\s*=\s*"([^"]+)"/)?.[1] || null;
   }
   return null;
-}
-
-function fail(message) {
-  console.log('FAIL ' + message);
-  process.exitCode = 1;
-}
-
-function pass(message) {
-  console.log('PASS ' + message);
 }
 
 const packageJson = readJson(packageJsonPath);

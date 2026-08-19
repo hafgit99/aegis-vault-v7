@@ -4,10 +4,10 @@
  */
 
 import React from 'react';
-import { ShieldCheck, AlertTriangle, AlertCircle, Sparkles, ArrowRight, User, WifiOff, Lock, Clock, Link, TrendingUp } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, AlertCircle, Sparkles, ArrowRight, User, WifiOff, Clock, Link, TrendingUp } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 import { runVaultAudit, calculatePasswordScore, getPasswordAgeInDays, isUnsecureHttpUrl, supportsTwoFactor, getAuditScoreHistory } from '../lib/security';
 import { checkPasswordAgainstHibp, isHibpCheckEnabled, setHibpCheckEnabled } from '../lib/hibp';
 
@@ -93,7 +93,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
   });
   const reusedItems = items.filter((i) => {
     const pw = i.password || '';
-    return pw && passwordFreq[pw] > 1;
+    return pw && (passwordFreq[pw] ?? 0) > 1;
   });
   const pwnedItems = items.filter((i) => {
     const pw = i.password || '';
@@ -142,11 +142,11 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
   // Bezier curve path generator
   const bezierPath = React.useMemo(() => {
     if (points.length === 0) return '';
-    if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
-    let d = `M ${points[0].x} ${points[0].y}`;
+    if (points.length === 1) return `M ${points[0]!.x} ${points[0]!.y}`;
+    let d = `M ${points[0]!.x} ${points[0]!.y}`;
     for (let i = 0; i < points.length - 1; i++) {
-      const p0 = points[i];
-      const p1 = points[i + 1];
+      const p0 = points[i]!;
+      const p1 = points[i + 1]!;
       const cpX1 = p0.x + (p1.x - p0.x) / 3;
       const cpY1 = p0.y;
       const cpX2 = p0.x + 2 * (p1.x - p0.x) / 3;
@@ -158,7 +158,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
 
   const bezierAreaPath = React.useMemo(() => {
     if (points.length === 0) return '';
-    return `${bezierPath} L ${points[points.length - 1].x} 95 L ${points[0].x} 95 Z`;
+    return `${bezierPath} L ${points[points.length - 1]!.x} 95 L ${points[0]!.x} 95 Z`;
   }, [points, bezierPath]);
 
   // Custom feedback text based on vault score
@@ -237,7 +237,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
               <TrendingUp className="w-4 h-4 text-brand-tertiary" />
               <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">{t('securityAudit.trendTitle')}</span>
             </div>
-            <span className="text-[10px] text-on-surface-variant font-mono">{t('securityAudit.lastAudits').replace('{count}', String(history.length))}</span>
+            <span className="text-[10px] text-on-surface-variant font-mono">{t('securityAudit.lastAudits', { count: history.length })}</span>
           </div>
 
           <div className="relative h-20 w-full mt-2">
@@ -261,9 +261,9 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
               {/* Vertical hover alignment line */}
               {hoveredIndex !== null && (
                 <line 
-                  x1={points[hoveredIndex].x} 
+                  x1={points[hoveredIndex]!.x} 
                   y1="10" 
-                  x2={points[hoveredIndex].x} 
+                  x2={points[hoveredIndex]!.x} 
                   y2="90" 
                   stroke="var(--brand-tertiary)" 
                   strokeWidth="1.2" 
@@ -326,11 +326,11 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
                 className="absolute pointer-events-none bg-surface-container/95 border border-brand-tertiary/20 backdrop-blur-md rounded-lg p-2 text-left shadow-xl animate-in fade-in zoom-in-95 duration-150 z-20 -translate-x-1/2 -translate-y-[125%]"
               >
                 <div className="text-[10px] text-on-surface-variant/80 font-mono font-bold whitespace-nowrap">
-                  {points[hoveredIndex].date}
+                  {points[hoveredIndex]!.date}
                 </div>
                 <div className="text-xs font-bold text-brand-tertiary flex items-center gap-1.5 mt-0.5 whitespace-nowrap">
                   <div className="w-1.5 h-1.5 rounded-full bg-brand-tertiary animate-pulse" />
-                  {t('securityAudit.securityLabel')}: %{points[hoveredIndex].score}
+                  {t('securityAudit.securityLabel')}: %{points[hoveredIndex]!.score}
                 </div>
               </div>
             )}
@@ -387,14 +387,14 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
                   type="button"
                   data-testid="security-audit-hibp-toggle"
                   onClick={handleToggleHibp}
-                  title={hibpEnabled ? 'HIBP K-Anonymity aktif (Kapatmak için tıklayın)' : 'HIBP kapalı (Etkinleştirmek için tıklayın)'}
+                  title={hibpEnabled ? t('securityAudit.hibpToggleEnabled') : t('securityAudit.hibpToggleDisabled')}
                   className={`text-[9px] font-bold px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
                     hibpEnabled
                       ? 'bg-brand-primary/20 text-brand-primary border-brand-primary/30'
                       : 'bg-outline-variant/10 text-on-surface-variant border-outline-variant/20'
                   }`}
                 >
-                  {hibpEnabled ? 'OPT-IN ON' : 'OFFLINE'}
+                  {hibpEnabled ? t('securityAudit.hibpStatusOn') : t('securityAudit.hibpStatusOffline')}
                 </button>
                 {hibpEnabled && (
                   hibpStatus === 'unavailable' ? (
@@ -411,7 +411,7 @@ export default function SecurityAudit({ items, onSelectItem }: SecurityAuditProp
               </span>
               <span className="text-xs text-on-surface-variant">
                 {!hibpEnabled
-                  ? (t('securityAudit.pwnedDisabled') || 'Offline (HIBP Kapalı)')
+                  ? t('securityAudit.pwnedDisabled')
                   : hibpStatus === 'checking'
                     ? t('securityAudit.pwnedChecking')
                     : hibpStatus === 'unavailable'

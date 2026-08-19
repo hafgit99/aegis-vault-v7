@@ -28,30 +28,6 @@ fs.mkdirSync(outDir, { recursive: true });
 if (batBackup) fs.writeFileSync(batPath, batBackup);
 if (jsonBackup) fs.writeFileSync(manifestPath, jsonBackup);
 
-// Ensure source icons directory exists and copy icons from Tauri
-const srcIconsDir = path.join(srcDir, 'icons');
-if (!fs.existsSync(srcIconsDir)) {
-  fs.mkdirSync(srcIconsDir, { recursive: true });
-}
-
-// Copy Tauri icons to extension source icons if missing
-const tauriIconsSrc = path.resolve('src-tauri/icons');
-if (fs.existsSync(tauriIconsSrc)) {
-  const mapping = {
-    '32x32.png': 'icon16.png',
-    '64x64.png': 'icon48.png',
-    '128x128.png': 'icon128.png'
-  };
-  
-  for (const [srcName, destName] of Object.entries(mapping)) {
-    const srcPath = path.join(tauriIconsSrc, srcName);
-    const destPath = path.join(srcIconsDir, destName);
-    if (fs.existsSync(srcPath) && !fs.existsSync(destPath)) {
-      fs.copyFileSync(srcPath, destPath);
-    }
-  }
-}
-
 async function build() {
   console.log('Compiling extension TS files using esbuild (' + (isDebugBuild ? 'debug' : 'release') + ')...');
   await esbuild.build({
@@ -69,10 +45,10 @@ async function build() {
     legalComments: 'none',
   });
 
-  // Sync tokens.css from src/styles/tokens.css to src-extension and outDir
+  // Sync tokens.css from src/styles/tokens.css into the build output only.
+  // The source tree (src-extension/) is left untouched to avoid drift.
   const sourceTokensPath = path.resolve('src/styles/tokens.css');
   if (fs.existsSync(sourceTokensPath)) {
-    fs.copyFileSync(sourceTokensPath, path.join(srcDir, 'tokens.css'));
     fs.copyFileSync(sourceTokensPath, path.join(outDir, 'tokens.css'));
   } else if (fs.existsSync(path.join(srcDir, 'tokens.css'))) {
     fs.copyFileSync(path.join(srcDir, 'tokens.css'), path.join(outDir, 'tokens.css'));
@@ -83,12 +59,13 @@ async function build() {
   fs.copyFileSync(path.join(srcDir, 'styles.css'), path.join(outDir, 'styles.css'));
   fs.copyFileSync(path.join(srcDir, 'manifest.json'), path.join(outDir, 'manifest.json'));
 
-  // Copy icons folder to dist
+  // Copy icons folder to dist (source lives in src-extension/icons, tracked in git)
   const distIconsDir = path.join(outDir, 'icons');
   if (!fs.existsSync(distIconsDir)) {
     fs.mkdirSync(distIconsDir, { recursive: true });
   }
 
+  const srcIconsDir = path.join(srcDir, 'icons');
   if (fs.existsSync(srcIconsDir)) {
     const files = fs.readdirSync(srcIconsDir);
     for (const file of files) {

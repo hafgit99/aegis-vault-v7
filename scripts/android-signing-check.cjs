@@ -1,6 +1,7 @@
 const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { pass, warn, failExit: fail } = require('./release-utils.cjs');
 const { loadAndroidSigningEnv } = require('./android-signing-env.cjs');
 
 const repoRoot = path.resolve(__dirname, '..');
@@ -13,19 +14,6 @@ const required = [
 
 function env(name) {
   return process.env[name] || '';
-}
-
-function fail(message) {
-  console.log(`FAIL ${message}`);
-  process.exitCode = 1;
-}
-
-function pass(message) {
-  console.log(`PASS ${message}`);
-}
-
-function warn(message) {
-  console.log(`WARN ${message}`);
 }
 
 function keytoolExecutable() {

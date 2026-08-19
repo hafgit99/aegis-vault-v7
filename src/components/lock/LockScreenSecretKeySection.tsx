@@ -6,7 +6,6 @@
 import React from 'react';
 import { KeyRound, Download } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { isRememberSecretKeySupported } from '../../lib/storage';
 
 interface LockScreenSecretKeySectionProps {
   secretKey: string;
@@ -28,7 +27,6 @@ export function LockScreenSecretKeySection({
   onDownloadEmergencyKit,
 }: LockScreenSecretKeySectionProps) {
   const { t } = useLanguage();
-  const isSecureSupported = isRememberSecretKeySupported();
 
   if (isSetup && !requiresSecretKey) {
     return null;

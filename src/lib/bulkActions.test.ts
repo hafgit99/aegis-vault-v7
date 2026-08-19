@@ -4,8 +4,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { applyBulkAction, bulkSoftDelete, bulkRestore, bulkPermanentDelete } from './bulkActions';
-import { VaultItem } from '../types';
+import { applyBulkAction } from './bulkActions';
+import type { VaultItem } from '../types';
 
 const mockItems = (): VaultItem[] => [
   {
@@ -46,8 +46,8 @@ describe('Bulk Actions Library', () => {
 
   it('restores soft-deleted items', () => {
     const initial = mockItems();
-    initial[0].deleted = true;
-    initial[0].deletedAt = new Date().toISOString();
+    initial[0]!.deleted = true;
+    initial[0]!.deletedAt = new Date().toISOString();
 
     const res = applyBulkAction(initial, {
       kind: 'restore',

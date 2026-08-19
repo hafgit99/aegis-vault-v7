@@ -43,6 +43,22 @@ OPTIONS:
 
 // ─── Generator Helpers ────────────────────────────────────────────────────────
 
+/**
+ * Rejection-sampling random index. Avoids the modulo-bias introduced by
+ * `bytes[i] % max`; consistent with the extension's `secureRandomIndex`.
+ */
+function secureRandomIndex(max) {
+  if (!Number.isSafeInteger(max) || max <= 0) {
+    throw new Error('Invalid secure random range');
+  }
+  const limit = Math.floor(0x100000000 / max) * max;
+  const sample = new Uint32Array(1);
+  do {
+    crypto.randomFillSync(sample);
+  } while (sample[0] >= limit);
+  return sample[0] % max;
+}
+
 function generateRandomPassword(length = 24, useSymbols = true) {
   const charLower = 'abcdefghijklmnopqrstuvwxyz';
   const charUpper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -52,32 +68,58 @@ function generateRandomPassword(length = 24, useSymbols = true) {
   let charset = charLower + charUpper + charNum;
   if (useSymbols) charset += charSym;
 
-  const bytes = crypto.randomBytes(length);
   let password = '';
   for (let i = 0; i < length; i++) {
-    password += charset[bytes[i] % charset.length];
+    password += charset[secureRandomIndex(charset.length)];
   }
   return password;
 }
 
+const DICEWARE_TARGET_WORD_POOL_SIZE = 7776;
+
+function loadDicewareWords() {
+  const wordsJsonPath = path.join(__dirname, 'diceware-words.json');
+  let raw;
+  try {
+    raw = JSON.parse(fs.readFileSync(wordsJsonPath, 'utf8'));
+  } catch {
+    // Fallback for environments where the shared word list is unavailable.
+    return ['apple', 'river', 'stone', 'cloud', 'forest', 'planet', 'bright', 'summer',
+      'breeze', 'autumn', 'spring', 'winter', 'sunset', 'sunrise', 'starry', 'ocean',
+      'island', 'valley', 'canyon', 'meadow', 'garden', 'flower', 'pebble', 'golden',
+      'silver', 'bronze', 'copper', 'iron', 'wood', 'marble', 'glass', 'cotton'];
+  }
+  return Array.isArray(raw.english) && raw.english.length > 0 ? raw.english : raw.turkish;
+}
+
+function expandWordPool(baseWords) {
+  const words = [...baseWords];
+  const seen = new Set(words);
+  for (let left = 0; left < baseWords.length && words.length < DICEWARE_TARGET_WORD_POOL_SIZE; left++) {
+    for (let right = 0; right < baseWords.length && words.length < DICEWARE_TARGET_WORD_POOL_SIZE; right++) {
+      const candidate = `${baseWords[left]}${baseWords[right]}`;
+      if (!seen.has(candidate)) {
+        seen.add(candidate);
+        words.push(candidate);
+      }
+    }
+  }
+  return words;
+}
+
+const DICEWARE_WORD_POOL = expandWordPool(loadDicewareWords());
+
 function generateDicewarePassphrase(wordCount = 4) {
-  const wordList = [
-    'aegis', 'vault', 'shield', 'crypto', 'argon', 'secure', 'cipher', 'matrix',
-    'quantum', 'phoenix', 'titan', 'vector', 'anchor', 'beacon', 'breeze', 'cobalt',
-    'crystal', 'dragon', 'ember', 'falcon', 'galaxy', 'harbor', 'horizon', 'island',
-    'jasper', 'kingdom', 'lantern', 'meadow', 'nebula', 'ocean', 'paladin', 'quest',
-  ];
   const words = [];
   for (let i = 0; i < wordCount; i++) {
-    const idx = crypto.randomInt(0, wordList.length);
-    words.push(wordList[idx]);
+    words.push(DICEWARE_WORD_POOL[secureRandomIndex(DICEWARE_WORD_POOL.length)]);
   }
   return words.join('-');
 }
 
 // ─── Vault Parsing Helpers ────────────────────────────────────────────────────
 
-function parseVaultEnvelope(filePath, password) {
+function parseVaultEnvelope(filePath, _password) {
   if (!fs.existsSync(filePath)) {
     throw new Error(`Vault file not found at path: ${filePath}`);
   }

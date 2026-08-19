@@ -1,4 +1,4 @@
-import { AppConfirmConfig, VaultItem } from '../types';
+import type { AppConfirmConfig, VaultItem } from '../types';
 import { deletePermanently, emptyTrashComplete, moveToTrash, restoreFromTrash } from '../lib/storage';
 import { useLanguage } from '../i18n/LanguageContext';
 
@@ -36,7 +36,7 @@ export function useTrashActions({
           clearCopiedField();
 
           const activeRemaining = updated.filter((item) => !item.deleted);
-          setSelectedItem(activeRemaining.length > 0 ? activeRemaining[0] : null);
+          setSelectedItem(activeRemaining.length > 0 ? activeRemaining[0]! : null);
         })();
       },
     });

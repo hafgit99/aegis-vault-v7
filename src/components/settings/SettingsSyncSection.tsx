@@ -5,7 +5,8 @@
 
 import React from 'react';
 import { Cloud, Wifi, Check, CloudOff, RotateCcw, CheckCircle, AlertCircle, RefreshCw, Server, Database } from 'lucide-react';
-import { SyncProviderType } from '../../lib/sync';
+import type { SyncProviderType } from '../../lib/sync';
+import type { TFunction } from '../../i18n/LanguageContext';
 
 export interface SettingsSyncSectionProps {
   syncProvider: SyncProviderType;
@@ -39,7 +40,7 @@ export interface SettingsSyncSectionProps {
   onSyncSave: () => void;
   onSyncDisable: () => void;
   onSyncNow: () => void;
-  t: (key: string) => string;
+  t: TFunction;
 }
 
 export function SettingsSyncSection({
@@ -99,7 +100,7 @@ export function SettingsSyncSection({
             }`}
           >
             <CloudOff className="w-3.5 h-3.5" />
-            <span>Devre Dışı</span>
+            <span>{t('settings.sync.provider.disabledShort')}</span>
           </button>
 
           <button
@@ -178,57 +179,57 @@ export function SettingsSyncSection({
         <div className="space-y-3 pt-2">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1 sm:col-span-2">
-              <label className="block text-xs font-medium text-on-surface-variant">S3 Endpoint URL</label>
+              <label className="block text-xs font-medium text-on-surface-variant">{t('settings.sync.s3.endpointUrl')}</label>
               <input
                 id="sync-s3-endpoint"
                 type="url"
                 value={s3Endpoint}
                 onChange={(e) => setS3Endpoint(e.target.value)}
-                placeholder="https://s3.us-east-1.amazonaws.com veya https://minio.example.com"
+                placeholder={t('settings.sync.s3.endpointPlaceholder')}
                 className="w-full bg-surface-lowest border border-outline-variant/20 rounded-lg px-3 py-2 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:ring-1 focus:ring-brand-primary"
               />
             </div>
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-on-surface-variant">Region (Bölge)</label>
+              <label className="block text-xs font-medium text-on-surface-variant">{t('settings.sync.s3.region')}</label>
               <input
                 id="sync-s3-region"
                 type="text"
                 value={s3Region}
                 onChange={(e) => setS3Region(e.target.value)}
-                placeholder="us-east-1 (varsayılan)"
+                placeholder={t('settings.sync.s3.regionPlaceholder')}
                 className="w-full bg-surface-lowest border border-outline-variant/20 rounded-lg px-3 py-2 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:ring-1 focus:ring-brand-primary"
               />
             </div>
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-on-surface-variant">Bucket Adı</label>
+              <label className="block text-xs font-medium text-on-surface-variant">{t('settings.sync.s3.bucket')}</label>
               <input
                 id="sync-s3-bucket"
                 type="text"
                 value={s3Bucket}
                 onChange={(e) => setS3Bucket(e.target.value)}
-                placeholder="my-aegis-vault-bucket"
+                placeholder={t('settings.sync.s3.bucketPlaceholder')}
                 className="w-full bg-surface-lowest border border-outline-variant/20 rounded-lg px-3 py-2 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:ring-1 focus:ring-brand-primary"
               />
             </div>
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-on-surface-variant">Access Key ID</label>
+              <label className="block text-xs font-medium text-on-surface-variant">{t('settings.sync.s3.accessKeyId')}</label>
               <input
                 id="sync-s3-access-key"
                 type="text"
                 value={s3AccessKeyId}
                 onChange={(e) => setS3AccessKeyId(e.target.value)}
-                placeholder="Örn: your-access-key-id"
+                placeholder={t('settings.sync.s3.accessKeyPlaceholder')}
                 className="w-full bg-surface-lowest border border-outline-variant/20 rounded-lg px-3 py-2 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:ring-1 focus:ring-brand-primary"
               />
             </div>
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-on-surface-variant">Secret Access Key</label>
+              <label className="block text-xs font-medium text-on-surface-variant">{t('settings.sync.s3.secretAccessKey')}</label>
               <input
                 id="sync-s3-secret-key"
                 type="password"
                 value={s3SecretAccessKey}
                 onChange={(e) => setS3SecretAccessKey(e.target.value)}
-                placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+                placeholder={t('settings.sync.s3.secretKeyPlaceholder')}
                 className="w-full bg-surface-lowest border border-outline-variant/20 rounded-lg px-3 py-2 text-sm text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:ring-1 focus:ring-brand-primary"
               />
             </div>

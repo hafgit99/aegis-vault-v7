@@ -62,13 +62,13 @@ describe('No-JS-Master-String Security Final Gate', () => {
       }
 
       if (fileHasPattern) {
-        const fileBaseline = baseline[relPath];
+        const fileBaseline = baseline[relPath as keyof typeof baseline];
         if (!fileBaseline) {
           unauthorizedLeaks.push(`${relPath} (Patterns: ${JSON.stringify(fileMatches)})`);
         } else {
           for (const pattern of forbiddenPatterns) {
             const count = fileMatches[pattern] || 0;
-            const allowed = fileBaseline[pattern] || 0;
+            const allowed = (fileBaseline as Record<string, number>)[pattern] || 0;
             if (count > allowed) {
               countExceededFiles.push(
                 `${relPath} - Pattern "${pattern}": found ${count}, allowed max ${allowed}`

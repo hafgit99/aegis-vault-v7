@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { ActiveTab } from '../types';
+import type { ActiveTab } from '../types';
 
 export function useAppNavigation() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('vault');

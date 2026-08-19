@@ -31,9 +31,9 @@ export const BACKUP_KDF_PROFILE = {
 // fallback was replaced with a more general roundtrip test.
 //
 // Keeping a constant here would still be useful for one-off developer
-// recovery scripts, so it stays as an unexported reference value.
+// recovery scripts, so it stays as a reference value.
 
-const BACKUP_KDF_LEGACY_HIGH_MEMORY_PROFILE = {
+export const BACKUP_KDF_LEGACY_HIGH_MEMORY_PROFILE = {
   memoryKiB: 64 * 1024,
   iterations: 4,
   parallelism: 1,
@@ -97,9 +97,9 @@ export async function encryptDataWithPasswordSecure(rawData: string, password: s
 
 export async function decryptDataWithPasswordSecure(envelopeJsonStr: string, password: string): Promise<string> {
   let parsed: any;
-  try {
+try {
     parsed = JSON.parse(envelopeJsonStr);
-  } catch (e) {
+  } catch (_e) {
     throw new SecureBackupError(secureBackupErrorCodes.invalidJson);
   }
 

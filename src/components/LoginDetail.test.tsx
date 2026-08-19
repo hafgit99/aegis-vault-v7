@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { LanguageProvider } from '../i18n/LanguageContext';
 import { languageStorageKey } from '../i18n/translations';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 import LoginDetail from './LoginDetail';
 
 const loginItem: VaultItem = {
@@ -94,7 +94,7 @@ describe('LoginDetail', () => {
     expect(screen.getByText('(Boş Şifre)')).toBeTruthy();
 
     const copyButtons = screen.getAllByTitle('Kopyala');
-    fireEvent.click(copyButtons[1]);
+    fireEvent.click(copyButtons[1]!);
 
     expect(onCopyText).toHaveBeenCalledWith('', 'password');
   });
@@ -149,9 +149,9 @@ describe('LoginDetail', () => {
     );
 
     const copyButtons = screen.getAllByTitle('Kopyala');
-    fireEvent.click(copyButtons[0]);
+    fireEvent.click(copyButtons[0]!);
     fireEvent.click(screen.getByTitle('Göster'));
-    fireEvent.click(copyButtons[1]);
+    fireEvent.click(copyButtons[1]!);
     fireEvent.click(screen.getByTitle('Doğrulama Kodunu Kopyala'));
 
     expect(onCopyText).toHaveBeenCalledWith('ada@example.com', 'username');

@@ -38,7 +38,8 @@ import {
   validateWebDavConfig,
   validateS3Config,
 } from './sync/syncConfigStorage';
-import { SyncError, syncErrorCodes, type SyncConfig } from './sync/syncTypes';
+import type { SyncError} from './sync/syncTypes';
+import { syncErrorCodes, type SyncConfig } from './sync/syncTypes';
 
 describe('syncConfigStorage', () => {
   beforeEach(() => {

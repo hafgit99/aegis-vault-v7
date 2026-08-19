@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
 import { scoreMultiField, type FuzzyScore } from '../lib/fuzzySearch';
-import { SmartFolder, VaultFolder, VaultItem } from '../types';
+import type { SmartFolder, VaultFolder, VaultItem } from '../types';
 import { runVaultAudit } from '../lib/security';
 import type { VaultCategoryFilter, VaultDateRange } from './useVaultFilters';
 import { buildContext as buildSmartContext, evaluateSmartFolder } from '../lib/smartFolders';

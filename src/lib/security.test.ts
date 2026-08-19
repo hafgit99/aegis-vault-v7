@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { calculatePasswordScore, generatePassword, getStrengthLabel, runVaultAudit, validateMasterPassword, supportsTwoFactor, isUnsecureHttpUrl, getPasswordAgeInDays } from './security';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 import { closeVaultSession } from './vaultSession';
 import { ZxcvbnFactory } from '@zxcvbn-ts/core';
 
@@ -168,12 +168,12 @@ describe('extended security audit checks', () => {
   });
 
   it('calculates password age correctly', () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split('T')[0]!;
     expect(getPasswordAgeInDays(today)).toBe(0);
 
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 95);
-    const oldDateStr = ninetyDaysAgo.toISOString().split('T')[0];
+    const oldDateStr = ninetyDaysAgo.toISOString().split('T')[0]!;
     expect(getPasswordAgeInDays(oldDateStr)).toBeGreaterThanOrEqual(95);
   });
 

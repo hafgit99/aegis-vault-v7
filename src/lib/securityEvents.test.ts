@@ -48,7 +48,7 @@ describe('security event taxonomy', () => {
     });
 
     expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(warnSpy.mock.calls[0][0]).toEqual({
+    expect(warnSpy.mock.calls[0]![0]).toEqual({
       source: 'AegisSecurity',
       code: securityEventCodes.storageLocalFallbackUsed,
       severity: 'warning',
@@ -73,7 +73,7 @@ describe('security event taxonomy', () => {
       packageName: longValue,
     });
 
-    const entry = infoSpy.mock.calls[0][0] as { meta: { packageName: string } };
+    const entry = infoSpy.mock.calls[0]![0] as { meta: { packageName: string } };
     expect(entry.meta.packageName).toHaveLength(160);
     expect(entry.meta.packageName).toBe('x'.repeat(160));
   });

@@ -61,7 +61,7 @@ function createRepositoryStub(options: {
       setupPassword = newPassword;
     }),
     deriveEncryptionKey: vi.fn(async () => new Uint8Array(32)),
-    getVaultItems: vi.fn(async (password: string) => {
+getVaultItems: vi.fn(async (password: string) => {
       getVaultItemsCallCount += 1;
       if (options.failGetVaultItemsAfter && getVaultItemsCallCount > options.failGetVaultItemsAfter) {
         throw new Error('dry run failed\n<script>secret</script>');
@@ -71,6 +71,7 @@ function createRepositoryStub(options: {
       }
       return items.map((storedItem) => ({ ...storedItem }));
     }),
+    getVaultItemsWithKey: vi.fn(async () => items.map((storedItem) => ({ ...storedItem }))),
     saveVaultItem: vi.fn(async (nextItem: VaultItem, password: string) => {
       if (setupPassword !== password) {
         throw new Error('invalid-password');

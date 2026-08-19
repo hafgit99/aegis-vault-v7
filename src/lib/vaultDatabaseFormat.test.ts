@@ -46,7 +46,7 @@ describe('vault database format migrations', () => {
     expect(migrated.migratedFrom).toBe(1);
     expect(migrated.user_secrets).toHaveLength(1);
     expect(migrated.vault_items).toHaveLength(1);
-    expect(migrated.vault_items[0].enc_kdf).toBe('argon2-browser');
+    expect(migrated.vault_items[0]!.enc_kdf).toBe('argon2-browser');
   });
 
   it('preserves current versioned database arrays when parsing serialized state', () => {

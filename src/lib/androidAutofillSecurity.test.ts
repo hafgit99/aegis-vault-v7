@@ -47,8 +47,8 @@ describe('androidAutofillSecurity', () => {
         itemMatchesTarget: true,
       }),
     }));
-    expect(JSON.stringify(info.mock.calls[0][0])).not.toContain('CorrectHorseBatteryStaple');
-    expect(JSON.stringify(info.mock.calls[0][0])).not.toContain('ada@example.com');
+    expect(JSON.stringify(info.mock.calls[0]![0])).not.toContain('CorrectHorseBatteryStaple');
+    expect(JSON.stringify(info.mock.calls[0]![0])).not.toContain('ada@example.com');
   });
 
   it('logs requested Autofill diagnostics without a selected item', () => {

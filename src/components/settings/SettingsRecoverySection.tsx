@@ -15,7 +15,6 @@ import {
   Check,
   RefreshCw,
   Eye,
-  EyeOff,
 } from 'lucide-react';
 import {
   generateRecoveryWords,
@@ -32,10 +31,11 @@ import {
 } from '../../lib/passwordHint';
 import { withActiveBackupPassword } from '../../lib/vaultSession';
 import { isNativeFileDialogSupported, saveDesktopExportFile } from '../../lib/desktopFiles';
+import type { TFunction } from '../../i18n/LanguageContext';
 
 interface SettingsRecoverySectionProps {
   masterPassword?: string | null;
-  t: (key: string) => string;
+  t: TFunction;
 }
 
 export function SettingsRecoverySection({ masterPassword, t }: SettingsRecoverySectionProps) {

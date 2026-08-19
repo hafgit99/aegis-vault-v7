@@ -158,7 +158,7 @@ function saveBiometricToIndexedDB(info: BiometricInfo): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       const transaction = db.transaction(BIOMETRIC_STORE_NAME, 'readwrite');
       const store = transaction.objectStore(BIOMETRIC_STORE_NAME);
-      const request = store.put(info, BIOMETRIC_KEY);
+      store.put(info, BIOMETRIC_KEY);
       transaction.oncomplete = () => {
         resolve();
         db.close();
@@ -183,7 +183,7 @@ function deleteBiometricFromIndexedDB(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       const transaction = db.transaction(BIOMETRIC_STORE_NAME, 'readwrite');
       const store = transaction.objectStore(BIOMETRIC_STORE_NAME);
-      const request = store.delete(BIOMETRIC_KEY);
+      store.delete(BIOMETRIC_KEY);
       transaction.oncomplete = () => {
         resolve();
         db.close();
@@ -601,7 +601,7 @@ async function authenticateBiometricRaw(): Promise<string> {
     }
 
     throw new BiometricError(biometricErrorCodes.integrityMismatch);
-  } catch (e) {
+  } catch (_e) {
     throw new BiometricError(biometricErrorCodes.integrityMismatch);
   }
 }

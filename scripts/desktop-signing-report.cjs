@@ -1,30 +1,23 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const {
+  hasFlag,
+  getArgValue,
+  detectPlatform,
+  assertPlatform,
+  failThrow: fail,
+  readJson,
+} = require('./release-utils.cjs');
 
 const rootDir = path.resolve(__dirname, '..');
 const releaseLocalDir = path.join(rootDir, 'release-local');
 const args = process.argv.slice(2);
 
-const platform = getArgValue('--platform') || detectPlatform();
-const explicitDir = getArgValue('--dir');
+const platform = getArgValue(args, '--platform') || detectPlatform();
+const explicitDir = getArgValue(args, '--dir');
 const evidenceDir = explicitDir ? path.resolve(rootDir, explicitDir) : path.join(releaseLocalDir, platform);
-const requireSigned = hasFlag('--require-signed');
-
-function hasFlag(flag) {
-  return args.includes(flag);
-}
-
-function getArgValue(name) {
-  const index = args.indexOf(name);
-  return index >= 0 ? args[index + 1] : null;
-}
-
-function detectPlatform() {
-  if (process.platform === 'win32') return 'windows';
-  if (process.platform === 'darwin') return 'macos';
-  return 'linux';
-}
+const requireSigned = hasFlag(args, '--require-signed');
 
 function usage() {
   return [
@@ -39,24 +32,6 @@ function usage() {
     '  --require-signed                  Fail if signable artifacts are not verified as signed.',
     '  --help                            Show this help.',
   ].join('\n');
-}
-
-function fail(message) {
-  throw new Error(message);
-}
-
-function assertPlatform(value) {
-  if (!['windows', 'linux', 'macos'].includes(value)) {
-    fail('Unsupported desktop release platform: ' + value);
-  }
-}
-
-function readJson(file) {
-  try {
-    return JSON.parse(fs.readFileSync(file, 'utf8'));
-  } catch (error) {
-    fail('Failed to read JSON file ' + file + ': ' + (error && error.message ? error.message : String(error)));
-  }
 }
 
 function run(command, commandArgs) {
@@ -211,7 +186,7 @@ function generateSigningReport() {
   console.log('Signable artifacts verified: ' + results.filter((result) => result.verified).length + '/' + results.filter((result) => result.applicable).length);
 }
 
-if (hasFlag('--help')) {
+if (hasFlag(args, '--help')) {
   console.log(usage());
   process.exit(0);
 }

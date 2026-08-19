@@ -7,24 +7,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const testVaultKey = vi.hoisted(() => new Uint8Array(32).fill(7));
 
 const sqliteOPFSInstance = vi.hoisted(() => ({
-  deletePermanently: vi.fn(),
-  deletePermanentlyWithKey: vi.fn(),
-  deletePermanentlyBatch: vi.fn(),
-  deletePermanentlyBatchWithKey: vi.fn(),
-  deriveEncryptionKey: vi.fn(async () => testVaultKey),
-  getVaultItems: vi.fn(() => []),
-  getVaultItemsWithKey: vi.fn(() => []),
-  hydrate: vi.fn(async () => undefined),
-  reseedDemo: vi.fn(),
-  reseedDemoWithKey: vi.fn(),
-  resetAll: vi.fn(),
-  changeMasterPassword: vi.fn(async () => undefined),
-  saveVaultItem: vi.fn(),
-  saveVaultItemWithKey: vi.fn(),
-  saveVaultItems: vi.fn(),
-  saveVaultItemsWithKey: vi.fn(),
-  setupMaster: vi.fn(async () => undefined),
-  verifyPassword: vi.fn(),
+  deletePermanently: vi.fn(async (..._args: any[]): Promise<VaultItem[]> => []),
+  deletePermanentlyWithKey: vi.fn(async (..._args: any[]): Promise<VaultItem[]> => []),
+  deletePermanentlyBatch: vi.fn(async (..._args: any[]): Promise<VaultItem[]> => []),
+  deletePermanentlyBatchWithKey: vi.fn(async (..._args: any[]): Promise<VaultItem[]> => []),
+  deriveEncryptionKey: vi.fn(async (..._args: any[]): Promise<Uint8Array> => testVaultKey),
+  getVaultItems: vi.fn(async (..._args: any[]): Promise<VaultItem[]> => []),
+  getVaultItemsWithKey: vi.fn(async (..._args: any[]): Promise<VaultItem[]> => []),
+  hydrate: vi.fn(async (..._args: any[]): Promise<void> => undefined),
+  reseedDemo: vi.fn(async (..._args: any[]): Promise<VaultItem[]> => []),
+  reseedDemoWithKey: vi.fn(async (..._args: any[]): Promise<VaultItem[]> => []),
+  resetAll: vi.fn(async (..._args: any[]): Promise<void> => undefined),
+  changeMasterPassword: vi.fn(async (..._args: any[]): Promise<void> => undefined),
+  saveVaultItem: vi.fn(async (..._args: any[]): Promise<VaultItem[]> => []),
+  saveVaultItemWithKey: vi.fn(async (..._args: any[]): Promise<VaultItem[]> => []),
+  saveVaultItems: vi.fn(async (..._args: any[]): Promise<VaultItem[]> => []),
+  saveVaultItemsWithKey: vi.fn(async (..._args: any[]): Promise<VaultItem[]> => []),
+  setupMaster: vi.fn(async (..._args: any[]): Promise<void> => undefined),
+  verifyPassword: vi.fn(async (..._args: any[]): Promise<boolean> => false),
 }));
 
 const migrateLegacyAttachmentsToAesGcm = vi.hoisted(() => vi.fn(async () => 0));
@@ -156,7 +156,7 @@ describe('vault session storage', () => {
     expect(sqliteOPFSInstance.hydrate).toHaveBeenCalledTimes(1);
     expect(hydrateBiometric).toHaveBeenCalledTimes(1);
     expect(restoreOrActivateDefaultVaultStorageBackend.mock.invocationCallOrder[0]).toBeLessThan(
-      getVaultStorageRepository.mock.invocationCallOrder[0],
+      getVaultStorageRepository.mock.invocationCallOrder[0]!,
     );
     // hydrateBiometric and vault repo hydrate now run concurrently,
     // so we only assert both were called (no strict ordering).
@@ -175,7 +175,7 @@ describe('vault session storage', () => {
       hydrate: vi.fn(async () => undefined),
     };
     restoreOrActivateDefaultVaultStorageBackend.mockImplementationOnce(async () => {
-      getVaultStorageRepository.mockReturnValue(restoredRepository);
+      getVaultStorageRepository.mockReturnValue(restoredRepository as unknown as typeof sqliteOPFSInstance);
       return 'restored-wa-sqlite';
     });
 
@@ -204,7 +204,7 @@ describe('vault session storage', () => {
       saveVaultItemsWithKey: vi.fn(() => [storedItem, importedItem]),
     };
     restoreOrActivateDefaultVaultStorageBackend.mockImplementationOnce(async () => {
-      getVaultStorageRepository.mockReturnValue(restoredRepository);
+      getVaultStorageRepository.mockReturnValue(restoredRepository as unknown as typeof sqliteOPFSInstance);
       return 'restored-wa-sqlite';
     });
 

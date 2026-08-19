@@ -2,7 +2,7 @@ import { Download, File } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { formatFileSize } from '../lib/display';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 
 interface VaultItemAttachmentCardProps {
   item: VaultItem;

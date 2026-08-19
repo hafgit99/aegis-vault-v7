@@ -172,9 +172,8 @@ npm ci
 ### Verification & Testing
 
 ```bash
-# ── 1. Typecheck & Linting ──────────────────────────────────────────
+# ── 1. Typecheck ─────────────────────────────────────────────────
 npm run typecheck
-npm run lint
 
 # ── 2. Unit Testing & Code Coverage ────────────────────────────────
 npm run test:unit
@@ -198,7 +197,7 @@ npm run test:mutation:security
 npm run test:mutation:search
 
 # Run Core cryptographic modules mutation test
-npm run test:mutation:core
+npm run test:mutation
 
 # Run Storage modules mutation test
 npm run test:mutation:storage

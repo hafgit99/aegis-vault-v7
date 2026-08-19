@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { Clock } from 'lucide-react';
-import { useLanguage } from '../../i18n/LanguageContext';
+import type { useLanguage } from '../../i18n/LanguageContext';
 
 interface LockOption {
   label: string;

@@ -3,14 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { VaultItem } from '../../types';
+import type { VaultItem } from '../../types';
 import {
   exportAllAttachments,
-  importAttachments,
   purgeOrphanedAttachments,
-  AttachmentBackupRecord,
 } from '../attachments';
-import { SyncProvider } from './syncTypes';
+import type { SyncProvider } from './syncTypes';
 
 /**
  * Uploads local encrypted attachments to the remote sync provider.

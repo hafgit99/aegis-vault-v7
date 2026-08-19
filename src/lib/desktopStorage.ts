@@ -1,17 +1,10 @@
 import { invoke } from '@tauri-apps/api/core';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 
 export const EXTENSION_CREDENTIAL_LEASE_MS = 5 * 60 * 1000;
 
-declare global {
-  interface Window {
-    __TAURI_INTERNALS__?: unknown;
-  }
-}
-
-export function isDesktopRuntime(): boolean {
-  return typeof window !== 'undefined' && Boolean(window.__TAURI_INTERNALS__);
-}
+export { isDesktopRuntime } from './environment';
+import { isDesktopRuntime } from './environment';
 
 export function isAndroidRuntime(): boolean {
   return isDesktopRuntime() && /Android/i.test(navigator.userAgent || '');

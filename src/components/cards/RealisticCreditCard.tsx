@@ -5,7 +5,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Eye, EyeOff, Copy, Check, Wifi, ShieldCheck } from 'lucide-react';
-import { VaultItem } from '../../types';
+import type { VaultItem } from '../../types';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 export type CardBrand = 'visa' | 'mastercard' | 'amex' | 'discover' | 'troy' | 'generic';
@@ -56,7 +56,7 @@ export function RealisticCreditCard({
   item,
   isRevealed = false,
   isCvvRevealed = false,
-  isPinRevealed = false,
+  isPinRevealed: _isPinRevealed = false,
   onToggleReveal,
   onCopy,
   compact = false,

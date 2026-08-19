@@ -1,8 +1,8 @@
 import { ShieldCheck } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
-import { TranslationKey } from '../i18n/translations';
-import { AuditReport } from '../types';
+import type { TranslationKey } from '../i18n/translations';
+import type { AuditReport } from '../types';
 
 interface DashboardSecurityScoreCardProps {
   auditReport: AuditReport;

@@ -37,15 +37,8 @@ interface Argon2BrowserImport {
   default?: Argon2BrowserModule;
 }
 
-declare global {
-  interface Window {
-    __TAURI_INTERNALS__?: unknown;
-  }
-}
-
-export function isDesktopRuntime(): boolean {
-  return typeof window !== 'undefined' && Boolean(window.__TAURI_INTERNALS__);
-}
+import { isDesktopRuntime } from './environment';
+export { isDesktopRuntime };
 
 // WebView2/WebKit/WebKitGTK can fail Argon2id allocations above ~64 MiB with
 // "memory access out of bounds" runtime errors (see docs/SECURITY_NOTES.md and

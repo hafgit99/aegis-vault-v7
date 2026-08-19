@@ -5,8 +5,8 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { performAttachmentSync, uploadAttachmentsToSync } from './attachmentSyncEngine';
-import { SyncProvider } from './syncTypes';
-import { VaultItem } from '../../types';
+import type { SyncProvider } from './syncTypes';
+import type { VaultItem } from '../../types';
 
 vi.mock('../attachments', () => ({
   exportAllAttachments: vi.fn(async () => [

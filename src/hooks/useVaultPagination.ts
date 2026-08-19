@@ -36,12 +36,6 @@ export interface VaultPaginationCallbacks {
 export interface VaultPaginationOptions {
   initialVisibleCount?: number;
   batchSize?: number;
-  /**
-   * Override for the requestAnimationFrame shim. The vault list uses this
-   * to release the loading flag on the next paint after loadMore resolves.
-   * Tests can pass a synchronous function to make assertions deterministic.
-   */
-  scheduleRelease?: (release: () => void) => void;
 }
 
 export const DEFAULT_INITIAL_VISIBLE_COUNT = 60;
@@ -92,15 +86,6 @@ export function createVaultPaginationReducer(
   action: { type: 'loadMore' | 'release' | 'reset'; totalCount?: number },
 ) => VaultPaginationState {
   const batchSize = options.batchSize ?? DEFAULT_BATCH_SIZE;
-  const scheduleRelease =
-    options.scheduleRelease ??
-    ((release) => {
-      if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
-        window.requestAnimationFrame(release);
-      } else {
-        release();
-      }
-    });
 
   return (state, action) => {
     if (action.type === 'loadMore') {

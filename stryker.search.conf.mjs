@@ -1,8 +1,8 @@
+import base from './stryker.base.mjs';
+
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 export default {
-  packageManager: 'npm',
-  testRunner: 'vitest',
-  coverageAnalysis: 'perTest',
+  ...base,
   mutate: [
     'src/lib/fuzzySearch.ts',
     'src/lib/recentSearches.ts',
@@ -16,23 +16,11 @@ export default {
     'src/lib/tags.test.ts',
     'src/lib/smartFolders.test.ts',
   ],
-  vitest: {
-    configFile: 'vitest.config.ts',
-    related: false,
-  },
-  reporters: ['progress', 'clear-text', 'html', 'json'],
   thresholds: {
     high: 85,
     low: 75,
     break: 70,
   },
-  timeoutMS: 15000,
-  dryRunTimeoutMinutes: 3,
-  concurrency: 2,
-  cleanTempDir: 'always',
-  ignoreStatic: true,
-  tempDirName: '.stryker-tmp',
-  incremental: true,
   incrementalFile: 'reports/mutation/search-incremental.json',
   htmlReporter: {
     fileName: 'reports/mutation/search.html',

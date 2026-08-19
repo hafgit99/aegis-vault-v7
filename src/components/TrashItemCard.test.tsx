@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { LanguageProvider } from '../i18n/LanguageContext';
 import { languageStorageKey } from '../i18n/translations';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 import TrashItemCard from './TrashItemCard';
 
 const trashItem: VaultItem = {

@@ -26,6 +26,7 @@ function createRepositoryStub(items: VaultItem[] = []): VaultStorageRepository {
     changeMasterPassword: vi.fn(async () => undefined),
     deriveEncryptionKey: vi.fn(async () => new Uint8Array(32)),
     getVaultItems: vi.fn(async () => items),
+    getVaultItemsWithKey: vi.fn(async () => items),
     saveVaultItem: vi.fn(async () => []),
     saveVaultItems: vi.fn(async () => []),
     executeCustomSQL: vi.fn(() => ({ columns: [], rows: [] })),
@@ -137,8 +138,8 @@ describe('read-only wa-sqlite vault storage adapter', () => {
     const items = await adapter.getVaultItems('valid-master');
 
     expect(items).toEqual([sourceItem]);
-    expect(items[0]).not.toBe(sourceItem);
-    expect(adapter.getQueryLogs()[0].query).toBe('WA_SQLITE_MIRROR SELECT vault_items FROM source fallback;');
+expect(items[0]!).not.toBe(sourceItem);
+    expect(adapter.getQueryLogs()[0]!.query).toBe('WA_SQLITE_MIRROR SELECT vault_items FROM source fallback;');
   });
 
   it('can seed empty wa-sqlite metadata from source items during dry-run reads', async () => {
@@ -184,7 +185,7 @@ describe('read-only wa-sqlite vault storage adapter', () => {
     expect(executedSql).toContain("'[encrypted: aes-256-gcm]'");
     expect(executedSql).not.toContain('private-user');
     expect(executedSql).not.toContain('private-password');
-    expect(adapter.getQueryLogs()[1].query).toBe('WA_SQLITE_MIRROR seed vault_items metadata from source;');
+    expect(adapter.getQueryLogs()[1]!.query).toBe('WA_SQLITE_MIRROR seed vault_items metadata from source;');
   });
 
   it('fails closed when the engine cannot be initialized or queried', async () => {
@@ -230,7 +231,7 @@ describe('read-only wa-sqlite vault storage adapter', () => {
       error: WA_SQLITE_READ_ONLY_ERROR,
     });
 
-    expect(adapter.getQueryLogs()[0].query).toBe('SELECT * FROM vault_items; &lt;script>alert(1)</script>');
+    expect(adapter.getQueryLogs()[0]!.query).toBe('SELECT * FROM vault_items; &lt;script>alert(1)</script>');
   });
 
   it('delegates safe operations and rejects every repository write surface', async () => {

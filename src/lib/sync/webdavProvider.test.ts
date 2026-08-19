@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { WebDavSyncProvider } from './webdavProvider';
 import { SyncError, syncErrorCodes } from './syncTypes';
 import { addSyncAllowedOrigin } from '../airgapNetworkPolicy';
@@ -209,7 +209,7 @@ describe('WebDavSyncProvider auth header', () => {
 
     const auth = (capturedHeaders as Record<string, string>)?.Authorization;
     expect(auth).toMatch(/^Basic /);
-    const decoded = atob(auth.replace('Basic ', ''));
+    const decoded = atob(auth!.replace('Basic ', ''));
     expect(new TextDecoder().decode(Uint8Array.from(decoded, (char) => char.charCodeAt(0)))).toBe('alice:sifre-unicode');
   });
 });

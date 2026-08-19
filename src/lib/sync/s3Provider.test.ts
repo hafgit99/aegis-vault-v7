@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { S3SyncProvider } from './s3Provider';
-import { S3SyncConfig, SyncError, syncErrorCodes } from './syncTypes';
+import type { S3SyncConfig} from './syncTypes';
+import { SyncError } from './syncTypes';
 import { getSyncAllowedOrigins } from '../airgapNetworkPolicy';
 
 describe('S3SyncProvider', () => {
@@ -57,7 +58,7 @@ describe('S3SyncProvider', () => {
 
     await expect(provider.testConnection()).resolves.toBeUndefined();
     expect(mockFetch).toHaveBeenCalledOnce();
-    expect(mockFetch.mock.calls[0][1]?.headers?.Authorization).toContain('AWS4-HMAC-SHA256');
+    expect(mockFetch.mock.calls[0]![1]?.headers?.Authorization).toContain('AWS4-HMAC-SHA256');
     provider.dispose();
   });
 
@@ -87,8 +88,8 @@ describe('S3SyncProvider', () => {
     await provider.uploadVault('encrypted-blob-content', metadata);
 
     expect(mockFetch).toHaveBeenCalledTimes(2); // 1. vault.aegis, 2. metadata.json
-    expect(mockFetch.mock.calls[0][0]).toContain('my-aegis-bucket/AegisVault/vault.aegis');
-    expect(mockFetch.mock.calls[1][0]).toContain('my-aegis-bucket/AegisVault/metadata.json');
+    expect(mockFetch.mock.calls[0]![0]).toContain('my-aegis-bucket/AegisVault/vault.aegis');
+    expect(mockFetch.mock.calls[1]![0]).toContain('my-aegis-bucket/AegisVault/metadata.json');
     provider.dispose();
   });
 

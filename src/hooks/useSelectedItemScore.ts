@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
 import { calculatePasswordScore } from '../lib/security';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 
 export function useSelectedItemScore(selectedItem: VaultItem | null) {
   return useMemo(() => {

@@ -58,6 +58,7 @@ function createRepositoryStub(): VaultStorageRepository {
     changeMasterPassword: vi.fn(async () => undefined),
     deriveEncryptionKey: vi.fn(async () => new Uint8Array(32)),
     getVaultItems: vi.fn(async () => []),
+    getVaultItemsWithKey: vi.fn(async () => []),
     saveVaultItem: vi.fn(async () => []),
     saveVaultItems: vi.fn(async () => []),
     executeCustomSQL: vi.fn(() => ({ columns: [], rows: [] })),

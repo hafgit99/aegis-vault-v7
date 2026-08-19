@@ -5,7 +5,7 @@
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 import { useVaultFormState } from './useVaultFormState';
 
 const item = (id: string): VaultItem => ({

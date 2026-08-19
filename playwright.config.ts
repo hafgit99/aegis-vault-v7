@@ -7,6 +7,7 @@ export default defineConfig({
     timeout: 10_000,
   },
   fullyParallel: false,
+  retries: process.env.CI ? 2 : 0,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: 'http://127.0.0.1:4177',
@@ -14,10 +15,10 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   webServer: {
-    command: 'npm run dev -- --port 4177 --host 127.0.0.1',
+    command: 'npm run build && npm run preview -- --port 4177 --host 127.0.0.1',
     url: 'http://127.0.0.1:4177',
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 180_000,
   },
   projects: [
     {

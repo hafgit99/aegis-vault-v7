@@ -1,4 +1,7 @@
+import { createRequire } from 'module';
 import { describe, expect, it } from 'vitest';
+
+const require = createRequire(import.meta.url);
 
 const { archiveContainsForbiddenDebugArtifact, isForbiddenDebugArtifact, isSignableArtifact, signingCoverage } = require('../../scripts/desktop-signing-policy.cjs') as {
   archiveContainsForbiddenDebugArtifact: (buffer: Buffer) => boolean;

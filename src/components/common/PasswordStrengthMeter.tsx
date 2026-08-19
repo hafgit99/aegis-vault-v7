@@ -6,7 +6,7 @@
 import React, { useMemo } from 'react';
 import { calculatePasswordScore, getStrengthLabel } from '../../lib/security';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { TranslationKey } from '../../i18n/translations';
+import type { TranslationKey } from '../../i18n/translations';
 
 const strengthLabelKeys: Record<ReturnType<typeof getStrengthLabel>['label'], TranslationKey> = {
   WEAK: 'vaultItem.strength.weak',
@@ -28,10 +28,6 @@ export function PasswordStrengthMeter({
 
   const score = useMemo(() => calculatePasswordScore(password), [password]);
   const strength = useMemo(() => getStrengthLabel(password), [password]);
-
-  if (!password) {
-    return null;
-  }
 
   // Predefined Tailwind width classes for CSP compliance (no inline styles)
   const widthClass = useMemo(() => {
@@ -75,6 +71,10 @@ export function PasswordStrengthMeter({
         };
     }
   }, [strength.label]);
+
+  if (!password) {
+    return null;
+  }
 
   return (
     <div data-testid="password-strength-meter" className="space-y-1.5 mt-2 select-none animate-fade-in">

@@ -98,7 +98,7 @@ describe('PasswordGenerator', () => {
     fireEvent.change(lengthSlider!, { target: { value: '24' } });
     expect(generatePassword).toHaveBeenLastCalledWith(expect.objectContaining({ length: 24 }));
 
-    fireEvent.click(checkboxes[0]);
+    fireEvent.click(checkboxes[0]!);
     expect(generatePassword).toHaveBeenLastCalledWith(expect.objectContaining({ uppercase: false }));
 
     fireEvent.click(refreshButton!);
@@ -109,13 +109,13 @@ describe('PasswordGenerator', () => {
     const { container } = render(<PasswordGenerator />);
     const checkboxes = container.querySelectorAll<HTMLInputElement>('#chars-spec-panel input[type="checkbox"]');
 
-    fireEvent.click(checkboxes[1]);
+    fireEvent.click(checkboxes[1]!);
     expect(generatePassword).toHaveBeenLastCalledWith(expect.objectContaining({ lowercase: false }));
 
-    fireEvent.click(checkboxes[2]);
+    fireEvent.click(checkboxes[2]!);
     expect(generatePassword).toHaveBeenLastCalledWith(expect.objectContaining({ numbers: false }));
 
-    fireEvent.click(checkboxes[3]);
+    fireEvent.click(checkboxes[3]!);
     expect(generatePassword).toHaveBeenLastCalledWith(expect.objectContaining({ symbols: false }));
   });
 
@@ -163,15 +163,15 @@ describe('PasswordGenerator', () => {
     expect(generateDiceware).toHaveBeenLastCalledWith(expect.objectContaining({ wordCount: 6 }));
 
     const separatorButtons = container.querySelectorAll<HTMLButtonElement>('#separator-selection-grid button');
-    fireEvent.click(separatorButtons[2]);
+    fireEvent.click(separatorButtons[2]!);
     expect(generateDiceware).toHaveBeenLastCalledWith(expect.objectContaining({ separator: 'underscore' }));
 
     const languageButtons = container.querySelectorAll<HTMLButtonElement>('#diceware-options-checkboxes button');
-    fireEvent.click(languageButtons[1]);
+    fireEvent.click(languageButtons[1]!);
     expect(generateDiceware).toHaveBeenLastCalledWith(expect.objectContaining({ language: 'en' }));
 
     const dicewareCheckboxes = container.querySelectorAll<HTMLInputElement>('#diceware-options-checkboxes input[type="checkbox"]');
-    fireEvent.click(dicewareCheckboxes[2]);
+    fireEvent.click(dicewareCheckboxes[2]!);
     expect(generateDiceware).toHaveBeenLastCalledWith(expect.objectContaining({ addSymbol: true }));
   });
 
@@ -198,10 +198,10 @@ describe('PasswordGenerator', () => {
 
     const dicewareCheckboxes = container.querySelectorAll<HTMLInputElement>('#diceware-options-checkboxes input[type="checkbox"]');
 
-    fireEvent.click(dicewareCheckboxes[0]);
+    fireEvent.click(dicewareCheckboxes[0]!);
     expect(generateDiceware).toHaveBeenLastCalledWith(expect.objectContaining({ capitalize: false }));
 
-    fireEvent.click(dicewareCheckboxes[1]);
+    fireEvent.click(dicewareCheckboxes[1]!);
     expect(generateDiceware).toHaveBeenLastCalledWith(expect.objectContaining({ addNumber: false }));
   });
 

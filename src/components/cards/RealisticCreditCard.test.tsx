@@ -8,7 +8,7 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { RealisticCreditCard, detectCardBrand, maskCardNumberDisplay, formatCardNumberDisplay } from './RealisticCreditCard';
 import { LanguageProvider } from '../../i18n/LanguageContext';
-import { VaultItem } from '../../types';
+import type { VaultItem } from '../../types';
 
 afterEach(cleanup);
 

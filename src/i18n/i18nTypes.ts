@@ -62,3 +62,6 @@ export function isRtlLanguage(code: LanguageCode): boolean {
 
 export const defaultLanguage: LanguageCode = 'tr';
 export const languageStorageKey = 'aegis-vault-language';
+
+/** Named interpolation parameters passed to the `t()` translation function. */
+export type TParams = Record<string, string | number>;

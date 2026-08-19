@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { LanguageProvider } from '../i18n/LanguageContext';
 import { languageStorageKey } from '../i18n/translations';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 import PasskeyDetail from './PasskeyDetail';
 
 const passkeyItem: VaultItem = {
@@ -74,9 +74,9 @@ describe('PasskeyDetail', () => {
     );
 
     expect(screen.getByText('private-secret-value')).toBeTruthy();
-    fireEvent.click(screen.getAllByRole('button')[0]);
-    fireEvent.click(screen.getAllByRole('button')[1]);
-    fireEvent.click(screen.getAllByTitle('Kopyala')[1]);
+    fireEvent.click(screen.getAllByRole('button')[0]!);
+    fireEvent.click(screen.getAllByRole('button')[1]!);
+    fireEvent.click(screen.getAllByTitle('Kopyala')[1]!);
 
     expect(onCopyText).toHaveBeenCalledWith('public-key-id', 'passkeyPublicId');
     expect(onToggleReveal).toHaveBeenCalledTimes(1);
@@ -123,8 +123,8 @@ describe('PasskeyDetail', () => {
     expect(screen.getByText('boş')).toBeTruthy();
     expect(screen.getByText('(Değer Girilmedi)')).toBeTruthy();
 
-    fireEvent.click(screen.getAllByRole('button')[0]);
-    fireEvent.click(screen.getAllByTitle('Kopyala')[1]);
+    fireEvent.click(screen.getAllByRole('button')[0]!);
+    fireEvent.click(screen.getAllByTitle('Kopyala')[1]!);
 
     expect(onCopyText).toHaveBeenCalledWith('', 'passkeyPublicId');
     expect(onCopyText).toHaveBeenCalledWith('', 'passkeyPrivateExponent');

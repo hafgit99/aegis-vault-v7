@@ -1,22 +1,11 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { setupVault } from './helpers';
 
 const masterPassword = 'master-pass-features-e2e';
 
-async function setupVault(page: Page) {
-  await page.goto('/');
-
-  await page.getByTestId('lock-password-input').fill(masterPassword);
-  await page.getByTestId('lock-confirm-password-input').fill(masterPassword);
-  await expect(page.getByTestId('lock-secret-key-input')).toHaveValue(/^A3-/);
-  await page.getByTestId('lock-remember-secret-key-checkbox').check();
-  await page.getByTestId('lock-submit-button').click();
-
-  await expect(page.getByTestId('new-vault-item-button')).toBeVisible();
-}
-
 test.describe('Aegis Vault Features & Workflows E2E', () => {
   test('creates, masks, reveals, and persists a payment card item', async ({ page }) => {
-    await setupVault(page);
+    await setupVault(page, masterPassword);
 
     await page.getByTestId('new-vault-item-button').click();
     await page.getByTestId('vault-item-category-card').click();
@@ -62,7 +51,7 @@ test.describe('Aegis Vault Features & Workflows E2E', () => {
   });
 
   test('creates and displays a passkey item', async ({ page }) => {
-    await setupVault(page);
+    await setupVault(page, masterPassword);
 
     await page.getByTestId('new-vault-item-button').click();
     await page.getByTestId('vault-item-category-passkey').click();
@@ -83,7 +72,7 @@ test.describe('Aegis Vault Features & Workflows E2E', () => {
   });
 
   test('generates a Zero-Knowledge share URL and decrypts it in a client modal', async ({ page }) => {
-    await setupVault(page);
+    await setupVault(page, masterPassword);
 
     // 1. Create target item to share
     await page.getByTestId('new-vault-item-button').click();
@@ -119,7 +108,7 @@ test.describe('Aegis Vault Features & Workflows E2E', () => {
   });
 
   test('attaches custom tags to a vault item and displays tag chips', async ({ page }) => {
-    await setupVault(page);
+    await setupVault(page, masterPassword);
 
     await page.getByTestId('new-vault-item-button').click();
     await page.getByTestId('vault-item-title-input').fill('E2E Tagged Service');
@@ -140,7 +129,7 @@ test.describe('Aegis Vault Features & Workflows E2E', () => {
   });
 
   test('switches visual theme palettes and maintains selection across page reloads', async ({ page }) => {
-    await setupVault(page);
+    await setupVault(page, masterPassword);
 
     await page.getByTestId('nav-settings-button').click();
     await expect(page.getByTestId('theme-settings-card')).toBeVisible();

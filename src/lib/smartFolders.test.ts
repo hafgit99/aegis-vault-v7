@@ -13,13 +13,12 @@ import {
   updateSmartFolder,
   deleteSmartFolder,
   applySmartFolder,
-  countSmartFolder,
   buildContext,
   builtInSmartFolders,
   readSmartFolders,
   ensureBuiltInPresents,
 } from './smartFolders';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 
 const mockItems = (): VaultItem[] => [
   {

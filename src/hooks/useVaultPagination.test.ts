@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import {
   advancePagination,
@@ -88,7 +88,7 @@ describe('useVaultPagination', () => {
     });
 
     it('collapses a burst of three back-to-back calls into a single batch (regression for the scrub loop)', () => {
-      let state: VaultPaginationState = createInitialPaginationState(INITIAL_TOTAL);
+      const state: VaultPaginationState = createInitialPaginationState(INITIAL_TOTAL);
       // Simulate the IntersectionObserver firing three times within the same
       // animation frame, which is exactly what was happening on Android
       // WebView before the fix.
@@ -175,25 +175,6 @@ describe('useVaultPagination', () => {
       const state = createInitialPaginationState(INITIAL_TOTAL);
       const next = reducer(state, { type: 'noop' as unknown as 'reset' });
       expect(next).toBe(state);
-    });
-
-    it('uses the scheduleRelease option to defer release dispatch', () => {
-      const pendingReleases: Array<() => void> = [];
-      const reducer = createVaultPaginationReducer({
-        scheduleRelease: (release) => pendingReleases.push(release),
-      });
-
-      const initial = reducer(undefined as unknown as VaultPaginationState, {
-        type: 'reset',
-        totalCount: INITIAL_TOTAL,
-      });
-      // scheduleRelease is intentionally not used by the reducer itself —
-      // the caller (a React useEffect) is responsible for invoking the
-      // release callback. This test exists to lock in that contract: the
-      // option is exposed but only invoked when the caller wires it up.
-      const loaded = reducer(initial, { type: 'loadMore', totalCount: INITIAL_TOTAL });
-      expect(loaded.loadingMore).toBe(true);
-      expect(pendingReleases).toHaveLength(0);
     });
   });
 });

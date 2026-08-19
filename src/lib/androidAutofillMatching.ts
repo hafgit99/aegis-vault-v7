@@ -9,10 +9,10 @@ function normalizeHost(value: string): string | null {
     const parsed = new URL(trimmed.includes('://') ? trimmed : `https://${trimmed}`);
     return parsed.hostname.replace(/^www\./, '') || null;
   } catch {
-    return trimmed
+    const segment = trimmed
       .replace(/^https?:\/\//, '')
-      .split('/')[0]
-      .replace(/^www\./, '') || null;
+      .split('/')[0];
+    return segment ? segment.replace(/^www\./, '') || null : null;
   }
 }
 

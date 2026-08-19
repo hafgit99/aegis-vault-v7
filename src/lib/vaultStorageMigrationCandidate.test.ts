@@ -41,11 +41,12 @@ function repositoryStub(items: VaultItem[], isPasswordValid = true): VaultStorag
     changeMasterPassword: vi.fn(async () => undefined),
     deriveEncryptionKey: vi.fn(async () => new Uint8Array(32)),
     getVaultItems: vi.fn(async () => storedItems.map((candidate) => ({ ...candidate }))),
-    saveVaultItem: vi.fn(async (candidate) => {
+    getVaultItemsWithKey: vi.fn(async () => storedItems.map((candidate) => ({ ...candidate }))),
+saveVaultItem: vi.fn(async (candidate: VaultItem) => {
       storedItems = [candidate];
       return storedItems.map((saved) => ({ ...saved }));
     }),
-    saveVaultItems: vi.fn(async (candidates) => {
+    saveVaultItems: vi.fn(async (candidates: VaultItem[]) => {
       storedItems = candidates.map((candidate) => ({ ...candidate }));
       return storedItems.map((candidate) => ({ ...candidate }));
     }),

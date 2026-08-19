@@ -21,6 +21,7 @@ import { getPasswordHint } from '../../lib/passwordHint';
 import { authenticateBiometric, isBiometricEnabled } from '../../lib/biometric';
 import { validateMasterPassword } from '../../lib/security';
 import { changeMasterPassword } from '../../lib/storage';
+import { Modal } from '../ui/Modal';
 
 interface LockScreenRecoveryModalProps {
   isOpen: boolean;
@@ -128,7 +129,7 @@ export function LockScreenRecoveryModal({
   };
 
   return (
-    <div data-testid="lock-recovery-modal" className="fixed inset-0 z-[200] flex items-center justify-center bg-black/75 backdrop-blur-md animate-fade-in p-4 overflow-y-auto">
+    <Modal open={isOpen} onClose={onClose} zIndex={200} overlayTestId="lock-recovery-modal">
       <div className="w-full max-w-lg surface-panel rounded-2xl p-6 space-y-5 my-8 relative border border-outline-variant/15">
         <button
           data-testid="lock-recovery-modal-close"
@@ -346,6 +347,6 @@ export function LockScreenRecoveryModal({
           </form>
         )}
       </div>
-    </div>
+    </Modal>
   );
 }

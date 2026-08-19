@@ -2,7 +2,7 @@ import { Check, Edit, ExternalLink, Heart, Share2, Trash2, QrCode } from 'lucide
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { getLogoForPlatform } from '../lib/display';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 
 interface VaultItemDetailHeaderProps {
   item: VaultItem;
@@ -86,7 +86,7 @@ export default function VaultItemDetailHeader({
           data-testid="secure-share-button"
           onClick={onSecureShare}
           className="p-2.5 rounded-lg bg-surface-high text-on-surface-variant hover:text-brand-primary hover:bg-[#202220] transition-all cursor-pointer border border-outline-variant/10"
-          title={t('detail.header.secureShare') || 'Secure Share / Güvenli Paylaş'}
+          title={t('detail.header.secureShare', 'Secure Share / Güvenli Paylaş')}
         >
           <QrCode className="w-4.5 h-4.5" />
         </button>

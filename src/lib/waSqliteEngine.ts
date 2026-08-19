@@ -13,11 +13,6 @@ import waSqliteAsyncWasmUrl from 'wa-sqlite/dist/wa-sqlite-async.wasm?url';
 
 type WaSqliteCompatibleValue = number | string | Uint8Array | Array<number> | bigint | null;
 
-interface WaSqliteVfs {
-  name: string;
-  close?: () => Promise<void> | void;
-}
-
 interface WaSqliteApi {
   open_v2(databaseName: string, flags?: number, vfsName?: string): Promise<number>;
   exec(

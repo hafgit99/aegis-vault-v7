@@ -2,7 +2,7 @@ import { Clock, KeyRound, RefreshCw, Trash2 } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { getTrashRemainingDays } from '../lib/display';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 
 interface TrashItemCardProps {
   item: VaultItem;

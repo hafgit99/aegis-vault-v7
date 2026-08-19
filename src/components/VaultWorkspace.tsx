@@ -1,4 +1,4 @@
-import React, { Fragment, useCallback, useState, useEffect, useRef, useReducer, memo } from 'react';
+import React, { useCallback, useState, useEffect, useRef, useReducer, memo } from 'react';
 import { AlignJustify, ArrowLeft, CreditCard, FileText, Fingerprint, Heart, KeyRound, Layers, LayoutDashboard, Lock, Plus, Rows, Search, Smartphone, User, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -12,7 +12,7 @@ import {
 import { useLanguage } from '../i18n/LanguageContext';
 import { androidAutofillTargetLabel, type AndroidAutofillRequest } from '../lib/androidAutofill';
 import { isAndroidAutofillTargetMatch, sortAndroidAutofillMatches } from '../lib/androidAutofillMatching';
-import { AuditReport, VaultItem } from '../types';
+import type { AuditReport, VaultItem } from '../types';
 import AegisGuardReport from './AegisGuardReport';
 import CryptoShieldPanel from './CryptoShieldPanel';
 import DashboardCategoryStats from './DashboardCategoryStats';
@@ -21,7 +21,8 @@ import DashboardQuickActions from './DashboardQuickActions';
 import DashboardSecurityScoreCard from './DashboardSecurityScoreCard';
 import RecentVaultPanel from './RecentVaultPanel';
 import VaultItemDetailPanel from './VaultItemDetailPanel';
-import VaultListItem, { ViewDensity } from './VaultListItem';
+import type { ViewDensity } from './VaultListItem';
+import VaultListItem from './VaultListItem';
 import { StickyNoteCard } from './notes/StickyNoteCard';
 import BulkActionBar from './BulkActionBar';
 import BulkSelectWrapper from './BulkSelectWrapper';
@@ -261,7 +262,7 @@ export function VaultWorkspaceContent({
                 type="button"
                 onClick={onOpenFolderSidebar}
                 className="lg:hidden toolbar-button cursor-pointer text-brand-primary flex items-center justify-center p-1.5"
-                title={t('organisation.title') || 'Folders'}
+                title={t('organisation.title', 'Folders')}
               >
                 <Layers className="w-4.5 h-4.5" />
               </button>
@@ -352,7 +353,7 @@ export function VaultWorkspaceContent({
                       e.preventDefault();
                     }
                   }}
-                  onDragEnter={(e) => {
+                  onDragEnter={(_e) => {
                     if (isDropAllowed) {
                       setDragOverCategory(cat.key);
                     }

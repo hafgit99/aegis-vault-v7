@@ -9,7 +9,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { generateShareUrl, decryptShareUrl, base64urlEncode, base64urlDecode } from './share';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 
 const testItem: VaultItem = {
   id: 'test-id',

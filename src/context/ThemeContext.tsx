@@ -3,6 +3,12 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 export type ThemeMode = 'dark' | 'light';
 export type ThemePalette = 'emerald' | 'blue' | 'purple' | 'orange' | 'red';
 
+const THEME_MODE_KEY = 'aegis-theme-mode';
+const THEME_PALETTE_KEY = 'aegis-theme-palette';
+
+const VALID_MODES: readonly ThemeMode[] = ['dark', 'light'];
+const VALID_PALETTES: readonly ThemePalette[] = ['emerald', 'blue', 'purple', 'orange', 'red'];
+
 interface ThemeContextType {
   themeMode: ThemeMode;
   themePalette: ThemePalette;
@@ -12,42 +18,40 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+function readStoredMode(): ThemeMode {
+  const saved = localStorage.getItem(THEME_MODE_KEY);
+  return VALID_MODES.includes(saved as ThemeMode) ? (saved as ThemeMode) : 'dark';
+}
+
+function readStoredPalette(): ThemePalette {
+  const saved = localStorage.getItem(THEME_PALETTE_KEY);
+  return VALID_PALETTES.includes(saved as ThemePalette) ? (saved as ThemePalette) : 'emerald';
+}
+
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [themeMode] = useState<ThemeMode>('dark');
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(readStoredMode);
+  const [themePalette, setThemePaletteState] = useState<ThemePalette>(readStoredPalette);
 
-  const [themePalette, setThemePaletteState] = useState<ThemePalette>(() => {
-    const saved = localStorage.getItem('aegis-theme-palette');
-    const valid: ThemePalette[] = ['emerald', 'blue', 'purple', 'orange', 'red'];
-    return valid.includes(saved as ThemePalette) ? (saved as ThemePalette) : 'emerald';
-  });
-
-  const setThemeMode = () => {
-    localStorage.setItem('aegis-theme-mode', 'dark');
+  const setThemeMode = (mode: ThemeMode) => {
+    setThemeModeState(mode);
+    localStorage.setItem(THEME_MODE_KEY, mode);
   };
 
   const setThemePalette = (palette: ThemePalette) => {
     setThemePaletteState(palette);
-    localStorage.setItem('aegis-theme-palette', palette);
+    localStorage.setItem(THEME_PALETTE_KEY, palette);
   };
 
   useEffect(() => {
     const root = document.documentElement;
-    
-    // Remove existing classes
-    root.classList.remove('light', 'dark');
-    root.classList.remove(
-      'palette-emerald',
-      'palette-blue',
-      'palette-purple',
-      'palette-orange',
-      'palette-red'
-    );
 
-    // Force dark mode
-    root.classList.add('dark');
+    // Remove existing mode and palette classes
+    root.classList.remove('light', 'dark');
+    root.classList.remove('palette-emerald', 'palette-blue', 'palette-purple', 'palette-orange', 'palette-red');
+
+    root.classList.add(themeMode);
     root.classList.add(`palette-${themePalette}`);
-    localStorage.setItem('aegis-theme-mode', 'dark');
-  }, [themePalette]);
+  }, [themeMode, themePalette]);
 
   return (
     <ThemeContext.Provider value={{ themeMode, themePalette, setThemeMode, setThemePalette }}>

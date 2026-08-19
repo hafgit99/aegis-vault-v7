@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 import { secureRandomBytes, secureRandomToken } from './random';
 import {
   createEmptyVaultDatabaseState,
@@ -31,10 +31,7 @@ import type {
   VaultStorageQueryResult,
   VaultStorageRepository,
 } from './vaultStorageRepository';
-
-const isTestEnv = typeof window === 'undefined' ||
-  (typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.includes('jsdom')) ||
-  (typeof window !== 'undefined' && (window as any).__happyDOM__);
+import { isTestEnv } from './environment';
 
 async function maybeDelay(ms: number): Promise<void> {
   if (isTestEnv) return;
@@ -50,7 +47,6 @@ export type SQLiteRow = VaultDatabaseRow;
 const DB_FILENAME = 'aegis_sqlite.db';
 const LOCAL_FALLBACK_KEY = 'aegis_sqlite_fallback';
 const VAULT_ITEM_KDF = 'argon2-browser' as const;
-const LEGACY_VAULT_ITEM_KDF = 'legacy-simulated-argon2id' as const;
 const LEGACY_VAULT_ITEM_KDF_SALT = 'aegis_vault_v7_db_encryption_salt';
 const LEGACY_VAULT_ITEM_KDF_PARAMS = {
   memoryKiB: 32 * 1024,
@@ -101,7 +97,7 @@ class SQLiteOPFS implements VaultStorageRepository {
     if (a.length !== b.length) return false;
     let result = 0;
     for (let i = 0; i < a.length; i++) {
-      result |= a[i] ^ b[i];
+      result |= (a[i] ?? 0) ^ (b[i] ?? 0);
     }
     return result === 0;
   }
@@ -237,7 +233,7 @@ class SQLiteOPFS implements VaultStorageRepository {
         let fileHandle;
         try {
           fileHandle = await root.getFileHandle(DB_FILENAME);
-        } catch (e) {
+        } catch {
           // File does not exist yet. Initialize using localStorage backup or start fresh
           await this.migrateLegacyLocalStorage();
           await this.saveToPersistentStorage();
@@ -350,7 +346,7 @@ class SQLiteOPFS implements VaultStorageRepository {
           logSecurityEvent(securityEventCodes.storageLocalFallbackUsed, 'Loaded vault state from local fallback mirror.', 'warning');
           return;
         }
-      } catch (e) {}
+      } catch {}
     }
 
     // Attempt to seed from standard legacy keys
@@ -473,7 +469,7 @@ class SQLiteOPFS implements VaultStorageRepository {
     if (this.state.user_secrets.length === 0) {
       return false;
     }
-    const expectedHash = this.state.user_secrets[0].argon_hash;
+    const expectedHash = this.state.user_secrets[0]!.argon_hash;
     if (expectedHash.startsWith('$argon2id$')) {
       const isVettedMatch = await verifyArgon2idHash(password, expectedHash);
       if (isVettedMatch) {
@@ -543,7 +539,7 @@ class SQLiteOPFS implements VaultStorageRepository {
 
       this.state.vault_items = await Promise.all(reWrappedItems.map(async (item) => {
         const encrypted = await webCryptoAesGcmEncrypt(JSON.stringify(item), derivedKey, generateSafeIv());
-        const nowStr = new Date().toISOString().split('T')[0];
+        const nowStr = new Date().toISOString().split('T')[0] ?? '';
 
         return {
           id: item.id || secureRandomToken(9),
@@ -613,7 +609,7 @@ class SQLiteOPFS implements VaultStorageRepository {
 
       this.state.vault_items = await Promise.all(items.map(async (item) => {
         const encrypted = await webCryptoAesGcmEncrypt(JSON.stringify(item), newVaultKey, generateSafeIv());
-        const nowStr = new Date().toISOString().split('T')[0];
+        const nowStr = new Date().toISOString().split('T')[0] ?? '';
 
         return {
           id: item.id || secureRandomToken(9),
@@ -689,7 +685,7 @@ class SQLiteOPFS implements VaultStorageRepository {
     const derivedKey = await this.deriveEncryptionKey(masterPasswordPlain, originalSalt);
     const shouldMigrateKdf = !this.state.kdfParams;
     const shouldMigrateStaticSalt = !this.state.encryption_salt;
-    const migratedSalt = shouldMigrateStaticSalt ? this.createVaultEncryptionSalt() : this.state.encryption_salt;
+    const migratedSalt = shouldMigrateStaticSalt ? this.createVaultEncryptionSalt() : this.state.encryption_salt!;
     const migrationKey = (shouldMigrateStaticSalt || shouldMigrateKdf)
       ? await deriveVettedArgon2idKey(masterPasswordPlain, migratedSalt, NEW_VAULT_ITEM_KDF_PARAMS)
       : derivedKey;
@@ -749,6 +745,7 @@ class SQLiteOPFS implements VaultStorageRepository {
 
       for (let i = 0; i < totalItems; i++) {
         const row = this.state.vault_items[i];
+        if (!row) continue;
 
         try {
           const cachedEntry = this.decryptedItemsCache.get(row.id);
@@ -851,14 +848,14 @@ class SQLiteOPFS implements VaultStorageRepository {
         if (this.cachedPasswordBytes) {
           this.cachedPasswordBytes.fill(0);
         }
-        this.cachedKeySalt = migratedSalt;
+        this.cachedKeySalt = migratedSalt ?? null;
         this.cachedKeyBytes = migrationKey;
         await this.saveToPersistentStorage();
       }
 
       this.logQuery(queryStr, 'SUCCESS', list.length);
       return list;
-    } catch (e) {
+    } catch {
       this.logQuery(queryStr, 'ERROR', 0);
       return [];
     }
@@ -901,7 +898,7 @@ class SQLiteOPFS implements VaultStorageRepository {
       const encrypted = await webCryptoAesGcmEncrypt(rawSensitive, perItemKey, generateSafeIv());
       perItemKey.fill(0);
 
-      const nowStr = new Date().toISOString().split('T')[0];
+      const nowStr = new Date().toISOString().split('T')[0] ?? '';
       const category = item.category || 'login';
 
       const row: SQLiteRow = {
@@ -989,7 +986,7 @@ class SQLiteOPFS implements VaultStorageRepository {
 
     try {
       this.ensureVaultEncryptionSalt();
-      const nowStr = new Date().toISOString().split('T')[0];
+      const nowStr = new Date().toISOString().split('T')[0] ?? '';
 
       const allRows: SQLiteRow[] = [];
       const failedItems: Array<{ id: string; error: string }> = []; // Security fix Y7
@@ -1115,7 +1112,7 @@ class SQLiteOPFS implements VaultStorageRepository {
    * SQL Parser implementation simulating typical queries execution.
    * Useful for the Interactive SQL Command Terminal inside Settings/Audit!
    */
-  public executeCustomSQL(sql: string, masterPasswordPlain: string): VaultStorageQueryResult {
+  public executeCustomSQL(sql: string, _masterPasswordPlain: string): VaultStorageQueryResult {
     const sanitized = sql.trim().replace(/;$/, '');
     const tokens = sanitized.split(/\s+/);
 
@@ -1123,7 +1120,7 @@ class SQLiteOPFS implements VaultStorageRepository {
       return { columns: [], rows: [] };
     }
 
-    const command = tokens[0].toUpperCase();
+    const command = tokens[0]!.toUpperCase();
 
     if (command === 'SELECT') {
       // 1. SELECT * FROM user_secrets
@@ -1167,7 +1164,7 @@ class SQLiteOPFS implements VaultStorageRepository {
           };
         } else {
           // Parse columns e.g. SELECT id, title, category FROM
-          const selectPart = sanitized.toUpperCase().split('FROM')[0];
+          const selectPart = sanitized.toUpperCase().split('FROM')[0] ?? '';
           const cols = selectPart.replace('SELECT', '').split(',').map(c => c.trim().toLowerCase());
 
           return {
@@ -1319,8 +1316,8 @@ class SQLiteOPFS implements VaultStorageRepository {
           favorite: item.favorite ? 1 : 0,
           deleted: item.deleted ? 1 : 0,
           deleted_at: item.deletedAt || null,
-          created_at: item.createdAt || new Date().toISOString().split('T')[0],
-          updated_at: new Date().toISOString().split('T')[0],
+          created_at: item.createdAt || (new Date().toISOString().split('T')[0] ?? ''),
+          updated_at: new Date().toISOString().split('T')[0] ?? '',
           username: item.username || '',
           username_db: '[encrypted: aes-256-gcm]',
           password_db: '[encrypted: aes-256-gcm]',

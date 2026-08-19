@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { resolveLWWConflicts, buildSyncEnvelope, parseSyncEnvelope, performSync } from './syncEngine';
-import { SyncProvider, SyncMetadata, SyncConflictItem } from './syncTypes';
-import { VaultItem } from '../../types';
+import type { SyncProvider, SyncMetadata} from './syncTypes';
+import type { VaultItem } from '../../types';
 
 // Mock argon2id so tests don't need WASM
 vi.mock('../argon2id', () => ({
@@ -82,7 +82,7 @@ describe('resolveLWWConflicts', () => {
     const { merged, conflicts } = resolveLWWConflicts(local, remote);
     expect(merged.find(i => i.id === 'a')!.title).toBe('Remote'); // remote wins
     expect(conflicts).toHaveLength(1);
-    expect(conflicts[0].id).toBe('a');
+    expect(conflicts[0]!.id).toBe('a');
   });
 
   it('does not flag conflicts for writes > 5s apart', () => {
@@ -212,8 +212,8 @@ describe('performSync', () => {
     const localItems = [makeItem('a', now.toISOString(), { title: 'Local' })];
     const remoteItems = [makeItem('a', oneSecondAgo.toISOString(), { title: 'Remote Older' })];
     // Make remote item have a slightly newer timestamp than local for conflict
-    remoteItems[0].updatedAt = new Date(now.getTime() + 500).toISOString();
-    remoteItems[0].title = 'Remote Newer';
+    remoteItems[0]!.updatedAt = new Date(now.getTime() + 500).toISOString();
+    remoteItems[0]!.title = 'Remote Newer';
 
     const { encryptedBlob, metadata } = await buildSyncEnvelope(remoteItems, MASTER_PW);
     const provider = makeProvider({

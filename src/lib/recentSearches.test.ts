@@ -29,7 +29,7 @@ describe('recentSearches', () => {
   it('records a new search and returns the updated list', () => {
     const result = recordRecentSearch('github');
     expect(result).toHaveLength(1);
-    expect(result[0].query).toBe('github');
+    expect(result[0]!.query).toBe('github');
     expect(readRecentSearches()).toEqual(result);
   });
 
@@ -51,7 +51,7 @@ describe('recentSearches', () => {
     const stored = readRecentSearches();
     expect(stored).toHaveLength(MAX_RECENT_SEARCHES);
     // Most recent first.
-    expect(stored[0].query).toBe(`query-${MAX_RECENT_SEARCHES + 4}`);
+    expect(stored[0]!.query).toBe(`query-${MAX_RECENT_SEARCHES + 4}`);
   });
 
   it('removes a single entry by query', () => {

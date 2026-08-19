@@ -52,7 +52,7 @@ export function decodeFileBuffer(buffer: ArrayBuffer): string {
   try {
     const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
     return utf8Decoder.decode(arr);
-  } catch (err) {
+  } catch (_err) {
     // If UTF-8 decoding throws a fatal error, fall back to Turkish Windows-1254
     const trDecoder = new TextDecoder('windows-1254');
     return trDecoder.decode(arr);

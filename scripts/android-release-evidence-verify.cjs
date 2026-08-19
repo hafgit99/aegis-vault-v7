@@ -1,27 +1,27 @@
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
+const {
+  hasFlag,
+  getArgValue,
+  failThrow: fail,
+  readJson,
+  sha256,
+  readChecksumFile,
+  checklistField,
+  isPlaceholderValue,
+} = require('./release-utils.cjs');
 
 const repoRoot = path.resolve(__dirname, '..');
 const args = process.argv.slice(2);
-const explicitDir = getArgValue('--dir');
+const explicitDir = getArgValue(args, '--dir');
 const releaseRoot = path.join(repoRoot, 'release-local', 'android');
 const evidenceDir = explicitDir ? path.resolve(repoRoot, explicitDir) : findLatestEvidenceDir();
-const allowDirty = hasFlag('--allow-dirty');
-const requireDevice = hasFlag('--require-device');
-const requireFreshInstall = hasFlag('--require-fresh-install');
-const requireSigned = hasFlag('--require-signed');
-const requireCompletedChecklist = hasFlag('--require-completed-checklist');
-const requireBiometricMatrix = hasFlag('--require-biometric-matrix');
-
-function hasFlag(flag) {
-  return args.includes(flag);
-}
-
-function getArgValue(name) {
-  const index = args.indexOf(name);
-  return index >= 0 ? args[index + 1] : null;
-}
+const allowDirty = hasFlag(args, '--allow-dirty');
+const requireDevice = hasFlag(args, '--require-device');
+const requireFreshInstall = hasFlag(args, '--require-fresh-install');
+const requireSigned = hasFlag(args, '--require-signed');
+const requireCompletedChecklist = hasFlag(args, '--require-completed-checklist');
+const requireBiometricMatrix = hasFlag(args, '--require-biometric-matrix');
 
 function usage() {
   return [
@@ -44,10 +44,6 @@ function usage() {
   ].join('\n');
 }
 
-function fail(message) {
-  throw new Error(message);
-}
-
 function findLatestEvidenceDir() {
   if (!fs.existsSync(releaseRoot)) {
     return path.join(releaseRoot, '<missing>');
@@ -59,32 +55,6 @@ function findLatestEvidenceDir() {
     .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
 
   return dirs[0] || path.join(releaseRoot, '<missing>');
-}
-
-function readJson(file) {
-  try {
-    return JSON.parse(fs.readFileSync(file, 'utf8'));
-  } catch (error) {
-    fail('Failed to read JSON file ' + file + ': ' + (error && error.message ? error.message : String(error)));
-  }
-}
-
-function sha256(file) {
-  return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
-}
-
-function readChecksumFile(file) {
-  const entries = new Map();
-  const contents = fs.readFileSync(file, 'utf8').trim();
-  if (!contents) return entries;
-
-  for (const line of contents.split(/\r?\n/)) {
-    const match = line.match(/^([a-f0-9]{64})\s{2}(.+)$/i);
-    if (!match) fail('Invalid checksum line: ' + line);
-    entries.set(match[2].replaceAll('/', path.sep), match[1].toLowerCase());
-  }
-
-  return entries;
 }
 
 function ensureInsideEvidence(relativePath) {
@@ -138,15 +108,6 @@ function verifyCompletedChecklist(file) {
   if (checkedCount === 0) {
     fail('ANDROID_MANUAL_SMOKE_CHECKLIST.md does not contain any completed checklist items.');
   }
-}
-
-function checklistField(contents, label) {
-  const line = contents.split(/\r?\n/).find((candidate) => candidate.startsWith(label));
-  return line ? line.slice(label.length).trim() : '';
-}
-
-function isPlaceholderValue(value) {
-  return !value || /^(blocked|n\/?a|na|none|tbd|todo|pending|-|<.*>)$/i.test(value.trim());
 }
 
 function verifyBiometricMatrix(file) {
@@ -205,7 +166,7 @@ function verifyDeviceEvidence(metadata) {
 }
 
 function verifyEvidence() {
-  if (hasFlag('--help')) {
+  if (hasFlag(args, '--help')) {
     console.log(usage());
     return;
   }
@@ -243,7 +204,9 @@ function verifyEvidence() {
   if (requireSigned && !metadata.signed) fail('Signed release evidence is required but metadata.signed is false.');
   if (artifacts.length === 0) fail('metadata.json contains no copied Android artifacts.');
 
-  const checksumEntries = readChecksumFile(checksumsPath);
+  const checksumEntries = readChecksumFile(checksumsPath, {
+    normalizeKey: (key) => key.replaceAll('/', path.sep),
+  });
   const artifactNames = new Set();
   for (const artifact of artifacts) {
     if (!artifact.copied || !artifact.sha256) fail('Android artifact metadata is missing copied path or sha256.');

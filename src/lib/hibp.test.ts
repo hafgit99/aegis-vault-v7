@@ -85,9 +85,9 @@ describe('HIBP password checks', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const calls = fetchMock.mock.calls as unknown as [string, RequestInit][];
-    expect(calls[0][0]).toBe('https://api.pwnedpasswords.com/range/5BAA6');
-    expect(calls[0][0]).not.toContain('1E4C9B93F3F0682250B6CF8331B7EE68FD8');
-    expect(calls[0][1]).toEqual(expect.objectContaining({
+    expect(calls[0]![0]).toBe('https://api.pwnedpasswords.com/range/5BAA6');
+    expect(calls[0]![0]).not.toContain('1E4C9B93F3F0682250B6CF8331B7EE68FD8');
+    expect(calls[0]![1]).toEqual(expect.objectContaining({
       cache: 'no-store',
       headers: {
         'Add-Padding': 'true',

@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { LanguageProvider } from '../i18n/LanguageContext';
 import { languageStorageKey } from '../i18n/translations';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 import VaultItemSideInfo from './VaultItemSideInfo';
 
 const baseItem: VaultItem = {

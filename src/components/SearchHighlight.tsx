@@ -88,10 +88,10 @@ function SearchHighlightContent({
     }
     // Skip combining marks — they don't consume a position in the
     // normalised string.
-    if (origPoints[i].normalize('NFD').length > 1) {
+    if (origPoints[i]!.normalize('NFD').length > 1) {
       // The character decomposes; advance normalised by the count of
       // base + combining marks so we stay aligned.
-      const decomposed = origPoints[i].normalize('NFD');
+      const decomposed = origPoints[i]!.normalize('NFD');
       normPos += Array.from(decomposed).filter((c) => c > '\u036f' || c < '\u0300').length;
       // Combining marks were stripped, so we still advance by 1 because
       // they don't survive the regex. Fall back to a single step.

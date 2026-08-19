@@ -7,7 +7,6 @@ import {
   encryptDataWithPasswordSecure,
   secureBackupErrorCodes,
 } from './encryption';
-import { generateSafeIv, webCryptoAesGcmEncrypt } from './webcrypto';
 
 const testKey = new Uint8Array(32).fill(7);
 

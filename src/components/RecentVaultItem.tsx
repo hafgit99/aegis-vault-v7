@@ -1,6 +1,6 @@
 import { useLanguage } from '../i18n/LanguageContext';
 import { getLogoForPlatform } from '../lib/display';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 
 interface RecentVaultItemProps {
   item: VaultItem;

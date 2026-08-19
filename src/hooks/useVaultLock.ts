@@ -1,7 +1,7 @@
 import { useCallback, useSyncExternalStore } from 'react';
 
 import { useAutoLock } from './useAutoLock';
-import { closeVaultSession, subscribeToVaultSession, getVaultSessionSnapshot, openVaultSession, hasActiveVaultSession } from '../lib/vaultSession';
+import { closeVaultSession, subscribeToVaultSession, getVaultSessionSnapshot } from '../lib/vaultSession';
 import { clearExtensionCredentials } from '../lib/desktopStorage';
 
 interface UseVaultLockOptions {

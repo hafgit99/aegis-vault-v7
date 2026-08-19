@@ -1,7 +1,7 @@
 import { Check, Copy, Eye, EyeOff } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 import { RealisticCreditCard } from './cards/RealisticCreditCard';
 
 interface CardDetailProps {
@@ -102,8 +102,8 @@ export default function CardDetail({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <div className="glass-panel p-4 rounded-xl">
+      <div className="flex flex-wrap gap-4">
+        <div className="glass-panel p-4 rounded-xl flex-1 min-w-[140px]">
           <label className="block text-[9px] font-bold tracking-wider text-on-surface-variant uppercase mb-1">
             {t('cardDetail.expiry')}
           </label>
@@ -115,7 +115,7 @@ export default function CardDetail({
           </div>
         </div>
 
-        <div className="glass-panel p-4 rounded-xl">
+        <div className="glass-panel p-4 rounded-xl flex-1 min-w-[140px]">
           <label className="block text-[9px] font-bold tracking-wider text-on-surface-variant uppercase mb-1">
             {t('cardDetail.cvv')}
           </label>
@@ -132,7 +132,7 @@ export default function CardDetail({
           </div>
         </div>
 
-        <div className="glass-panel p-4 rounded-xl">
+        <div className="glass-panel p-4 rounded-xl flex-1 min-w-[140px]">
           <label className="block text-[9px] font-bold tracking-wider text-on-surface-variant uppercase mb-1">
             {t('cardDetail.pin')}
           </label>

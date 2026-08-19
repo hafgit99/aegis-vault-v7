@@ -162,11 +162,11 @@ describe('Vault Form Child Components', () => {
     );
 
     const inputs = screen.getAllByRole('textbox');
-    fireEvent.change(inputs[0], { target: { value: 'google.com' } });
+    fireEvent.change(inputs[0]!, { target: { value: 'google.com' } });
     expect(onPasskeyServiceChange).toHaveBeenCalledWith('google.com');
 
     if (inputs[1]) {
-      fireEvent.change(inputs[1], { target: { value: 'alice-2' } });
+      fireEvent.change(inputs[1]!, { target: { value: 'alice-2' } });
       expect(onPasskeyPublicIdChange).toHaveBeenCalledWith('alice-2');
     }
 

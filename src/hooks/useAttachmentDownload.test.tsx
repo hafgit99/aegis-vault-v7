@@ -84,7 +84,7 @@ describe('useAttachmentDownload', () => {
       await result.current.downloadAttachment('attachment-1', 'download.txt');
     });
 
-    const savedBytes = vi.mocked(saveDesktopBinaryFile).mock.calls[0][1];
+    const savedBytes = vi.mocked(saveDesktopBinaryFile).mock.calls[0]![1];
     expect(saveDesktopBinaryFile).toHaveBeenCalledWith('secret.txt', expect.any(Uint8Array));
     expect(Array.from(savedBytes)).toEqual(Array.from(new TextEncoder().encode('secret')));
     expect(createObjectURL).not.toHaveBeenCalled();
@@ -160,7 +160,7 @@ describe('useAttachmentDownload', () => {
       await result.current.downloadAttachment('attachment-legacy', 'download.txt');
     });
 
-    const savedBytes = vi.mocked(saveDesktopBinaryFile).mock.calls[0][1];
+    const savedBytes = vi.mocked(saveDesktopBinaryFile).mock.calls[0]![1];
     expect(Array.from(savedBytes)).toEqual(Array.from(new TextEncoder().encode('legacy-reader')));
     expect(onNotify).not.toHaveBeenCalled();
   });

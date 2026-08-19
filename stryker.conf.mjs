@@ -1,8 +1,8 @@
+import base from './stryker.base.mjs';
+
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 export default {
-  packageManager: 'npm',
-  testRunner: 'vitest',
-  coverageAnalysis: 'perTest',
+  ...base,
   mutate: [
     'src/lib/diceware.ts',
     'src/lib/emergencyKit.ts',
@@ -19,22 +19,10 @@ export default {
     'src/lib/secretKey.test.ts',
     'src/lib/securityEvents.test.ts',
   ],
-  vitest: {
-    configFile: 'vitest.config.ts',
-    related: false,
-  },
-  reporters: ['progress', 'clear-text', 'html', 'json'],
   thresholds: {
     high: 80,
     low: 70,
     break: 65,
   },
-  timeoutMS: 15000,
-  dryRunTimeoutMinutes: 3,
-  concurrency: 2,
-  cleanTempDir: 'always',
-  ignoreStatic: true,
-  tempDirName: '.stryker-tmp',
-  incremental: true,
   incrementalFile: 'reports/mutation/incremental.json',
 };

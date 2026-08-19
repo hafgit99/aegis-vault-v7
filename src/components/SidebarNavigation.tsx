@@ -2,7 +2,7 @@ import { Clock, HeartHandshake, KeyRound, Lock, Settings, ShieldCheck, Trash2 } 
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { APP_NAME } from '../lib/branding';
-import { ActiveTab } from '../types';
+import type { ActiveTab } from '../types';
 import aegisLogo from '../../src-tauri/icons/icon.png';
 
 interface SidebarNavigationProps {

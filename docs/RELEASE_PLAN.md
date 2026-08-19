@@ -45,7 +45,7 @@ Every Android release candidate must pass:
 
 The desktop release gate runs:
 
-- `npm run lint`
+- `npm run typecheck`
 - `npm run desktop:release:version:check`
 - `npm run test:unit`
 - `npm run build`

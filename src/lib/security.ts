@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { VaultItem, GeneratorOptions, AuditReport } from '../types';
+import type { VaultItem, GeneratorOptions, AuditReport } from '../types';
 import { secureRandomIndex } from './random';
 import { ZxcvbnFactory } from '@zxcvbn-ts/core';
 import * as zxcvbnCommonPackage from '@zxcvbn-ts/language-common';
@@ -207,12 +207,12 @@ export function saveAuditScoreToHistory(score: number): void {
     if (!Array.isArray(history)) {
       history = [];
     }
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split('T')[0] ?? '';
     
     const existingIndex = history.findIndex(h => h.date === today);
-    if (existingIndex !== -1) {
+    if (existingIndex !== -1 && history[existingIndex]) {
       history[existingIndex].score = score;
-    } else {
+    } else if (today) {
       history.push({ date: today, score });
     }
     
@@ -296,7 +296,7 @@ export function runVaultAudit(items: VaultItem[]): AuditReport {
       secureCount++;
     }
 
-    if (pw && passwordFreq[pw] > 1) {
+    if (pw && (passwordFreq[pw] ?? 0) > 1) {
       reusedCount++;
     }
 
@@ -358,39 +358,45 @@ export function generatePassword(options: GeneratorOptions): string {
 
   if (options.uppercase) {
     pool += uppercaseChars;
-    requiredChars += uppercaseChars[secureRandomIndex(uppercaseChars.length)];
+    requiredChars += uppercaseChars[secureRandomIndex(uppercaseChars.length)] ?? '';
   }
   if (options.lowercase) {
     pool += lowercaseChars;
-    requiredChars += lowercaseChars[secureRandomIndex(lowercaseChars.length)];
+    requiredChars += lowercaseChars[secureRandomIndex(lowercaseChars.length)] ?? '';
   }
   if (options.numbers) {
     pool += numberChars;
-    requiredChars += numberChars[secureRandomIndex(numberChars.length)];
+    requiredChars += numberChars[secureRandomIndex(numberChars.length)] ?? '';
   }
   if (options.symbols) {
     pool += symbolChars;
-    requiredChars += symbolChars[secureRandomIndex(symbolChars.length)];
+    requiredChars += symbolChars[secureRandomIndex(symbolChars.length)] ?? '';
   }
 
   // Fallback to lowercase if no options chosen
   if (!pool) {
     pool = lowercaseChars;
-    requiredChars += lowercaseChars[secureRandomIndex(lowercaseChars.length)];
+    requiredChars += lowercaseChars[secureRandomIndex(lowercaseChars.length)] ?? '';
   }
 
-  let passwordArray: string[] = requiredChars.split('');
+  const passwordArray: string[] = requiredChars.split('');
 
   // Fill up to target length
   const remainingLength = options.length - passwordArray.length;
   for (let i = 0; i < remainingLength; i++) {
-    passwordArray.push(pool[secureRandomIndex(pool.length)]);
+    const char = pool[secureRandomIndex(pool.length)];
+    if (char) passwordArray.push(char);
   }
 
   // Shuffle password characters
   for (let i = passwordArray.length - 1; i > 0; i--) {
     const j = secureRandomIndex(i + 1);
-    [passwordArray[i], passwordArray[j]] = [passwordArray[j], passwordArray[i]];
+    const tempI = passwordArray[i];
+    const tempJ = passwordArray[j];
+    if (tempI !== undefined && tempJ !== undefined) {
+      passwordArray[i] = tempJ;
+      passwordArray[j] = tempI;
+    }
   }
 
   return passwordArray.join('');

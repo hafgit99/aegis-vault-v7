@@ -1,8 +1,8 @@
 import { Calendar } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
-import { TranslationKey } from '../i18n/translations';
-import { VaultItem } from '../types';
+import type { TranslationKey } from '../i18n/translations';
+import type { VaultItem } from '../types';
 
 interface VaultItemSideInfoProps {
   item: VaultItem;

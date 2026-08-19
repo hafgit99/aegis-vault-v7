@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { androidAutofillTargetLabel, type AndroidAutofillRequest } from '../lib/androidAutofill';
 import { isAndroidAutofillTargetMatch } from '../lib/androidAutofillMatching';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 import CardDetail from './CardDetail';
 import IdentityDetail from './IdentityDetail';
 import LoginDetail from './LoginDetail';

@@ -61,7 +61,7 @@ async function blobText(blob: Blob | undefined): Promise<string> {
 
 function legacyXorEncrypt(buffer: ArrayBuffer): ArrayBuffer {
   const key = new TextEncoder().encode('aegis_secure_file');
-  return new Uint8Array(buffer).map((byte, index) => byte ^ key[index % key.length]).buffer;
+  return new Uint8Array(buffer).map((byte, index) => byte ^ key[index % key.length]!).buffer;
 }
 
 function deleteAttachmentDatabase(): Promise<void> {
@@ -546,7 +546,7 @@ describe('attachment encryption', () => {
 
   it('handles undefined indexedDB gracefully in export, import, and delete', async () => {
     const originalIndexedDB = global.indexedDB;
-    // @ts-ignore
+// @ts-expect-error deleting global indexedDB to simulate missing storage
     delete global.indexedDB;
 
     await expect(exportAllAttachments()).resolves.toEqual([]);
@@ -584,7 +584,7 @@ describe('attachment encryption', () => {
     
     // Broken should be skipped, only working is exported
     expect(exported).toHaveLength(1);
-    expect(exported[0].id).toBe('attachment-working');
+    expect(exported[0]!.id).toBe('attachment-working');
     expect(consoleSpy).toHaveBeenCalled();
 
     consoleSpy.mockRestore();

@@ -1,11 +1,8 @@
 import { useCallback, useState } from 'react';
 
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 import { getVaultItems, saveVaultItem, saveVaultItems } from '../lib/storage';
-
-const isTestEnv = typeof window === 'undefined' || 
-  (typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.includes('jsdom')) || 
-  (typeof window !== 'undefined' && (window as any).__happyDOM__);
+import { isTestEnv } from '../lib/environment';
 
 const maybeDelay = async (ms: number): Promise<void> => {
   if (isTestEnv) return;
@@ -49,10 +46,10 @@ export function useVaultData() {
     setSelectedItem((current) => {
       if (current && !current.deleted) {
         const stillExists = activeLoaded.find((item) => item.id === current.id);
-        return stillExists || activeLoaded[0];
+        return stillExists || activeLoaded[0]!;
       }
 
-      return activeLoaded[0];
+      return activeLoaded[0]!;
     });
   }, []);
 

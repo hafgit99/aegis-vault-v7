@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { setupVault } from './helpers';
 
 const masterPassword = 'master-pass-mobile-e2e';
 
@@ -7,16 +8,6 @@ test.use({
   isMobile: true,
   hasTouch: true,
 });
-
-async function setupVault(page: Page) {
-  await page.goto('/');
-  await page.getByTestId('lock-password-input').fill(masterPassword);
-  await page.getByTestId('lock-confirm-password-input').fill(masterPassword);
-  await expect(page.getByTestId('lock-secret-key-input')).toHaveValue(/^A3-/);
-  await page.getByTestId('lock-remember-secret-key-checkbox').check();
-  await page.getByTestId('lock-submit-button').click();
-  await expect(page.getByTestId('new-vault-item-button')).toBeVisible();
-}
 
 async function openMobileNavigation(page: Page) {
   await page.getByTestId('topbar-menu-button').click();
@@ -42,7 +33,7 @@ test('keeps the mobile lock screen controls inside the viewport', async ({ page 
 });
 
 test('shows a usable mobile dashboard lock action after setup', async ({ page }) => {
-  await setupVault(page);
+  await setupVault(page, masterPassword);
 
   await page.getByTestId('vault-dashboard-card').click();
   const mobileLockButton = page.getByTestId('mobile-dashboard-lock-button');
@@ -53,7 +44,7 @@ test('shows a usable mobile dashboard lock action after setup', async ({ page })
 });
 
 test('keeps mobile item creation and settings controls reachable', async ({ page }) => {
-  await setupVault(page);
+  await setupVault(page, masterPassword);
 
   await page.getByTestId('new-vault-item-button').click();
   await expect(page.getByTestId('vault-item-title-input')).toBeVisible();

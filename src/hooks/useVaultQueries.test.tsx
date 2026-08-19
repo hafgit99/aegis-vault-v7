@@ -2,7 +2,7 @@
 
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 import { useVaultQueries } from './useVaultQueries';
 
 const item = (overrides: Partial<VaultItem>): VaultItem => ({
@@ -51,7 +51,7 @@ describe('useVaultQueries', () => {
     );
 
     expect(result.current.filteredItems).toHaveLength(1);
-    expect(result.current.filteredItems[0].id).toBe('1');
+    expect(result.current.filteredItems[0]!.id).toBe('1');
   });
 
   it('returns category counters and audit report', () => {

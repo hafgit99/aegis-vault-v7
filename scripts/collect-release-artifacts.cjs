@@ -180,6 +180,7 @@ function copyBrowserExtensions() {
   const extensionRoot = path.join(outputDir, 'browser-extension');
   const chromiumDir = path.join(rootDir, 'dist-extension');
   const firefoxDir = path.join(rootDir, 'dist-extension-firefox');
+  const safariDir = path.join(rootDir, 'dist-extension-safari');
   const signedFirefoxDir = path.join(releaseLocalDir, 'firefox');
 
   if (fs.existsSync(chromiumDir)) {
@@ -187,6 +188,9 @@ function copyBrowserExtensions() {
   }
   if (fs.existsSync(firefoxDir)) {
     fs.cpSync(firefoxDir, path.join(extensionRoot, 'firefox'), { recursive: true });
+  }
+  if (fs.existsSync(safariDir)) {
+    fs.cpSync(safariDir, path.join(extensionRoot, 'safari'), { recursive: true });
   }
   if (fs.existsSync(signedFirefoxDir)) {
     const xpi = fs.readdirSync(signedFirefoxDir)

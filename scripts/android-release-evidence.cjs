@@ -1,8 +1,8 @@
 const { execFileSync } = require('child_process');
-const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { sha256, firstMatch } = require('./release-utils.cjs');
 const { findLatestAndroidCandidateArtifacts } = require('./android-artifact-utils.cjs');
 
 const repoRoot = path.resolve(__dirname, '..');
@@ -104,10 +104,6 @@ function gitValue(args, fallbackValue) {
   return isSpawnBlocked(output) || output === '<command failed>' ? fallbackValue : output;
 }
 
-function sha256(file) {
-  return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
-}
-
 function readAssetIntegrityEvidence() {
   const manifestPath = path.join(repoRoot, 'dist', 'aegis-integrity.json');
   if (!fs.existsSync(manifestPath)) throw new Error('Production asset integrity manifest is missing. Run npm run build first.');
@@ -131,10 +127,6 @@ function copyArtifact(file) {
   fs.mkdirSync(path.dirname(destination), { recursive: true });
   fs.copyFileSync(file, destination);
   return destination;
-}
-
-function firstMatch(text, pattern, fallback = '') {
-  return String(text || '').match(pattern)?.[1]?.trim() || fallback;
 }
 
 function completedManualChecklist(contents, metadata, report, deviceDoctorReport) {

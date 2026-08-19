@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 
-import { AppConfirmConfig, AppNotification } from '../types';
+import type { AppConfirmConfig, AppNotification } from '../types';
 
 type OpenConfirmConfig = Omit<AppConfirmConfig, 'isOpen'>;
 

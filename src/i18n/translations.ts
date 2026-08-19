@@ -28,6 +28,7 @@ export {
   isRtlLanguage,
   rtlLanguages,
   type LanguageCode,
+  type TParams,
 } from './i18nTypes';
 
 export const translations = {

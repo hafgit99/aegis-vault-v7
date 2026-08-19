@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LanguageProvider } from '../i18n/LanguageContext';
 import { languageStorageKey } from '../i18n/translations';
 import { APP_NAME } from '../lib/branding';
-import { AuditReport, VaultItem } from '../types';
+import type { AuditReport, VaultItem } from '../types';
 import VaultWorkspace from './VaultWorkspace';
 
 const auditReport: AuditReport = {
@@ -135,7 +135,7 @@ describe('VaultWorkspace', () => {
     fireEvent.click(screen.getByTestId('new-vault-item-button'));
     fireEvent.click(screen.getByText('Favoriler (1)'));
     fireEvent.click(screen.getByText('Aegis Kontrol Paneli'));
-    fireEvent.click(screen.getAllByText('Aegis Mail')[0]);
+    fireEvent.click(screen.getAllByText('Aegis Mail')[0]!);
 
     expect(props.onNewItem).toHaveBeenCalledTimes(1);
     expect(props.onSetFavoritesOnly).toHaveBeenCalledWith(true);
@@ -146,7 +146,7 @@ describe('VaultWorkspace', () => {
   it('renders active favorite filter state and can switch back to all items', () => {
     const props = renderWorkspace({
       filterFavoritesOnly: true,
-      filteredItems: [activeItems[0]],
+      filteredItems: [activeItems[0]!],
     });
 
     const allButton = buttonByText('Tümü (2)');
@@ -203,7 +203,7 @@ describe('VaultWorkspace', () => {
 
     const rows = screen.getAllByText(/Target Login|Unrelated/);
 
-    expect(rows[0].textContent).toContain('Target Login');
+    expect(rows[0]!.textContent).toContain('Target Login');
     expect(screen.getByText('1 eşleşen kayıt öne çıkarıldı')).toBeTruthy();
     expect(screen.getByTestId('autofill-recommended-badge')).toBeTruthy();
   });

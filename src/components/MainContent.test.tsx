@@ -6,7 +6,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { AuditReport, VaultItem } from '../types';
+import type { AuditReport, VaultItem } from '../types';
 import MainContent from './MainContent';
 
 vi.mock('./VaultWorkspace', () => ({
@@ -58,6 +58,7 @@ function renderMainContent(overrides: Partial<ComponentProps<typeof MainContent>
     selectedItem: null,
     mobileActiveView: 'list',
     filteredItems: [item('mail')],
+    filteredItemResults: [],
     activeItems: [item('mail')],
     trashItems: [item('trash')],
     filterFavoritesOnly: false,
@@ -81,9 +82,11 @@ function renderMainContent(overrides: Partial<ComponentProps<typeof MainContent>
     autoLockDuration: 300,
     onNewItem: vi.fn(),
     onOpenProfile: vi.fn(),
+    onLock: vi.fn(),
     onOpenAudit: vi.fn(),
     onOpenGenerator: vi.fn(),
     onSetFavoritesOnly: vi.fn(),
+    onSelectCategory: vi.fn(),
     onSelectDashboard: vi.fn(),
     onBackToList: vi.fn(),
     onSelectItem: vi.fn(),

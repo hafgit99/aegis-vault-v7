@@ -6,6 +6,9 @@
 import React, { useState, useEffect } from 'react';
 import { X, Lock, Eye, EyeOff, ShieldCheck, KeyRound } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
+import { Modal } from './ui/Modal';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
 
 interface PasswordConfirmModalProps {
   isOpen: boolean;
@@ -60,7 +63,7 @@ export default function PasswordConfirmModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-md animate-fade-in">
+    <Modal open={isOpen} onClose={onCancel} zIndex={50} closeOnBackdrop={false}>
       <div 
         className="relative w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden p-6 animate-scale-up"
         onClick={(e) => e.stopPropagation()}
@@ -71,7 +74,7 @@ export default function PasswordConfirmModal({
           onClick={onCancel}
           disabled={isLoading}
           className="absolute top-4 right-4 p-1.5 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/60 rounded-lg transition-colors disabled:opacity-50"
-          aria-label="Close"
+          aria-label={t('confirm.close')}
         >
           <X className="w-5 h-5" />
         </button>
@@ -83,43 +86,36 @@ export default function PasswordConfirmModal({
           </div>
           <div>
             <h3 className="text-lg font-semibold text-neutral-100">
-              {title || t('settings.biometric.promptMasterPasswordTitle') || t('common.confirmPassword') || 'Ana Parola Doğrulaması'}
+              {title || t('common.confirmPassword')}
             </h3>
             <p className="text-xs text-neutral-400">
-              {description || t('settings.biometric.promptMasterPassword') || 'İşlemi tamamlamak için lütfen Ana Parolanızı doğrulayın:'}
+              {description || t('common.verifyMasterPasswordHint')}
             </p>
           </div>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="relative">
-            <label className="block text-xs font-medium text-neutral-300 mb-1.5">
-              {t('common.masterPassword') || 'Ana Parola'}
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  if (localError) setLocalError(null);
-                }}
-                placeholder="••••••••••••"
-                autoFocus
-                disabled={isLoading}
-                className="w-full pl-10 pr-11 py-2.5 bg-neutral-950/80 border border-neutral-800 focus:border-brand-primary/60 focus:ring-1 focus:ring-brand-primary/60 rounded-xl text-sm text-neutral-100 placeholder-neutral-600 transition-all outline-none"
-              />
-              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 pointer-events-none" />
-              
-              {/* Eye Toggle Button */}
+          <Input
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (localError) setLocalError(null);
+            }}
+            placeholder="••••••••••••"
+            autoFocus
+            disabled={isLoading}
+            label={t('common.masterPassword')}
+            leadingIcon={<Lock className="w-4 h-4 text-neutral-500" />}
+            trailing={
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 disabled={isLoading}
                 tabIndex={-1}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-neutral-400 hover:text-neutral-200 transition-colors focus:outline-none"
-                title={showPassword ? 'Şifreyi Gizle' : 'Şifreyi Göster'}
+                className="p-1 text-neutral-400 hover:text-neutral-200 transition-colors focus:outline-none"
+                title={showPassword ? t('common.hidePassword') : t('common.showPassword')}
               >
                 {showPassword ? (
                   <EyeOff className="w-4 h-4 text-brand-primary" />
@@ -127,8 +123,8 @@ export default function PasswordConfirmModal({
                   <Eye className="w-4 h-4 text-neutral-400" />
                 )}
               </button>
-            </div>
-          </div>
+            }
+          />
 
           {/* Error Message */}
           {localError && (
@@ -140,34 +136,34 @@ export default function PasswordConfirmModal({
 
           {/* Actions */}
           <div className="flex items-center justify-end gap-3 pt-2">
-            <button
+            <Button
               type="button"
               onClick={onCancel}
               disabled={isLoading}
-              className="px-4 py-2 text-xs font-medium text-neutral-300 hover:text-neutral-100 hover:bg-neutral-800/80 rounded-xl border border-neutral-800 transition-all disabled:opacity-50"
+              variant="secondary"
+              size="md"
             >
-              {cancelText || t('common.cancel') || 'İptal'}
-            </button>
-            <button
+              {cancelText || t('common.cancel')}
+            </Button>
+            <Button
               type="submit"
               disabled={isLoading || !password.trim()}
-              className="px-4 py-2 text-xs font-medium text-neutral-950 bg-brand-primary hover:bg-brand-primary/90 rounded-xl font-semibold shadow-lg shadow-brand-primary/10 transition-all disabled:opacity-50 flex items-center gap-2"
+              variant="primary"
+              size="md"
+              loading={isLoading}
             >
               {isLoading ? (
-                <>
-                  <span className="w-3.5 h-3.5 border-2 border-neutral-950/30 border-t-neutral-950 rounded-full animate-spin" />
-                  <span>{t('common.verifying') || 'Doğrulanıyor...'}</span>
-                </>
+                <span>{t('common.verifying')}</span>
               ) : (
                 <>
                   <ShieldCheck className="w-4 h-4" />
-                  <span>{confirmText || t('common.confirm') || 'Doğrula & Aktifleştir'}</span>
+                  <span>{confirmText || t('common.confirm')}</span>
                 </>
               )}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
-    </div>
+    </Modal>
   );
 }

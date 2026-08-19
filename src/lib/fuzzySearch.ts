@@ -78,14 +78,14 @@ export function damerauLevenshteinDistance(a: string, b: string): number {
   for (let i = 0; i < a.length + 2; i += 1) {
     d[i] = new Array(b.length + 2).fill(0);
   }
-  d[0][0] = inf;
+  d[0]![0] = inf;
   for (let i = 0; i <= a.length; i += 1) {
-    d[i + 1][1] = i;
-    d[i + 1][0] = inf;
+    d[i + 1]![1] = i;
+    d[i + 1]![0] = inf;
   }
   for (let j = 0; j <= b.length; j += 1) {
-    d[1][j + 1] = j;
-    d[0][j + 1] = inf;
+    d[1]![j + 1] = j;
+    d[0]![j + 1] = inf;
   }
 
   for (let i = 1; i <= a.length; i += 1) {
@@ -93,26 +93,26 @@ export function damerauLevenshteinDistance(a: string, b: string): number {
     for (let j = 1; j <= b.length; j += 1) {
       // 1-based indices, matching the algorithm in Wikipedia:
       //   https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance
-      const k = da[b[j - 1]] ?? 0;
+      const k = da[b[j - 1] ?? ''] ?? 0;
       const l = db;
       const i1 = i;
       const j1 = j;
       let cost = 1;
-      if (a[i1 - 1] === b[j1 - 1]) {
+      if ((a[i1 - 1] ?? '') === (b[j1 - 1] ?? '')) {
         cost = 0;
         db = j;
       }
-      d[i + 1][j + 1] = Math.min(
-        d[i][j] + cost, // substitution
-        d[i + 1][j] + 1, // insertion
-        d[i][j + 1] + 1, // deletion
-        d[k][l] + (i1 - k - 1) + 1 + (j1 - l - 1), // transposition
+      d[i + 1]![j + 1] = Math.min(
+        d[i]![j]! + cost, // substitution
+        d[i + 1]![j]! + 1, // insertion
+        d[i]![j + 1]! + 1, // deletion
+        d[k]![l]! + (i1 - k - 1) + 1 + (j1 - l - 1), // transposition
       );
     }
-    da[a[i - 1]] = i;
+    da[a[i - 1] ?? ''] = i;
   }
 
-  return d[a.length + 1][b.length + 1];
+  return d[a.length + 1]![b.length + 1]!;
 }
 
 /**

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { subscribeToSecurityEvents } from '../lib/securityEvents';
 import { useLanguage } from '../i18n/LanguageContext';
-import { AppNotification } from '../types';
+import type { AppNotification } from '../types';
 
 interface UseAirgapAlertsProps {
   unlocked: boolean;

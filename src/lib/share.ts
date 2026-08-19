@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { VaultItem } from '../types';
-import { generateSafeIv, webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, WebCryptoAesGcmPayload } from './webcrypto';
+import type { VaultItem } from '../types';
+import type { WebCryptoAesGcmPayload } from './webcrypto';
+import { generateSafeIv, webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt } from './webcrypto';
 import { secureRandomBytes } from './random';
 
 export interface DecryptedSharePayload {

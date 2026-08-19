@@ -1,18 +1,25 @@
-const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const {
+  hasFlag,
+  getArgValue,
+  readJsonSafe,
+  sha256,
+  formatBool,
+  readChecksumFile,
+  checklistStats,
+  checklistField,
+  isPlaceholderValue,
+} = require('./release-utils.cjs');
 
 const repoRoot = path.resolve(__dirname, '..');
 const args = process.argv.slice(2);
-const explicitDir = getArgValue('--dir');
-const finalMode = hasFlag('--final');
-const allowDirty = hasFlag('--allow-dirty');
-const requireBiometricMatrix = hasFlag('--require-biometric-matrix') || finalMode;
+const explicitDir = getArgValue(args, '--dir');
+const finalMode = hasFlag(args, '--final');
+const allowDirty = hasFlag(args, '--allow-dirty');
+const requireBiometricMatrix = hasFlag(args, '--require-biometric-matrix') || finalMode;
 const releaseRoot = path.join(repoRoot, 'release-local', 'android');
 const evidenceDir = explicitDir ? path.resolve(repoRoot, explicitDir) : findLatestEvidenceDir();
-
-function hasFlag(flag) { return args.includes(flag); }
-function getArgValue(name) { const index = args.indexOf(name); return index >= 0 ? args[index + 1] : null; }
 
 function usage() {
   return [
@@ -40,48 +47,16 @@ function findLatestEvidenceDir() {
   return dirs[0] || path.join(releaseRoot, '<missing>');
 }
 
-function readJson(file, issues) {
-  try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
-  catch (error) { issues.push('metadata.json could not be read: ' + (error && error.message ? error.message : String(error))); return null; }
-}
-
-function sha256(file) { return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'); }
-function formatBool(value) { return value ? 'yes' : 'no'; }
-
-function readChecksumFile(file, issues) {
-  const entries = new Map();
-  if (!fs.existsSync(file)) { issues.push('SHA256SUMS.txt is missing.'); return entries; }
-  const contents = fs.readFileSync(file, 'utf8').trim();
-  if (!contents) return entries;
-  for (const line of contents.split(/\r?\n/)) {
-    const match = line.match(/^([a-f0-9]{64})\s{2}(.+)$/i);
-    if (!match) { issues.push('Invalid checksum line: ' + line); continue; }
-    entries.set(match[2].replaceAll('/', path.sep), match[1].toLowerCase());
-  }
-  return entries;
-}
-
-function checklistStats(file) {
-  if (!fs.existsSync(file)) return { checked: 0, unchecked: 0, fieldsMissing: ['<checklist missing>'] };
-  const contents = fs.readFileSync(file, 'utf8');
-  const checked = contents.split(/\r?\n/).filter((line) => /^- \[x\]/i.test(line)).length;
-  const unchecked = contents.split(/\r?\n/).filter((line) => /^- \[ \]/.test(line)).length;
-  const fieldLabels = ['- Version:', '- Commit:', '- Device model:', '- Android version / SDK:', '- Build type:', '- Fresh install used:', '- Tester:', '- Date:'];
-  const fieldsMissing = fieldLabels.filter((label) => {
-    const line = contents.split(/\r?\n/).find((candidate) => candidate.startsWith(label));
-    return !line || line.slice(label.length).trim().length === 0;
-  });
-  return { checked, unchecked, fieldsMissing };
-}
-
-function checklistField(contents, label) {
-  const line = contents.split(new RegExp('\\r?\\n')).find((candidate) => candidate.startsWith(label));
-  return line ? line.slice(label.length).trim() : '';
-}
-
-function isPlaceholderValue(value) {
-  return !value || new RegExp('^(blocked|n/?a|na|none|tbd|todo|pending|-|<.*>)$', 'i').test(value.trim());
-}
+const ANDROID_CHECKLIST_FIELDS = [
+  '- Version:',
+  '- Commit:',
+  '- Device model:',
+  '- Android version / SDK:',
+  '- Build type:',
+  '- Fresh install used:',
+  '- Tester:',
+  '- Date:',
+];
 
 function biometricMatrixStats(file) {
   if (!fs.existsSync(file)) return { approved: false, missing: ['<checklist missing>'] };
@@ -121,7 +96,10 @@ function verifyEvidence(metadata, artifacts, stats, biometricStats) {
   if (finalMode && !metadata.signed) issues.push('Final mode requires signed release evidence.');
   if (artifacts.length === 0) issues.push('No Android artifacts are listed in metadata.json.');
 
-  const checksumEntries = readChecksumFile(path.join(evidenceDir, 'SHA256SUMS.txt'), issues);
+  const checksumEntries = readChecksumFile(path.join(evidenceDir, 'SHA256SUMS.txt'), {
+    issues,
+    normalizeKey: (key) => key.replaceAll('/', path.sep),
+  });
   const artifactNames = new Set();
   for (const artifact of artifacts) {
     if (!artifact.copied || !artifact.sha256) { issues.push('Artifact metadata is missing copied path or sha256.'); continue; }
@@ -150,13 +128,13 @@ function verifyEvidence(metadata, artifacts, stats, biometricStats) {
 }
 
 function main() {
-  if (hasFlag('--help')) { console.log(usage()); return; }
+  if (hasFlag(args, '--help')) { console.log(usage()); return; }
   const bootstrapIssues = [];
   if (!fs.existsSync(evidenceDir) || !fs.statSync(evidenceDir).isDirectory()) bootstrapIssues.push('Evidence directory not found: ' + evidenceDir);
-  const metadata = bootstrapIssues.length ? null : readJson(path.join(evidenceDir, 'metadata.json'), bootstrapIssues);
+  const metadata = bootstrapIssues.length ? null : readJsonSafe(path.join(evidenceDir, 'metadata.json'), bootstrapIssues);
   const artifacts = Array.isArray(metadata?.artifacts) ? metadata.artifacts : [];
   const checklistPath = path.join(evidenceDir, 'ANDROID_MANUAL_SMOKE_CHECKLIST.md');
-  const stats = checklistStats(checklistPath);
+  const stats = checklistStats(checklistPath, ANDROID_CHECKLIST_FIELDS);
   const biometricStats = biometricMatrixStats(checklistPath);
   const issues = bootstrapIssues.concat(bootstrapIssues.length ? [] : verifyEvidence(metadata, artifacts, stats, biometricStats));
   const passed = issues.length === 0;

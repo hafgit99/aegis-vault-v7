@@ -38,6 +38,7 @@ vi.mock('./argon2id', () => ({
 }));
 
 import {
+  computeSha256ChecksumByteSync,
   generateRecoveryWords,
   validateRecoveryWords,
   formatRecoveryWords,
@@ -90,7 +91,7 @@ describe('recoveryKey', () => {
 
   it('accepts words case-insensitively', () => {
     const words = generateRecoveryWords();
-    words[0] = words[0].toUpperCase();
+    words[0] = words[0]!.toUpperCase();
     expect(validateRecoveryWords(words)).toBe(true);
   });
 
@@ -99,10 +100,9 @@ describe('recoveryKey', () => {
       const entropy = crypto.getRandomValues(new Uint8Array(32));
       const hashBuffer = await crypto.subtle.digest('SHA-256', entropy);
       const expectedFirstByte = new Uint8Array(hashBuffer)[0];
-      
-      // Generate words and verify checksum validity
-      const words = generateRecoveryWords();
-      expect(validateRecoveryWords(words)).toBe(true);
+
+      // Compare the synchronous checksum implementation against WebCrypto
+      expect(computeSha256ChecksumByteSync(entropy)).toBe(expectedFirstByte);
     }
   });
 

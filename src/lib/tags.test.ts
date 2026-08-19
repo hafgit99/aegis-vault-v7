@@ -61,7 +61,7 @@ describe('Tags Library', () => {
   });
 
   it('resolves tag colors from library or deterministically fallback', () => {
-    const t1 = createTag({ name: 'Social', color: 'cyan' })!;
+    createTag({ name: 'Social', color: 'cyan' })!;
     expect(resolveTagColor('Social')).toBe('cyan');
 
     // fallback

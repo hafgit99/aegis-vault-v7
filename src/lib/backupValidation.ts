@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { VaultItem } from '../types';
-
 export const validationErrorCodes = {
   invalidBackupFormat: 'validation.invalidBackupFormat',
   missingItems: 'validation.missingItems',

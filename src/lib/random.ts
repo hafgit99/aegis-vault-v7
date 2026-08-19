@@ -21,11 +21,13 @@ export function secureRandomIndex(max: number): number {
   const array = new Uint32Array(1);
   const limit = Math.floor(0xffffffff / max) * max;
 
+  let val = 0;
   do {
     cryptoApi.getRandomValues(array);
-  } while (array[0] >= limit);
+    val = array[0] ?? 0;
+  } while (val >= limit);
 
-  return array[0] % max;
+  return val % max;
 }
 
 export function secureRandomId(): string {
@@ -34,8 +36,10 @@ export function secureRandomId(): string {
   }
 
   const bytes = secureRandomBytes(16);
-  bytes[6] = (bytes[6] & 0x0f) | 0x40;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const byte6 = bytes[6] ?? 0;
+  const byte8 = bytes[8] ?? 0;
+  bytes[6] = (byte6 & 0x0f) | 0x40;
+  bytes[8] = (byte8 & 0x3f) | 0x80;
   const hex = [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 
   return [

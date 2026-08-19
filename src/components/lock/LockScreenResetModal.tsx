@@ -6,6 +6,7 @@
 import React from 'react';
 import { AlertTriangle, RotateCcw, Trash2 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { Modal } from '../ui/Modal';
 
 interface LockScreenResetModalProps {
   isOpen: boolean;
@@ -25,7 +26,7 @@ export function LockScreenResetModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in">
+    <Modal open={isOpen} onClose={onClose} zIndex={200} closeOnBackdrop={false}>
       <div className="w-full max-w-sm mx-4 surface-panel rounded-2xl p-6 space-y-5 animate-fade-in">
         <div className="flex flex-col items-center text-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
@@ -68,6 +69,6 @@ export function LockScreenResetModal({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

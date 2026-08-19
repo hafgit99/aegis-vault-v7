@@ -30,7 +30,7 @@ export const AVATAR_GRADIENT_PRESETS: AvatarGradientPreset[] = [
   },
 ];
 
-const DEFAULT_AVATAR_CLASS = AVATAR_GRADIENT_PRESETS[0].className;
+const DEFAULT_AVATAR_CLASS = AVATAR_GRADIENT_PRESETS[0]?.className ?? 'avatar-gradient-emerald';
 
 export function isAvatarGradient(value: string): boolean {
   return value.startsWith('linear-gradient') || value.startsWith('gradient');

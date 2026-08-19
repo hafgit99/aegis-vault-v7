@@ -6,11 +6,15 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import PasswordConfirmModal from './PasswordConfirmModal';
 import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
 
 describe('PasswordConfirmModal', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
   afterEach(() => {
     cleanup();
   });
@@ -41,6 +45,7 @@ describe('PasswordConfirmModal', () => {
   });
 
   it('submits password when user clicks confirm', async () => {
+    window.localStorage.setItem(languageStorageKey, 'en');
     const onConfirm = vi.fn();
     render(
       <LanguageProvider>

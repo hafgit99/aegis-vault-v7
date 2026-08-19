@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { TagDefinition, VaultFolder } from '../../types';
+import type { TagDefinition, VaultFolder } from '../../types';
 import TagPicker from '../TagPicker';
 
 interface VaultFormFolderTagsSectionProps {
@@ -39,7 +39,7 @@ export function VaultFormFolderTagsSection({
           onChange={(e) => onFolderIdChange(e.target.value)}
           className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl px-3 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface cursor-pointer"
         >
-          <option value="">{t('bulk.noFolder') || 'No Folder / Klasör Yok'}</option>
+          <option value="">{t('bulk.noFolder', 'No Folder / Klasör Yok')}</option>
           {folders.map((f) => (
             <option key={f.id} value={f.id}>
               {f.name}

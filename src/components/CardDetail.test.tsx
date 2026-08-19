@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import CardDetail from './CardDetail';
 import { LanguageProvider } from '../i18n/LanguageContext';
 import { languageStorageKey } from '../i18n/translations';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 
 const cardItem: VaultItem = {
   id: 'card-1',

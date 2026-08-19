@@ -56,11 +56,12 @@ function repositoryStub(items: VaultItem[], isPasswordValid = true): VaultStorag
     changeMasterPassword: vi.fn(async () => undefined),
     deriveEncryptionKey: vi.fn(async () => new Uint8Array(32)),
     getVaultItems: vi.fn(async () => storedItems.map((candidate) => ({ ...candidate }))),
-    saveVaultItem: vi.fn(async (candidate) => {
+    getVaultItemsWithKey: vi.fn(async () => storedItems.map((candidate) => ({ ...candidate }))),
+    saveVaultItem: vi.fn(async (candidate: VaultItem) => {
       storedItems = [candidate];
       return storedItems.map((saved) => ({ ...saved }));
     }),
-    saveVaultItems: vi.fn(async (candidates) => {
+    saveVaultItems: vi.fn(async (candidates: VaultItem[]) => {
       storedItems = candidates.map((candidate) => ({ ...candidate }));
       return storedItems.map((candidate) => ({ ...candidate }));
     }),
@@ -92,7 +93,7 @@ describe('vault storage migration', () => {
 
     expect(sourceRepository.verifyPassword).toHaveBeenCalledWith('master-pass');
     expect(vi.mocked(targetRepository.resetAll).mock.invocationCallOrder[0]).toBeLessThan(
-      vi.mocked(targetRepository.setupMaster).mock.invocationCallOrder[0],
+      vi.mocked(targetRepository.setupMaster).mock.invocationCallOrder[0]!,
     );
     expect(targetRepository.setupMaster).toHaveBeenCalledWith('master-pass');
     expect(targetRepository.saveVaultItems).toHaveBeenCalledWith([

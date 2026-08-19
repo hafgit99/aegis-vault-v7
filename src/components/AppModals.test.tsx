@@ -6,7 +6,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 import AppModals from './AppModals';
 
 vi.mock('./VaultFormModal', () => ({

@@ -1,4 +1,4 @@
-import { AppNotification } from '../types';
+import type { AppNotification } from '../types';
 import { getAttachmentBlob } from '../lib/attachments';
 import { isDesktopRuntime } from '../lib/desktopStorage';
 import { saveDesktopBinaryFile } from '../lib/desktopFiles';

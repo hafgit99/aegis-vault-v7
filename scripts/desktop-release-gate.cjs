@@ -1,6 +1,7 @@
 const path = require('path');
 const os = require('os');
 const { spawnSync } = require('child_process');
+const { hasFlag, getArgValue, detectPlatform, assertPlatform } = require('./release-utils.cjs');
 
 const rootDir = path.resolve(__dirname, '..');
 const args = process.argv.slice(2);
@@ -15,40 +16,25 @@ if (
   console.log('Using a local Cargo target directory to avoid OneDrive build locks: ' + process.env.CARGO_TARGET_DIR);
 }
 
-const platform = getArgValue('--platform') || detectPlatform();
-const dryRun = hasFlag('--dry-run');
-const skipVersionCheck = hasFlag('--skip-version-check');
-const skipUnit = hasFlag('--skip-unit');
-const skipWebBuild = hasFlag('--skip-web-build');
-const skipExtension = hasFlag('--skip-extension');
-const skipDesktopBuild = hasFlag('--skip-desktop-build');
-const skipCollect = hasFlag('--skip-collect');
-const skipEvidenceVerify = hasFlag('--skip-evidence-verify');
-const skipReleaseNotes = hasFlag('--skip-release-notes');
-const skipSigningReport = hasFlag('--skip-signing-report');
-const finalMode = hasFlag('--final');
-const requireSignedArtifacts = hasFlag('--require-signed-artifacts') || (finalMode && platform !== 'linux');
-const signedReleaseNotes = hasFlag('--signed-release-notes') || (finalMode && platform !== 'linux');
-const releaseChannel = getArgValue('--channel');
-const allowDirtyEvidence = hasFlag('--allow-dirty-evidence');
-const allowEmptyEvidence = hasFlag('--allow-empty-evidence');
-const requireCompletedChecklist = hasFlag('--require-completed-checklist') || finalMode;
-const macUniversal = hasFlag('--mac-universal');
-
-function hasFlag(flag) {
-  return args.includes(flag);
-}
-
-function getArgValue(name) {
-  const index = args.indexOf(name);
-  return index >= 0 ? args[index + 1] : null;
-}
-
-function detectPlatform() {
-  if (process.platform === 'win32') return 'windows';
-  if (process.platform === 'darwin') return 'macos';
-  return 'linux';
-}
+const platform = getArgValue(args, '--platform') || detectPlatform();
+const dryRun = hasFlag(args, '--dry-run');
+const skipVersionCheck = hasFlag(args, '--skip-version-check');
+const skipUnit = hasFlag(args, '--skip-unit');
+const skipWebBuild = hasFlag(args, '--skip-web-build');
+const skipExtension = hasFlag(args, '--skip-extension');
+const skipDesktopBuild = hasFlag(args, '--skip-desktop-build');
+const skipCollect = hasFlag(args, '--skip-collect');
+const skipEvidenceVerify = hasFlag(args, '--skip-evidence-verify');
+const skipReleaseNotes = hasFlag(args, '--skip-release-notes');
+const skipSigningReport = hasFlag(args, '--skip-signing-report');
+const finalMode = hasFlag(args, '--final');
+const requireSignedArtifacts = hasFlag(args, '--require-signed-artifacts') || (finalMode && platform !== 'linux');
+const signedReleaseNotes = hasFlag(args, '--signed-release-notes') || (finalMode && platform !== 'linux');
+const releaseChannel = getArgValue(args, '--channel');
+const allowDirtyEvidence = hasFlag(args, '--allow-dirty-evidence');
+const allowEmptyEvidence = hasFlag(args, '--allow-empty-evidence');
+const requireCompletedChecklist = hasFlag(args, '--require-completed-checklist') || finalMode;
+const macUniversal = hasFlag(args, '--mac-universal');
 
 function usage() {
   return [
@@ -79,12 +65,6 @@ function usage() {
     '  --require-completed-checklist     Require completed manual smoke checklist during evidence verification.',
     '  --help                           Show this help.',
   ].join('\n');
-}
-
-function assertPlatform(value) {
-  if (!['windows', 'linux', 'macos'].includes(value)) {
-    throw new Error('Unsupported desktop release platform: ' + value);
-  }
 }
 
 function assertHostCanBuild(targetPlatform) {
@@ -166,7 +146,7 @@ function printPlan(steps) {
   steps.forEach((step, index) => console.log((index + 1) + '. ' + commandLabel(step.command, step.args)));
 }
 
-if (hasFlag('--help')) {
+if (hasFlag(args, '--help')) {
   console.log(usage());
   process.exit(0);
 }

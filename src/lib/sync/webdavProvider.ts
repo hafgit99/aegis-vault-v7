@@ -4,7 +4,8 @@
  */
 
 import { addSyncAllowedOrigin, isPrivateOrLoopbackHostname, removeSyncAllowedOrigin } from '../airgapNetworkPolicy';
-import { SyncProvider, SyncMetadata, SyncError, syncErrorCodes } from './syncTypes';
+import type { SyncProvider, SyncMetadata} from './syncTypes';
+import { SyncError, syncErrorCodes } from './syncTypes';
 
 const VAULT_FILE = 'vault.aegis';
 const METADATA_FILE = 'metadata.json';

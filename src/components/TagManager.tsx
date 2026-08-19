@@ -7,6 +7,7 @@ import { Plus, Trash2, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { useLanguage } from '../i18n/LanguageContext';
+import type { TranslationKey } from '../i18n/translations';
 import {
   getPalette,
   slugifyTagName,
@@ -14,6 +15,8 @@ import {
   TAG_PALETTE,
 } from '../lib/tags';
 import type { TagColorKey, TagDefinition } from '../types';
+import { Modal } from './ui/Modal';
+import { Button } from './ui/Button';
 
 interface TagManagerProps {
   open: boolean;
@@ -72,19 +75,19 @@ export default function TagManager({
   };
 
   return (
-    <div
-      data-testid="tag-manager"
-      role="dialog"
-      aria-modal="true"
-      aria-label={t('tags.managerTitle')}
-      className="fixed inset-0 z-[260] flex items-center justify-center bg-black/65 backdrop-blur-sm p-4 animate-fade-in"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <Modal
+      open
+      onClose={onClose}
+      zIndex={260}
+      labelledBy="tag-manager-title"
+      closeOnBackdrop
     >
-      <div className="w-full max-w-xl rounded-2xl border border-outline-variant/20 bg-surface-lowest/97 shadow-2xl shadow-black/50 overflow-hidden">
+      <div
+        data-testid="tag-manager"
+        className="w-full max-w-xl rounded-2xl border border-outline-variant/20 bg-surface-lowest/97 shadow-2xl shadow-black/50 overflow-hidden"
+      >
         <header className="flex items-center justify-between px-4 py-3 border-b border-outline-variant/15">
-          <h2 className="text-base font-bold text-on-surface">{t('tags.managerTitle')}</h2>
+          <h2 id="tag-manager-title" className="text-base font-bold text-on-surface">{t('tags.managerTitle')}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -122,16 +125,17 @@ export default function TagManager({
                   </option>
                 ))}
               </select>
-              <button
+              <Button
                 type="button"
                 onClick={handleCreate}
                 disabled={!draftName.trim()}
                 data-testid="tag-manager-create"
-                className="inline-flex items-center gap-1 rounded-md bg-brand-primary text-white px-3 py-1.5 text-sm font-bold hover:bg-brand-primary/90 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-primary/40"
+                variant="primary"
+                size="sm"
               >
                 <Plus className="w-4 h-4" aria-hidden="true" />
                 {t('tags.add')}
-              </button>
+              </Button>
             </div>
             <ColorSwatchRow
               active={draftColor}
@@ -168,10 +172,10 @@ export default function TagManager({
                           className="flex-1 text-left text-sm text-on-surface hover:text-brand-primary cursor-pointer">{entry.name}</button>
                       )}
                       <select data-testid="tag-manager-row-color" value={entry.color}
-                        onChange={(event) => onUpdate(entry.id, { color: event.target.value })}
+                        onChange={(event) => onUpdate(entry.id, { color: event.target.value as TagColorKey })}
                         className="bg-surface-lowest border border-outline-variant/20 rounded-md px-1.5 py-1 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-brand-primary/40"
                         aria-label={t('tags.colorLabel')}>
-                        {TAG_COLOR_KEYS.map((key) => (<option key={key} value={key}>{t('tags.color.' + key)}</option>))}
+                        {TAG_COLOR_KEYS.map((key) => (<option key={key} value={key}>{t(`tags.color.${key}` as TranslationKey)}</option>))}
                       </select>
                       <span className="text-[10px] font-mono text-on-surface-variant/80" title={t('tags.managerUsage', { count: usage })}>{usage}</span>
                       <button type="button" onClick={() => onDelete(entry.id)}
@@ -189,7 +193,7 @@ export default function TagManager({
           </div>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 

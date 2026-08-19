@@ -30,6 +30,7 @@ import { useVaultFormState } from './hooks/useVaultFormState';
 import { useVaultMobileView } from './hooks/useVaultMobileView';
 import { useVaultFilters } from './hooks/useVaultFilters';
 import { useUnlockedVaultRefresh } from './hooks/useUnlockedVaultRefresh';
+import { useShareReceive } from './hooks/useShareReceive';
 import { useSelectedItemScore } from './hooks/useSelectedItemScore';
 import { useVaultStatusAction } from './hooks/useVaultStatusAction';
 import { useRuntimeSecurity } from './hooks/useRuntimeSecurity';
@@ -38,7 +39,7 @@ import { useAndroidRuntimeSecurity } from './hooks/useAndroidRuntimeSecurity';
 import { useAssetIntegrity } from './hooks/useAssetIntegrity';
 import { useLanguage } from './i18n/LanguageContext';
 import { useAirgapAlerts } from './hooks/useAirgapAlerts';
-import { VaultItem } from './types';
+import type { VaultItem } from './types';
 import {
   useTagLibrary,
   useVaultFolders,
@@ -46,7 +47,6 @@ import {
   useBulkSelection,
 } from './hooks/useOrganisation';
 import { syncExtensionCredentials, clearExtensionCredentials } from './lib/desktopStorage';
-import { decryptShareUrl, type DecryptedSharePayload } from './lib/share';
 
 interface UnlockedAppProps {
   unlocked: boolean;
@@ -174,93 +174,25 @@ export default function UnlockedApp({
     onNotify: showNotification,
   });
 
-  const { failureReason: assetIntegrityFailure } = useAssetIntegrity({
+  useAssetIntegrity({
     unlocked,
     onNotify: showNotification,
   });
 
   // Share & Receive Modals state
-  const [isShareOpen, setIsShareOpen] = useState(false);
-  const [sharingItem, setSharingItem] = useState<VaultItem | null>(null);
-  const [isReceiveOpen, setIsReceiveOpen] = useState(false);
-  const [receivedPayload, setReceivedPayload] = useState<DecryptedSharePayload | null>(null);
-
-  const handleSecureShare = (item: VaultItem) => {
-    setSharingItem(item);
-    setIsShareOpen(true);
-  };
-
-  const handleCloseShare = () => {
-    setIsShareOpen(false);
-    setSharingItem(null);
-  };
-
-  const handleCloseReceive = () => {
-    setIsReceiveOpen(false);
-    setReceivedPayload(null);
-    window.history.replaceState(null, '', window.location.pathname);
-  };
-
-  const handleImportShare = async (itemData: Partial<VaultItem>) => {
-    try {
-      const now = new Date().toISOString().split('T')[0];
-      const newItem: VaultItem = {
-        id: crypto.randomUUID(),
-        title: itemData.title || 'Shared Item',
-        username: itemData.username || '',
-        password: itemData.password || '',
-        url: itemData.url || '',
-        notes: itemData.notes || '',
-        category: itemData.category || 'login',
-        totpSecret: itemData.totpSecret || '',
-        favorite: false,
-        createdAt: now,
-        updatedAt: now,
-      };
-
-      await handleSaveItem(newItem);
-      showNotification({
-        type: 'success',
-        message: t('share.success.import') || 'Shared item imported successfully.',
-      });
-      handleCloseReceive();
-    } catch (error) {
-      console.error('Failed to import shared item:', error);
-      showNotification({
-        type: 'error',
-        message: t('share.error.import') || 'Failed to import shared item.',
-      });
-    }
-  };
-
-  useEffect(() => {
-    const checkHashShare = async () => {
-      if (window.location.hash.startsWith('#share=')) {
-        const payload = await decryptShareUrl(window.location.hash);
-        if (payload) {
-          setReceivedPayload(payload);
-          setIsReceiveOpen(true);
-        } else {
-          showNotification({
-            type: 'error',
-            message: t('share.error.decrypt') || 'Failed to decrypt share link.',
-          });
-          window.history.replaceState(null, '', window.location.pathname);
-        }
-      }
-    };
-
-    void checkHashShare();
-
-    const handleHashChange = () => {
-      void checkHashShare();
-    };
-
-    window.addEventListener('hashchange', handleHashChange);
-    return () => {
-      window.removeEventListener('hashchange', handleHashChange);
-    };
-  }, [t, showNotification]);
+  const {
+    isShareOpen,
+    sharingItem,
+    isReceiveOpen,
+    receivedPayload,
+    openShare: handleSecureShare,
+    closeShare: handleCloseShare,
+    closeReceive: handleCloseReceive,
+    importShare: handleImportShare,
+  } = useShareReceive({
+    onSaveItem: handleSaveItem,
+    onNotify: showNotification,
+  });
 
   interface LinuxSecurityStatus {
     is_x11?: boolean;
@@ -376,7 +308,7 @@ export default function UnlockedApp({
   const [activeSmartFolderId, setActiveSmartFolderId] = useState<string | null>(null);
 
   const { tags, createTag, updateTag, deleteTag } = useTagLibrary();
-  const { folders, createFolder, updateFolder, deleteFolder } = useVaultFolders();
+  const { folders, createFolder, deleteFolder } = useVaultFolders();
   const { smartFolders, createSmartFolder, deleteSmartFolder, counts: smartFolderCounts } = useSmartFolders(items);
   const bulkSelection = useBulkSelection();
 
@@ -617,7 +549,7 @@ export default function UnlockedApp({
         />
       </main>
 
-      <FloatingVaultAction onNewItem={handleTriggerNew} />
+      {selectedItem === null && <FloatingVaultAction onNewItem={handleTriggerNew} />}
 
       <PrivacyShieldBackdrop
         visible={privacyShieldVisible}

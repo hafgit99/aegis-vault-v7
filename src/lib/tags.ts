@@ -221,7 +221,7 @@ export function resolveTagColor(tagName: string, library?: TagDefinition[]): Tag
   for (let i = 0; i < slug.length; i += 1) {
     hash = (hash * 31 + slug.charCodeAt(i)) >>> 0;
   }
-  return TAG_COLOR_KEYS[hash % TAG_COLOR_KEYS.length];
+  return TAG_COLOR_KEYS[hash % TAG_COLOR_KEYS.length] ?? 'slate';
 }
 
 /**

@@ -15,7 +15,7 @@ import {
   useSmartFolders,
   useBulkSelection,
 } from './useOrganisation';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 
 describe('useOrganisation Hooks', () => {
   beforeEach(() => {
@@ -31,15 +31,15 @@ describe('useOrganisation Hooks', () => {
       });
 
       expect(result.current.tags.length).toBe(1);
-      expect(result.current.tags[0].name).toBe('Work');
+      expect(result.current.tags[0]!.name).toBe('Work');
 
-      const tagId = result.current.tags[0].id;
+      const tagId = result.current.tags[0]!.id;
       act(() => {
         result.current.updateTag(tagId, { name: 'Finance', color: 'blue' });
       });
 
-      expect(result.current.tags[0].name).toBe('Finance');
-      expect(result.current.tags[0].color).toBe('blue');
+      expect(result.current.tags[0]!.name).toBe('Finance');
+      expect(result.current.tags[0]!.color).toBe('blue');
 
       act(() => {
         result.current.deleteTag(tagId);
@@ -58,13 +58,13 @@ describe('useOrganisation Hooks', () => {
       });
 
       expect(result.current.folders.length).toBe(1);
-      expect(result.current.folders[0].name).toBe('Folder 1');
+      expect(result.current.folders[0]!.name).toBe('Folder 1');
 
-      const folderId = result.current.folders[0].id;
+      const folderId = result.current.folders[0]!.id;
       act(() => {
         result.current.updateFolder(folderId, { name: 'Folder 1 Renamed' });
       });
-      expect(result.current.folders[0].name).toBe('Folder 1 Renamed');
+      expect(result.current.folders[0]!.name).toBe('Folder 1 Renamed');
 
       act(() => {
         result.current.deleteFolder(folderId);

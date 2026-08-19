@@ -19,9 +19,10 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { progressWidthClass } from '../lib/progressWidth';
-import { GeneratorOptions } from '../types';
+import type { GeneratorOptions } from '../types';
 import { generatePassword, calculatePasswordScore, getStrengthLabel } from '../lib/security';
-import { calculateDicewareEntropyBits, generateDiceware, DicewareOptions } from '../lib/diceware';
+import type { DicewareOptions } from '../lib/diceware';
+import { calculateDicewareEntropyBits, generateDiceware } from '../lib/diceware';
 import {
   clearClipboardIfUnchanged,
   DEFAULT_CLIPBOARD_CLEAR_DELAY_MS,

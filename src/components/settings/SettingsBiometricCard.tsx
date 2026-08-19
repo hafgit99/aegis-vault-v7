@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { Fingerprint, Key, Check, ShieldAlert, AlertTriangle } from 'lucide-react';
 import { getBiometricType, isBiometricAutofillRequireEnabled, isBiometricV2UpgradeRequired, setBiometricAutofillRequireEnabled } from '../../lib/biometric';
+import type { TFunction } from '../../i18n/LanguageContext';
 
 interface SettingsBiometricCardProps {
   biometricEnabled: boolean;
@@ -13,7 +14,7 @@ interface SettingsBiometricCardProps {
   biometricSuccess: string | null;
   biometricError: string | null;
   onToggleBiometric: (type: 'platform' | 'cross-platform') => void;
-  t: (key: string) => string;
+  t: TFunction;
 }
 
 export function SettingsBiometricCard({

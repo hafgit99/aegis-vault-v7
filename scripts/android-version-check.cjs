@@ -1,23 +1,11 @@
 const fs = require('fs');
 const path = require('path');
+const { normalizeVersion, readJson, pass, failExit: fail } = require('./release-utils.cjs');
 
 const repoRoot = path.resolve(__dirname, '..');
 const packageJsonPath = path.join(repoRoot, 'package.json');
 const tauriConfigPath = path.join(repoRoot, 'src-tauri', 'tauri.conf.json');
 const androidPropertiesPath = path.join(repoRoot, 'src-tauri', 'gen', 'android', 'app', 'tauri.properties');
-
-function normalizeVersion(version) {
-  const parts = String(version || '')
-    .trim()
-    .split('.')
-    .map((part) => Number.parseInt(part, 10));
-
-  while (parts.length > 3 && parts[parts.length - 1] === 0) {
-    parts.pop();
-  }
-
-  return parts.join('.');
-}
 
 function readProperties(file) {
   return Object.fromEntries(
@@ -32,17 +20,8 @@ function readProperties(file) {
   );
 }
 
-function fail(message) {
-  console.log(`FAIL ${message}`);
-  process.exitCode = 1;
-}
-
-function pass(message) {
-  console.log(`PASS ${message}`);
-}
-
-const packageVersion = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')).version;
-const tauriVersion = JSON.parse(fs.readFileSync(tauriConfigPath, 'utf8')).version;
+const packageVersion = readJson(packageJsonPath).version;
+const tauriVersion = readJson(tauriConfigPath).version;
 const androidProperties = readProperties(androidPropertiesPath);
 const androidVersionName = androidProperties['tauri.android.versionName'];
 const androidVersionCode = androidProperties['tauri.android.versionCode'];

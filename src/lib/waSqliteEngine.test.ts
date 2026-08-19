@@ -58,7 +58,7 @@ function createRuntimeStub(): WaSqliteRuntime & {
 describe('wa-sqlite engine', () => {
   it('creates a Vite-safe module config and preserves explicit WASM overrides', () => {
     const wasmBinary = new Uint8Array([0, 1, 2]);
-    const customLocateFile = vi.fn((path: string, prefix: string) => `${prefix}${path}`);
+    const customLocateFile = vi.fn((path: string, prefix?: string) => `${prefix ?? ''}${path}`);
 
     const defaultConfig = createWaSqliteModuleConfig() as {
       locateFile: (path: string, prefix?: string) => string;

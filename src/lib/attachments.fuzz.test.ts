@@ -6,7 +6,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 
 import {
-  AttachmentError,
   attachmentErrorCodes,
   decryptAttachmentData,
   type AttachmentRecord,

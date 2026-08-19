@@ -32,7 +32,7 @@ export interface VaultStorageRepository {
   changeMasterPassword(oldPassword: string, newPassword: string): Promise<void>;
   deriveEncryptionKey(password: string, salt?: string): Promise<Uint8Array>;
   getVaultItems(masterPasswordPlain: string): Promise<VaultItem[]>;
-  getVaultItemsWithKey?(vaultEncryptionKey: Uint8Array): Promise<VaultItem[]>;
+  getVaultItemsWithKey(vaultEncryptionKey: Uint8Array): Promise<VaultItem[]>;
   saveVaultItem(item: VaultItem, masterPasswordPlain: string): Promise<VaultItem[]>;
   saveVaultItemWithKey?(item: VaultItem, vaultEncryptionKey: Uint8Array): Promise<VaultItem[]>;
   saveVaultItems(

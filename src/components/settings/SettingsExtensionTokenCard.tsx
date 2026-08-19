@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { RefreshCw } from 'lucide-react';
-import { useLanguage } from '../../i18n/LanguageContext';
+import type { useLanguage } from '../../i18n/LanguageContext';
 
 interface SettingsExtensionTokenCardProps {
   tokenRotateStatus: 'idle' | 'loading' | 'success' | 'error';

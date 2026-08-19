@@ -209,11 +209,11 @@ describe('SettingsSyncSection', () => {
 
     render(<SettingsSyncSection {...props} />);
 
-    const endpointInput = screen.getByPlaceholderText('https://s3.us-east-1.amazonaws.com veya https://minio.example.com') as HTMLInputElement;
-    const regionInput = screen.getByPlaceholderText('us-east-1 (varsayılan)') as HTMLInputElement;
-    const bucketInput = screen.getByPlaceholderText('my-aegis-vault-bucket') as HTMLInputElement;
-    const accessKeyInput = screen.getByPlaceholderText('Örn: your-access-key-id') as HTMLInputElement;
-    const secretKeyInput = screen.getByPlaceholderText('wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY') as HTMLInputElement;
+    const endpointInput = screen.getByPlaceholderText('settings.sync.s3.endpointPlaceholder') as HTMLInputElement;
+    const regionInput = screen.getByPlaceholderText('settings.sync.s3.regionPlaceholder') as HTMLInputElement;
+    const bucketInput = screen.getByPlaceholderText('settings.sync.s3.bucketPlaceholder') as HTMLInputElement;
+    const accessKeyInput = screen.getByPlaceholderText('settings.sync.s3.accessKeyPlaceholder') as HTMLInputElement;
+    const secretKeyInput = screen.getByPlaceholderText('settings.sync.s3.secretKeyPlaceholder') as HTMLInputElement;
 
     expect(endpointInput.value).toBe('https://s3.amazonaws.com');
     expect(regionInput.value).toBe('us-east-1');

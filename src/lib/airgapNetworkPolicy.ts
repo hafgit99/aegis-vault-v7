@@ -21,11 +21,14 @@ export function isPrivateOrLoopbackHostname(hostname: string): boolean {
   if (normalized.startsWith('192.168.') || normalized.startsWith('10.')) return true;
 
   const octets = normalized.split('.').map((part) => Number(part));
+  const first = octets[0];
+  const second = octets[1];
   return octets.length === 4
     && octets.every((part) => Number.isInteger(part) && part >= 0 && part <= 255)
-    && octets[0] === 172
-    && octets[1] >= 16
-    && octets[1] <= 31;
+    && first === 172
+    && second !== undefined
+    && second >= 16
+    && second <= 31;
 }
 
 /**

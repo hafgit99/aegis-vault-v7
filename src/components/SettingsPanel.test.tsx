@@ -7,12 +7,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from '../lib/encryption';
 import { isNativeFileDialogSupported, openDesktopImportFile, saveDesktopExportFile } from '../lib/desktopFiles';
-import { isAndroidRuntime } from '../lib/desktopStorage';
 import { isAndroidAutofillSupported, openAndroidAutofillSettings } from '../lib/androidAutofill';
 import { disableBiometric, isBiometricEnabled, isBiometricSupported, registerBiometric } from '../lib/biometric';
-import { changeMasterPassword, deleteVaultItem, getRememberedAccountSecretKey, getVaultItems, isAccountSecretKeyRequired, migrateActiveVaultStorageToWaSqlite, resetSystem, reseedDemoData, saveVaultItem, saveVaultItems, verifyMasterPassword } from '../lib/storage';
+import { changeMasterPassword, deleteVaultItem, getRememberedAccountSecretKey, getVaultItems, isAccountSecretKeyRequired, migrateActiveVaultStorageToWaSqlite, resetSystem, reseedDemoData, saveVaultItems, verifyMasterPassword } from '../lib/storage';
 import { closeVaultSession, openVaultSession } from '../lib/vaultSession';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 import { LanguageProvider } from '../i18n/LanguageContext';
 import { languageStorageKey } from '../i18n/translations';
 import { saveEmergencyKit } from '../lib/emergencyKit';
@@ -146,8 +145,9 @@ function passwordChangeForm(container: HTMLElement): HTMLFormElement {
   return container.querySelector('#pass-change-form') as HTMLFormElement;
 }
 
-function passwordChangeInputs(container: HTMLElement): HTMLInputElement[] {
-  return Array.from(container.querySelectorAll('#pass-change-form input[type="password"]')) as HTMLInputElement[];
+function passwordChangeInputs(container: HTMLElement): [HTMLInputElement, HTMLInputElement, HTMLInputElement] {
+  const inputs = Array.from(container.querySelectorAll('#pass-change-form input[type="password"]')) as HTMLInputElement[];
+  return [inputs[0]!, inputs[1]!, inputs[2]!];
 }
 
 function encryptedExportButtons(container: HTMLElement): HTMLButtonElement[] {
@@ -884,7 +884,7 @@ describe('SettingsPanel plain export and import errors', () => {
     vi.useFakeTimers();
     const { container } = renderSettings();
 
-    fireEvent.click(encryptedExportButtons(container)[1]);
+    fireEvent.click(encryptedExportButtons(container)[1]!);
     expect(screen.getByTestId('plain-export-warning')).toBeTruthy();
     expect(saveDesktopExportFile).not.toHaveBeenCalled();
 
@@ -908,7 +908,7 @@ describe('SettingsPanel plain export and import errors', () => {
     vi.useFakeTimers();
     const { container } = renderSettings();
 
-    fireEvent.click(encryptedExportButtons(container)[1]);
+    fireEvent.click(encryptedExportButtons(container)[1]!);
     fireEvent.change(screen.getByTestId('plain-export-confirm-input'), {
       target: { value: 'NOPE' },
     });
@@ -928,7 +928,7 @@ describe('SettingsPanel plain export and import errors', () => {
     vi.useFakeTimers();
     const { container } = renderSettings();
 
-    fireEvent.click(encryptedExportButtons(container)[1]);
+    fireEvent.click(encryptedExportButtons(container)[1]!);
     fireEvent.change(screen.getByTestId('plain-export-confirm-input'), {
       target: { value: 'EXPORT' },
     });
@@ -948,7 +948,7 @@ describe('SettingsPanel plain export and import errors', () => {
     vi.useFakeTimers();
     const { container } = renderSettings();
 
-    fireEvent.click(encryptedExportButtons(container)[1]);
+    fireEvent.click(encryptedExportButtons(container)[1]!);
     fireEvent.change(screen.getByTestId('plain-export-confirm-input'), {
       target: { value: 'EXPORT' },
     });
@@ -1069,7 +1069,7 @@ describe('SettingsPanel import interaction states', () => {
     const input = fileInput(container);
     const inputClickSpy = vi.spyOn(input, 'click');
 
-    fireEvent.click(encryptedExportButtons(container)[1]);
+    fireEvent.click(encryptedExportButtons(container)[1]!);
     fireEvent.change(screen.getByTestId('plain-export-confirm-input'), {
       target: { value: 'EXPORT' },
     });

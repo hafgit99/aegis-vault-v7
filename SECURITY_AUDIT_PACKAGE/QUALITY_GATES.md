@@ -84,8 +84,8 @@ This gate already caught and fixed a native Aegis JSON import hardening issue wh
 The first practical mutation gate runs against critical library helpers with:
 
 ```bash
-npm run test:mutation:core:dry
-npm run test:mutation:core
+npm run test:mutation:dry
+npm run test:mutation
 ```
 
 Current mutation scope:
@@ -417,7 +417,7 @@ Recently improved:
 ## Next Gates
 
 - Add Android release gate:
-  - `npm run lint`
+  - `npm run typecheck`
   - `npm run test:unit`
   - `npm run build`
   - `npm run android:release:version:check`

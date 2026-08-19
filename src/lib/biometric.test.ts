@@ -149,7 +149,7 @@ describe('biometric master password wrapper', () => {
 
     const stored = await getStoredBiometricFromDB();
     const create = vi.mocked(navigator.credentials.create);
-    const creationOptions = create.mock.calls[0][0] as CredentialCreationOptions;
+    const creationOptions = create.mock.calls[0]![0] as CredentialCreationOptions;
 
     expect(isBiometricEnabled()).toBe(true);
     expect(stored).toMatchObject({
@@ -202,7 +202,7 @@ describe('biometric master password wrapper', () => {
     await expect(authenticateBiometric()).resolves.toBe('master-pass');
 
     const get = vi.mocked(navigator.credentials.get);
-    const requestOptions = get.mock.calls[0][0] as CredentialRequestOptions;
+    const requestOptions = get.mock.calls[0]![0] as CredentialRequestOptions;
     expect(requestOptions.publicKey).toMatchObject({
       allowCredentials: [
         {

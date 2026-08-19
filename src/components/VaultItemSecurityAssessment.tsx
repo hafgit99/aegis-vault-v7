@@ -1,5 +1,5 @@
 import { useLanguage } from '../i18n/LanguageContext';
-import { TranslationKey } from '../i18n/translations';
+import type { TranslationKey } from '../i18n/translations';
 
 interface VaultItemSecurityAssessmentProps {
   score: number;

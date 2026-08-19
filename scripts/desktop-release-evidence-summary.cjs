@@ -1,22 +1,30 @@
-const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const {
+  hasFlag,
+  getArgValue,
+  detectPlatform,
+  readJsonSafe,
+  sha256,
+  walk,
+  directoryStats,
+  formatBytes,
+  formatBool,
+  readChecksumFile,
+  checklistStats,
+} = require('./release-utils.cjs');
 const { archiveContainsForbiddenDebugArtifact, isForbiddenDebugArtifact, signingCoverage } = require('./desktop-signing-policy.cjs');
 
 const rootDir = path.resolve(__dirname, '..');
 const packageJson = require(path.join(rootDir, 'package.json'));
 const releaseLocalDir = path.join(rootDir, 'release-local');
 const args = process.argv.slice(2);
-const platform = getArgValue('--platform') || detectPlatform();
-const explicitDir = getArgValue('--dir');
+const platform = getArgValue(args, '--platform') || detectPlatform();
+const explicitDir = getArgValue(args, '--dir');
 const evidenceDir = explicitDir ? path.resolve(rootDir, explicitDir) : path.join(releaseLocalDir, platform);
-const finalMode = hasFlag('--final');
-const allowDirty = hasFlag('--allow-dirty');
-const allowEmpty = hasFlag('--allow-empty');
-
-function hasFlag(flag) { return args.includes(flag); }
-function getArgValue(name) { const index = args.indexOf(name); return index >= 0 ? args[index + 1] : null; }
-function detectPlatform() { if (process.platform === 'win32') return 'windows'; if (process.platform === 'darwin') return 'macos'; return 'linux'; }
+const finalMode = hasFlag(args, '--final');
+const allowDirty = hasFlag(args, '--allow-dirty');
+const allowEmpty = hasFlag(args, '--allow-empty');
 
 function usage() {
   return [
@@ -35,61 +43,15 @@ function usage() {
   ].join('\n');
 }
 
-function formatBool(value) { return value ? 'yes' : 'no'; }
-function formatBytes(bytes) {
-  if (!Number.isFinite(bytes)) return 'unknown size';
-  const units = ['B', 'KiB', 'MiB', 'GiB'];
-  let size = bytes;
-  let index = 0;
-  while (size >= 1024 && index < units.length - 1) { size /= 1024; index += 1; }
-  return (index === 0 ? String(size) : size.toFixed(2)) + ' ' + units[index];
-}
-function sha256(file) { return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'); }
-
-function readJson(file, issues) {
-  try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
-  catch (error) { issues.push('metadata.json could not be read: ' + (error && error.message ? error.message : String(error))); return null; }
-}
-
-function walk(dir, files = []) {
-  if (!fs.existsSync(dir)) return files;
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) walk(fullPath, files); else files.push(fullPath);
-  }
-  return files;
-}
-
-function directoryStats(dir) {
-  const files = walk(dir).filter((file) => fs.existsSync(file) && fs.statSync(file).isFile());
-  return { fileCount: files.length, sizeBytes: files.reduce((total, file) => total + fs.statSync(file).size, 0) };
-}
-
-function readChecksumFile(file, issues) {
-  const entries = new Map();
-  if (!fs.existsSync(file)) { issues.push('SHA256SUMS.txt is missing.'); return entries; }
-  const contents = fs.readFileSync(file, 'utf8').trim();
-  if (!contents) return entries;
-  for (const line of contents.split(/\r?\n/)) {
-    const match = line.match(/^([a-f0-9]{64})\s{2}(.+)$/i);
-    if (!match) { issues.push('Invalid checksum line: ' + line); continue; }
-    entries.set(match[2], match[1].toLowerCase());
-  }
-  return entries;
-}
-
-function checklistStats(file) {
-  if (!fs.existsSync(file)) return { checked: 0, unchecked: 0, fieldsMissing: ['<checklist missing>'] };
-  const contents = fs.readFileSync(file, 'utf8');
-  const checked = contents.split(/\r?\n/).filter((line) => /^- \[x\]/i.test(line)).length;
-  const unchecked = contents.split(/\r?\n/).filter((line) => /^- \[ \]/.test(line)).length;
-  const labels = ['- Version:', '- Commit:', '- Platform:', '- Build type:', '- Signed artifacts:', '- Tester:', '- Date:'];
-  const fieldsMissing = labels.filter((label) => {
-    const line = contents.split(/\r?\n/).find((candidate) => candidate.startsWith(label));
-    return !line || line.slice(label.length).trim().length === 0;
-  });
-  return { checked, unchecked, fieldsMissing };
-}
+const DESKTOP_CHECKLIST_FIELDS = [
+  '- Version:',
+  '- Commit:',
+  '- Platform:',
+  '- Build type:',
+  '- Signed artifacts:',
+  '- Tester:',
+  '- Date:',
+];
 
 function signingStats(file) {
   if (!fs.existsSync(file)) return { verified: 0, applicable: 0, missing: true };
@@ -124,7 +86,7 @@ function verifyEvidence(metadata, artifacts, stats, signing) {
   if (metadata.dirty && !allowDirty) issues.push('Working tree was dirty when evidence was created.');
   if (artifacts.length === 0 && !allowEmpty) issues.push('No desktop artifacts are listed in metadata.json.');
 
-  const checksumEntries = readChecksumFile(path.join(evidenceDir, 'SHA256SUMS.txt'), issues);
+  const checksumEntries = readChecksumFile(path.join(evidenceDir, 'SHA256SUMS.txt'), { issues });
   const fileArtifactNames = new Set();
   for (const artifact of artifacts) {
     if (!artifact || typeof artifact.path !== 'string') { issues.push('Artifact entry is missing a path.'); continue; }
@@ -168,12 +130,12 @@ function verifyEvidence(metadata, artifacts, stats, signing) {
 }
 
 function main() {
-  if (hasFlag('--help')) { console.log(usage()); return; }
+  if (hasFlag(args, '--help')) { console.log(usage()); return; }
   const bootstrapIssues = [];
   if (!fs.existsSync(evidenceDir) || !fs.statSync(evidenceDir).isDirectory()) bootstrapIssues.push('Evidence directory not found: ' + evidenceDir);
-  const metadata = bootstrapIssues.length ? null : readJson(path.join(evidenceDir, 'metadata.json'), bootstrapIssues);
+  const metadata = bootstrapIssues.length ? null : readJsonSafe(path.join(evidenceDir, 'metadata.json'), bootstrapIssues);
   const artifacts = Array.isArray(metadata?.artifacts) ? metadata.artifacts : [];
-  const checklist = checklistStats(path.join(evidenceDir, 'DESKTOP_MANUAL_SMOKE_CHECKLIST.md'));
+  const checklist = checklistStats(path.join(evidenceDir, 'DESKTOP_MANUAL_SMOKE_CHECKLIST.md'), DESKTOP_CHECKLIST_FIELDS);
   const signing = signingStats(path.join(evidenceDir, 'DESKTOP_SIGNATURES.md'));
   const issues = bootstrapIssues.concat(bootstrapIssues.length ? [] : verifyEvidence(metadata, artifacts, checklist, signing));
   const passed = issues.length === 0;

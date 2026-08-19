@@ -3,7 +3,7 @@ import { Check, Copy, Eye, EyeOff } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { generateTOTP, getTotpPeriod, TOTPValidationError } from '../lib/otp';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 import { TotpCountdownRing } from './totp/TotpCountdownRing';
 
 interface LoginDetailProps {

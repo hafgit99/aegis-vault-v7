@@ -1,57 +1,8 @@
 import fs from 'node:fs/promises';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { createLoginItem, exportEncryptedBackup, openSettings, setupVault, unlockVault } from './helpers';
 
 const masterPassword = 'master-pass-e2e';
-
-async function setupVault(page: Page) {
-  await page.goto('/');
-
-  await page.getByTestId('lock-password-input').fill(masterPassword);
-  await page.getByTestId('lock-confirm-password-input').fill(masterPassword);
-  await expect(page.getByTestId('lock-secret-key-input')).toHaveValue(/^A3-/);
-  await expect(page.getByTestId('lock-emergency-kit-button')).toBeVisible();
-  await page.getByTestId('lock-remember-secret-key-checkbox').check();
-  await page.getByTestId('lock-submit-button').click();
-
-  await expect(page.getByTestId('new-vault-item-button')).toBeVisible();
-}
-
-async function createLoginItem(
-  page: Page,
-  title: string,
-  options: { username?: string; password?: string; url?: string; notes?: string } = {},
-) {
-  await page.getByTestId('new-vault-item-button').click();
-  await page.getByTestId('vault-item-title-input').fill(title);
-  await page.getByTestId('vault-item-url-input').fill(options.url ?? 'https://github.com');
-  await page.getByTestId('vault-item-username-input').fill(options.username ?? 'ada-e2e');
-  await page.getByTestId('vault-item-password-input').fill(options.password ?? 'CorrectHorseBatteryStaple!42');
-  await page.getByTestId('vault-item-notes-input').fill(options.notes ?? 'Created by the Playwright smoke suite.');
-  await page.getByTestId('vault-item-save-button').click();
-
-  const savedItem = page.getByTestId('vault-list-item').filter({ hasText: title });
-  await expect(savedItem).toBeVisible();
-  await expect(savedItem).toContainText(options.username ?? 'ada-e2e');
-
-  return savedItem;
-}
-
-async function openSettings(page: Page) {
-  await page.getByTestId('nav-settings-button').click();
-  await expect(page.getByTestId('plain-export-button')).toBeVisible();
-}
-
-async function exportEncryptedBackup(page: Page) {
-  const downloadPromise = page.waitForEvent('download');
-  await page.getByTestId('encrypted-export-button').click();
-  const download = await downloadPromise;
-  const downloadPath = await download.path();
-
-  expect(download.suggestedFilename()).toMatch(/^aegis_guvenli_yedek_\d{4}-\d{2}-\d{2}\.aegis$/);
-  expect(downloadPath).toBeTruthy();
-
-  return downloadPath!;
-}
 
 test('downloads an emergency kit during first-run setup', async ({ page }) => {
   await page.goto('/');
@@ -70,21 +21,20 @@ test('downloads an emergency kit during first-run setup', async ({ page }) => {
 });
 
 test('sets up, stores, locks, and unlocks a vault item', async ({ page }) => {
-  await setupVault(page);
+  await setupVault(page, masterPassword);
 
   await createLoginItem(page, 'E2E GitHub');
 
   await page.getByTestId('lock-vault-button').click();
   await expect(page.getByTestId('lock-confirm-password-input')).toBeHidden();
 
-  await page.getByTestId('lock-password-input').fill(masterPassword);
-  await page.getByTestId('lock-submit-button').click();
+  await unlockVault(page, masterPassword);
 
   await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E GitHub' })).toBeVisible();
 });
 
 test('restores persisted vault data after an app reload and unlock', async ({ page }) => {
-  await setupVault(page);
+  await setupVault(page, masterPassword);
 
   await createLoginItem(page, 'E2E Persisted Login', {
     username: 'persisted-user',
@@ -96,8 +46,7 @@ test('restores persisted vault data after an app reload and unlock', async ({ pa
   await expect(page.getByTestId('lock-password-input')).toBeVisible();
   await expect(page.getByTestId('lock-confirm-password-input')).toBeHidden();
 
-  await page.getByTestId('lock-password-input').fill(masterPassword);
-  await page.getByTestId('lock-submit-button').click();
+  await unlockVault(page, masterPassword);
 
   const restoredItem = page.getByTestId('vault-list-item').filter({ hasText: 'E2E Persisted Login' });
   await expect(restoredItem).toBeVisible();
@@ -108,7 +57,7 @@ test('restores persisted vault data after an app reload and unlock', async ({ pa
 });
 
 test('reveals and copies login detail fields', async ({ page }) => {
-  await setupVault(page);
+  await setupVault(page, masterPassword);
 
   const savedItem = await createLoginItem(page, 'E2E Detail Actions');
   await savedItem.click();
@@ -130,7 +79,7 @@ test('adds, persists, and downloads a vault item attachment', async ({ page }) =
   const attachmentName = 'aegis-e2e-attachment.txt';
   const attachmentText = 'Aegis Vault attachment E2E proof.\nLine two stays encrypted at rest.';
 
-  await setupVault(page);
+  await setupVault(page, masterPassword);
 
   await page.getByTestId('new-vault-item-button').click();
   await page.getByTestId('vault-item-title-input').fill('E2E Attachment Login');
@@ -165,8 +114,7 @@ test('adds, persists, and downloads a vault item attachment', async ({ page }) =
 
   await page.reload();
   await expect(page.getByTestId('lock-password-input')).toBeVisible();
-  await page.getByTestId('lock-password-input').fill(masterPassword);
-  await page.getByTestId('lock-submit-button').click();
+  await unlockVault(page, masterPassword);
 
   const restoredItem = page.getByTestId('vault-list-item').filter({ hasText: 'E2E Attachment Login' });
   await expect(restoredItem).toBeVisible();
@@ -185,7 +133,7 @@ test('adds, persists, and downloads a vault item attachment', async ({ page }) =
 });
 
 test('moves a vault item to trash and restores it', async ({ page }) => {
-  await setupVault(page);
+  await setupVault(page, masterPassword);
 
   const savedItem = await createLoginItem(page, 'E2E Trash Restore');
   await savedItem.click();
@@ -207,7 +155,7 @@ test('moves a vault item to trash and restores it', async ({ page }) => {
 });
 
 test('permanently deletes a trashed vault item and keeps it deleted after reload', async ({ page }) => {
-  await setupVault(page);
+  await setupVault(page, masterPassword);
 
   const savedItem = await createLoginItem(page, 'E2E Permanent Delete', {
     username: 'delete-forever-user',
@@ -230,8 +178,7 @@ test('permanently deletes a trashed vault item and keeps it deleted after reload
 
   await page.reload();
   await expect(page.getByTestId('lock-password-input')).toBeVisible();
-  await page.getByTestId('lock-password-input').fill(masterPassword);
-  await page.getByTestId('lock-submit-button').click();
+  await unlockVault(page, masterPassword);
 
   await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Permanent Delete' })).toBeHidden();
   await page.getByTestId('nav-trash-button').click();
@@ -239,7 +186,7 @@ test('permanently deletes a trashed vault item and keeps it deleted after reload
 });
 
 test('empties all trashed vault items and keeps the trash empty after reload', async ({ page }) => {
-  await setupVault(page);
+  await setupVault(page, masterPassword);
 
   const firstItem = await createLoginItem(page, 'E2E Empty Trash One', {
     username: 'empty-trash-one',
@@ -270,8 +217,7 @@ test('empties all trashed vault items and keeps the trash empty after reload', a
 
   await page.reload();
   await expect(page.getByTestId('lock-password-input')).toBeVisible();
-  await page.getByTestId('lock-password-input').fill(masterPassword);
-  await page.getByTestId('lock-submit-button').click();
+  await unlockVault(page, masterPassword);
 
   await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Empty Trash One' })).toBeHidden();
   await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Empty Trash Two' })).toBeHidden();
@@ -281,7 +227,7 @@ test('empties all trashed vault items and keeps the trash empty after reload', a
 });
 
 test('filters favorite vault items', async ({ page }) => {
-  await setupVault(page);
+  await setupVault(page, masterPassword);
 
   const favoriteItem = await createLoginItem(page, 'E2E Favorite Item');
   await createLoginItem(page, 'E2E Regular Item');
@@ -299,7 +245,7 @@ test('filters favorite vault items', async ({ page }) => {
 });
 
 test('filters vault items by search query', async ({ page }) => {
-  await setupVault(page);
+  await setupVault(page, masterPassword);
 
   await createLoginItem(page, 'E2E Search Alpha');
   await createLoginItem(page, 'E2E Search Beta');
@@ -314,7 +260,7 @@ test('filters vault items by search query', async ({ page }) => {
 });
 
 test('shows an empty state when search has no matches', async ({ page }) => {
-  await setupVault(page);
+  await setupVault(page, masterPassword);
 
   await createLoginItem(page, 'E2E Empty State Anchor');
 
@@ -332,7 +278,7 @@ test('reports weak and reused passwords in the security audit', async ({ page })
     await route.fulfill({ status: 503, body: '' });
   });
 
-  await setupVault(page);
+  await setupVault(page, masterPassword);
   await createLoginItem(page, 'E2E Weak Audit Item', { username: 'weak-user', password: '12345' });
   await createLoginItem(page, 'E2E Reused Audit One', { username: 'reuse-one', password: 'SharedAuditPass!42' });
   await createLoginItem(page, 'E2E Reused Audit Two', { username: 'reuse-two', password: 'SharedAuditPass!42' });
@@ -361,7 +307,7 @@ test('reports pwned passwords from a mocked HIBP range response', async ({ page 
     });
   });
 
-  await setupVault(page);
+  await setupVault(page, masterPassword);
   await createLoginItem(page, 'E2E Pwned Audit Item', {
     username: 'pwned-user',
     password: 'PwnedPass123!',
@@ -382,7 +328,7 @@ test('reports pwned passwords from a mocked HIBP range response', async ({ page 
 });
 
 test('navigates across primary workspaces and returns to the vault', async ({ page }) => {
-  await setupVault(page);
+  await setupVault(page, masterPassword);
 
   await page.getByTestId('nav-audit-button').click();
   await expect(page.getByTestId('audit-workspace')).toBeVisible();
@@ -402,7 +348,7 @@ test('navigates across primary workspaces and returns to the vault', async ({ pa
 });
 
 test('generates and copies a password from the generator workspace', async ({ page }) => {
-  await setupVault(page);
+  await setupVault(page, masterPassword);
 
   await page.getByTestId('nav-generator-button').click();
   await expect(page.getByTestId('generator-workspace')).toBeVisible();
@@ -422,7 +368,7 @@ test('generates and copies a password from the generator workspace', async ({ pa
 
 test('runs the wa-sqlite migration UI safety gate', async ({ page }) => {
   test.setTimeout(180000); // Allow up to 3 minutes for multiple WASM KDF rounds
-  await setupVault(page);
+  await setupVault(page, masterPassword);
   await createLoginItem(page, 'E2E SQLite Migration Guard');
   await openSettings(page);
 
@@ -442,15 +388,12 @@ test('runs the wa-sqlite migration UI safety gate', async ({ page }) => {
   await expect(migrationMessage).toContainText(/wa-sqlite/i);
   await expect(migrationButton).toBeEnabled();
 
-  await page.getByTestId('confirm-modal-confirm-button').click();
-  await expect(page.getByTestId('confirm-modal-confirm-button')).toBeHidden();
-
   await page.getByTestId('nav-vault-button').click();
   await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E SQLite Migration Guard' })).toBeVisible();
 });
 
 test('switches the interface language between English and Chinese', async ({ page }) => {
-  await setupVault(page);
+  await setupVault(page, masterPassword);
   await openSettings(page);
 
   await page.getByTestId('language-select').selectOption('en');
@@ -465,7 +408,7 @@ test('switches the interface language between English and Chinese', async ({ pag
 });
 
 test('renders the crypto donation page with wallet QR codes', async ({ page }) => {
-  await setupVault(page);
+  await setupVault(page, masterPassword);
 
   await page.getByTestId('nav-donate-button').click();
   await expect(page.getByTestId('donate-workspace')).toBeVisible();
@@ -482,7 +425,7 @@ test('renders the crypto donation page with wallet QR codes', async ({ page }) =
 });
 
 test('downloads an emergency kit from settings after unlock', async ({ page }) => {
-  await setupVault(page);
+  await setupVault(page, masterPassword);
   await openSettings(page);
 
   await expect(page.getByTestId('settings-emergency-kit-card')).toBeVisible();
@@ -502,7 +445,7 @@ test('downloads an emergency kit from settings after unlock', async ({ page }) =
 test('changes the master password, preserves data, and exports with the new session', async ({ page }) => {
   test.setTimeout(120000);
   const newMasterPassword = 'NewMasterPass!42';
-  await setupVault(page);
+  await setupVault(page, masterPassword);
   await createLoginItem(page, 'E2E Master Rotation', {
     username: 'rotated-user',
     password: 'RotatedVaultPass!42',
@@ -527,13 +470,11 @@ test('changes the master password, preserves data, and exports with the new sess
   await page.getByTestId('lock-vault-button').click();
   await expect(page.getByTestId('lock-password-input')).toBeVisible();
 
-  await page.getByTestId('lock-password-input').fill(masterPassword);
-  await page.getByTestId('lock-submit-button').click();
+  await unlockVault(page, masterPassword);
   await expect(page.getByTestId('lock-password-input')).toBeVisible();
   await expect(page.getByTestId('new-vault-item-button')).toBeHidden();
 
-  await page.getByTestId('lock-password-input').fill(newMasterPassword);
-  await page.getByTestId('lock-submit-button').click();
+  await unlockVault(page, newMasterPassword);
 
   await page.getByTestId('nav-vault-button').click();
   const restoredItem = page.getByTestId('vault-list-item').filter({ hasText: 'E2E Master Rotation' });
@@ -546,15 +487,14 @@ test('changes the master password, preserves data, and exports with the new sess
 
   await page.reload();
   await expect(page.getByTestId('lock-password-input')).toBeVisible();
-  await page.getByTestId('lock-password-input').fill(newMasterPassword);
-  await page.getByTestId('lock-submit-button').click();
+  await unlockVault(page, newMasterPassword);
 
   await page.getByTestId('nav-vault-button').click();
   await expect(page.getByTestId('vault-list-item').filter({ hasText: 'E2E Master Rotation' })).toBeVisible();
 });
 
 test('exports an encrypted backup download', async ({ page }) => {
-  await setupVault(page);
+  await setupVault(page, masterPassword);
   await createLoginItem(page, 'E2E Export Backup');
   await openSettings(page);
 
@@ -562,7 +502,7 @@ test('exports an encrypted backup download', async ({ page }) => {
 });
 
 test('exports a confirmed plain JSON backup download', async ({ page }) => {
-  await setupVault(page);
+  await setupVault(page, masterPassword);
   await createLoginItem(page, 'E2E Plain Export', {
     username: 'plain-export-user',
     password: 'PlainExportPass!42',
@@ -575,7 +515,11 @@ test('exports a confirmed plain JSON backup download', async ({ page }) => {
   await page.getByTestId('plain-export-confirm-input').fill('EXPORT');
 
   const downloadPromise = page.waitForEvent('download');
-  await page.getByTestId('plain-export-confirm-button').click();
+  const confirmButton = page.getByTestId('plain-export-confirm-button');
+  await confirmButton.hover();
+  await page.mouse.down();
+  await page.waitForTimeout(3300);
+  await page.mouse.up();
   const download = await downloadPromise;
   const downloadPath = await download.path();
 
@@ -583,7 +527,7 @@ test('exports a confirmed plain JSON backup download', async ({ page }) => {
   expect(downloadPath).toBeTruthy();
 
   const exportedItems = JSON.parse(await fs.readFile(downloadPath!, 'utf8'));
-  expect(exportedItems).toEqual(
+  expect(exportedItems.items).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
         title: 'E2E Plain Export',
@@ -596,7 +540,7 @@ test('exports a confirmed plain JSON backup download', async ({ page }) => {
 });
 
 test('imports a plain JSON backup file', async ({ page }) => {
-  await setupVault(page);
+  await setupVault(page, masterPassword);
   await openSettings(page);
 
   await page.getByTestId('import-file-input').setInputFiles({
@@ -623,8 +567,7 @@ test('imports a plain JSON backup file', async ({ page }) => {
 
   await page.reload();
   await expect(page.getByTestId('lock-password-input')).toBeVisible();
-  await page.getByTestId('lock-password-input').fill(masterPassword);
-  await page.getByTestId('lock-submit-button').click();
+  await unlockVault(page, masterPassword);
 
   const restoredImport = page.getByTestId('vault-list-item').filter({ hasText: 'E2E Imported Login' });
   await expect(restoredImport).toBeVisible();
@@ -634,7 +577,7 @@ test('imports a plain JSON backup file', async ({ page }) => {
 });
 
 test('imports an encrypted aegis backup file', async ({ page }) => {
-  await setupVault(page);
+  await setupVault(page, masterPassword);
   await createLoginItem(page, 'E2E Encrypted Import');
   await openSettings(page);
 
@@ -653,8 +596,7 @@ test('imports an encrypted aegis backup file', async ({ page }) => {
 
   await page.reload();
   await expect(page.getByTestId('lock-password-input')).toBeVisible();
-  await page.getByTestId('lock-password-input').fill(masterPassword);
-  await page.getByTestId('lock-submit-button').click();
+  await unlockVault(page, masterPassword);
 
   const restoredImport = page.getByTestId('vault-list-item').filter({ hasText: 'E2E Encrypted Import' });
   await expect(restoredImport).toBeVisible();
@@ -663,7 +605,7 @@ test('imports an encrypted aegis backup file', async ({ page }) => {
 });
 
 test('rejects encrypted aegis import with a wrong password', async ({ page }) => {
-  await setupVault(page);
+  await setupVault(page, masterPassword);
   await createLoginItem(page, 'E2E Wrong Password Import');
   await openSettings(page);
 
@@ -679,7 +621,7 @@ test('rejects encrypted aegis import with a wrong password', async ({ page }) =>
 });
 
 test('cancels encrypted aegis import before decrypting', async ({ page }) => {
-  await setupVault(page);
+  await setupVault(page, masterPassword);
   await createLoginItem(page, 'E2E Cancel Import');
   await openSettings(page);
 

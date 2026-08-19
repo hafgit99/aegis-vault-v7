@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { ActiveTab, VaultItem } from '../types';
+import type { ActiveTab, VaultItem } from '../types';
 
 interface UseVaultSelectionOptions {
   setSelectedItem: (item: VaultItem) => void;

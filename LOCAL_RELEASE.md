@@ -32,22 +32,10 @@ The command performs:
 
 ## Platform Commands
 
-Windows:
+The release script detects the host platform automatically, so a single command works on Windows, Linux, and macOS:
 
 ```bash
-npm run release:windows
-```
-
-Linux:
-
-```bash
-npm run release:linux
-```
-
-macOS current architecture:
-
-```bash
-npm run release:macos
+npm run release:local
 ```
 
 macOS universal Apple/Intel build:

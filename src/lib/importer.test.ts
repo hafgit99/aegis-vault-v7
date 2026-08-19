@@ -130,7 +130,7 @@ describe('universal importer', () => {
     // The smart title builder falls through to the username ('u') when
     // the title cell is empty, so the localized `untitledUniversal`
     // placeholder is only used when both title and username are empty.
-    expect(universal.items[0].title).toBe('u');
+    expect(universal.items[0]!.title).toBe('u');
     expect(parseUniversalImport('alpha,beta\na,b', labels)).toEqual({ type: 'error', message: 'csv-columns-x' });
   });
 

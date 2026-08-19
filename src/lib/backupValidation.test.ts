@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { validateBackupPayload, validationErrorCodes, MAX_BACKUP_FILE_SIZE } from './backupValidation';
+import { validateBackupPayload, MAX_BACKUP_FILE_SIZE } from './backupValidation';
 
 describe('backupValidation', () => {
   it('accepts and parses valid legacy items array', () => {
@@ -42,7 +42,7 @@ describe('backupValidation', () => {
   });
 
   it('rejects backup exceeding max file size limit', () => {
-    const payload = [];
+    const payload: unknown[] = [];
     const size = MAX_BACKUP_FILE_SIZE + 10;
 
     expect(() => validateBackupPayload(payload, size)).toThrowError(

@@ -2,7 +2,7 @@
 
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 import { useVaultSelection } from './useVaultSelection';
 
 const selectedItem: VaultItem = {

@@ -1,31 +1,26 @@
 const fs = require('fs');
 const path = require('path');
+const {
+  hasFlag,
+  getArgValue,
+  detectPlatform,
+  assertPlatform,
+  failThrow: fail,
+  readJson,
+  shortHash,
+  formatBytes,
+} = require('./release-utils.cjs');
 
 const rootDir = path.resolve(__dirname, '..');
 const releaseLocalDir = path.join(rootDir, 'release-local');
 const packageJson = require(path.join(rootDir, 'package.json'));
 const args = process.argv.slice(2);
 
-const platform = getArgValue('--platform') || detectPlatform();
-const explicitDir = getArgValue('--dir');
+const platform = getArgValue(args, '--platform') || detectPlatform();
+const explicitDir = getArgValue(args, '--dir');
 const evidenceDir = explicitDir ? path.resolve(rootDir, explicitDir) : path.join(releaseLocalDir, platform);
-const signed = hasFlag('--signed');
-const channel = getArgValue('--channel') || 'internal candidate';
-
-function hasFlag(flag) {
-  return args.includes(flag);
-}
-
-function getArgValue(name) {
-  const index = args.indexOf(name);
-  return index >= 0 ? args[index + 1] : null;
-}
-
-function detectPlatform() {
-  if (process.platform === 'win32') return 'windows';
-  if (process.platform === 'darwin') return 'macos';
-  return 'linux';
-}
+const signed = hasFlag(args, '--signed');
+const channel = getArgValue(args, '--channel') || 'internal candidate';
 
 function usage() {
   return [
@@ -43,28 +38,6 @@ function usage() {
   ].join('\n');
 }
 
-function fail(message) {
-  throw new Error(message);
-}
-
-function assertPlatform(value) {
-  if (!['windows', 'linux', 'macos'].includes(value)) {
-    fail('Unsupported desktop release platform: ' + value);
-  }
-}
-
-function readJson(file) {
-  try {
-    return JSON.parse(fs.readFileSync(file, 'utf8'));
-  } catch (error) {
-    fail('Failed to read JSON file ' + file + ': ' + (error && error.message ? error.message : String(error)));
-  }
-}
-
-function shortHash(value) {
-  return typeof value === 'string' && value.length >= 12 ? value.slice(0, 12) : value;
-}
-
 function artifactKind(name) {
   const lower = name.toLowerCase();
   if (lower.endsWith('.msi')) return 'Windows MSI installer';
@@ -76,18 +49,6 @@ function artifactKind(name) {
   if (lower.endsWith('.xpi')) return 'Firefox signed extension';
   if (lower.endsWith('.app')) return 'macOS app bundle';
   return 'Release artifact';
-}
-
-function formatBytes(bytes) {
-  if (!Number.isFinite(bytes)) return 'unknown size';
-  const units = ['B', 'KiB', 'MiB', 'GiB'];
-  let size = bytes;
-  let index = 0;
-  while (size >= 1024 && index < units.length - 1) {
-    size /= 1024;
-    index += 1;
-  }
-  return (index === 0 ? String(size) : size.toFixed(2)) + ' ' + units[index];
 }
 
 function checksumLines(artifacts) {
@@ -175,7 +136,7 @@ function generateReleaseNotes() {
   console.log('Desktop release notes written to ' + path.relative(rootDir, path.join(evidenceDir, 'RELEASE_NOTES.md')));
 }
 
-if (hasFlag('--help')) {
+if (hasFlag(args, '--help')) {
   console.log(usage());
   process.exit(0);
 }

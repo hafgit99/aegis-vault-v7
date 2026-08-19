@@ -5,7 +5,7 @@
 import { cleanup, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 import { useSelectedItemScore } from './useSelectedItemScore';
 
 const item = (password?: string): VaultItem => ({

@@ -486,7 +486,7 @@ FROM vault_items;
   }
 
   private async createEncryptedRow(item: VaultItem, key: Uint8Array): Promise<WaSqliteVaultItemRow> {
-    const nowStr = new Date().toISOString().split('T')[0];
+    const nowStr = new Date().toISOString().split('T')[0] ?? new Date().toISOString();
     const id = item.id || secureRandomToken(9);
     const createdAt = item.createdAt || nowStr;
     const updatedAt = item.updatedAt || nowStr;

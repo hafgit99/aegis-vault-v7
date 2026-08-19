@@ -1,10 +1,10 @@
-import { AppConfirmConfig, AppNotification, TagDefinition, VaultFolder, VaultItem } from '../types';
+import type { AppConfirmConfig, AppNotification, TagDefinition, VaultFolder, VaultItem } from '../types';
 import ConfirmModal from './ConfirmModal';
 import ProfileModal from './ProfileModal';
 import VaultFormModal from './VaultFormModal';
 import ShareModal from './ShareModal';
 import ReceiveShareModal from './ReceiveShareModal';
-import { DecryptedSharePayload } from '../lib/share';
+import type { DecryptedSharePayload } from '../lib/share';
 
 interface AppModalsProps {
   isVaultFormOpen: boolean;

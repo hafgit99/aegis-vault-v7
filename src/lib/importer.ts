@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 
 import { parseCSV } from './csvParser';
 import { defaultImportLabels } from './importerLabels';
@@ -83,8 +83,8 @@ function buildImportedTitle(
     }
   }
   if (notes && notes.trim().length > 0) {
-    const firstLine = notes.trim().split(/\r?\n/)[0].trim();
-    if (firstLine.length > 0 && firstLine.length <= 60) return firstLine;
+    const firstLine = notes.trim().split(/\r?\n/)[0]?.trim();
+    if (firstLine && firstLine.length > 0 && firstLine.length <= 60) return firstLine;
   }
   return untitledFallback;
 }
@@ -216,11 +216,12 @@ export function parseUniversalImport(fileContent: string, labels: Partial<Import
 
   // Scenario B: CSV Format
   const rows = parseCSV(trimmed);
-  if (rows.length < 2) {
+  const firstRow = rows[0];
+  if (rows.length < 2 || !firstRow) {
     return { type: 'error', message: copy.errorCsvHeader };
   }
 
-  const headers = rows[0].map(h => h.toLowerCase().trim().replace(/^["']|["']$/g, ''));
+  const headers = firstRow.map(h => h.toLowerCase().trim().replace(/^["']|["']$/g, ''));
   const dataRows = rows.slice(1);
 
   // Helper to locate column index by aliases.
@@ -280,7 +281,8 @@ export function parseUniversalImport(fileContent: string, labels: Partial<Import
       const title = buildImportedTitle(rawTitle, username, url, notes, copy.untitledUniversal);
 
       // Map Bitwarden type strings/ids to local categories.
-      const typeStr = (typeIdx !== -1 ? row[typeIdx] : 'login').toLowerCase();
+      const typeCell = typeIdx !== -1 ? row[typeIdx] : 'login';
+      const typeStr = (typeCell ?? 'login').toLowerCase();
       let category: 'login' | 'card' | 'identity' | 'secure_note' = 'login';
       if (typeStr.includes('note') || typeStr === '2') category = 'secure_note';
       else if (typeStr.includes('card') || typeStr === '3') category = 'card';

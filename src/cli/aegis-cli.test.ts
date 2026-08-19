@@ -17,11 +17,27 @@ describe('aegis-cli module', () => {
     expect(pw2.length).toBe(32);
   });
 
+  it('generateRandomPassword samples from the full charset without modulo bias', () => {
+    const symbols = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+    const pw = generateRandomPassword(2000, true);
+    for (const ch of symbols) {
+      expect(pw).toContain(ch);
+    }
+  });
+
   it('generateDicewarePassphrase produces hyphen-separated words', () => {
     const phrase = generateDicewarePassphrase(4);
     const parts = phrase.split('-');
     expect(parts.length).toBe(4);
     expect(parts.every((w: string) => w.length > 0)).toBe(true);
+  });
+
+  it('generateDicewarePassphrase draws from an EFF-sized word pool', () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 2000; i++) {
+      seen.add(generateDicewarePassphrase(1));
+    }
+    expect(seen.size).toBeGreaterThan(1000);
   });
 
   it('parseVaultEnvelope parses unencrypted array backups', () => {

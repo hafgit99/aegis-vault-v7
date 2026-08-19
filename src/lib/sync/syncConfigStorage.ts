@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { S3SyncConfig, SyncConfig, SyncError, syncErrorCodes, WebDavSyncConfig } from './syncTypes';
-import { webCryptoAesGcmEncrypt, webCryptoAesGcmDecrypt, generateSafeIv, WebCryptoAesGcmPayload } from '../webcrypto';
+import type { S3SyncConfig, SyncConfig, WebDavSyncConfig } from './syncTypes';
+import { SyncError, syncErrorCodes } from './syncTypes';
+import type { WebCryptoAesGcmPayload } from '../webcrypto';
+import { webCryptoAesGcmEncrypt, webCryptoAesGcmDecrypt, generateSafeIv } from '../webcrypto';
 import { deriveArgon2idKey } from '../argon2id';
-import { secureRandomBytes } from '../random';
 import { isPrivateOrLoopbackHostname } from '../airgapNetworkPolicy';
 
 const CONFIG_STORAGE_KEY = 'aegis_sync_config_v1';

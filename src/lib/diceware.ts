@@ -55,7 +55,7 @@ export function generateDiceware(options: DicewareOptions): string {
 
   for (let i = 0; i < options.wordCount; i++) {
     const randomIndex = secureRandomIndex(wordPool.length);
-    let word = wordPool[randomIndex];
+    let word = wordPool[randomIndex] ?? 'aegis';
 
     if (options.capitalize) {
       word = word.charAt(0).toUpperCase() + word.slice(1);
@@ -77,8 +77,9 @@ export function generateDiceware(options: DicewareOptions): string {
     // We already handled individual word capitalization according to 'options.capitalize'.
     // Let's force-capitalize all words from 2nd word onwards if Camel is chosen.
     for (let i = 0; i < pickedWords.length; i++) {
-      if (i > 0 || options.capitalize) {
-        pickedWords[i] = pickedWords[i].charAt(0).toUpperCase() + pickedWords[i].slice(1);
+      const currentWord = pickedWords[i];
+      if (currentWord && (i > 0 || options.capitalize)) {
+        pickedWords[i] = currentWord.charAt(0).toUpperCase() + currentWord.slice(1);
       }
     }
   }

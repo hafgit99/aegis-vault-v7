@@ -46,7 +46,7 @@ function secureZeroizeBytes(arr: Uint8Array): void {
   // Force a side-effect accumulator to prevent JIT optimizer from dropping .fill(0)
   let acc = 0;
   for (let i = 0; i < arr.length; i++) {
-    acc |= arr[i];
+    acc |= (arr[i] ?? 0);
   }
   if (acc !== 0) {
     arr.fill(0);

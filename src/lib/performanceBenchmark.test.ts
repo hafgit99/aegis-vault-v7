@@ -2,8 +2,8 @@
  * @vitest-environment jsdom
  */
 
-import { describe, expect, it, vi } from 'vitest';
-import { generateSafeIv, webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt } from './webcrypto';
+import { describe, expect, it } from 'vitest';
+import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, generateSafeIv } from './webcrypto';
 
 describe('Cryptographic Performance Benchmarks', () => {
   it('measures WebCrypto AES-256-GCM encryption and decryption throughput', async () => {

@@ -1,9 +1,9 @@
 import { Palette, Check } from 'lucide-react';
-import { useTheme, type ThemeMode, type ThemePalette } from '../../context/ThemeContext';
+import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 export function SettingsThemeCard() {
-  const { themeMode, themePalette, setThemeMode, setThemePalette } = useTheme();
+  const { themePalette, setThemePalette } = useTheme();
   const { t } = useLanguage();
 
   const palettes: { key: ThemePalette; colorClass: string; nameKey: string }[] = [

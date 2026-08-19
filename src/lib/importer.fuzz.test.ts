@@ -131,7 +131,7 @@ function expectedImportedTitle(
   }
   const notes = expectedString(item.notes).trim();
   if (notes.length > 0) {
-    const firstLine = notes.split(/\r?\n/)[0].trim();
+    const firstLine = notes.split(/\r?\n/)[0]!.trim();
     if (firstLine.length > 0 && firstLine.length <= 60) return firstLine;
   }
   return placeholder;

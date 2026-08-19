@@ -61,17 +61,22 @@ function levenshtein(a: string, b: string): number {
   for (let i = 1; i <= a.length; i++) {
     curr[0] = i;
     for (let j = 1; j <= b.length; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      const charA = a[i - 1];
+      const charB = b[j - 1];
+      const cost = (charA !== undefined && charA === charB) ? 0 : 1;
+      const prevJ = prev[j] ?? 0;
+      const currJMinus1 = curr[j - 1] ?? 0;
+      const prevJMinus1 = prev[j - 1] ?? 0;
       curr[j] = Math.min(
-        prev[j] + 1,       // deletion
-        curr[j - 1] + 1,   // insertion
-        prev[j - 1] + cost, // substitution
+        prevJ + 1,       // deletion
+        currJMinus1 + 1,   // insertion
+        prevJMinus1 + cost, // substitution
       );
     }
     [prev, curr] = [curr, prev];
   }
 
-  return prev[b.length];
+  return prev[b.length] ?? 0;
 }
 
 // ── CRUD ────────────────────────────────────────────────────────────────

@@ -6,8 +6,18 @@
 import React, { useState, useEffect } from 'react';
 import { X, CheckCircle2, AlertTriangle, Eye, EyeOff, KeyRound, User, Globe, StickyNote, Download } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
-import { DecryptedSharePayload } from '../lib/share';
-import { VaultItem } from '../types';
+import type { DecryptedSharePayload } from '../lib/share';
+import type { VaultItem } from '../types';
+import { Modal } from './ui/Modal';
+import { Button } from './ui/Button';
+
+const categoryTranslationKeys: Record<string, string> = {
+  login: 'detail.category.login',
+  card: 'detail.category.card',
+  passkey: 'detail.category.passkey',
+  identity: 'detail.category.identity',
+  secureNote: 'detail.category.secureNote',
+};
 
 interface ReceiveShareModalProps {
   isOpen: boolean;
@@ -29,16 +39,16 @@ export default function ReceiveShareModal({ isOpen, onClose, payload, onImport }
       const remaining = payload.expiresAt - Date.now();
       if (remaining <= 0) {
         setIsExpired(true);
-        setTimeLeftStr(t('share.expired') || 'Expired / Süresi Doldu');
+        setTimeLeftStr(t('share.expired'));
       } else {
         setIsExpired(false);
         const mins = Math.ceil(remaining / 60000);
         if (mins > 60) {
           const hrs = Math.floor(mins / 60);
           const remainingMins = mins % 60;
-          setTimeLeftStr(`${hrs}s ${remainingMins}d`);
+          setTimeLeftStr(t('share.timeLeftHours', { hours: hrs, minutes: remainingMins }));
         } else {
-          setTimeLeftStr(`${mins}d`);
+          setTimeLeftStr(t('share.timeLeftMinutes', { minutes: mins }));
         }
       }
     };
@@ -68,7 +78,7 @@ export default function ReceiveShareModal({ isOpen, onClose, payload, onImport }
   };
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/75 backdrop-blur-md overflow-hidden select-none animate-fade-in">
+    <Modal open={isOpen && Boolean(payload)} onClose={onClose} zIndex={110}>
       <div className="w-full max-w-md bg-surface-container border border-outline-variant/30 rounded-2xl overflow-hidden custom-shadow relative flex flex-col mx-4">
         
         {/* Header line */}
@@ -82,10 +92,10 @@ export default function ReceiveShareModal({ isOpen, onClose, payload, onImport }
             </div>
             <div>
               <h3 className="font-display font-bold text-sm text-on-surface">
-                {t('share.importTitle') || 'Import Shared Item / Paylaşılan Kaydı İçe Aktar'}
+                {t('share.importTitle')}
               </h3>
               <p className="text-[10px] text-on-surface-variant font-medium">
-                {t('share.importSubtitle') || 'A credential has been shared securely.'}
+                {t('share.importSubtitle')}
               </p>
             </div>
           </div>
@@ -105,16 +115,16 @@ export default function ReceiveShareModal({ isOpen, onClose, payload, onImport }
             <div className="p-3.5 bg-brand-error/10 border border-brand-error/20 rounded-xl flex items-start gap-3 text-brand-error text-xs text-left animate-fade-in">
               <AlertTriangle className="w-4.5 h-4.5 shrink-0 text-red-400 mt-0.5" />
               <div>
-                <p className="font-bold">{t('share.expiredTitle') || 'Share Expired / Paylaşım Süresi Doldu'}</p>
+                <p className="font-bold">{t('share.expiredTitle')}</p>
                 <p className="text-[10px] opacity-80 mt-0.5">
-                  {t('share.expiredDesc') || 'This one-time sharing link has expired and can no longer be decrypted.'}
+                  {t('share.expiredDesc')}
                 </p>
               </div>
             </div>
           ) : (
             <div className="p-3 bg-brand-primary/5 border border-brand-primary/15 rounded-xl flex items-center justify-between text-left">
               <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">
-                {t('share.timeRemaining') || 'Time Remaining / Kalan Süre'}
+                {t('share.timeRemaining')}
               </span>
               <span className="text-xs font-bold text-brand-primary bg-brand-primary/10 px-2 py-0.5 rounded border border-brand-primary/20">
                 {timeLeftStr}
@@ -128,12 +138,14 @@ export default function ReceiveShareModal({ isOpen, onClose, payload, onImport }
             {/* Title / Category */}
             <div>
               <label className="block text-[9px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-0.5">
-                {t('share.fieldTitle') || 'Title / Başlık'}
+                {t('share.fieldTitle')}
               </label>
               <div className="text-sm font-bold text-on-surface flex items-center gap-2">
                 <span data-testid="receive-share-title-value">{payload.title}</span>
                 <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full border border-brand-primary/20 bg-brand-primary/10 text-brand-primary uppercase">
-                  {payload.category}
+                  {categoryTranslationKeys[payload.category]
+                    ? t(categoryTranslationKeys[payload.category] as Parameters<typeof t>[0])
+                    : payload.category}
                 </span>
               </div>
             </div>
@@ -142,7 +154,7 @@ export default function ReceiveShareModal({ isOpen, onClose, payload, onImport }
             {payload.username && (
               <div>
                 <label className="block text-[9px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-0.5">
-                  {t('share.fieldUsername') || 'Username / Kullanıcı Adı'}
+                  {t('share.fieldUsername')}
                 </label>
                 <div className="text-xs text-on-surface flex items-center gap-1.5 font-mono">
                   <User className="w-3.5 h-3.5 text-on-surface-variant/40" />
@@ -155,7 +167,7 @@ export default function ReceiveShareModal({ isOpen, onClose, payload, onImport }
             {payload.password && (
               <div>
                 <label className="block text-[9px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-0.5">
-                  {t('share.fieldPassword') || 'Password / Şifre'}
+                  {t('share.fieldPassword')}
                 </label>
                 <div className="relative">
                   <KeyRound className="w-3.5 h-3.5 absolute left-0 top-1 text-on-surface-variant/40" />
@@ -180,7 +192,7 @@ export default function ReceiveShareModal({ isOpen, onClose, payload, onImport }
             {payload.url && (
               <div>
                 <label className="block text-[9px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-0.5">
-                  {t('share.fieldUrl') || 'URL / Web Adresi'}
+                  {t('share.fieldUrl')}
                 </label>
                 <div className="text-xs text-on-surface flex items-center gap-1.5">
                   <Globe className="w-3.5 h-3.5 text-on-surface-variant/40" />
@@ -193,7 +205,7 @@ export default function ReceiveShareModal({ isOpen, onClose, payload, onImport }
             {payload.notes && (
               <div>
                 <label className="block text-[9px] font-bold text-on-surface-variant/80 uppercase tracking-widest mb-0.5">
-                  {t('share.fieldNotes') || 'Notes / Açıklama'}
+                  {t('share.fieldNotes')}
                 </label>
                 <div className="text-xs text-on-surface flex items-start gap-1.5 bg-[#000]/10 p-2 rounded border border-outline-variant/5 max-h-24 overflow-y-auto font-sans leading-relaxed">
                   <StickyNote className="w-3.5 h-3.5 text-on-surface-variant/40 mt-0.5 shrink-0" />
@@ -206,24 +218,26 @@ export default function ReceiveShareModal({ isOpen, onClose, payload, onImport }
 
         {/* Footer */}
         <div className="px-5 py-3 border-t border-outline-variant/10 bg-[#0c0d0c]/95 flex justify-end gap-2.5">
-          <button
+          <Button
             data-testid="receive-share-cancel-button"
             onClick={onClose}
-            className="px-4 py-2 bg-[#1b1d1b] hover:bg-[#232623] border border-outline-variant/15 rounded-xl font-bold text-xs text-on-surface transition-colors cursor-pointer focus:outline-none"
+            variant="secondary"
+            size="md"
           >
-            {t('share.cancel') || 'Cancel / İptal'}
-          </button>
-          <button
+            {t('share.cancel')}
+          </Button>
+          <Button
             data-testid="receive-share-save-button"
             onClick={handleImport}
             disabled={isExpired}
-            className="px-5 py-2 bg-brand-primary text-brand-on-primary rounded-xl font-bold text-xs hover:brightness-110 active:scale-95 transition-all cursor-pointer shadow-lg shadow-brand-primary/10 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none"
+            variant="primary"
+            size="md"
           >
             <CheckCircle2 className="w-4 h-4" />
-            <span>{t('share.importSave') || 'Save to Vault / Kasaya Ekle'}</span>
-          </button>
+            <span>{t('share.importSave')}</span>
+          </Button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

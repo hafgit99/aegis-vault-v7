@@ -1,7 +1,8 @@
 import React from 'react';
-import { X, AlertTriangle, Trash2, HelpCircle, CheckCircle, Info } from 'lucide-react';
+import { X, AlertTriangle, Trash2, CheckCircle, Info } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
+import { Modal } from './ui/Modal';
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -60,7 +61,7 @@ export default function ConfirmModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[100] flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
+    <Modal open={isOpen} onClose={onCancel} zIndex={100} closeOnBackdrop={false}>
       <div 
         className="w-full max-w-md surface-panel rounded-xl p-6 relative overflow-hidden"
         id="confirm-modal-wrapper"
@@ -109,6 +110,6 @@ export default function ConfirmModal({
           </div>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

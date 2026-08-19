@@ -4,13 +4,14 @@
  */
 
 import { Smartphone, Check, ShieldAlert } from 'lucide-react';
+import type { TFunction } from '../../i18n/LanguageContext';
 
 interface SettingsAutofillCardProps {
   autofillEnabled: boolean;
   autofillMessage: string | null;
   autofillError: string | null;
   onOpenAutofillSettings: () => void;
-  t: (key: string) => string;
+  t: TFunction;
 }
 
 export function SettingsAutofillCard({

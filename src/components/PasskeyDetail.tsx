@@ -1,7 +1,7 @@
 import { Check, Copy, Eye, EyeOff } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 
 const HIDDEN_SECRET = '••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••';
 

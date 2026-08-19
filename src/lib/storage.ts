@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 import { getDefaultKdfProfile } from './argon2id';
 import { migrateLegacyAttachmentsToAesGcm, reencryptAttachmentsForVaultKeyChange } from './attachments';
 import {
@@ -29,7 +29,6 @@ import { disableBiometric, hydrateBiometric } from './biometric';
 import { createDemoItems } from './storageDemoItems';
 import {
   getSecureStorageItem,
-  isSecureStorageAvailable,
   removeSecureStorageItem,
   secureStorageKeys,
   setSecureStorageItem,
@@ -97,7 +96,9 @@ export function isMasterPasswordSet(): boolean {
       if (parsed.user_secrets && parsed.user_secrets.length > 0) {
         return true;
       }
-    } catch(e) {}
+    } catch {
+      // fall through to the legacy IS_SET_UP check
+    }
   }
   return getIndexedDbItemSync(STORAGE_KEYS.IS_SET_UP) === 'true';
 }
@@ -568,7 +569,7 @@ async function withSessionVaultKey<T>(fallback: T, action: (vaultEncryptionKey: 
   try {
     return await result;
   } finally {
-    keyCopy?.fill(0);
+    (keyCopy as Uint8Array | null)?.fill(0);
   }
 }
 

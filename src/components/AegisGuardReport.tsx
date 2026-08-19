@@ -2,7 +2,7 @@ import { AlertTriangle, ShieldCheck } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { APP_SECURITY_BRAND } from '../lib/branding';
-import { AuditReport } from '../types';
+import type { AuditReport } from '../types';
 
 interface AegisGuardReportProps {
   auditReport: AuditReport;

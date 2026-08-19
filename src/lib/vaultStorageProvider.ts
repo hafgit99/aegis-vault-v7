@@ -21,7 +21,7 @@ import {
 } from './waSqlitePersistence';
 import { createWaSqliteVaultStorageRepository } from './waSqliteVaultStorageRepository';
 import { getIndexedDbItemSync, setIndexedDbItemSync, removeIndexedDbItemSync } from './indexedDbStorage';
-import { isAndroidRuntime, isDesktopRuntime } from './desktopStorage';
+import { isDesktopRuntime } from './desktopStorage';
 
 export const ACTIVE_VAULT_STORAGE_BACKEND_KEY = 'aegis_vault_storage_active_backend';
 

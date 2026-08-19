@@ -78,7 +78,7 @@ describe('emergencyKit', () => {
     await expect(saveEmergencyKit(secretKey)).resolves.toBe(true);
 
     expect(createObjectUrlSpy).toHaveBeenCalledWith(expect.any(Blob));
-    const blob = createObjectUrlSpy.mock.calls[0][0] as Blob;
+    const blob = createObjectUrlSpy.mock.calls[0]![0] as Blob;
     expect(blob.size).toBeGreaterThan(0);
     expect(blob.type).toBe('text/plain;charset=utf-8');
     expect(appendSpy).toHaveBeenCalledWith(expect.any(HTMLAnchorElement));
@@ -118,7 +118,7 @@ describe('emergencyKit', () => {
     await expect(saveEmergencyKitPdf(secretKey)).resolves.toBe(true);
 
     expect(saveDesktopBinaryFile).toHaveBeenCalledTimes(1);
-    const [calledFilename, calledBytes] = vi.mocked(saveDesktopBinaryFile).mock.calls[0];
+    const [calledFilename, calledBytes] = vi.mocked(saveDesktopBinaryFile).mock.calls[0]!;
     expect(calledFilename).toBe(EMERGENCY_KIT_PDF_FILENAME);
     const byteArr = calledBytes instanceof Uint8Array ? calledBytes : new Uint8Array(Object.values(calledBytes as any));
     const pdfHeader = new TextDecoder().decode(byteArr.slice(0, 8));
@@ -139,7 +139,7 @@ describe('emergencyKit', () => {
     await expect(saveEmergencyKitPdf(secretKey)).resolves.toBe(true);
 
     expect(createObjectUrlSpy).toHaveBeenCalledWith(expect.any(Blob));
-    const blob = createObjectUrlSpy.mock.calls[0][0] as Blob;
+    const blob = createObjectUrlSpy.mock.calls[0]![0] as Blob;
     expect(blob.type).toBe('application/pdf');
     expect(appendSpy).toHaveBeenCalledWith(expect.any(HTMLAnchorElement));
     expect(clickSpy).toHaveBeenCalledTimes(1);

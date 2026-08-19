@@ -2,11 +2,11 @@ import { Heart, Sparkles } from 'lucide-react';
 import { memo, useState } from 'react';
 
 import { useLanguage } from '../i18n/LanguageContext';
-import { TranslationKey } from '../i18n/translations';
+import type { TranslationKey } from '../i18n/translations';
 import { getLogoForPlatform } from '../lib/display';
 import { getStrengthLabel } from '../lib/security';
 import type { FuzzyScore } from '../lib/fuzzySearch';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 import { resolveTagColor, TAG_PALETTE } from '../lib/tags';
 import SearchHighlight from './SearchHighlight';
 

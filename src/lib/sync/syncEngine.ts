@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { VaultItem } from '../../types';
+import type { VaultItem } from '../../types';
 import { encryptDataWithPasswordSecure, decryptDataWithPasswordSecure } from '../encryption';
 import { secureRandomToken } from '../random';
-import { SyncProvider, SyncResult, SyncMetadata, SyncError, syncErrorCodes, SyncConflictItem } from './syncTypes';
+import type { SyncProvider, SyncResult, SyncMetadata, SyncConflictItem } from './syncTypes';
+import { SyncError, syncErrorCodes } from './syncTypes';
 
 const VAULT_VERSION = '7.0';
 

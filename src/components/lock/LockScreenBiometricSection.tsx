@@ -11,7 +11,7 @@ interface LockScreenBiometricSectionProps {
   isSetup: boolean;
   isBioEnabled: boolean;
   biometricLoading: boolean;
-  biometricType: 'platform' | 'cross-platform' | 'native';
+  biometricType: 'platform' | 'cross-platform' | 'native' | null;
   onBiometricUnlock: () => void | Promise<void>;
 }
 
@@ -24,7 +24,7 @@ export function LockScreenBiometricSection({
 }: LockScreenBiometricSectionProps) {
   const { t } = useLanguage();
 
-  if (!isSetup || !isBioEnabled) {
+  if (!isSetup || !isBioEnabled || !biometricType) {
     return null;
   }
 

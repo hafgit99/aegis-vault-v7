@@ -1,7 +1,18 @@
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 const { execFileSync } = require('child_process');
+const {
+  hasFlag,
+  getArgValue,
+  detectPlatform,
+  assertPlatform,
+  failThrow: fail,
+  readJson,
+  sha256,
+  walk,
+  directoryStats,
+  readChecksumFile,
+} = require('./release-utils.cjs');
 const { archiveContainsForbiddenDebugArtifact, isForbiddenDebugArtifact, signingCoverage } = require('./desktop-signing-policy.cjs');
 
 const rootDir = path.resolve(__dirname, '..');
@@ -9,28 +20,13 @@ const releaseLocalDir = path.join(rootDir, 'release-local');
 const packageJson = require(path.join(rootDir, 'package.json'));
 const args = process.argv.slice(2);
 
-const platform = getArgValue('--platform') || detectPlatform();
-const explicitDir = getArgValue('--dir');
+const platform = getArgValue(args, '--platform') || detectPlatform();
+const explicitDir = getArgValue(args, '--dir');
 const evidenceDir = explicitDir ? path.resolve(rootDir, explicitDir) : path.join(releaseLocalDir, platform);
-const allowDirty = hasFlag('--allow-dirty');
-const allowEmpty = hasFlag('--allow-empty');
-const requireCompletedChecklist = hasFlag('--require-completed-checklist');
-const requireSignedArtifacts = hasFlag('--require-signed-artifacts');
-
-function hasFlag(flag) {
-  return args.includes(flag);
-}
-
-function getArgValue(name) {
-  const index = args.indexOf(name);
-  return index >= 0 ? args[index + 1] : null;
-}
-
-function detectPlatform() {
-  if (process.platform === 'win32') return 'windows';
-  if (process.platform === 'darwin') return 'macos';
-  return 'linux';
-}
+const allowDirty = hasFlag(args, '--allow-dirty');
+const allowEmpty = hasFlag(args, '--allow-empty');
+const requireCompletedChecklist = hasFlag(args, '--require-completed-checklist');
+const requireSignedArtifacts = hasFlag(args, '--require-signed-artifacts');
 
 function usage() {
   return [
@@ -50,70 +46,12 @@ function usage() {
   ].join('\n');
 }
 
-function fail(message) {
-  throw new Error(message);
-}
-
-function assertPlatform(value) {
-  if (!['windows', 'linux', 'macos'].includes(value)) {
-    fail('Unsupported desktop release platform: ' + value);
-  }
-}
-
-function readJson(file) {
-  try {
-    return JSON.parse(fs.readFileSync(file, 'utf8'));
-  } catch (error) {
-    fail('Failed to read JSON file ' + file + ': ' + (error && error.message ? error.message : String(error)));
-  }
-}
-
-function sha256(file) {
-  return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
-}
-
-function walk(dir, files = []) {
-  if (!fs.existsSync(dir)) return files;
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      walk(fullPath, files);
-    } else {
-      files.push(fullPath);
-    }
-  }
-  return files;
-}
-
-function directoryStats(dir) {
-  const files = walk(dir).filter(file => fs.existsSync(file) && fs.statSync(file).isFile());
-  return {
-    fileCount: files.length,
-    sizeBytes: files.reduce((total, file) => total + fs.statSync(file).size, 0),
-  };
-}
-
 function gitValue(commandArgs, fallback = '<unknown>') {
   try {
     return execFileSync('git', commandArgs, { cwd: rootDir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || fallback;
   } catch {
     return fallback;
   }
-}
-
-function readChecksumFile(file) {
-  const entries = new Map();
-  const contents = fs.readFileSync(file, 'utf8').trim();
-  if (!contents) return entries;
-
-  for (const line of contents.split(/\r?\n/)) {
-    const match = line.match(/^([a-f0-9]{64})\s{2}(.+)$/i);
-    if (!match) {
-      fail('Invalid checksum line: ' + line);
-    }
-    entries.set(match[2], match[1].toLowerCase());
-  }
-  return entries;
 }
 
 function resolveArtifactPath(artifact) {
@@ -328,7 +266,7 @@ function verifyEvidence() {
   console.log('Signed artifacts required: ' + (requireSignedArtifacts ? 'yes' : 'no'));
 }
 
-if (hasFlag('--help')) {
+if (hasFlag(args, '--help')) {
   console.log(usage());
   process.exit(0);
 }

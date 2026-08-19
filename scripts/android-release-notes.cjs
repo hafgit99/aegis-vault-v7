@@ -1,19 +1,29 @@
 const fs = require('fs');
 const path = require('path');
+const {
+  hasFlag,
+  getArgValue,
+  failThrow: fail,
+  readJson,
+  readText,
+  shortHash,
+  firstMatch,
+  formatBytes,
+  checklistStats,
+  checklistField,
+  isPlaceholderValue,
+} = require('./release-utils.cjs');
 
 const repoRoot = path.resolve(__dirname, '..');
 const packageJson = require(path.join(repoRoot, 'package.json'));
 const args = process.argv.slice(2);
-const explicitDir = getArgValue('--dir');
-const channel = getArgValue('--channel') || 'internal Android candidate';
-const signed = hasFlag('--signed');
-const finalMode = hasFlag('--final');
-const biometricClaim = hasFlag('--biometric-claim');
+const explicitDir = getArgValue(args, '--dir');
+const channel = getArgValue(args, '--channel') || 'internal Android candidate';
+const signed = hasFlag(args, '--signed');
+const finalMode = hasFlag(args, '--final');
+const biometricClaim = hasFlag(args, '--biometric-claim');
 const releaseRoot = path.join(repoRoot, 'release-local', 'android');
 const evidenceDir = explicitDir ? path.resolve(repoRoot, explicitDir) : findLatestEvidenceDir();
-
-function hasFlag(flag) { return args.includes(flag); }
-function getArgValue(name) { const index = args.indexOf(name); return index >= 0 ? args[index + 1] : null; }
 
 function usage() {
   return [
@@ -32,8 +42,6 @@ function usage() {
   ].join('\n');
 }
 
-function fail(message) { throw new Error(message); }
-
 function findLatestEvidenceDir() {
   if (!fs.existsSync(releaseRoot)) return path.join(releaseRoot, '<missing>');
   const dirs = fs.readdirSync(releaseRoot, { withFileTypes: true })
@@ -41,32 +49,6 @@ function findLatestEvidenceDir() {
     .map((entry) => path.join(releaseRoot, entry.name))
     .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
   return dirs[0] || path.join(releaseRoot, '<missing>');
-}
-
-function readJson(file) {
-  try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
-  catch (error) { fail('Failed to read JSON file ' + file + ': ' + (error && error.message ? error.message : String(error))); }
-}
-
-function readText(file) { return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : ''; }
-function shortHash(value) { return typeof value === 'string' && value.length >= 12 ? value.slice(0, 12) : value; }
-
-function firstMatch(text, patterns, fallback = '') {
-  const list = Array.isArray(patterns) ? patterns : [patterns];
-  for (const pattern of list) {
-    const value = String(text || '').match(pattern)?.[1]?.trim();
-    if (value) return value;
-  }
-  return fallback;
-}
-
-function formatBytes(bytes) {
-  if (!Number.isFinite(bytes)) return 'unknown size';
-  const units = ['B', 'KiB', 'MiB', 'GiB'];
-  let size = bytes;
-  let index = 0;
-  while (size >= 1024 && index < units.length - 1) { size /= 1024; index += 1; }
-  return (index === 0 ? String(size) : size.toFixed(2)) + ' ' + units[index];
 }
 
 function artifactKind(name) {
@@ -78,27 +60,16 @@ function artifactKind(name) {
   return 'Android artifact';
 }
 
-function checklistStats(file) {
-  if (!fs.existsSync(file)) return { checked: 0, unchecked: 0, fieldsMissing: ['<checklist missing>'] };
-  const contents = fs.readFileSync(file, 'utf8');
-  const checked = contents.split(/\r?\n/).filter((line) => /^- \[x\]/i.test(line)).length;
-  const unchecked = contents.split(/\r?\n/).filter((line) => /^- \[ \]/.test(line)).length;
-  const labels = ['- Version:', '- Commit:', '- Device model:', '- Android version / SDK:', '- Build type:', '- Fresh install used:', '- Tester:', '- Date:'];
-  const fieldsMissing = labels.filter((label) => {
-    const line = contents.split(/\r?\n/).find((candidate) => candidate.startsWith(label));
-    return !line || line.slice(label.length).trim().length === 0;
-  });
-  return { checked, unchecked, fieldsMissing };
-}
-
-function checklistField(contents, label) {
-  const line = contents.split(new RegExp('\\r?\\n')).find((candidate) => candidate.startsWith(label));
-  return line ? line.slice(label.length).trim() : '';
-}
-
-function isPlaceholderValue(value) {
-  return !value || new RegExp('^(blocked|n/?a|na|none|tbd|todo|pending|-|<.*>)$', 'i').test(value.trim());
-}
+const ANDROID_CHECKLIST_FIELDS = [
+  '- Version:',
+  '- Commit:',
+  '- Device model:',
+  '- Android version / SDK:',
+  '- Build type:',
+  '- Fresh install used:',
+  '- Tester:',
+  '- Date:',
+];
 
 function biometricMatrixStats(file) {
   if (!fs.existsSync(file)) return { approved: false, missing: ['<checklist missing>'] };
@@ -139,7 +110,7 @@ function generateNotes() {
   const artifacts = Array.isArray(metadata.artifacts) ? metadata.artifacts : [];
   const report = readText(path.join(evidenceDir, 'android-release-report.txt'));
   const checklistPath = path.join(evidenceDir, 'ANDROID_MANUAL_SMOKE_CHECKLIST.md');
-  const checklist = checklistStats(checklistPath);
+  const checklist = checklistStats(checklistPath, ANDROID_CHECKLIST_FIELDS);
   const biometricMatrix = biometricMatrixStats(checklistPath);
   const reportVersion = firstMatch(report, [/version: ([^\r\n]+)/i, /versionName[:=]\s*([^\r\n]+)/i], packageJson.version);
   const packageName = firstMatch(report, [/package(?: name)?: ([^\r\n]+)/i, /applicationId[:=]\s*([^\r\n]+)/i], metadata.signed ? 'com.hafgit99.aegisvault7' : 'com.hafgit99.aegisvault7.debug');
@@ -225,5 +196,5 @@ function generateNotes() {
   console.log('Android release notes written to ' + path.relative(repoRoot, output));
 }
 
-if (hasFlag('--help')) { console.log(usage()); process.exit(0); }
+if (hasFlag(args, '--help')) { console.log(usage()); process.exit(0); }
 generateNotes();

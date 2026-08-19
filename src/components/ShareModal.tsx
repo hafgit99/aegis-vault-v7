@@ -7,8 +7,10 @@ import React, { useState, useEffect } from 'react';
 import { X, Copy, Check, Clock, QrCode, AlertTriangle } from 'lucide-react';
 import QRCode from 'qrcode';
 import { useLanguage } from '../i18n/LanguageContext';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 import { generateShareUrl } from '../lib/share';
+import { Modal } from './ui/Modal';
+import { Button } from './ui/Button';
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -63,7 +65,7 @@ export default function ShareModal({ isOpen, onClose, item }: ShareModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/75 backdrop-blur-md overflow-hidden select-none animate-fade-in">
+    <Modal open={isOpen && Boolean(item)} onClose={onClose} zIndex={110}>
       <div className="w-full max-w-md bg-surface-container border border-outline-variant/30 rounded-2xl overflow-hidden custom-shadow relative flex flex-col mx-4">
         
         {/* Header line */}
@@ -77,7 +79,7 @@ export default function ShareModal({ isOpen, onClose, item }: ShareModalProps) {
             </div>
             <div>
               <h3 className="font-display font-bold text-sm text-on-surface">
-                {t('share.title') || 'Secure Share / Güvenli Paylaşım'}
+                {t('share.title')}
               </h3>
               <p className="text-[10px] text-on-surface-variant font-medium">
                 {item.title}
@@ -97,7 +99,7 @@ export default function ShareModal({ isOpen, onClose, item }: ShareModalProps) {
           {/* Expiration Selection */}
           <div className="space-y-1.5 text-left">
             <label className="block text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-widest">
-              {t('share.durationLabel') || 'Sharing Duration / Paylaşım Süresi'}
+              {t('share.durationLabel')}
             </label>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -110,7 +112,7 @@ export default function ShareModal({ isOpen, onClose, item }: ShareModalProps) {
                 }`}
               >
                 <Clock className="w-3.5 h-3.5" />
-                <span>1 {t('share.hour') || 'Hour / Saat'}</span>
+                <span>1 {t('share.hour')}</span>
               </button>
               <button
                 type="button"
@@ -122,7 +124,7 @@ export default function ShareModal({ isOpen, onClose, item }: ShareModalProps) {
                 }`}
               >
                 <Clock className="w-3.5 h-3.5" />
-                <span>24 {t('share.hours') || 'Hours / Saat'}</span>
+                <span>24 {t('share.hours')}</span>
               </button>
             </div>
           </div>
@@ -132,7 +134,7 @@ export default function ShareModal({ isOpen, onClose, item }: ShareModalProps) {
             {loading ? (
               <div className="w-48 h-48 flex items-center justify-center">
                 <span className="text-xs text-on-surface-variant animate-pulse">
-                  {t('share.generating') || 'Generating QR Code...'}
+                  {t('share.generating')}
                 </span>
               </div>
             ) : (
@@ -140,7 +142,7 @@ export default function ShareModal({ isOpen, onClose, item }: ShareModalProps) {
                 <div className="p-2 bg-white rounded-lg shadow-inner overflow-hidden animate-scale-in">
                   <img
                     src={qrCodeDataUrl}
-                    alt="Share QR Code"
+                    alt={t('share.qrAlt')}
                     className="w-44 h-44 object-contain select-none"
                     draggable={false}
                   />
@@ -148,7 +150,7 @@ export default function ShareModal({ isOpen, onClose, item }: ShareModalProps) {
               )
             )}
             <p className="text-[10px] text-on-surface-variant/70 text-center mt-3 leading-relaxed max-w-[280px]">
-              {t('share.scanHelp') || 'Scan this QR code with a nearby device to securely import this credential.'}
+              {t('share.scanHelp')}
             </p>
           </div>
 
@@ -157,10 +159,10 @@ export default function ShareModal({ isOpen, onClose, item }: ShareModalProps) {
             <AlertTriangle className="w-4.5 h-4.5 text-brand-primary shrink-0 mt-0.5" />
             <div className="space-y-0.5">
               <h4 className="text-[10px] font-bold text-brand-primary uppercase tracking-wider">
-                {t('share.securityTitle') || 'Zero-Knowledge Security'}
+                {t('share.securityTitle')}
               </h4>
               <p className="text-[9px] text-on-surface-variant leading-relaxed">
-                {t('share.securityDesc') || 'Encryption keys are embedded in the URL hash and never leave the device. No data is stored on external servers.'}
+                {t('share.securityDesc')}
               </p>
             </div>
           </div>
@@ -171,10 +173,10 @@ export default function ShareModal({ isOpen, onClose, item }: ShareModalProps) {
               <AlertTriangle className="w-4.5 h-4.5 text-amber-400 shrink-0 mt-0.5" />
               <div className="space-y-0.5">
                 <h4 className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">
-                  {t('share.totpIncludedTitle') || '2FA / TOTP Key Included'}
+                  {t('share.totpIncludedTitle')}
                 </h4>
                 <p className="text-[9px] text-on-surface-variant leading-relaxed">
-                  {t('share.totpIncludedDesc') || 'This credential contains a 2FA authentication secret. Only share this link with trusted recipients.'}
+                  {t('share.totpIncludedDesc')}
                 </p>
               </div>
             </div>
@@ -202,12 +204,12 @@ export default function ShareModal({ isOpen, onClose, item }: ShareModalProps) {
               {copied ? (
                 <>
                   <Check className="w-4 h-4" />
-                  <span>{t('share.copied') || 'Copied!'}</span>
+                  <span>{t('share.copied')}</span>
                 </>
               ) : (
                 <>
                   <Copy className="w-4 h-4" />
-                  <span>{t('share.copy') || 'Copy'}</span>
+                  <span>{t('share.copy')}</span>
                 </>
               )}
             </button>
@@ -216,15 +218,16 @@ export default function ShareModal({ isOpen, onClose, item }: ShareModalProps) {
 
         {/* Footer */}
         <div className="px-5 py-3 border-t border-outline-variant/10 bg-[#0c0d0c]/95 flex justify-end">
-          <button
+          <Button
             data-testid="share-modal-close-button"
             onClick={onClose}
-            className="px-4 py-2 bg-[#1b1d1b] hover:bg-[#232623] border border-outline-variant/15 rounded-xl font-bold text-xs text-on-surface transition-colors cursor-pointer focus:outline-none"
+            variant="secondary"
+            size="md"
           >
-            {t('share.close') || 'Close'}
-          </button>
+            {t('share.close')}
+          </Button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

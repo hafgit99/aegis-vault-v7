@@ -1,7 +1,10 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { createRequire } from 'module';
 import { afterEach, describe, expect, it } from 'vitest';
+
+const require = createRequire(import.meta.url);
 
 const {
   buildIntegrityManifest,

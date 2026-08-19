@@ -6,11 +6,13 @@
 import { useEffect, useState } from 'react';
 import { ShieldAlert, Trash2, Globe } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import type {
+  BlockedNetworkEvent
+} from '../../lib/securityEvents';
 import {
   getBlockedNetworkEvents,
   clearBlockedNetworkEvents,
-  subscribeToSecurityEvents,
-  BlockedNetworkEvent
+  subscribeToSecurityEvents
 } from '../../lib/securityEvents';
 
 export function BlockedRequestsPanel() {

@@ -5,7 +5,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 import VaultFormModal from './VaultFormModal';
 import { getAttachmentBlob, saveAttachment } from '../lib/attachments';
 import { LanguageProvider } from '../i18n/LanguageContext';
@@ -265,7 +265,7 @@ describe('VaultFormModal', () => {
     expect(screen.getByText('Ekli Dosya')).toBeTruthy();
     expect(screen.getByText(/0 B/)).toBeTruthy();
 
-    fireEvent.change(formInputs()[0], {
+    fireEvent.change(formInputs()[0]!, {
       target: { value: 'Restored Legacy Login' },
     });
     fireEvent.submit(document.querySelector('form') as HTMLFormElement);
@@ -371,12 +371,12 @@ describe('VaultFormModal', () => {
 
     fireEvent.click(screen.getByText('Kart'));
     const inputs = formInputs();
-    fireEvent.change(inputs[0], { target: { value: '  Business Card  ' } });
-    fireEvent.change(inputs[2], { target: { value: '  Ada Lovelace  ' } });
-    fireEvent.change(inputs[3], { target: { value: '4111 1111 1111 1111' } });
-    fireEvent.change(inputs[4], { target: { value: ' 12/30 ' } });
-    fireEvent.change(inputs[5], { target: { value: '123' } });
-    fireEvent.change(inputs[6], { target: { value: '9876' } });
+    fireEvent.change(inputs[0]!, { target: { value: '  Business Card  ' } });
+    fireEvent.change(inputs[2]!, { target: { value: '  Ada Lovelace  ' } });
+    fireEvent.change(inputs[3]!, { target: { value: '4111 1111 1111 1111' } });
+    fireEvent.change(inputs[4]!, { target: { value: ' 12/30 ' } });
+    fireEvent.change(inputs[5]!, { target: { value: '123' } });
+    fireEvent.change(inputs[6]!, { target: { value: '9876' } });
 
     submitForm();
 
@@ -407,9 +407,9 @@ describe('VaultFormModal', () => {
 
     fireEvent.click(screen.getByTestId('vault-item-category-passkey'));
     const inputs = formInputs();
-    fireEvent.change(inputs[0], { target: { value: 'API Key' } });
-    fireEvent.change(inputs[2], { target: { value: '  Google Login  ' } });
-    fireEvent.change(inputs[3], { target: { value: '  public-id-1  ' } });
+    fireEvent.change(inputs[0]!, { target: { value: 'API Key' } });
+    fireEvent.change(inputs[2]!, { target: { value: '  Google Login  ' } });
+    fireEvent.change(inputs[3]!, { target: { value: '  public-id-1  ' } });
 
     const exponentButton = Array.from(document.querySelectorAll<HTMLButtonElement>('button'))
       .find((button) => button.title.toLowerCase().includes('gizli'))!;
@@ -441,13 +441,13 @@ describe('VaultFormModal', () => {
 
     fireEvent.click(screen.getByText('Kimlik'));
     const inputs = formInputs();
-    fireEvent.change(inputs[0], { target: { value: 'Passport' } });
-    fireEvent.change(inputs[1], { target: { value: 'https://identity.example' } });
-    fireEvent.change(inputs[2], { target: { value: '  U1234567  ' } });
-    fireEvent.change(inputs[3], { target: { value: '  Ada Lovelace  ' } });
+    fireEvent.change(inputs[0]!, { target: { value: 'Passport' } });
+    fireEvent.change(inputs[1]!, { target: { value: 'https://identity.example' } });
+    fireEvent.change(inputs[2]!, { target: { value: '  U1234567  ' } });
+    fireEvent.change(inputs[3]!, { target: { value: '  Ada Lovelace  ' } });
     const dateInputs = document.querySelectorAll<HTMLInputElement>('input[type="date"]');
-    fireEvent.change(dateInputs[0], { target: { value: '1815-12-10' } });
-    fireEvent.change(dateInputs[1], { target: { value: '2030-12-10' } });
+    fireEvent.change(dateInputs[0]!, { target: { value: '1815-12-10' } });
+    fireEvent.change(dateInputs[1]!, { target: { value: '2030-12-10' } });
     const genderSelect = Array.from(document.querySelectorAll('select')).find(s => s.querySelector('option[value="Female"]'))!;
     fireEvent.change(genderSelect, { target: { value: 'Female' } });
 
@@ -478,7 +478,7 @@ describe('VaultFormModal', () => {
     );
 
     fireEvent.click(screen.getByText('Not'));
-    fireEvent.change(formInputs()[0], { target: { value: 'Recovery Notes' } });
+    fireEvent.change(formInputs()[0]!, { target: { value: 'Recovery Notes' } });
     const notesArea = document.querySelector<HTMLTextAreaElement>('textarea')!;
     expect(notesArea.rows).toBe(8);
     fireEvent.change(notesArea, {
@@ -497,7 +497,7 @@ describe('VaultFormModal', () => {
 
   it('uploads a selected attachment and stores metadata in the saved item', async () => {
     vi.mocked(saveAttachment).mockImplementation(async (_id, _file, onProgress) => {
-      onProgress(100);
+      onProgress?.(100);
     });
     const onSave = vi.fn();
     render(
@@ -510,8 +510,8 @@ describe('VaultFormModal', () => {
     );
 
     const inputs = formInputs();
-    fireEvent.change(inputs[0], { target: { value: 'Login With File' } });
-    fireEvent.change(inputs[2], { target: { value: 'ada' } });
+    fireEvent.change(inputs[0]!, { target: { value: 'Login With File' } });
+    fireEvent.change(inputs[2]!, { target: { value: 'ada' } });
     const file = new File(['secret attachment'], 'secret.txt', { type: 'text/plain' });
     fireEvent.change(document.querySelector<HTMLInputElement>('input[type="file"]')!, {
       target: { files: [file] },
@@ -568,7 +568,7 @@ describe('VaultFormModal', () => {
       />,
     );
 
-    fireEvent.change(formInputs()[0], { target: { value: 'Login With Broken File' } });
+    fireEvent.change(formInputs()[0]!, { target: { value: 'Login With Broken File' } });
     const file = new File(['secret attachment'], 'broken.txt', { type: 'text/plain' });
     fireEvent.change(document.querySelector<HTMLInputElement>('input[type="file"]')!, {
       target: { files: [file] },

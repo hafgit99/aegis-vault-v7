@@ -25,6 +25,8 @@ src-tauri/target/
 src-tauri/gen/*
 !src-tauri/gen/android/
 !src-tauri/gen/android/**
+.kotlin/
+*.kotlin/
 target/
 release-local/
 .tmp/
@@ -43,9 +45,11 @@ reports/
 # Local security audit report & competitive analysis (private, not published to the remote)
 docs/GUVENLIK_DENETIM_RAPORU.md
 docs/GUVENLIK_INCELEME_RAPORU.md
+docs/KOD_DUZENI_DENETIM_RAPORU_2026.md
 docs/COMPETITIVE_ANALYSIS.md
 docs/SECURITY_CODE_AUDIT_REPORT_2026.md
 KOD_GUVENLIK_ANALIZ_RAPORU_TR.md
+session-*.md
 
 # Scratchpad
 scratch/

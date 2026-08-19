@@ -2,7 +2,7 @@ import { Trash2 } from 'lucide-react';
 import { Fragment, useState } from 'react';
 
 import { useLanguage } from '../i18n/LanguageContext';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 import TrashEmptyState from './TrashEmptyState';
 import TrashInfoBanner from './TrashInfoBanner';
 import TrashItemCard from './TrashItemCard';

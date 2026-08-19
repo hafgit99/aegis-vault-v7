@@ -8,7 +8,7 @@ import type { VaultItem } from '../types';
 import { createEmptyVaultDatabaseState, type VersionedVaultDatabaseState } from './vaultDatabaseFormat';
 
 const writeDesktopVaultDatabase = vi.hoisted(() => vi.fn(async () => false));
-const readDesktopVaultDatabase = vi.hoisted(() => vi.fn(async () => null));
+const readDesktopVaultDatabase = vi.hoisted(() => vi.fn(async (): Promise<string | null> => null));
 const resetDesktopVaultDatabase = vi.hoisted(() => vi.fn(async () => false));
 const getNativeVaultStorageScope = vi.hoisted(() => vi.fn(() => 'desktop-app-data'));
 const originalNavigatorStorage = navigator.storage;
@@ -477,14 +477,14 @@ describe('SQLite OPFS persistence engine', () => {
       sampleItem({
         id: '',
         title: '',
-        category: undefined as VaultItem['category'],
+category: undefined,
         notes: '',
         createdAt: '',
       }),
       'master-pass',
     );
 
-    const generatedId = created[0].id;
+    const generatedId = created[0]!.id;
     expect(generatedId).toHaveLength(9);
     expect(created[0]).toMatchObject({
       title: 'Imported Record',
@@ -893,7 +893,7 @@ describe('SQLite OPFS persistence engine', () => {
     await sqlite.setupMaster('master-pass');
 
     const saved = await sqlite.saveVaultItems([
-      sampleItem({ id: '', title: '', category: undefined as VaultItem['category'], createdAt: '' }),
+      sampleItem({ id: '', title: '', category: undefined, createdAt: '' }),
     ], 'master-pass');
 
     expect(saved).toHaveLength(1);
@@ -905,13 +905,13 @@ describe('SQLite OPFS persistence engine', () => {
       favorite: true,
       deleted: false,
     });
-    expect(saved[0].id).toHaveLength(9);
-    expect(saved[0].createdAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(saved[0].updatedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+expect(saved[0]!.id).toHaveLength(9);
+    expect(saved[0]!.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(saved[0]!.updatedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 
     await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual([
       expect.objectContaining({
-        id: saved[0].id,
+        id: saved[0]!.id,
         title: 'Imported Record',
         password: 'secret-password',
       }),
@@ -960,7 +960,7 @@ describe('SQLite OPFS persistence engine', () => {
     // Retrieve items again - should hit the cache
     const items2 = await sqlite.getVaultItems('master-pass');
     expect(items2).toHaveLength(1);
-    expect(items2[0].id).toBe('cache-perf-1');
+    expect(items2[0]!.id).toBe('cache-perf-1');
 
     // clearDerivedKeyCache should wipe both caches
     sqlite.clearDerivedKeyCache();

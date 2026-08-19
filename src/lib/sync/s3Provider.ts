@@ -4,7 +4,8 @@
  */
 
 import { addSyncAllowedOrigin, isPrivateOrLoopbackHostname, removeSyncAllowedOrigin } from '../airgapNetworkPolicy';
-import { SyncProvider, SyncMetadata, SyncError, syncErrorCodes, S3SyncConfig } from './syncTypes';
+import type { SyncProvider, SyncMetadata, S3SyncConfig } from './syncTypes';
+import { SyncError, syncErrorCodes } from './syncTypes';
 
 const VAULT_FILE = 'vault.aegis';
 const METADATA_FILE = 'metadata.json';
@@ -132,7 +133,10 @@ export class S3SyncProvider implements SyncProvider {
     const signedHeadersStr = sortedHeaderNames.join(';');
 
     const canonicalHeadersStr = sortedHeaderNames
-      .map((h) => `${h}:${headers[h].trim()}\n`)
+      .map((h) => {
+        const val = headers[h];
+        return val !== undefined ? `${h}:${val.trim()}\n` : '';
+      })
       .join('');
 
     const canonicalRequest = [

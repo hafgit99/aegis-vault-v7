@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useLanguage } from '../i18n/LanguageContext';
-import {
+import type {
   AndroidAutofillRequest,
-  AndroidAutofillSaveCandidate,
+  AndroidAutofillSaveCandidate} from '../lib/androidAutofill';
+import {
   clearPendingAndroidAutofillRequest,
   clearPendingAndroidAutofillSaveCandidate,
   completePendingAndroidAutofillRequest,
@@ -161,7 +162,7 @@ export function useAndroidAutofillCoordinator({
     const completed = completePendingAndroidAutofillRequest(
       pendingAutofillRequest.requestId,
       item.username ?? '',
-      item.password,
+      item.password ?? '',
       item.title || 'Aegis Vault',
     );
 

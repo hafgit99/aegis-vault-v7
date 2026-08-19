@@ -1,4 +1,4 @@
-import { AppConfirmConfig } from '../types';
+import type { AppConfirmConfig } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
 
 type OpenConfirm = (config: Omit<AppConfirmConfig, 'isOpen'>) => void;

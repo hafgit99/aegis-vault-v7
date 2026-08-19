@@ -148,8 +148,8 @@ function createEngineStub(): WaSqliteEngine & {
       return { columns: [], rows: [], error: 'unparsed-vault-upsert' };
     }
 
-    const columns = columnsMatch[1].split(',').map((column) => column.trim());
-    const values = splitSqlValues(valuesMatch[1]);
+    const columns = columnsMatch[1]!.split(',').map((column) => column.trim());
+    const values = splitSqlValues(valuesMatch[1]!);
     const row = Object.fromEntries(columns.map((column, index) => [column, values[index]]));
     const rowIndex = state.vaultRows.findIndex((candidate) => candidate.id === row.id);
     if (rowIndex >= 0) {
@@ -322,7 +322,7 @@ describe('wa-sqlite vault storage repository', () => {
     await expect(repository.saveVaultItem(createVaultItem(), 'valid-master')).resolves.toHaveLength(1);
 
     expect(engine.vaultRows).toHaveLength(1);
-    const stored = engine.vaultRows[0];
+    const stored = engine.vaultRows[0]!;
     expect(stored.title).toBe('[encrypted: aes-256-gcm]');
     expect(stored.username_db).toBe('[encrypted: aes-256-gcm]');
     expect(stored.enc_metadata).toContain('sealed:');
@@ -349,7 +349,7 @@ describe('wa-sqlite vault storage repository', () => {
     await expect(repository.saveVaultItem(createVaultItem({ title: 'Changed' }), 'valid-master')).rejects.toThrow('injected-upsert-failure');
 
     expect(engine.vaultRows).toHaveLength(1);
-    expect(engine.vaultRows[0].title).toBe('[encrypted: aes-256-gcm]');
+    expect(engine.vaultRows[0]!.title).toBe('[encrypted: aes-256-gcm]');
     expect(engine.execute).toHaveBeenCalledWith('ROLLBACK;');
   });
 
@@ -500,7 +500,7 @@ describe('wa-sqlite vault storage repository', () => {
     const repository = createWaSqliteVaultStorageRepository({ engine });
     await repository.setupMaster('valid-master');
     await repository.saveVaultItem(createVaultItem(), 'valid-master');
-    engine.vaultRows[0].enc_metadata = JSON.stringify({ ciphertext: 'tampered' });
+    engine.vaultRows[0]!.enc_metadata = JSON.stringify({ ciphertext: 'tampered' });
 
     await expect(repository.getVaultItems('valid-master')).rejects.toThrow(WA_SQLITE_ROW_DECRYPT_ERROR);
   });
@@ -533,7 +533,7 @@ describe('wa-sqlite vault storage repository', () => {
     await repository.setupMaster('valid-master');
     await repository.saveVaultItem(createVaultItem({ id: "id'1", title: "Alice's Login" }), 'valid-master');
 
-    expect(engine.vaultRows[0].id).toBe("id'1");
-    expect(engine.vaultRows[0].title).toBe('[encrypted: aes-256-gcm]');
+    expect(engine.vaultRows[0]!.id).toBe("id'1");
+    expect(engine.vaultRows[0]!.title).toBe('[encrypted: aes-256-gcm]');
   });
 });

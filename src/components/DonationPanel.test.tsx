@@ -49,7 +49,7 @@ describe('DonationPanel', () => {
   it('copies the selected wallet address', () => {
     const onCopyText = renderDonationPanel();
 
-    fireEvent.click(screen.getAllByText('Adresi Kopyala')[0]);
+    fireEvent.click(screen.getAllByText('Adresi Kopyala')[0]!);
 
     expect(onCopyText).toHaveBeenCalledWith(
       'bc1qqsuljwzs32ckkqdrsdus7wgqzuetty3g0x47l7',

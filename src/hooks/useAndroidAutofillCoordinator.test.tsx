@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -268,7 +268,7 @@ describe('useAndroidAutofillCoordinator', () => {
 
     act(() => {
       autofillState.pendingRequest = liveRequest;
-      autofillState.requestListeners[0](liveRequest);
+      autofillState.requestListeners[0]!(liveRequest);
     });
 
     expect(result.current.pendingAutofillRequest).toMatchObject({ requestId: 'live-request' });
@@ -336,7 +336,7 @@ describe('useAndroidAutofillCoordinator', () => {
 
     act(() => {
       autofillState.pendingSaveCandidate = sparseCandidate;
-      autofillState.saveListeners[0](sparseCandidate);
+      autofillState.saveListeners[0]!(sparseCandidate);
     });
 
     expect(openNewItemForm).toHaveBeenCalledWith({
@@ -364,7 +364,7 @@ describe('useAndroidAutofillCoordinator', () => {
     const { openNewItemForm, setActiveTab } = renderCoordinator(true);
 
     await act(async () => {
-      autofillState.saveListeners[0](encryptedCandidate);
+      autofillState.saveListeners[0]!(encryptedCandidate);
       await Promise.resolve();
     });
 
@@ -390,7 +390,7 @@ describe('useAndroidAutofillCoordinator', () => {
     const { openNewItemForm, setActiveTab, showNotification } = renderCoordinator(true);
 
     await act(async () => {
-      autofillState.saveListeners[0](encryptedCandidate);
+      autofillState.saveListeners[0]!(encryptedCandidate);
       await Promise.resolve();
     });
 

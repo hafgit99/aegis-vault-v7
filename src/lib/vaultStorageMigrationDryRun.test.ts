@@ -35,6 +35,7 @@ function repositoryStub(items: VaultItem[], isPasswordValid = true): VaultStorag
     changeMasterPassword: vi.fn(async () => undefined),
     deriveEncryptionKey: vi.fn(async () => new Uint8Array(32)),
     getVaultItems: vi.fn(async () => items),
+    getVaultItemsWithKey: vi.fn(async () => items),
     saveVaultItem: vi.fn(async () => items),
     saveVaultItems: vi.fn(async () => items),
     executeCustomSQL: vi.fn(() => ({ columns: [], rows: [] })),

@@ -62,7 +62,7 @@ export function setIndexedDbItem(key: string, value: string): Promise<void> {
       return new Promise<void>((resolve, reject) => {
         const transaction = db.transaction(STORE_NAME, 'readwrite');
         const store = transaction.objectStore(STORE_NAME);
-        const request = store.put(value, key);
+        store.put(value, key);
         transaction.oncomplete = () => {
           db.close();
           resolve();
@@ -87,7 +87,7 @@ export function removeIndexedDbItem(key: string): Promise<void> {
       return new Promise<void>((resolve, reject) => {
         const transaction = db.transaction(STORE_NAME, 'readwrite');
         const store = transaction.objectStore(STORE_NAME);
-        const request = store.delete(key);
+        store.delete(key);
         transaction.oncomplete = () => {
           db.close();
           resolve();
@@ -111,7 +111,7 @@ export async function clearAllSetupFlags(): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     const transaction = db.transaction(STORE_NAME, 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
-    const request = store.clear();
+    store.clear();
     transaction.oncomplete = () => {
       db.close();
       resolve();

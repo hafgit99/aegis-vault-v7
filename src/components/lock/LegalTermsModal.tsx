@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { ShieldCheck, FileText, Lock, X, CheckCircle2, Shield } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { Modal } from '../ui/Modal';
 
 export type LegalTermsTab = 'terms' | 'privacy';
 
@@ -33,10 +34,7 @@ export function LegalTermsModal({
   if (!isOpen) return null;
 
   return (
-    <div
-      data-testid="legal-terms-modal"
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-fade-in"
-    >
+    <Modal open={isOpen} onClose={onClose} zIndex={200} overlayTestId="legal-terms-modal" closeOnBackdrop={false}>
       <div className="w-full max-w-lg surface-panel rounded-2xl border border-brand-primary/20 p-5 sm:p-6 space-y-4 shadow-2xl flex flex-col max-h-[85vh] animate-scale-up">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-outline-variant/15 pb-4">
@@ -58,7 +56,7 @@ export function LegalTermsModal({
             type="button"
             onClick={onClose}
             className="p-1.5 rounded-lg text-on-surface-variant/60 hover:text-on-surface hover:bg-surface-low transition-colors cursor-pointer"
-            title="Kapat"
+            title={t('lock.terms.close')}
           >
             <X className="w-5 h-5" />
           </button>
@@ -153,6 +151,6 @@ export function LegalTermsModal({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

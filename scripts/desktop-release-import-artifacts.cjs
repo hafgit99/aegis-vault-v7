@@ -1,14 +1,19 @@
-﻿const fs = require('fs');
+const fs = require('fs');
 const path = require('path');
+const {
+  hasFlag,
+  getArgValue,
+  assertPlatform,
+  failThrow: fail,
+  readJson,
+} = require('./release-utils.cjs');
 
 const rootDir = path.resolve(__dirname, '..');
 const args = process.argv.slice(2);
-const platform = getArgValue('--platform');
-const sourceArg = getArgValue('--source');
+const platform = getArgValue(args, '--platform');
+const sourceArg = getArgValue(args, '--source');
 const releaseLocalDir = path.join(rootDir, 'release-local');
 
-function hasFlag(flag) { return args.includes(flag); }
-function getArgValue(name) { const index = args.indexOf(name); return index >= 0 ? args[index + 1] : null; }
 function usage() {
   return [
     'Desktop release artifact importer',
@@ -25,10 +30,7 @@ function usage() {
     '  --help                            Show this help.',
   ].join('\n');
 }
-function fail(message) { throw new Error(message); }
-function assertPlatform(value) {
-  if (!['windows', 'linux', 'macos'].includes(value || '')) fail('Unsupported or missing platform: ' + (value || '<missing>'));
-}
+
 function assertSource(value) {
   if (!value) fail('Missing --source <dir>.');
   const source = path.resolve(rootDir, value);
@@ -54,10 +56,6 @@ function findEvidenceRoot(source) {
   if (candidates.length > 1) fail('Multiple evidence roots found under source. Pass the exact folder containing metadata.json: ' + candidates.join(', '));
   fail('metadata.json was not found under source: ' + source);
 }
-function readJson(file) {
-  try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
-  catch (error) { fail('Failed to read ' + file + ': ' + (error && error.message ? error.message : String(error))); }
-}
 function ensureRequiredFiles(evidenceRoot) {
   const required = ['metadata.json', 'SHA256SUMS.txt', 'README.md', 'RELEASE_NOTES.md', 'DESKTOP_SIGNATURES.md', 'DESKTOP_MANUAL_SMOKE_CHECKLIST.md'];
   const missing = required.filter((name) => !fs.existsSync(path.join(evidenceRoot, name)));
@@ -72,7 +70,7 @@ function copyEvidence(source, destination) {
   fs.cpSync(sourceResolved, destinationResolved, { recursive: true });
 }
 
-if (hasFlag('--help')) {
+if (hasFlag(args, '--help')) {
   console.log(usage());
   process.exit(0);
 }

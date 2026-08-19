@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
+import type { TranslationKey } from '../i18n/translations';
 import { getPalette } from '../lib/tags';
 import type { FolderIconKey, SmartFolder } from '../types';
 
@@ -89,11 +90,11 @@ export default function SmartFolderCard({
         </span>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold text-on-surface truncate">
-            {folder.builtIn ? t(`smartFolders.${folder.id}.name`) : folder.name}
+            {folder.builtIn ? t(`smartFolders.${folder.id}.name` as TranslationKey) : folder.name}
           </p>
           {folder.description && (
             <p className="text-[11px] text-on-surface-variant/80 leading-tight mt-0.5 line-clamp-2">
-              {folder.builtIn ? t(`smartFolders.${folder.id}.desc`) : folder.description}
+              {folder.builtIn ? t(`smartFolders.${folder.id}.desc` as TranslationKey) : folder.description}
             </p>
           )}
         </div>

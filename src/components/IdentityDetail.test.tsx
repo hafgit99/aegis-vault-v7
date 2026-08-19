@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { LanguageProvider } from '../i18n/LanguageContext';
 import { languageStorageKey } from '../i18n/translations';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 import IdentityDetail from './IdentityDetail';
 
 const identityItem: VaultItem = {
@@ -53,8 +53,8 @@ describe('IdentityDetail', () => {
     const onCopyText = vi.fn();
 
     render(<IdentityDetail item={identityItem} copiedField={null} onCopyText={onCopyText} />);
-    fireEvent.click(screen.getAllByRole('button')[0]);
-    fireEvent.click(screen.getAllByRole('button')[1]);
+    fireEvent.click(screen.getAllByRole('button')[0]!);
+    fireEvent.click(screen.getAllByRole('button')[1]!);
 
     expect(onCopyText).toHaveBeenCalledWith('Ada Lovelace', 'idFullName');
     expect(onCopyText).toHaveBeenCalledWith('A1234567', 'idNumber');
@@ -110,7 +110,7 @@ describe('IdentityDetail', () => {
     expect(screen.getAllByText('Belirtilmedi')).toHaveLength(2);
     expect(screen.getByText('Sınırsız / Yok')).toBeTruthy();
 
-    fireEvent.click(screen.getAllByRole('button')[0]);
+    fireEvent.click(screen.getAllByRole('button')[0]!);
 
     expect(onCopyText).toHaveBeenCalledWith('', 'idFullName');
   });

@@ -26,7 +26,6 @@ import { useMemo, useState } from 'react';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import {
-  ancestorsOf,
   buildTree,
   ROOT_FOLDER_ID,
 } from '../lib/folders';
@@ -81,11 +80,12 @@ export default function FolderTree({
   onDeleteFolder,
   onRenameFolder,
 }: FolderTreeProps) {
+  const { t } = useLanguage();
   const tree = useMemo(() => buildTree(folders), [folders]);
   const topLevel = tree.get(null) ?? [];
 
   return (
-    <nav data-testid="folder-tree" className="text-sm" aria-label="Folders">
+    <nav data-testid="folder-tree" className="text-sm" aria-label={t('folders.label')}>
       <ul className="space-y-0.5">
         <FolderRow
           icon={Inbox}

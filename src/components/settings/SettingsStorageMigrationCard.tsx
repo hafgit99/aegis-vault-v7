@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { Database, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
-import { useLanguage } from '../../i18n/LanguageContext';
+import type { useLanguage } from '../../i18n/LanguageContext';
 
 interface SettingsStorageMigrationCardProps {
   storageMigrationStatus: 'idle' | 'running' | 'promoted' | 'blocked' | 'error';

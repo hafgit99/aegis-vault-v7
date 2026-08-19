@@ -4,17 +4,17 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Copy, Check, FileText, Pin, Clock, Calendar } from 'lucide-react';
-import { VaultItem } from '../../types';
+import { Copy, Check, Pin } from 'lucide-react';
+import type { VaultItem } from '../../types';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { resolveTagColor, TAG_PALETTE } from '../../lib/tags';
+import { resolveTagColor } from '../../lib/tags';
 
 export type NoteColor = 'amber' | 'emerald' | 'blue' | 'purple' | 'rose' | 'slate';
 
 export function getNoteColor(item: VaultItem): NoteColor {
   // If item has tags, match tag color or deterministic hash from item ID
   if (item.tags && item.tags.length > 0) {
-    const tag = item.tags[0];
+    const tag = item.tags[0]!;
     const resolved = resolveTagColor(tag);
     if (resolved.includes('amber') || resolved.includes('yellow')) return 'amber';
     if (resolved.includes('emerald') || resolved.includes('green')) return 'emerald';
@@ -26,7 +26,7 @@ export function getNoteColor(item: VaultItem): NoteColor {
   // Hash ID to pick one of the 6 colors
   const charSum = item.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
   const colors: NoteColor[] = ['amber', 'emerald', 'blue', 'purple', 'rose', 'slate'];
-  return colors[charSum % colors.length];
+  return colors[charSum % colors.length]!;
 }
 
 interface StickyNoteCardProps {

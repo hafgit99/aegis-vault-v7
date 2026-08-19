@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { LanguageProvider } from '../i18n/LanguageContext';
 import { languageStorageKey } from '../i18n/translations';
-import { VaultItem } from '../types';
+import type { VaultItem } from '../types';
 import { deletePermanently, emptyTrashComplete, moveToTrash, restoreFromTrash } from '../lib/storage';
 import { useTrashActions } from './useTrashActions';
 
@@ -67,7 +67,7 @@ describe('useTrashActions', () => {
     const { result, options } = renderTrashActions();
 
     act(() => result.current.deleteItem('deleted'));
-    const confirm = options.openConfirm.mock.calls[0][0];
+    const confirm = options.openConfirm.mock.calls[0]![0];
     await act(async () => {
       confirm.onConfirm();
     });
@@ -91,7 +91,7 @@ describe('useTrashActions', () => {
 
     act(() => result.current.deleteItem('deleted'));
     await act(async () => {
-      options.openConfirm.mock.calls[0][0].onConfirm();
+      options.openConfirm.mock.calls[0]![0].onConfirm();
     });
 
     expect(options.setSelectedItem).toHaveBeenCalledWith(null);
@@ -102,7 +102,7 @@ describe('useTrashActions', () => {
     const { result, options } = renderTrashActions();
 
     act(() => result.current.emptyTrash());
-    const confirm = options.openConfirm.mock.calls[0][0];
+    const confirm = options.openConfirm.mock.calls[0]![0];
     await act(async () => {
       confirm.onConfirm();
     });
@@ -113,7 +113,7 @@ describe('useTrashActions', () => {
     });
     expect(emptyTrashComplete).toHaveBeenCalledTimes(1);
     expect(options.setItems).toHaveBeenCalledWith([]);
-    expect(options.openConfirm.mock.calls[1][0]).toMatchObject({
+    expect(options.openConfirm.mock.calls[1]![0]).toMatchObject({
       title: 'Çöp Kutusu Boşaltıldı',
       type: 'success',
       isAlert: true,
@@ -145,7 +145,7 @@ describe('useTrashActions', () => {
     const { result, options } = renderTrashActions();
 
     act(() => result.current.deleteTrashItemPermanently(item('gone')));
-    const confirm = options.openConfirm.mock.calls[0][0];
+    const confirm = options.openConfirm.mock.calls[0]![0];
     await act(async () => {
       confirm.onConfirm();
     });
@@ -165,7 +165,7 @@ describe('useTrashActions', () => {
     const { result, options } = renderTrashActions('en');
 
     act(() => result.current.deleteItem('active'));
-    expect(options.openConfirm.mock.calls[0][0]).toMatchObject({
+    expect(options.openConfirm.mock.calls[0]![0]).toMatchObject({
       title: 'Move to Trash',
       message: 'Are you sure you want to move this password record to the trash? Items in the trash are cleaned automatically after 15 days.',
       confirmText: 'Move to Trash',
@@ -173,7 +173,7 @@ describe('useTrashActions', () => {
     });
 
     act(() => result.current.emptyTrash());
-    const emptyConfirm = options.openConfirm.mock.calls[1][0];
+    const emptyConfirm = options.openConfirm.mock.calls[1]![0];
     await act(async () => {
       emptyConfirm.onConfirm();
     });
@@ -184,7 +184,7 @@ describe('useTrashActions', () => {
       confirmText: 'Reset and Delete Permanently',
       cancelText: 'Cancel',
     });
-    expect(options.openConfirm.mock.calls[2][0]).toMatchObject({
+    expect(options.openConfirm.mock.calls[2]![0]).toMatchObject({
       title: 'Trash Emptied',
       message: 'All passwords in the trash were permanently deleted.',
       type: 'success',
@@ -194,13 +194,13 @@ describe('useTrashActions', () => {
     await act(async () => {
       result.current.restoreTrashItem(item('restored'));
     });
-    expect(options.openConfirm.mock.calls[3][0]).toMatchObject({
+    expect(options.openConfirm.mock.calls[3]![0]).toMatchObject({
       title: 'Restored',
       message: '"restored" password record was restored to the vault successfully!',
     });
 
     act(() => result.current.deleteTrashItemPermanently(item('gone')));
-    expect(options.openConfirm.mock.calls[4][0]).toMatchObject({
+    expect(options.openConfirm.mock.calls[4]![0]).toMatchObject({
       title: 'Delete Permanently',
       message: '"gone" will be permanently deleted. This action CANNOT be undone.',
       confirmText: 'Delete Permanently',

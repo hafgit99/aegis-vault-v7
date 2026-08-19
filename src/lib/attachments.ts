@@ -3,8 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { secureRandomBytes } from './random';
-import { withActiveVaultEncryptionKey, withActiveSessionSecrets } from './vaultSession';
+import { withActiveVaultEncryptionKey } from './vaultSession';
 import { webCryptoAesGcmDecryptBytes, webCryptoAesGcmEncryptBytes, generateSafeIv } from './webcrypto';
 import { logSecurityEvent } from './securityEvents';
 
@@ -40,7 +39,7 @@ function initDB(): Promise<IDBDatabase> {
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);
 
-    request.onupgradeneeded = (event) => {
+    request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME, { keyPath: 'id' });
@@ -190,24 +189,6 @@ async function decryptAttachmentDataWithVaultKey(
     },
     key,
   );
-}
-
-async function encryptAttachmentDataWithMasterPassword(
-  masterPassword: string,
-  attachmentId: string,
-  rawBuffer: ArrayBuffer,
-): Promise<Pick<AttachmentRecord, 'algorithm' | 'data' | 'encrypted' | 'iv' | 'tag' | 'kdf'>> {
-  const key = await deriveAttachmentKeyHkdf(masterPassword, attachmentId);
-  const encrypted = await webCryptoAesGcmEncryptBytes(rawBuffer, key, generateSafeIv());
-
-  return {
-    algorithm: 'AES-256-GCM',
-    kdf: 'HKDF-SHA-256',
-    data: encrypted.ciphertext,
-    encrypted: true,
-    iv: encrypted.iv,
-    tag: encrypted.tag,
-  };
 }
 
 async function decryptAttachmentDataWithMasterPassword(
@@ -484,7 +465,7 @@ export async function saveAttachment(
 
         const transaction = db.transaction(STORE_NAME, 'readwrite');
         const store = transaction.objectStore(STORE_NAME);
-        const request = store.put(record);
+        store.put(record);
 
         transaction.oncomplete = () => {
           db.close();
@@ -557,7 +538,7 @@ export async function deleteAttachment(id: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORE_NAME, 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
-    const request = store.delete(id);
+    store.delete(id);
 
     transaction.oncomplete = () => {
       db.close();

@@ -1,11 +1,12 @@
-import { useState, useRef, useEffect, useCallback, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent} from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 
 import { Bell, Lock, Menu, RefreshCw, Search, SlidersHorizontal } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { avatarClassNameForValue } from '../lib/avatarStyles';
 import { APP_PROFILE_ALT } from '../lib/branding';
-import { ActiveTab } from '../types';
+import type { ActiveTab } from '../types';
 import AdvancedSearchPanel from './AdvancedSearchPanel';
 import LocalStorageBadge from './LocalStorageBadge';
 import { isGradient } from './ProfileModal';
@@ -88,9 +89,10 @@ export default function TopBar({
   // Close the advanced panel when clicking outside or pressing Escape.
   useEffect(() => {
     if (!isAdvancedOpen) return;
-    const handleClickOutside = (event: ReactMouseEvent) => {
-      const target = event.target as Node;
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node | null;
       if (
+        !target ||
         advancedRef.current?.contains(target) ||
         advancedButtonRef.current?.contains(target)
       ) {
@@ -98,7 +100,7 @@ export default function TopBar({
       }
       setIsAdvancedOpen(false);
     };
-    const handleKey = (event: ReactKeyboardEvent) => {
+    const handleKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsAdvancedOpen(false);
         advancedButtonRef.current?.focus();

@@ -6,6 +6,8 @@
 import React from 'react';
 import { Lock, Unlock, Download, Upload, ShieldAlert, AlertCircle } from 'lucide-react';
 import { progressWidthClass } from '../../lib/progressWidth';
+import type { TFunction } from '../../i18n/LanguageContext';
+import type { TranslationKey } from '../../i18n/translations';
 
 interface SettingsBackupSectionProps {
   useMasterForBackup: boolean;
@@ -38,9 +40,9 @@ interface SettingsBackupSectionProps {
   onDrop: (e: React.DragEvent) => void;
   triggerImportSelect: () => void;
   isDragOver: boolean;
-  fileInputRef: React.RefObject<HTMLInputElement>;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
   handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  t: (key: string) => string;
+  t: TFunction;
 }
 
 export function SettingsBackupSection({
@@ -223,7 +225,7 @@ export function SettingsBackupSection({
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-brand-primary rounded-full animate-pulse" />
                   <span className="text-xs font-bold text-brand-primary uppercase tracking-wider text-left">
-                    {t('settings.import.stage.' + importState.status)}
+                    {t(`settings.import.stage.${importState.status}` as TranslationKey)}
                   </span>
                 </div>
               </div>
