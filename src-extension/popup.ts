@@ -370,13 +370,14 @@ async function refreshUI() {
 
                 if (!itemHost) return false;
 
-                // Match strictly:
-                // 1. Hostnames match exactly
-                // 2. Active host is a subdomain of item host (e.g. sub.domain.com and domain.com)
-                // 3. Item host is a subdomain of active host
+                // Match with PSL-aware registrable domain or hostname
+                const activeRegDomain = extractRegistrableDomain(activeHost) || activeHost;
+                const itemRegDomain = extractRegistrableDomain(itemHost) || itemHost;
+
                 return activeHost === itemHost || 
                        activeHost.endsWith('.' + itemHost) || 
-                       itemHost.endsWith('.' + activeHost);
+                       itemHost.endsWith('.' + activeHost) ||
+                       (activeRegDomain && itemRegDomain && activeRegDomain === itemRegDomain);
               });
             } else {
               suggestedCredentials = [];

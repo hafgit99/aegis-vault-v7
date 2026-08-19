@@ -98,87 +98,103 @@ export default function VaultFormModal({
   } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const prevOpenRef = useRef(false);
+  const prevEditingItemRef = useRef<VaultItem | null>(null);
 
-  // Synchronize state when edit selection changes
+  // Synchronize state only when modal opens or editingItem changes
   useEffect(() => {
-    if (editingItem) {
-      setCategory(editingItem.category || 'login');
-      setTitle(editingItem.title || '');
-      setUsername(editingItem.username || '');
-      setPassword(editingItem.password || '');
-      setUrl(editingItem.url || '');
-      setTotpSecret(editingItem.totpSecret || '');
-      setNotes(editingItem.notes || '');
+    if (!isOpen) {
+      prevOpenRef.current = false;
+      return;
+    }
 
-      // Cards
-      setCardholderName(editingItem.cardholderName || '');
-      setCardNumber(editingItem.cardNumber || '');
-      setCardExpiry(editingItem.cardExpiry || '');
-      setCardCvv(editingItem.cardCvv || '');
-      setCardPin(editingItem.cardPin || '');
+    const isJustOpening = !prevOpenRef.current && isOpen;
+    const isItemChanged = prevEditingItemRef.current !== editingItem;
 
-      // Identity
-      setIdNumber(editingItem.idNumber || '');
-      setIdFullName(editingItem.idFullName || '');
-      setIdBirthDate(editingItem.idBirthDate || '');
-      setIdExpiryDate(editingItem.idExpiryDate || '');
-      setIdGender(editingItem.idGender || 'Male');
+    if (isJustOpening || isItemChanged) {
+      prevOpenRef.current = true;
+      prevEditingItemRef.current = editingItem;
 
-      // Passkey
-      setPasskeyService(editingItem.passkeyService || '');
-      setPasskeyPrivateExponent(editingItem.passkeyPrivateExponent || '');
-      setPasskeyPublicId(editingItem.passkeyPublicId || '');
+      if (editingItem) {
+        setCategory(editingItem.category || 'login');
+        setTitle(editingItem.title || '');
+        setUsername(editingItem.username || '');
+        setPassword(editingItem.password || '');
+        setUrl(editingItem.url || '');
+        setTotpSecret(editingItem.totpSecret || '');
+        setNotes(editingItem.notes || '');
 
-      // Attachment
-      if (editingItem.attachmentId) {
-        setExistingAttachment({
-          id: editingItem.attachmentId,
-          name: editingItem.attachmentName || t('vaultForm.attachment.fallbackName'),
-          size: editingItem.attachmentSize || 0,
-          type: editingItem.attachmentType || 'application/octet-stream'
-        });
+        // Cards
+        setCardholderName(editingItem.cardholderName || '');
+        setCardNumber(editingItem.cardNumber || '');
+        setCardExpiry(editingItem.cardExpiry || '');
+        setCardCvv(editingItem.cardCvv || '');
+        setCardPin(editingItem.cardPin || '');
+
+        // Identity
+        setIdNumber(editingItem.idNumber || '');
+        setIdFullName(editingItem.idFullName || '');
+        setIdBirthDate(editingItem.idBirthDate || '');
+        setIdExpiryDate(editingItem.idExpiryDate || '');
+        setIdGender(editingItem.idGender || 'Male');
+
+        // Passkey
+        setPasskeyService(editingItem.passkeyService || '');
+        setPasskeyPrivateExponent(editingItem.passkeyPrivateExponent || '');
+        setPasskeyPublicId(editingItem.passkeyPublicId || '');
+
+        // Attachment
+        if (editingItem.attachmentId) {
+          setExistingAttachment({
+            id: editingItem.attachmentId,
+            name: editingItem.attachmentName || t('vaultForm.attachment.fallbackName'),
+            size: editingItem.attachmentSize || 0,
+            type: editingItem.attachmentType || 'application/octet-stream'
+          });
+        } else {
+          setExistingAttachment(null);
+        }
+
+        setFolderId(editingItem.folderId || '');
+        setItemTags(editingItem.tags || []);
       } else {
+        // Clean start for new items
+        setCategory('login');
+        setTitle('');
+        setUsername('');
+        setPassword('');
+        setUrl('');
+        setTotpSecret('');
+        setNotes('');
+
+        setCardholderName('');
+        setCardNumber('');
+        setCardExpiry('');
+        setCardCvv('');
+        setCardPin('');
+
+        setIdNumber('');
+        setIdFullName('');
+        setIdBirthDate('');
+        setIdExpiryDate('');
+        setIdGender('Male');
+
+        setPasskeyService('');
+        setPasskeyPrivateExponent('');
+        setPasskeyPublicId('');
+
         setExistingAttachment(null);
+        setFolderId('');
+        setItemTags([]);
       }
 
-      setFolderId(editingItem.folderId || '');
-      setItemTags(editingItem.tags || []);
-    } else {
-      // Clean start for new items
-      setCategory('login');
-      setTitle('');
-      setUsername('');
-      setPassword('');
-      setUrl('');
-      setTotpSecret('');
-      setNotes('');
-
-      setCardholderName('');
-      setCardNumber('');
-      setCardExpiry('');
-      setCardCvv('');
-      setCardPin('');
-
-      setIdNumber('');
-      setIdFullName('');
-      setIdBirthDate('');
-      setIdExpiryDate('');
-      setIdGender('Male');
-
-      setPasskeyService('');
-      setPasskeyPrivateExponent('');
-      setPasskeyPublicId('');
-
-      setExistingAttachment(null);
-      setFolderId('');
-      setItemTags([]);
+      // Clear selected temporary files and error messages on reopen
+      setSelectedFile(null);
+      setIsUploading(false);
+      setUploadProgress(0);
+      setErrorMessage(null);
     }
-    // Always clear selected temporary files and error messages on reopen
-    setSelectedFile(null);
-    setIsUploading(false);
-    setUploadProgress(0);
-    setErrorMessage(null);
-  }, [editingItem, isOpen, t]);
+  }, [editingItem, isOpen]);
 
   if (!isOpen) return null;
 

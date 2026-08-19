@@ -57,6 +57,11 @@ export function Modal({
 }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
 
   // Focus trap + Escape-to-close + return focus on unmount.
   useEffect(() => {
@@ -67,7 +72,7 @@ export function Modal({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.stopPropagation();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (event.key !== 'Tab' || !overlayRef.current) return;
@@ -96,8 +101,13 @@ export function Modal({
     document.addEventListener('keydown', handleKeyDown, true);
 
     const raf = window.requestAnimationFrame(() => {
-      const focusable = overlayRef.current ? getFocusable(overlayRef.current) : [];
-      if (focusable.length > 0) focusable[0]!.focus();
+      if (!overlayRef.current) return;
+      const currentActive = document.activeElement;
+      // Only focus the initial element if focus is not already inside the modal
+      if (!currentActive || !overlayRef.current.contains(currentActive)) {
+        const focusable = getFocusable(overlayRef.current);
+        if (focusable.length > 0) focusable[0]!.focus();
+      }
     });
 
     return () => {
@@ -106,7 +116,7 @@ export function Modal({
       document.removeEventListener('keydown', handleKeyDown, true);
       previouslyFocused.current?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 

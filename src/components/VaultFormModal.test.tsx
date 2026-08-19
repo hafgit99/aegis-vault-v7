@@ -748,4 +748,35 @@ describe('VaultFormModal', () => {
       }));
     });
   });
+
+  it('preserves typed values during sequential character inputs without jumping or resetting', async () => {
+    render(
+      <VaultFormModal
+        isOpen={true}
+        editingItem={null}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    const titleInput = screen.getByTestId('vault-item-title-input') as HTMLInputElement;
+    const usernameInput = screen.getByTestId('vault-item-username-input') as HTMLInputElement;
+    const passwordInput = screen.getByTestId('vault-item-password-input') as HTMLInputElement;
+
+    // Simulate typing character by character
+    fireEvent.change(titleInput, { target: { value: 'G' } });
+    fireEvent.change(titleInput, { target: { value: 'Git' } });
+    fireEvent.change(titleInput, { target: { value: 'GitHub' } });
+    expect(titleInput.value).toBe('GitHub');
+
+    fireEvent.change(usernameInput, { target: { value: 'u' } });
+    fireEvent.change(usernameInput, { target: { value: 'user' } });
+    fireEvent.change(usernameInput, { target: { value: 'user@example.com' } });
+    expect(usernameInput.value).toBe('user@example.com');
+
+    // Simulate paste
+    fireEvent.change(passwordInput, { target: { value: 'P@ssw0rd!LongSecureToken2026' } });
+    expect(passwordInput.value).toBe('P@ssw0rd!LongSecureToken2026');
+  });
 });
+

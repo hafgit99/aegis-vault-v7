@@ -1245,17 +1245,109 @@ function showSavePromptBanner(cred: any) {
   }, 200);
 }
 
+// Global state tracking for robust multi-step or separated DOM field detection
+let lastActiveUsername = '';
+let lastActivePassword = '';
+
+// Helper to find the best matching username input associated with a password input
+function findAssociatedUsernameInput(passwordInput: HTMLInputElement): HTMLInputElement | null {
+  const USERNAME_SELECTORS = [
+    'input[autocomplete="username"]',
+    'input[autocomplete="email"]',
+    'input[type="email"]',
+    'input[name*="user" i]',
+    'input[name*="login" i]',
+    'input[name*="email" i]',
+    'input[name*="identifier" i]',
+    'input[id*="user" i]',
+    'input[id*="login" i]',
+    'input[id*="email" i]',
+    'input[id*="identifier" i]',
+    'input[type="text"]'
+  ];
+
+  // 1. Search inside the enclosing form
+  if (passwordInput.form) {
+    for (const selector of USERNAME_SELECTORS) {
+      const match = passwordInput.form.querySelector(selector) as HTMLInputElement;
+      if (match && match !== passwordInput && match.type !== 'hidden') {
+        return match;
+      }
+    }
+  }
+
+  // 2. Search upwards through ancestor containers (up to 6 levels)
+  let parent = passwordInput.parentElement;
+  let depth = 0;
+  while (parent && depth < 6 && parent !== document.body) {
+    for (const selector of USERNAME_SELECTORS) {
+      const match = parent.querySelector(selector) as HTMLInputElement;
+      if (match && match !== passwordInput && match.type !== 'hidden') {
+        return match;
+      }
+    }
+    parent = parent.parentElement;
+    depth++;
+  }
+
+  // 3. Fallback: Search all preceding visible text/email inputs in document order
+  const allInputs = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([type="password"]):not([type="submit"]):not([type="button"])')) as HTMLInputElement[];
+  const preceding = allInputs.filter(input => (input.compareDocumentPosition(passwordInput) & Node.DOCUMENT_POSITION_PRECEDING) !== 0 && input.value);
+  if (preceding.length > 0) {
+    return preceding[preceding.length - 1]!;
+  }
+
+  return null;
+}
+
+// Helper to find active password input on the page or inside container
+function findPasswordInput(context?: HTMLElement | null): HTMLInputElement | null {
+  if (context) {
+    const pw = context.querySelector('input[type="password"]') as HTMLInputElement;
+    if (pw && pw.value) return pw;
+  }
+
+  // Search inside nearest form
+  if (context) {
+    const form = context.closest('form');
+    if (form) {
+      const pw = form.querySelector('input[type="password"]') as HTMLInputElement;
+      if (pw && pw.value) return pw;
+    }
+  }
+
+  // Fallback: document-level password inputs with values
+  const allPasswords = Array.from(document.querySelectorAll('input[type="password"]')) as HTMLInputElement[];
+  const filled = allPasswords.filter(p => p.value && p.value.length >= 4);
+  if (filled.length > 0) {
+    return filled[filled.length - 1]!;
+  }
+
+  return allPasswords[0] || null;
+}
+
 // Update draft credential in background script as user types/blurs
 function updateDraftCredential(inputEl: HTMLInputElement) {
-  const form = inputEl.form || inputEl.closest('form') || inputEl.closest('div');
-  if (!form) return;
+  let password = '';
+  let username = '';
 
-  const passwordInput = form.querySelector('input[type="password"]') as HTMLInputElement;
-  if (!passwordInput || !passwordInput.value) return;
+  if (inputEl.type === 'password') {
+    password = inputEl.value;
+    const userInput = findAssociatedUsernameInput(inputEl);
+    username = userInput ? userInput.value.trim() : lastActiveUsername;
+  } else {
+    username = inputEl.value.trim();
+    if (username) {
+      lastActiveUsername = username;
+    }
+    const pwInput = findPasswordInput(inputEl.form || inputEl.parentElement);
+    if (pwInput) {
+      password = pwInput.value;
+    }
+  }
 
-  const usernameInput = form.querySelector('input[type="text"], input[type="email"], input[name="username"], input[name="login"]') as HTMLInputElement;
-  const username = usernameInput ? usernameInput.value.trim() : '';
-  const password = passwordInput.value;
+  if (username) lastActiveUsername = username;
+  if (password) lastActivePassword = password;
 
   if (password.length < 4) return;
 
@@ -1263,7 +1355,7 @@ function updateDraftCredential(inputEl: HTMLInputElement) {
     action: 'update_draft_credential',
     credential: {
       title: document.title || window.location.hostname,
-      username: username,
+      username: username || lastActiveUsername,
       password: password,
       url: window.location.href
     }
@@ -1271,15 +1363,19 @@ function updateDraftCredential(inputEl: HTMLInputElement) {
 }
 
 // Intercept form submissions
-function handleFormSubmit(form: HTMLElement) {
-  const passwordInput = form.querySelector('input[type="password"]') as HTMLInputElement;
-  if (!passwordInput || !passwordInput.value) return;
+function handleFormSubmit(formOrEl?: HTMLElement | null) {
+  const passwordInput = findPasswordInput(formOrEl);
+  const password = passwordInput?.value || lastActivePassword;
+  if (!password || password.length < 4) return;
 
-  const usernameInput = form.querySelector('input[type="text"], input[type="email"], input[name="username"], input[name="login"]') as HTMLInputElement;
-  const username = usernameInput ? usernameInput.value.trim() : '';
-  const password = passwordInput.value;
-
-  if (password.length < 4) return;
+  let username = '';
+  if (passwordInput) {
+    const userInput = findAssociatedUsernameInput(passwordInput);
+    username = userInput ? userInput.value.trim() : '';
+  }
+  if (!username) {
+    username = lastActiveUsername;
+  }
 
   chrome.runtime.sendMessage({
     action: 'set_pending_credential',
@@ -1308,25 +1404,24 @@ document.addEventListener('change', (e) => {
 }, true);
 
 document.addEventListener('submit', (e) => {
-  handleFormSubmit(e.target as HTMLFormElement);
+  handleFormSubmit(e.target as HTMLElement);
 }, true);
 
 document.addEventListener('click', (e) => {
   const target = e.target as HTMLElement;
   if (target && (target.tagName === 'BUTTON' || target.tagName === 'INPUT')) {
     const type = target.getAttribute('type');
+    const textContent = (target.textContent || '').toLowerCase();
     const isSubmit = type === 'submit' || 
-                     target.innerText?.toLowerCase().includes('giriş') ||
-                     target.innerText?.toLowerCase().includes('login') ||
-                     target.innerText?.toLowerCase().includes('kaydet') ||
-                     target.innerText?.toLowerCase().includes('save') ||
-                     target.innerText?.toLowerCase().includes('register') ||
-                     target.innerText?.toLowerCase().includes('sign');
+                     textContent.includes('giriş') ||
+                     textContent.includes('login') ||
+                     textContent.includes('kaydet') ||
+                     textContent.includes('save') ||
+                     textContent.includes('register') ||
+                     textContent.includes('sign') ||
+                     textContent.includes('oturumu aç');
     if (isSubmit) {
-      const form = target.closest('form') || target.closest('div');
-      if (form) {
-        handleFormSubmit(form as HTMLElement);
-      }
+      handleFormSubmit(target.closest('form') || target.parentElement);
     }
   }
 }, true);

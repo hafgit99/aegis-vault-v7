@@ -743,7 +743,8 @@ fn handle_client(
                             .collect();
                         serde_json::json!({ "locked": false, "credentials": matching })
                     } else {
-                        serde_json::json!({ "locked": false, "credentials": [] })
+                        // Return full list of cached credentials for popup search, favorites & matching
+                        serde_json::json!({ "locked": false, "credentials": cache.credentials })
                     }
                 } else {
                     serde_json::json!({ "locked": true, "credentials": [] })

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 import type { VaultItem } from '../types';
 
@@ -6,7 +6,7 @@ export function useVaultFormState() {
   const [isVaultFormOpen, setIsVaultFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<VaultItem | null>(null);
 
-  const openNewItemForm = (prefill?: Partial<VaultItem> | null) => {
+  const openNewItemForm = useCallback((prefill?: Partial<VaultItem> | null) => {
     if (prefill) {
       setEditingItem({
         id: '',
@@ -22,18 +22,18 @@ export function useVaultFormState() {
       setEditingItem(null);
     }
     setIsVaultFormOpen(true);
-  };
+  }, []);
 
-  const openEditItemForm = (item: VaultItem | null) => {
+  const openEditItemForm = useCallback((item: VaultItem | null) => {
     if (!item) return;
 
     setEditingItem(item);
     setIsVaultFormOpen(true);
-  };
+  }, []);
 
-  const closeVaultForm = () => {
+  const closeVaultForm = useCallback(() => {
     setIsVaultFormOpen(false);
-  };
+  }, []);
 
   return {
     isVaultFormOpen,
