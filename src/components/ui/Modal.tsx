@@ -35,6 +35,15 @@ function getFocusable(root: HTMLElement): HTMLElement[] {
   );
 }
 
+function getZIndexClass(zIndex?: number): string {
+  if (!zIndex || zIndex <= 50) return 'z-50';
+  if (zIndex <= 100) return 'z-[100]';
+  if (zIndex <= 110) return 'z-[110]';
+  if (zIndex <= 200) return 'z-[200]';
+  if (zIndex <= 260) return 'z-[260]';
+  return 'z-[300]';
+}
+
 export function Modal({
   open,
   onClose,
@@ -43,7 +52,7 @@ export function Modal({
   closeOnBackdrop = true,
   zIndex = 100,
   overlayTestId = 'shared-modal-overlay',
-  className,
+  className = '',
   children,
 }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -101,6 +110,8 @@ export function Modal({
 
   if (!open) return null;
 
+  const zIndexClass = getZIndexClass(zIndex);
+
   return (
     <div
       ref={overlayRef}
@@ -112,8 +123,7 @@ export function Modal({
       onClick={(event) => {
         if (closeOnBackdrop && event.target === event.currentTarget) onClose();
       }}
-      style={{ zIndex }}
-      className={`fixed inset-0 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-fade-in${className ? ` ${className}` : ''}`}
+      className={`fixed inset-0 ${zIndexClass} flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-fade-in${className ? ` ${className}` : ''}`}
     >
       {children}
     </div>

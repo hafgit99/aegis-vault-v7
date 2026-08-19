@@ -32,6 +32,9 @@ const authorizedFiles = [
   path.normalize('src/lib/storage.ts'),
   path.normalize('src/components/SettingsPanel.tsx'),
   path.normalize('src/components/settings/SettingsRecoverySection.tsx'),
+  path.normalize('src/hooks/useSettingsBackupImport.ts'),
+  path.normalize('src/hooks/useSettingsBiometric.ts'),
+  path.normalize('src/hooks/useSettingsSync.ts'),
   path.normalize('src/lib/vaultSession.ts')
 ];
 
