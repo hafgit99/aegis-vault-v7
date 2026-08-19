@@ -1,5 +1,5 @@
 import { translate, getPreferredLanguage } from './i18n';
-import { extractRegistrableDomain } from './psl-utils';
+import { extractRegistrableDomain, extractRegistrableDomainFromUrl } from './psl-utils';
 
 const activeLanguage = getPreferredLanguage();
 
@@ -1214,7 +1214,13 @@ function showSavePromptBanner(cred: any) {
   saveBtn.addEventListener('click', () => {
     chrome.runtime.sendMessage({
       action: 'save_new_credential',
-      credential: cred
+      credential: {
+        title: cred.title || document.title || window.location.hostname,
+        username: cred.username || '',
+        password: cred.password || '',
+        url: cred.url || window.location.href,
+        category: 'login'
+      }
     }, () => {
       banner.classList.remove('show');
       setTimeout(() => banner.remove(), 400);
@@ -1431,17 +1437,24 @@ setTimeout(() => {
   chrome.runtime.sendMessage({ action: 'get_pending_credential' }, (response) => {
     if (response && response.credential) {
       const cred = response.credential;
+      if (!cred.password || cred.password.length < 4) {
+        chrome.runtime.sendMessage({ action: 'clear_pending_credential' });
+        return;
+      }
       try {
-        const credDomain = new URL(cred.url).hostname.replace('www.', '').toLowerCase();
-        const currentDomain = window.location.hostname.replace('www.', '').toLowerCase();
+        const credDomain = extractRegistrableDomainFromUrl(cred.url || window.location.href);
+        const currentDomain = extractRegistrableDomainFromUrl(window.location.href);
         
-        if (credDomain === currentDomain) {
-          // Verify if it doesn't already exist in matches to prevent duplicate saves
+        if (!credDomain || !currentDomain || credDomain === currentDomain) {
+          // Verify if it doesn't already exist in matches to prevent duplicate save prompts
           chrome.runtime.sendMessage(
             { action: 'query_credentials', url: window.location.href },
             (dbResponse) => {
-              const exists = dbResponse && dbResponse.credentials && dbResponse.credentials.some((item: any) => {
-                return item.username === cred.username && item.password === cred.password;
+              const matchingList = (dbResponse && dbResponse.credentials) ? dbResponse.credentials : [];
+              const exists = matchingList.some((item: any) => {
+                const sameUser = !cred.username || !item.username || item.username.toLowerCase() === cred.username.toLowerCase();
+                const samePass = Boolean(item.password && cred.password && item.password === cred.password);
+                return sameUser && samePass;
               });
 
               if (!exists) {

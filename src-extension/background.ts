@@ -28,7 +28,7 @@ function setDraftCredential(tabId: number, cred: any) {
   if (draftCredentialTimers[tabId]) {
     clearTimeout(draftCredentialTimers[tabId]);
   }
-  draftCredentials[tabId] = cred;
+  draftCredentials[tabId] = cred ? { ...cred } : null;
   // Security fix O7: 10-minute TTL for draft credentials in service worker memory
   draftCredentialTimers[tabId] = setTimeout(() => {
     clearDraftCredential(tabId);
@@ -65,17 +65,13 @@ function setPendingCredential(cred: any, originUrl?: string) {
   if (pendingCredential) {
     wipeObjectCredentials(pendingCredential);
   }
-  pendingCredential = cred;
+  pendingCredential = cred ? { ...cred } : null;
   pendingOrigin = extractOrigin(originUrl);
   if (pendingTimer) {
     clearTimeout(pendingTimer);
   }
   pendingTimer = setTimeout(() => {
-    if (pendingCredential) {
-      wipeObjectCredentials(pendingCredential);
-      pendingCredential = null;
-      pendingOrigin = null;
-    }
+    clearPendingCredential();
   }, 120000); // 120s transient memory retention
 }
 
