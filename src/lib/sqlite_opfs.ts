@@ -488,7 +488,7 @@ class SQLiteOPFS implements VaultStorageRepository {
     await this.saveToPersistentStorage();
   }
 
-  public async setupMasterWithHash(argonHash: string, salt: string, kdfParams?: Partial<Argon2idOptions>): Promise<void> {
+  public async setupMasterWithHash(argonHash: string, salt: string, kdfParams?: VersionedVaultDatabaseState['kdfParams']): Promise<void> {
     await this.hydrate();
     this.state.encryption_salt = salt;
     this.state.kdfParams = kdfParams;
@@ -582,7 +582,7 @@ class SQLiteOPFS implements VaultStorageRepository {
   public async changeMasterPasswordWithHash(
     newArgonHash: string,
     newSalt: string,
-    kdfParams: Partial<Argon2idOptions> | undefined,
+    kdfParams: VersionedVaultDatabaseState['kdfParams'],
     oldVaultKey: Uint8Array,
     newVaultKey: Uint8Array,
   ): Promise<void> {
@@ -987,14 +987,18 @@ class SQLiteOPFS implements VaultStorageRepository {
 
       for (let i = 0; i < items.length; i += CHUNK_SIZE) {
         const chunk = items.slice(i, i + CHUNK_SIZE);
+        type ChunkEncryptionResult =
+          | { __failed: false; row: SQLiteRow }
+          | { __failed: true; id: string; error: string };
+
         const chunkRows = await Promise.all(
-          chunk.map(async (item) => {
+          chunk.map(async (item): Promise<ChunkEncryptionResult> => {
             try {
               const itemId = item.id || secureRandomToken(9);
               const existingRow = this.state.vault_items.find(x => x.id === itemId);
               const isPlaceholderItem = item.title === '[encrypted: aes-256-gcm]' && item.username === '[encrypted: aes-256-gcm]';
               if (isPlaceholderItem && existingRow && existingRow.enc_metadata) {
-                return existingRow;
+                return { __failed: false, row: existingRow };
               }
 
               const rawSensitive = JSON.stringify(item);
@@ -1033,9 +1037,9 @@ class SQLiteOPFS implements VaultStorageRepository {
         );
 
         for (const row of chunkRows) {
-          if (row && !row.__failed) {
+          if (!row.__failed) {
             allRows.push(row.row);
-          } else if (row && row.__failed) {
+          } else {
             failedItems.push({ id: row.id, error: row.error });
           }
         }
