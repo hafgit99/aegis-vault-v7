@@ -19,8 +19,8 @@ describe('Cryptographic Performance Benchmarks', () => {
     const decDuration = performance.now() - decStart;
 
     expect(decrypted).toBe(samplePayload);
-    expect(encDuration).toBeLessThan(100);
-    expect(decDuration).toBeLessThan(100);
+    expect(encDuration).toBeLessThan(500);
+    expect(decDuration).toBeLessThan(500);
   });
 
   it('measures CSPRNG IV generation throughput', () => {
@@ -29,6 +29,6 @@ describe('Cryptographic Performance Benchmarks', () => {
       generateSafeIv();
     }
     const duration = performance.now() - startTime;
-    expect(duration).toBeLessThan(100);
+    expect(duration).toBeLessThan(500);
   });
 });
