@@ -54,6 +54,7 @@ import { LockScreenRecoveryModal } from './lock/LockScreenRecoveryModal';
 import type { LegalTermsTab } from './lock/LegalTermsModal';
 import { LegalTermsModal } from './lock/LegalTermsModal';
 import { PasswordStrengthMeter } from './common/PasswordStrengthMeter';
+import type { TranslationKey } from '../i18n/translations';
 
 const LOCKOUT_STORAGE_KEY = 'aegis_lockout_state';
 const MAX_LOCKOUT_MS = 5 * 60 * 1000;
@@ -65,28 +66,39 @@ interface LockoutState {
 
 function readLockoutState(): LockoutState {
   try {
-    const parsed = JSON.parse(localStorage.getItem(LOCKOUT_STORAGE_KEY) || '{}') as Partial<LockoutState>;
-    return {
-      failedAttempts: Math.max(0, Number(parsed.failedAttempts) || 0),
-      lockedUntil: Math.max(0, Number(parsed.lockedUntil) || 0),
-    };
+    const raw = localStorage.getItem(LOCKOUT_STORAGE_KEY);
+    if (!raw) return { failedAttempts: 0, lockedUntil: 0 };
+    const parsed = JSON.parse(raw);
+    if (typeof parsed.failedAttempts === 'number' && typeof parsed.lockedUntil === 'number') {
+      return parsed;
+    }
   } catch {
-    return { failedAttempts: 0, lockedUntil: 0 };
+    // Fall back to clean state on parse error
   }
+  return { failedAttempts: 0, lockedUntil: 0 };
 }
 
 function writeLockoutState(state: LockoutState): void {
-  localStorage.setItem(LOCKOUT_STORAGE_KEY, JSON.stringify(state));
+  try {
+    localStorage.setItem(LOCKOUT_STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // Local storage full or unavailable; fail open for user
+  }
 }
 
 function clearLockoutState(): void {
-  localStorage.removeItem(LOCKOUT_STORAGE_KEY);
+  try {
+    localStorage.removeItem(LOCKOUT_STORAGE_KEY);
+  } catch {
+    // Silently ignore
+  }
 }
 
 function recordFailedUnlockAttempt(now = Date.now()): LockoutState {
-  const previous = readLockoutState();
-  const failedAttempts = previous.failedAttempts + 1;
+  const current = readLockoutState();
+  const failedAttempts = current.failedAttempts + 1;
   const delayMs = Math.min(MAX_LOCKOUT_MS, 1000 * 2 ** Math.min(failedAttempts - 1, 8));
+
   const state = {
     failedAttempts,
     lockedUntil: now + delayMs,
@@ -99,12 +111,13 @@ function getLockoutRemainingMs(now = Date.now()): number {
   return Math.max(0, readLockoutState().lockedUntil - now);
 }
 
-function getBiometricUnlockErrorMessage(err: any, t: ReturnType<typeof useLanguage>['t']): string {
-  if (err?.name === "SecurityError" || err?.name === "NotAllowedError") {
+function getBiometricUnlockErrorMessage(err: unknown, t: ReturnType<typeof useLanguage>['t']): string {
+  const errorObj = err && typeof err === 'object' ? (err as { name?: string; code?: string; message?: string }) : null;
+  if (errorObj?.name === "SecurityError" || errorObj?.name === "NotAllowedError") {
     return t('lock.error.biometricPermission');
   }
 
-  switch (err?.code) {
+  switch (errorObj?.code) {
     case 'biometric.unsupported':
       return t('lock.error.biometricUnsupported');
     case 'biometric.integrityMismatch':
@@ -113,7 +126,7 @@ function getBiometricUnlockErrorMessage(err: any, t: ReturnType<typeof useLangua
     case 'biometric.authenticationCancelled':
       return t('lock.error.biometricFailed');
     default:
-      return err?.message || t('lock.error.biometricFailed');
+      return errorObj?.message || (err instanceof Error ? err.message : t('lock.error.biometricFailed'));
   }
 }
 
@@ -204,7 +217,7 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
         triggerShake();
         throw new Error(t('lock.error.biometricIntegrity'));
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setBiometricError(getBiometricUnlockErrorMessage(err, t));
     } finally {
       setBiometricLoading(false);
@@ -321,7 +334,11 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
     }
   };
 
-  const features = [
+  const features: Array<{
+    icon: React.ReactNode;
+    titleKey: TranslationKey;
+    descKey: TranslationKey;
+  }> = [
     {
       icon: <ShieldAlert className="w-6 h-6 text-brand-primary" />,
       titleKey: 'lock.feature.zeroKnowledge.title',
@@ -418,10 +435,10 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
                       <div className="w-12 h-12 rounded-xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
                         {feat.icon}
                       </div>
-                      <span className="text-base font-bold text-on-surface leading-snug tracking-tight">{t(feat.titleKey as any)}</span>
+                      <span className="text-base font-bold text-on-surface leading-snug tracking-tight">{t(feat.titleKey)}</span>
                     </div>
                     <p className="text-xs sm:text-sm text-on-surface-variant/80 leading-relaxed line-clamp-3">
-                      {t(feat.descKey as any)}
+                      {t(feat.descKey)}
                     </p>
                   </div>
                 ))}

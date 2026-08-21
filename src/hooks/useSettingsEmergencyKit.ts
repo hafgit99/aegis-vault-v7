@@ -40,8 +40,9 @@ export function useSettingsEmergencyKit() {
       setEmergencySecretKey('');
       setEmergencyKitSuccess(t('settings.emergencyKit.success'));
       setTimeout(() => setEmergencyKitSuccess(null), 5000);
-    } catch (err: any) {
-      setEmergencyKitError(`${t('settings.emergencyKit.errorPrefix')}: ${err?.message || t('settings.export.defaultSaveError')}`);
+    } catch (err: unknown) {
+      const message = (err instanceof Error && err.message.trim()) ? err.message : t('settings.export.defaultSaveError');
+      setEmergencyKitError(`${t('settings.emergencyKit.errorPrefix')}: ${message}`);
     }
   };
 

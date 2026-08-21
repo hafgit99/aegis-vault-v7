@@ -23,9 +23,10 @@ export function useSettingsExtensionToken() {
       setTokenRotateStatus('success');
       setTokenRotateMessage('Extension token rotated successfully. Reconnect the browser extension.');
       setTimeout(() => { setTokenRotateStatus('idle'); setTokenRotateMessage(null); }, 6000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setTokenRotateStatus('error');
-      setTokenRotateMessage(`Failed to rotate token: ${err?.message ?? String(err)}`);
+      const message = err instanceof Error ? err.message : String(err);
+      setTokenRotateMessage(`Failed to rotate token: ${message}`);
     }
   };
 

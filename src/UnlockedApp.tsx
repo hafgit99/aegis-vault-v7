@@ -240,7 +240,7 @@ export default function UnlockedApp({
 
     let unlistenFn: (() => void) | null = null;
 
-    listen<any>('add-credential-from-extension', (event) => {
+    listen<Partial<VaultItem>>('add-credential-from-extension', (event) => {
       const payload = event.payload;
       if (payload) {
         handleTriggerNew({
@@ -371,7 +371,7 @@ export default function UnlockedApp({
     openEditItemForm(selectedItem);
   };
 
-  const handleUpdateItemCategory = async (itemId: string, newCategory: any) => {
+  const handleUpdateItemCategory = async (itemId: string, newCategory: VaultItem['category']) => {
     const item = items.find(i => i.id === itemId);
     if (item) {
       const updatedItem = { ...item, category: newCategory, updatedAt: new Date().toISOString() };

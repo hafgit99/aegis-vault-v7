@@ -29,7 +29,7 @@ interface SettingsBackupSectionProps {
     percent: number;
     errorMsg: string | null;
     successMsg: string | null;
-    pendingEnvelope?: any;
+    pendingEnvelope?: unknown;
   };
   decryptPasswordInput: string;
   setDecryptPasswordInput: (val: string) => void;

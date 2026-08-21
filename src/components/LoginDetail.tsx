@@ -40,7 +40,7 @@ export default function LoginDetail({
         })
         .catch((error) => {
           if (active) {
-            const isValidationError = error instanceof TOTPValidationError || (error && (error as any).name === 'TOTPValidationError');
+            const isValidationError = error instanceof TOTPValidationError || (error instanceof Error && error.name === 'TOTPValidationError');
             setHasTotpValidationError(Boolean(isValidationError));
             if (isValidationError) {
               setTotpCode('000 000');

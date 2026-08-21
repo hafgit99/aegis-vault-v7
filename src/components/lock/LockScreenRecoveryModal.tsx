@@ -74,11 +74,12 @@ export function LockScreenRecoveryModal({
       const decryptedMaster = await authenticateBiometric();
       setRecoveredMasterPassword(decryptedMaster);
       setRecoveryModalError(null);
-    } catch (err: any) {
-      if (err?.name === "SecurityError" || err?.name === "NotAllowedError") {
+    } catch (err: unknown) {
+      const errorObj = err && typeof err === 'object' ? (err as { name?: string; code?: string }) : null;
+      if (errorObj?.name === "SecurityError" || errorObj?.name === "NotAllowedError") {
         setRecoveryModalError(t('lock.error.biometricPermission'));
       } else {
-        switch (err?.code) {
+        switch (errorObj?.code) {
           case 'biometric.unsupported':
             setRecoveryModalError(t('lock.error.biometricUnsupported'));
             break;
@@ -90,7 +91,8 @@ export function LockScreenRecoveryModal({
             setRecoveryModalError(t('lock.error.biometricFailed'));
             break;
           default:
-            setRecoveryModalError(err?.message || t('lock.error.biometricFailed'));
+            setRecoveryModalError(t('lock.error.biometricFailed'));
+            break;
         }
       }
     } finally {

@@ -93,6 +93,22 @@ interface MainContentProps {
   onDeleteSmartFolder?: (id: string) => void;
 }
 
+import type { BulkActionDescriptor } from './BulkActionBar';
+
+const defaultBulkSelection: UseBulkSelectionResult = {
+  selectedIds: new Set<string>(),
+  isSelectionMode: false,
+  selectionCount: 0,
+  isSelected: () => false,
+  toggle: () => {},
+  selectOnly: () => {},
+  selectAll: () => {},
+  clear: () => {},
+  selectRange: () => {},
+  enterSelectionMode: () => {},
+  exitSelectionMode: () => {},
+};
+
 export function MainContentComponent({
   activeTab,
   selectedItem,
@@ -163,23 +179,22 @@ export function MainContentComponent({
   onUpdateTag = () => {},
   onDeleteTag = () => {},
   onItemsChange = () => {},
-  bulkSelection = {
-    selectedIds: new Set(),
-    isSelectionMode: false,
-    isSelected: () => false,
-    toggle: () => {},
-    selectOnly: () => {},
-    clear: () => {},
-    selectRange: () => {},
-  } as any,
-  onCreateSmartFolder = () => ({} as any),
+  bulkSelection = defaultBulkSelection,
+  onCreateSmartFolder = (input: CreateSmartFolderInput): SmartFolder => ({
+    id: 'dummy',
+    name: input.name,
+    rules: input.rules,
+    icon: input.icon ?? 'folder',
+    color: input.color ?? 'indigo',
+    createdAt: new Date().toISOString(),
+  }),
   onDeleteSmartFolder = () => {},
   onSecureShare = () => {},
 }: MainContentProps) {
   const [isFolderSidebarOpen, setIsFolderSidebarOpen] = useState(false);
   const runBulkAction = useBulkActionRunner(activeItems, onItemsChange);
 
-  const handleApplyBulkAction = (action: any) => {
+  const handleApplyBulkAction = (action: BulkActionDescriptor) => {
     runBulkAction({
       kind: action.kind,
       ids: bulkSelection.selectedIds,
@@ -271,6 +286,7 @@ export function MainContentComponent({
                 onSelectDashboard={onSelectDashboard}
                 onBackToList={onBackToList}
                 onSelectItem={onSelectItem}
+                onSelectAuditItem={onSelectAuditItem}
                 onToggleFavorite={onToggleFavorite}
                 onEdit={onEdit}
                 onDelete={onDelete}

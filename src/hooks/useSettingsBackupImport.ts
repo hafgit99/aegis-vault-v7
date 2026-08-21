@@ -14,6 +14,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import type { TFunction } from '../i18n/LanguageContext';
 import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from '../lib/encryption';
 import { parseUniversalImport, decodeFileBuffer } from '../lib/importer';
+import type { AttachmentBackupRecord } from '../lib/attachments';
 import { exportAllAttachments, importAttachments, deleteAttachments } from '../lib/attachments';
 import { validateBackupPayload } from '../lib/backupValidation';
 import { secureRandomToken } from '../lib/random';
@@ -29,8 +30,9 @@ interface UseSettingsBackupImportOptions {
   onDatabaseChanged: () => void | Promise<void>;
 }
 
-function getBackupDecryptErrorMessage(err: any, t: TFunction): string {
-  switch (err?.code) {
+function getBackupDecryptErrorMessage(err: unknown, t: TFunction): string {
+  const errorObj = err && typeof err === 'object' ? (err as { code?: string; message?: string }) : null;
+  switch (errorObj?.code) {
     case 'secureBackup.invalidJson':
     case 'legacyCrypto.invalidJson':
       return t('settings.import.decryptErrorInvalidJson');
@@ -59,7 +61,7 @@ function getBackupDecryptErrorMessage(err: any, t: TFunction): string {
     case 'validation.attachmentCorruptData':
       return t('settings.import.errorAttachmentCorrupt', 'Attachment data is corrupt.');
     default:
-      return err?.message || t('settings.import.decryptErrorFallback');
+      return errorObj?.message || (err instanceof Error ? err.message : t('settings.import.decryptErrorFallback'));
   }
 }
 
@@ -74,7 +76,7 @@ interface ImportState {
   message: string;
   errorMsg: string | null;
   successMsg: string | null;
-  pendingEnvelope: any | null;
+  pendingEnvelope: unknown | null;
 }
 
 const IDLE_IMPORT_STATE: ImportState = {
@@ -100,8 +102,8 @@ export function useSettingsBackupImport({
   const [plainExportArmed, setPlainExportArmed] = useState(false);
   const [plainExportConfirmation, setPlainExportConfirmation] = useState('');
   const [holdProgress, setHoldProgress] = useState(0);
-  const holdTimerRef = useRef<any>(null);
-  const holdIntervalRef = useRef<any>(null);
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const holdIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ─── Universal Import unified state ─────────────────────────────────
   const [importState, setImportState] = useState<ImportState>(IDLE_IMPORT_STATE);
@@ -200,8 +202,9 @@ export function useSettingsBackupImport({
         }
         downloadTextFile(filename, contents);
       }
-    } catch (err: any) {
-      setBackupError(`${t('settings.export.plainErrorPrefix')}: ${err?.message || t('settings.export.defaultSaveError')}`);
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : t('settings.export.defaultSaveError');
+      setBackupError(`${t('settings.export.plainErrorPrefix')}: ${errorMsg}`);
       return;
     }
     setPlainExportArmed(false);
@@ -240,8 +243,9 @@ export function useSettingsBackupImport({
         setBackupSuccess(t('settings.export.encryptedSuccess'));
         setCustomBackupPassword('');
         setTimeout(() => setBackupSuccess(null), 5000);
-      } catch (err: any) {
-        setBackupError(`${t('settings.export.encryptErrorPrefix')}: ${err?.message || t('settings.export.defaultSaveError')}`);
+      } catch (err: unknown) {
+        const errorMsg = err instanceof Error ? err.message : t('settings.export.defaultSaveError');
+        setBackupError(`${t('settings.export.encryptErrorPrefix')}: ${errorMsg}`);
       }
     };
 
@@ -266,8 +270,9 @@ export function useSettingsBackupImport({
         }
         await exportWithPassword(customBackupPassword);
       }
-    } catch (err: any) {
-      setBackupError(`${t('settings.export.encryptErrorPrefix')}: ${err?.message || t('settings.export.defaultSaveError')}`);
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : t('settings.export.defaultSaveError');
+      setBackupError(`${t('settings.export.encryptErrorPrefix')}: ${errorMsg}`);
     }
   };
 
@@ -280,7 +285,7 @@ export function useSettingsBackupImport({
     });
   };
 
-  const handleImportedItems = async (itemsList: any[], attachmentsList: any[] = []) => {
+  const handleImportedItems = async (itemsList: Array<Partial<VaultItem>>, attachmentsList: AttachmentBackupRecord[] = []) => {
     const mappedItems: VaultItem[] = [];
     const nowStr = new Date().toISOString().split('T')[0] ?? '';
 
@@ -405,7 +410,7 @@ export function useSettingsBackupImport({
         importedAttachmentIds = await importAttachments(attachmentsList);
       }
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Automatic Rollback to prevent partial write state
       console.error('Import failed, initiating rollback...', err);
 
@@ -502,7 +507,7 @@ export function useSettingsBackupImport({
       setTimeout(() => {
         setImportState(prev => prev.status === 'success' ? { ...prev, status: 'idle', successMsg: null } : prev);
       }, 4000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setImportState({
         status: 'decrypting_pending',
         percent: 0,
@@ -531,16 +536,17 @@ export function useSettingsBackupImport({
   };
 
   const executeImportPipeline = async (file: File) => {
-    setImportState({
-      status: 'reading',
-      percent: 5,
-      message: t('settings.import.stage.reading'),
-      errorMsg: null,
-      successMsg: null,
-      pendingEnvelope: null,
-    });
-
     try {
+      setImportState({
+        status: 'reading',
+        percent: 5,
+        message: t('settings.import.stage.reading'),
+        errorMsg: null,
+        successMsg: null,
+        pendingEnvelope: null,
+      });
+      await maybeDelay(150);
+
       // 1. Hardened safety check for total backup size
       if (file.size > 100 * 1024 * 1024) {
         throw new Error(t('settings.import.errorBackupTooLarge', 'Backup file size exceeds 100MB limit.'));
@@ -559,7 +565,7 @@ export function useSettingsBackupImport({
       const decodedResult = decodeFileBuffer(buffer);
 
       // Check if it parses as our version 7 unencrypted envelope structure
-      let parsedJson: any = null;
+      let parsedJson: { version?: number; items?: unknown } | null = null;
       try {
         parsedJson = JSON.parse(decodedResult.trim());
       } catch {}
@@ -584,7 +590,7 @@ export function useSettingsBackupImport({
           percent: 100,
           message: '',
           errorMsg: null,
-          successMsg: `âœ“ Aegis JSON Backup ${t('settings.import.detectedSuccessMiddle')} ${count} ${t('settings.import.recordsLoadedSuffix')}`,
+          successMsg: `✓ Aegis JSON Backup ${t('settings.import.detectedSuccessMiddle')} ${count} ${t('settings.import.recordsLoadedSuffix')}`,
           pendingEnvelope: null,
         });
 
@@ -632,7 +638,7 @@ export function useSettingsBackupImport({
             percent: 100,
             message: '',
             errorMsg: null,
-            successMsg: `âœ“ ${scanResult.formatName} ${t('settings.import.detectedSuccessMiddle')} ${count} ${t('settings.import.recordsLoadedSuffix')}`,
+            successMsg: `✓ ${scanResult.formatName} ${t('settings.import.detectedSuccessMiddle')} ${count} ${t('settings.import.recordsLoadedSuffix')}`,
             pendingEnvelope: null,
           });
 
@@ -641,8 +647,9 @@ export function useSettingsBackupImport({
           }, 4000);
         }
       }
-    } catch (err: any) {
-      const errorMsg = err?.code ? getBackupDecryptErrorMessage(err, t) : (err?.message || t('settings.import.errorFallback'));
+    } catch (err: unknown) {
+      const errorObj = err && typeof err === 'object' ? (err as { code?: string; message?: string }) : null;
+      const errorMsg = errorObj?.code ? getBackupDecryptErrorMessage(err, t) : (errorObj?.message || (err instanceof Error ? err.message : t('settings.import.errorFallback')));
       setImportState({
         status: 'error',
         percent: 0,
@@ -662,12 +669,13 @@ export function useSettingsBackupImport({
           if (selectedFile) {
             executeImportPipeline(new File([selectedFile.contents], selectedFile.name));
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : t('settings.import.fileSelectError');
           setImportState({
             status: 'error',
             percent: 0,
             message: '',
-            errorMsg: err?.message || t('settings.import.fileSelectError'),
+            errorMsg: message,
             successMsg: null,
             pendingEnvelope: null,
           });
@@ -678,12 +686,13 @@ export function useSettingsBackupImport({
 
     try {
       fileInputRef.current?.click();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : t('settings.import.fileSelectError');
       setImportState({
         status: 'error',
         percent: 0,
         message: '',
-        errorMsg: err?.message || t('settings.import.fileSelectError'),
+        errorMsg: message,
         successMsg: null,
         pendingEnvelope: null,
       });

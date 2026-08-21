@@ -662,68 +662,6 @@ fn verify_argon2id_hash(password: String, encoded_hash: String) -> Result<bool, 
     Ok(verified)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::path::PathBuf;
-    use std::time::{SystemTime, UNIX_EPOCH};
-
-    fn unique_test_dir(name: &str) -> PathBuf {
-        let nanos = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("system clock should be after unix epoch")
-            .as_nanos();
-        std::env::temp_dir().join(format!(
-            "aegis-vault-v7-{name}-{}-{nanos}",
-            std::process::id()
-        ))
-    }
-
-    #[test]
-    fn write_vault_database_file_replaces_existing_contents_and_removes_temp_file() {
-        let dir = unique_test_dir("atomic-success");
-        fs::create_dir_all(&dir).expect("test directory should be created");
-        let database_path = dir.join(VAULT_DATABASE_FILENAME);
-        fs::write(&database_path, "old vault contents")
-            .expect("existing database should be written");
-        let tmp_path = database_path.with_extension(format!("tmp-{}", std::process::id()));
-
-        write_vault_database_file(&database_path, "new vault contents")
-            .expect("database write should succeed");
-
-        let contents = fs::read_to_string(&database_path).expect("database should be readable");
-        assert_eq!(contents, "new vault contents");
-        assert!(
-            !tmp_path.exists(),
-            "temporary database file should not remain after atomic replace"
-        );
-
-        fs::remove_dir_all(&dir).expect("test directory should be removed");
-    }
-
-    #[test]
-    fn write_vault_database_file_preserves_existing_contents_when_temp_create_fails() {
-        let dir = unique_test_dir("atomic-temp-failure");
-        fs::create_dir_all(&dir).expect("test directory should be created");
-        let database_path = dir.join(VAULT_DATABASE_FILENAME);
-        fs::write(&database_path, "old vault contents")
-            .expect("existing database should be written");
-        let tmp_path = database_path.with_extension(format!("tmp-{}", std::process::id()));
-        fs::create_dir(&tmp_path).expect("temp path directory should block File::create");
-
-        let result = write_vault_database_file(&database_path, "new vault contents");
-
-        assert!(
-            result.is_err(),
-            "database write should fail when temp file cannot be created"
-        );
-        let contents = fs::read_to_string(&database_path).expect("database should remain readable");
-        assert_eq!(contents, "old vault contents");
-
-        fs::remove_dir_all(&dir).expect("test directory should be removed");
-    }
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let args: Vec<String> = std::env::args().collect();
@@ -824,4 +762,66 @@ pub fn run() {
             std::process::exit(0);
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn unique_test_dir(name: &str) -> PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock should be after unix epoch")
+            .as_nanos();
+        std::env::temp_dir().join(format!(
+            "aegis-vault-v7-{name}-{}-{nanos}",
+            std::process::id()
+        ))
+    }
+
+    #[test]
+    fn write_vault_database_file_replaces_existing_contents_and_removes_temp_file() {
+        let dir = unique_test_dir("atomic-success");
+        fs::create_dir_all(&dir).expect("test directory should be created");
+        let database_path = dir.join(VAULT_DATABASE_FILENAME);
+        fs::write(&database_path, "old vault contents")
+            .expect("existing database should be written");
+        let tmp_path = database_path.with_extension(format!("tmp-{}", std::process::id()));
+
+        write_vault_database_file(&database_path, "new vault contents")
+            .expect("database write should succeed");
+
+        let contents = fs::read_to_string(&database_path).expect("database should be readable");
+        assert_eq!(contents, "new vault contents");
+        assert!(
+            !tmp_path.exists(),
+            "temporary database file should not remain after atomic replace"
+        );
+
+        fs::remove_dir_all(&dir).expect("test directory should be removed");
+    }
+
+    #[test]
+    fn write_vault_database_file_preserves_existing_contents_when_temp_create_fails() {
+        let dir = unique_test_dir("atomic-temp-failure");
+        fs::create_dir_all(&dir).expect("test directory should be created");
+        let database_path = dir.join(VAULT_DATABASE_FILENAME);
+        fs::write(&database_path, "old vault contents")
+            .expect("existing database should be written");
+        let tmp_path = database_path.with_extension(format!("tmp-{}", std::process::id()));
+        fs::create_dir(&tmp_path).expect("temp path directory should block File::create");
+
+        let result = write_vault_database_file(&database_path, "new vault contents");
+
+        assert!(
+            result.is_err(),
+            "database write should fail when temp file cannot be created"
+        );
+        let contents = fs::read_to_string(&database_path).expect("database should remain readable");
+        assert_eq!(contents, "old vault contents");
+
+        fs::remove_dir_all(&dir).expect("test directory should be removed");
+    }
 }

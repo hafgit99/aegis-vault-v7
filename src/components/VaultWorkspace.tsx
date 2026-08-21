@@ -12,7 +12,9 @@ import {
 import { useLanguage } from '../i18n/LanguageContext';
 import { androidAutofillTargetLabel, type AndroidAutofillRequest } from '../lib/androidAutofill';
 import { isAndroidAutofillTargetMatch, sortAndroidAutofillMatches } from '../lib/androidAutofillMatching';
-import type { AuditReport, VaultItem } from '../types';
+import type { AuditReport, TagDefinition, VaultFolder, VaultItem } from '../types';
+import type { UseBulkSelectionResult } from '../hooks/useOrganisation';
+import type { BulkActionDescriptor } from './BulkActionBar';
 import AegisGuardReport from './AegisGuardReport';
 import CryptoShieldPanel from './CryptoShieldPanel';
 import DashboardCategoryStats from './DashboardCategoryStats';
@@ -62,6 +64,7 @@ interface VaultWorkspaceProps {
   onSelectDashboard: () => void;
   onBackToList: () => void;
   onSelectItem: (item: VaultItem) => void;
+  onSelectAuditItem?: (item: VaultItem) => void;
   onToggleFavorite: (item: VaultItem) => void | Promise<void>;
   onEdit: () => void;
   onDelete: (id: string) => void;
@@ -75,12 +78,26 @@ interface VaultWorkspaceProps {
   onUpdateItemCategory?: (itemId: string, category: VaultItem['category']) => void;
   onSecureShare?: (item: VaultItem) => void;
   // 5.3 Tags & Organisation
-  bulkSelection?: any;
-  folders?: any[];
-  tags?: any[];
-  onApplyBulkAction?: (action: any) => void;
+  bulkSelection?: UseBulkSelectionResult;
+  folders?: VaultFolder[];
+  tags?: TagDefinition[];
+  onApplyBulkAction?: (action: BulkActionDescriptor) => void;
   onOpenFolderSidebar?: () => void;
 }
+
+const defaultBulkSelection: UseBulkSelectionResult = {
+  selectedIds: new Set<string>(),
+  isSelectionMode: false,
+  selectionCount: 0,
+  isSelected: () => false,
+  toggle: () => {},
+  selectOnly: () => {},
+  selectAll: () => {},
+  clear: () => {},
+  selectRange: () => {},
+  enterSelectionMode: () => {},
+  exitSelectionMode: () => {},
+};
 
 export function VaultWorkspaceContent({
   selectedItem,
@@ -127,14 +144,7 @@ export function VaultWorkspaceContent({
   onCancelAutofill,
   onApproveAutofill,
   onUpdateItemCategory,
-  bulkSelection = {
-    selectedIds: new Set(),
-    isSelectionMode: false,
-    isSelected: () => false,
-    toggle: () => {},
-    selectOnly: () => {},
-    clear: () => {},
-  },
+  bulkSelection = defaultBulkSelection,
   folders = [],
   tags = [],
   onApplyBulkAction = () => {},
@@ -369,7 +379,7 @@ export function VaultWorkspaceContent({
                       setDragOverCategory(null);
                       const itemId = e.dataTransfer.getData('text/plain');
                       if (itemId && onUpdateItemCategory) {
-                        onUpdateItemCategory(itemId, cat.key as any);
+                        onUpdateItemCategory(itemId, cat.key as VaultItem['category']);
                       }
                     }
                   }}

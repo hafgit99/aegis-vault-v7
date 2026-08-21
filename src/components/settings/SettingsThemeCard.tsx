@@ -1,12 +1,13 @@
 import { Palette, Check } from 'lucide-react';
 import { useTheme, type ThemePalette } from '../../context/ThemeContext';
 import { useLanguage } from '../../i18n/LanguageContext';
+import type { TranslationKey } from '../../i18n/translations';
 
 export function SettingsThemeCard() {
   const { themePalette, setThemePalette } = useTheme();
   const { t } = useLanguage();
 
-  const palettes: { key: ThemePalette; colorClass: string; nameKey: string }[] = [
+  const palettes: { key: ThemePalette; colorClass: string; nameKey: TranslationKey }[] = [
     { key: 'emerald', colorClass: 'bg-emerald-500 border-emerald-400', nameKey: 'settings.theme.paletteEmerald' },
     { key: 'blue', colorClass: 'bg-sky-500 border-sky-400', nameKey: 'settings.theme.paletteBlue' },
     { key: 'purple', colorClass: 'bg-purple-500 border-purple-400', nameKey: 'settings.theme.palettePurple' },
@@ -42,7 +43,7 @@ export function SettingsThemeCard() {
                 type="button"
                 data-testid={`theme-palette-${palette.key}`}
                 onClick={() => setThemePalette(palette.key)}
-                title={t(palette.nameKey as any)}
+                title={t(palette.nameKey)}
                 className={`w-8 h-8 rounded-full cursor-pointer flex items-center justify-center border-2 transition-all relative hover:scale-110 active:scale-95 ${palette.colorClass} ${
                   isActive
                     ? 'ring-2 ring-brand-primary ring-offset-2 ring-offset-surface-low scale-105 border-white'

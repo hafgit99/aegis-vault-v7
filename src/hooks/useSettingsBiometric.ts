@@ -17,12 +17,13 @@ import { withActiveAccountSecretKey, withActiveBackupPassword } from '../lib/vau
 import { isAndroidAutofillEnabled, isAndroidAutofillSupported, openAndroidAutofillSettings } from '../lib/androidAutofill';
 import type { TFunction } from '../i18n/LanguageContext';
 
-function getBiometricSettingsErrorMessage(err: any, t: TFunction): string {
-  if (err?.name === "SecurityError" || err?.name === "NotAllowedError") {
+function getBiometricSettingsErrorMessage(err: unknown, t: TFunction): string {
+  const errorObj = err && typeof err === 'object' ? (err as { name?: string; code?: string; message?: string }) : null;
+  if (errorObj?.name === "SecurityError" || errorObj?.name === "NotAllowedError") {
     return t('settings.biometric.permissionError');
   }
 
-  switch (err?.code) {
+  switch (errorObj?.code) {
     case 'biometric.unsupported':
       return t('settings.biometric.unsupportedError');
     case 'biometric.registrationCancelled':
@@ -32,7 +33,7 @@ function getBiometricSettingsErrorMessage(err: any, t: TFunction): string {
     case 'biometric.integrityMismatch':
       return t('settings.biometric.genericError');
     default:
-      return err?.message || t('settings.biometric.registerFailed');
+      return (errorObj?.message && errorObj.message.trim()) || (err instanceof Error && err.message.trim()) || t('settings.biometric.registerFailed');
   }
 }
 
@@ -72,7 +73,7 @@ export function useSettingsBiometric() {
       setIsPasswordPromptOpen(false);
       setBiometricEnabled(true);
       setBiometricSuccess(t('settings.biometric.enabledSuccess'));
-    } catch (err: any) {
+    } catch (err: unknown) {
       setPasswordPromptError(getBiometricSettingsErrorMessage(err, t));
     } finally {
       setIsConfirmingBiometricPassword(false);
@@ -89,8 +90,9 @@ export function useSettingsBiometric() {
         disableBiometric();
         setBiometricEnabled(false);
         setBiometricSuccess(t('settings.biometric.disabledSuccess'));
-      } catch (err: any) {
-        setBiometricError(err?.message || t('settings.biometric.genericError'));
+      } catch (err: unknown) {
+        const message = (err instanceof Error && err.message.trim()) ? err.message : t('settings.biometric.genericError');
+        setBiometricError(message);
       } finally {
         setBiometricLoading(false);
       }
@@ -122,7 +124,7 @@ export function useSettingsBiometric() {
           setPasswordPromptError(null);
           setIsPasswordPromptOpen(true);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         setBiometricError(getBiometricSettingsErrorMessage(err, t));
       }
     }
