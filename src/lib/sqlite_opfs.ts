@@ -304,16 +304,9 @@ class SQLiteOPFS implements VaultStorageRepository {
 
       // Use createWritable if supported (standard), or fallback to alternative file APIs
       if ('createWritable' in fileHandle) {
-        const writable = await (fileHandle as any).createWritable();
+        const writable = await (fileHandle as FileSystemFileHandle & { createWritable(): Promise<FileSystemWritableFileStream> }).createWritable();
         await writable.write(payloadStr);
         await writable.close();
-      } else {
-        // Alternative file system writer standard for Safari / some Mobile browsers
-        const accessHandle = await (fileHandle as any).createWritable ? await (fileHandle as any).createWritable() : null;
-        if (accessHandle) {
-          await accessHandle.write(payloadStr);
-          await accessHandle.close();
-        }
       }
     })();
 
@@ -495,7 +488,7 @@ class SQLiteOPFS implements VaultStorageRepository {
     await this.saveToPersistentStorage();
   }
 
-  public async setupMasterWithHash(argonHash: string, salt: string, kdfParams: any): Promise<void> {
+  public async setupMasterWithHash(argonHash: string, salt: string, kdfParams?: Partial<Argon2idOptions>): Promise<void> {
     await this.hydrate();
     this.state.encryption_salt = salt;
     this.state.kdfParams = kdfParams;
@@ -589,7 +582,7 @@ class SQLiteOPFS implements VaultStorageRepository {
   public async changeMasterPasswordWithHash(
     newArgonHash: string,
     newSalt: string,
-    kdfParams: any,
+    kdfParams: Partial<Argon2idOptions> | undefined,
     oldVaultKey: Uint8Array,
     newVaultKey: Uint8Array,
   ): Promise<void> {
@@ -728,7 +721,7 @@ class SQLiteOPFS implements VaultStorageRepository {
 
       if (shouldMigrateStaticSalt || shouldMigrateKdf) {
         logSecurityEvent(
-          'security.legacyCryptoWarning' as any,
+          securityEventCodes.securityLegacyCryptoWarning,
           'Legacy SQLite database encryption parameters detected. Migrating to secure Argon2id (64 MiB, 4 iterations).',
           'warning'
         );
@@ -760,7 +753,7 @@ class SQLiteOPFS implements VaultStorageRepository {
             } else {
               if (isLegacyRow) {
                 logSecurityEvent(
-                  'security.legacyCryptoWarning' as any,
+                  securityEventCodes.securityLegacyCryptoWarning,
                   'Legacy custom-crypto SQLite rows are no longer decrypted in this build. Re-export from an earlier migration build first.',
                   'critical'
                 );
@@ -809,7 +802,7 @@ class SQLiteOPFS implements VaultStorageRepository {
             title: '[encrypted: aes-256-gcm]',
             username: '[encrypted: aes-256-gcm]',
             url: '',
-            category: row.category as any,
+            category: (row.category as VaultItem['category']) || 'login',
             createdAt: row.created_at,
             updatedAt: row.updated_at,
             favorite: row.favorite === 1,
@@ -830,7 +823,7 @@ class SQLiteOPFS implements VaultStorageRepository {
         ...item,
         id: row.id,
         title: item.title || 'Imported Record',
-        category: row.category as any,
+        category: (row.category as VaultItem['category']) || 'login',
         favorite: row.favorite === 1,
         deleted: row.deleted === 1,
         deletedAt: row.deleted_at || undefined,
@@ -1030,18 +1023,18 @@ class SQLiteOPFS implements VaultStorageRepository {
                 item: { ...item, id: row.id }
               });
 
-              return row;
+              return { __failed: false, row };
             } catch (e) {
               // Security fix Y7: Track failed items instead of silently dropping them.
               console.error('Encryption error for item:', item.id, e);
-              return { __failed: true, id: item.id, error: e instanceof Error ? e.message : String(e) } as any;
+              return { __failed: true, id: item.id, error: e instanceof Error ? e.message : String(e) };
             }
           })
         );
 
         for (const row of chunkRows) {
           if (row && !row.__failed) {
-            allRows.push(row);
+            allRows.push(row.row);
           } else if (row && row.__failed) {
             failedItems.push({ id: row.id, error: row.error });
           }
