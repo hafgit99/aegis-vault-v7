@@ -31,7 +31,13 @@ interface UseSettingsBackupImportOptions {
 }
 
 function getBackupDecryptErrorMessage(err: unknown, t: TFunction): string {
-  const errorObj = err && typeof err === 'object' ? (err as { code?: string; message?: string }) : null;
+  const errorObj = err && typeof err === 'object' ? (err as { code?: string; message?: string; name?: string }) : null;
+  const isWebCryptoError = errorObj?.name === 'OperationError' || 
+    String(errorObj?.message ?? '').includes('operation-specific') ||
+    String(err ?? '').includes('OperationError');
+  if (isWebCryptoError) {
+    return t('settings.import.decryptErrorIntegrity');
+  }
   switch (errorObj?.code) {
     case 'secureBackup.invalidJson':
     case 'legacyCrypto.invalidJson':
@@ -61,7 +67,9 @@ function getBackupDecryptErrorMessage(err: unknown, t: TFunction): string {
     case 'validation.attachmentCorruptData':
       return t('settings.import.errorAttachmentCorrupt', 'Attachment data is corrupt.');
     default:
-      return errorObj?.message || (err instanceof Error ? err.message : t('settings.import.decryptErrorFallback'));
+      return (typeof errorObj?.message === 'string' && errorObj.message.trim().length > 0)
+        ? errorObj.message
+        : t('settings.import.decryptErrorFallback');
   }
 }
 
@@ -452,8 +460,10 @@ export function useSettingsBackupImport({
   };
 
   // Decrypts and unpacks encrypted .aegis uploads
-  const handleDecryptAndImport = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleDecryptAndImport = async (e?: React.SyntheticEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
 
     if (!decryptPasswordInput) {
       setImportState(prev => ({

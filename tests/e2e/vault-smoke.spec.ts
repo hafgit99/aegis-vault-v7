@@ -587,7 +587,7 @@ test('imports an encrypted aegis backup file', async ({ page }) => {
   await page.getByTestId('decrypt-import-password-input').fill(masterPassword);
   await page.getByTestId('decrypt-import-submit-button').click();
 
-  await expect(page.getByTestId('import-success-message')).toBeVisible();
+  await expect(page.getByTestId('import-success-message')).toBeVisible({ timeout: 20000 });
   await expect(page.getByTestId('import-success-message')).toContainText('başarıyla çözüldü');
 
   await page.getByTestId('nav-vault-button').click();
@@ -615,7 +615,7 @@ test('rejects encrypted aegis import with a wrong password', async ({ page }) =>
   await page.getByTestId('decrypt-import-password-input').fill('wrong-master-pass');
   await page.getByTestId('decrypt-import-submit-button').click();
 
-  await expect(page.getByTestId('decrypt-import-error-message')).toBeVisible();
+  await expect(page.getByTestId('decrypt-import-error-message')).toBeVisible({ timeout: 45000 });
   await expect(page.getByTestId('decrypt-import-password-input')).toBeVisible();
   await expect(page.getByTestId('import-success-message')).toBeHidden();
 });

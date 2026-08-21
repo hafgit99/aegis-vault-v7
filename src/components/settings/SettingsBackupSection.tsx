@@ -33,7 +33,7 @@ interface SettingsBackupSectionProps {
   };
   decryptPasswordInput: string;
   setDecryptPasswordInput: (val: string) => void;
-  handleDecryptAndImport: (e: React.FormEvent) => void;
+  handleDecryptAndImport: (e: React.SyntheticEvent) => void;
   resetImportFlowState: () => void;
   onDragOver: (e: React.DragEvent) => void;
   onDragLeave: () => void;
@@ -259,7 +259,6 @@ export function SettingsBackupSection({
                   onChange={(e) => setDecryptPasswordInput(e.target.value)}
                   className="w-full bg-surface-lowest border border-outline-variant/30 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-brand-primary text-on-surface font-mono"
                   placeholder={t('settings.import.decryptPlaceholder')}
-                  required
                 />
               </div>
 
@@ -277,6 +276,7 @@ export function SettingsBackupSection({
                 <button
                   data-testid="decrypt-import-submit-button"
                   type="submit"
+                  onClick={handleDecryptAndImport}
                   className="flex-1 py-2 bg-brand-primary text-brand-on-primary font-bold text-xs rounded-lg hover:brightness-110 active:scale-95 transition-all"
                 >
                   {t('settings.import.decryptSubmit')}
