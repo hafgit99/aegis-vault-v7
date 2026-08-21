@@ -4,6 +4,7 @@
 
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type * as vaultSessionModule from '../lib/vaultSession';
 import { useSettingsSync } from './useSettingsSync';
 import * as syncModule from '../lib/sync';
 import * as storageModule from '../lib/storage';
@@ -11,7 +12,7 @@ import { LanguageProvider } from '../i18n/LanguageContext';
 import React from 'react';
 
 vi.mock('../lib/sync', async () => {
-  const actual = await vi.importActual<typeof import('../lib/sync')>('../lib/sync');
+  const actual = await vi.importActual<typeof syncModule>('../lib/sync');
   return {
     ...actual,
     getLastSyncTime: vi.fn(() => '2026-01-01T00:00:00.000Z'),
@@ -43,7 +44,7 @@ vi.mock('../lib/storage', () => ({
 }));
 
 vi.mock('../lib/vaultSession', async () => {
-  const actual = await vi.importActual<typeof import('../lib/vaultSession')>('../lib/vaultSession');
+  const actual = await vi.importActual<typeof vaultSessionModule>('../lib/vaultSession');
   return {
     ...actual,
     withActiveBackupPassword: vi.fn((cb) => cb('mock-password-123')),

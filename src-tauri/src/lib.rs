@@ -819,10 +819,9 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 
-    app.run(|_app_handle, event| match event {
-        tauri::RunEvent::ExitRequested { .. } => {
+    app.run(|_app_handle, event| {
+        if let tauri::RunEvent::ExitRequested { .. } = event {
             std::process::exit(0);
         }
-        _ => {}
     });
 }

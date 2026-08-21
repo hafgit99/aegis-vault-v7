@@ -12,7 +12,7 @@ import React from 'react';
 import type { VaultItem } from '../types';
 
 vi.mock('../lib/passkey', async () => {
-  const actual = await vi.importActual<typeof import('../lib/passkey')>('../lib/passkey');
+  const actual = await vi.importActual<typeof passkeyModule>('../lib/passkey');
   return {
     ...actual,
     registerPasskey: vi.fn(),
@@ -23,7 +23,7 @@ vi.mock('../lib/passkey', async () => {
 });
 
 vi.mock('../lib/storage', async () => {
-  const actual = await vi.importActual<typeof import('../lib/storage')>('../lib/storage');
+  const actual = await vi.importActual<typeof storageModule>('../lib/storage');
   return {
     ...actual,
     saveVaultItem: vi.fn(),

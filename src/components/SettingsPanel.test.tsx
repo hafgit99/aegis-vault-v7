@@ -5,6 +5,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type * as encryptionModule from '../lib/encryption';
 import { decryptDataWithPasswordSecure, encryptDataWithPasswordSecure } from '../lib/encryption';
 import { isNativeFileDialogSupported, openDesktopImportFile, saveDesktopExportFile } from '../lib/desktopFiles';
 import { isAndroidAutofillSupported, openAndroidAutofillSettings } from '../lib/androidAutofill';
@@ -23,11 +24,21 @@ const vaultItems: VaultItem[] = [
     title: 'GitHub',
     username: 'hafgit99',
     password: 'secret-password',
-    url: 'https://github.com',
-    notes: 'primary account',
-    createdAt: '2026-06-10',
-    updatedAt: '2026-06-10',
+    url: 'https://github.com/login',
     category: 'login',
+    createdAt: '2026-01-01',
+    updatedAt: '2026-01-01',
+    favorite: false,
+  },
+  {
+    id: 'mail',
+    title: 'ProtonMail',
+    username: 'hafgit99@proton.me',
+    password: 'secret-password',
+    url: 'https://mail.proton.me',
+    category: 'login',
+    createdAt: '2026-01-02',
+    updatedAt: '2026-01-02',
     favorite: true,
   },
 ];
@@ -40,20 +51,20 @@ vi.mock('@tauri-apps/api/core', () => ({
 
 vi.mock('../lib/storage', () => ({
   changeMasterPassword: vi.fn(),
-  deleteVaultItem: vi.fn(async () => []),
-  getRememberedAccountSecretKey: vi.fn(() => null),
+  deleteVaultItem: vi.fn(async () => vaultItems),
+  getRememberedAccountSecretKey: vi.fn(() => 'EG7-1111-2222-3333-4444'),
   getVaultItems: vi.fn(async () => vaultItems),
-  isAccountSecretKeyRequired: vi.fn(() => true),
+  isAccountSecretKeyRequired: vi.fn(() => false),
   migrateActiveVaultStorageToWaSqlite: vi.fn(),
   resetSystem: vi.fn(),
-  reseedDemoData: vi.fn(async () => vaultItems),
+  reseedDemoData: vi.fn(),
   saveVaultItem: vi.fn(async () => vaultItems),
   saveVaultItems: vi.fn(async () => vaultItems),
   verifyMasterPassword: vi.fn(),
 }));
 
 vi.mock('../lib/encryption', async () => {
-  const actual = await vi.importActual<typeof import('../lib/encryption')>('../lib/encryption');
+  const actual = await vi.importActual<typeof encryptionModule>('../lib/encryption');
 
   return {
     ...actual,

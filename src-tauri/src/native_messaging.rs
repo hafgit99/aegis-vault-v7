@@ -62,20 +62,6 @@ pub struct ExtensionCredentialCache {
     pub expires_at_epoch_ms: u64,
 }
 
-pub struct ExtensionState {
-    pub credentials: Arc<Mutex<Option<ExtensionCredentialCache>>>,
-    pub pairing_token: String,
-}
-
-impl ExtensionState {
-    pub fn new(token: String) -> Self {
-        Self {
-            credentials: Arc::new(Mutex::new(None)),
-            pairing_token: token,
-        }
-    }
-}
-
 pub fn get_app_data_dir() -> Option<PathBuf> {
     #[cfg(target_os = "windows")]
     {
@@ -119,15 +105,17 @@ fn is_pairing_token_valid(received_token: &str, pairing_token: &str) -> bool {
 }
 
 pub fn write_pairing_token_file(path: &PathBuf, token: &str) -> io::Result<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+
     #[cfg(unix)]
     {
-        use std::fs::OpenOptions;
         use std::os::unix::fs::OpenOptionsExt;
-
-        let mut file = OpenOptions::new()
+        let mut file = fs::OpenOptions::new()
+            .write(true)
             .create(true)
             .truncate(true)
-            .write(true)
             .mode(0o600)
             .open(path)?;
         file.write_all(token.as_bytes())?;
@@ -142,7 +130,7 @@ pub fn write_pairing_token_file(path: &PathBuf, token: &str) -> io::Result<()> {
             if let Ok(username) = std::env::var("USERNAME") {
                 let user_grant = format!("{}:(F)", username);
                 let output = std::process::Command::new("icacls")
-                    .args(&[path_str, "/inheritance:r", "/grant:r", &user_grant])
+                    .args([path_str, "/inheritance:r", "/grant:r", &user_grant])
                     .output();
                 if let Ok(out) = output {
                     if !out.status.success() {

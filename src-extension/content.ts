@@ -1173,8 +1173,26 @@ export function generateSecurePassword(length = 16): string {
   return secureShuffle(passwordChars).join('');
 }
 
+export interface CapturedCredentialPayload {
+  title?: string;
+  username?: string;
+  password?: string;
+  url?: string;
+  category?: string;
+}
+
+interface VaultQueryCredential {
+  id?: string;
+  title?: string;
+  username?: string;
+  password?: string;
+  url?: string;
+  category?: string;
+  favorite?: boolean;
+}
+
 // Show premium glassmorphic top prompt banner inside isolated Shadow DOM
-function showSavePromptBanner(cred: any) {
+function showSavePromptBanner(cred: CapturedCredentialPayload) {
   const root = getAegisShadowRoot();
   if (root.querySelector('.aegis-banner')) return;
 
@@ -1520,7 +1538,7 @@ setTimeout(() => {
             { action: 'query_credentials', url: window.location.href },
             (dbResponse) => {
               const matchingList = (dbResponse && dbResponse.credentials) ? dbResponse.credentials : [];
-              const exists = matchingList.some((item: any) => {
+              const exists = matchingList.some((item: VaultQueryCredential) => {
                 const sameUser = !cred.username || !item.username || item.username.toLowerCase() === cred.username.toLowerCase();
                 const samePass = Boolean(item.password && cred.password && item.password === cred.password);
                 return sameUser && samePass;

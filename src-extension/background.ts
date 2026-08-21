@@ -2,26 +2,35 @@ import { extractRegistrableDomainFromUrl } from './psl-utils';
 
 const HOST_NAME = 'com.hafgit99.aegisvault7';
 
+export interface ExtensionDraftCredential {
+  title?: string;
+  username?: string;
+  password?: string;
+  url?: string;
+  category?: string;
+}
+
 interface NativeRequest {
   action: string;
   url?: string;
+  credential?: ExtensionDraftCredential;
 }
 
-let pendingCredential: any = null;
-let pendingTimer: any = null;
+let pendingCredential: ExtensionDraftCredential | null = null;
+let pendingTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingOrigin: string | null = null;
 
-let draftCredentials: { [tabId: number]: any } = {};
-let draftCredentialTimers: { [tabId: number]: any } = {};
+let draftCredentials: { [tabId: number]: ExtensionDraftCredential | null } = {};
+let draftCredentialTimers: { [tabId: number]: ReturnType<typeof setTimeout> } = {};
 
-function wipeObjectCredentials(obj: any) {
+function wipeObjectCredentials(obj: ExtensionDraftCredential | null | undefined) {
   if (obj && typeof obj === 'object') {
     if (typeof obj.password === 'string') obj.password = '';
     if (typeof obj.username === 'string') obj.username = '';
   }
 }
 
-function setDraftCredential(tabId: number, cred: any) {
+function setDraftCredential(tabId: number, cred: ExtensionDraftCredential | null) {
   if (draftCredentials[tabId]) {
     wipeObjectCredentials(draftCredentials[tabId]);
   }
@@ -61,7 +70,7 @@ function isValidTabUrl(url?: string): boolean {
   return url.startsWith('http://') || url.startsWith('https://');
 }
 
-function setPendingCredential(cred: any, originUrl?: string) {
+function setPendingCredential(cred: ExtensionDraftCredential | null, originUrl?: string) {
   if (pendingCredential) {
     wipeObjectCredentials(pendingCredential);
   }

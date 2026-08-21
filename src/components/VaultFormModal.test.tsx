@@ -5,6 +5,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type * as securityModule from '../lib/security';
 import type { VaultItem } from '../types';
 import VaultFormModal from './VaultFormModal';
 import { getAttachmentBlob, saveAttachment } from '../lib/attachments';
@@ -17,7 +18,7 @@ vi.mock('../lib/attachments', () => ({
 }));
 
 vi.mock('../lib/security', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../lib/security')>();
+  const actual = await importOriginal<typeof securityModule>();
   return {
     ...actual,
     generatePassword: vi.fn(() => 'Generated-Password-123!'),
