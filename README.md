@@ -6,7 +6,6 @@
 
 *Enterprise-grade local cryptographic security for Desktop (Windows, Linux, macOS), Android, and WebExtensions.*
 
-[![CI Pipeline](https://github.com/kodbest/AegisV7/actions/workflows/ci.yml/badge.svg)](https://github.com/kodbest/AegisV7/actions)
 ![Security Score](https://img.shields.io/badge/Security_Audit-92%2F100_(A%2B)-brightgreen?style=flat-square&logo=shield)
 ![Tests](https://img.shields.io/badge/Unit_Tests-1487_Passed-success?style=flat-square&logo=vitest)
 ![Fuzz Tests](https://img.shields.io/badge/Fuzz_Tests-33_Passed-success?style=flat-square&logo=vitest)
