@@ -946,6 +946,7 @@ export const de = {
   'share.scanHelp': 'Scannen Sie diesen QR-Code mit einem Gerät in der Nähe, um diese Anmeldeinformationen sicher zu importieren.',
   'share.securityTitle': 'Zero-Knowledge-Sicherheit',
   'share.securityDesc': 'Verschlüsselungsschlüssel werden in den URL-Hash eingebettet und verlassen niemals Ihr Gerät. Es werden keine Daten auf Servern gespeichert.',
+  'share.securityWarningDetail': 'Jeder mit diesem Link kann diese Anmeldedaten entschlüsseln und einsehen. Teilen Sie sie nur über sichere, Ende-zu-Ende-verschlüsselte Kanäle und schließen Sie den Tab nach der Verwendung.',
   'share.copied': 'Kopiert!',
   'share.copy': 'Link kopieren',
   'share.close': 'Schließen',

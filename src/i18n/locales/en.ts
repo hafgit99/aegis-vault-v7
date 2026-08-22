@@ -950,6 +950,7 @@ export const en = {
     'share.scanHelp': 'Scan this QR code with a nearby device to securely import this credential.',
     'share.securityTitle': 'Zero-Knowledge Security',
     'share.securityDesc': 'Encryption keys are embedded in the URL hash and never leave your device. No data is stored on servers.',
+    'share.securityWarningDetail': 'Anyone with this link can decrypt and view this credential. Share only via secure, end-to-end encrypted channels and close the tab after use.',
     'share.copied': 'Copied!',
     'share.copy': 'Copy Link',
     'share.close': 'Close',

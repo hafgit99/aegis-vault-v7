@@ -946,6 +946,7 @@ export const ja = {
   'share.scanHelp': 'この資格情報を安全にインポートするには、近くのデバイスでこの QR コードをスキャンします。',
   'share.securityTitle': 'ゼロ知識セキュリティ',
   'share.securityDesc': '暗号化キーは URL ハッシュに埋め込まれており、デバイスから離れることはありません。データはサーバーに保存されません。',
+  'share.securityWarningDetail': 'このリンクを持つすべてのユーザーがこの認証情報を復号して閲覧できます。安全なエンドツーエンド暗号化チャネルでのみ共有し、使用後はタブを閉じてください。',
   'share.copied': 'コピーしました！',
   'share.copy': 'リンクをコピー',
   'share.close': '近い',

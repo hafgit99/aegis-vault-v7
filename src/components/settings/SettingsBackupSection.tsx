@@ -110,6 +110,14 @@ export function SettingsBackupSection({
                   type="password"
                   value={customBackupPassword}
                   onChange={(e) => setCustomBackupPassword(e.target.value)}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  data-bwignore="true"
+                  data-form-type="other"
                   className="w-full bg-surface-lowest border border-outline-variant/30 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-tertiary text-on-surface"
                   placeholder={t('settings.export.passwordPlaceholder')}
                   minLength={6}
@@ -257,6 +265,14 @@ export function SettingsBackupSection({
                   type="password"
                   value={decryptPasswordInput}
                   onChange={(e) => setDecryptPasswordInput(e.target.value)}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  data-bwignore="true"
+                  data-form-type="other"
                   className="w-full bg-surface-lowest border border-outline-variant/30 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-brand-primary text-on-surface font-mono"
                   placeholder={t('settings.import.decryptPlaceholder')}
                 />

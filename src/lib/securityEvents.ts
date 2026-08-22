@@ -27,6 +27,7 @@ export const securityEventCodes = {
   androidRuntimeRiskDetected: 'android.runtime.riskDetected',
   assetIntegrityFailed: 'application.assetIntegrity.failed',
   securityLegacyCryptoWarning: 'security.legacyCryptoWarning',
+  cspViolation: 'security.cspViolation',
 } as const;
 
 export type SecurityEventCode = (typeof securityEventCodes)[keyof typeof securityEventCodes];

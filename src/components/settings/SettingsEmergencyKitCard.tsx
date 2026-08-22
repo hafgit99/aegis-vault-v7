@@ -50,7 +50,13 @@ export function SettingsEmergencyKitCard({
               className="w-full bg-surface-lowest border border-outline-variant/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 text-on-surface"
               placeholder={t('settings.emergencyKit.secretKeyPlaceholder')}
               autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
               spellCheck={false}
+              data-lpignore="true"
+              data-1p-ignore="true"
+              data-bwignore="true"
+              data-form-type="other"
             />
             <p className="mt-1.5 text-[11px] text-on-surface-variant leading-relaxed">
               {t('settings.emergencyKit.rememberedHint')}

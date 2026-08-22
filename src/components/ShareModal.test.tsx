@@ -112,4 +112,23 @@ describe('ShareModal', () => {
 
     consoleError.mockRestore();
   });
+
+  it('renders prominent security warning and hardens share URL input', async () => {
+    render(
+      <LanguageProvider>
+        <ShareModal isOpen={true} onClose={vi.fn()} item={mockItem} />
+      </LanguageProvider>,
+    );
+
+    const input = screen.getByTestId('share-modal-url-input');
+    expect(input.getAttribute('autocomplete')).toBe('off');
+    expect(input.getAttribute('data-lpignore')).toBe('true');
+    expect(input.getAttribute('data-1p-ignore')).toBe('true');
+    expect(input.getAttribute('data-bwignore')).toBe('true');
+    expect(input.getAttribute('spellcheck')).toBe('false');
+
+    await waitFor(() => {
+      expect(screen.getByText(/Zero-Knowledge|Sıfır Bilgi/i)).toBeTruthy();
+    });
+  });
 });

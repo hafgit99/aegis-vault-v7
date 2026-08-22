@@ -78,6 +78,14 @@ export function VaultFormLoginFields({
               type={isPasswordVisible ? 'text' : 'password'}
               value={password}
               onChange={(e) => onPasswordChange(e.target.value)}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              data-lpignore="true"
+              data-1p-ignore="true"
+              data-bwignore="true"
+              data-form-type="other"
               className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 rounded-xl pl-9 pr-20 py-2.5 text-sm focus:ring-1 focus:ring-brand-primary/30 focus:outline-none text-on-surface font-mono"
               placeholder={t('vaultForm.login.passwordPlaceholder')}
             />

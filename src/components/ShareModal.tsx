@@ -157,12 +157,15 @@ export default function ShareModal({ isOpen, onClose, item }: ShareModalProps) {
           {/* Security Banner */}
           <div className="p-3 bg-brand-primary/5 border border-brand-primary/15 rounded-xl flex items-start gap-2.5 text-left">
             <AlertTriangle className="w-4.5 h-4.5 text-brand-primary shrink-0 mt-0.5" />
-            <div className="space-y-0.5">
+            <div className="space-y-1">
               <h4 className="text-[10px] font-bold text-brand-primary uppercase tracking-wider">
                 {t('share.securityTitle')}
               </h4>
               <p className="text-[9px] text-on-surface-variant leading-relaxed">
                 {t('share.securityDesc')}
+              </p>
+              <p className="text-[9px] text-amber-400/90 font-medium leading-relaxed pt-0.5">
+                {t('share.securityWarningDetail')}
               </p>
             </div>
           </div>
@@ -188,6 +191,14 @@ export default function ShareModal({ isOpen, onClose, item }: ShareModalProps) {
               data-testid="share-modal-url-input"
               type="text"
               readOnly
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              data-lpignore="true"
+              data-1p-ignore="true"
+              data-bwignore="true"
+              data-form-type="other"
               value={shareUrl}
               onClick={(e) => (e.target as HTMLInputElement).select()}
               className="flex-1 bg-[#161816] border border-outline-variant/20 rounded-xl px-3 py-2 text-[10px] text-on-surface-variant font-mono focus:outline-none focus:ring-1 focus:ring-brand-primary/30"

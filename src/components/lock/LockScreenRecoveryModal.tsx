@@ -316,6 +316,14 @@ export function LockScreenRecoveryModal({
                 type="password"
                 value={recoveryNewPassword}
                 onChange={(e) => setRecoveryNewPassword(e.target.value)}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                data-lpignore="true"
+                data-1p-ignore="true"
+                data-bwignore="true"
+                data-form-type="other"
                 className="w-full bg-surface-lowest border border-outline-variant/20 rounded-xl px-4 py-3 text-sm text-on-surface font-mono"
                 placeholder="••••••••"
                 required
@@ -331,6 +339,14 @@ export function LockScreenRecoveryModal({
                 type="password"
                 value={recoveryConfirmPassword}
                 onChange={(e) => setRecoveryConfirmPassword(e.target.value)}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                data-lpignore="true"
+                data-1p-ignore="true"
+                data-bwignore="true"
+                data-form-type="other"
                 className="w-full bg-surface-lowest border border-outline-variant/20 rounded-xl px-4 py-3 text-sm text-on-surface font-mono"
                 placeholder="••••••••"
                 required

@@ -946,6 +946,7 @@ export const ko = {
   'share.scanHelp': '이 자격 증명을 안전하게 가져오려면 근처 장치로 이 QR 코드를 스캔하세요.',
   'share.securityTitle': '영지식 보안',
   'share.securityDesc': '암호화 키는 URL 해시에 내장되어 있으며 장치를 떠나지 않습니다. 서버에는 데이터가 저장되지 않습니다.',
+  'share.securityWarningDetail': '이 링크를 가진 사람은 누구나 이 자격 증명을 복호화하여 볼 수 있습니다. 보안이 유지되는 종단 간 암호화 채널을 통해서만 공유하고 사용 후에는 탭을 닫으세요.',
   'share.copied': '복사되었습니다!',
   'share.copy': '링크 복사',
   'share.close': '닫다',

@@ -56,6 +56,12 @@ import { LegalTermsModal } from './lock/LegalTermsModal';
 import { PasswordStrengthMeter } from './common/PasswordStrengthMeter';
 import type { TranslationKey } from '../i18n/translations';
 
+import {
+  getIndexedDbItemSync,
+  setIndexedDbItemSync,
+  removeIndexedDbItemSync,
+} from '../lib/indexedDbStorage';
+
 const LOCKOUT_STORAGE_KEY = 'aegis_lockout_state';
 const MAX_LOCKOUT_MS = 5 * 60 * 1000;
 
@@ -66,7 +72,7 @@ interface LockoutState {
 
 function readLockoutState(): LockoutState {
   try {
-    const raw = localStorage.getItem(LOCKOUT_STORAGE_KEY);
+    const raw = getIndexedDbItemSync(LOCKOUT_STORAGE_KEY) || localStorage.getItem(LOCKOUT_STORAGE_KEY);
     if (!raw) return { failedAttempts: 0, lockedUntil: 0 };
     const parsed = JSON.parse(raw);
     if (typeof parsed.failedAttempts === 'number' && typeof parsed.lockedUntil === 'number') {
@@ -79,14 +85,25 @@ function readLockoutState(): LockoutState {
 }
 
 function writeLockoutState(state: LockoutState): void {
+  const serialized = JSON.stringify(state);
   try {
-    localStorage.setItem(LOCKOUT_STORAGE_KEY, JSON.stringify(state));
+    setIndexedDbItemSync(LOCKOUT_STORAGE_KEY, serialized);
+  } catch {
+    // Fall back or ignore
+  }
+  try {
+    localStorage.setItem(LOCKOUT_STORAGE_KEY, serialized);
   } catch {
     // Local storage full or unavailable; fail open for user
   }
 }
 
 function clearLockoutState(): void {
+  try {
+    removeIndexedDbItemSync(LOCKOUT_STORAGE_KEY);
+  } catch {
+    // Silently ignore
+  }
   try {
     localStorage.removeItem(LOCKOUT_STORAGE_KEY);
   } catch {
@@ -544,6 +561,14 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
                           }
                         }}
                         onBlur={() => setIsCapsLockOn(false)}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                        spellCheck={false}
+                        data-lpignore="true"
+                        data-1p-ignore="true"
+                        data-bwignore="true"
+                        data-form-type="other"
                         className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 focus:border-brand-primary/30 rounded-xl pl-4 pr-11 py-3 sm:py-3.5 text-on-surface placeholder-on-surface-variant/20 focus:ring-2 focus:ring-brand-primary/10 focus:shadow-[0_0_15px_rgba(220,225,255,0.06)] focus:outline-none transition-all duration-300 text-center tracking-widest text-lg font-mono"
                         placeholder="••••••••"
                         required
@@ -591,6 +616,14 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
                           onKeyDown={(e) => setIsCapsLockOn(e.getModifierState('CapsLock'))}
                           onKeyUp={(e) => setIsCapsLockOn(e.getModifierState('CapsLock'))}
                           onBlur={() => setIsCapsLockOn(false)}
+                          autoComplete="off"
+                          autoCorrect="off"
+                          autoCapitalize="off"
+                          spellCheck={false}
+                          data-lpignore="true"
+                          data-1p-ignore="true"
+                          data-bwignore="true"
+                          data-form-type="other"
                           className="w-full bg-surface-lowest hover:bg-surface-lowest/80 focus:bg-surface-lowest border border-outline-variant/20 focus:border-brand-primary/30 rounded-xl pl-4 pr-11 py-3 sm:py-3.5 text-on-surface placeholder-on-surface-variant/20 focus:ring-2 focus:ring-brand-primary/10 focus:shadow-[0_0_15px_rgba(220,225,255,0.06)] focus:outline-none transition-all duration-300 text-center tracking-widest text-lg font-mono"
                           placeholder="••••••••"
                           required

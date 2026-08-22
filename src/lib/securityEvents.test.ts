@@ -102,4 +102,22 @@ describe('security event taxonomy', () => {
       'A secure operation could not be completed. Please try again or restart Aegis Vault.',
     );
   });
+
+  it('supports cspViolation security event code', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    logSecurityEvent(
+      securityEventCodes.cspViolation,
+      'CSP violation: script-src blocked eval',
+      'warning',
+      { violatedDirective: 'script-src', blockedURI: 'eval' },
+    );
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: securityEventCodes.cspViolation,
+        severity: 'warning',
+      }),
+    );
+  });
 });

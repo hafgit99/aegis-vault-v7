@@ -21,6 +21,7 @@ import {
   setupMasterPasswordWithSecretKey,
   verifyMasterPassword,
 } from '../lib/storage';
+import { clearAllSetupFlagsSync, removeIndexedDbItemSync } from '../lib/indexedDbStorage';
 import LockScreen from './LockScreen';
 
 vi.mock('../lib/storage', () => ({
@@ -69,6 +70,7 @@ afterEach(() => {
   vi.useRealTimers();
   cleanup();
   window.localStorage.clear();
+  clearAllSetupFlagsSync();
   vi.clearAllMocks();
 });
 
@@ -274,6 +276,7 @@ describe('LockScreen', () => {
     });
 
     window.localStorage.removeItem('aegis_lockout_state');
+    removeIndexedDbItemSync('aegis_lockout_state');
 
     fireEvent.change(password, { target: { value: 'correct-pass' } });
     fireEvent.submit(document.querySelector('form') as HTMLFormElement);
@@ -515,5 +518,34 @@ describe('LockScreen', () => {
 
     const resetConfirmBtn = screen.getByTestId('lock-reset-confirm-button');
     fireEvent.click(resetConfirmBtn);
+  });
+
+  it('verifies hardened security attributes on password and secret key inputs', () => {
+    vi.mocked(isMasterPasswordSet).mockReturnValue(false);
+    vi.mocked(isAccountSecretKeyRequired).mockReturnValue(true);
+
+    render(
+      <LanguageProvider>
+        <LockScreen onUnlock={vi.fn()} />
+      </LanguageProvider>,
+    );
+
+    const passInput = screen.getByTestId('lock-password-input');
+    expect(passInput.getAttribute('autocomplete')).toBe('off');
+    expect(passInput.getAttribute('autocorrect')).toBe('off');
+    expect(passInput.getAttribute('autocapitalize')).toBe('off');
+    expect(passInput.getAttribute('spellcheck')).toBe('false');
+    expect(passInput.getAttribute('data-lpignore')).toBe('true');
+    expect(passInput.getAttribute('data-1p-ignore')).toBe('true');
+    expect(passInput.getAttribute('data-bwignore')).toBe('true');
+    expect(passInput.getAttribute('data-form-type')).toBe('other');
+
+    const confirmInput = screen.getByTestId('lock-confirm-password-input');
+    expect(confirmInput.getAttribute('autocomplete')).toBe('off');
+    expect(confirmInput.getAttribute('data-lpignore')).toBe('true');
+
+    const secretInput = screen.getByTestId('lock-secret-key-input');
+    expect(secretInput.getAttribute('autocomplete')).toBe('off');
+    expect(secretInput.getAttribute('data-lpignore')).toBe('true');
   });
 });

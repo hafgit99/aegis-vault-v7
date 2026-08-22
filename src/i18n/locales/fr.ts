@@ -946,6 +946,7 @@ export const fr = {
   'share.scanHelp': 'Scannez ce code QR avec un appareil à proximité pour importer cet identifiant en toute sécurité.',
   'share.securityTitle': 'Sécurité sans connaissance',
   'share.securityDesc': 'Les clés de cryptage sont intégrées au hachage de l\'URL et ne quittent jamais votre appareil. Aucune donnée n\'est stockée sur les serveurs.',
+  'share.securityWarningDetail': 'Toute personne disposant de ce lien peut déchiffrer et afficher ces informations d\'identification. Partagez uniquement via des canaux sécurisés et chiffrés de bout en bout et fermez l\'onglet après utilisation.',
   'share.copied': 'Copié!',
   'share.copy': 'Copier le lien',
   'share.close': 'Fermer',

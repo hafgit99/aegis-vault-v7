@@ -218,7 +218,7 @@ export async function setupRecoveryKey(masterPassword: string, recoveryWords: st
   // The bundle is cryptographically sealed with AES-256-GCM using an Argon2id key derived from
   // 256-bit BIP-39 recovery entropy, ensuring the master password cannot be retrieved offline
   // without the 24 recovery words.
-  if (!setSecureStorageItem(secureStorageKeys.recoveryKeyBundle ?? RECOVERY_STORAGE_KEY, serialised)) {
+  if (!setSecureStorageItem(secureStorageKeys.recoveryKeyBundle, serialised)) {
     setIndexedDbItemSync(RECOVERY_STORAGE_KEY, serialised);
   }
 }
@@ -252,7 +252,7 @@ export async function recoverWithRecoveryKey(recoveryWords: string[]): Promise<s
 
 function loadRecoveryBundle(): RecoveryKeyBundle | null {
   const raw =
-    getSecureStorageItem(secureStorageKeys.recoveryKeyBundle ?? RECOVERY_STORAGE_KEY) ??
+    getSecureStorageItem(secureStorageKeys.recoveryKeyBundle) ??
     getIndexedDbItemSync(RECOVERY_STORAGE_KEY);
 
   if (!raw) return null;
@@ -278,6 +278,6 @@ export function getRecoveryKeyCreatedAt(): string | null {
 
 /** Removes the recovery key bundle from all storage layers. */
 export function disableRecoveryKey(): void {
-  removeSecureStorageItem(secureStorageKeys.recoveryKeyBundle ?? RECOVERY_STORAGE_KEY);
+  removeSecureStorageItem(secureStorageKeys.recoveryKeyBundle);
   removeIndexedDbItemSync(RECOVERY_STORAGE_KEY);
 }

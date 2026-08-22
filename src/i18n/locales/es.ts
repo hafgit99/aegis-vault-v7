@@ -946,6 +946,7 @@ export const es = {
   'share.scanHelp': 'Escanee este código QR con un dispositivo cercano para importar esta credencial de forma segura.',
   'share.securityTitle': 'Seguridad de conocimiento cero',
   'share.securityDesc': 'Las claves de cifrado están integradas en el hash de la URL y nunca salen de su dispositivo. No se almacenan datos en los servidores.',
+  'share.securityWarningDetail': 'Cualquiera que tenga este enlace puede descifrar y ver estas credenciales. Compártalo solo a través de canales seguros y cifrados de extremo a extremo y cierre la pestaña después de usarlo.',
   'share.copied': '¡Copiado!',
   'share.copy': 'Copiar enlace',
   'share.close': 'Cerca',

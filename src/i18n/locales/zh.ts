@@ -950,6 +950,7 @@ export const zh = {
     'share.scanHelp': '使用附近的设备扫描此二维码即可安全地导入此凭证。',
     'share.securityTitle': '零知识安全',
     'share.securityDesc': '加密密钥嵌入在 URL 哈希中，绝不会离开您的设备。服务器上不存储任何数据。',
+    'share.securityWarningDetail': '拥有此链接的任何人都可以解密并查看此凭据。仅通过安全的端到端加密渠道共享，并在使用后关闭标签页。',
     'share.copied': '已复制！',
     'share.copy': '复制链接',
     'share.close': '关闭',

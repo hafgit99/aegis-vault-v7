@@ -183,4 +183,24 @@ describe('recoveryKey', () => {
     store.set('aegis_recovery_key_bundle', JSON.stringify({ version: 1 }));
     expect(isRecoveryKeySetup()).toBe(false);
   });
+
+  it('handles recovery failure when words derive the wrong key and retrieves creation date', async () => {
+    const words = generateRecoveryWords();
+    await setupRecoveryKey('SecretPass!', words);
+    expect(isRecoveryKeySetup()).toBe(true);
+    expect(typeof getRecoveryKeyCreatedAt()).toBe('string');
+
+    // Create a different set of 24 valid words to trigger decryption error
+    const differentWords = generateRecoveryWords();
+    await expect(recoverWithRecoveryKey(differentWords)).rejects.toThrow('Recovery failed: words do not match');
+  });
+
+  it('supports secure storage when available', async () => {
+    const secureStorageModule = await import('./secureStorage');
+    vi.mocked(secureStorageModule.setSecureStorageItem).mockReturnValueOnce(true);
+
+    const words = generateRecoveryWords();
+    await setupRecoveryKey('SecureVault123!', words);
+    expect(secureStorageModule.setSecureStorageItem).toHaveBeenCalled();
+  });
 });

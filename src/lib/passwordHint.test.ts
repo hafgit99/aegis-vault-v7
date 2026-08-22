@@ -76,6 +76,18 @@ describe('passwordHint', () => {
     expect(isHintDangerouslySimilar('MyPassword123', 'MyPassword124')).toBe(true);
   });
 
+  it('warns when hint contains key password tokens or words', () => {
+    expect(isHintDangerouslySimilar('The word is SecretKey and something else', 'SecretKey99!')).toBe(true);
+    expect(isHintDangerouslySimilar('My Istanbul trip', 'Istanbul2026!')).toBe(true);
+    expect(isHintDangerouslySimilar('Secret', 'My-Secret-Password-2026')).toBe(true);
+    expect(isHintDangerouslySimilar('abcdefghijk', '123-defgh-456')).toBe(true);
+  });
+
+  it('warns when hint is reversed password or contains reversed password', () => {
+    expect(isHintDangerouslySimilar('drowssap', 'password')).toBe(true);
+    expect(isHintDangerouslySimilar('pass-drowssap-word', 'password')).toBe(true);
+  });
+
   it('does not warn for clearly different hint and password', () => {
     const result = setPasswordHint('My cat name + birthday year', 'Tr0ub4dor&3Horse');
     expect(result.warning).toBe(false);

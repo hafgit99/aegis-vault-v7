@@ -39,6 +39,21 @@ export function isHintDangerouslySimilar(hint: string, password: string): boolea
   // Substring containment
   if (p.includes(h) || h.includes(p)) return true;
 
+  // Token/word containment for tokens >= 3 characters
+  const hintTokens = h.split(/[^a-z0-9]+/i).filter((tok) => tok.length >= 3);
+  for (const token of hintTokens) {
+    if (p.includes(token)) return true;
+  }
+
+  const passTokens = p.split(/[^a-z0-9]+/i).filter((tok) => tok.length >= 3);
+  for (const token of passTokens) {
+    if (h.includes(token)) return true;
+  }
+
+  // Reverse string match
+  const reversedH = h.split('').reverse().join('');
+  if (p.includes(reversedH) || reversedH.includes(p)) return true;
+
   // Levenshtein distance (bounded by shorter string length)
   const distance = levenshtein(h, p);
   const maxLen = Math.max(h.length, p.length);
@@ -61,16 +76,14 @@ function levenshtein(a: string, b: string): number {
   for (let i = 1; i <= a.length; i++) {
     curr[0] = i;
     for (let j = 1; j <= b.length; j++) {
-      const charA = a[i - 1];
-      const charB = b[j - 1];
-      const cost = (charA !== undefined && charA === charB) ? 0 : 1;
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
       const prevJ = prev[j] ?? 0;
       const currJMinus1 = curr[j - 1] ?? 0;
       const prevJMinus1 = prev[j - 1] ?? 0;
       curr[j] = Math.min(
-        prevJ + 1,       // deletion
-        currJMinus1 + 1,   // insertion
-        prevJMinus1 + cost, // substitution
+        prevJ + 1,
+        currJMinus1 + 1,
+        prevJMinus1 + cost,
       );
     }
     [prev, curr] = [curr, prev];

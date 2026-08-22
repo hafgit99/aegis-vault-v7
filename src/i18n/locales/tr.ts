@@ -950,6 +950,7 @@ export const tr = {
     'share.scanHelp': 'Bu QR kodu yakındaki bir cihazla taratarak veriyi güvenli bir şekilde içe aktarabilirsiniz.',
     'share.securityTitle': 'Sıfır Bilgi Güvenliği',
     'share.securityDesc': 'Şifreleme anahtarları URL hash kısmındadır ve asla cihazınızdan ayrılmaz. Sunucularda veri saklanmaz.',
+    'share.securityWarningDetail': 'Bu bağlantıya sahip olan herkes bu kaydı çözüp görüntüleyebilir. Yalnızca güvenli, uçtan uca şifreli kanallarla paylaşın ve kullandıktan sonra sekmeyi kapatın.',
     'share.copied': 'Kopyalandı!',
     'share.copy': 'Linki Kopyala',
     'share.close': 'Kapat',

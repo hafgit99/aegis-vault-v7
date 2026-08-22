@@ -163,7 +163,14 @@ export function SettingsSyncSection({
               <input
                 id="sync-webdav-password"
                 type="password"
-                autoComplete="current-password"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                data-lpignore="true"
+                data-1p-ignore="true"
+                data-bwignore="true"
+                data-form-type="other"
                 value={syncPassword}
                 onChange={(e) => setSyncPassword(e.target.value)}
                 placeholder={t('settings.sync.configure.passwordPlaceholder')}
@@ -227,6 +234,14 @@ export function SettingsSyncSection({
               <input
                 id="sync-s3-secret-key"
                 type="password"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                data-lpignore="true"
+                data-1p-ignore="true"
+                data-bwignore="true"
+                data-form-type="other"
                 value={s3SecretAccessKey}
                 onChange={(e) => setS3SecretAccessKey(e.target.value)}
                 placeholder={t('settings.sync.s3.secretKeyPlaceholder')}

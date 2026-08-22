@@ -4,6 +4,28 @@ import './index.css';
 import {LanguageProvider} from './i18n/LanguageContext';
 import {ThemeProvider} from './context/ThemeContext';
 import {installAirgapNetworkPolicy} from './lib/airgapNetworkPolicy';
+import {logSecurityEvent, securityEventCodes} from './lib/securityEvents';
+
+function registerCspViolationTelemetry(): void {
+  if (typeof document === 'undefined') return;
+
+  document.addEventListener('securitypolicyviolation', (e: SecurityPolicyViolationEvent) => {
+    logSecurityEvent(
+      securityEventCodes.cspViolation,
+      `CSP violation: ${e.violatedDirective} blocked ${e.blockedURI || 'inline resource'}`,
+      'warning',
+      {
+        violatedDirective: e.violatedDirective,
+        blockedURI: e.blockedURI,
+        sourceFile: e.sourceFile,
+        lineNumber: e.lineNumber,
+        columnNumber: e.columnNumber,
+      },
+    );
+  });
+}
+
+registerCspViolationTelemetry();
 
 function revealNativeWindowAfterFirstPaint(): void {
   if (typeof window === 'undefined' || !('__TAURI_INTERNALS__' in window)) return;
