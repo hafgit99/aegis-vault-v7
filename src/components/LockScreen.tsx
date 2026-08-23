@@ -22,6 +22,7 @@ import {
   GlobeLock
 } from 'lucide-react';
 import {
+  forgetRememberedAccountSecretKey,
   getRememberedAccountSecretKey,
   isAccountSecretKeyRequired,
   isMasterPasswordSet,
@@ -163,7 +164,7 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
   const [secretKey, setSecretKey] = useState(() => (
     rememberedSecretKey || (isSetup ? '' : generateAccountSecretKey())
   ));
-  const [rememberSecretKey, setRememberSecretKey] = useState(Boolean(rememberedSecretKey));
+  const [rememberSecretKey, setRememberSecretKey] = useState(!isSetup ? true : Boolean(rememberedSecretKey));
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -209,6 +210,16 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
 
     return () => window.clearInterval(interval);
   }, [isLockedOut]);
+
+  useEffect(() => {
+    if (isSetup) {
+      const remembered = getRememberedAccountSecretKey();
+      if (remembered) {
+        setSecretKey((prev) => prev || remembered);
+        setRememberSecretKey(true);
+      }
+    }
+  }, [isSetup]);
 
   const getRateLimitMessage = (remainingSeconds: number) =>
     `${t('lock.error.rateLimitedPrefix')} ${remainingSeconds} ${t('lock.error.rateLimitedSuffix')}`;
@@ -301,8 +312,10 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
           return;
         }
         if (await verifyMasterPassword(password, submittedSecretKey)) {
-          if (rememberSecretKey && submittedSecretKey && !currentRemembered) {
+          if (rememberSecretKey && submittedSecretKey) {
             rememberAccountSecretKey(submittedSecretKey);
+          } else if (!rememberSecretKey && currentRemembered) {
+            forgetRememberedAccountSecretKey();
           }
           clearLockoutState();
           setLockoutRemainingMs(0);

@@ -26,6 +26,8 @@ import LockScreen from './LockScreen';
 
 vi.mock('../lib/storage', () => ({
   getRememberedAccountSecretKey: vi.fn(() => null),
+  rememberAccountSecretKey: vi.fn(() => true),
+  forgetRememberedAccountSecretKey: vi.fn(),
   isAccountSecretKeyRequired: vi.fn(() => false),
   isRememberSecretKeySupported: vi.fn(() => true),
   isMasterPasswordSet: vi.fn(),
@@ -173,7 +175,7 @@ describe('LockScreen', () => {
       expect(setupMasterPasswordWithSecretKey).toHaveBeenCalledWith(
         'strong-pass-12',
         expect.stringMatching(/^A3-/),
-        false,
+        true,
       );
       expect(onUnlock).toHaveBeenCalledTimes(1);
     });
@@ -194,19 +196,20 @@ describe('LockScreen', () => {
       expect(setupMasterPasswordWithSecretKey).toHaveBeenCalledWith(
         'strong-pass-12',
         expect.stringMatching(/^A3-/),
-        false,
+        true,
       );
       expect(onUnlock).toHaveBeenCalledTimes(1);
     });
   });
 
-  it('can remember the generated secret key during setup', async () => {
+  it('can opt out of remembering the generated secret key during setup', async () => {
     const onUnlock = vi.fn();
     render(<LockScreen onUnlock={onUnlock} />);
 
     fireEvent.change(passwordInput(), { target: { value: 'strong-pass-12' } });
     fireEvent.change(confirmationInput(), { target: { value: 'strong-pass-12' } });
     fireEvent.click(screen.getByTestId('lock-terms-checkbox'));
+    // By default it is checked; uncheck it
     fireEvent.click(screen.getByTestId('lock-remember-secret-key-checkbox'));
     fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 
@@ -214,7 +217,7 @@ describe('LockScreen', () => {
       expect(setupMasterPasswordWithSecretKey).toHaveBeenCalledWith(
         'strong-pass-12',
         expect.stringMatching(/^A3-/),
-        true,
+        false,
       );
       expect(onUnlock).toHaveBeenCalledTimes(1);
     });
@@ -316,6 +319,31 @@ describe('LockScreen', () => {
 
     fireEvent.change(passwordInput(), { target: { value: 'correct-pass' } });
     fireEvent.change(secretKeyInput(), { target: { value: 'A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567' } });
+    fireEvent.submit(document.querySelector('form') as HTMLFormElement);
+
+    await waitFor(() => {
+      expect(verifyMasterPassword).toHaveBeenCalledWith(
+        'correct-pass',
+        'A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
+      );
+      expect(onUnlock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('pre-fills remembered secret key and allows unlock without typing it again', async () => {
+    const onUnlock = vi.fn();
+    vi.mocked(isMasterPasswordSet).mockReturnValue(true);
+    vi.mocked(isAccountSecretKeyRequired).mockReturnValue(true);
+    vi.mocked(getRememberedAccountSecretKey).mockReturnValue('A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567');
+    vi.mocked(verifyMasterPassword).mockResolvedValueOnce(true);
+
+    render(<LockScreen onUnlock={onUnlock} />);
+
+    expect(secretKeyInput().value).toBe('A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567');
+    const rememberCheckbox = screen.getByTestId('lock-remember-secret-key-checkbox') as HTMLInputElement;
+    expect(rememberCheckbox.checked).toBe(true);
+
+    fireEvent.change(passwordInput(), { target: { value: 'correct-pass' } });
     fireEvent.submit(document.querySelector('form') as HTMLFormElement);
 
     await waitFor(() => {

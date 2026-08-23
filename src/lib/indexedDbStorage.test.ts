@@ -57,7 +57,7 @@ describe('indexedDbStorage', () => {
 
     expect(getIndexedDbItemSync('aegis_is_setup')).toBe('true');
     expect(getIndexedDbItemSync('aegis_account_secret_key_remembered')).toBe('secret');
-    expect(localStorage.getItem('aegis_is_setup')).toBeNull();
+    expect(localStorage.getItem('aegis_is_setup')).toBe('true');
     expect(await getIndexedDbItem('aegis_is_setup')).toBe('true');
   });
 

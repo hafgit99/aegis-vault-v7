@@ -123,19 +123,21 @@ export async function clearAllSetupFlags(): Promise<void> {
   });
 }
 
+export const SETUP_STORAGE_KEYS = [
+  'aegis_is_setup',
+  'aegis_account_secret_profile',
+  'aegis_account_secret_key_remembered',
+  'aegis_sqlite_fallback',
+  'aegis_vault_storage_active_backend'
+];
+
 /**
  * Initializes the setup flags storage by reading all known keys from IndexedDB
  * in a single transaction and populating the synchronous in-memory cache.
- * Performs migration of legacy localStorage values if found.
+ * Mirrors values to localStorage for instant synchronous reads on cold starts.
  */
 export async function initializeIndexedDbStorage(): Promise<void> {
-  const keys = [
-    'aegis_is_setup',
-    'aegis_account_secret_profile',
-    'aegis_account_secret_key_remembered',
-    'aegis_sqlite_fallback',
-    'aegis_vault_storage_active_backend'
-  ];
+  const keys = SETUP_STORAGE_KEYS;
 
   // Batch-read all keys in a single IndexedDB transaction
   let dbValues: Map<string, string | null>;
@@ -167,18 +169,24 @@ export async function initializeIndexedDbStorage(): Promise<void> {
     dbValues = new Map(keys.map(k => [k, null]));
   }
 
-  // Populate in-memory cache and migrate legacy localStorage values
+  // Populate in-memory cache and keep localStorage in sync
   const migrationWrites: Promise<void>[] = [];
   for (const key of keys) {
     const dbVal = dbValues.get(key) ?? null;
     if (dbVal !== null) {
       inMemoryCache[key] = dbVal;
+      if (typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem(key, dbVal);
+        } catch {
+          // ignore quota or security errors
+        }
+      }
     } else {
       const legacyVal = typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
       if (legacyVal !== null) {
         migrationWrites.push(setIndexedDbItem(key, legacyVal));
         inMemoryCache[key] = legacyVal;
-        localStorage.removeItem(key);
       } else {
         inMemoryCache[key] = null;
       }
@@ -205,32 +213,55 @@ export function getIndexedDbItemSync(key: string): string | null {
 }
 
 /**
- * Synchronously sets a setup flag in the cache and triggers an asynchronous write to IndexedDB.
+ * Synchronously sets a setup flag in the cache, mirrors to localStorage, and triggers an asynchronous write to IndexedDB.
  */
 export function setIndexedDbItemSync(key: string, value: string): void {
   inMemoryCache[key] = value;
+  if (typeof localStorage !== 'undefined') {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // ignore
+    }
+  }
   setIndexedDbItem(key, value).catch((err) => {
     console.error(`Failed to write setup flag ${key} to IndexedDB:`, err);
   });
 }
 
 /**
- * Synchronously removes a setup flag from the cache and triggers an asynchronous delete in IndexedDB.
+ * Synchronously removes a setup flag from the cache and localStorage, and triggers an asynchronous delete in IndexedDB.
  */
 export function removeIndexedDbItemSync(key: string): void {
   inMemoryCache[key] = null;
+  if (typeof localStorage !== 'undefined') {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // ignore
+    }
+  }
   removeIndexedDbItem(key).catch((err) => {
     console.error(`Failed to remove setup flag ${key} from IndexedDB:`, err);
   });
 }
 
 /**
- * Synchronously clears all setup flags in the cache and triggers an asynchronous clear in IndexedDB.
+ * Synchronously clears all setup flags in the cache and localStorage, and triggers an asynchronous clear in IndexedDB.
  */
 export function clearAllSetupFlagsSync(): void {
   Object.keys(inMemoryCache).forEach((key) => {
     inMemoryCache[key] = null;
   });
+  if (typeof localStorage !== 'undefined') {
+    try {
+      for (const key of SETUP_STORAGE_KEYS) {
+        localStorage.removeItem(key);
+      }
+    } catch {
+      // ignore
+    }
+  }
   clearAllSetupFlags().catch((err) => {
     console.error('Failed to clear setup flags from IndexedDB:', err);
   });
