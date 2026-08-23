@@ -220,6 +220,9 @@ if (!skipDesktopBuild) {
   if (platform === 'macos' && macUniversal) {
     tauriArgs.push('--target', 'universal-apple-darwin');
   }
+  if (!process.env.TAURI_SIGNING_PRIVATE_KEY) {
+    tauriArgs.push('--config', JSON.stringify({ bundle: { createUpdaterArtifacts: false } }));
+  }
   steps.push({ command: 'npx', args: tauriArgs });
 }
 

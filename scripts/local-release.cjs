@@ -83,6 +83,9 @@ const tauriArgs = ['tauri', 'build'];
 if (platform === 'darwin' && macUniversal) {
   tauriArgs.push('--target', 'universal-apple-darwin');
 }
+if (!process.env.TAURI_SIGNING_PRIVATE_KEY) {
+  tauriArgs.push('--config', JSON.stringify({ bundle: { createUpdaterArtifacts: false } }));
+}
 run('npx', tauriArgs);
 run('npm', ['run', 'security:release-hardening']);
 
