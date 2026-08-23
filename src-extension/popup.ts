@@ -689,7 +689,7 @@ function showDomainMismatchWarning(item: CredentialItem, tabDomain: string, cred
   icon.style.cssText = 'font-size: 32px; text-align: center; margin-bottom: 12px;';
 
   const title = document.createElement('div');
-  title.textContent = activeLanguage === 'tr' ? 'Alan Adı Uyuşmazlığı' : 'Domain Mismatch';
+  title.textContent = translate('mismatch.title' as any, activeLanguage);
   title.style.cssText = `
     font-size: 15px; font-weight: 700; text-align: center;
     color: var(--text-primary, #fff); margin-bottom: 8px;
@@ -700,11 +700,9 @@ function showDomainMismatchWarning(item: CredentialItem, tabDomain: string, cred
     font-size: 12px; color: var(--text-secondary, #aaa);
     text-align: center; line-height: 1.5; margin-bottom: 16px;
   `;
-  const warningText = activeLanguage === 'tr'
-    ? 'Kaydın alan adı mevcut sayfa ile eşleşmiyor. Bu bir oltalama (phishing) saldırısı olabilir.'
-    : 'The credential domain does not match the current page. This could be a phishing attempt.';
-  const credLabel = activeLanguage === 'tr' ? 'Kayıt' : 'Credential';
-  const pageLabel = activeLanguage === 'tr' ? 'Mevcut sayfa' : 'Current page';
+  const warningText = translate('mismatch.desc' as any, activeLanguage);
+  const credLabel = translate('mismatch.cred' as any, activeLanguage);
+  const pageLabel = translate('mismatch.page' as any, activeLanguage);
 
   desc.textContent = warningText;
 
@@ -738,7 +736,7 @@ function showDomainMismatchWarning(item: CredentialItem, tabDomain: string, cred
   btnRow.style.cssText = 'display: flex; gap: 8px; margin-top: 16px;';
 
   const cancelBtn = document.createElement('button');
-  cancelBtn.textContent = activeLanguage === 'tr' ? 'İptal' : 'Cancel';
+  cancelBtn.textContent = translate('mismatch.cancel' as any, activeLanguage);
   cancelBtn.style.cssText = `
     flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border, rgba(255,255,255,0.15));
     background: transparent; color: var(--text-primary, #fff); cursor: pointer;
@@ -747,7 +745,7 @@ function showDomainMismatchWarning(item: CredentialItem, tabDomain: string, cred
   cancelBtn.addEventListener('click', () => overlay.remove());
 
   const proceedBtn = document.createElement('button');
-  proceedBtn.textContent = activeLanguage === 'tr' ? 'Yine de Doldur' : 'Fill Anyway';
+  proceedBtn.textContent = translate('mismatch.proceed' as any, activeLanguage);
   proceedBtn.style.cssText = `
     flex: 1; padding: 10px; border-radius: 8px; border: none;
     background: #ef4444; color: #fff; cursor: pointer;
