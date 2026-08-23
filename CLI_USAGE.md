@@ -55,10 +55,15 @@ npm run cli -- generate --diceware
 `vault` komutları, AegisVault yedek dosyalarını (`.json`) sıfır-bilgi ilkesiyle çözerek terminalde sorgulamanızı sağlar.
 
 ### Kasa Kayıtlarını Listeleme (`vault list`)
-Kasa dosyasındaki tüm başlıkları, kategorileri ve kullanıcı adlarını listeler:
+Kasa dosyasındaki tüm başlıkları, kategorileri ve kullanıcı adlarını Argon2id + AES-256-GCM ile çözerek listeler:
 
 ```bash
-npm run cli -- vault list --vault-file ./my-vault-backup.json --password "MasterPassword123!"
+# Güvenli interaktif parola istemi (Kabuk geçmişine yazılmaz):
+npm run cli -- vault list --vault-file ./my-vault-backup.json
+
+# Ortam değişkeni ile (CI/CD ve Otomasyon için):
+export AEGIS_PASSWORD="MasterPassword123!"
+npm run cli -- vault list --vault-file ./my-vault-backup.json
 ```
 
 **Çıktı Örneği:**
@@ -74,7 +79,8 @@ Vault Items (3 total):
 Belirli bir ID veya Başlığa (Title) sahip kaydın şifre ve detaylarını görüntüler:
 
 ```bash
-npm run cli -- vault get --vault-file ./my-vault-backup.json --password "MasterPassword123!" --id "GitHub"
+# İnteraktif güvenli parola girişiyle:
+npm run cli -- vault get --vault-file ./my-vault-backup.json --id "GitHub"
 ```
 
 **Çıktı Örneği:**
@@ -93,8 +99,9 @@ Notes:    Primary developer account
 
 ## 🛡️ Güvenlik & CI/CD İpuçları
 
-1. **Kabuk Geçmişi (Shell History) Güvenliği:** Terminal komutlarında ana şifrenizi komut satırı argümanı olarak geçerken kabuk geçmişine (`.bash_history`, `.zsh_history`) yazılmaması için komutun başına bir boşluk koyabilir veya ortam değişkeni kullanabilirsiniz.
-2. **Pipeling (Boru Hattı):** `aegis-cli generate` komutu çıktı olarak sadece üretilen parolayı döndürdüğü için betiklerde (Bash/Python/CI) doğrudan değişkene atanabilir:
+1. **Gizli Parola İstemi (Masked TTY Prompt):** `--password` parametresi verilmediğinde CLI, terminal üzerinden parolanızı ekrana yansıtmadan (yıldızlı olarak) güvenle ister. Bu sayede parola shell geçmişinize (`.bash_history`, `.zsh_history`) veya `ps aux` işlem listesine asla sızmaz.
+2. **Ortam Değişkeni:** Otomasyon ve betiklerde `AEGIS_PASSWORD` ortam değişkenini kullanabilirsiniz.
+3. **Pipeling (Boru Hattı):** `aegis-cli generate` komutu çıktı olarak sadece üretilen parolayı döndürdüğü için betiklerde (Bash/Python/CI) doğrudan değişkene atanabilir:
    ```bash
    NEW_DB_PASS=$(npx aegis-cli generate --length 32 --symbols)
    ```

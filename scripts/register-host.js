@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
+import { spawnSync } from 'child_process';
 
 const HOST_NAME = 'com.hafgit99.aegisvault7';
 const FIREFOX_EXTENSION_ID = 'aegisvault7@hafgit99.com';
@@ -13,22 +13,26 @@ const firefoxManifestPath = path.join(firefoxDistDir, `${HOST_NAME}.json`);
 
 const isWin = process.platform === 'win32';
 const exeName = isWin ? 'aegis-vault-v7.exe' : 'aegis-vault-v7';
-const debugExe = path.resolve('src-tauri/target/debug', exeName);
 const releaseExe = path.resolve('src-tauri/target/release', exeName);
+const debugExe = path.resolve('src-tauri/target/debug', exeName);
 
+// Prefer production release binary first, fall back to debug binary for local testing
 let selectedExe = releaseExe;
-if (fs.existsSync(debugExe)) {
+if (fs.existsSync(releaseExe)) {
+  selectedExe = releaseExe;
+  console.log(`Using release binary: ${selectedExe}`);
+} else if (fs.existsSync(debugExe)) {
   selectedExe = debugExe;
   console.log(`Using debug binary: ${selectedExe}`);
-} else if (fs.existsSync(releaseExe)) {
-  console.log(`Using release binary: ${selectedExe}`);
 } else {
-  console.warn(`Warning: No compiled binary found at ${debugExe} or ${releaseExe}. Defaulting path to release binary.`);
+  console.warn(`Warning: No compiled binary found at ${releaseExe} or ${debugExe}. Defaulting path to release binary.`);
 }
 
-// 1. Create aegis-host.bat with fallback logic (kept for back-compat)
+// 1. Create aegis-host.bat with release-first fallback logic
 const batContent = `@echo off
-if exist "${debugExe}" (
+if exist "${releaseExe}" (
+  "${releaseExe}" --native-messaging-host %*
+) else if exist "${debugExe}" (
   "${debugExe}" --native-messaging-host %*
 ) else (
   "${releaseExe}" --native-messaging-host %*
@@ -41,21 +45,25 @@ console.log(`Created: ${batPath}`);
 
 // 2. Create com.hafgit99.aegisvault7.json
 // Note: Chrome/Edge do NOT support wildcards (*) in allowed_origins.
-// We must specify the exact extension ID. We read it from command line arguments.
-const extensionId = process.argv[2];
+// We only permit official/configured extension IDs and reject arbitrary placeholders.
 const allowedOrigins = [
-  "chrome-extension://bfjfdbphbmdfinjddbbegnlclanbpnch/", // User's Extension ID
-  "chrome-extension://cojgpfjcljepclmjldmdcfbghidmfgph/", // Default Placeholder
-  "chrome-extension://hhpldpjhbmdepocpffccmdofgebgkclg/"  // Default Placeholder
+  "chrome-extension://bfjfdbphbmdfinjddbbegnlclanbpnch/", // Primary Aegis Extension ID
 ];
 
+const extensionId = process.argv[2] || process.env.AEGIS_EXTENSION_ID;
 if (extensionId) {
-  // Normalize extension ID if it has protocol prefix or trailing slash
-  let cleanId = extensionId.replace('chrome-extension://', '').replace('/', '');
-  allowedOrigins.push(`chrome-extension://${cleanId}/`);
-  console.log(`Adding allowed origin: chrome-extension://${cleanId}/`);
+  let cleanId = extensionId.replace(/^chrome-extension:\/\//, '').replace(/\/+$/, '').trim();
+  if (/^[a-p]{32}$/i.test(cleanId)) {
+    const formattedOrigin = `chrome-extension://${cleanId}/`;
+    if (!allowedOrigins.includes(formattedOrigin)) {
+      allowedOrigins.push(formattedOrigin);
+      console.log(`Adding validated allowed origin: ${formattedOrigin}`);
+    }
+  } else {
+    console.warn(`Warning: Provided extension ID '${cleanId}' is not a valid 32-char Chrome Extension ID format. Ignoring.`);
+  }
 } else {
-  console.log('No extension ID provided. You can pass it as: npm run register:extension <extension-id>');
+  console.log('No extra extension ID provided. You can pass it as: npm run register:extension <extension-id>');
 }
 
 const baseManifest = {
@@ -82,7 +90,7 @@ fs.writeFileSync(firefoxManifestPath, JSON.stringify(firefoxManifestContent, nul
 console.log(`Created Chrome/Edge manifest: ${chromeManifestPath}`);
 console.log(`Created Firefox manifest: ${firefoxManifestPath}`);
 
-// 3. Register on Windows Registry via PowerShell
+// 3. Register on Windows Registry via parameterized PowerShell (no string concatenation)
 if (process.platform === 'win32') {
   try {
     console.log('Registering Host in Windows Registry for Chrome, Edge, and Firefox...');
@@ -102,14 +110,27 @@ if (process.platform === 'win32') {
       }
     ];
 
+    const psRegistryScript = `
+      param($regPath, $manifestFile)
+      if (!(Test-Path -LiteralPath $regPath)) {
+        New-Item -Path $regPath -Force | Out-Null
+      }
+      Set-ItemProperty -LiteralPath $regPath -Name '(Default)' -Value $manifestFile -Force
+    `;
+
     for (const entry of registryEntries) {
-      // Create path if not exists
-      const checkCmd = `powershell -Command "if (!(Test-Path '${entry.path}')) { New-Item -Path '${entry.path}' -Force | Out-Null }"`;
-      execSync(checkCmd);
-      
-      // Set default value pointing to manifest JSON
-      const setCmd = `powershell -Command "Set-ItemProperty -Path '${entry.path}' -Name '(Default)' -Value '${entry.manifest}' -Force"`;
-      execSync(setCmd);
+      const regRes = spawnSync('powershell', [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        psRegistryScript,
+        entry.path,
+        entry.manifest,
+      ], { stdio: 'inherit' });
+
+      if (regRes.status !== 0) {
+        throw new Error(`Failed to write registry entry for ${entry.path}`);
+      }
     }
 
     const firefoxUserHostDir = path.join(

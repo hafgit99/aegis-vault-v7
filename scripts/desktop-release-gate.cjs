@@ -104,9 +104,11 @@ function commandLabel(command, commandArgs) {
 function killRunningProcessesOnWindows() {
   if (process.platform === 'win32' && !dryRun) {
     try {
-      require('child_process').execSync(
-        `powershell -NoProfile -Command "Get-Process | Where-Object { $_.ProcessName -like '*aegis*' -or $_.ProcessName -like '*vault*' } | Stop-Process -Force"`,
-        { stdio: 'ignore' }
+      const { spawnSync } = require('child_process');
+      spawnSync(
+        'powershell',
+        ['-NoProfile', '-NonInteractive', '-Command', "Get-Process | Where-Object { $_.ProcessName -like '*aegis*' -or $_.ProcessName -like '*vault*' } | Stop-Process -Force"],
+        { stdio: 'ignore' },
       );
     } catch (_) {}
   }

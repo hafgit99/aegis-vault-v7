@@ -90,7 +90,8 @@ function copyFile(source, fileName) {
         if (process.platform === 'win32' && attempt >= 1) {
           const destName = path.basename(destination);
           try {
-            require('child_process').execSync(`taskkill /F /IM "${destName}"`, { stdio: 'ignore' });
+            const { spawnSync } = require('child_process');
+            spawnSync('taskkill', ['/F', '/IM', destName], { stdio: 'ignore' });
           } catch (_) {}
         }
         const delay = BASE_DELAY_MS * Math.pow(2, attempt);

@@ -78,9 +78,15 @@ function createZip(sourceDirectory, destinationZipPath) {
     zip.addLocalFolder(sourceDirectory, '');
     zip.writeZip(destinationZipPath);
   } else {
-    // PowerShell Compress-Archive fallback
-    const psCommand = `Compress-Archive -Path '${sourceDirectory}\\*' -DestinationPath '${destinationZipPath}' -Force`;
-    spawnSync('powershell', ['-NoProfile', '-Command', psCommand], { stdio: 'inherit' });
+    // PowerShell Compress-Archive fallback with safe parameter passing
+    const psScript = `
+      param($src, $dst)
+      Compress-Archive -Path (Join-Path $src '*') -DestinationPath $dst -Force
+    `;
+    const res = spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', psScript, sourceDirectory, destinationZipPath], { stdio: 'inherit' });
+    if (res.status !== 0) {
+      throw new Error(`Failed to create zip archive with PowerShell: ${destinationZipPath}`);
+    }
   }
 }
 
