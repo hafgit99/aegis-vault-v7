@@ -7,9 +7,9 @@
 *Enterprise-grade local cryptographic security for Desktop (Windows, Linux, macOS), Android, and WebExtensions.*
 
 ![Security Score](https://img.shields.io/badge/Security_Audit-92%2F100_(A%2B)-brightgreen?style=flat-square&logo=shield)
-![Tests](https://img.shields.io/badge/Unit_Tests-1487_Passed-success?style=flat-square&logo=vitest)
+![Tests](https://img.shields.io/badge/Unit_Tests-1494_Passed-success?style=flat-square&logo=vitest)
 ![Fuzz Tests](https://img.shields.io/badge/Fuzz_Tests-33_Passed-success?style=flat-square&logo=vitest)
-![Coverage](https://img.shields.io/badge/Coverage-92.0%25_Lines-brightgreen?style=flat-square&logo=vitest)
+![Coverage](https://img.shields.io/badge/Coverage-92.3%25_Lines-brightgreen?style=flat-square&logo=vitest)
 ![Mutation Testing](https://img.shields.io/badge/Mutation_Testing-Stryker_Ready-blue?style=flat-square&logo=stryker)
 ![TypeScript](https://img.shields.io/badge/TypeScript-0_Errors-blue?style=flat-square&logo=typescript)
 ![License](https://img.shields.io/badge/License-Apache_2.0-orange?style=flat-square)
@@ -92,14 +92,14 @@ Aegis Vault 7 maintains rigorous automated testing standards with defense-in-dep
 |---|---|---|---|
 | **TypeScript Typecheck** | **`0 errors`** | ✅ 100% Clean | `tsc --noEmit` |
 | **Unit & Integration Test Suite** | **`201 test files passed (201/201)`** | ✅ 100% Green | Vitest 4.1 |
-| **Unit Tests Executed** | **`1,487 tests passed (1,487/1,487)`** | ✅ 100% Green | Vitest / React Testing Library |
+| **Unit Tests Executed** | **`1,494 tests passed (1,494/1,494)`** | ✅ 100% Green | Vitest / React Testing Library |
 | **Property-Based Fuzz Tests** | **`33 tests across 8 files passed`** | ✅ 100% Green | `fast-check` v4 |
 | **End-to-End (E2E) Suites** | **`All 5 Critical Feature Workflows Passed`** | ✅ 100% Green | Playwright (Chromium & Multi-Browser) |
 | **Mutation Testing** | **`7 Specialized Stryker Suites`** | ✅ Ready & Verified | `@stryker-mutator/core` v9 |
-| **Rust Backend Tests** | **`9 tests passed (9/9)`** | ✅ 100% Green | `cargo test` (Tauri 2) |
-| **Lines Coverage** | **`92.0%`** | ✅ Exceeds Global Target (≥ 90%) | Vitest V8 Coverage |
-| **Statements Coverage** | **`90.1%`** | ✅ Exceeds Global Target (≥ 88%) | Vitest V8 Coverage |
-| **Functions Coverage** | **`90.0%`** | ✅ Exceeds Global Target (≥ 85%) | Vitest V8 Coverage |
+| **Rust Backend Tests** | **`10 tests passed (10/10)`** | ✅ 100% Green | `cargo test` (Tauri 2) |
+| **Lines Coverage** | **`92.3%`** | ✅ Exceeds Global Target (≥ 90%) | Vitest V8 Coverage |
+| **Statements Coverage** | **`90.4%`** | ✅ Exceeds Global Target (≥ 88%) | Vitest V8 Coverage |
+| **Functions Coverage** | **`90.3%`** | ✅ Exceeds Global Target (≥ 85%) | Vitest V8 Coverage |
 | **Branches Coverage** | **`80.0%`** | ✅ Exceeds Global Target (≥ 80%) | Vitest V8 Coverage |
 
 ---
