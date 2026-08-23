@@ -7,7 +7,8 @@ const strict = process.argv.includes('--strict');
 const checks = [];
 
 function commandExists(command, args = ['--version']) {
-  const result = spawnSync(command, args, { encoding: 'utf8', shell: process.platform === 'win32' });
+  const exe = process.platform === 'win32' && !command.endsWith('.exe') ? `${command}.exe` : command;
+  const result = spawnSync(exe, args, { encoding: 'utf8', shell: false });
   return {
     ok: result.status === 0,
     output: [result.stdout, result.stderr].filter(Boolean).join('\n').trim(),
@@ -24,7 +25,8 @@ function readJson(relativePath) {
 }
 
 function rustTargetInstalled(target) {
-  const result = spawnSync('rustup', ['target', 'list', '--installed'], { encoding: 'utf8', shell: process.platform === 'win32' });
+  const exe = process.platform === 'win32' ? 'rustup.exe' : 'rustup';
+  const result = spawnSync(exe, ['target', 'list', '--installed'], { encoding: 'utf8', shell: false });
   if (result.status !== 0) return { ok: false, detail: (result.stderr || result.error || 'rustup target list failed').toString().trim() };
   const installed = result.stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   return { ok: installed.includes(target), detail: installed.includes(target) ? 'installed' : 'missing' };

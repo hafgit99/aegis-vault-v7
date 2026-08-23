@@ -145,6 +145,10 @@ fn write_clipboard_text_protected(text: String) -> Result<bool, String> {
         GlobalAlloc, GlobalLock, GlobalUnlock, GMEM_MOVEABLE,
     };
 
+    extern "system" {
+        fn GlobalFree(hmem: *mut std::ffi::c_void) -> *mut std::ffi::c_void;
+    }
+
     // Unicode Text Format ID is 13 (CF_UNICODETEXT)
     const CF_UNICODETEXT: u32 = 13;
 
@@ -177,7 +181,7 @@ fn write_clipboard_text_protected(text: String) -> Result<bool, String> {
         // Empty the clipboard first
         EmptyClipboard();
 
-        // Helper to write data to clipboard
+        // Helper to write data to clipboard with proper error memory cleanup
         let write_to_clipboard = |format: u32, data: &[u8]| -> Result<(), String> {
             let hmem = GlobalAlloc(GMEM_MOVEABLE, data.len());
             if hmem.is_null() {
@@ -185,11 +189,13 @@ fn write_clipboard_text_protected(text: String) -> Result<bool, String> {
             }
             let ptr = GlobalLock(hmem);
             if ptr.is_null() {
+                GlobalFree(hmem);
                 return Err("Failed to lock global memory".to_string());
             }
             std::ptr::copy_nonoverlapping(data.as_ptr(), ptr as *mut u8, data.len());
             GlobalUnlock(hmem);
             if SetClipboardData(format, hmem).is_null() {
+                GlobalFree(hmem);
                 return Err(format!(
                     "Failed to set clipboard data for format {}",
                     format
@@ -665,9 +671,13 @@ fn verify_argon2id_hash(password: String, encoded_hash: String) -> Result<bool, 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let args: Vec<String> = std::env::args().collect();
-    let is_native_host = args.iter().any(|arg| arg == "--native-messaging-host")
-        || (args.len() >= 2 && args[1].starts_with("chrome-extension://"))
-        || (args.len() >= 3 && args[1].ends_with(".json") && args[2].contains('@'));
+    let is_native_host = args.iter().any(|arg| {
+        arg == "--native-messaging-host"
+            || arg.starts_with("chrome-extension://")
+            || arg.ends_with("com.hafgit99.aegisvault7.json")
+            || arg == "aegisvault7@hafgit99.com"
+            || (arg.ends_with(".json") && args.iter().any(|a| a.contains('@')))
+    });
 
     if is_native_host {
         native_messaging::run_host();

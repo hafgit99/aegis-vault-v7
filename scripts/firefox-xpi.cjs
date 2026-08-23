@@ -32,12 +32,21 @@ function maskCommandArgs(cmdArgs) {
   return masked;
 }
 
+function resolveExecutable(command) {
+  if (process.platform === 'win32') {
+    if (command === 'npm') return 'npm.cmd';
+    if (command === 'npx') return 'npx.cmd';
+  }
+  return command;
+}
+
 function run(command, commandArgs, options = {}) {
-  console.log(`\n> ${command} ${maskCommandArgs(commandArgs).join(' ')}`);
-  const result = spawnSync(command, commandArgs, {
+  const exe = resolveExecutable(command);
+  console.log(`\n> ${exe} ${maskCommandArgs(commandArgs).join(' ')}`);
+  const result = spawnSync(exe, commandArgs, {
     cwd: rootDir,
     stdio: 'inherit',
-    shell: process.platform === 'win32',
+    shell: false,
     ...options,
   });
 

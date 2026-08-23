@@ -40,17 +40,26 @@ function commandLabel(command, commandArgs) {
   return (command + ' ' + commandArgs.join(' ')).trim();
 }
 
+function resolveExecutable(command) {
+  if (process.platform === 'win32') {
+    if (command === 'npm') return 'npm.cmd';
+    if (command === 'npx') return 'npx.cmd';
+  }
+  return command;
+}
+
 function run(command, commandArgs) {
   if (dryRun) {
     console.log('[dry-run] ' + commandLabel(command, commandArgs));
     return;
   }
 
-  console.log('\n> ' + commandLabel(command, commandArgs));
-  const result = spawnSync(command, commandArgs, {
+  const exe = resolveExecutable(command);
+  console.log('\n> ' + commandLabel(exe, commandArgs));
+  const result = spawnSync(exe, commandArgs, {
     cwd: rootDir,
     stdio: 'inherit',
-    shell: process.platform === 'win32',
+    shell: false,
   });
 
   if (result.status !== 0) {

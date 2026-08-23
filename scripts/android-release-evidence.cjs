@@ -156,13 +156,13 @@ function findArtifacts() {
 
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const report = run(npmCommand, ['run', 'android:release:report', '--', '--strict', ...(signed ? ['--signed'] : [])], {
-  shell: process.platform === 'win32',
+  shell: false,
 });
 const deviceDoctorReport = includeDeviceEvidence
-  ? run(npmCommand, ['run', 'android:device:doctor', '--', ...(enableAutofill ? ['--enable-autofill'] : []), ...deviceModeArgs], { shell: process.platform === 'win32' })
+  ? run(npmCommand, ['run', 'android:device:doctor', '--', ...(enableAutofill ? ['--enable-autofill'] : []), ...deviceModeArgs], { shell: false })
   : '';
 const deviceSecurityReport = includeDeviceEvidence
-  ? run(npmCommand, ['run', 'android:device:security', '--', '--launch', ...deviceModeArgs], { shell: process.platform === 'win32' })
+  ? run(npmCommand, ['run', 'android:device:security', '--', '--launch', ...deviceModeArgs], { shell: false })
   : '';
 const gitFallback = readGitHeadFallback();
 const rawDirtyStatus = run('git', ['status', '--short']);

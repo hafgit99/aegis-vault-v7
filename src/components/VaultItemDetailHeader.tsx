@@ -51,9 +51,9 @@ export default function VaultItemDetailHeader({
           {item.url && (
             <a
               className="text-brand-primary hover:underline text-xs flex items-center gap-1 mt-1.5 font-semibold min-w-0"
-              href={`https://${item.url}`}
+              href={/^https?:\/\//i.test(item.url) ? item.url : `https://${item.url}`}
               target="_blank"
-              rel="noreferrer"
+              rel="noreferrer noopener"
             >
               <span className="truncate">{item.url}</span>
               <ExternalLink className="w-3.5 h-3.5" />

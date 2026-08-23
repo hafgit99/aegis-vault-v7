@@ -641,7 +641,8 @@ FROM vault_items;
   }
 
   private sqlString(value: string): string {
-    return `'${value.replace(/'/g, "''")}'`;
+    const sanitized = value.replace(/\0/g, '').replace(/'/g, "''");
+    return `'${sanitized}'`;
   }
 
   private sqlStringForLog(value: string): string {

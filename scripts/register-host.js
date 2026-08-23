@@ -1,20 +1,25 @@
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { spawnSync } from 'child_process';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, '..');
 
 const HOST_NAME = 'com.hafgit99.aegisvault7';
 const FIREFOX_EXTENSION_ID = 'aegisvault7@hafgit99.com';
 
-const distDir = path.resolve('dist-extension');
-const firefoxDistDir = path.resolve('dist-extension-firefox');
+const distDir = path.resolve(projectRoot, 'dist-extension');
+const firefoxDistDir = path.resolve(projectRoot, 'dist-extension-firefox');
 const batPath = path.join(distDir, 'aegis-host.bat');
 const chromeManifestPath = path.join(distDir, `${HOST_NAME}.json`);
 const firefoxManifestPath = path.join(firefoxDistDir, `${HOST_NAME}.json`);
 
 const isWin = process.platform === 'win32';
 const exeName = isWin ? 'aegis-vault-v7.exe' : 'aegis-vault-v7';
-const releaseExe = path.resolve('src-tauri/target/release', exeName);
-const debugExe = path.resolve('src-tauri/target/debug', exeName);
+const releaseExe = path.resolve(projectRoot, 'src-tauri/target/release', exeName);
+const debugExe = path.resolve(projectRoot, 'src-tauri/target/debug', exeName);
 
 // Prefer production release binary first, fall back to debug binary for local testing
 let selectedExe = releaseExe;

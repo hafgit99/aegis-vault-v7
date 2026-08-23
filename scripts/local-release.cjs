@@ -8,12 +8,23 @@ const args = process.argv.slice(2);
 const skipTests = args.includes('--skip-tests');
 const macUniversal = args.includes('--mac-universal');
 
+function resolveExecutable(command) {
+  if (process.platform === 'win32') {
+    if (command === 'npm') return 'npm.cmd';
+    if (command === 'npx') return 'npx.cmd';
+    if (command === 'cargo') return 'cargo.exe';
+    if (command === 'rustup') return 'rustup.exe';
+  }
+  return command;
+}
+
 function run(command, commandArgs, options = {}) {
+  const exe = resolveExecutable(command);
   console.log(`\n> ${command} ${commandArgs.join(' ')}`);
-  const result = spawnSync(command, commandArgs, {
+  const result = spawnSync(exe, commandArgs, {
     cwd: rootDir,
     stdio: 'inherit',
-    shell: process.platform === 'win32',
+    shell: false,
     ...options,
   });
 

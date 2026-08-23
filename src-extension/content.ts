@@ -733,11 +733,40 @@ function closeDropdown() {
   window.removeEventListener('resize', closeDropdown);
 }
 
+function showSecurityToast(message: string): void {
+  const root = getAegisShadowRoot();
+  const existing = root.querySelector('.aegis-security-toast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.className = 'aegis-security-toast';
+  toast.style.cssText = `
+    position: fixed !important; top: 20px !important; right: 20px !important; z-index: 2147483647 !important;
+    background: #ef4444 !important; color: #ffffff !important; padding: 12px 18px !important; border-radius: 8px !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    font-size: 13px !important; font-weight: 600 !important; box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important;
+    display: flex !important; align-items: center !important; gap: 8px !important; transition: opacity 0.3s ease !important;
+    pointer-events: auto !important;
+  `;
+  const icon = document.createElement('span');
+  icon.textContent = '🛡️';
+  const text = document.createElement('span');
+  text.textContent = message;
+  toast.appendChild(icon);
+  toast.appendChild(text);
+  root.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+}
+
 // Handle messages from background service worker
 chrome.runtime.onMessage.addListener((message) => {
   if (message.action === 'fill_inputs') {
     if (activePhishingThreat) {
-      alert(translate('phishing.autofill.blocked', activeLanguage));
+      showSecurityToast(translate('phishing.autofill.blocked', activeLanguage));
       return;
     }
     const activeEl = document.activeElement as HTMLInputElement;
@@ -1058,7 +1087,7 @@ function copyToClipboardWithAutoClear(text: string, timeoutMs = 30000) {
 // Find login/password form fields and fill them
 function fillPageCredentials(activeInput: HTMLInputElement, username: string, password: string) {
   if (activePhishingThreat) {
-    alert(translate('phishing.autofill.blocked', activeLanguage));
+    showSecurityToast(translate('phishing.autofill.blocked', activeLanguage));
     return;
   }
   lastFilledCredential = { username, password, timestamp: Date.now() };

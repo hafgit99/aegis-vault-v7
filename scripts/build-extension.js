@@ -1,10 +1,15 @@
 import esbuild from 'esbuild';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-const outDir = path.resolve('dist-extension');
-const outDirFirefox = path.resolve('dist-extension-firefox');
-const srcDir = path.resolve('src-extension');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, '..');
+
+const outDir = path.resolve(projectRoot, 'dist-extension');
+const outDirFirefox = path.resolve(projectRoot, 'dist-extension-firefox');
+const srcDir = path.resolve(projectRoot, 'src-extension');
 const isDebugBuild = process.argv.includes('--debug');
 
 const batPath = path.join(outDir, 'aegis-host.bat');

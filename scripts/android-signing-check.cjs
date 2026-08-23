@@ -39,7 +39,8 @@ function validateKeystore(resolved) {
   const storePassword = env('AEGIS_ANDROID_KEYSTORE_PASSWORD');
   if (!alias || !storePassword || !fs.existsSync(resolved)) return;
 
-  const args = ['-list', '-keystore', resolved, '-storepass', storePassword, '-alias', alias];
+  // Pass password safely via environment variable reference to avoid exposing secrets in process lists
+  const args = ['-list', '-keystore', resolved, '-storepass:env', 'AEGIS_ANDROID_KEYSTORE_PASSWORD', '-alias', alias];
   const storeType = detectStoreType(resolved);
   if (storeType) args.push('-storetype', storeType);
 
@@ -47,7 +48,11 @@ function validateKeystore(resolved) {
     execFileSync(keytoolExecutable(), args, {
       cwd: repoRoot,
       encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
+      env: {
+        ...process.env,
+        AEGIS_ANDROID_KEYSTORE_PASSWORD: storePassword,
+      },
+      stdio: ['pipe', 'pipe', 'pipe'],
       maxBuffer: 1024 * 1024,
     });
     pass('keystore password opens the store and alias is present');

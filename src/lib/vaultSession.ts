@@ -182,7 +182,74 @@ export function hasActiveBackupPassword(): boolean {
 
 export function withActiveVaultEncryptionKey<T>(callback: (vaultEncryptionKey: Uint8Array) => T): T | null {
   if (!activeVaultKeyBytes) return null;
-  return callback(cloneBytes(activeVaultKeyBytes));
+  const cloned = cloneBytes(activeVaultKeyBytes);
+  try {
+    const result = callback(cloned);
+    if (result instanceof Promise) {
+      return (result as Promise<unknown>).finally(() => {
+        wasmZeroizeArray(cloned);
+      }) as unknown as T;
+    }
+    wasmZeroizeArray(cloned);
+    return result;
+  } catch (err) {
+    wasmZeroizeArray(cloned);
+    throw err;
+  }
+}
+
+export function withActiveCredentialBytes<T>(callback: (credentialBytes: Uint8Array) => T): T | null {
+  if (!fallbackCredentialBytes) return null;
+  const cloned = cloneBytes(fallbackCredentialBytes);
+  try {
+    const result = callback(cloned);
+    if (result instanceof Promise) {
+      return (result as Promise<unknown>).finally(() => {
+        wasmZeroizeArray(cloned);
+      }) as unknown as T;
+    }
+    wasmZeroizeArray(cloned);
+    return result;
+  } catch (err) {
+    wasmZeroizeArray(cloned);
+    throw err;
+  }
+}
+
+export function withActiveBackupPasswordBytes<T>(callback: (backupPasswordBytes: Uint8Array) => T): T | null {
+  if (!fallbackBackupPasswordBytes) return null;
+  const cloned = cloneBytes(fallbackBackupPasswordBytes);
+  try {
+    const result = callback(cloned);
+    if (result instanceof Promise) {
+      return (result as Promise<unknown>).finally(() => {
+        wasmZeroizeArray(cloned);
+      }) as unknown as T;
+    }
+    wasmZeroizeArray(cloned);
+    return result;
+  } catch (err) {
+    wasmZeroizeArray(cloned);
+    throw err;
+  }
+}
+
+export function withActiveAccountSecretKeyBytes<T>(callback: (secretKeyBytes: Uint8Array) => T): T | null {
+  if (!fallbackAccountSecretKeyBytes) return null;
+  const cloned = cloneBytes(fallbackAccountSecretKeyBytes);
+  try {
+    const result = callback(cloned);
+    if (result instanceof Promise) {
+      return (result as Promise<unknown>).finally(() => {
+        wasmZeroizeArray(cloned);
+      }) as unknown as T;
+    }
+    wasmZeroizeArray(cloned);
+    return result;
+  } catch (err) {
+    wasmZeroizeArray(cloned);
+    throw err;
+  }
 }
 
 export async function withActiveAccountSecretKey<T>(callback: (secretKey: string) => Promise<T> | T): Promise<T | null> {

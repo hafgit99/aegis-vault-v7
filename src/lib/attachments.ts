@@ -144,17 +144,7 @@ async function deriveAttachmentKeyFromVaultKey(vaultKey: Uint8Array, attachmentI
     baseKey,
     256
   );
-  // Zeroize the imported view of the vault key copy we received.
-  vaultKey.fill(0);
   return new Uint8Array(derivedBits);
-}
-
-function getRequiredVaultKey(): Uint8Array {
-  const key = withActiveVaultEncryptionKey((value) => value);
-  if (!key) {
-    throw new AttachmentError(attachmentErrorCodes.missingVaultSession);
-  }
-  return key;
 }
 
 async function encryptAttachmentDataWithVaultKey(
@@ -231,12 +221,13 @@ export async function encryptAttachmentData(
   attachmentId: string,
   rawBuffer: ArrayBuffer,
 ): Promise<Pick<AttachmentRecord, 'algorithm' | 'data' | 'encrypted' | 'iv' | 'tag' | 'kdf' | 'keySource'>> {
-  const vaultKey = getRequiredVaultKey();
-  try {
+  const result = await withActiveVaultEncryptionKey(async (vaultKey) => {
     return await encryptAttachmentDataWithVaultKey(vaultKey, attachmentId, rawBuffer);
-  } finally {
-    vaultKey.fill(0);
+  });
+  if (!result) {
+    throw new AttachmentError(attachmentErrorCodes.missingVaultSession);
   }
+  return result;
 }
 
 /**
@@ -256,12 +247,13 @@ export async function decryptAttachmentData(record: AttachmentRecord): Promise<A
   }
 
   if (record.keySource === 'vault-key') {
-    const vaultKey = getRequiredVaultKey();
-    try {
+    const result = await withActiveVaultEncryptionKey(async (vaultKey) => {
       return await decryptAttachmentDataWithVaultKey(record, vaultKey);
-    } finally {
-      vaultKey.fill(0);
+    });
+    if (!result) {
+      throw new AttachmentError(attachmentErrorCodes.missingVaultSession);
     }
+    return result;
   }
 
   // Legacy master-password-derived attachment records are intentionally blocked

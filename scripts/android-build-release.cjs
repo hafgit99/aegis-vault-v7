@@ -32,12 +32,23 @@ env.ANDROID_HOME = sdkRoot;
 env.ANDROID_SDK_ROOT = env.ANDROID_SDK_ROOT || sdkRoot;
 env.JAVA_HOME = javaHome;
 
+function resolveExecutable(command) {
+  if (process.platform === 'win32') {
+    if (command === 'npm') return 'npm.cmd';
+    if (command === 'npx') return 'npx.cmd';
+    if (command === 'tauri') return 'npx.cmd';
+  }
+  return command;
+}
+
 function run(command, args) {
-  const result = spawnSync(command, args, {
+  const exe = resolveExecutable(command);
+  const finalArgs = command === 'tauri' && process.platform === 'win32' ? ['tauri', ...args] : args;
+  const result = spawnSync(exe, finalArgs, {
     cwd: repoRoot,
     env,
     stdio: 'inherit',
-    shell: process.platform === 'win32',
+    shell: false,
   });
   if (result.status !== 0) process.exit(result.status || 1);
 }

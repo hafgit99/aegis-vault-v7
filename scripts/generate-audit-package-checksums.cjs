@@ -135,6 +135,16 @@ function generate(dir) {
   console.log('  Node verify: npm run audit:checksums:verify');
 }
 
+function validateContainedPath(candidatePath, parentDir) {
+  const resolved = path.resolve(candidatePath);
+  const parentResolved = path.resolve(parentDir);
+  const relative = path.relative(parentResolved, resolved);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error(`Path traversal blocked: "${candidatePath}" escapes boundary "${parentDir}"`);
+  }
+  return resolved;
+}
+
 function verify(dir) {
   const sumPath = path.join(dir, CHECKSUM_FILE);
   if (!fs.existsSync(sumPath)) {
@@ -160,7 +170,16 @@ function verify(dir) {
     }
     const expected = match[1].toLowerCase();
     const rel = match[2];
-    const abs = path.join(dir, rel);
+
+    let abs;
+    try {
+      abs = validateContainedPath(path.resolve(dir, rel), dir);
+    } catch (_err) {
+      console.error('[TRAVERSAL BLOCKED] ' + rel);
+      failed += 1;
+      continue;
+    }
+
     if (!fs.existsSync(abs)) {
       console.error('[MISSING]  ' + rel);
       missing += 1;
@@ -186,6 +205,13 @@ function verify(dir) {
     process.exit(1);
   }
   console.log('Checksum verification PASSED.');
+
+  const sigPath = path.join(dir, CHECKSUM_FILE + '.minisig');
+  if (fs.existsSync(sigPath)) {
+    console.log('[SIGNATURE] Detached minisign signature detected: ' + path.basename(sigPath));
+  } else {
+    console.log('[SIGNATURE] To sign manifest: minisign -Sm ' + CHECKSUM_FILE + ' or gpg --armor --detach-sign ' + CHECKSUM_FILE);
+  }
 }
 
 if (hasFlag('--help')) {
@@ -193,7 +219,17 @@ if (hasFlag('--help')) {
   process.exit(0);
 }
 
-const dir = getArgValue('--dir') ? path.resolve(rootDir, getArgValue('--dir')) : defaultPackageDir();
+const rawDir = getArgValue('--dir');
+let dir = defaultPackageDir();
+if (rawDir) {
+  try {
+    dir = validateContainedPath(path.resolve(rootDir, rawDir), rootDir);
+  } catch (err) {
+    console.error('Invalid --dir argument:', err.message);
+    process.exit(1);
+  }
+}
+
 const mode = hasFlag('--verify') ? 'verify' : 'generate';
 console.log('Aegis Vault 7 - Security Audit Package checksum ' + mode);
 console.log('Target: ' + path.relative(rootDir, dir));

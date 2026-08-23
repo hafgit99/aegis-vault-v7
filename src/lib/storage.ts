@@ -223,7 +223,10 @@ export async function verifyMasterPassword(password: string, secretKey?: string 
 
   if (isDesktopRuntime()) {
     const repo = getVaultStorageRepository();
-    const salt = repo.getCurrentVaultEncryptionSalt ? await repo.getCurrentVaultEncryptionSalt() : 'aegis_vault_v7_db_encryption_salt';
+    const salt = repo.getCurrentVaultEncryptionSalt ? await repo.getCurrentVaultEncryptionSalt() : null;
+    if (!salt) {
+      throw new Error('Vault encryption salt is missing or uninitialized in repository.');
+    }
     const kdfParams = repo.getKdfParams ? await repo.getKdfParams() : { memoryKiB: 32 * 1024, iterations: 3, parallelism: 1, hashLength: 32 };
     const argonHash = repo.getArgonHash ? await repo.getArgonHash() : '';
 

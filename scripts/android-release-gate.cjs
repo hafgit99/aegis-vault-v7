@@ -82,12 +82,21 @@ function androidEnv() {
   return env;
 }
 
+function resolveExecutable(command) {
+  if (process.platform === 'win32') {
+    if (command === 'npm') return 'npm.cmd';
+    if (command === 'npx') return 'npx.cmd';
+  }
+  return command;
+}
+
 function run(command, commandArgs, options = {}) {
-  console.log(`\n> ${command} ${commandArgs.join(' ')}`);
-  const result = spawnSync(command, commandArgs, {
+  const exe = resolveExecutable(command);
+  console.log(`\n> ${exe} ${commandArgs.join(' ')}`);
+  const result = spawnSync(exe, commandArgs, {
     cwd: repoRoot,
     stdio: 'inherit',
-    shell: process.platform === 'win32',
+    shell: false,
     env: androidEnv(),
     ...options,
   });

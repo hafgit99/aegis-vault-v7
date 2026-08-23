@@ -126,12 +126,23 @@ function run(command, commandArgs) {
   }
 
 
-  console.log('\n> ' + commandLabel(command, commandArgs));
+  function resolveExecutable(cmd) {
+    if (isWindows) {
+      if (cmd === 'npm') return 'npm.cmd';
+      if (cmd === 'npx') return 'npx.cmd';
+      if (cmd === 'cargo') return 'cargo.exe';
+      if (cmd === 'rustup') return 'rustup.exe';
+    }
+    return cmd;
+  }
 
-  const result = spawnSync(command, commandArgs, {
+  const exe = resolveExecutable(command);
+  console.log('\n> ' + commandLabel(exe, commandArgs));
+
+  const result = spawnSync(exe, commandArgs, {
     cwd: rootDir,
     stdio: 'inherit',
-    shell: isWindows,
+    shell: false,
   });
 
   if (result.status !== 0) {
