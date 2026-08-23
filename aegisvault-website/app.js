@@ -728,12 +728,18 @@ document.addEventListener('DOMContentLoaded', () => {
         item.classList.toggle('active', item.dataset.lang === currentLang);
       });
 
-      // Translate all static nodes with data-i18n
+      // Translate all static nodes with data-i18n safely
       document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         const val = t(key);
         if (val !== key) {
-          el.innerHTML = val;
+          if (val.includes('<') && (val.includes('gradient-text') || val.includes('<br>'))) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(`<div>${val}</div>`, 'text/html');
+            el.replaceChildren(...doc.body.firstChild.childNodes);
+          } else {
+            el.textContent = val;
+          }
         }
       });
 

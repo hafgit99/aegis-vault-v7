@@ -66,14 +66,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
       document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
-        el.innerHTML = t(key);
+        el.textContent = t(key);
       });
 
       const titleEl = document.getElementById('legal-page-title');
       const bodyEl = document.getElementById('legal-page-body');
       
       if (titleEl) titleEl.textContent = t(`${pageType}-title`);
-      if (bodyEl) bodyEl.innerHTML = t(`${pageType}-content`);
+      if (bodyEl) {
+        const val = t(`${pageType}-content`);
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(`<div>${val}</div>`, 'text/html');
+        bodyEl.replaceChildren(...doc.body.firstChild.childNodes);
+      }
 
       // Update document head title
       document.title = `AegisVault 7 — ${t(`${pageType}-title`)}`;

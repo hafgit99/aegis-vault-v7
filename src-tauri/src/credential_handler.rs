@@ -115,12 +115,12 @@ fn resolve_backup_password(password: &str, explicit_backup: Option<String>) -> S
 #[tauri::command]
 pub fn open_rust_session(
     session: State<'_, CredentialSession>,
-    password: String,
+    mut password: String,
     backup_password: Option<String>,
     argon_hash: String,
     salt: String,
     kdf_params: Option<RustArgon2idOptions>,
-    secret_key: Option<String>,
+    mut secret_key: Option<String>,
 ) -> Result<Vec<u8>, String> {
     use argon2::{
         password_hash::{PasswordHash, PasswordVerifier},
@@ -135,6 +135,10 @@ pub fn open_rust_session(
         .is_ok();
 
     if !verified {
+        password.zeroize();
+        if let Some(ref mut sk) = secret_key {
+            sk.zeroize();
+        }
         return Err("invalid-master-password".to_string());
     }
 
@@ -144,12 +148,18 @@ pub fn open_rust_session(
     state.clear();
 
     state.active_credential = Some(password.as_bytes().to_vec());
-    let bp = resolve_backup_password(&password, backup_password);
+    let mut bp = resolve_backup_password(&password, backup_password);
     state.active_backup_password = Some(bp.as_bytes().to_vec());
-    if let Some(sk) = secret_key {
+    if let Some(ref sk) = secret_key {
         state.active_account_secret_key = Some(sk.as_bytes().to_vec());
     }
     state.active_vault_key = Some(derived_key.clone());
+
+    password.zeroize();
+    bp.zeroize();
+    if let Some(ref mut sk) = secret_key {
+        sk.zeroize();
+    }
 
     Ok(derived_key)
 }
@@ -157,9 +167,9 @@ pub fn open_rust_session(
 #[tauri::command]
 pub fn setup_rust_session(
     session: State<'_, CredentialSession>,
-    password: String,
+    mut password: String,
     backup_password: Option<String>,
-    secret_key: Option<String>,
+    mut secret_key: Option<String>,
     salt: String,
     kdf_params: Option<RustArgon2idOptions>,
 ) -> Result<RustSetupResult, String> {
@@ -177,23 +187,35 @@ pub fn setup_rust_session(
     let mut rng_bytes = [0u8; 16];
     rand::thread_rng().fill(&mut rng_bytes);
     let salt_str = SaltString::encode_b64(&rng_bytes)
-        .map_err(|e| format!("failed to encode random salt: {e}"))?;
+        .map_err(|e| {
+            password.zeroize();
+            format!("failed to encode random salt: {e}")
+        })?;
 
     let argon_hash = argon2
         .hash_password(password.as_bytes(), &salt_str)
-        .map_err(|e| format!("Argon2id hashing failed: {e}"))?
+        .map_err(|e| {
+            password.zeroize();
+            format!("Argon2id hashing failed: {e}")
+        })?
         .to_string();
 
     let mut state = session.state.lock().map_err(|e| e.to_string())?;
     state.clear();
 
     state.active_credential = Some(password.as_bytes().to_vec());
-    let bp = resolve_backup_password(&password, backup_password);
+    let mut bp = resolve_backup_password(&password, backup_password);
     state.active_backup_password = Some(bp.as_bytes().to_vec());
-    if let Some(sk) = secret_key {
+    if let Some(ref sk) = secret_key {
         state.active_account_secret_key = Some(sk.as_bytes().to_vec());
     }
     state.active_vault_key = Some(derived_key.clone());
+
+    password.zeroize();
+    bp.zeroize();
+    if let Some(ref mut sk) = secret_key {
+        sk.zeroize();
+    }
 
     Ok(RustSetupResult {
         vault_encryption_key: derived_key,
@@ -205,8 +227,8 @@ pub fn setup_rust_session(
 #[tauri::command]
 pub fn rotate_rust_session(
     session: State<'_, CredentialSession>,
-    old_password: String,
-    new_password: String,
+    mut old_password: String,
+    mut new_password: String,
     backup_password: Option<String>,
     new_salt: String,
     kdf_params: Option<RustArgon2idOptions>,
@@ -216,15 +238,25 @@ pub fn rotate_rust_session(
         Algorithm, Argon2, Version,
     };
     use rand::Rng;
+    use subtle::ConstantTimeEq;
 
     let mut state = session.state.lock().map_err(|e| e.to_string())?;
 
     let matches_old = match state.active_credential {
-        Some(ref bytes) => bytes == old_password.as_bytes(),
+        Some(ref bytes) => {
+            let old_bytes = old_password.as_bytes();
+            if bytes.len() == old_bytes.len() {
+                bool::from(bytes.ct_eq(old_bytes))
+            } else {
+                false
+            }
+        }
         None => false,
     };
 
     if !matches_old {
+        old_password.zeroize();
+        new_password.zeroize();
         return Err("current-master-password-invalid".to_string());
     }
 
@@ -236,17 +268,29 @@ pub fn rotate_rust_session(
     let mut rng_bytes = [0u8; 16];
     rand::thread_rng().fill(&mut rng_bytes);
     let salt_str = SaltString::encode_b64(&rng_bytes)
-        .map_err(|e| format!("failed to encode random salt: {e}"))?;
+        .map_err(|e| {
+            old_password.zeroize();
+            new_password.zeroize();
+            format!("failed to encode random salt: {e}")
+        })?;
 
     let new_argon_hash = argon2
         .hash_password(new_password.as_bytes(), &salt_str)
-        .map_err(|e| format!("Argon2id hashing failed: {e}"))?
+        .map_err(|e| {
+            old_password.zeroize();
+            new_password.zeroize();
+            format!("Argon2id hashing failed: {e}")
+        })?
         .to_string();
 
     state.active_credential = Some(new_password.as_bytes().to_vec());
-    let bp = resolve_backup_password(&new_password, backup_password);
+    let mut bp = resolve_backup_password(&new_password, backup_password);
     state.active_backup_password = Some(bp.as_bytes().to_vec());
     state.active_vault_key = Some(new_vault_key.clone());
+
+    old_password.zeroize();
+    new_password.zeroize();
+    bp.zeroize();
 
     Ok(RustRotationResult {
         new_vault_key,
