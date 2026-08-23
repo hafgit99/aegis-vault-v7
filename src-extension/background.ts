@@ -256,17 +256,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           return;
         }
 
-        // If targetDomain is provided, validate against active tab's domain
+        // If targetDomain is provided, validate against active tab's domain (defense-in-depth)
         if (request.targetDomain && tabUrl) {
           const tabDomain = extractRegistrableDomainFromUrl(tabUrl);
           if (tabDomain && request.targetDomain && tabDomain !== request.targetDomain) {
-            // Log the mismatch attempt for security auditing
+            if (!request.userConfirmedMismatch) {
+              console.warn(
+                '[AegisVault Security] Autofill domain mismatch blocked by background service worker:',
+                `tab=${tabDomain}, credential=${request.targetDomain}`
+              );
+              sendResponse({ status: 'blocked', reason: 'domain_mismatch' });
+              return;
+            }
             console.warn(
-              '[AegisVault Security] Autofill domain mismatch blocked:',
+              '[AegisVault Security] Autofill domain mismatch allowed with explicit user confirmation:',
               `tab=${tabDomain}, credential=${request.targetDomain}`
             );
-            // Still allow — popup already showed the warning and user confirmed.
-            // This log is for security auditing; the popup is the enforcement point.
           }
         }
 

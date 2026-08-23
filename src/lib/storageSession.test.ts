@@ -267,14 +267,14 @@ describe('vault session storage', () => {
     expect(sqliteOPFSInstance.reseedDemoWithKey).not.toHaveBeenCalled();
   });
 
-  it('stores secret keys in device storage when hardware secure bridge is absent', () => {
+  it('refuses to store secret keys in unencrypted device storage when hardware secure bridge is absent', () => {
     delete (window as any).AegisAndroidSecureStorage;
 
     const stored = rememberAccountSecretKey('  a3-abcd-efgh-ijkl-mnop-qrst-uvwx-yz23-4567  ');
 
-    expect(stored).toBe(true);
-    expect(localStorage.getItem('aegis_account_secret_key_remembered')).toBe('A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567');
-    expect(getRememberedAccountSecretKey()).toBe('A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567');
+    expect(stored).toBe(false);
+    expect(localStorage.getItem('aegis_account_secret_key_remembered')).toBeNull();
+    expect(getRememberedAccountSecretKey()).toBeNull();
   });
 
   it('removes remembered secret keys from both secure storage and the legacy fallback', () => {

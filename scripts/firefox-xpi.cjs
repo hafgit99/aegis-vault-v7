@@ -20,8 +20,20 @@ const excludedNames = new Set([
   'com.hafgit99.aegisvault7.json',
 ]);
 
+function maskCommandArgs(cmdArgs) {
+  const masked = [...cmdArgs];
+  for (let i = 0; i < masked.length; i++) {
+    if (masked[i] === '--api-secret' || masked[i] === '--api-key') {
+      if (i + 1 < masked.length) {
+        masked[i + 1] = '********';
+      }
+    }
+  }
+  return masked;
+}
+
 function run(command, commandArgs, options = {}) {
-  console.log(`\n> ${command} ${commandArgs.join(' ')}`);
+  console.log(`\n> ${command} ${maskCommandArgs(commandArgs).join(' ')}`);
   const result = spawnSync(command, commandArgs, {
     cwd: rootDir,
     stdio: 'inherit',
@@ -97,10 +109,6 @@ if (shouldSign) {
     stagingDir,
     '--artifacts-dir',
     artifactsDir,
-    '--api-key',
-    apiKey,
-    '--api-secret',
-    apiSecret,
     '--channel',
     channel,
     '--no-input',
@@ -110,7 +118,14 @@ if (shouldSign) {
     signArgs.push('--approval-timeout', approvalTimeout);
   }
 
-  run('npx', signArgs);
+  // Pass credentials safely via environment variables to avoid exposing secrets in process lists
+  const signEnv = {
+    ...process.env,
+    WEB_EXT_API_KEY: apiKey,
+    WEB_EXT_API_SECRET: apiSecret,
+  };
+
+  run('npx', signArgs, { env: signEnv });
 } else {
   run('npx', [
     'web-ext',

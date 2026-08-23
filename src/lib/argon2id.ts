@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { logSecurityEvent } from './securityEvents';
+import { logSecurityEvent, securityEventCodes } from './securityEvents';
 
 export interface Argon2idOptions {
   memoryKiB?: number;
@@ -173,8 +173,11 @@ export async function deriveArgon2idKey(
       if (!/memory access out of bounds|out of memory|wasm|RangeError/i.test(message)) {
         throw error;
       }
+      console.warn(
+        `[AegisSecurity] WASM Argon2id memory limit encountered (${profile.memoryKiB} KiB). Degrading profile parameters from requested ${requested.memoryKiB} KiB.`
+      );
       logSecurityEvent(
-        'security.legacyCryptoWarning' as any,
+        securityEventCodes.securityLegacyCryptoWarning,
         `WASM Argon2id memory limit encountered (${profile.memoryKiB} KiB). Degrading profile parameters.`,
         'warning',
         { requestedMemoryKiB: requested.memoryKiB, fallbackMemoryKiB: profile.memoryKiB }

@@ -5,7 +5,7 @@
 
 import { withActiveVaultEncryptionKey } from './vaultSession';
 import { webCryptoAesGcmDecryptBytes, webCryptoAesGcmEncryptBytes, generateSafeIv } from './webcrypto';
-import { logSecurityEvent } from './securityEvents';
+import { logSecurityEvent, securityEventCodes } from './securityEvents';
 
 const DB_NAME = 'aegis_attachments_db';
 const STORE_NAME = 'attachments';
@@ -78,7 +78,7 @@ export interface AttachmentRecord {
  */
 function rejectLegacyXorRecord(): never {
   logSecurityEvent(
-    'attachment.legacyMigration.failed' as any,
+    securityEventCodes.attachmentLegacyMigrationFailed,
     'Rejected legacy XOR-obfuscated attachment. This format is no longer supported. Migrate from a previous Aegis Vault version first.',
     'critical',
   );
@@ -86,6 +86,12 @@ function rejectLegacyXorRecord(): never {
 }
 
 async function deriveAttachmentKey(masterPassword: string, attachmentId: string): Promise<Uint8Array> {
+  logSecurityEvent(
+    securityEventCodes.securityLegacyCryptoWarning,
+    'Legacy raw SHA-256 attachment key derivation accessed. Migration to HKDF-SHA-256 with vault-key is required.',
+    'warning',
+    { attachmentId },
+  );
   const keyMaterial = new TextEncoder().encode(`${ATTACHMENT_KEY_CONTEXT}:${attachmentId}:${masterPassword}`);
   return new Uint8Array(await crypto.subtle.digest('SHA-256', keyMaterial));
 }

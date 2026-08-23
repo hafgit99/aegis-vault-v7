@@ -127,12 +127,14 @@ export function getRememberedAccountSecretKey(): string | null {
   const secureValue = getSecureStorageItem(secureStorageKeys.rememberedSecretKey);
   if (secureValue) return secureValue;
 
-  const deviceValue = getIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
-  if (deviceValue) {
-    if (setSecureStorageItem(secureStorageKeys.rememberedSecretKey, deviceValue)) {
+  const legacyDeviceValue = getIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
+  if (legacyDeviceValue) {
+    if (setSecureStorageItem(secureStorageKeys.rememberedSecretKey, legacyDeviceValue)) {
       removeIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
+      return legacyDeviceValue;
     }
-    return deviceValue;
+    // Secure storage unavailable: purge unencrypted secret key to prevent offline 2FA bypass
+    removeIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
   }
 
   return null;
@@ -145,8 +147,9 @@ export function rememberAccountSecretKey(secretKey: string): boolean {
     return true;
   }
 
-  setIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY, normalizedSecretKey);
-  return true;
+  // Refuse to write plaintext 2FA secret keys into unencrypted IndexedDB
+  removeIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
+  return false;
 }
 
 export function forgetRememberedAccountSecretKey(): void {
@@ -159,6 +162,9 @@ function migrateRememberedSecretKeyToSecureStorage(): void {
   if (!legacySecretKey) return;
 
   if (setSecureStorageItem(secureStorageKeys.rememberedSecretKey, legacySecretKey)) {
+    removeIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
+  } else {
+    // Purge unencrypted plaintext copy
     removeIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
   }
 }

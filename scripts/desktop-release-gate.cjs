@@ -107,7 +107,7 @@ function killRunningProcessesOnWindows() {
       const { spawnSync } = require('child_process');
       spawnSync(
         'powershell',
-        ['-NoProfile', '-NonInteractive', '-Command', "Get-Process | Where-Object { $_.ProcessName -like '*aegis*' -or $_.ProcessName -like '*vault*' } | Stop-Process -Force"],
+        ['-NoProfile', '-NonInteractive', '-Command', "Get-Process -Name 'aegis-vault-v7' -ErrorAction SilentlyContinue | Stop-Process -Force"],
         { stdio: 'ignore' },
       );
     } catch (_) {}

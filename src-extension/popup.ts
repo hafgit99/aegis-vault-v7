@@ -706,15 +706,36 @@ function showDomainMismatchWarning(item: CredentialItem, tabDomain: string, cred
   const credLabel = activeLanguage === 'tr' ? 'Kayıt' : 'Credential';
   const pageLabel = activeLanguage === 'tr' ? 'Mevcut sayfa' : 'Current page';
 
-  desc.innerHTML = `
-    ${warningText}
-    <br><br>
-    <strong style="color: var(--accent-green, #10b981);">${credLabel}:</strong> ${credDomain}<br>
-    <strong style="color: var(--accent-red, #ef4444);">${pageLabel}:</strong> ${tabDomain}
-  `;
+  desc.textContent = warningText;
+
+  const detailBox = document.createElement('div');
+  detailBox.style.cssText = 'margin-top: 12px; text-align: left; background: rgba(0,0,0,0.25); padding: 8px 12px; border-radius: 6px; font-size: 12px; word-break: break-all;';
+
+  const credLine = document.createElement('div');
+  const credStrong = document.createElement('strong');
+  credStrong.style.color = 'var(--accent-green, #10b981)';
+  credStrong.textContent = `${credLabel}: `;
+  const credSpan = document.createElement('span');
+  credSpan.textContent = credDomain;
+  credLine.appendChild(credStrong);
+  credLine.appendChild(credSpan);
+
+  const pageLine = document.createElement('div');
+  pageLine.style.marginTop = '4px';
+  const pageStrong = document.createElement('strong');
+  pageStrong.style.color = 'var(--accent-red, #ef4444)';
+  pageStrong.textContent = `${pageLabel}: `;
+  const pageSpan = document.createElement('span');
+  pageSpan.textContent = tabDomain;
+  pageLine.appendChild(pageStrong);
+  pageLine.appendChild(pageSpan);
+
+  detailBox.appendChild(credLine);
+  detailBox.appendChild(pageLine);
+  desc.appendChild(detailBox);
 
   const btnRow = document.createElement('div');
-  btnRow.style.cssText = 'display: flex; gap: 8px;';
+  btnRow.style.cssText = 'display: flex; gap: 8px; margin-top: 16px;';
 
   const cancelBtn = document.createElement('button');
   cancelBtn.textContent = activeLanguage === 'tr' ? 'İptal' : 'Cancel';
@@ -734,7 +755,7 @@ function showDomainMismatchWarning(item: CredentialItem, tabDomain: string, cred
   `;
   proceedBtn.addEventListener('click', () => {
     overlay.remove();
-    sendAutofillMessage(item);
+    sendAutofillMessage(item, true /* userConfirmedMismatch */);
   });
 
   btnRow.appendChild(cancelBtn);
@@ -755,9 +776,9 @@ function showDomainMismatchWarning(item: CredentialItem, tabDomain: string, cred
 
 /**
  * Sends the autofill message to background, which forwards to the active tab's content script.
- * Includes the credential's target domain for background-side validation. (Security fix Y1)
+ * Includes the credential's target domain and confirmation state for background-side validation.
  */
-function sendAutofillMessage(item: CredentialItem): void {
+function sendAutofillMessage(item: CredentialItem, userConfirmedMismatch = false): void {
   const credDomain = item.url ? extractRegistrableDomainFromUrl(
     item.url.startsWith('http') ? item.url : `https://${item.url}`
   ) : '';
@@ -767,6 +788,7 @@ function sendAutofillMessage(item: CredentialItem): void {
     username: item.username,
     password: item.password || '',
     targetDomain: credDomain,
+    userConfirmedMismatch,
   });
 }
 

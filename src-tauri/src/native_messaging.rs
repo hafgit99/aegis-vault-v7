@@ -731,8 +731,22 @@ fn handle_client(
                             .collect();
                         serde_json::json!({ "locked": false, "credentials": matching })
                     } else {
-                        // Return full list of cached credentials for popup search, favorites & matching
-                        serde_json::json!({ "locked": false, "credentials": cache.credentials })
+                        // Return metadata-only list of cached credentials (with empty passwords)
+                        // for popup search, favorites & domain extraction to prevent single-message bulk password dumping.
+                        let sanitized: Vec<ExtensionCredential> = cache
+                            .credentials
+                            .iter()
+                            .map(|item| ExtensionCredential {
+                                id: item.id.clone(),
+                                title: item.title.clone(),
+                                username: item.username.clone(),
+                                password: String::new(),
+                                url: item.url.clone(),
+                                category: item.category.clone(),
+                                favorite: item.favorite,
+                            })
+                            .collect();
+                        serde_json::json!({ "locked": false, "credentials": sanitized })
                     }
                 } else {
                     serde_json::json!({ "locked": true, "credentials": [] })
@@ -984,5 +998,42 @@ mod tests {
         let host_active = parse_url("https://example.com:3000/");
         let host_item = parse_url("https://example.com/");
         assert!(match_credentials(&host_active, &host_item).is_some());
+    }
+
+    #[test]
+    fn test_empty_url_sanitizes_passwords() {
+        let cred = ExtensionCredential {
+            id: "item-1".to_string(),
+            title: "Test Item".to_string(),
+            username: "alice".to_string(),
+            password: "supersecretpassword123".to_string(),
+            url: "https://example.com".to_string(),
+            category: "login".to_string(),
+            favorite: true,
+        };
+
+        let cache = ExtensionCredentialCache {
+            credentials: vec![cred],
+            expires_at_epoch_ms: u64::MAX,
+        };
+
+        let sanitized: Vec<ExtensionCredential> = cache
+            .credentials
+            .iter()
+            .map(|item| ExtensionCredential {
+                id: item.id.clone(),
+                title: item.title.clone(),
+                username: item.username.clone(),
+                password: String::new(),
+                url: item.url.clone(),
+                category: item.category.clone(),
+                favorite: item.favorite,
+            })
+            .collect();
+
+        assert_eq!(sanitized.len(), 1);
+        assert_eq!(sanitized[0].title, "Test Item");
+        assert_eq!(sanitized[0].username, "alice");
+        assert!(sanitized[0].password.is_empty());
     }
 }
