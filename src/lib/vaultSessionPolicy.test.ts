@@ -125,7 +125,7 @@ describe('vaultSession comprehensive lifecycle and byte callbacks', () => {
     // Async callbacks
     const asyncVal = await withActiveVaultEncryptionKey(async (k) => {
       await new Promise((r) => setTimeout(r, 5));
-      return k[0] * 2;
+      return (k[0] ?? 0) * 2;
     });
     expect(asyncVal).toBe(22);
 

@@ -8,23 +8,43 @@ const args = process.argv.slice(2);
 const skipTests = args.includes('--skip-tests');
 const macUniversal = args.includes('--mac-universal');
 
-function resolveExecutable(command) {
-  if (process.platform === 'win32') {
-    if (command === 'npm') return 'npm.cmd';
-    if (command === 'npx') return 'npx.cmd';
-    if (command === 'cargo') return 'cargo.exe';
-    if (command === 'rustup') return 'rustup.exe';
-  }
-  return command;
-}
+const fs = require('fs');
+
+const npmCli = path.join(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js');
+const npxCli = path.join(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npx-cli.js');
 
 function run(command, commandArgs, options = {}) {
-  const exe = resolveExecutable(command);
+  let executable = command;
+  let args = commandArgs;
+
+  if (command === 'npm') {
+    if (fs.existsSync(npmCli)) {
+      executable = process.execPath;
+      args = [npmCli, ...commandArgs];
+    } else {
+      executable = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+    }
+  } else if (command === 'npx') {
+    if (fs.existsSync(npxCli)) {
+      executable = process.execPath;
+      args = [npxCli, ...commandArgs];
+    } else {
+      executable = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+    }
+  } else if (command === 'node') {
+    executable = process.execPath;
+    args = commandArgs;
+  } else if (command === 'cargo' && process.platform === 'win32') {
+    executable = 'cargo.exe';
+  } else if (command === 'rustup' && process.platform === 'win32') {
+    executable = 'rustup.exe';
+  }
+
   console.log(`\n> ${command} ${commandArgs.join(' ')}`);
-  const result = spawnSync(exe, commandArgs, {
+  const result = spawnSync(executable, args, {
     cwd: rootDir,
     stdio: 'inherit',
-    shell: false,
+    shell: !fs.existsSync(npmCli) && process.platform === 'win32' && (command === 'npm' || command === 'npx'),
     ...options,
   });
 

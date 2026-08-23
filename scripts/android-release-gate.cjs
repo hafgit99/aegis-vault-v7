@@ -82,21 +82,37 @@ function androidEnv() {
   return env;
 }
 
-function resolveExecutable(command) {
-  if (process.platform === 'win32') {
-    if (command === 'npm') return 'npm.cmd';
-    if (command === 'npx') return 'npx.cmd';
-  }
-  return command;
-}
+const npmCli = path.join(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js');
+const npxCli = path.join(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npx-cli.js');
 
 function run(command, commandArgs, options = {}) {
-  const exe = resolveExecutable(command);
-  console.log(`\n> ${exe} ${commandArgs.join(' ')}`);
-  const result = spawnSync(exe, commandArgs, {
+  let executable = command;
+  let args = commandArgs;
+
+  if (command === 'npm') {
+    if (fs.existsSync(npmCli)) {
+      executable = process.execPath;
+      args = [npmCli, ...commandArgs];
+    } else {
+      executable = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+    }
+  } else if (command === 'npx') {
+    if (fs.existsSync(npxCli)) {
+      executable = process.execPath;
+      args = [npxCli, ...commandArgs];
+    } else {
+      executable = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+    }
+  } else if (command === 'node') {
+    executable = process.execPath;
+    args = commandArgs;
+  }
+
+  console.log(`\n> ${command} ${commandArgs.join(' ')}`);
+  const result = spawnSync(executable, args, {
     cwd: repoRoot,
     stdio: 'inherit',
-    shell: false,
+    shell: !fs.existsSync(npmCli) && process.platform === 'win32' && (command === 'npm' || command === 'npx'),
     env: androidEnv(),
     ...options,
   });

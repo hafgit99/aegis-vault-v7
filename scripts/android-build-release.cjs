@@ -32,23 +32,35 @@ env.ANDROID_HOME = sdkRoot;
 env.ANDROID_SDK_ROOT = env.ANDROID_SDK_ROOT || sdkRoot;
 env.JAVA_HOME = javaHome;
 
-function resolveExecutable(command) {
-  if (process.platform === 'win32') {
-    if (command === 'npm') return 'npm.cmd';
-    if (command === 'npx') return 'npx.cmd';
-    if (command === 'tauri') return 'npx.cmd';
-  }
-  return command;
-}
+const npmCli = path.join(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js');
+const npxCli = path.join(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npx-cli.js');
 
-function run(command, args) {
-  const exe = resolveExecutable(command);
-  const finalArgs = command === 'tauri' && process.platform === 'win32' ? ['tauri', ...args] : args;
-  const result = spawnSync(exe, finalArgs, {
+function run(command, commandArgs) {
+  let executable = command;
+  let args = commandArgs;
+
+  if (command === 'npm') {
+    if (fs.existsSync(npmCli)) {
+      executable = process.execPath;
+      args = [npmCli, ...commandArgs];
+    } else {
+      executable = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+    }
+  } else if (command === 'npx' || command === 'tauri') {
+    if (fs.existsSync(npxCli)) {
+      executable = process.execPath;
+      args = [npxCli, ...(command === 'tauri' ? ['tauri', ...commandArgs] : commandArgs)];
+    } else {
+      executable = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+      args = command === 'tauri' && process.platform === 'win32' ? ['tauri', ...commandArgs] : commandArgs;
+    }
+  }
+
+  const result = spawnSync(executable, args, {
     cwd: repoRoot,
     env,
     stdio: 'inherit',
-    shell: false,
+    shell: !fs.existsSync(npmCli) && process.platform === 'win32',
   });
   if (result.status !== 0) process.exit(result.status || 1);
 }

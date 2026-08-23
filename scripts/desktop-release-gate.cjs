@@ -1,3 +1,4 @@
+const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { spawnSync } = require('child_process');
@@ -115,6 +116,9 @@ function killRunningProcessesOnWindows() {
 }
 
 
+const npmCli = path.join(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js');
+const npxCli = path.join(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npx-cli.js');
+
 function run(command, commandArgs) {
   if (command === 'npx' && commandArgs.includes('build')) {
     killRunningProcessesOnWindows();
@@ -125,24 +129,38 @@ function run(command, commandArgs) {
     return;
   }
 
+  let executable = command;
+  let args = commandArgs;
 
-  function resolveExecutable(cmd) {
-    if (isWindows) {
-      if (cmd === 'npm') return 'npm.cmd';
-      if (cmd === 'npx') return 'npx.cmd';
-      if (cmd === 'cargo') return 'cargo.exe';
-      if (cmd === 'rustup') return 'rustup.exe';
+  if (command === 'npm') {
+    if (fs.existsSync(npmCli)) {
+      executable = process.execPath;
+      args = [npmCli, ...commandArgs];
+    } else {
+      executable = isWindows ? 'npm.cmd' : 'npm';
     }
-    return cmd;
+  } else if (command === 'npx') {
+    if (fs.existsSync(npxCli)) {
+      executable = process.execPath;
+      args = [npxCli, ...commandArgs];
+    } else {
+      executable = isWindows ? 'npx.cmd' : 'npx';
+    }
+  } else if (command === 'node') {
+    executable = process.execPath;
+    args = commandArgs;
+  } else if (command === 'cargo' && isWindows) {
+    executable = 'cargo.exe';
+  } else if (command === 'rustup' && isWindows) {
+    executable = 'rustup.exe';
   }
 
-  const exe = resolveExecutable(command);
-  console.log('\n> ' + commandLabel(exe, commandArgs));
+  console.log('\n> ' + commandLabel(command, commandArgs));
 
-  const result = spawnSync(exe, commandArgs, {
+  const result = spawnSync(executable, args, {
     cwd: rootDir,
     stdio: 'inherit',
-    shell: false,
+    shell: !fs.existsSync(npmCli) && isWindows && (command === 'npm' || command === 'npx'),
   });
 
   if (result.status !== 0) {

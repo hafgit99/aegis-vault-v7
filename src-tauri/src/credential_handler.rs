@@ -186,11 +186,10 @@ pub fn setup_rust_session(
 
     let mut rng_bytes = [0u8; 16];
     rand::thread_rng().fill(&mut rng_bytes);
-    let salt_str = SaltString::encode_b64(&rng_bytes)
-        .map_err(|e| {
-            password.zeroize();
-            format!("failed to encode random salt: {e}")
-        })?;
+    let salt_str = SaltString::encode_b64(&rng_bytes).map_err(|e| {
+        password.zeroize();
+        format!("failed to encode random salt: {e}")
+    })?;
 
     let argon_hash = argon2
         .hash_password(password.as_bytes(), &salt_str)
@@ -267,12 +266,11 @@ pub fn rotate_rust_session(
 
     let mut rng_bytes = [0u8; 16];
     rand::thread_rng().fill(&mut rng_bytes);
-    let salt_str = SaltString::encode_b64(&rng_bytes)
-        .map_err(|e| {
-            old_password.zeroize();
-            new_password.zeroize();
-            format!("failed to encode random salt: {e}")
-        })?;
+    let salt_str = SaltString::encode_b64(&rng_bytes).map_err(|e| {
+        old_password.zeroize();
+        new_password.zeroize();
+        format!("failed to encode random salt: {e}")
+    })?;
 
     let new_argon_hash = argon2
         .hash_password(new_password.as_bytes(), &salt_str)
