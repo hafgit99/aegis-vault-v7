@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { VaultItem } from '../types';
 import type { VaultStorageQueryResult } from './vaultStorageRepository';
 import { createWaSqlitePersistenceProfile } from './waSqlitePersistence';
-import type { WaSqliteEngine } from './waSqliteEngine';
+import { bindSqlParams, type WaSqliteEngine } from './waSqliteEngine';
 import {
   createWaSqliteVaultStorageRepository,
   WA_SQLITE_INVALID_MASTER_PASSWORD_ERROR,
@@ -197,8 +197,9 @@ function createEngineStub(): WaSqliteEngine & {
       tableCount: 3,
       persistenceProfile: createWaSqlitePersistenceProfile(),
     })),
-    execute: vi.fn(async (sql: string) => {
-      const normalizedSql = sql.trim();
+    execute: vi.fn(async (sql: string, params?: any) => {
+      const boundSql = bindSqlParams(sql, params);
+      const normalizedSql = boundSql.trim();
       if (normalizedSql === 'BEGIN IMMEDIATE;') {
         snapshot();
         return { columns: [], rows: [] };
@@ -244,16 +245,17 @@ function createEngineStub(): WaSqliteEngine & {
       return { columns: [], rows: [] };
     }),
     executeReadOnly: vi.fn(async () => ({ columns: [], rows: [] })),
-    selectObjects: vi.fn(async (sql: string) => {
-      if (sql.includes('FROM user_secrets')) {
+    selectObjects: vi.fn(async (sql: string, params?: any) => {
+      const boundSql = bindSqlParams(sql, params);
+      if (boundSql.includes('FROM user_secrets')) {
         return state.userSecretHash ? [{ argon_hash: state.userSecretHash }] : [];
       }
-      if (sql.includes('FROM storage_metadata')) {
-        const key = String(parseSqlValue(sql.match(/WHERE key = ('(?:''|[^'])*')/)?.[1] ?? "''"));
+      if (boundSql.includes('FROM storage_metadata')) {
+        const key = String(parseSqlValue(boundSql.match(/WHERE key = ('(?:''|[^'])*')/)?.[1] ?? "''"));
         const value = state.metadata.get(key);
         return value ? [{ value }] : [];
       }
-      if (sql.includes('FROM vault_items')) {
+      if (boundSql.includes('FROM vault_items')) {
         return state.vaultRows;
       }
       return [];

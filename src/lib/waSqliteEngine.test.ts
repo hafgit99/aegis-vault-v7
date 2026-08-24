@@ -5,7 +5,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { createWaSqlitePersistenceProfile } from './waSqlitePersistence';
-import { createWaSqliteEngine, createWaSqliteModuleConfig, WA_SQLITE_BOOTSTRAP_SCHEMA, type WaSqliteRuntime } from './waSqliteEngine';
+import { bindSqlParams, createWaSqliteEngine, createWaSqliteModuleConfig, WA_SQLITE_BOOTSTRAP_SCHEMA, type WaSqliteRuntime } from './waSqliteEngine';
 
 function createRuntimeStub(): WaSqliteRuntime & {
   exec: ReturnType<typeof vi.fn>;
@@ -206,5 +206,33 @@ describe('wa-sqlite engine', () => {
 
     expect(runtime.close).toHaveBeenCalledOnce();
     expect(runtime.close).toHaveBeenCalledWith(42);
+  });
+
+  describe('bindSqlParams parameter binding security', () => {
+    it('binds positional parameters cleanly with proper type escaping', () => {
+      const sql = 'INSERT INTO test (name, count, active, data, opt) VALUES (?, ?, ?, ?, ?);';
+      const bound = bindSqlParams(sql, [
+        "Alice's Keys",
+        42,
+        true,
+        new Uint8Array([0xde, 0xad, 0xbe, 0xef]),
+        null,
+      ]);
+      expect(bound).toBe("INSERT INTO test (name, count, active, data, opt) VALUES ('Alice''s Keys', 42, 1, X'deadbeef', NULL);");
+    });
+
+    it('binds named parameters cleanly and neutralizes SQL injection attempts', () => {
+      const sql = 'SELECT * FROM users WHERE username = :username AND role = :role;';
+      const bound = bindSqlParams(sql, {
+        username: "admin' OR '1'='1",
+        role: 'user',
+      });
+      expect(bound).toBe("SELECT * FROM users WHERE username = 'admin'' OR ''1''=''1' AND role = 'user';");
+    });
+
+    it('throws when missing positional or named parameters', () => {
+      expect(() => bindSqlParams('SELECT * FROM a WHERE x = ? AND y = ?;', [1])).toThrow(/Insufficient SQL parameters/);
+      expect(() => bindSqlParams('SELECT * FROM a WHERE x = :id;', {})).toThrow(/Missing named SQL parameter: :id/);
+    });
   });
 });

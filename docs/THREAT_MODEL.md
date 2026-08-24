@@ -87,7 +87,8 @@ Vault database:
 
 - Database persistence payloads use a versioned schema envelope.
 - Legacy unversioned database payloads are normalized to the current schema.
-- Vault rows store sensitive item data inside encrypted metadata.
+- Vault rows store sensitive item data inside encrypted metadata (`enc_metadata`).
+- **Metadata vs Ciphertext Boundary:** All sensitive item fields (passwords, usernames, titles, notes, URLs, TOTP secrets, card data, and passkeys) are strictly encrypted inside the AES-256-GCM authenticated ciphertext envelope with per-item derived HKDF keys. Row-level columns (`category`, `favorite`, `deleted`, `deleted_at`, timestamps) are maintained in plain columns solely for local SQL indexing and sync tombstone resolution. These columns never contain credential data or secret strings.
 - New vault item metadata writes use Argon2id-derived keys and WebCrypto AES-GCM.
 - Fresh vaults use the real wa-sqlite backend with persistent VFS support when available. Existing OPFS/JSON vaults stay on the legacy encrypted store until the guarded migration proves persistence, item parity, and restore safety.
 

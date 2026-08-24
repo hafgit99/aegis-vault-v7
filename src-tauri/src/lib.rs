@@ -237,6 +237,9 @@ fn write_clipboard_text_protected(text: String) -> Result<bool, String> {
     Ok(true)
 }
 
+/// Non-Windows desktop platforms (macOS/Linux): returns Ok(false) so the frontend
+/// gracefully falls back to `navigator.clipboard` with active 30s overwrite timers
+/// (`useClipboardFeedback`).
 #[cfg(not(target_os = "windows"))]
 #[tauri::command]
 fn write_clipboard_text_protected(_text: String) -> Result<bool, String> {

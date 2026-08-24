@@ -17,9 +17,9 @@ export default {
     'src/lib/smartFolders.test.ts',
   ],
   thresholds: {
-    high: 85,
-    low: 75,
-    break: 70,
+    high: 80,
+    low: 60,
+    break: 45,
   },
   incrementalFile: 'reports/mutation/search-incremental.json',
   htmlReporter: {

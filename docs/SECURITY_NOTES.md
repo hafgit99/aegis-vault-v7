@@ -12,14 +12,19 @@ This project is a password vault, so security claims must stay conservative unti
 - New biometric master-password wrapping uses WebCrypto PBKDF2-SHA256 at 600,000 iterations and AES-GCM.
 - New vault item metadata writes use WebCrypto AES-GCM with keys derived through the vetted Argon2id adapter.
 - Tauri CSP now adds native defense-in-depth restrictions for frames, objects, forms, workers, media, and outbound connections; runtime air-gap guards also block WebRTC construction.
-- Tauri CSP now removes `style-src 'unsafe-inline'`; production React/HTML sources avoid inline style attributes and the release gates enforce this with `npm run security:csp`.
+- Tauri CSP removes `style-src 'unsafe-inline'`; production React/HTML sources avoid inline style attributes and the release gates enforce this with `npm run security:csp`.
+- Auto-lock configuration removes insecure "Never Lock" option; auto-lock is strictly bounded between 15 seconds and 2 hours with automatic duration sanitation.
+- Failed unlock attempt lockout delay is persisted to IndexedDB across application restarts, preventing brute-force lockout resets via quick app reboot.
+- Browser extension IPC credential cache in native Rust derives `Zeroize` and `ZeroizeOnDrop`, securely wiping credentials from memory when leases expire.
+- Argon2id key derivation includes fallback ladder degradation detection with subscriber notifications (`getArgon2DegradationInfo`) and `logSecurityEvent` tracking.
+- Row-level SQLite database storage maintains sensitive items inside encrypted `enc_metadata` blobs (AES-256-GCM + HKDF per-item keys), while keeping category and tombstone markers in unencrypted columns for local index performance without credential exposure.
 - Imported WebCrypto AES-GCM key references are cleared automatically when the vault session closes.
 - WebCrypto AES-GCM IV generation now uses a fresh 12-byte CSPRNG nonce for every encryption operation instead of process-local counter state.
 - Legacy backup encryption writer and decrypt fallback paths have been removed from the public API.
 - Vault database payloads now include a versioned schema envelope with migration tests for legacy unversioned state.
 - Desktop vault persistence now mirrors database state through the Tauri app data directory, and native database writes use a temp-file + atomic replace flow to reduce crash/power-loss corruption risk.
 - Desktop import/export now uses controlled native Windows file dialogs.
-- Clipboard clearing now removes copied secrets after the safety delay when the clipboard remains unchanged, using a two-step overwrite-then-clear strategy. Windows native clipboard writes also set history/cloud/monitor exclusion formats where supported.
+- Clipboard clearing now removes copied secrets after the safety delay when the clipboard remains unchanged, using a two-step overwrite-then-clear strategy. Windows native clipboard writes also set history/cloud/monitor exclusion formats where supported, and cross-platform frontends enforce automatic overwrite timers.
 - Browser extension IPC pairing token checks use constant-time comparison, and Unix/macOS token files are written with owner-only permissions.
 - WebDAV Basic Auth encoding avoids deprecated `unescape`, and sync local-network exceptions are limited to loopback plus RFC 1918 private address ranges.
 - Production builds install an air-gap network policy that blocks unexpected outbound `fetch`, XHR, WebSocket, `sendBeacon`, EventSource, and WebRTC connections while allowing app-local/Tauri IPC URLs and exact five-character HIBP SHA-1 range checks.

@@ -257,6 +257,100 @@ Current measured storage orchestration mutation baseline:
 | Survived | 28 |
 | No coverage | 0 |
 
+## Dedicated Security Mutation Gate
+
+A specialized mutation testing gate focuses on cryptographic primitives, share URL decryption, recovery key generation/reconstruction, and database format normalization.
+
+Run it with:
+
+```bash
+npm run test:mutation:security:dry
+npm run test:mutation:security
+```
+
+Current mutation scope:
+
+- `src/lib/share.ts`
+- `src/lib/recoveryKey.ts`
+- `src/lib/backupValidation.ts`
+- `src/lib/vaultDatabaseFormat.ts`
+
+Current measured security mutation baseline:
+
+| Metric | Baseline |
+| --- | ---: |
+| Mutants | 533 |
+| Mutation score | 70.78% |
+| Covered mutation score | 83.63% |
+| Killed | 360 |
+| Timed out | 13 |
+| Survived | 73 |
+| No coverage | 81 |
+
+File scores:
+
+| File | Mutation score | Covered score |
+| --- | ---: | ---: |
+| `src/lib/recoveryKey.ts` | 87.00% | 87.44% |
+| `src/lib/share.ts` | 83.67% | 83.67% |
+| `src/lib/vaultDatabaseFormat.ts` | 80.00% | 81.36% |
+| `src/lib/backupValidation.ts` | 50.46% | 79.14% |
+
+Security mutation thresholds:
+
+| Threshold | Current value |
+| --- | ---: |
+| High | 85% |
+| Low | 75% |
+| Break | 70% |
+
+## Dedicated Search & Smart Folders Mutation Gate
+
+Search, tag resolution, and smart folder filtering logic have a dedicated mutation gate measuring fuzz and predicate resilience.
+
+Run it with:
+
+```bash
+npm run test:mutation:search:dry
+npm run test:mutation:search
+```
+
+Current mutation scope:
+
+- `src/lib/fuzzySearch.ts`
+- `src/lib/recentSearches.ts`
+- `src/lib/tags.ts`
+- `src/lib/smartFolders.ts`
+
+Current measured search mutation baseline:
+
+| Metric | Baseline |
+| --- | ---: |
+| Mutants | 1,111 |
+| Mutation score | 48.84% |
+| Covered mutation score | 52.77% |
+| Killed | 478 |
+| Timed out | 7 |
+| Survived | 434 |
+| No coverage | 74 |
+
+File scores:
+
+| File | Mutation score | Covered score |
+| --- | ---: | ---: |
+| `src/lib/tags.ts` | 64.02% | 65.05% |
+| `src/lib/recentSearches.ts` | 63.54% | 67.03% |
+| `src/lib/fuzzySearch.ts` | 55.48% | 61.33% |
+| `src/lib/smartFolders.ts` | 34.35% | 37.82% |
+
+Search mutation thresholds:
+
+| Threshold | Current value |
+| --- | ---: |
+| High | 80% |
+| Low | 60% |
+| Break | 45% |
+
 ## Android Release Evidence Boundary
 
 Android release quality gates intentionally separate automated script evidence from device-only manual claims. Automated gates can validate artifact integrity, signing metadata, install/launch health, app-private storage, declared Autofill services, selected security-report output, and the presence of a completed biometric production matrix. Final Android release candidates still require the completed checklist copy in `release-local/android/<timestamp>/` for document picker destinations, browser Autofill behavior, biometric flows, FLAG_SECURE behavior on the target phone, and safe-area/mobile UI checks. Public biometric claims additionally require `--require-biometric-matrix` with Pixel, Samsung, Xiaomi, and Android 12/13/14/15 evidence recorded.

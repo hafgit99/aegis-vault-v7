@@ -6,7 +6,7 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import fc from 'fast-check';
 import { S3SyncProvider } from './s3Provider';
-import { WebDAVSyncProvider } from './webdavProvider';
+import { WebDavSyncProvider } from './webdavProvider';
 import { SyncError } from './syncTypes';
 
 const fuzzConfig = { numRuns: 80, seed: 0x5343 };
@@ -36,7 +36,7 @@ describe('Sync Providers property-based fuzz tests', () => {
               type: 's3',
               ...config,
             });
-            expect(provider.type).toBe('s3');
+            expect(provider).toBeInstanceOf(S3SyncProvider);
             provider.dispose();
           } catch (err: any) {
             expect(err instanceof SyncError || err instanceof Error).toBe(true);
@@ -58,11 +58,8 @@ describe('Sync Providers property-based fuzz tests', () => {
         }),
         (config) => {
           try {
-            const provider = new WebDAVSyncProvider({
-              type: 'webdav',
-              ...config,
-            });
-            expect(provider.type).toBe('webdav');
+            const provider = new WebDavSyncProvider(config.url, config.username, config.password);
+            expect(provider).toBeInstanceOf(WebDavSyncProvider);
             provider.dispose();
           } catch (err: any) {
             expect(err instanceof SyncError || err instanceof Error).toBe(true);
@@ -98,7 +95,7 @@ describe('Sync Providers property-based fuzz tests', () => {
         }),
         async (payload, meta) => {
           globalThis.fetch = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
-          await expect(provider.uploadVault(payload, meta)).resolves.not.toThrow();
+          await expect(provider.uploadVault(new TextDecoder().decode(payload), meta)).resolves.toBeUndefined();
         },
       ),
       { numRuns: 30, seed: 0x5354 },

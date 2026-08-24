@@ -12,7 +12,7 @@ import type {
   VaultStorageQueryResult,
   VaultStorageRepository,
 } from './vaultStorageRepository';
-import { createWaSqliteEngine, type WaSqliteEngine } from './waSqliteEngine';
+import { createWaSqliteEngine, type WaSqliteEngine, type SqlParams } from './waSqliteEngine';
 import { reWrapPasskeysInVaultItems } from './passkey';
 import {
   derivePerItemKey,
@@ -404,8 +404,10 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
     return this.getVaultItemsWithKey(key);
   }
 
-  private async executeRequired(sql: string): Promise<void> {
-    const result = await this.engine.execute(sql);
+  private async executeRequired(sql: string, params?: SqlParams): Promise<void> {
+    const result = params !== undefined
+      ? await this.engine.execute(sql, params)
+      : await this.engine.execute(sql);
     if (result.error) {
       throw new Error(result.error);
     }
@@ -605,16 +607,16 @@ FROM vault_items;
 
   private async getStorageMetadata(key: string): Promise<string | null> {
     await this.hydrate();
-    const rows = await this.engine.selectObjects(`SELECT value FROM storage_metadata WHERE key = ${this.sqlString(key)};`);
+    const rows = await this.engine.selectObjects('SELECT value FROM storage_metadata WHERE key = ?;', [key]);
     const value = rows[0]?.value;
     return typeof value === 'string' && value.length > 0 ? value : null;
   }
 
   private async upsertStorageMetadata(key: string, value: string): Promise<void> {
     await this.executeRequired(
-      'INSERT INTO storage_metadata (key, value) VALUES '
-      + `(${this.sqlString(key)}, ${this.sqlString(value)}) `
+      'INSERT INTO storage_metadata (key, value) VALUES (?, ?) '
       + 'ON CONFLICT(key) DO UPDATE SET value = excluded.value;',
+      [key, value],
     );
   }
 

@@ -53,11 +53,47 @@ export interface WaSqliteEngineHealth {
   persistenceProfile: WaSqlitePersistenceProfile;
 }
 
+export type SqlParamValue = string | number | boolean | null | undefined | Uint8Array;
+export type SqlParams = Record<string, SqlParamValue> | Array<SqlParamValue>;
+
+export function bindSqlParams(sql: string, params?: SqlParams): string {
+  if (!params) return sql;
+
+  const sanitizeParam = (val: SqlParamValue): string => {
+    if (val === null || val === undefined) return 'NULL';
+    if (typeof val === 'number') return Number.isFinite(val) ? String(val) : 'NULL';
+    if (typeof val === 'boolean') return val ? '1' : '0';
+    if (val instanceof Uint8Array) {
+      const hex = Array.from(val).map((b) => b.toString(16).padStart(2, '0')).join('');
+      return `X'${hex}'`;
+    }
+    const str = String(val).replace(/\0/g, '').replace(/'/g, "''");
+    return `'${str}'`;
+  };
+
+  if (Array.isArray(params)) {
+    let index = 0;
+    return sql.replace(/\?/g, () => {
+      if (index >= params.length) {
+        throw new Error(`Insufficient SQL parameters: expected at least ${index + 1}, got ${params.length}`);
+      }
+      return sanitizeParam(params[index++]);
+    });
+  }
+
+  return sql.replace(/:([a-zA-Z0-9_]+)/g, (_match, paramName) => {
+    if (!(paramName in params)) {
+      throw new Error(`Missing named SQL parameter: :${paramName}`);
+    }
+    return sanitizeParam(params[paramName]);
+  });
+}
+
 export interface WaSqliteEngine {
   initialize(): Promise<WaSqliteEngineHealth>;
-  execute(sql: string): Promise<VaultStorageQueryResult>;
-  executeReadOnly(sql: string): Promise<VaultStorageQueryResult>;
-  selectObjects(sql: string): Promise<Array<Record<string, unknown>>>;
+  execute(sql: string, params?: SqlParams): Promise<VaultStorageQueryResult>;
+  executeReadOnly(sql: string, params?: SqlParams): Promise<VaultStorageQueryResult>;
+  selectObjects(sql: string, params?: SqlParams): Promise<Array<Record<string, unknown>>>;
   close(): Promise<void>;
 }
 
@@ -251,13 +287,14 @@ export function createWaSqliteEngine(options: WaSqliteEngineOptions = {}): WaSql
       };
     },
 
-    async execute(sql: string): Promise<VaultStorageQueryResult> {
+    async execute(sql: string, params?: SqlParams): Promise<VaultStorageQueryResult> {
       const opened = await ensureOpen();
       const rows: unknown[][] = [];
       let columns: string[] = [];
 
       try {
-        await opened.sqlite3.exec(opened.db, sql, (row, rowColumns) => {
+        const boundSql = bindSqlParams(sql, params);
+        await opened.sqlite3.exec(opened.db, boundSql, (row, rowColumns) => {
           columns = rowColumns;
           rows.push(row.map(normalizeWaSqliteValue));
         });
@@ -275,8 +312,9 @@ export function createWaSqliteEngine(options: WaSqliteEngineOptions = {}): WaSql
       };
     },
 
-    async executeReadOnly(sql: string): Promise<VaultStorageQueryResult> {
-      if (!isReadOnlySelect(sql)) {
+    async executeReadOnly(sql: string, params?: SqlParams): Promise<VaultStorageQueryResult> {
+      const boundSql = bindSqlParams(sql, params);
+      if (!isReadOnlySelect(boundSql)) {
         return {
           columns: [],
           rows: [],
@@ -284,11 +322,11 @@ export function createWaSqliteEngine(options: WaSqliteEngineOptions = {}): WaSql
         };
       }
 
-      return this.execute(sql);
+      return this.execute(boundSql);
     },
 
-    async selectObjects(sql: string): Promise<Array<Record<string, unknown>>> {
-      const result = await this.executeReadOnly(sql);
+    async selectObjects(sql: string, params?: SqlParams): Promise<Array<Record<string, unknown>>> {
+      const result = await this.executeReadOnly(sql, params);
       if (result.error) {
         throw new Error(result.error);
       }
