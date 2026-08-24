@@ -90,7 +90,7 @@ Bu bölüm, `docs/SECURITY_CODE_AUDIT_REPORT_2026.md` raporundaki P0-P3 önerile
 | P2-1 | App.tsx route/page kompozisyonu | ❌ **YAPILMADI** | Hâlâ tek dosyada 20+ hook (değişiklik commit'te yok) |
 | P2-2 | `content.ts` modülerleştir | ❌ **YAPILMADI** | (commit'te yok) |
 | P2-3 | Eklenti i18n 12 dil | ✅ **ÇÖZÜLDÜ** | Commit `f9edc9d feat: expand i18n to 12 languages` |
-| P2-4 | VaultSessionContext | ✅ **ÇÖZÜLDÜ** | `src/context/VaultSessionContext.tsx` (54 satır, yeni dosya) |
+| P2-4 | SensitiveRevealContext | ✅ **ÇÖZÜLDÜ** | `src/context/SensitiveRevealContext.tsx` — Reveal durumlarını merkezileştirip prop drilling'i azaltan context; oturum durumu `vaultSession.ts` + `useVaultLock.ts` ile yönetiliyor |
 | P2-5 | Dinamik TCP port (49152-65535) | ❌ **YAPILMADI** | Hâlâ sabit 49155 |
 | P2-6 | Per-item key (HKDF) | ❌ **YAPILMADI** | (commit'te yok) |
 | P2-7 | Public Suffix List | ❌ **YAPILMADI** | (commit'te yok) |
@@ -237,7 +237,7 @@ Bu, **"kullan-at" credential taşıma** için endüstri standardı bir implement
 
 ### 3.2 Yeni Eklenenler (v2'de)
 
-- `src/context/VaultSessionContext.tsx` — Prop drilling'i azaltan context
+- `src/context/SensitiveRevealContext.tsx` — Prop drilling'i azaltıp hassas alan reveal durumlarını merkezileştiren context
 - `src-tauri/src/linux_security.rs` — Linux-specific kod modülden çıkarıldı (lib.rs 28484 bytes, 220 azaldı)
 - `src/lib/performanceBenchmark.test.ts` — Argon2id / AES throughput benchmark
 - `LICENSE-3RD-PARTY.md` — Üçüncü taraf lisans beyanları
@@ -256,7 +256,7 @@ Bu, **"kullan-at" credential taşıma** için endüstri standardı bir implement
 - **Brute-force koruması** (`vaultSession.ts`): 3 başarısız denemeden sonra exponential backoff (2^n saniye, max 30s)
 - **Secret zeroize** (`vaultSession.ts`): `Uint8Array` + `wasmZeroizeArray` (WASM-backed), `createSecureBuffer` ile heap-temizleme
 - **Cache TTL** (`sqlite_opfs.ts`): 5 dakika sonra `decryptedItemsCache.clear()`
-- **VaultSessionContext** (`src/context/VaultSessionContext.tsx`): `useAutoLock` + `unlocked` state'i context üzerinden paylaşım
+- **SensitiveRevealContext & Hook Mimarisi** (`src/context/SensitiveRevealContext.tsx`): Hassas alan görünürlük state'i context üzerinden; oturum state'i `useAutoLock` + `useVaultLock` hook'ları ile paylaşım
 - **Tauri updater configured** (`tauri.conf.json`): pubkey + endpoint yapılandırıldı (P1-3)
 - **CSP'de güncelleme yok** — v1'deki sıkı CSP (`default-src 'self'`, `unsafe-inline` yok) korunuyor
 - **i18n 12 dil**: TR, EN, ZH, DE, FR, ES, IT, PT, RU, JA, KO, AR

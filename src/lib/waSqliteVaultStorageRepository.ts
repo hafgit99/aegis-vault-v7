@@ -137,8 +137,8 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
       await this.upsertStorageMetadata(VAULT_ENCRYPTION_SALT_KEY, salt);
       await this.upsertStorageMetadata(VAULT_KDF_PARAMS_KEY, JSON.stringify(DEFAULT_KDF_PARAMS));
       await this.executeRequired(
-        'INSERT INTO user_secrets (username, argon_hash) VALUES '
-        + `(${this.sqlString('owner')}, ${this.sqlString(argonHash)});`,
+        'INSERT INTO user_secrets (username, argon_hash) VALUES (?, ?);',
+        ['owner', argonHash],
       );
     });
 
@@ -172,12 +172,13 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
       await this.upsertStorageMetadata(VAULT_ENCRYPTION_SALT_KEY, newSalt);
       await this.upsertStorageMetadata(VAULT_KDF_PARAMS_KEY, JSON.stringify(DEFAULT_KDF_PARAMS));
       await this.executeRequired(
-        'INSERT INTO user_secrets (username, argon_hash) VALUES '
-        + `(${this.sqlString('owner')}, ${this.sqlString(newArgonHash)});`,
+        'INSERT INTO user_secrets (username, argon_hash) VALUES (?, ?);',
+        ['owner', newArgonHash],
       );
       await this.executeRequired('DELETE FROM vault_items;');
       for (const row of rekeyedRows) {
-        await this.executeRequired(this.createVaultItemUpsertSql(row));
+        const stmt = this.createVaultItemUpsertStatement(row);
+        await this.executeRequired(stmt.sql, stmt.params);
       }
     });
 
@@ -206,8 +207,8 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
       await this.upsertStorageMetadata(VAULT_ENCRYPTION_SALT_KEY, salt);
       await this.upsertStorageMetadata(VAULT_KDF_PARAMS_KEY, JSON.stringify(kdfParams));
       await this.executeRequired(
-        'INSERT INTO user_secrets (username, argon_hash) VALUES '
-        + `(${this.sqlString('owner')}, ${this.sqlString(argonHash)});`,
+        'INSERT INTO user_secrets (username, argon_hash) VALUES (?, ?);',
+        ['owner', argonHash],
       );
     });
 
@@ -230,12 +231,13 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
       await this.upsertStorageMetadata(VAULT_ENCRYPTION_SALT_KEY, newSalt);
       await this.upsertStorageMetadata(VAULT_KDF_PARAMS_KEY, JSON.stringify(kdfParams));
       await this.executeRequired(
-        'INSERT INTO user_secrets (username, argon_hash) VALUES '
-        + `(${this.sqlString('owner')}, ${this.sqlString(newArgonHash)});`,
+        'INSERT INTO user_secrets (username, argon_hash) VALUES (?, ?);',
+        ['owner', newArgonHash],
       );
       await this.executeRequired('DELETE FROM vault_items;');
       for (const row of rekeyedRows) {
-        await this.executeRequired(this.createVaultItemUpsertSql(row));
+        const stmt = this.createVaultItemUpsertStatement(row);
+        await this.executeRequired(stmt.sql, stmt.params);
       }
     });
 
@@ -280,7 +282,8 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
     const row = await this.createEncryptedRow(item, key);
 
     await this.runTransaction(async () => {
-      await this.executeRequired(this.createVaultItemUpsertSql(row));
+      const stmt = this.createVaultItemUpsertStatement(row);
+      await this.executeRequired(stmt.sql, stmt.params);
     });
 
     this.logQuery(`INSERT OR REPLACE INTO vault_items (id, title, category, enc_metadata) VALUES (${this.sqlStringForLog(this.optionalString(row.id) || '')}, ${this.sqlStringForLog(this.optionalString(row.title) || 'Imported Record')}, ${this.sqlStringForLog(this.optionalString(row.category) || 'login')}, "[encrypted metadata]");`, 'SUCCESS', 1);
@@ -315,7 +318,8 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
 
     await this.runTransaction(async () => {
       for (const [index, row] of rows.entries()) {
-        await this.executeRequired(this.createVaultItemUpsertSql(row));
+        const stmt = this.createVaultItemUpsertStatement(row);
+        await this.executeRequired(stmt.sql, stmt.params);
         onProgress?.(index + 1);
       }
     });
@@ -372,7 +376,8 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
     }
 
     await this.runTransaction(async () => {
-      await this.executeRequired(`DELETE FROM vault_items WHERE id IN (${ids.map((id) => this.sqlString(id)).join(', ')});`);
+      const placeholders = ids.map(() => '?').join(', ');
+      await this.executeRequired(`DELETE FROM vault_items WHERE id IN (${placeholders});`, ids);
     });
 
     this.logQuery(`DELETE FROM vault_items WHERE id IN (${ids.map((id) => this.sqlStringForLog(id)).join(', ')});`, 'SUCCESS', ids.length);
@@ -396,7 +401,8 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
     await this.runTransaction(async () => {
       await this.executeRequired('DELETE FROM vault_items;');
       for (const row of rows) {
-        await this.executeRequired(this.createVaultItemUpsertSql(row));
+        const stmt = this.createVaultItemUpsertStatement(row);
+        await this.executeRequired(stmt.sql, stmt.params);
       }
     });
 
@@ -542,26 +548,11 @@ FROM vault_items;
     };
   }
 
-  private createVaultItemUpsertSql(row: WaSqliteVaultItemRow): string {
-    return 'INSERT INTO vault_items ('
+  private createVaultItemUpsertStatement(row: WaSqliteVaultItemRow): { sql: string; params: SqlParams } {
+    const sql = 'INSERT INTO vault_items ('
       + 'id, title, category, favorite, deleted, deleted_at, created_at, updated_at, username_db, password_db, notes_db, enc_metadata, enc_kdf'
-      + ') VALUES ('
-      + [
-        this.sqlString(this.optionalString(row.id) || ''),
-        this.sqlString(this.optionalString(row.title) || 'Imported Record'),
-        this.sqlString(this.optionalString(row.category) || 'login'),
-        this.sqlBoolean(row.favorite),
-        this.sqlBoolean(row.deleted),
-        this.sqlNullableString(row.deleted_at),
-        this.sqlString(this.optionalString(row.created_at) || ''),
-        this.sqlString(this.optionalString(row.updated_at) || ''),
-        this.sqlString(ENCRYPTED_MARKER),
-        this.sqlString(ENCRYPTED_MARKER),
-        this.sqlString(this.optionalString(row.notes_db) || ''),
-        this.sqlString(this.optionalString(row.enc_metadata) || ''),
-        this.sqlString(this.optionalString(row.enc_kdf) || VAULT_ITEM_KDF),
-      ].join(', ')
-      + ') ON CONFLICT(id) DO UPDATE SET '
+      + ') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) '
+      + 'ON CONFLICT(id) DO UPDATE SET '
       + 'title = excluded.title, '
       + 'category = excluded.category, '
       + 'favorite = excluded.favorite, '
@@ -574,6 +565,24 @@ FROM vault_items;
       + 'notes_db = excluded.notes_db, '
       + 'enc_metadata = excluded.enc_metadata, '
       + 'enc_kdf = excluded.enc_kdf;';
+
+    const params: SqlParams = [
+      this.optionalString(row.id) || '',
+      this.optionalString(row.title) || 'Imported Record',
+      this.optionalString(row.category) || 'login',
+      Number(row.favorite) === 1 || row.favorite === true ? 1 : 0,
+      Number(row.deleted) === 1 || row.deleted === true ? 1 : 0,
+      this.optionalString(row.deleted_at) ?? null,
+      this.optionalString(row.created_at) || '',
+      this.optionalString(row.updated_at) || '',
+      ENCRYPTED_MARKER,
+      ENCRYPTED_MARKER,
+      this.optionalString(row.notes_db) || '',
+      this.optionalString(row.enc_metadata) || '',
+      this.optionalString(row.enc_kdf) || VAULT_ITEM_KDF,
+    ];
+
+    return { sql, params };
   }
 
   private async ensureVaultEncryptionSalt(): Promise<string> {
@@ -635,23 +644,6 @@ FROM vault_items;
       return undefined;
     }
     return String(value);
-  }
-
-  private sqlBoolean(value: unknown): string {
-    return Number(value) === 1 || value === true ? '1' : '0';
-  }
-
-  private sqlNullableString(value: unknown): string {
-    const normalizedValue = this.optionalString(value);
-    return normalizedValue ? this.sqlString(normalizedValue) : 'NULL';
-  }
-
-  private sqlString(value: string): string {
-    if (typeof value !== 'string') {
-      value = String(value ?? '');
-    }
-    const sanitized = value.replace(/\0/g, '').replace(/'/g, "''");
-    return `'${sanitized}'`;
   }
 
   private sqlStringForLog(value: string): string {

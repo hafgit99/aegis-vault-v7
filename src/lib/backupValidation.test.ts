@@ -184,4 +184,118 @@ describe('backupValidation', () => {
     };
     expect(() => validateBackupPayload(payload)).toThrowError(/contains corrupt or invalid base64 data/);
   });
+
+  describe('universal import mode (options.fromUniversalImport = true)', () => {
+    it('accepts items with only title', () => {
+      const payload = [{ id: '1', title: 'My Service' }];
+      const result = validateBackupPayload(payload, undefined, { fromUniversalImport: true });
+      expect(result.items).toHaveLength(1);
+    });
+
+    it('accepts items with only username', () => {
+      const payload = [{ id: '1', username: 'admin_user' }];
+      const result = validateBackupPayload(payload, undefined, { fromUniversalImport: true });
+      expect(result.items).toHaveLength(1);
+    });
+
+    it('accepts items with only url', () => {
+      const payload = [{ id: '1', url: 'https://example.com' }];
+      const result = validateBackupPayload(payload, undefined, { fromUniversalImport: true });
+      expect(result.items).toHaveLength(1);
+    });
+
+    it('accepts items with only password', () => {
+      const payload = [{ id: '1', password: 'SecretPassword123' }];
+      const result = validateBackupPayload(payload, undefined, { fromUniversalImport: true });
+      expect(result.items).toHaveLength(1);
+    });
+
+    it('accepts items with only notes', () => {
+      const payload = [{ id: '1', notes: 'Important secret recovery notes' }];
+      const result = validateBackupPayload(payload, undefined, { fromUniversalImport: true });
+      expect(result.items).toHaveLength(1);
+    });
+
+    it('accepts items with only totpSecret', () => {
+      const payload = [{ id: '1', totpSecret: 'JBSWY3DPEHPK3PXP' }];
+      const result = validateBackupPayload(payload, undefined, { fromUniversalImport: true });
+      expect(result.items).toHaveLength(1);
+    });
+
+    it('accepts items with only cardNumber', () => {
+      const payload = [{ id: '1', cardNumber: '4111222233334444' }];
+      const result = validateBackupPayload(payload, undefined, { fromUniversalImport: true });
+      expect(result.items).toHaveLength(1);
+    });
+
+    it('rejects items with no recognisable vault fields', () => {
+      const payload = [{ id: '1', extraCustomField: 'value' }];
+      expect(() => validateBackupPayload(payload, undefined, { fromUniversalImport: true })).toThrowError(
+        /has no recognisable vault field/
+      );
+    });
+
+    it('rejects items where fields contain only whitespace', () => {
+      const payload = [{ id: '1', title: '   ', username: '  ', url: '  ', notes: '   ' }];
+      expect(() => validateBackupPayload(payload, undefined, { fromUniversalImport: true })).toThrowError(
+        /has no recognisable vault field/
+      );
+    });
+  });
+
+  describe('RFC 4648 base64 validation and size boundaries', () => {
+    it('accepts valid base64 strings with no padding, 1 padding char, and 2 padding chars', () => {
+      const validNoPad = 'QUJD'; // "ABC"
+      const validOnePad = 'QUI='; // "AB"
+      const validTwoPad = 'QQ=='; // "A"
+
+      for (const b64 of [validNoPad, validOnePad, validTwoPad]) {
+        const payload = {
+          version: 7,
+          items: [{ id: '1', title: 'Item' }],
+          attachments: [{ id: 'a1', name: 'f.bin', type: 'bin', size: 10, dataBase64: b64 }]
+        };
+        const res = validateBackupPayload(payload);
+        expect(res.attachments).toHaveLength(1);
+      }
+    });
+
+    it('rejects base64 with padding in the middle or invalid padding counts', () => {
+      const invalidMiddlePad = 'QQ==QUJD';
+      const invalidChars = 'QUJD$%==';
+
+      for (const b64 of [invalidMiddlePad, invalidChars]) {
+        const payload = {
+          version: 7,
+          items: [{ id: '1', title: 'Item' }],
+          attachments: [{ id: 'a1', name: 'f.bin', type: 'bin', size: 10, dataBase64: b64 }]
+        };
+        expect(() => validateBackupPayload(payload)).toThrowError(/corrupt or invalid base64 data/);
+      }
+    });
+
+    it('accepts backup file exactly at MAX_BACKUP_FILE_SIZE limit', () => {
+      const payload: unknown[] = [];
+      const result = validateBackupPayload(payload, MAX_BACKUP_FILE_SIZE);
+      expect(result.items).toHaveLength(0);
+    });
+
+    it('accepts attachment exactly at 250MB limit', () => {
+      const payload = {
+        version: 7,
+        items: [{ id: '1', title: 'Item' }],
+        attachments: [
+          {
+            id: 'a1',
+            name: 'max.bin',
+            type: 'bin',
+            size: 250 * 1024 * 1024,
+            dataBase64: 'QUJD'
+          }
+        ]
+      };
+      const result = validateBackupPayload(payload);
+      expect(result.attachments).toHaveLength(1);
+    });
+  });
 });
