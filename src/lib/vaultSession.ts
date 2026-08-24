@@ -58,26 +58,80 @@ export function registerOnCloseSession(cb: () => void): void {
   onCloseCallbacks.push(cb);
 }
 
-let failedUnlockAttemptCount = 0;
-let lastFailedAttemptTimestamp = 0;
+import {
+  getIndexedDbItemSync,
+  setIndexedDbItemSync,
+  removeIndexedDbItemSync,
+} from './indexedDbStorage';
 
-export function recordFailedUnlockAttempt(): number {
-  failedUnlockAttemptCount += 1;
-  lastFailedAttemptTimestamp = Date.now();
-  return getUnlockAttemptLockoutDelayMs();
+export const LOCKOUT_STORAGE_KEY = 'aegis_lockout_state';
+export const MAX_LOCKOUT_MS = 5 * 60 * 1000;
+
+export interface LockoutState {
+  failedAttempts: number;
+  lockedUntil: number;
 }
 
-export function getUnlockAttemptLockoutDelayMs(): number {
-  if (failedUnlockAttemptCount < 3) return 0;
-  const backoffSeconds = Math.min(30, Math.pow(2, failedUnlockAttemptCount - 3));
-  const elapsedMs = Date.now() - lastFailedAttemptTimestamp;
-  const remainingMs = backoffSeconds * 1000 - elapsedMs;
-  return remainingMs > 0 ? Math.ceil(remainingMs) : 0;
+export function readLockoutState(): LockoutState {
+  try {
+    const raw = getIndexedDbItemSync(LOCKOUT_STORAGE_KEY) || (typeof localStorage !== 'undefined' ? localStorage.getItem(LOCKOUT_STORAGE_KEY) : null);
+    if (!raw) return { failedAttempts: 0, lockedUntil: 0 };
+    const parsed = JSON.parse(raw) as LockoutState;
+    if (typeof parsed.failedAttempts === 'number' && typeof parsed.lockedUntil === 'number') {
+      return parsed;
+    }
+  } catch {
+    // Fall back to clean state on parse error
+  }
+  return { failedAttempts: 0, lockedUntil: 0 };
+}
+
+export function writeLockoutState(state: LockoutState): void {
+  const serialized = JSON.stringify(state);
+  try {
+    setIndexedDbItemSync(LOCKOUT_STORAGE_KEY, serialized);
+  } catch {
+    // Fall back or ignore
+  }
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(LOCKOUT_STORAGE_KEY, serialized);
+    }
+  } catch {
+    // Fail open if storage is unavailable
+  }
+}
+
+export function recordFailedUnlockAttempt(now = Date.now()): LockoutState {
+  const current = readLockoutState();
+  const failedAttempts = current.failedAttempts + 1;
+  const delayMs = Math.min(MAX_LOCKOUT_MS, 1000 * 2 ** Math.min(failedAttempts - 1, 8));
+
+  const state: LockoutState = {
+    failedAttempts,
+    lockedUntil: now + delayMs,
+  };
+  writeLockoutState(state);
+  return state;
+}
+
+export function getUnlockAttemptLockoutDelayMs(now = Date.now()): number {
+  return Math.max(0, readLockoutState().lockedUntil - now);
 }
 
 export function resetFailedUnlockAttempts(): void {
-  failedUnlockAttemptCount = 0;
-  lastFailedAttemptTimestamp = 0;
+  try {
+    removeIndexedDbItemSync(LOCKOUT_STORAGE_KEY);
+  } catch {
+    // Silently ignore
+  }
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(LOCKOUT_STORAGE_KEY);
+    }
+  } catch {
+    // Silently ignore
+  }
 }
 
 export function openVaultSession(

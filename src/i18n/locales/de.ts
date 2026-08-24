@@ -398,6 +398,7 @@ export const de = {
   'settings.autoLock.15m': '15 Minuten',
   'settings.autoLock.30m': '30 Minuten',
   'settings.autoLock.1h': '1 Stunde',
+  'settings.autoLock.2h': '2 Stunden',
   'settings.autoLock.never': 'Niemals verriegeln',
   'settings.biometric.title': 'Gerätesperre und FIDO2-Sicherheitsschlüssel',
   'settings.biometric.descriptionPrefix': 'Integrieren Sie Betriebssystem-Biometrie (Windows Hello, Touch ID, Face ID) oder FIDO2-Hardware-Sicherheitsschlüssel (wie YubiKey) als Schutzkomfort. Es speichert das Master-Passwort-Wrapping-Paket lokal bei',

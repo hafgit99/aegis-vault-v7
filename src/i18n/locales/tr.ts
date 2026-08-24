@@ -399,6 +399,7 @@ export const tr = {
     'settings.autoLock.15m': '15 Dakika',
     'settings.autoLock.30m': '30 Dakika',
     'settings.autoLock.1h': '1 Saat',
+    'settings.autoLock.2h': '2 Saat',
     'settings.autoLock.never': 'Asla Kilitleme',
     'settings.biometric.title': 'Cihaz Kilidi ve FIDO2 Güvenlik Anahtarı',
     'settings.biometric.descriptionPrefix': 'Windows Hello, Touch ID, Face ID veya YubiKey gibi FIDO2 donanım güvenlik anahtarlarını kilit açma kolaylığı olarak entegre edin. Şifrelenmiş paket (bundle)',

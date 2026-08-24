@@ -83,6 +83,32 @@ export function enforceMinimumKdfFloor(options: Argon2idOptions = {}): Required<
   };
 }
 
+export interface Argon2DegradationInfo {
+  degraded: boolean;
+  requestedMemoryKiB: number;
+  activeMemoryKiB: number;
+  timestamp: number;
+}
+
+let latestDegradationInfo: Argon2DegradationInfo | null = null;
+const degradationSubscribers = new Set<(info: Argon2DegradationInfo) => void>();
+
+export function getArgon2DegradationInfo(): Argon2DegradationInfo | null {
+  return latestDegradationInfo;
+}
+
+export function subscribeArgon2Degradation(cb: (info: Argon2DegradationInfo) => void): () => void {
+  degradationSubscribers.add(cb);
+  if (latestDegradationInfo) {
+    try {
+      cb(latestDegradationInfo);
+    } catch {}
+  }
+  return () => {
+    degradationSubscribers.delete(cb);
+  };
+}
+
 let argon2ModulePromise: Promise<Argon2BrowserModule> | null = null;
 
 function resolveOptions(options: Argon2idOptions = {}): Required<Argon2idOptions> {
@@ -119,28 +145,17 @@ export async function deriveArgon2idKey(
       return new Uint8Array(keyBytes);
     } catch (error) {
       console.error('Rust deriveArgon2idKey failed:', error);
-      // On Android, the native Rust `argon2` crate can fail to allocate
-      // large Argon2id profiles (or, in some Android Tauri builds, the
-      // Tauri invoke channel itself is not yet wired for KDF commands).
-      // We cannot tell the two apart from the JS side, so fall through
-      // to the WASM fallback path instead of throwing a hard
-      // 'native-argon2id-derive-failed' that the caller would translate
-      // into the "KDF runtime failure" toast.
     }
   }
 
-  // WebView2 / WebKit / WebKitGTK / Android WebView can fail Argon2id
-  // allocations with "memory access out of bounds" runtime errors when
-  // requested memory exceeds what the host's WASM linear memory can address
-  // (the bundled argon2.wasm uses a 32-bit address space). Try the requested
-  // parameters first, then gracefully drop to a known-safe profile before
-  // surfacing a stable error to the caller. The fallback ladder is
-  // deliberately aggressive (down to 2 MiB) so that an Android device
-  // with a constrained WASM heap (e.g. a 32 MiB 32-bit address-space
-  // boundary on certain WebView versions) can still decrypt a 32 MiB
-  // backup by accepting the user's request to retry from a fresh
-  // browser tab, while encrypted backups created with the 8/16/32 MiB
-  // profile all succeed on the first try.
+  return deriveWasmHash(password, salt, options);
+}
+
+async function deriveWasmHash(
+  password: string,
+  salt: string,
+  options?: Argon2idOptions,
+): Promise<Uint8Array> {
   const FALLBACK_PROFILES: Required<Argon2idOptions>[] = [
     { memoryKiB: 16 * 1024, iterations: 3, parallelism: 1, hashLength: 32 },
     { memoryKiB: 8 * 1024, iterations: 3, parallelism: 1, hashLength: 32 },
@@ -166,6 +181,23 @@ export async function deriveArgon2idKey(
         mem: profile.memoryKiB,
         parallelism: profile.parallelism,
       });
+
+      if (profile.memoryKiB < requested.memoryKiB) {
+        latestDegradationInfo = {
+          degraded: true,
+          requestedMemoryKiB: requested.memoryKiB,
+          activeMemoryKiB: profile.memoryKiB,
+          timestamp: Date.now(),
+        };
+        degradationSubscribers.forEach((cb) => {
+          try {
+            cb(latestDegradationInfo!);
+          } catch (err) {
+            console.error('Error in argon2 degradation subscriber:', err);
+          }
+        });
+      }
+
       return result.hash;
     } catch (error) {
       lastError = error;

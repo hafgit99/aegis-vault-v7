@@ -65,13 +65,13 @@ describe('Settings Modular Cards', () => {
   it('renders SettingsAutoLockCard and triggers change', () => {
     const onChange = vi.fn();
     const lockOptions = [
-      { label: 'Immediate', value: 0 },
+      { label: '15 Seconds', value: 15 },
       { label: '5 Minutes', value: 300 },
     ];
 
     render(
       <SettingsAutoLockCard
-        autoLockDuration={0}
+        autoLockDuration={15}
         lockOptions={lockOptions}
         onAutoLockDurationChange={onChange}
         t={t}

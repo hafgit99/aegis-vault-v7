@@ -398,6 +398,7 @@ export const ja = {
   'settings.autoLock.15m': '15分',
   'settings.autoLock.30m': '30分',
   'settings.autoLock.1h': '1時間',
+  'settings.autoLock.2h': '2時間',
   'settings.autoLock.never': '決してロックしないでください',
   'settings.biometric.title': 'デバイスロックとFIDO2セキュリティキー',
   'settings.biometric.descriptionPrefix': '保護の便宜として、OS 生体認証 (Windows Hello、Touch ID、Face ID) または FIDO2 ハードウェア セキュリティ キー (YubiKey など) を統合します。マスターパスワードのラッピングバンドルをローカルに保存します。',

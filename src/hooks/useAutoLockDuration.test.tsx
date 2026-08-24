@@ -35,12 +35,21 @@ describe('useAutoLockDuration', () => {
     expect(result.current.autoLockDuration).toBe(300);
   });
 
-  it('saves duration changes to state and localStorage', () => {
+  it('saves duration changes to state and localStorage within safe bounds', () => {
+    const { result } = renderHook(() => useAutoLockDuration());
+
+    act(() => result.current.changeAutoLockDuration(7200));
+
+    expect(result.current.autoLockDuration).toBe(7200);
+    expect(localStorage.getItem('auto_lock_duration')).toBe('7200');
+  });
+
+  it('sanitizes zero or negative duration to default', () => {
     const { result } = renderHook(() => useAutoLockDuration());
 
     act(() => result.current.changeAutoLockDuration(0));
 
-    expect(result.current.autoLockDuration).toBe(0);
-    expect(localStorage.getItem('auto_lock_duration')).toBe('0');
+    expect(result.current.autoLockDuration).toBe(300);
+    expect(localStorage.getItem('auto_lock_duration')).toBe('300');
   });
 });

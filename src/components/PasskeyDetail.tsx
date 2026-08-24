@@ -3,24 +3,29 @@ import { Check, Copy, Eye, EyeOff } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { VaultItem } from '../types';
 
+import { useSensitiveRevealContext } from '../context/SensitiveRevealContext';
+
 const HIDDEN_SECRET = '••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••';
 
 interface PasskeyDetailProps {
   item: VaultItem;
   copiedField: string | null;
-  isPrivateExponentRevealed: boolean;
-  onToggleReveal: () => void;
+  isPrivateExponentRevealed?: boolean;
+  onToggleReveal?: () => void;
   onCopyText: (text: string, field: string) => void;
 }
 
 export default function PasskeyDetail({
   item,
   copiedField,
-  isPrivateExponentRevealed,
-  onToggleReveal,
+  isPrivateExponentRevealed: propIsPrivateExponentRevealed,
+  onToggleReveal: propOnToggleReveal,
   onCopyText,
 }: PasskeyDetailProps) {
   const { t } = useLanguage();
+  const revealCtx = useSensitiveRevealContext();
+  const isPrivateExponentRevealed = propIsPrivateExponentRevealed ?? revealCtx.revealed.passkeyPrivateExponent;
+  const onToggleReveal = propOnToggleReveal ?? (() => revealCtx.toggleReveal('passkeyPrivateExponent'));
 
   if (item.category !== 'passkey') return null;
 

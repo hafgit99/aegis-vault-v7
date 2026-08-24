@@ -6,6 +6,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 use subtle::ConstantTimeEq;
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 pub const TOKEN_FILENAME: &str = "aegis_ipc_token.bin";
 pub const PORT_FILENAME: &str = "aegis_ipc_port.txt";
@@ -42,7 +43,7 @@ impl ConnectionRateLimiter {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Zeroize, ZeroizeOnDrop)]
 pub struct ExtensionCredential {
     pub id: String,
     pub title: String,
@@ -56,7 +57,7 @@ pub struct ExtensionCredential {
 
 pub const EXTENSION_CREDENTIAL_LEASE_MS: u64 = 5 * 60 * 1000;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Zeroize, ZeroizeOnDrop)]
 pub struct ExtensionCredentialCache {
     pub credentials: Vec<ExtensionCredential>,
     pub expires_at_epoch_ms: u64,

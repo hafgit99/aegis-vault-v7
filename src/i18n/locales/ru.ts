@@ -398,6 +398,7 @@ export const ru = {
   'settings.autoLock.15m': '15 минут',
   'settings.autoLock.30m': '30 минут',
   'settings.autoLock.1h': '1 час',
+  'settings.autoLock.2h': '2 часа',
   'settings.autoLock.never': 'Никогда не блокируйте',
   'settings.biometric.title': 'Блокировка устройства и ключ безопасности FIDO2',
   'settings.biometric.descriptionPrefix': 'Интегрируйте биометрические данные ОС (Windows Hello, Touch ID, Face ID) или аппаратные ключи безопасности FIDO2 (например, YubiKey) в качестве удобства защиты. Он хранит пакет упаковки мастер-пароля локально с помощью',

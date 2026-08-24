@@ -398,6 +398,7 @@ export const ko = {
   'settings.autoLock.15m': '15분',
   'settings.autoLock.30m': '30분',
   'settings.autoLock.1h': '1시간',
+  'settings.autoLock.2h': '2시간',
   'settings.autoLock.never': '절대 잠그지 않음',
   'settings.biometric.title': '장치 잠금 및 FIDO2 보안 키',
   'settings.biometric.descriptionPrefix': '보호 편의를 위해 OS 생체 인식(Windows Hello, Touch ID, Face ID) 또는 FIDO2 하드웨어 보안 키(예: YubiKey)를 통합합니다. 마스터 비밀번호 래핑 번들을 로컬에 저장합니다.',

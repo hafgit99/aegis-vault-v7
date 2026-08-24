@@ -398,6 +398,7 @@ export const fr = {
   'settings.autoLock.15m': '15 minutes',
   'settings.autoLock.30m': '30 minutes',
   'settings.autoLock.1h': '1 heure',
+  'settings.autoLock.2h': '2 Heures',
   'settings.autoLock.never': 'Ne jamais verrouiller',
   'settings.biometric.title': 'Verrouillage de l\'appareil et clé de sécurité FIDO2',
   'settings.biometric.descriptionPrefix': 'Intégrez la biométrie du système d\'exploitation (Windows Hello, Touch ID, Face ID) ou les clés de sécurité matérielles FIDO2 (comme YubiKey) comme commodité de protection. Il stocke localement le paquet d\'encapsulation du mot de passe principal avec',

@@ -6,24 +6,29 @@ import { generateTOTP, getTotpPeriod, TOTPValidationError } from '../lib/otp';
 import type { VaultItem } from '../types';
 import { TotpCountdownRing } from './totp/TotpCountdownRing';
 
+import { useSensitiveRevealContext } from '../context/SensitiveRevealContext';
+
 interface LoginDetailProps {
   item: VaultItem;
   copiedField: string | null;
-  isPasswordRevealed: boolean;
+  isPasswordRevealed?: boolean;
   totpCountdown: number;
-  onTogglePasswordReveal: () => void;
+  onTogglePasswordReveal?: () => void;
   onCopyText: (text: string, field: string) => void;
 }
 
 export default function LoginDetail({
   item,
   copiedField,
-  isPasswordRevealed,
+  isPasswordRevealed: propIsPasswordRevealed,
   totpCountdown,
-  onTogglePasswordReveal,
+  onTogglePasswordReveal: propOnTogglePasswordReveal,
   onCopyText,
 }: LoginDetailProps) {
   const { t } = useLanguage();
+  const revealCtx = useSensitiveRevealContext();
+  const isPasswordRevealed = propIsPasswordRevealed ?? revealCtx.revealed.password;
+  const onTogglePasswordReveal = propOnTogglePasswordReveal ?? (() => revealCtx.toggleReveal('password'));
   const [totpCode, setTotpCode] = useState<string>('');
   const [hasTotpValidationError, setHasTotpValidationError] = useState<boolean>(false);
   const totpPeriod = getTotpPeriod(item.totpSecret);

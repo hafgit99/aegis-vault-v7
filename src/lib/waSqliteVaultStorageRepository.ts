@@ -548,8 +548,8 @@ FROM vault_items;
         this.sqlString(this.optionalString(row.id) || ''),
         this.sqlString(this.optionalString(row.title) || 'Imported Record'),
         this.sqlString(this.optionalString(row.category) || 'login'),
-        Number(row.favorite ?? 0),
-        Number(row.deleted ?? 0),
+        this.sqlBoolean(row.favorite),
+        this.sqlBoolean(row.deleted),
         this.sqlNullableString(row.deleted_at),
         this.sqlString(this.optionalString(row.created_at) || ''),
         this.sqlString(this.optionalString(row.updated_at) || ''),
@@ -635,12 +635,19 @@ FROM vault_items;
     return String(value);
   }
 
+  private sqlBoolean(value: unknown): string {
+    return Number(value) === 1 || value === true ? '1' : '0';
+  }
+
   private sqlNullableString(value: unknown): string {
     const normalizedValue = this.optionalString(value);
     return normalizedValue ? this.sqlString(normalizedValue) : 'NULL';
   }
 
   private sqlString(value: string): string {
+    if (typeof value !== 'string') {
+      value = String(value ?? '');
+    }
     const sanitized = value.replace(/\0/g, '').replace(/'/g, "''");
     return `'${sanitized}'`;
   }

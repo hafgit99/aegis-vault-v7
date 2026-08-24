@@ -4,13 +4,15 @@ import { useLanguage } from '../i18n/LanguageContext';
 import type { VaultItem } from '../types';
 import { RealisticCreditCard } from './cards/RealisticCreditCard';
 
+import { useSensitiveRevealContext } from '../context/SensitiveRevealContext';
+
 interface CardDetailProps {
   item: VaultItem;
   copiedField: string | null;
-  isCardNumberRevealed: boolean;
-  isCvvRevealed: boolean;
-  isPinRevealed: boolean;
-  onToggleReveal: (field: 'cardNumber' | 'cardCvv' | 'cardPin') => void;
+  isCardNumberRevealed?: boolean;
+  isCvvRevealed?: boolean;
+  isPinRevealed?: boolean;
+  onToggleReveal?: (field: 'cardNumber' | 'cardCvv' | 'cardPin') => void;
   onCopyText: (text: string, field: string) => void;
 }
 
@@ -25,13 +27,18 @@ function maskCardNumber(cardNumber?: string): string {
 export default function CardDetail({
   item,
   copiedField,
-  isCardNumberRevealed,
-  isCvvRevealed,
-  isPinRevealed,
-  onToggleReveal,
+  isCardNumberRevealed: propIsCardNumberRevealed,
+  isCvvRevealed: propIsCvvRevealed,
+  isPinRevealed: propIsPinRevealed,
+  onToggleReveal: propOnToggleReveal,
   onCopyText,
 }: CardDetailProps) {
   const { t } = useLanguage();
+  const revealCtx = useSensitiveRevealContext();
+  const isCardNumberRevealed = propIsCardNumberRevealed ?? revealCtx.revealed.cardNumber;
+  const isCvvRevealed = propIsCvvRevealed ?? revealCtx.revealed.cardCvv;
+  const isPinRevealed = propIsPinRevealed ?? revealCtx.revealed.cardPin;
+  const onToggleReveal = propOnToggleReveal ?? ((field) => revealCtx.toggleReveal(field));
 
   if (item.category !== 'card') return null;
 

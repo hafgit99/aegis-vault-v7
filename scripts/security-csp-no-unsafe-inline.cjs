@@ -46,6 +46,21 @@ if (/https:\/\/lh3\.googleusercontent\.com/.test(csp)) {
   findings.push('src-tauri/tauri.conf.json: remote Google content origins are not allowed under strict privacy requirements');
 }
 
+const indexHtmlText = readText('index.html');
+const indexCspMatch = indexHtmlText.match(/http-equiv=["']Content-Security-Policy["'][\s\S]*?content="([^"]+)"/i)
+  || indexHtmlText.match(/http-equiv=["']Content-Security-Policy["'][\s\S]*?content='([^']+)'/i);
+if (!indexCspMatch) {
+  findings.push('index.html: missing meta Content-Security-Policy directive');
+} else {
+  const indexCsp = indexCspMatch[1].replace(/\r?\n/g, ' ');
+  const indexStyleSrc = indexCsp.split(';').map((part) => part.trim()).find((part) => /^style-src\b/i.test(part));
+  if (!indexStyleSrc) {
+    findings.push('index.html: missing style-src in meta Content-Security-Policy');
+  } else if (/['"]unsafe-inline['"]/.test(indexStyleSrc)) {
+    findings.push('index.html: meta style-src must not include unsafe-inline');
+  }
+}
+
 for (const file of ['index.html', ...collectFiles('src', ['.tsx', '.ts', '.jsx', '.js'])]) {
   if (/\.(test|spec)\.[tj]sx?$/.test(file)) continue;
   const text = readText(file);

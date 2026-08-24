@@ -398,6 +398,7 @@ export const ar = {
   'settings.autoLock.15m': '15 دقيقة',
   'settings.autoLock.30m': '30 دقيقة',
   'settings.autoLock.1h': '1 ساعة',
+  'settings.autoLock.2h': '2 ساعة',
   'settings.autoLock.never': 'لا تقفل أبدًا',
   'settings.biometric.title': 'قفل الجهاز ومفتاح الأمان FIDO2',
   'settings.biometric.descriptionPrefix': 'قم بدمج القياسات الحيوية لنظام التشغيل (Windows Hello، وTouch ID، وFace ID) أو مفاتيح أمان الأجهزة FIDO2 (مثل YubiKey) كوسيلة وقائية. يقوم بتخزين حزمة التفاف كلمة المرور الرئيسية محليًا باستخدام',

@@ -399,6 +399,7 @@ export const zh = {
     'settings.autoLock.15m': '15 分钟',
     'settings.autoLock.30m': '30 分钟',
     'settings.autoLock.1h': '1 小时',
+    'settings.autoLock.2h': '2 小时',
     'settings.autoLock.never': '永不锁定',
     'settings.biometric.title': '设备锁与 FIDO2 安全密钥',
     'settings.biometric.descriptionPrefix': '集成操作系统生物识别（Windows Hello、Touch ID、Face ID）或 FIDO2 硬件安全密钥（如 YubiKey）作为保护便利功能。它会在本地使用',

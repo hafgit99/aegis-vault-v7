@@ -234,7 +234,7 @@ describe('SettingsPanel import/export', () => {
     expect(screen.getByText('Auto-Lock Duration')).toBeTruthy();
     expect(screen.getByText('The app locks itself securely when it stays idle in the background or the selected duration expires.')).toBeTruthy();
     expect(screen.getByText('5 Minutes')).toBeTruthy();
-    expect(screen.getByText('Never Lock')).toBeTruthy();
+    expect(screen.getByText('2 Hours')).toBeTruthy();
     expect(screen.getByText('Device Lock & FIDO2 Security Key')).toBeTruthy();
     expect(screen.getByText(/Integrate OS biometrics/)).toBeTruthy();
     expect(screen.getByText('Status: PASSIVE 🔴')).toBeTruthy();

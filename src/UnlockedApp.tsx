@@ -14,6 +14,7 @@ import FloatingVaultAction from './components/FloatingVaultAction';
 import { PrivacyShieldBackdrop } from './components/PrivacyShieldBackdrop';
 import { CopiedToastNotification } from './components/CopiedToastNotification';
 import AppModals from './components/AppModals';
+import { SensitiveRevealProvider } from './context/SensitiveRevealContext';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
 import { useVaultQueries } from './hooks/useVaultQueries';
@@ -433,154 +434,156 @@ export default function UnlockedApp({
   }, [unlocked, handleTriggerNew, handleLock]);
 
   return (
-    <div className="safe-screen-fixed flex w-full bg-brand-bg text-on-surface overflow-hidden font-sans">
-      <MobileSidebarBackdrop isOpen={isSidebarOpen} onClose={handleCloseSidebar} />
+    <SensitiveRevealProvider>
+      <div className="safe-screen-fixed flex w-full bg-brand-bg text-on-surface overflow-hidden font-sans">
+        <MobileSidebarBackdrop isOpen={isSidebarOpen} onClose={handleCloseSidebar} />
 
-      <SidebarNavigation
-        activeTab={activeTab}
-        isOpen={isSidebarOpen}
-        trashCount={trashItems.length}
-        onTabChange={handleTabChange}
-        onLock={handleLock}
-      />
-
-      <main className="lg:ml-[280px] ml-0 flex-1 flex flex-col min-h-0 min-w-0 max-w-full overflow-hidden bg-brand-bg">
-        <TopBar
+        <SidebarNavigation
           activeTab={activeTab}
-          searchQuery={searchQuery}
-          profileName={profileName}
+          isOpen={isSidebarOpen}
+          trashCount={trashItems.length}
+          onTabChange={handleTabChange}
+          onLock={handleLock}
+        />
+
+        <main className="lg:ml-[280px] ml-0 flex-1 flex flex-col min-h-0 min-w-0 max-w-full overflow-hidden bg-brand-bg">
+          <TopBar
+            activeTab={activeTab}
+            searchQuery={searchQuery}
+            profileName={profileName}
+            profileAvatar={profileAvatar}
+            onSearchChange={setSearchQuery}
+            onOpenSidebar={handleOpenSidebar}
+            onRefresh={handleManualRefresh}
+            onOpenVaultStatus={handleOpenVaultStatus}
+            onOpenProfile={handleOpenProfile}
+            onLock={handleLock}
+            fuzzyEnabled={fuzzyEnabled}
+            onToggleFuzzy={setFuzzyEnabled}
+            selectedTags={selectedTags}
+            onToggleTag={toggleTag}
+            onClearTags={clearTags}
+            dateRange={dateRange}
+            dateField={dateField}
+            onDateFieldChange={setDateField}
+            onChangeDateRange={updateDateRange}
+            onClearDateRange={clearDateRange}
+            onResetAdvancedFilters={resetAdvancedFilters}
+            recentSearches={recentSearches}
+            onRemoveRecentEntry={removeRecentEntry}
+            onClearRecentSearches={clearRecent}
+            onCommitSearch={commitSearch}
+          />
+
+          <MainContent
+            activeTab={activeTab}
+            selectedItem={selectedItem}
+            mobileActiveView={mobileActiveView}
+            filteredItems={filteredItems}
+            filteredItemResults={filteredItemResults}
+            activeItems={activeItems}
+            trashItems={trashItems}
+            filterFavoritesOnly={filterFavoritesOnly}
+            favoriteCount={favoriteCount}
+            loginCount={loginCount}
+            cardCount={cardCount}
+            secureNoteCount={secureNoteCount}
+            passkeyCount={passkeyCount}
+            identityCount={identityCount}
+            selectedCategory={selectedCategory}
+            auditReport={auditReport}
+            profileName={profileName}
+            copiedField={copiedField}
+            score={score}
+            isPasswordRevealed={isPasswordRevealed}
+            isCardNumberRevealed={isCardNumRevealed}
+            isCvvRevealed={isCvvRevealed}
+            isPinRevealed={isPinRevealed}
+            isPasskeyPrivateExponentRevealed={isPasskeyExpRevealed}
+            totpCountdown={totpCountdown}
+            autoLockDuration={autoLockDuration}
+            onNewItem={handleTriggerNew}
+            onOpenProfile={handleOpenProfile}
+            onLock={handleLock}
+            onOpenAudit={handleOpenAuditTab}
+            onOpenGenerator={handleOpenGeneratorTab}
+            onSetFavoritesOnly={setFilterFavoritesOnly}
+            onSelectCategory={setSelectedCategory}
+            onSelectDashboard={handleSelectDashboard}
+            onBackToList={handleBackToList}
+            onSelectItem={handleSelectItem}
+            onSelectAuditItem={handleAuditSelectItem}
+            onToggleFavorite={handleToggleFavorite}
+            onEdit={handleTriggerEdit}
+            onDelete={handleDeleteItem}
+            onUpdateItemCategory={handleUpdateItemCategory}
+            onToggleReveal={toggleReveal}
+            onCopyText={handleCopyText}
+            onDownloadAttachment={handleDownloadAttachment}
+            onDatabaseChanged={refreshDatabase}
+            onAutoLockDurationChange={handleAutoLockDurationChange}
+            onNotify={showNotification}
+            onEmptyTrash={handleEmptyTrash}
+            onRestoreTrashItem={handleRestoreTrashItem}
+            onDeleteTrashItemPermanently={handleDeleteTrashItemPermanently}
+            tags={tags}
+            folders={folders}
+            smartFolders={smartFolders}
+            smartFolderCounts={smartFolderCounts}
+            selectedFolderId={selectedFolderId}
+            activeSmartFolderId={activeSmartFolderId}
+            onSelectFolder={setSelectedFolderId}
+            onSelectSmartFolder={setActiveSmartFolderId}
+            onCreateFolder={handleCreateFolder}
+            onDeleteFolder={handleDeleteFolder}
+            onCreateTag={createTag}
+            onUpdateTag={updateTag}
+            onDeleteTag={deleteTag}
+            onItemsChange={handleItemsChange}
+            bulkSelection={bulkSelection}
+            onCreateSmartFolder={createSmartFolder}
+            onDeleteSmartFolder={deleteSmartFolder}
+            isAutofillMode={Boolean(pendingAutofillRequest)}
+            autofillRequest={pendingAutofillRequest}
+            onCancelAutofill={handleCancelAutofillRequest}
+            onApproveAutofill={handleApproveAutofillRequest}
+            onSecureShare={handleSecureShare}
+          />
+        </main>
+
+        {selectedItem === null && <FloatingVaultAction onNewItem={handleTriggerNew} />}
+
+        <PrivacyShieldBackdrop
+          visible={privacyShieldVisible}
+          screenRecordingDetected={screenRecordingDetected}
+        />
+
+        <AppModals
+          isVaultFormOpen={isVaultFormOpen}
+          editingItem={editingItem}
+          isProfileOpen={isProfileModalOpen}
           profileAvatar={profileAvatar}
-          onSearchChange={setSearchQuery}
-          onOpenSidebar={handleOpenSidebar}
-          onRefresh={handleManualRefresh}
-          onOpenVaultStatus={handleOpenVaultStatus}
-          onOpenProfile={handleOpenProfile}
-          onLock={handleLock}
-          fuzzyEnabled={fuzzyEnabled}
-          onToggleFuzzy={setFuzzyEnabled}
-          selectedTags={selectedTags}
-          onToggleTag={toggleTag}
-          onClearTags={clearTags}
-          dateRange={dateRange}
-          dateField={dateField}
-          onDateFieldChange={setDateField}
-          onChangeDateRange={updateDateRange}
-          onClearDateRange={clearDateRange}
-          onResetAdvancedFilters={resetAdvancedFilters}
-          recentSearches={recentSearches}
-          onRemoveRecentEntry={removeRecentEntry}
-          onClearRecentSearches={clearRecent}
-          onCommitSearch={commitSearch}
-        />
-
-        <MainContent
-          activeTab={activeTab}
-          selectedItem={selectedItem}
-          mobileActiveView={mobileActiveView}
-          filteredItems={filteredItems}
-          filteredItemResults={filteredItemResults}
-          activeItems={activeItems}
-          trashItems={trashItems}
-          filterFavoritesOnly={filterFavoritesOnly}
-          favoriteCount={favoriteCount}
-          loginCount={loginCount}
-          cardCount={cardCount}
-          secureNoteCount={secureNoteCount}
-          passkeyCount={passkeyCount}
-          identityCount={identityCount}
-          selectedCategory={selectedCategory}
-          auditReport={auditReport}
           profileName={profileName}
-          copiedField={copiedField}
-          score={score}
-          isPasswordRevealed={isPasswordRevealed}
-          isCardNumberRevealed={isCardNumRevealed}
-          isCvvRevealed={isCvvRevealed}
-          isPinRevealed={isPinRevealed}
-          isPasskeyPrivateExponentRevealed={isPasskeyExpRevealed}
-          totpCountdown={totpCountdown}
-          autoLockDuration={autoLockDuration}
-          onNewItem={handleTriggerNew}
-          onOpenProfile={handleOpenProfile}
-          onLock={handleLock}
-          onOpenAudit={handleOpenAuditTab}
-          onOpenGenerator={handleOpenGeneratorTab}
-          onSetFavoritesOnly={setFilterFavoritesOnly}
-          onSelectCategory={setSelectedCategory}
-          onSelectDashboard={handleSelectDashboard}
-          onBackToList={handleBackToList}
-          onSelectItem={handleSelectItem}
-          onSelectAuditItem={handleAuditSelectItem}
-          onToggleFavorite={handleToggleFavorite}
-          onEdit={handleTriggerEdit}
-          onDelete={handleDeleteItem}
-          onUpdateItemCategory={handleUpdateItemCategory}
-          onToggleReveal={toggleReveal}
-          onCopyText={handleCopyText}
-          onDownloadAttachment={handleDownloadAttachment}
-          onDatabaseChanged={refreshDatabase}
-          onAutoLockDurationChange={handleAutoLockDurationChange}
+          confirmConfig={confirmConfig}
+          onCloseVaultForm={handleCloseVaultForm}
+          onSaveVaultItem={handleSaveItem}
           onNotify={showNotification}
-          onEmptyTrash={handleEmptyTrash}
-          onRestoreTrashItem={handleRestoreTrashItem}
-          onDeleteTrashItemPermanently={handleDeleteTrashItemPermanently}
-          tags={tags}
+          onCloseProfile={handleCloseProfile}
+          onSaveProfile={handleSaveProfile}
+          onCancelConfirm={handleCloseConfirm}
           folders={folders}
-          smartFolders={smartFolders}
-          smartFolderCounts={smartFolderCounts}
-          selectedFolderId={selectedFolderId}
-          activeSmartFolderId={activeSmartFolderId}
-          onSelectFolder={setSelectedFolderId}
-          onSelectSmartFolder={setActiveSmartFolderId}
-          onCreateFolder={handleCreateFolder}
-          onDeleteFolder={handleDeleteFolder}
-          onCreateTag={createTag}
-          onUpdateTag={updateTag}
-          onDeleteTag={deleteTag}
-          onItemsChange={handleItemsChange}
-          bulkSelection={bulkSelection}
-          onCreateSmartFolder={createSmartFolder}
-          onDeleteSmartFolder={deleteSmartFolder}
-          isAutofillMode={Boolean(pendingAutofillRequest)}
-          autofillRequest={pendingAutofillRequest}
-          onCancelAutofill={handleCancelAutofillRequest}
-          onApproveAutofill={handleApproveAutofillRequest}
-          onSecureShare={handleSecureShare}
+          tags={tags}
+          isShareOpen={isShareOpen}
+          sharingItem={sharingItem}
+          onCloseShare={handleCloseShare}
+          isReceiveOpen={isReceiveOpen}
+          receivedPayload={receivedPayload}
+          onCloseReceive={handleCloseReceive}
+          onImportShare={handleImportShare}
         />
-      </main>
 
-      {selectedItem === null && <FloatingVaultAction onNewItem={handleTriggerNew} />}
-
-      <PrivacyShieldBackdrop
-        visible={privacyShieldVisible}
-        screenRecordingDetected={screenRecordingDetected}
-      />
-
-      <AppModals
-        isVaultFormOpen={isVaultFormOpen}
-        editingItem={editingItem}
-        isProfileOpen={isProfileModalOpen}
-        profileAvatar={profileAvatar}
-        profileName={profileName}
-        confirmConfig={confirmConfig}
-        onCloseVaultForm={handleCloseVaultForm}
-        onSaveVaultItem={handleSaveItem}
-        onNotify={showNotification}
-        onCloseProfile={handleCloseProfile}
-        onSaveProfile={handleSaveProfile}
-        onCancelConfirm={handleCloseConfirm}
-        folders={folders}
-        tags={tags}
-        isShareOpen={isShareOpen}
-        sharingItem={sharingItem}
-        onCloseShare={handleCloseShare}
-        isReceiveOpen={isReceiveOpen}
-        receivedPayload={receivedPayload}
-        onCloseReceive={handleCloseReceive}
-        onImportShare={handleImportShare}
-      />
-
-      <CopiedToastNotification copiedField={copiedField} />
-    </div>
+        <CopiedToastNotification copiedField={copiedField} />
+      </div>
+    </SensitiveRevealProvider>
   );
 }

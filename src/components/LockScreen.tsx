@@ -58,76 +58,10 @@ import { PasswordStrengthMeter } from './common/PasswordStrengthMeter';
 import type { TranslationKey } from '../i18n/translations';
 
 import {
-  getIndexedDbItemSync,
-  setIndexedDbItemSync,
-  removeIndexedDbItemSync,
-} from '../lib/indexedDbStorage';
-
-const LOCKOUT_STORAGE_KEY = 'aegis_lockout_state';
-const MAX_LOCKOUT_MS = 5 * 60 * 1000;
-
-interface LockoutState {
-  failedAttempts: number;
-  lockedUntil: number;
-}
-
-function readLockoutState(): LockoutState {
-  try {
-    const raw = getIndexedDbItemSync(LOCKOUT_STORAGE_KEY) || localStorage.getItem(LOCKOUT_STORAGE_KEY);
-    if (!raw) return { failedAttempts: 0, lockedUntil: 0 };
-    const parsed = JSON.parse(raw);
-    if (typeof parsed.failedAttempts === 'number' && typeof parsed.lockedUntil === 'number') {
-      return parsed;
-    }
-  } catch {
-    // Fall back to clean state on parse error
-  }
-  return { failedAttempts: 0, lockedUntil: 0 };
-}
-
-function writeLockoutState(state: LockoutState): void {
-  const serialized = JSON.stringify(state);
-  try {
-    setIndexedDbItemSync(LOCKOUT_STORAGE_KEY, serialized);
-  } catch {
-    // Fall back or ignore
-  }
-  try {
-    localStorage.setItem(LOCKOUT_STORAGE_KEY, serialized);
-  } catch {
-    // Local storage full or unavailable; fail open for user
-  }
-}
-
-function clearLockoutState(): void {
-  try {
-    removeIndexedDbItemSync(LOCKOUT_STORAGE_KEY);
-  } catch {
-    // Silently ignore
-  }
-  try {
-    localStorage.removeItem(LOCKOUT_STORAGE_KEY);
-  } catch {
-    // Silently ignore
-  }
-}
-
-function recordFailedUnlockAttempt(now = Date.now()): LockoutState {
-  const current = readLockoutState();
-  const failedAttempts = current.failedAttempts + 1;
-  const delayMs = Math.min(MAX_LOCKOUT_MS, 1000 * 2 ** Math.min(failedAttempts - 1, 8));
-
-  const state = {
-    failedAttempts,
-    lockedUntil: now + delayMs,
-  };
-  writeLockoutState(state);
-  return state;
-}
-
-function getLockoutRemainingMs(now = Date.now()): number {
-  return Math.max(0, readLockoutState().lockedUntil - now);
-}
+  recordFailedUnlockAttempt,
+  resetFailedUnlockAttempts as clearLockoutState,
+  getUnlockAttemptLockoutDelayMs as getLockoutRemainingMs,
+} from '../lib/vaultSession';
 
 function getBiometricUnlockErrorMessage(err: unknown, t: ReturnType<typeof useLanguage>['t']): string {
   const errorObj = err && typeof err === 'object' ? (err as { name?: string; code?: string; message?: string }) : null;

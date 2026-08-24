@@ -191,7 +191,7 @@ export default function SettingsPanel({
     { value: 900, label: t('settings.autoLock.15m') },
     { value: 1800, label: t('settings.autoLock.30m') },
     { value: 3600, label: t('settings.autoLock.1h') },
-    { value: 0, label: t('settings.autoLock.never') }
+    { value: 7200, label: t('settings.autoLock.2h') }
   ];
 
   return (
