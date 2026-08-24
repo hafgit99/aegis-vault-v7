@@ -280,21 +280,21 @@ Current measured security mutation baseline:
 | Metric | Baseline |
 | --- | ---: |
 | Mutants | 533 |
-| Mutation score | 70.78% |
-| Covered mutation score | 83.63% |
-| Killed | 360 |
+| Mutation score | 86.15% |
+| Covered mutation score | 86.48% |
+| Killed | 441 |
 | Timed out | 13 |
-| Survived | 73 |
-| No coverage | 81 |
+| Survived | 71 |
+| No coverage | 2 |
 
 File scores:
 
 | File | Mutation score | Covered score |
 | --- | ---: | ---: |
+| `src/lib/backupValidation.ts` | 87.61% | 87.61% |
 | `src/lib/recoveryKey.ts` | 87.00% | 87.44% |
 | `src/lib/share.ts` | 83.67% | 83.67% |
 | `src/lib/vaultDatabaseFormat.ts` | 80.00% | 81.36% |
-| `src/lib/backupValidation.ts` | 50.46% | 79.14% |
 
 Security mutation thresholds:
 
@@ -327,12 +327,12 @@ Current measured search mutation baseline:
 | Metric | Baseline |
 | --- | ---: |
 | Mutants | 1,111 |
-| Mutation score | 48.84% |
-| Covered mutation score | 52.77% |
-| Killed | 478 |
+| Mutation score | 57.50% |
+| Covered mutation score | 59.92% |
+| Killed | 564 |
 | Timed out | 7 |
-| Survived | 434 |
-| No coverage | 74 |
+| Survived | 382 |
+| No coverage | 40 |
 
 File scores:
 
@@ -341,7 +341,7 @@ File scores:
 | `src/lib/tags.ts` | 64.02% | 65.05% |
 | `src/lib/recentSearches.ts` | 63.54% | 67.03% |
 | `src/lib/fuzzySearch.ts` | 55.48% | 61.33% |
-| `src/lib/smartFolders.ts` | 34.35% | 37.82% |
+| `src/lib/smartFolders.ts` | 54.59% | 55.24% |
 
 Search mutation thresholds:
 
