@@ -127,7 +127,7 @@
     "@tauri-apps/cli": "^2.11.2",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
-    "@testing-library/user-event": "^14.6.1",
+    "@testing-library/user-event": "^14.6.6",
     "@types/chrome": "^0.0.307",
     "@types/node": "^22.14.0",
     "@types/qrcode": "^1.5.6",
