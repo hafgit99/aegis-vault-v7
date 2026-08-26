@@ -4,7 +4,7 @@
  */
 
 import type { VaultItem } from '../types';
-import { secureRandomBytes, secureRandomToken } from './random';
+import { secureRandomToken } from './random';
 import {
   createEmptyVaultDatabaseState,
   normalizeVaultDatabaseState,
@@ -12,7 +12,7 @@ import {
   type VaultDatabaseRow,
   type VersionedVaultDatabaseState,
 } from './vaultDatabaseFormat';
-import { createArgon2idHash, verifyArgon2idHash, enforceMinimumKdfFloor, getDefaultKdfProfile, type Argon2idOptions } from './argon2id';
+import { createArgon2idHash, verifyArgon2idHash, enforceMinimumKdfFloor, type Argon2idOptions } from './argon2id';
 import { deriveArgon2idKey as deriveVettedArgon2idKey } from './argon2id';
 import { reWrapPasskeysInVaultItems } from './passkey';
 import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, generateSafeIv, derivePerItemKey, type WebCryptoAesGcmPayload } from './webcrypto';
@@ -31,12 +31,19 @@ import type {
   VaultStorageQueryResult,
   VaultStorageRepository,
 } from './vaultStorageRepository';
+import {
+  areByteArraysEqual,
+  buildVaultItemRow,
+  createVaultEncryptionSalt,
+  LEGACY_VAULT_ITEM_KDF_PARAMS,
+  LEGACY_VAULT_ITEM_KDF_SALT,
+  maybeDelay,
+  NEW_VAULT_ITEM_KDF_PARAMS,
+  sanitizeLogValue,
+  sanitizeQueryForLog,
+  VAULT_ITEM_KDF,
+} from './sqliteOpfsShared';
 import { isTestEnv } from './environment';
-
-async function maybeDelay(ms: number): Promise<void> {
-  if (isTestEnv) return;
-  await new Promise(resolve => setTimeout(resolve, ms));
-}
 
 /**
  * SQLite simulated schema and data manager storing DB blocks in private OPFS.
@@ -46,15 +53,6 @@ export type SQLiteRow = VaultDatabaseRow;
 
 const DB_FILENAME = 'aegis_sqlite.db';
 const LOCAL_FALLBACK_KEY = 'aegis_sqlite_fallback';
-const VAULT_ITEM_KDF = 'argon2-browser' as const;
-const LEGACY_VAULT_ITEM_KDF_SALT = 'aegis_vault_v7_db_encryption_salt';
-const LEGACY_VAULT_ITEM_KDF_PARAMS = {
-  memoryKiB: 32 * 1024,
-  iterations: 3,
-  parallelism: 1,
-  hashLength: 32,
-};
-const NEW_VAULT_ITEM_KDF_PARAMS: Required<Argon2idOptions> = getDefaultKdfProfile();
 
 class SQLiteOPFS implements VaultStorageRepository {
   private state: VersionedVaultDatabaseState = createEmptyVaultDatabaseState();
@@ -89,17 +87,6 @@ class SQLiteOPFS implements VaultStorageRepository {
       this.decryptedItemsCache.clear();
       this.lastCacheTimestamp = Date.now();
     }
-  }
-
-  private areByteArraysEqual(a: Uint8Array | null, b: Uint8Array | null): boolean {
-    if (a === b) return true;
-    if (!a || !b) return false;
-    if (a.length !== b.length) return false;
-    let result = 0;
-    for (let i = 0; i < a.length; i++) {
-      result |= (a[i] ?? 0) ^ (b[i] ?? 0);
-    }
-    return result === 0;
   }
 
   public clearDerivedKeyCache(): void {
@@ -137,23 +124,15 @@ class SQLiteOPFS implements VaultStorageRepository {
     this.logs.push({
       id: secureRandomToken(7),
       timestamp: new Date().toLocaleTimeString(),
-      query: this.sanitizeQueryForLog(query),
+      query: sanitizeQueryForLog(query),
       status,
       rowsAffected,
     });
     this.notifyLogsChanged();
   }
 
-  private bytesToHex(bytes: Uint8Array): string {
-    return Array.from(bytes).map((byte) => byte.toString(16).padStart(2, '0')).join('');
-  }
-
-  private createVaultEncryptionSalt(): string {
-    return this.bytesToHex(secureRandomBytes(16));
-  }
-
   private ensureVaultEncryptionSalt(): string {
-    this.state.encryption_salt ??= this.createVaultEncryptionSalt();
+    this.state.encryption_salt ??= createVaultEncryptionSalt();
     return this.state.encryption_salt;
   }
 
@@ -205,14 +184,6 @@ class SQLiteOPFS implements VaultStorageRepository {
     this.state = state;
     this.clearDerivedKeyCache();
     this.decryptedItemsCache = decryptedItemsCache;
-  }
-
-  private sanitizeLogValue(value: string): string {
-    return value.replace(/[\r\n\t]/g, ' ').replace(/["\\<>]/g, '_').slice(0, 120);
-  }
-
-  private sanitizeQueryForLog(query: string): string {
-    return query.replace(/[\r\n\t]/g, ' ').replace(/<script/gi, '&lt;script').slice(0, 1000);
   }
 
   /**
@@ -350,7 +321,7 @@ class SQLiteOPFS implements VaultStorageRepository {
     if (isSetup && legacyPass && legacyItemsStr) {
       try {
         const passwordPlain = atob(legacyPass);
-        const argonHash = await createArgon2idHash(passwordPlain, this.createVaultEncryptionSalt());
+        const argonHash = await createArgon2idHash(passwordPlain, createVaultEncryptionSalt());
 
         this.state.user_secrets = [{
           username: 'owner',
@@ -358,29 +329,20 @@ class SQLiteOPFS implements VaultStorageRepository {
         }];
 
         const items: VaultItem[] = JSON.parse(legacyItemsStr);
-        this.state.encryption_salt = this.createVaultEncryptionSalt();
+        this.state.encryption_salt = createVaultEncryptionSalt();
         const derivedKey = await this.deriveEncryptionKey(passwordPlain);
 
         this.state.vault_items = await Promise.all(items.map(async (item) => {
           const sensitivePayload = JSON.stringify(item);
           const encrypted = await webCryptoAesGcmEncrypt(sensitivePayload, derivedKey, generateSafeIv());
 
-          return {
+          return buildVaultItemRow({
             id: item.id,
-            title: '[encrypted: aes-256-gcm]',
-            category: item.category,
-            favorite: item.favorite ? 1 : 0,
-            deleted: item.deleted ? 1 : 0,
-            deleted_at: item.deletedAt || null,
-            created_at: item.createdAt,
-            updated_at: item.updatedAt,
-            username: '[encrypted: aes-256-gcm]',
-            username_db: '[encrypted: aes-256-gcm]',
-            password_db: '[encrypted: aes-256-gcm]',
-            notes_db: item.notes ? '[encrypted: aes-256-gcm]' : '',
-            enc_metadata: JSON.stringify(encrypted),
-            enc_kdf: VAULT_ITEM_KDF,
-          };
+            encrypted,
+            item,
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt,
+          });
         }));
 
         this.logQuery('CREATE TABLE vault_items (id TEXT PRIMARY KEY, title TEXT, category TEXT, favorite INTEGER, deleted INTEGER, username_db TEXT, password_db TEXT, enc_metadata TEXT);', 'SUCCESS', this.state.vault_items.length);
@@ -477,8 +439,8 @@ class SQLiteOPFS implements VaultStorageRepository {
    */
   public async setupMaster(password: string): Promise<void> {
     await this.hydrate();
-    const argonHash = await createArgon2idHash(password, this.createVaultEncryptionSalt());
-    this.state.encryption_salt = this.createVaultEncryptionSalt();
+    const argonHash = await createArgon2idHash(password, createVaultEncryptionSalt());
+    this.state.encryption_salt = createVaultEncryptionSalt();
     this.state.kdfParams = NEW_VAULT_ITEM_KDF_PARAMS;
     this.state.user_secrets = [{
       username: 'owner',
@@ -516,9 +478,9 @@ class SQLiteOPFS implements VaultStorageRepository {
     const previousDecryptedItemsCache = this.cloneDecryptedItemsCache();
 
     try {
-      const argonHash = await createArgon2idHash(newPassword, this.createVaultEncryptionSalt());
+      const argonHash = await createArgon2idHash(newPassword, createVaultEncryptionSalt());
       this.clearDerivedKeyCache();
-      this.state.encryption_salt = this.createVaultEncryptionSalt();
+      this.state.encryption_salt = createVaultEncryptionSalt();
       this.state.kdfParams = NEW_VAULT_ITEM_KDF_PARAMS;
       this.state.user_secrets = [{
         username: 'owner',
@@ -534,22 +496,13 @@ class SQLiteOPFS implements VaultStorageRepository {
         const encrypted = await webCryptoAesGcmEncrypt(JSON.stringify(item), derivedKey, generateSafeIv());
         const nowStr = new Date().toISOString().split('T')[0] ?? '';
 
-        return {
+        return buildVaultItemRow({
           id: item.id || secureRandomToken(9),
-          title: '[encrypted: aes-256-gcm]',
-          category: item.category || 'login',
-          favorite: item.favorite ? 1 : 0,
-          deleted: item.deleted ? 1 : 0,
-          deleted_at: item.deletedAt || null,
-          created_at: item.createdAt || nowStr,
-          updated_at: item.updatedAt || nowStr,
-          username: '[encrypted: aes-256-gcm]',
-          username_db: '[encrypted: aes-256-gcm]',
-          password_db: '[encrypted: aes-256-gcm]',
-          notes_db: item.notes ? '[encrypted: aes-256-gcm]' : '',
-          enc_metadata: JSON.stringify(encrypted),
-          enc_kdf: VAULT_ITEM_KDF,
-        };
+          encrypted,
+          item,
+          createdAt: item.createdAt || nowStr,
+          updatedAt: item.updatedAt || nowStr,
+        });
       }));
 
       this.decryptedItemsCache.clear();
@@ -604,22 +557,13 @@ class SQLiteOPFS implements VaultStorageRepository {
         const encrypted = await webCryptoAesGcmEncrypt(JSON.stringify(item), newVaultKey, generateSafeIv());
         const nowStr = new Date().toISOString().split('T')[0] ?? '';
 
-        return {
+        return buildVaultItemRow({
           id: item.id || secureRandomToken(9),
-          title: '[encrypted: aes-256-gcm]',
-          category: item.category || 'login',
-          favorite: item.favorite ? 1 : 0,
-          deleted: item.deleted ? 1 : 0,
-          deleted_at: item.deletedAt || null,
-          created_at: item.createdAt || nowStr,
-          updated_at: nowStr,
-          username: '[encrypted: aes-256-gcm]',
-          username_db: '[encrypted: aes-256-gcm]',
-          password_db: '[encrypted: aes-256-gcm]',
-          notes_db: item.notes ? '[encrypted: aes-256-gcm]' : '',
-          enc_metadata: JSON.stringify(encrypted),
-          enc_kdf: VAULT_ITEM_KDF,
-        };
+          encrypted,
+          item,
+          createdAt: item.createdAt || nowStr,
+          updatedAt: nowStr,
+        });
       }));
 
       this.decryptedItemsCache.clear();
@@ -656,7 +600,7 @@ class SQLiteOPFS implements VaultStorageRepository {
    */
   public async deriveEncryptionKey(password: string, salt = this.getCurrentVaultEncryptionSalt()): Promise<Uint8Array> {
     const passwordBytes = new TextEncoder().encode(password);
-    if (this.areByteArraysEqual(this.cachedPasswordBytes, passwordBytes) && this.cachedKeySalt === salt && this.cachedKeyBytes) {
+    if (areByteArraysEqual(this.cachedPasswordBytes, passwordBytes) && this.cachedKeySalt === salt && this.cachedKeyBytes) {
       passwordBytes.fill(0);
       return new Uint8Array(this.cachedKeyBytes);
     }
@@ -678,7 +622,7 @@ class SQLiteOPFS implements VaultStorageRepository {
     const derivedKey = await this.deriveEncryptionKey(masterPasswordPlain, originalSalt);
     const shouldMigrateKdf = !this.state.kdfParams;
     const shouldMigrateStaticSalt = !this.state.encryption_salt;
-    const migratedSalt = shouldMigrateStaticSalt ? this.createVaultEncryptionSalt() : this.state.encryption_salt!;
+    const migratedSalt = shouldMigrateStaticSalt ? createVaultEncryptionSalt() : this.state.encryption_salt!;
     const migrationKey = (shouldMigrateStaticSalt || shouldMigrateKdf)
       ? await deriveVettedArgon2idKey(masterPasswordPlain, migratedSalt, NEW_VAULT_ITEM_KDF_PARAMS)
       : derivedKey;
@@ -744,6 +688,7 @@ class SQLiteOPFS implements VaultStorageRepository {
           const cachedEntry = this.decryptedItemsCache.get(row.id);
           const isLegacyRow = row.enc_kdf !== VAULT_ITEM_KDF;
           let decryptedJson: string;
+          let usedLegacyMasterKeyFallback = false;
 
           if (cachedEntry && cachedEntry.enc_metadata === row.enc_metadata && !shouldMigrateStaticSalt && !shouldMigrateKdf) {
             decryptedResults.push({ row, item: cachedEntry.item });
@@ -764,13 +709,34 @@ class SQLiteOPFS implements VaultStorageRepository {
               try {
                 decryptedJson = await webCryptoAesGcmDecrypt(encryptedPayload, itemKey);
               } catch {
+                // Pre-HKDF rows were encrypted with the raw derived key. The
+                // fallback is allowed once per row: the row is immediately
+                // re-encrypted under its per-item key below.
                 decryptedJson = await webCryptoAesGcmDecrypt(encryptedPayload, derivedKey);
+                usedLegacyMasterKeyFallback = true;
               } finally {
                 itemKey.fill(0);
               }
             }
 
             const originalItem: VaultItem = JSON.parse(decryptedJson);
+
+            if (usedLegacyMasterKeyFallback) {
+              // One-time upgrade: re-encrypt the row under its per-item key so
+              // the raw-master-key fallback never fires again for this row.
+              const upgradeKey = await derivePerItemKey(derivedKey, row.id);
+              const upgraded = await webCryptoAesGcmEncrypt(decryptedJson, upgradeKey, generateSafeIv());
+              upgradeKey.fill(0);
+              row.enc_metadata = JSON.stringify(upgraded);
+              row.enc_kdf = VAULT_ITEM_KDF;
+              migratedLegacyRows = true;
+              logSecurityEvent(
+                securityEventCodes.securityLegacyCryptoWarning,
+                `Vault item ${row.id} decrypted via legacy master-key fallback and re-encrypted with a per-item key.`,
+                'warning',
+                { itemId: row.id },
+              );
+            }
 
             if (isLegacyRow || shouldMigrateStaticSalt || shouldMigrateKdf) {
               const itemMigrationKey = await derivePerItemKey(migrationKey, row.id);
@@ -892,34 +858,19 @@ class SQLiteOPFS implements VaultStorageRepository {
       perItemKey.fill(0);
 
       const nowStr = new Date().toISOString().split('T')[0] ?? '';
-      const category = item.category || 'login';
 
-      const row: SQLiteRow = {
+      const row: SQLiteRow = buildVaultItemRow({
         id: itemId,
-        title: '[encrypted: aes-256-gcm]',
-        category: category,
-        favorite: item.favorite ? 1 : 0,
-        deleted: item.deleted ? 1 : 0,
-        deleted_at: item.deletedAt || null,
-        created_at: item.createdAt || nowStr,
-        updated_at: nowStr,
-
-        // Decrypted display properties
-        username: '[encrypted: aes-256-gcm]',
-
-        // SQLite visible values (completely masked for security)
-        username_db: '[encrypted: aes-256-gcm]',
-        password_db: '[encrypted: aes-256-gcm]',
-        notes_db: item.notes ? '[encrypted: aes-256-gcm]' : '',
-
-        enc_metadata: JSON.stringify(encrypted),
-        enc_kdf: VAULT_ITEM_KDF,
-      };
+        encrypted,
+        item,
+        createdAt: item.createdAt || nowStr,
+        updatedAt: nowStr,
+      });
 
       let query = '';
-      const safeId = this.sanitizeLogValue(row.id);
-      const safeTitle = this.sanitizeLogValue(row.title);
-      const safeCategory = this.sanitizeLogValue(row.category);
+      const safeId = sanitizeLogValue(row.id);
+      const safeTitle = sanitizeLogValue(row.title);
+      const safeCategory = sanitizeLogValue(row.category);
       if (index > -1) {
         this.state.vault_items[index] = row;
         query = `UPDATE vault_items SET title = "${safeTitle}", category = "${safeCategory}", enc_metadata = "[encrypted metadata payload]" WHERE id = "${safeId}";`;
@@ -1003,24 +954,14 @@ class SQLiteOPFS implements VaultStorageRepository {
 
               const rawSensitive = JSON.stringify(item);
               const encrypted = await webCryptoAesGcmEncrypt(rawSensitive, derivedKey, generateSafeIv());
-              const category = item.category || 'login';
 
-              const row: SQLiteRow = {
+              const row: SQLiteRow = buildVaultItemRow({
                 id: itemId,
-                title: '[encrypted: aes-256-gcm]',
-                category: category,
-                favorite: item.favorite ? 1 : 0,
-                deleted: item.deleted ? 1 : 0,
-                deleted_at: item.deletedAt || null,
-                created_at: item.createdAt || nowStr,
-                updated_at: nowStr,
-                username: '[encrypted: aes-256-gcm]',
-                username_db: '[encrypted: aes-256-gcm]',
-                password_db: '[encrypted: aes-256-gcm]',
-                notes_db: item.notes ? '[encrypted: aes-256-gcm]' : '',
-                enc_metadata: JSON.stringify(encrypted),
-                enc_kdf: VAULT_ITEM_KDF,
-              };
+                encrypted,
+                item,
+                createdAt: item.createdAt || nowStr,
+                updatedAt: nowStr,
+              });
 
               this.decryptedItemsCache.set(row.id, {
                 enc_metadata: row.enc_metadata,
@@ -1238,11 +1179,11 @@ class SQLiteOPFS implements VaultStorageRepository {
       if (!persisted) {
         throw new Error('vault-item-delete-persist-failed');
       }
-      this.logQuery(`DELETE FROM vault_items WHERE id = "${this.sanitizeLogValue(id)}";`, 'SUCCESS', 1);
+      this.logQuery(`DELETE FROM vault_items WHERE id = "${sanitizeLogValue(id)}";`, 'SUCCESS', 1);
       return this.getVaultItemsWithKey(derivedKey);
     } catch (err) {
       this.restoreTransactionalState(previousState, previousDecryptedItemsCache);
-      this.logQuery(`DELETE FROM vault_items WHERE id = "${this.sanitizeLogValue(id)}" rolled back because persistence failed;`, 'ERROR', 0);
+      this.logQuery(`DELETE FROM vault_items WHERE id = "${sanitizeLogValue(id)}" rolled back because persistence failed;`, 'ERROR', 0);
       if (err instanceof Error && err.message === 'vault-item-delete-persist-failed') {
         throw err;
       }
@@ -1274,11 +1215,11 @@ class SQLiteOPFS implements VaultStorageRepository {
       if (!persisted) {
         throw new Error('vault-items-delete-persist-failed');
       }
-      this.logQuery(`DELETE FROM vault_items WHERE id IN (${ids.map(id => `"${this.sanitizeLogValue(id)}"`).join(', ')});`, 'SUCCESS', ids.length);
+      this.logQuery(`DELETE FROM vault_items WHERE id IN (${ids.map(id => `"${sanitizeLogValue(id)}"`).join(', ')});`, 'SUCCESS', ids.length);
       return this.getVaultItemsWithKey(derivedKey);
     } catch (err) {
       this.restoreTransactionalState(previousState, previousDecryptedItemsCache);
-      this.logQuery(`DELETE FROM vault_items WHERE id IN (${ids.map(id => `"${this.sanitizeLogValue(id)}"`).join(', ')}) rolled back because persistence failed;`, 'ERROR', 0);
+      this.logQuery(`DELETE FROM vault_items WHERE id IN (${ids.map(id => `"${sanitizeLogValue(id)}"`).join(', ')}) rolled back because persistence failed;`, 'ERROR', 0);
       if (err instanceof Error && err.message === 'vault-items-delete-persist-failed') {
         throw err;
       }
@@ -1305,23 +1246,16 @@ class SQLiteOPFS implements VaultStorageRepository {
       this.state.vault_items = await Promise.all(demoItems.map(async (item) => {
         const sensitivePayload = JSON.stringify(item);
         const encrypted = await webCryptoAesGcmEncrypt(sensitivePayload, derivedKey, generateSafeIv());
+        const today = new Date().toISOString().split('T')[0] ?? '';
 
-        return {
+        return buildVaultItemRow({
           id: item.id,
-          title: '[encrypted: aes-256-gcm]',
-          category: item.category,
-          favorite: item.favorite ? 1 : 0,
-          deleted: item.deleted ? 1 : 0,
-          deleted_at: item.deletedAt || null,
-          created_at: item.createdAt || (new Date().toISOString().split('T')[0] ?? ''),
-          updated_at: new Date().toISOString().split('T')[0] ?? '',
-          username: item.username || '',
-          username_db: '[encrypted: aes-256-gcm]',
-          password_db: '[encrypted: aes-256-gcm]',
-          notes_db: item.notes ? '[encrypted: aes-256-gcm]' : '',
-          enc_metadata: JSON.stringify(encrypted),
-          enc_kdf: VAULT_ITEM_KDF,
-        };
+          encrypted,
+          item,
+          createdAt: item.createdAt || today,
+          updatedAt: today,
+          exposeUsername: true,
+        });
       }));
 
       const persisted = await this.saveToPersistentStorage();
