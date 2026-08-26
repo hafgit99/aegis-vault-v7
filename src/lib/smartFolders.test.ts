@@ -19,7 +19,7 @@ import {
   readSmartFolders,
   ensureBuiltInPresents,
 } from './smartFolders';
-import type { VaultItem } from '../types';
+import type { SmartFolder, VaultItem } from '../types';
 
 const mockItems = (): VaultItem[] => [
   {
@@ -462,6 +462,139 @@ describe('Smart Folders Library', () => {
       expect(applySmartFolder(folder8, [itemWith8])).toHaveLength(1);
       expect(applySmartFolder(folder9, [itemWith8])).toHaveLength(0);
       expect(applySmartFolder(folder8, [itemNoPass])).toHaveLength(0);
+    });
+
+    it('exposes every built-in preset with its exact identity and rules', () => {
+      const presets = builtInSmartFolders();
+      const byId = new Map(presets.map((p) => [p.id, p]));
+
+      const expectations: Array<[string, string, string, string, SmartFolder['rules']]> = [
+        ['smart-favorites', 'Favorites', 'star', 'amber', [{ kind: 'favorite' }]],
+        ['smart-recent-30', 'Last 30 days', 'globe', 'emerald', [{ kind: 'newerThanDays', days: 30 }]],
+        ['smart-2fa', 'Has 2FA', 'shield', 'cyan', [{ kind: 'hasTotp' }]],
+        ['smart-no-2fa', 'Missing 2FA', 'shield', 'orange', [{ kind: 'category', categories: ['login'] }, { kind: 'noTotp' }]],
+        ['smart-weak', 'Weak passwords', 'lock', 'red', [{ kind: 'weakPassword' }]],
+        ['smart-reused', 'Reused passwords', 'key-round', 'rose', [{ kind: 'reusedPassword' }]],
+        ['smart-archive', 'Old & forgotten', 'archive', 'slate', [{ kind: 'olderThanDays', days: 365 }]],
+      ];
+
+      expect(presets).toHaveLength(expectations.length);
+      for (const [id, name, icon, color, rules] of expectations) {
+        const preset = byId.get(id);
+        expect(preset, `preset ${id}`).toBeDefined();
+        expect(preset!.name).toBe(name);
+        expect(preset!.icon).toBe(icon);
+        expect(preset!.color).toBe(color);
+        expect(preset!.rules).toEqual(rules);
+        expect(preset!.builtIn).toBe(true);
+        expect(preset!.description).toBeTruthy();
+      }
+    });
+
+    it('coerces invalid entry field types to safe defaults when parsing stored folders', () => {
+      localStorage.setItem('aegis-vault-v7-smart-folders-v1', JSON.stringify([
+        {
+          id: 'weird-types',
+          name: 'Weird Types',
+          description: 42,
+          icon: true,
+          color: [],
+          builtIn: 0,
+          createdAt: 12345,
+          rules: [{ kind: 'favorite' }],
+        },
+      ]));
+
+      const loaded = readSmartFolders().find((f) => f.id === 'weird-types');
+      expect(loaded).toBeDefined();
+      // non-string description → undefined; icon/color → defaults
+      expect(loaded!.description).toBeUndefined();
+      expect(loaded!.icon).toBe('folder');
+      expect(loaded!.color).toBe('indigo');
+      // falsy builtIn coerced to boolean false → treated as a user folder
+      expect(loaded!.builtIn).toBe(false);
+      // non-string createdAt → fresh ISO timestamp string
+      expect(typeof loaded!.createdAt).toBe('string');
+      expect(Number.isNaN(Date.parse(loaded!.createdAt))).toBe(false);
+
+      // a truthy non-boolean builtIn value coerces to true and hides the
+      // entry from the user folder list
+      localStorage.setItem('aegis-vault-v7-smart-folders-v1', JSON.stringify([
+        { id: 'hidden-user', name: 'Hidden User', builtIn: 'truthy-string', rules: [] },
+      ]));
+      expect(readSmartFolders().some((f) => f.id === 'hidden-user')).toBe(false);
+    });
+
+    it('keeps existing metadata when a patch omits optional fields', () => {
+      const folder = createSmartFolder({
+        name: 'Original',
+        description: 'Keep me',
+        icon: 'star',
+        color: 'amber',
+        rules: [{ kind: 'hasTotp' }],
+      });
+
+      const updated = updateSmartFolder(folder.id, { name: 'Renamed Only' });
+      const patched = updated.find((f) => f.id === folder.id);
+      expect(patched!.name).toBe('Renamed Only');
+      expect(patched!.description).toBe('Keep me');
+      expect(patched!.icon).toBe('star');
+      expect(patched!.color).toBe('amber');
+      expect(patched!.rules).toEqual([{ kind: 'hasTotp' }]);
+    });
+
+    it('still returns the created folder when storage writes fail', () => {
+      const setItemSpy = vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+        throw new Error('quota exceeded');
+      });
+
+      try {
+        const folder = createSmartFolder({ name: 'Quota Victim', rules: [{ kind: 'favorite' }] });
+        expect(folder.name).toBe('Quota Victim');
+        expect(folder.rules).toEqual([{ kind: 'favorite' }]);
+
+        // read path also survives a broken write-backed store
+        expect(readSmartFolders().some((f) => f.id === 'smart-favorites')).toBe(true);
+
+        // delete on a failing store still reports removal
+        const afterDelete = deleteSmartFolder(folder.id);
+        expect(afterDelete.some((f) => f.id === folder.id)).toBe(false);
+      } finally {
+        setItemSpy.mockRestore();
+      }
+    });
+
+    it('treats non-array JSON payloads as an empty library', () => {
+      localStorage.setItem('aegis-vault-v7-smart-folders-v1', JSON.stringify({ not: 'an array' }));
+      const userFolders = readSmartFolders().filter((f) => !f.builtIn);
+      expect(userFolders).toHaveLength(0);
+    });
+
+    it('generates unique ids for consecutive creates', () => {
+      const a = createSmartFolder({ name: 'A', rules: [] });
+      const b = createSmartFolder({ name: 'B', rules: [] });
+      expect(a.id).not.toBe(b.id);
+      expect(a.id.startsWith('smart-')).toBe(true);
+    });
+
+    it('rejects malformed newerThanDays rules while keeping valid ones in the same entry', () => {
+      localStorage.setItem('aegis-vault-v7-smart-folders-v1', JSON.stringify([
+        {
+          id: 'mixed-rules',
+          name: 'Mixed Rules',
+          rules: [
+            { kind: 'newerThanDays' },
+            { kind: 'newerThanDays', days: 7 },
+            { kind: 'category', categories: ['card', 'login'] },
+          ],
+        },
+      ]));
+
+      const loaded = readSmartFolders().find((f) => f.id === 'mixed-rules');
+      expect(loaded!.rules).toEqual([
+        { kind: 'newerThanDays', days: 7 },
+        { kind: 'category', categories: ['card', 'login'] },
+      ]);
     });
   });
 });
