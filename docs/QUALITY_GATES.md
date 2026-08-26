@@ -327,21 +327,21 @@ Current measured search mutation baseline:
 | Metric | Baseline |
 | --- | ---: |
 | Mutants | 1,111 |
-| Mutation score | 71.80% |
-| Covered mutation score | 74.74% |
-| Killed | 706 |
+| Mutation score | 78.95% |
+| Covered mutation score | 81.58% |
+| Killed | 777 |
 | Timed out | 7 |
-| Survived | 241 |
-| No coverage | 39 |
+| Survived | 177 |
+| No coverage | 32 |
 
 File scores:
 
 | File | Mutation score | Covered score |
 | --- | ---: | ---: |
+| `src/lib/recentSearches.ts` | 87.50% | 89.36% |
+| `src/lib/tags.ts` | 86.77% | 87.23% |
 | `src/lib/smartFolders.ts` | 78.59% | 79.33% |
-| `src/lib/fuzzySearch.ts` | 69.61% | 76.95% |
-| `src/lib/tags.ts` | 63.49% | 64.52% |
-| `src/lib/recentSearches.ts` | 62.89% | 66.30% |
+| `src/lib/fuzzySearch.ts` | 71.38% | 78.29% |
 
 Search mutation thresholds:
 
