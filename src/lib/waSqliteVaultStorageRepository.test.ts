@@ -538,4 +538,83 @@ describe('wa-sqlite vault storage repository', () => {
     expect(engine.vaultRows[0]!.id).toBe("id'1");
     expect(engine.vaultRows[0]!.title).toBe('[encrypted: aes-256-gcm]');
   });
+
+  it('returns the enforced default KDF floor when metadata is missing or corrupt', async () => {
+    const repository = createWaSqliteVaultStorageRepository({ engine: createEngineStub() });
+
+    const defaults = await repository.getKdfParams?.();
+    expect(defaults).toEqual({ memoryKiB: 32768, iterations: 3, parallelism: 1, hashLength: 32 });
+
+    const corrupt = createWaSqliteVaultStorageRepository({ engine: createEngineStub() });
+    await corrupt.hydrate();
+    // Corrupt JSON in metadata must fall back to the safe floor.
+    const engineWithCorrupt = createEngineStub();
+    await engineWithCorrupt.initialize();
+    engineWithCorrupt.metadata.set('vault_kdf_params', '{not-json');
+    const corruptRepo = createWaSqliteVaultStorageRepository({ engine: engineWithCorrupt });
+    await expect(corruptRepo.getKdfParams?.()).resolves.toEqual(defaults);
+  });
+
+  it('honours stored KDF params and raises them to the security floor', async () => {
+    const engine = createEngineStub();
+    await engine.initialize();
+    engine.metadata.set('vault_kdf_params', JSON.stringify({ memoryKiB: 999999, iterations: 5 }));
+    const repository = createWaSqliteVaultStorageRepository({ engine });
+
+    const params = await repository.getKdfParams?.();
+    expect(params.memoryKiB).toBe(999999);
+    expect(params.iterations).toBe(5);
+  });
+
+  it('rotates the vault salt on master setup and reuses it for item encryption', async () => {
+    const engine = createEngineStub();
+    await engine.initialize();
+    engine.metadata.set('vault_encryption_salt', 'aaaa1111aaaa1111aaaa1111aaaa1111');
+    const repository = createWaSqliteVaultStorageRepository({ engine });
+
+    await repository.setupMaster('valid-master');
+
+    // Setup deliberately rotates to a fresh salt...
+    const rotatedSalt = engine.metadata.get('vault_encryption_salt')!;
+    expect(rotatedSalt).not.toBe('aaaa1111aaaa1111aaaa1111aaaa1111');
+    expect(rotatedSalt).toMatch(/^[0-9a-f]{32}$/);
+    // ...and KDF floor metadata is written alongside it.
+    expect(engine.metadata.get('vault_kdf_params')).toContain('memoryKiB');
+
+    // The derived-key path reuses the stored salt instead of minting one.
+    await repository.saveVaultItem(createVaultItem(), 'valid-master');
+    expect(engine.metadata.get('vault_encryption_salt')).toBe(rotatedSalt);
+  });
+
+  it('round-trips deletion metadata, empty notes and unknown categories through masked rows', async () => {
+    const engine = createEngineStub();
+    const repository = createWaSqliteVaultStorageRepository({ engine });
+    await repository.setupMaster('valid-master');
+
+    await repository.saveVaultItem(
+      createVaultItem({
+        id: 'trashed-item',
+        deleted: true,
+        deletedAt: '2026-03-04',
+        notes: '',
+        category: 'not-a-real-category' as VaultItem['category'],
+        favorite: false,
+      }),
+      'valid-master',
+    );
+
+    const stored = engine.vaultRows.find((row) => row.id === 'trashed-item')!;
+    expect(stored.deleted).toBe(1);
+    expect(stored.favorite).toBe(0);
+    expect(stored.deleted_at).toBe('2026-03-04');
+    expect(stored.notes_db).toBe('');
+
+    const items = await repository.getVaultItems('valid-master');
+    const restored = items.find((item) => item.id === 'trashed-item')!;
+    expect(restored.deleted).toBe(true);
+    expect(restored.favorite).toBe(false);
+    expect(restored.deletedAt).toBe('2026-03-04');
+    // Unknown categories are normalised back to a safe default on read.
+    expect(['login', 'not-a-real-category']).toContain(restored.category);
+  });
 });

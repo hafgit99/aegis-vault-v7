@@ -135,10 +135,12 @@ describe('SQLite OPFS persistence engine', () => {
     });
 
     const blockedWrite = sqlite.executeCustomSQL('DELETE FROM vault_items;', 'master-pass');
-    expect(blockedWrite.error).toContain('disabled');
+    expect(blockedWrite.error).toBe(
+      'Direct writes (INSERT/UPDATE/DELETE) are disabled in the SQLite terminal for security. Please use the main interface.',
+    );
+    expect(sqlite.executeCustomSQL('UPDATE vault_items SET title = 1;', 'master-pass').error).toContain('disabled');
 
-    expect(sqlite.getQueryLogs()[0]).toMatchObject({
-      query: 'DELETE FROM vault_items;',
+    expect(sqlite.getQueryLogs().find((entry) => entry.query === 'DELETE FROM vault_items;')).toMatchObject({
       status: 'ERROR',
     });
 
@@ -916,6 +918,56 @@ expect(saved[0]!.id).toHaveLength(9);
         password: 'secret-password',
       }),
     ]);
+  });
+
+  it('blocks placeholder bulk items from overwriting existing ciphertext and defaults missing timestamps', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    await sqlite.saveVaultItem(sampleItem({ id: 'existing-row' }), 'master-pass');
+
+    const placeholder = sampleItem({
+      id: 'existing-row',
+      title: '[encrypted: aes-256-gcm]',
+      username: '[encrypted: aes-256-gcm]',
+    });
+    const normal = sampleItem({ id: 'fresh-row', createdAt: '', updatedAt: '' });
+
+    const saved = await sqlite.saveVaultItems([placeholder, normal], 'master-pass');
+
+    // The placeholder is skipped (existing ciphertext preserved) but still reported.
+    expect(saved.map((item) => item.id)).toEqual(['existing-row', 'fresh-row']);
+    const storedRow = sqlite.executeCustomSQL('SELECT * FROM vault_items', 'master-pass');
+    void storedRow;
+    await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'existing-row', title: 'Email Account' }),
+        expect.objectContaining({
+          id: 'fresh-row',
+          title: 'Email Account',
+          createdAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+          updatedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        }),
+      ]),
+    );
+  });
+
+  it('defaults missing item timestamps to today when rotating the master password', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    await sqlite.saveVaultItem(
+      sampleItem({ id: 'no-timestamps', createdAt: '', updatedAt: '' }),
+      'master-pass',
+    );
+
+    const rotated = await sqlite.changeMasterPassword('master-pass', 'brand-new-master');
+
+    expect(rotated).toBeUndefined();
+    const items = await sqlite.getVaultItems('brand-new-master');
+    const restored = items.find((item) => item.id === 'no-timestamps')!;
+    expect(restored.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(restored.updatedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    await expect(sqlite.verifyPassword('master-pass')).resolves.toBe(false);
+    await expect(sqlite.verifyPassword('brand-new-master')).resolves.toBe(true);
   });
 
   it('uses the cached KDF derived key when password and salt match, avoiding Argon2id calls', async () => {
