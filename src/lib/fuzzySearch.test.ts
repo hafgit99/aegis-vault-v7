@@ -249,3 +249,87 @@ describe('normalizeForSearch edge cases', () => {
     expect(normalizeForSearch('')).toBe('');
   });
 });
+
+describe('scoreField branch contracts (wave-2 mutation hardening)', () => {
+  it('treats a whitespace-only query as a trivial match', () => {
+    const result = scoreField('some text', '   ');
+    expect(result.score).toBe(1);
+    expect(result.matchStart).toBe(0);
+    expect(result.matchEnd).toBe(0);
+  });
+
+  it('matches across diacritics with exact substring scoring', () => {
+    // normalized haystack 'gmail mail' (len 10): idx 0 → prefix 25,
+    // lengthBonus max(0, 10 - floor(10/8)) = 9 → 134.
+    const result = scoreField('Gmáil Mail', 'gmail');
+    expect(result.score).toBe(100 + 25 + 9);
+    expect(result.matchStart).toBe(0);
+    expect(result.matchEnd).toBe(5);
+  });
+
+  it('normalises surrounding whitespace in both value and query', () => {
+    expect(scoreField('  GitHub  ', 'git').score).toBe(100 + 25 + 10);
+  });
+
+  it('falls back to the approximate window when the subsequence is incomplete', () => {
+    // 'abd' is not a subsequence of 'abc' (d missing); every other branch
+    // fails and the 3-char window 'abc' vs 'abd' has distance 1 → sim 2/3
+    // ≥ 0.55 → score round((1 - 1/3) * 20) = 13.
+    const result = scoreField('abc', 'abd');
+    expect(result.score).toBe(Math.round((1 - 1 / 3) * 20));
+    expect(result.matchStart).toBe(0);
+    expect(result.matchEnd).toBe(3);
+  });
+
+  it('picks the best sliding window for approximate matches', () => {
+    // haystack 'zzgithbuz': no substring, no complete subsequence; the
+    // best window is 'githbu' at index 2 (distance 1 from 'github',
+    // sim 1 - 1/6) → score round((1 - 1/6) * 20), matchEnd = 2 + 6.
+    const result = scoreField('zzgithbuz', 'github');
+    expect(result.score).toBe(Math.round((1 - 1 / 6) * 20));
+    expect(result.matchStart).toBe(2);
+    expect(result.matchEnd).toBe(8);
+  });
+
+  it('keeps searching windows after an early dissimilar region', () => {
+    // Two substitutions ('github' → 'gathbuz') still reach similarity
+    // 4/6 ≈ 0.667 at index 0 → round(0.667 * 20) = 13, matchEnd = 0 + 6.
+    const result = scoreField('gathbuz', 'github');
+    expect(result.score).toBe(Math.round((1 - 2 / 6) * 20));
+    expect(result.matchStart).toBe(0);
+    expect(result.matchEnd).toBe(6);
+  });
+});
+
+describe('scoreMultiField tie-breaks and hit counting', () => {
+  it('breaks score ties in favour of the earlier field', () => {
+    const result = scoreMultiField(
+      [
+        { field: 'title', value: 'github' },
+        { field: 'url', value: 'github' },
+      ],
+      'github',
+    );
+    expect(result.matchedField).toBe('title');
+    expect(result.score).toBe(135 + 5 + 3);
+  });
+
+  it('does not award the multi-hit bonus for a single matching field', () => {
+    const result = scoreMultiField([{ field: 'title', value: 'github' }], 'github');
+    expect(result.score).toBe(135 + 5);
+  });
+
+  it('pins the trivial-match aggregation contract', () => {
+    // Empty query: every non-empty field scores 1; the first wins and
+    // receives the title (+5) and multi-hit (+3) bonuses → 9.
+    const result = scoreMultiField(
+      [
+        { field: 'title', value: 'alpha' },
+        { field: 'username', value: 'beta' },
+      ],
+      '',
+    );
+    expect(result.score).toBe(9);
+    expect(result.matchedField).toBe('title');
+  });
+});
