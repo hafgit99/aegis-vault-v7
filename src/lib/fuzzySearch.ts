@@ -14,7 +14,6 @@
  *
  * Scoring rules (higher is better, > 0 means a match):
  *  - Exact substring match (case-insensitive)              → 100 + bonus
- *  - Word-prefix match                                     → 60
  *  - Subsequence match (chars in order, gaps allowed)      → 25 + density bonus
  *  - Approximate match (Damerau–Levenshtein, normalised)   →  0..20
  */
@@ -39,12 +38,6 @@ export function normalizeForSearch(value: string): string {
 function containsSubstring(haystack: string, needle: string): boolean {
   if (!needle) return true;
   return haystack.includes(needle);
-}
-
-function matchesWordPrefix(haystack: string, needle: string): boolean {
-  if (!needle) return true;
-  const tokens = haystack.split(/[^a-z0-9]+/u).filter(Boolean);
-  return tokens.some((token) => token.startsWith(needle));
 }
 
 function isSubsequence(haystack: string, needle: string): boolean {
@@ -178,27 +171,9 @@ export function scoreField(value: string, query: string): FuzzyScore {
     };
   }
 
-  // 2) Word-prefix match.
-  if (matchesWordPrefix(haystack, needle)) {
-    const tokens = haystack.split(/[^a-z0-9]+/u).filter(Boolean);
-    let cursor = 0;
-    for (const token of tokens) {
-      if (token.startsWith(needle)) {
-        const start = haystack.indexOf(token, cursor);
-        return {
-          score: 60,
-          matchStart: start,
-          matchEnd: start + needle.length,
-          matchedField: null,
-        };
-      }
-      const tokenIdx = haystack.indexOf(token, cursor);
-      if (tokenIdx === -1) break;
-      cursor = tokenIdx + token.length;
-    }
-  }
-
-  // 3) Subsequence match — useful for short queries across longer fields.
+  // 2) Subsequence match — useful for short queries across longer fields.
+  //    (The former word-prefix branch was removed: any token prefixed by
+  //    the needle is by definition a substring, so branch 1 always won.)
   if (isSubsequence(haystack, needle)) {
     let hi = -1;
     let matched = 0;
@@ -220,7 +195,7 @@ export function scoreField(value: string, query: string): FuzzyScore {
     }
   }
 
-  // 4) Approximate (Damerau–Levenshtein) match — only for longer queries
+  // 3) Approximate (Damerau–Levenshtein) match — only for longer queries
   //    to avoid noisy matches. We compare the needle against a sliding
   //    window in the haystack, NOT the full haystack, because the
   //    haystack can be much longer than the needle (e.g. notes) and
