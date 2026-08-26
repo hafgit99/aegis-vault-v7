@@ -3,9 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect, useState } from 'react';
-import { listen } from '@tauri-apps/api/event';
-import { invoke } from '@tauri-apps/api/core';
+import { useCallback } from 'react';
 import MobileSidebarBackdrop from './components/MobileSidebarBackdrop';
 import SidebarNavigation from './components/SidebarNavigation';
 import TopBar from './components/TopBar';
@@ -38,16 +36,14 @@ import { useRuntimeSecurity } from './hooks/useRuntimeSecurity';
 import { useAndroidAutofillCoordinator } from './hooks/useAndroidAutofillCoordinator';
 import { useAndroidRuntimeSecurity } from './hooks/useAndroidRuntimeSecurity';
 import { useAssetIntegrity } from './hooks/useAssetIntegrity';
-import { useLanguage } from './i18n/LanguageContext';
 import { useAirgapAlerts } from './hooks/useAirgapAlerts';
+import { useLinuxSecurityStatus } from './hooks/useLinuxSecurityStatus';
+import { useExtensionCredentialSync } from './hooks/useExtensionCredentialSync';
+import { useExtensionCredentialListener } from './hooks/useExtensionCredentialListener';
+import { useKeyboardShortcuts, dispatchFocusSearchShortcut } from './hooks/useKeyboardShortcuts';
+import { useVaultOrganisation } from './hooks/useVaultOrganisation';
+import { useLanguage } from './i18n/LanguageContext';
 import type { VaultItem } from './types';
-import {
-  useTagLibrary,
-  useVaultFolders,
-  useSmartFolders,
-  useBulkSelection,
-} from './hooks/useOrganisation';
-import { syncExtensionCredentials, clearExtensionCredentials } from './lib/desktopStorage';
 
 interface UnlockedAppProps {
   unlocked: boolean;
@@ -180,6 +176,22 @@ export default function UnlockedApp({
     onNotify: showNotification,
   });
 
+  useLinuxSecurityStatus({
+    unlocked,
+    onNotify: showNotification,
+  });
+
+  useExtensionCredentialSync(unlocked, items);
+
+  const handleAddCredentialFromExtension = useCallback(
+    (payload: { title: string; username: string; password: string; url: string }) => {
+      handleTriggerNew({ ...payload, category: 'login' });
+    },
+    [handleTriggerNew],
+  );
+
+  useExtensionCredentialListener(handleAddCredentialFromExtension);
+
   // Share & Receive Modals state
   const {
     isShareOpen,
@@ -194,76 +206,6 @@ export default function UnlockedApp({
     onSaveItem: handleSaveItem,
     onNotify: showNotification,
   });
-
-  interface LinuxSecurityStatus {
-    is_x11?: boolean;
-    wayland_active?: boolean;
-  }
-
-  useEffect(() => {
-    if (unlocked && typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
-      invoke<LinuxSecurityStatus>('get_linux_security_status')
-        .then((status) => {
-          if (status && status.is_x11) {
-            showNotification({
-              title: t('security.x11WarningTitle'),
-              message: t('security.x11WarningMessage'),
-              type: 'warning',
-            });
-          }
-        })
-        .catch((err) => {
-          console.error('Failed to query Linux security status:', err);
-        });
-    }
-  }, [unlocked, showNotification, t]);
-
-  useEffect(() => {
-    if (!unlocked) {
-      clearExtensionCredentials();
-      return;
-    }
-
-    syncExtensionCredentials(items);
-    const interval = window.setInterval(() => {
-      syncExtensionCredentials(items);
-    }, 60_000);
-
-    return () => {
-      window.clearInterval(interval);
-    };
-  }, [unlocked, items]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.__TAURI_INTERNALS__) {
-      return;
-    }
-
-    let unlistenFn: (() => void) | null = null;
-
-    listen<Partial<VaultItem>>('add-credential-from-extension', (event) => {
-      const payload = event.payload;
-      if (payload) {
-        handleTriggerNew({
-          title: payload.title || '',
-          username: payload.username || '',
-          password: payload.password || '',
-          url: payload.url || '',
-          category: 'login',
-        });
-      }
-    }).then((unlisten) => {
-      unlistenFn = unlisten;
-    }).catch(err => {
-      console.error('Failed to listen to tauri add-credential event:', err);
-    });
-
-    return () => {
-      if (unlistenFn) {
-        unlistenFn();
-      }
-    };
-  }, [handleTriggerNew]);
 
   const { openVaultStatus: handleOpenVaultStatus } = useVaultStatusAction({ openConfirm });
 
@@ -305,29 +247,24 @@ export default function UnlockedApp({
     onRefresh: refreshDatabase,
   });
 
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-  const [activeSmartFolderId, setActiveSmartFolderId] = useState<string | null>(null);
-
-  const { tags, createTag, updateTag, deleteTag } = useTagLibrary();
-  const { folders, createFolder, deleteFolder } = useVaultFolders();
-  const { smartFolders, createSmartFolder, deleteSmartFolder, counts: smartFolderCounts } = useSmartFolders(items);
-  const bulkSelection = useBulkSelection();
-
-  const handleCreateFolder = (parentId: string | null) => {
-    const name = window.prompt(t('folders.createPrompt') || 'New folder name:');
-    if (name && name.trim()) {
-      createFolder({ name: name.trim(), parentId });
-    }
-  };
-
-  const handleDeleteFolder = (folderId: string) => {
-    if (window.confirm(t('confirm.defaultConfirm') || 'Are you sure?')) {
-      deleteFolder(folderId);
-      if (selectedFolderId === folderId) {
-        setSelectedFolderId(null);
-      }
-    }
-  };
+  const {
+    tags,
+    createTag,
+    updateTag,
+    deleteTag,
+    folders,
+    smartFolders,
+    smartFolderCounts,
+    createSmartFolder,
+    deleteSmartFolder,
+    bulkSelection,
+    selectedFolderId,
+    setSelectedFolderId,
+    activeSmartFolderId,
+    setActiveSmartFolderId,
+    handleCreateFolder,
+    handleDeleteFolder,
+  } = useVaultOrganisation(items);
 
   const handleItemsChange = async (nextItems: VaultItem[]) => {
     await handleSaveItems(nextItems);
@@ -405,33 +342,12 @@ export default function UnlockedApp({
     }
   };
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!unlocked) return;
-
-      const isMac = typeof navigator !== 'undefined' && navigator.userAgent.toLowerCase().includes('mac');
-      const modifier = isMac ? e.metaKey : e.ctrlKey;
-
-      if (modifier) {
-        const key = e.key.toLowerCase();
-        if (key === 'k') {
-          e.preventDefault();
-          window.dispatchEvent(new CustomEvent('aegis-focus-search'));
-        } else if (key === 'n') {
-          e.preventDefault();
-          handleTriggerNew();
-        } else if (key === 'l') {
-          e.preventDefault();
-          handleLock();
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [unlocked, handleTriggerNew, handleLock]);
+  useKeyboardShortcuts({
+    enabled: unlocked,
+    onFocusSearch: dispatchFocusSearchShortcut,
+    onNewItem: handleTriggerNew,
+    onLock: handleLock,
+  });
 
   return (
     <SensitiveRevealProvider>
