@@ -62,6 +62,31 @@ export type PersistedLoadResult =
   /** Neither desktop storage nor OPFS is available — caller should run legacy migration. */
   | { kind: 'unavailable' };
 
+let lastObservedVersionCounter = 0;
+
+export function getLastObservedVersionCounter(): number {
+  return lastObservedVersionCounter;
+}
+
+export function setLastObservedVersionCounter(val: number): void {
+  lastObservedVersionCounter = val;
+}
+
+function processLoadedStateIntegrity(state: VersionedVaultDatabaseState): void {
+  if (typeof state.versionCounter === 'number') {
+    if (lastObservedVersionCounter > 0 && state.versionCounter < lastObservedVersionCounter) {
+      logSecurityEvent(
+        securityEventCodes.storageLegacyMigrationFailed,
+        `Vault database rollback detected! Loaded versionCounter (${state.versionCounter}) is lower than last observed (${lastObservedVersionCounter}).`,
+        'critical',
+        { loadedVersion: state.versionCounter, expectedMinVersion: lastObservedVersionCounter },
+      );
+    } else {
+      lastObservedVersionCounter = Math.max(lastObservedVersionCounter, state.versionCounter);
+    }
+  }
+}
+
 /**
  * Reads the vault database from desktop app-data or the OPFS mirror.
  * Never throws — unexpected shapes are surfaced through `parseVaultDatabaseState`.
@@ -82,6 +107,7 @@ export async function loadPersistedVaultDatabase(): Promise<PersistedLoadResult>
 
   if (desktopPayload) {
     const state = parseVaultDatabaseState(desktopPayload);
+    processLoadedStateIntegrity(state);
     setIndexedDbItemSync(LOCAL_FALLBACK_KEY, createDesktopManagedSetupMarker(state));
     return {
       kind: 'state',
@@ -104,9 +130,11 @@ export async function loadPersistedVaultDatabase(): Promise<PersistedLoadResult>
     const file = await fileHandle.getFile();
     const content = await file.text();
     if (content) {
+      const state = parseVaultDatabaseState(content);
+      processLoadedStateIntegrity(state);
       return {
         kind: 'state',
-        state: parseVaultDatabaseState(content),
+        state,
         logLabel: `sqlite3_open("opfs:///${DB_FILENAME}")`,
         resaveAfterLoad: true,
       };
@@ -171,8 +199,8 @@ export async function persistVaultDatabase(state: VersionedVaultDatabaseState): 
   }
 
   try {
-    // P1-5: Increment version counter monotonically on each persistent write
-    state.versionCounter = (state.versionCounter ?? 0) + 1;
+    // P1-5: Ensure version counter is present
+    state.versionCounter = state.versionCounter ?? 1;
 
     const payloadStr = JSON.stringify(state);
     const savedToDesktop = await writeDesktopVaultDatabase(payloadStr);

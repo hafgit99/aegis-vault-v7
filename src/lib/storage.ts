@@ -120,7 +120,7 @@ export function isAccountSecretKeyRequired(): boolean {
 }
 
 export function isRememberSecretKeySupported(): boolean {
-  return true;
+  return isSecureStorageAvailable();
 }
 
 export function getRememberedAccountSecretKey(): string | null {
@@ -131,8 +131,8 @@ export function getRememberedAccountSecretKey(): string | null {
   if (deviceValue) {
     if (setSecureStorageItem(secureStorageKeys.rememberedSecretKey, deviceValue)) {
       removeIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY);
+      return deviceValue;
     }
-    return deviceValue;
   }
 
   return null;
@@ -145,8 +145,8 @@ export function rememberAccountSecretKey(secretKey: string): boolean {
     return true;
   }
 
-  setIndexedDbItemSync(STORAGE_KEYS.REMEMBERED_SECRET_KEY, normalizedSecretKey);
-  return true;
+  // R-5: If hardware/OS secure storage is unavailable, fail closed without writing plaintext secret keys to IndexedDB
+  return false;
 }
 
 export function forgetRememberedAccountSecretKey(): void {

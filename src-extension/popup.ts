@@ -1,5 +1,5 @@
 import { translate, getPreferredLanguage, savePreferredLanguage, ExtensionLanguage } from './i18n';
-import { extractRegistrableDomain, extractRegistrableDomainFromUrl } from './psl-utils';
+import { extractRegistrableDomain, extractRegistrableDomainFromUrl, isSuspiciousIdnHostname } from './psl-utils';
 
 // Interfaces for response credentials
 interface CredentialItem {
@@ -218,8 +218,8 @@ function checkPhishing(url: string, trustedDomains: string[] = []): PhishingResu
     const parsed = new URL(url);
     const hostname = parsed.hostname.toLowerCase();
 
-    // 1. IDN Punycode homograph detection
-    if (hostname.includes('xn--')) {
+    // 1. IDN Punycode homograph detection (R-2)
+    if (isSuspiciousIdnHostname(hostname)) {
       result.isSuspicious = true;
       result.threatType = 'homograph';
       result.details = hostname;
@@ -647,20 +647,20 @@ function validateAndAutofill(item: CredentialItem): void {
       item.url.startsWith('http') ? item.url : `https://${item.url}`
     ) : '';
 
-    // If credential has no URL or domains match → proceed directly
-    if (!credDomain || tabDomain === credDomain) {
+    // If credential has a matching domain → proceed directly
+    if (credDomain && tabDomain === credDomain) {
       sendAutofillMessage(item);
       return;
     }
 
-    // Domain mismatch detected — show confirmation warning
+    // Domain mismatch or URL-less credential detected — show confirmation warning (R-3)
     showDomainMismatchWarning(item, tabDomain, credDomain);
   });
 }
 
 /**
  * Shows a domain mismatch warning overlay in the popup.
- * User must explicitly confirm to proceed with autofill. (Security fix Y1)
+ * User must explicitly confirm to proceed with autofill. (Security fix Y1 / R-3)
  */
 function showDomainMismatchWarning(item: CredentialItem, tabDomain: string, credDomain: string): void {
   // Remove any existing warning
@@ -714,7 +714,7 @@ function showDomainMismatchWarning(item: CredentialItem, tabDomain: string, cred
   credStrong.style.color = 'var(--accent-green, #10b981)';
   credStrong.textContent = `${credLabel}: `;
   const credSpan = document.createElement('span');
-  credSpan.textContent = credDomain;
+  credSpan.textContent = credDomain || '(No domain configured)';
   credLine.appendChild(credStrong);
   credLine.appendChild(credSpan);
 
@@ -781,13 +781,20 @@ function sendAutofillMessage(item: CredentialItem, userConfirmedMismatch = false
     item.url.startsWith('http') ? item.url : `https://${item.url}`
   ) : '';
 
-  chrome.runtime.sendMessage({
-    action: 'autofill_page',
-    username: item.username,
-    password: item.password || '',
-    targetDomain: credDomain,
-    userConfirmedMismatch,
-  });
+  chrome.runtime.sendMessage(
+    {
+      action: 'autofill_page',
+      username: item.username,
+      password: item.password || '',
+      targetDomain: credDomain,
+      userConfirmedMismatch,
+    },
+    (response: { status?: string; reason?: string } | undefined) => {
+      if (response && response.status === 'blocked') {
+        showToast('⚠️ Autofill blocked: domain mismatch confirmation required.');
+      }
+    }
+  );
 }
 
 // Initial load

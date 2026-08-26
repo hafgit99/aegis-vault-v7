@@ -30,6 +30,7 @@ import {
   loadPersistedVaultDatabase,
   LOCAL_FALLBACK_KEY,
   persistVaultDatabase,
+  setLastObservedVersionCounter,
   writeLocalFallbackMirror,
 } from './sqliteOpfsPersistence';
 import {
@@ -356,6 +357,26 @@ describe('persistVaultDatabase', () => {
       expect.any(String),
       'critical',
       expect.objectContaining({ error: 'disk full' }),
+    );
+  });
+});
+
+describe('loadPersistedVaultDatabase', () => {
+  it('detects rollback when loaded state versionCounter is lower than previous observed (R-1)', async () => {
+    setLastObservedVersionCounter(5);
+    const rolledBackState = {
+      ...createEmptyVaultDatabaseState(),
+      versionCounter: 2,
+    };
+    readDesktopVaultDatabase.mockResolvedValueOnce(JSON.stringify(rolledBackState));
+
+    const result = await loadPersistedVaultDatabase();
+    expect(result.kind).toBe('state');
+    expect(logSecurityEvent).toHaveBeenCalledWith(
+      securityEventCodes.storageLegacyMigrationFailed,
+      expect.stringContaining('Vault database rollback detected'),
+      'critical',
+      expect.objectContaining({ loadedVersion: 2, expectedMinVersion: 5 }),
     );
   });
 });

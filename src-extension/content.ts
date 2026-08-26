@@ -1,5 +1,5 @@
 import { translate, getPreferredLanguage } from './i18n';
-import { extractRegistrableDomain, extractRegistrableDomainFromUrl } from './psl-utils';
+import { extractRegistrableDomain, extractRegistrableDomainFromUrl, isSuspiciousIdnHostname } from './psl-utils';
 
 const activeLanguage = getPreferredLanguage();
 
@@ -323,13 +323,9 @@ function checkContentPhishing(url: string, trustedDomains: string[] = []): any {
     const hostname = parsed.hostname.toLowerCase();
 
     // 1. IDN Punycode homograph detection
-    // P2-17: Exempt well-known internationalized TLDs from unconditional flagging
-    if (hostname.includes('xn--')) {
-      const SAFE_IDN_TLDS = new Set(['.de', '.jp', '.cn', '.kr', '.ru', '.br', '.pl', '.fr', '.es', '.nl', '.se', '.no', '.fi', '.dk', '.at', '.ch', '.it', '.pt', '.tr', '.ua', '.cz', '.hu', '.ro', '.bg', '.hr', '.sk', '.si']);
-      const tld = '.' + hostname.split('.').pop();
-      if (!SAFE_IDN_TLDS.has(tld)) {
-        return { isSuspicious: true, threatType: 'homograph', details: hostname };
-      }
+    // P2-17 / R-2: Exempt well-known internationalized TLDs from unconditional flagging
+    if (isSuspiciousIdnHostname(hostname)) {
+      return { isSuspicious: true, threatType: 'homograph', details: hostname };
     }
 
     // 2. Non-ASCII / Unicode confusable detection

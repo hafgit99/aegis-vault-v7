@@ -1019,4 +1019,26 @@ expect(saved[0]!.id).toHaveLength(9);
     sqlite.clearDerivedKeyCache();
     expect(cacheMap.size).toBe(0);
   });
+
+  it('rejects loading and logs security event when state is tampered (R-1 HMAC integrity)', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    await sqlite.saveVaultItem(sampleItem({ id: 'secure-item-1', title: 'Original' }), 'master-pass');
+
+    // Get the written payload from writeDesktopVaultDatabase call
+    const lastWriteCall = writeDesktopVaultDatabase.mock.calls.at(-1);
+    expect(lastWriteCall).toBeDefined();
+    const payloadStr = lastWriteCall![0] as string;
+    const parsed = JSON.parse(payloadStr);
+    expect(parsed.vault_items).toBeDefined();
+    expect(parsed.integrityHmac).toBeDefined();
+
+    // Tamper with the raw database row in payload
+    parsed.vault_items[0].title = 'Tampered Title';
+    readDesktopVaultDatabase.mockResolvedValueOnce(JSON.stringify(parsed));
+
+    const reloaded = await freshSqliteInstance();
+    // Tampered row fails HMAC check and returns empty list
+    await expect(reloaded.getVaultItems('master-pass')).resolves.toEqual([]);
+  });
 });

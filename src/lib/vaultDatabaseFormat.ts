@@ -164,3 +164,27 @@ export async function verifyStateIntegrityHmac(
   const expectedHmac = await computeStateIntegrityHmac(state, hmacKey);
   return state.integrityHmac === expectedHmac;
 }
+
+/**
+ * Derives an HMAC integrity key from the vault key using HKDF-SHA256 (R-1).
+ */
+export async function deriveVaultHmacKey(vaultEncryptionKey: Uint8Array): Promise<Uint8Array> {
+  const ikm = await crypto.subtle.importKey(
+    'raw',
+    vaultEncryptionKey,
+    'HKDF',
+    false,
+    ['deriveBits'],
+  );
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: 'HKDF',
+      hash: 'SHA-256',
+      salt: new Uint8Array(32),
+      info: new TextEncoder().encode('aegis-vault-db-integrity-hmac-v1'),
+    },
+    ikm,
+    256,
+  );
+  return new Uint8Array(derivedBits);
+}

@@ -117,6 +117,27 @@ const MULTI_PART_TLDS: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * P2-17 / R-2: Well-known internationalized TLDs with strict registrar anti-homograph protections.
+ */
+export const SAFE_IDN_TLDS: ReadonlySet<string> = new Set([
+  '.de', '.jp', '.cn', '.kr', '.ru', '.br', '.pl', '.fr', '.es', '.nl',
+  '.se', '.no', '.fi', '.dk', '.at', '.ch', '.it', '.pt', '.tr', '.ua',
+  '.cz', '.hu', '.ro', '.bg', '.hr', '.sk', '.si',
+]);
+
+/**
+ * Checks whether an IDN punycode hostname (`xn--...`) should be flagged as suspicious.
+ * Exempts reputable ccTLDs that enforce registry-level script restrictions.
+ */
+export function isSuspiciousIdnHostname(hostname: string): boolean {
+  if (!hostname.includes('xn--')) {
+    return false;
+  }
+  const tld = '.' + (hostname.split('.').pop() || '').toLowerCase();
+  return !SAFE_IDN_TLDS.has(tld);
+}
+
+/**
  * Extracts the registrable domain (eTLD+1) from a hostname using PSL lookup.
  *
  * Examples:

@@ -7,6 +7,9 @@ import type { VaultItem } from '../types';
 import { secureRandomToken } from './random';
 import {
   createEmptyVaultDatabaseState,
+  computeStateIntegrityHmac,
+  deriveVaultHmacKey,
+  verifyStateIntegrityHmac,
   type VaultDatabaseRow,
   type VersionedVaultDatabaseState,
 } from './vaultDatabaseFormat';
@@ -205,9 +208,24 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
   }
 
   /**
-   * Saves raw DB state to private OPFS.
+   * Saves raw DB state to private OPFS with cryptographic HMAC state integrity.
    */
-  private async saveToPersistentStorage(): Promise<boolean> {
+  private async saveToPersistentStorage(vaultKey?: Uint8Array): Promise<boolean> {
+    this.state.versionCounter = (this.state.versionCounter ?? 0) + 1;
+    const key = vaultKey || this.cachedKeyBytes;
+    if (key) {
+      try {
+        const hmacKey = await deriveVaultHmacKey(key);
+        this.state.integrityHmac = await computeStateIntegrityHmac(this.state, hmacKey);
+      } catch (err) {
+        logSecurityEvent(
+          securityEventCodes.storageLegacyMigrationFailed,
+          'Failed to compute vault database integrity HMAC.',
+          'warning',
+          { error: err instanceof Error ? err.message : String(err) },
+        );
+      }
+    }
     return persistVaultDatabase(this.state);
   }
 
@@ -322,7 +340,7 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
         }
       }
 
-      const persisted = await this.saveToPersistentStorage();
+      const persisted = await this.saveToPersistentStorage(derivedKey);
       if (!persisted) {
         throw new Error('master-password-rotation-persist-failed');
       }
@@ -383,7 +401,7 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
         }
       }
 
-      const persisted = await this.saveToPersistentStorage();
+      const persisted = await this.saveToPersistentStorage(newVaultKey);
       if (!persisted) {
         throw new Error('master-password-rotation-persist-failed');
       }
@@ -468,6 +486,20 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
       const shouldMigrateStaticSalt = migration?.shouldMigrateStaticSalt ?? false;
       const migratedSalt = migration?.migratedSalt ?? this.state.encryption_salt;
       const migrationKey = migration?.migrationKey ?? derivedKey;
+
+      if (this.state.integrityHmac && !shouldMigrateStaticSalt && !shouldMigrateKdf) {
+        const hmacKey = await deriveVaultHmacKey(derivedKey);
+        const isIntegrityValid = await verifyStateIntegrityHmac(this.state, hmacKey);
+        if (!isIntegrityValid) {
+          logSecurityEvent(
+            securityEventCodes.storageLegacyMigrationFailed,
+            'Vault database HMAC integrity check failed! State tampering or unauthorized modification detected.',
+            'critical',
+            { versionCounter: this.state.versionCounter },
+          );
+          throw new Error('vault-database-integrity-corrupted');
+        }
+      }
 
       if (shouldMigrateStaticSalt || shouldMigrateKdf) {
         logSecurityEvent(
@@ -584,7 +616,7 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
         item: { ...item, id: row.id }
       });
 
-      const persisted = await this.saveToPersistentStorage();
+      const persisted = await this.saveToPersistentStorage(derivedKey);
       if (!persisted) {
         throw new Error('vault-item-persist-failed');
       }
@@ -701,7 +733,7 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
         }
       }
 
-      const persisted = await this.saveToPersistentStorage();
+      const persisted = await this.saveToPersistentStorage(derivedKey);
       if (!persisted) {
         throw new Error('vault-items-persist-failed');
       }
@@ -874,7 +906,7 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
     try {
       this.state.vault_items = this.state.vault_items.filter(row => row.id !== id);
       this.decryptedItemsCache.delete(id);
-      const persisted = await this.saveToPersistentStorage();
+      const persisted = await this.saveToPersistentStorage(derivedKey);
       if (!persisted) {
         throw new Error('vault-item-delete-persist-failed');
       }
@@ -910,7 +942,7 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
       for (const id of ids) {
         this.decryptedItemsCache.delete(id);
       }
-      const persisted = await this.saveToPersistentStorage();
+      const persisted = await this.saveToPersistentStorage(derivedKey);
       if (!persisted) {
         throw new Error('vault-items-delete-persist-failed');
       }
@@ -947,17 +979,23 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
         const encrypted = await webCryptoAesGcmEncrypt(sensitivePayload, derivedKey, generateSafeIv());
         const today = new Date().toISOString().split('T')[0] ?? '';
 
-        return buildVaultItemRow({
-          id: item.id,
+        const row = buildVaultItemRow({
+          id: item.id || secureRandomToken(9),
           encrypted,
           item,
-          createdAt: item.createdAt || today,
+          createdAt: today,
           updatedAt: today,
-          exposeUsername: true,
         });
+
+        this.decryptedItemsCache.set(row.id, {
+          enc_metadata: row.enc_metadata,
+          item: { ...item, id: row.id }
+        });
+
+        return row;
       }));
 
-      const persisted = await this.saveToPersistentStorage();
+      const persisted = await this.saveToPersistentStorage(derivedKey);
       if (!persisted) {
         throw new Error('vault-reseed-persist-failed');
       }
