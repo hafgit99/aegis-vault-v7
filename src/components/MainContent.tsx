@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import type { VaultCategoryFilter } from '../hooks/useVaultFilters';
@@ -7,14 +7,13 @@ import type { FilteredVaultItem } from '../hooks/useVaultQueries';
 import type { ActiveTab, AppNotification, AuditReport, VaultItem } from '../types';
 import type { SmartFolder, TagColorKey, TagDefinition, VaultFolder } from '../types';
 import type { CreateSmartFolderInput } from '../lib/smartFolders';
-import { useBulkActionRunner, type UseBulkSelectionResult } from '../hooks/useOrganisation';
-import PasswordGenerator from './PasswordGenerator';
-import SecurityAudit from './SecurityAudit';
-import SettingsPanel from './SettingsPanel';
+import type { UseBulkSelectionResult } from '../hooks/useOrganisation';
 import TrashWorkspace from './TrashWorkspace';
-import VaultWorkspace from './VaultWorkspace';
-import DonationPanel from './DonationPanel';
-import OrganisationSidebar from './OrganisationSidebar';
+import VaultPage from '../pages/VaultPage';
+import { AuditPage } from '../pages/AuditPage';
+import { GeneratorPage } from '../pages/GeneratorPage';
+import { SettingsPage } from '../pages/SettingsPage';
+import { DonatePage } from '../pages/DonatePage';
 
 interface MainContentProps {
   activeTab: ActiveTab;
@@ -93,127 +92,19 @@ interface MainContentProps {
   onDeleteSmartFolder?: (id: string) => void;
 }
 
-import type { BulkActionDescriptor } from './BulkActionBar';
-
-const defaultBulkSelection: UseBulkSelectionResult = {
-  selectedIds: new Set<string>(),
-  isSelectionMode: false,
-  selectionCount: 0,
-  isSelected: () => false,
-  toggle: () => {},
-  selectOnly: () => {},
-  selectAll: () => {},
-  clear: () => {},
-  selectRange: () => {},
-  enterSelectionMode: () => {},
-  exitSelectionMode: () => {},
-};
-
+/**
+ * Tab router for the unlocked application. Each tab renders a dedicated
+ * page component from `src/pages`; this component only owns the shared
+ * transition animation and prop forwarding.
+ */
 export function MainContentComponent({
   activeTab,
-  selectedItem,
-  mobileActiveView,
-  filteredItems,
-  filteredItemResults,
-  activeItems,
   trashItems,
-  filterFavoritesOnly,
-  favoriteCount,
-  loginCount,
-  cardCount,
-  secureNoteCount,
-  passkeyCount,
-  identityCount,
-  selectedCategory,
-  auditReport,
-  profileName,
-  copiedField,
-  score,
-  isPasswordRevealed,
-  isCardNumberRevealed,
-  isCvvRevealed,
-  isPinRevealed,
-  isPasskeyPrivateExponentRevealed,
-  totpCountdown,
-  autoLockDuration,
-  onNewItem,
-  onOpenProfile,
-  onLock,
-  onOpenAudit,
-  onOpenGenerator,
-  onSetFavoritesOnly,
-  onSelectCategory,
-  onSelectDashboard,
-  onBackToList,
-  onSelectItem,
-  onSelectAuditItem,
-  onToggleFavorite,
-  onEdit,
-  onDelete,
-  onToggleReveal,
-  onCopyText,
-  onDownloadAttachment,
-  onDatabaseChanged,
-  onAutoLockDurationChange,
-  onNotify,
   onEmptyTrash,
   onRestoreTrashItem,
   onDeleteTrashItemPermanently,
-  isAutofillMode = false,
-  autofillRequest = null,
-  onCancelAutofill,
-  onApproveAutofill,
-  onUpdateItemCategory,
-  // 5.3 — Tagging & Organisation
-  tags = [],
-  folders = [],
-  smartFolders = [],
-  smartFolderCounts = {},
-  selectedFolderId = null,
-  activeSmartFolderId = null,
-  onSelectFolder = () => {},
-  onSelectSmartFolder = () => {},
-  onCreateFolder = () => {},
-  onDeleteFolder = () => {},
-  onCreateTag = () => null,
-  onUpdateTag = () => {},
-  onDeleteTag = () => {},
-  onItemsChange = () => {},
-  bulkSelection = defaultBulkSelection,
-  onCreateSmartFolder = (input: CreateSmartFolderInput): SmartFolder => ({
-    id: 'dummy',
-    name: input.name,
-    rules: input.rules,
-    icon: input.icon ?? 'folder',
-    color: input.color ?? 'indigo',
-    createdAt: new Date().toISOString(),
-  }),
-  onDeleteSmartFolder = () => {},
-  onSecureShare = () => {},
+  ...pageProps
 }: MainContentProps) {
-  const [isFolderSidebarOpen, setIsFolderSidebarOpen] = useState(false);
-  const runBulkAction = useBulkActionRunner(activeItems, onItemsChange);
-
-  const handleApplyBulkAction = (action: BulkActionDescriptor) => {
-    runBulkAction({
-      kind: action.kind,
-      ids: bulkSelection.selectedIds,
-      tag: 'tag' in action ? action.tag : undefined,
-      folderId: 'folderId' in action ? action.folderId : undefined,
-    });
-    bulkSelection.clear();
-  };
-
-  const handleSelectFolder = (id: string | null) => {
-    onSelectFolder(id);
-    setIsFolderSidebarOpen(false);
-  };
-
-  const handleSelectSmartFolder = (id: string | null) => {
-    onSelectSmartFolder(id);
-    setIsFolderSidebarOpen(false);
-  };
-
   return (
     <div className="flex flex-1 overflow-hidden relative min-w-0 max-w-full w-full">
       <AnimatePresence mode="wait">
@@ -225,116 +116,27 @@ export function MainContentComponent({
           transition={{ duration: 0.18, ease: 'easeInOut' }}
           className="flex-1 flex overflow-hidden min-h-0 min-w-0 max-w-full w-full"
         >
-          {activeTab === 'vault' && (
-            <>
-              {isFolderSidebarOpen && (
-                <div
-                  className="fixed inset-0 bg-[#000000]/60 backdrop-blur-sm z-30 lg:hidden"
-                  onClick={() => setIsFolderSidebarOpen(false)}
-                />
-              )}
-              <OrganisationSidebar
-                folders={folders}
-                tags={tags}
-                smartFolders={smartFolders}
-                smartFolderCounts={smartFolderCounts}
-                items={activeItems}
-                activeFolderId={selectedFolderId}
-                activeSmartFolderId={activeSmartFolderId}
-                onSelectFolder={handleSelectFolder}
-                onSelectSmartFolder={handleSelectSmartFolder}
-                onCreateFolder={onCreateFolder}
-                onDeleteFolder={onDeleteFolder}
-                onCreateTag={onCreateTag}
-                onUpdateTag={onUpdateTag}
-                onDeleteTag={onDeleteTag}
-                onCreateSmartFolder={onCreateSmartFolder}
-                onDeleteSmartFolder={onDeleteSmartFolder}
-                isOpen={isFolderSidebarOpen}
-              />
-              <VaultWorkspace
-                selectedItem={selectedItem}
-                mobileActiveView={mobileActiveView}
-                filteredItems={filteredItems}
-                filteredItemResults={filteredItemResults}
-                activeItems={activeItems}
-                filterFavoritesOnly={filterFavoritesOnly}
-                favoriteCount={favoriteCount}
-                loginCount={loginCount}
-                cardCount={cardCount}
-                secureNoteCount={secureNoteCount}
-                passkeyCount={passkeyCount}
-                identityCount={identityCount}
-                selectedCategory={selectedCategory}
-                auditReport={auditReport}
-                profileName={profileName}
-                copiedField={copiedField}
-                score={score}
-                isPasswordRevealed={isPasswordRevealed}
-                isCardNumberRevealed={isCardNumberRevealed}
-                isCvvRevealed={isCvvRevealed}
-                isPinRevealed={isPinRevealed}
-                isPasskeyPrivateExponentRevealed={isPasskeyPrivateExponentRevealed}
-                totpCountdown={totpCountdown}
-                onNewItem={onNewItem}
-                onOpenProfile={onOpenProfile}
-                onLock={onLock}
-                onOpenAudit={onOpenAudit}
-                onOpenGenerator={onOpenGenerator}
-                onSetFavoritesOnly={onSetFavoritesOnly}
-                onSelectCategory={onSelectCategory}
-                onSelectDashboard={onSelectDashboard}
-                onBackToList={onBackToList}
-                onSelectItem={onSelectItem}
-                onSelectAuditItem={onSelectAuditItem}
-                onToggleFavorite={onToggleFavorite}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onToggleReveal={onToggleReveal}
-                onCopyText={onCopyText}
-                onDownloadAttachment={onDownloadAttachment}
-                isAutofillMode={isAutofillMode}
-                autofillRequest={autofillRequest}
-                onCancelAutofill={onCancelAutofill}
-                onApproveAutofill={onApproveAutofill}
-                onUpdateItemCategory={onUpdateItemCategory}
-                bulkSelection={bulkSelection}
-                folders={folders}
-                tags={tags}
-                onApplyBulkAction={handleApplyBulkAction}
-                onSecureShare={onSecureShare}
-                onOpenFolderSidebar={() => setIsFolderSidebarOpen(true)}
-              />
-            </>
-          )}
+          {activeTab === 'vault' && <VaultPage {...pageProps} />}
 
           {activeTab === 'audit' && (
-            <div data-testid="audit-workspace" className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto scrollbar-hide safe-bottom">
-              <SecurityAudit items={activeItems} onSelectItem={onSelectAuditItem} />
-            </div>
+            <AuditPage activeItems={pageProps.activeItems} onSelectAuditItem={pageProps.onSelectAuditItem} />
           )}
 
           {activeTab === 'generator' && (
-            <div data-testid="generator-workspace" className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto scrollbar-hide safe-bottom">
-              <PasswordGenerator onCopyText={onCopyText} copiedField={copiedField} />
-            </div>
+            <GeneratorPage copiedField={pageProps.copiedField} onCopyText={pageProps.onCopyText} />
           )}
 
           {activeTab === 'settings' && (
-            <div data-testid="settings-workspace" className="flex-1 p-3 sm:p-6 lg:p-8 overflow-y-auto scrollbar-hide safe-bottom">
-              <SettingsPanel
-                onDatabaseChanged={onDatabaseChanged}
-                autoLockDuration={autoLockDuration}
-                onAutoLockDurationChange={onAutoLockDurationChange}
-                onNotify={onNotify}
-              />
-            </div>
+            <SettingsPage
+              autoLockDuration={pageProps.autoLockDuration}
+              onDatabaseChanged={pageProps.onDatabaseChanged}
+              onAutoLockDurationChange={pageProps.onAutoLockDurationChange}
+              onNotify={pageProps.onNotify}
+            />
           )}
 
           {activeTab === 'donate' && (
-            <div data-testid="donate-workspace" className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto scrollbar-hide safe-bottom">
-              <DonationPanel copiedField={copiedField} onCopyText={onCopyText} />
-            </div>
+            <DonatePage copiedField={pageProps.copiedField} onCopyText={pageProps.onCopyText} />
           )}
 
           {activeTab === 'trash' && (
