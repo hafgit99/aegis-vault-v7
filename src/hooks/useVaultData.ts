@@ -57,7 +57,8 @@ export function useVaultData() {
     const updated = await saveVaultItem(item);
     setItems(updated);
 
-    const saved = updated.find((entry) => entry.title === item.title && entry.username === item.username);
+    const saved = updated.find((entry) => entry.id === item.id)
+      ?? updated.find((entry) => entry.title === item.title && entry.username === item.username);
     if (saved) {
       setSelectedItem(saved);
     }

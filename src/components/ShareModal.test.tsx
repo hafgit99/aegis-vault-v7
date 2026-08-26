@@ -11,7 +11,8 @@ import React from 'react';
 import type { VaultItem } from '../types';
 
 vi.mock('../lib/share', () => ({
-  generateShareUrl: vi.fn().mockResolvedValue('https://app.aegisvault.org/#share=encrypted_data'),
+  generateShareUrl: vi.fn().mockResolvedValue('https://app.aegisvault.org/#share=encrypted_data&s=salt'),
+  MIN_SHARE_PASSWORD_LENGTH: 4,
 }));
 
 vi.mock('qrcode', () => ({
@@ -36,7 +37,7 @@ describe('ShareModal', () => {
     cleanup();
   });
 
-  it('renders modal and generates share URL with QR code', async () => {
+  it('renders modal with password input and generate button', async () => {
     const onClose = vi.fn();
     render(
       <LanguageProvider>
@@ -45,9 +46,37 @@ describe('ShareModal', () => {
     );
 
     expect(screen.queryByText('My Bank Login')).not.toBeNull();
+    // Password input should be visible
+    expect(screen.getByTestId('share-modal-password-input')).toBeTruthy();
+    // Generate button should be visible
+    expect(screen.getByTestId('share-modal-generate-button')).toBeTruthy();
+    // URL input should NOT be visible yet (not generated)
+    expect(screen.queryByTestId('share-modal-url-input')).toBeNull();
+  });
+
+  it('generates share URL after entering password and clicking generate', async () => {
+    const onClose = vi.fn();
+    render(
+      <LanguageProvider>
+        <ShareModal isOpen={true} onClose={onClose} item={mockItem} />
+      </LanguageProvider>,
+    );
+
+    // Type a password
+    const passwordInput = screen.getByTestId('share-modal-password-input');
+    fireEvent.change(passwordInput, { target: { value: 'test-share-password' } });
+
+    // Click generate
+    const generateBtn = screen.getByTestId('share-modal-generate-button');
+    fireEvent.click(generateBtn);
 
     await waitFor(() => {
-      expect(shareModule.generateShareUrl).toHaveBeenCalledWith(mockItem, 1);
+      expect(shareModule.generateShareUrl).toHaveBeenCalledWith(mockItem, 1, 'test-share-password');
+    });
+
+    // URL input should now be visible
+    await waitFor(() => {
+      expect(screen.getByTestId('share-modal-url-input')).toBeTruthy();
     });
   });
 
@@ -64,36 +93,17 @@ describe('ShareModal', () => {
       </LanguageProvider>,
     );
 
+    // Type password and generate
+    const passwordInput = screen.getByTestId('share-modal-password-input');
+    fireEvent.change(passwordInput, { target: { value: 'test-share-password' } });
+    const generateBtn = screen.getByTestId('share-modal-generate-button');
+    fireEvent.click(generateBtn);
+
     await waitFor(() => {
       const copyBtn = screen.getByTestId('share-modal-copy-button');
       fireEvent.click(copyBtn);
-      expect(writeText).toHaveBeenCalledWith('https://app.aegisvault.org/#share=encrypted_data');
+      expect(writeText).toHaveBeenCalledWith('https://app.aegisvault.org/#share=encrypted_data&s=salt');
     });
-  });
-
-  it('updates duration when duration button is clicked', async () => {
-    const onClose = vi.fn();
-    render(
-      <LanguageProvider>
-        <ShareModal isOpen={true} onClose={onClose} item={mockItem} />
-      </LanguageProvider>,
-    );
-
-    const btn24h = screen.getAllByRole('button').find((btn) => btn.textContent?.includes('24'));
-    if (btn24h) {
-      fireEvent.click(btn24h);
-      await waitFor(() => {
-        expect(shareModule.generateShareUrl).toHaveBeenCalledWith(mockItem, 24);
-      });
-    }
-
-    const btn1h = screen.getAllByRole('button').find((btn) => btn.textContent?.includes('1'));
-    if (btn1h) {
-      fireEvent.click(btn1h);
-      await waitFor(() => {
-        expect(shareModule.generateShareUrl).toHaveBeenCalledWith(mockItem, 1);
-      });
-    }
   });
 
   it('handles clipboard failure and generation errors gracefully', async () => {
@@ -106,6 +116,12 @@ describe('ShareModal', () => {
       </LanguageProvider>,
     );
 
+    // Type password and generate
+    const passwordInput = screen.getByTestId('share-modal-password-input');
+    fireEvent.change(passwordInput, { target: { value: 'test-share-password' } });
+    const generateBtn = screen.getByTestId('share-modal-generate-button');
+    fireEvent.click(generateBtn);
+
     await waitFor(() => {
       expect(consoleError).toHaveBeenCalled();
     });
@@ -113,22 +129,19 @@ describe('ShareModal', () => {
     consoleError.mockRestore();
   });
 
-  it('renders prominent security warning and hardens share URL input', async () => {
+  it('renders password input with proper security attributes', async () => {
     render(
       <LanguageProvider>
         <ShareModal isOpen={true} onClose={vi.fn()} item={mockItem} />
       </LanguageProvider>,
     );
 
-    const input = screen.getByTestId('share-modal-url-input');
+    const input = screen.getByTestId('share-modal-password-input');
     expect(input.getAttribute('autocomplete')).toBe('off');
     expect(input.getAttribute('data-lpignore')).toBe('true');
     expect(input.getAttribute('data-1p-ignore')).toBe('true');
     expect(input.getAttribute('data-bwignore')).toBe('true');
     expect(input.getAttribute('spellcheck')).toBe('false');
-
-    await waitFor(() => {
-      expect(screen.getByText(/Zero-Knowledge|Sıfır Bilgi/i)).toBeTruthy();
-    });
+    expect(input.getAttribute('type')).toBe('password');
   });
 });

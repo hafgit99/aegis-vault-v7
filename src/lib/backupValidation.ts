@@ -48,10 +48,10 @@ function isValidBase64(str: string): boolean {
  * misleading "Yedek dosyasının içi liste yapısında değil" message.
  */
 export function validateBackupPayload(
-  parsed: any,
+  parsed: unknown,
   fileSizeBytes?: number,
   options: { fromUniversalImport?: boolean } = {},
-): { items: any[]; attachments: any[] } {
+): { items: unknown[]; attachments: unknown[] } {
   // 1. File size checks
   if (fileSizeBytes !== undefined && fileSizeBytes > MAX_BACKUP_FILE_SIZE) {
     throw new BackupValidationError(
@@ -65,8 +65,8 @@ export function validateBackupPayload(
   }
 
   // 2. Normalize based on format: Array vs Envelope Object
-  let items: any[] = [];
-  let attachments: any[] = [];
+  let items: unknown[] = [];
+  let attachments: unknown[] = [];
 
   if (Array.isArray(parsed)) {
     // Legacy format: raw items array

@@ -323,8 +323,13 @@ function checkContentPhishing(url: string, trustedDomains: string[] = []): any {
     const hostname = parsed.hostname.toLowerCase();
 
     // 1. IDN Punycode homograph detection
+    // P2-17: Exempt well-known internationalized TLDs from unconditional flagging
     if (hostname.includes('xn--')) {
-      return { isSuspicious: true, threatType: 'homograph', details: hostname };
+      const SAFE_IDN_TLDS = new Set(['.de', '.jp', '.cn', '.kr', '.ru', '.br', '.pl', '.fr', '.es', '.nl', '.se', '.no', '.fi', '.dk', '.at', '.ch', '.it', '.pt', '.tr', '.ua', '.cz', '.hu', '.ro', '.bg', '.hr', '.sk', '.si']);
+      const tld = '.' + hostname.split('.').pop();
+      if (!SAFE_IDN_TLDS.has(tld)) {
+        return { isSuspicious: true, threatType: 'homograph', details: hostname };
+      }
     }
 
     // 2. Non-ASCII / Unicode confusable detection
@@ -697,7 +702,7 @@ function initializePhishingCheck() {
 // Keep track of active dropdown
 let activeDropdown: HTMLDivElement | null = null;
 let activeTargetInput: HTMLInputElement | null = null;
-let lastFilledCredential: { username: string; password: string; timestamp: number } | null = null;
+let lastFilledCredential: { username: string; password: string; timestamp: number; formElement: HTMLFormElement | null } | null = null;
 
 function wipeLastFilledCredential() {
   if (lastFilledCredential) {
@@ -862,10 +867,18 @@ function checkAndAutofillPendingPassword() {
     return;
   }
   
+  // P1-7b: Only refill password inputs that belong to the same <form> as the
+  // originally filled field. This prevents a malicious page from injecting a
+  // hidden password input outside the legitimate form to exfiltrate the password.
+  const originalForm = lastFilledCredential.formElement || null;
   const passwordInputs = document.querySelectorAll('input[type="password"]');
   passwordInputs.forEach((passEl) => {
     const passInput = passEl as HTMLInputElement;
     if (passInput && !passInput.value && isElementVisible(passInput)) {
+      // If we have a reference to the original form, restrict refill to the same form
+      if (originalForm && passInput.form !== originalForm) {
+        return; // Skip — different form
+      }
       passInput.value = lastFilledCredential!.password;
       passInput.dispatchEvent(new Event('input', { bubbles: true }));
       passInput.dispatchEvent(new Event('change', { bubbles: true }));
@@ -1090,7 +1103,9 @@ function fillPageCredentials(activeInput: HTMLInputElement, username: string, pa
     showSecurityToast(translate('phishing.autofill.blocked', activeLanguage));
     return;
   }
-  lastFilledCredential = { username, password, timestamp: Date.now() };
+  // P1-7b: Track the form element for refill containment
+  const formElement = activeInput?.form || (document.activeElement as HTMLInputElement | null)?.form || null;
+  lastFilledCredential = { username, password, timestamp: Date.now(), formElement };
 
   const fillInput = (el: HTMLInputElement, val: string) => {
     // Security fix D2: Call native HTMLInputElement.prototype value setter to protect against prototype tampering

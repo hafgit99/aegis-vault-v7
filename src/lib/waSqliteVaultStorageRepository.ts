@@ -199,7 +199,7 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
     return this.ensureVaultEncryptionSalt();
   }
 
-  public async setupMasterWithHash(argonHash: string, salt: string, kdfParams: any): Promise<void> {
+  public async setupMasterWithHash(argonHash: string, salt: string, kdfParams: unknown): Promise<void> {
     await this.hydrate();
     await this.runTransaction(async () => {
       await this.executeRequired('DELETE FROM user_secrets;');
@@ -218,7 +218,7 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
   public async changeMasterPasswordWithHash(
     newArgonHash: string,
     newSalt: string,
-    kdfParams: any,
+    kdfParams: unknown,
     oldVaultKey: Uint8Array,
     newVaultKey: Uint8Array,
   ): Promise<void> {

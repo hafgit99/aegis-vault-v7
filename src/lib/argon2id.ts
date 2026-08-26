@@ -88,6 +88,8 @@ export interface Argon2DegradationInfo {
   requestedMemoryKiB: number;
   activeMemoryKiB: number;
   timestamp: number;
+  /** P1-6: When true, vault writes should be blocked to prevent persisting weak KDF parameters. */
+  writeBlocked: boolean;
 }
 
 let latestDegradationInfo: Argon2DegradationInfo | null = null;
@@ -95,6 +97,14 @@ const degradationSubscribers = new Set<(info: Argon2DegradationInfo) => void>();
 
 export function getArgon2DegradationInfo(): Argon2DegradationInfo | null {
   return latestDegradationInfo;
+}
+
+/**
+ * P1-6: Returns true if Argon2id memory degradation was detected and vault writes
+ * should be blocked to prevent persisting records with weak KDF parameters.
+ */
+export function isArgon2WriteBlocked(): boolean {
+  return latestDegradationInfo?.writeBlocked === true;
 }
 
 export function subscribeArgon2Degradation(cb: (info: Argon2DegradationInfo) => void): () => void {
@@ -188,6 +198,7 @@ async function deriveWasmHash(
           requestedMemoryKiB: requested.memoryKiB,
           activeMemoryKiB: profile.memoryKiB,
           timestamp: Date.now(),
+          writeBlocked: true,
         };
         degradationSubscribers.forEach((cb) => {
           try {

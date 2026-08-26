@@ -55,12 +55,12 @@ export interface VaultStorageRepository {
   reseedDemoWithKey?(vaultEncryptionKey: Uint8Array, demoItems: VaultItem[]): Promise<VaultItem[]>;
   getArgonHash?(): string | Promise<string>;
   getCurrentVaultEncryptionSalt?(): string | Promise<string>;
-  getKdfParams?(): any | Promise<any>;
-  setupMasterWithHash?(argonHash: string, salt: string, kdfParams: any): Promise<void>;
+  getKdfParams?(): unknown | Promise<unknown>;
+  setupMasterWithHash?(argonHash: string, salt: string, kdfParams: unknown): Promise<void>;
   changeMasterPasswordWithHash?(
     newArgonHash: string,
     newSalt: string,
-    kdfParams: any,
+    kdfParams: unknown,
     oldVaultKey: Uint8Array,
     newVaultKey: Uint8Array,
   ): Promise<void>;

@@ -6,6 +6,8 @@ import {
   createEmptyVaultDatabaseState,
   normalizeVaultDatabaseState,
   parseVaultDatabaseState,
+  computeStateIntegrityHmac,
+  verifyStateIntegrityHmac,
 } from './vaultDatabaseFormat';
 
 describe('vault database format migrations', () => {
@@ -15,6 +17,7 @@ describe('vault database format migrations', () => {
       appId: VAULT_DB_APP_ID,
       user_secrets: [],
       vault_items: [],
+      versionCounter: 1,
     });
   });
 
@@ -47,6 +50,7 @@ describe('vault database format migrations', () => {
     expect(migrated.user_secrets).toHaveLength(1);
     expect(migrated.vault_items).toHaveLength(1);
     expect(migrated.vault_items[0]!.enc_kdf).toBe('argon2-browser');
+    expect(migrated.versionCounter).toBe(1);
   });
 
   it('preserves current versioned database arrays when parsing serialized state', () => {
@@ -55,6 +59,7 @@ describe('vault database format migrations', () => {
       appId: VAULT_DB_APP_ID,
       user_secrets: [],
       vault_items: [],
+      versionCounter: 5,
     }));
 
     expect(parsed).toEqual({
@@ -62,6 +67,7 @@ describe('vault database format migrations', () => {
       appId: VAULT_DB_APP_ID,
       user_secrets: [],
       vault_items: [],
+      versionCounter: 5,
     });
   });
 
@@ -104,5 +110,45 @@ describe('vault database format migrations', () => {
       migratedFrom: 1,
     });
     expect(result.migratedFrom).toBe(1);
+  });
+
+  it('computes and verifies state integrity HMAC (P1-5)', async () => {
+    const dummyKey = new Uint8Array(32).fill(7);
+    const state = createEmptyVaultDatabaseState();
+    state.user_secrets.push({ username: 'alice', argon_hash: '$argon2id$v=19$m=65536,t=4,p=2$mock' });
+    state.vault_items.push({
+      id: 'item-1',
+      title: 'Email',
+      category: 'login',
+      favorite: 0,
+      deleted: 0,
+      deleted_at: null,
+      created_at: '2026-01-01',
+      updated_at: '2026-01-01',
+      username: 'alice@example.com',
+      username_db: 'enc-username',
+      password_db: 'enc-pass',
+      notes_db: '',
+      enc_metadata: '{}',
+    });
+
+    const hmac = await computeStateIntegrityHmac(state, dummyKey);
+    expect(typeof hmac).toBe('string');
+    expect(hmac.length).toBe(64); // 32 bytes hex = 64 chars
+
+    state.integrityHmac = hmac;
+    expect(await verifyStateIntegrityHmac(state, dummyKey)).toBe(true);
+
+    // Tampering with user_secrets (e.g. argon_hash replacement) should fail verification
+    const tamperedSecrets = { ...state, user_secrets: [{ username: 'alice', argon_hash: '$argon2id$tampered' }] };
+    expect(await verifyStateIntegrityHmac(tamperedSecrets, dummyKey)).toBe(false);
+
+    // Tampering with vault_items (row deletion) should fail verification
+    const tamperedRows = { ...state, vault_items: [] };
+    expect(await verifyStateIntegrityHmac(tamperedRows, dummyKey)).toBe(false);
+
+    // Tampering with versionCounter (rollback) should fail verification
+    const tamperedVersion = { ...state, versionCounter: 0 };
+    expect(await verifyStateIntegrityHmac(tamperedVersion, dummyKey)).toBe(false);
   });
 });

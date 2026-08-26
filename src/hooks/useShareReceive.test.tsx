@@ -64,14 +64,20 @@ describe('useShareReceive', () => {
     expect(result.current.sharingItem).toBeNull();
   });
 
-  it('opens the receive modal when a valid #share= hash is present', async () => {
-    window.location.hash = '#share=valid-token';
+  it('opens the receive password prompt when a #share= hash is present and decrypts on password submit', async () => {
+    window.location.hash = '#share=valid-token&s=salt';
     const { result } = renderHook(() => useShareReceive({ onSaveItem: vi.fn() }), { wrapper });
 
     await waitFor(() => {
-      expect(decryptShareUrl).toHaveBeenCalled();
-      expect(result.current.isReceiveOpen).toBe(true);
+      expect(result.current.isSharePasswordPromptOpen).toBe(true);
     });
+
+    await act(async () => {
+      await result.current.submitSharePassword('correct-password');
+    });
+
+    expect(decryptShareUrl).toHaveBeenCalledWith('#share=valid-token&s=salt', 'correct-password');
+    expect(result.current.isReceiveOpen).toBe(true);
   });
 
   it('imports a received payload as a new vault item', async () => {

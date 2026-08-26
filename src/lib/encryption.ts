@@ -96,9 +96,9 @@ export async function encryptDataWithPasswordSecure(rawData: string, password: s
 }
 
 export async function decryptDataWithPasswordSecure(envelopeJsonStr: string, password: string): Promise<string> {
-  let parsed: any;
-try {
-    parsed = JSON.parse(envelopeJsonStr);
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(envelopeJsonStr) as Record<string, unknown>;
   } catch (_e) {
     throw new SecureBackupError(secureBackupErrorCodes.invalidJson);
   }

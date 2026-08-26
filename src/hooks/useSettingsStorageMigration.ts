@@ -55,13 +55,14 @@ export function useSettingsStorageMigration({
           ? `${t('settings.storageMigration.blocked')} (${issuePreview})`
           : t('settings.storageMigration.blocked'),
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       setStorageMigrationStatus('error');
-      const message = err?.message === 'vault-storage-active-migration-session-required'
+      const errMessage = err instanceof Error ? err.message : String(err || '');
+      const message = errMessage === 'vault-storage-active-migration-session-required'
         ? t('settings.storageMigration.missingSession')
-        : err?.message === 'wa-sqlite-android-webview-wasm-memory-unsupported' || err?.message === 'wa-sqlite-webview-wasm-memory-unsupported'
+        : errMessage === 'wa-sqlite-android-webview-wasm-memory-unsupported' || errMessage === 'wa-sqlite-webview-wasm-memory-unsupported'
           ? t('settings.storageMigration.androidUnsupported')
-          : `${t('settings.storageMigration.error')}: ${err?.message || t('settings.biometric.genericError')}`;
+          : `${t('settings.storageMigration.error')}: ${errMessage || t('settings.biometric.genericError')}`;
       setStorageMigrationMessage(message);
     }
   };

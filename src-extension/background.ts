@@ -156,9 +156,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === 'save_new_credential') {
+    // P1-7d: Validate credential payload schema before forwarding to native host
+    const cred = request.credential;
+    if (!cred || typeof cred !== 'object'
+      || (cred.password !== undefined && typeof cred.password !== 'string')
+      || (cred.username !== undefined && typeof cred.username !== 'string')
+      || (cred.url !== undefined && typeof cred.url !== 'string')
+      || (cred.title !== undefined && typeof cred.title !== 'string')
+      || (cred.category !== undefined && typeof cred.category !== 'string')) {
+      sendResponse({ error: 'invalid_credential_payload' });
+      return false;
+    }
     chrome.runtime.sendNativeMessage(
       HOST_NAME,
-      { action: 'add_credential', credential: request.credential },
+      { action: 'add_credential', credential: cred },
       (response) => {
         if (chrome.runtime.lastError) {
           sendResponse({ error: chrome.runtime.lastError.message });
@@ -256,23 +267,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           return;
         }
 
-        // If targetDomain is provided, validate against active tab's domain (defense-in-depth)
-        if (request.targetDomain && tabUrl) {
-          const tabDomain = extractRegistrableDomainFromUrl(tabUrl);
-          if (tabDomain && request.targetDomain && tabDomain !== request.targetDomain) {
+        // P1-7a: Domain validation is MANDATORY — if targetDomain is missing/empty,
+        // treat it as a domain mismatch (credential has no URL, user must confirm).
+        const tabDomain = extractRegistrableDomainFromUrl(tabUrl);
+        const credDomain = request.targetDomain || '';
+        if (!credDomain || (tabDomain && credDomain && tabDomain !== credDomain)) {
             if (!request.userConfirmedMismatch) {
               console.warn(
                 '[AegisVault Security] Autofill domain mismatch blocked by background service worker:',
-                `tab=${tabDomain}, credential=${request.targetDomain}`
+                `tab=${tabDomain}, credential=${credDomain || '(empty)'}`
               );
               sendResponse({ status: 'blocked', reason: 'domain_mismatch' });
               return;
             }
             console.warn(
               '[AegisVault Security] Autofill domain mismatch allowed with explicit user confirmation:',
-              `tab=${tabDomain}, credential=${request.targetDomain}`
+              `tab=${tabDomain}, credential=${credDomain || '(empty)'}`
             );
-          }
         }
 
         chrome.tabs.sendMessage(activeTab.id, {

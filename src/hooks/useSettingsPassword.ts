@@ -52,10 +52,11 @@ export function useSettingsPassword({ onDatabaseChanged }: UseSettingsPasswordOp
     try {
       await changeMasterPassword(oldPassword, newPassword);
       await onDatabaseChanged();
-    } catch (err: any) {
-      setPasswordError(err?.message === 'current-master-password-invalid'
+    } catch (err: unknown) {
+      const errMessage = err instanceof Error ? err.message : String(err || '');
+      setPasswordError(errMessage === 'current-master-password-invalid'
         ? t('settings.password.error.current')
-        : err?.message || t('settings.password.error.rotationFailed'));
+        : errMessage || t('settings.password.error.rotationFailed'));
       return;
     }
 

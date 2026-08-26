@@ -28,6 +28,7 @@ vi.mock('./argon2id', () => ({
   }),
   verifyArgon2idHash: vi.fn(async (password: string, encoded: string) => encoded.endsWith(`$${password}`)),
   MIN_ARGON2ID_MEMORY_KIB: 8192,
+  isArgon2WriteBlocked: vi.fn(() => false),
   enforceMinimumKdfFloor: vi.fn((opts: any) => ({ memoryKiB: 32768, iterations: 3, parallelism: 1, hashLength: 32, ...opts })),
   getDefaultKdfProfile: vi.fn(() => ({ memoryKiB: 32768, iterations: 3, parallelism: 1, hashLength: 32 })),
 }));

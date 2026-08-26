@@ -12,7 +12,7 @@ export { parseCSV } from './csvParser';
 
 export type ImportResult = 
   | { type: 'success'; items: Partial<VaultItem>[]; formatName: string }
-  | { type: 'encrypted_aegis'; envelope: any }
+  | { type: 'encrypted_aegis'; envelope: Record<string, unknown> }
   | { type: 'error'; message: string };
 
 export interface ImportLabels {
@@ -147,7 +147,16 @@ export function parseUniversalImport(fileContent: string, labels: Partial<Import
       // 3. Bitwarden JSON structure
       if (parsed.items && Array.isArray(parsed.items)) {
         const items: Partial<VaultItem>[] = [];
-        parsed.items.forEach((bw: any) => {
+        parsed.items.forEach((bwRaw: unknown) => {
+          const bw = bwRaw as Record<string, unknown> & {
+            name?: string;
+            type?: number;
+            notes?: string;
+            favorite?: boolean;
+            login?: { username?: string; password?: string; uris?: { uri?: string }[]; totp?: string };
+            card?: { cardholderName?: string; number?: string; code?: string; expMonth?: string; expYear?: string };
+            identity?: { firstName?: string; lastName?: string; ssn?: string; passportNumber?: string };
+          };
           // First pass: discover the row's identifying fields so we can
           // synthesise a non-empty title if `bw.name` is missing.
           const username = (bw.type === 1 && bw.login?.username) || '';
@@ -209,8 +218,9 @@ export function parseUniversalImport(fileContent: string, labels: Partial<Import
 
       // Fallback fallback general JSON structure
       return { type: 'error', message: copy.errorUnsupportedJson };
-    } catch (err: any) {
-      return { type: 'error', message: `${copy.errorJsonPrefix}: ${err?.message}` };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err || '');
+      return { type: 'error', message: `${copy.errorJsonPrefix}: ${msg}` };
     }
   }
 

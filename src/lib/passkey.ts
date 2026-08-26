@@ -563,7 +563,7 @@ export async function reWrapPasskeysInVaultItems<T>(
   newVaultKey: Uint8Array,
 ): Promise<T[]> {
   for (const item of items) {
-    const raw = item as Record<string, any>;
+    const raw = item as Record<string, unknown>;
     if (raw.passkeyPrivateKeyBundle && typeof raw.passkeyPrivateKeyBundle === 'object') {
       raw.passkeyPrivateKeyBundle = await reWrapPasskeyBundle(
         raw.passkeyPrivateKeyBundle as WebCryptoAesGcmPayload,

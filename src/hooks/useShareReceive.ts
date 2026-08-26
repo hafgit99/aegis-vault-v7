@@ -5,10 +5,14 @@
  * `#share=` hash-listen flow, and importing a received item. Extracted from
  * UnlockedApp to keep its body declarative.
  *
+ * Security: Share links now require a password for decryption (P0-1).
+ * The receive flow prompts the user for the share password before attempting
+ * to decrypt the payload.
+ *
  * @license SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { decryptShareUrl, type DecryptedSharePayload } from '../lib/share';
@@ -30,6 +34,11 @@ export function useShareReceive({
   const [isReceiveOpen, setIsReceiveOpen] = useState(false);
   const [receivedPayload, setReceivedPayload] = useState<DecryptedSharePayload | null>(null);
 
+  // Password-protected share receive flow state
+  const [pendingShareHash, setPendingShareHash] = useState<string | null>(null);
+  const [isSharePasswordPromptOpen, setIsSharePasswordPromptOpen] = useState(false);
+  const [shareReceiveError, setShareReceiveError] = useState<string | null>(null);
+
   const openShare = (item: VaultItem) => {
     setSharingItem(item);
     setIsShareOpen(true);
@@ -43,8 +52,37 @@ export function useShareReceive({
   const closeReceive = () => {
     setIsReceiveOpen(false);
     setReceivedPayload(null);
+    setPendingShareHash(null);
+    setIsSharePasswordPromptOpen(false);
+    setShareReceiveError(null);
     window.history.replaceState(null, '', window.location.pathname);
   };
+
+  /**
+   * Called when the user submits the share password in the receive prompt.
+   * Attempts to decrypt the pending share hash with the provided password.
+   */
+  const submitSharePassword = useCallback(async (password: string) => {
+    if (!pendingShareHash) return;
+    setShareReceiveError(null);
+
+    const payload = await decryptShareUrl(pendingShareHash, password);
+    if (payload) {
+      setReceivedPayload(payload);
+      setIsSharePasswordPromptOpen(false);
+      setIsReceiveOpen(true);
+      setPendingShareHash(null);
+    } else {
+      setShareReceiveError(t('share.error.wrongPassword', 'Incorrect password or the link has expired.'));
+    }
+  }, [pendingShareHash, t]);
+
+  const cancelSharePasswordPrompt = useCallback(() => {
+    setIsSharePasswordPromptOpen(false);
+    setPendingShareHash(null);
+    setShareReceiveError(null);
+    window.history.replaceState(null, '', window.location.pathname);
+  }, []);
 
   const importShare = async (itemData: Partial<VaultItem>) => {
     try {
@@ -81,34 +119,26 @@ export function useShareReceive({
   };
 
   useEffect(() => {
-    const checkHashShare = async () => {
+    const checkHashShare = () => {
       if (window.location.hash.startsWith('#share=')) {
-        const payload = await decryptShareUrl(window.location.hash);
-        if (payload) {
-          setReceivedPayload(payload);
-          setIsReceiveOpen(true);
-        } else {
-          onNotify?.({
-            type: 'danger',
-            title: t('share.title'),
-            message: t('share.error.decrypt', 'Failed to decrypt share link.'),
-          });
-          window.history.replaceState(null, '', window.location.pathname);
-        }
+        // Store the hash and prompt for password — do NOT try to auto-decrypt
+        setPendingShareHash(window.location.hash);
+        setIsSharePasswordPromptOpen(true);
+        setShareReceiveError(null);
       }
     };
 
-    void checkHashShare();
+    checkHashShare();
 
     const handleHashChange = () => {
-      void checkHashShare();
+      checkHashShare();
     };
 
     window.addEventListener('hashchange', handleHashChange);
     return () => {
       window.removeEventListener('hashchange', handleHashChange);
     };
-  }, [t, onNotify]);
+  }, []);
 
   return {
     isShareOpen,
@@ -119,5 +149,10 @@ export function useShareReceive({
     closeShare,
     closeReceive,
     importShare,
+    // Password-protected receive flow
+    isSharePasswordPromptOpen,
+    shareReceiveError,
+    submitSharePassword,
+    cancelSharePasswordPrompt,
   };
 }

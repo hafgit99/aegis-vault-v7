@@ -90,8 +90,9 @@ export function useSettingsSync({ onDatabaseChanged }: UseSettingsSyncOptions) {
         const provider = new WebDavSyncProvider(syncUrl, syncUsername, syncPassword);
         await provider.testConnection();
         setSyncTestResult(t('settings.sync.test.success'));
-      } catch (e: any) {
-        setSyncTestResult(t('settings.sync.test.failed') + (e?.message ? ` (${e.message})` : ''));
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e || '');
+        setSyncTestResult(t('settings.sync.test.failed') + (msg ? ` (${msg})` : ''));
       } finally {
         setSyncTestLoading(false);
       }
@@ -117,8 +118,9 @@ export function useSettingsSync({ onDatabaseChanged }: UseSettingsSyncOptions) {
         });
         await provider.testConnection();
         setSyncTestResult(t('settings.sync.test.success'));
-      } catch (e: any) {
-        setSyncTestResult(t('settings.sync.test.failed') + (e?.message ? ` (${e.message})` : ''));
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e || '');
+        setSyncTestResult(t('settings.sync.test.failed') + (msg ? ` (${msg})` : ''));
       } finally {
         setSyncTestLoading(false);
       }
@@ -204,9 +206,10 @@ export function useSettingsSync({ onDatabaseChanged }: UseSettingsSyncOptions) {
             setSyncMessage(`${result.mergedCount} ${t('settings.sync.mergedItems')}`);
           }
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         setSyncStatus('error');
-        setSyncMessage(e?.message ?? t('settings.sync.error.connection'));
+        const msg = e instanceof Error ? e.message : String(e || '');
+        setSyncMessage(msg || t('settings.sync.error.connection'));
       } finally {
         setSyncLoading(false);
       }

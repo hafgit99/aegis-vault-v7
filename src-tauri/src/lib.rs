@@ -696,7 +696,9 @@ pub fn run() {
     };
 
     let credential_session = credential_handler::CredentialSession::default();
-    let builder = tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    let builder = builder
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(state)
         .manage(credential_session);
 

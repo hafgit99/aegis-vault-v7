@@ -20,6 +20,10 @@ describe('psl-utils (Public Suffix List domain extractor)', () => {
       expect(extractRegistrableDomain('sub.bank.com.tr')).toBe('bank.com.tr');
       expect(extractRegistrableDomain('portal.unsw.edu.au')).toBe('unsw.edu.au');
       expect(extractRegistrableDomain('auth.service.co.jp')).toBe('service.co.jp');
+      expect(extractRegistrableDomain('login.portal.com.tn')).toBe('portal.com.tn');
+      expect(extractRegistrableDomain('app.safaricom.co.ke')).toBe('safaricom.co.ke');
+      expect(extractRegistrableDomain('pay.gtbank.com.ng')).toBe('gtbank.com.ng');
+      expect(extractRegistrableDomain('shop.mercado.com.co')).toBe('mercado.com.co');
     });
 
     it('correctly handles service suffixes (.github.io, etc.)', () => {

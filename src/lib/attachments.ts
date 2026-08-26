@@ -316,7 +316,7 @@ export async function migrateLegacyAttachmentsToAesGcm(): Promise<number> {
     }
 
     logSecurityEvent(
-      'security.legacyCryptoWarning' as any,
+      securityEventCodes.securityLegacyCryptoWarning,
       `Legacy XOR-LEGACY or old SHA-256 KDF encrypted attachments detected. Forcing migration to secure AES-256-GCM HKDF-SHA-256.`,
       'warning'
     );
@@ -610,7 +610,7 @@ export async function exportAllAttachments(): Promise<AttachmentBackupRecord[]> 
       } catch (err) {
         console.error(`Failed to decrypt attachment ${record.id} for export:`, err);
         logSecurityEvent(
-          'security.attachmentExportFailed' as any,
+          securityEventCodes.storageLegacyMigrationFailed,
           `Failed to decrypt attachment ${record.id} for export.`,
           'warning',
           { attachmentId: record.id, error: err instanceof Error ? err.message : String(err) }

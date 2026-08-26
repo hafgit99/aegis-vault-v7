@@ -74,6 +74,7 @@ vi.mock('./argon2id', () => ({
   deriveArgon2idKey: vi.fn(async (password: string) => new Uint8Array(new TextEncoder().encode(password.padEnd(32, '#').slice(0, 32)))),
   enforceMinimumKdfFloor: vi.fn((opts: Record<string, unknown>) => ({ memoryKiB: 32768, iterations: 3, parallelism: 1, hashLength: 32, ...opts })),
   getDefaultKdfProfile: vi.fn(() => ({ memoryKiB: 65536, iterations: 4, parallelism: 1, hashLength: 32 })),
+  isArgon2WriteBlocked: vi.fn(() => false),
 }));
 
 import { logSecurityEvent, securityEventCodes } from './securityEvents';

@@ -36,6 +36,10 @@ export interface VersionedVaultDatabaseState {
   };
   user_secrets: VaultDatabaseUserSecret[];
   vault_items: VaultDatabaseRow[];
+  /** P1-5: Monotonically increasing version counter to detect rollback attacks. */
+  versionCounter?: number;
+  /** P1-5: HMAC-SHA256 integrity tag over canonical state to detect row deletion, tampering, or argon_hash modifications. */
+  integrityHmac?: string;
 }
 
 function arrayOrEmpty<T>(value: unknown): T[] {
@@ -49,6 +53,7 @@ export function createEmptyVaultDatabaseState(): VersionedVaultDatabaseState {
     encryption_salt: undefined,
     user_secrets: [],
     vault_items: [],
+    versionCounter: 1,
   };
 }
 
@@ -70,11 +75,12 @@ export function normalizeVaultDatabaseState(raw: unknown): VersionedVaultDatabas
   // in WebView2 (Windows), WebKit (macOS/iOS), WebKitGTK (Linux) and Android
   // WebView. The 128 MiB default previously crashed on constrained WebView2
   // builds with "memory access out of bounds" during unlock and import.
-  const kdfParams = rawKdfParams && typeof rawKdfParams === 'object' ? {
-    memoryKiB: typeof (rawKdfParams as any).memoryKiB === 'number' ? (rawKdfParams as any).memoryKiB : 32 * 1024,
-    iterations: typeof (rawKdfParams as any).iterations === 'number' ? (rawKdfParams as any).iterations : 3,
-    parallelism: typeof (rawKdfParams as any).parallelism === 'number' ? (rawKdfParams as any).parallelism : 1,
-    hashLength: typeof (rawKdfParams as any).hashLength === 'number' ? (rawKdfParams as any).hashLength : 32,
+  const kdfObj = rawKdfParams && typeof rawKdfParams === 'object' ? (rawKdfParams as Record<string, unknown>) : null;
+  const kdfParams = kdfObj ? {
+    memoryKiB: typeof kdfObj.memoryKiB === 'number' ? kdfObj.memoryKiB : 32 * 1024,
+    iterations: typeof kdfObj.iterations === 'number' ? kdfObj.iterations : 3,
+    parallelism: typeof kdfObj.parallelism === 'number' ? kdfObj.parallelism : 1,
+    hashLength: typeof kdfObj.hashLength === 'number' ? kdfObj.hashLength : 32,
   } : undefined;
 
   return {
@@ -85,9 +91,76 @@ export function normalizeVaultDatabaseState(raw: unknown): VersionedVaultDatabas
     kdfParams,
     user_secrets: arrayOrEmpty<VaultDatabaseUserSecret>(input.user_secrets),
     vault_items: arrayOrEmpty<VaultDatabaseRow>(input.vault_items),
+    versionCounter: typeof input.versionCounter === 'number' ? input.versionCounter : 1,
+    integrityHmac: typeof input.integrityHmac === 'string' ? input.integrityHmac : undefined,
   };
 }
 
 export function parseVaultDatabaseState(serialized: string): VersionedVaultDatabaseState {
   return normalizeVaultDatabaseState(JSON.parse(serialized));
+}
+
+/**
+ * Computes a deterministic canonical string representation of the vault state
+ * (excluding the integrityHmac itself) for HMAC hashing.
+ */
+export function computeCanonicalStateString(state: VersionedVaultDatabaseState): string {
+  const sortedSecrets = [...state.user_secrets].sort((a, b) => a.username.localeCompare(b.username));
+  const sortedItems = [...state.vault_items].sort((a, b) => a.id.localeCompare(b.id));
+
+  return JSON.stringify({
+    appId: state.appId,
+    schemaVersion: state.schemaVersion,
+    encryption_salt: state.encryption_salt || '',
+    versionCounter: state.versionCounter ?? 1,
+    user_secrets: sortedSecrets.map((s) => ({ u: s.username, h: s.argon_hash })),
+    vault_items: sortedItems.map((i) => ({
+      id: i.id,
+      t: i.title,
+      c: i.category,
+      f: i.favorite,
+      d: i.deleted,
+      da: i.deleted_at,
+      u: i.username,
+      udb: i.username_db,
+      pdb: i.password_db,
+      ndb: i.notes_db,
+      em: i.enc_metadata,
+      kdf: i.enc_kdf || '',
+    })),
+  });
+}
+
+/**
+ * Computes an HMAC-SHA256 tag over the canonical state using an authentication key.
+ */
+export async function computeStateIntegrityHmac(
+  state: VersionedVaultDatabaseState,
+  hmacKey: Uint8Array,
+): Promise<string> {
+  const canonical = computeCanonicalStateString(state);
+  const data = new TextEncoder().encode(canonical);
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    hmacKey,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const signature = await crypto.subtle.sign('HMAC', cryptoKey, data);
+  return Array.from(new Uint8Array(signature))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+/**
+ * Verifies that the state's integrityHmac matches the calculated HMAC over canonical state.
+ */
+export async function verifyStateIntegrityHmac(
+  state: VersionedVaultDatabaseState,
+  hmacKey: Uint8Array,
+): Promise<boolean> {
+  if (!state.integrityHmac) return false;
+  const expectedHmac = await computeStateIntegrityHmac(state, hmacKey);
+  return state.integrityHmac === expectedHmac;
 }

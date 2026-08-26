@@ -135,11 +135,20 @@ pub fn write_pairing_token_file(path: &PathBuf, token: &str) -> io::Result<()> {
                     .output();
                 if let Ok(out) = output {
                     if !out.status.success() {
-                        eprintln!(
-                            "[Aegis IPC Warning] Failed to restrict pairing token ACL: {}",
+                        let _ = fs::remove_file(path);
+                        let err_msg = format!(
+                            "Failed to restrict pairing token ACL (fail-closed): {}",
                             String::from_utf8_lossy(&out.stderr)
                         );
+                        eprintln!("[Aegis IPC Error] {}", err_msg);
+                        return Err(io::Error::new(io::ErrorKind::PermissionDenied, err_msg));
                     }
+                } else {
+                    let _ = fs::remove_file(path);
+                    return Err(io::Error::new(
+                        io::ErrorKind::PermissionDenied,
+                        "Failed to execute icacls for ACL restriction (fail-closed)",
+                    ));
                 }
             }
         }
@@ -473,17 +482,132 @@ const PUBLIC_SUFFIXES: &[&str] = &[
     "com.co",
     "net.co",
     "nom.co",
+    "org.co",
+    "gov.co",
+    "edu.co",
+    "com.pe",
+    "org.pe",
+    "net.pe",
+    "gob.pe",
+    "edu.pe",
+    "co.cl",
+    "gob.cl",
+    "gov.cl",
+    "com.ve",
+    "org.ve",
+    "net.ve",
+    "gob.ve",
+    "edu.ve",
+    "com.ec",
+    "org.ec",
+    "net.ec",
+    "gob.ec",
+    "edu.ec",
+    "com.sa",
+    "net.sa",
+    "org.sa",
+    "gov.sa",
+    "edu.sa",
+    "med.sa",
+    "com.ae",
+    "net.ae",
+    "org.ae",
+    "gov.ae",
+    "ac.ae",
+    "sch.ae",
+    "com.kw",
+    "net.kw",
+    "org.kw",
+    "gov.kw",
+    "edu.kw",
+    "com.qa",
+    "net.qa",
+    "org.qa",
+    "gov.qa",
+    "edu.qa",
+    "com.bh",
+    "net.bh",
+    "org.bh",
+    "gov.bh",
+    "edu.bh",
+    "com.om",
+    "net.om",
+    "org.om",
+    "gov.om",
+    "edu.om",
+    "com.jo",
+    "net.jo",
+    "org.jo",
+    "gov.jo",
+    "edu.jo",
+    "com.lb",
+    "net.lb",
+    "org.lb",
+    "gov.lb",
+    "edu.lb",
+    "co.ke",
+    "or.ke",
+    "ne.ke",
+    "go.ke",
+    "ac.ke",
+    "sc.ke",
+    "co.ug",
+    "or.ug",
+    "ne.ug",
+    "go.ug",
+    "ac.ug",
+    "sc.ug",
+    "co.tz",
+    "or.tz",
+    "ne.tz",
+    "go.tz",
+    "ac.tz",
+    "sc.tz",
+    "com.gh",
+    "org.gh",
+    "net.gh",
+    "gov.gh",
+    "edu.gh",
+    "com.tn",
+    "org.tn",
+    "net.tn",
+    "gov.tn",
+    "edunet.tn",
+    "com.ma",
+    "org.ma",
+    "net.ma",
+    "gov.ma",
+    "ac.ma",
+    "com.dz",
+    "org.dz",
+    "net.dz",
+    "gov.dz",
+    "edu.dz",
+    "com.sn",
+    "org.sn",
+    "net.sn",
+    "gov.sn",
+    "univ.sn",
     "github.io",
     "gitlab.io",
+    "herokuapp.com",
     "vercel.app",
     "netlify.app",
-    "cloudflare.dev",
+    "pages.dev",
+    "workers.dev",
+    "web.app",
+    "firebaseapp.com",
+    "appspot.com",
+    "azurewebsites.net",
+    "cloudfront.net",
+    "amazonaws.com",
+    "blogspot.com",
+    "s3.amazonaws.com",
+    "storage.googleapis.com",
+    "cloudapp.net",
     "fly.dev",
     "render.com",
-    "azurewebsites.net",
-    "cloudapp.net",
-    "s3.amazonaws.com",
-    "pages.dev",
+    "cloudflare.dev",
 ];
 
 pub fn extract_etld_plus_one(host: &str) -> String {
@@ -819,15 +943,10 @@ pub fn run_host() {
         .and_then(|s| s.trim().parse::<u16>().ok())
         .unwrap_or(DEFAULT_TCP_PORT);
 
-    let candidate_ports = vec![
-        target_port,
-        DEFAULT_TCP_PORT,
-        49156,
-        49157,
-        49158,
-        49159,
-        49160,
-    ];
+    let mut candidate_ports = vec![target_port];
+    if target_port != DEFAULT_TCP_PORT {
+        candidate_ports.push(DEFAULT_TCP_PORT);
+    }
     let mut stream = None;
     if let Some(ref token) = pairing_token {
         for port in candidate_ports {
@@ -958,6 +1077,9 @@ mod tests {
         );
         assert_eq!(extract_etld_plus_one("sub.domain.com.tr"), "domain.com.tr");
         assert_eq!(extract_etld_plus_one("www.aegis.org"), "aegis.org");
+        assert_eq!(extract_etld_plus_one("login.portal.com.tn"), "portal.com.tn");
+        assert_eq!(extract_etld_plus_one("app.safaricom.co.ke"), "safaricom.co.ke");
+        assert_eq!(extract_etld_plus_one("shop.mercado.com.co"), "mercado.com.co");
     }
 
     #[test]

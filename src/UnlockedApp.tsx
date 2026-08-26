@@ -12,6 +12,7 @@ import FloatingVaultAction from './components/FloatingVaultAction';
 import { PrivacyShieldBackdrop } from './components/PrivacyShieldBackdrop';
 import { CopiedToastNotification } from './components/CopiedToastNotification';
 import AppModals from './components/AppModals';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { SensitiveRevealProvider } from './context/SensitiveRevealContext';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
@@ -350,8 +351,9 @@ export default function UnlockedApp({
   });
 
   return (
-    <SensitiveRevealProvider>
-      <div className="safe-screen-fixed flex w-full bg-brand-bg text-on-surface overflow-hidden font-sans">
+    <ErrorBoundary onLock={handleLock}>
+      <SensitiveRevealProvider>
+        <div className="safe-screen-fixed flex w-full bg-brand-bg text-on-surface overflow-hidden font-sans">
         <MobileSidebarBackdrop isOpen={isSidebarOpen} onClose={handleCloseSidebar} />
 
         <SidebarNavigation
@@ -501,5 +503,6 @@ export default function UnlockedApp({
         <CopiedToastNotification copiedField={copiedField} />
       </div>
     </SensitiveRevealProvider>
+  </ErrorBoundary>
   );
 }

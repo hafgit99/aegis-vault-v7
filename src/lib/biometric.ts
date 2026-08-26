@@ -65,7 +65,8 @@ interface NativeBiometricInfoV3 {
   provider: 'Tauri Native Biometric';
   kdf: 'WebCrypto PBKDF2-SHA256';
   cipher: 'WebCrypto AES-256-GCM';
-  wrappingSecret: string;
+  /** @deprecated wrappingSecret is no longer stored in the bundle (P0-3 security fix). Retained for migration only. */
+  wrappingSecret?: string;
   salt: string;
   bundle: WebCryptoAesGcmPayload;
   pbkdf2Iterations?: number;
@@ -219,6 +220,26 @@ export async function hydrateBiometric(): Promise<void> {
       biometricV2UpgradeRequired = true;
     }
 
+    // P0-3: Migrate v3 biometric registrations that still have wrappingSecret embedded
+    // in the bundle. Move it to secure storage and strip it from the persisted bundle.
+    if (cachedBiometricInfo && cachedBiometricInfo.version === 3 && cachedBiometricInfo.wrappingSecret) {
+      const inlineSecret = cachedBiometricInfo.wrappingSecret;
+      if (isSecureStorageAvailable()) {
+        const existingSecure = getSecureStorageItem(secureStorageKeys.biometricWrappingSecret);
+        if (!existingSecure) {
+          setSecureStorageItem(secureStorageKeys.biometricWrappingSecret, inlineSecret);
+        }
+        // Strip wrappingSecret from the persisted bundle
+        const migratedInfo: NativeBiometricInfoV3 = { ...cachedBiometricInfo };
+        delete migratedInfo.wrappingSecret;
+        cachedBiometricInfo = migratedInfo;
+        if (!saveBiometricToSecureStorage(migratedInfo)) {
+          await saveBiometricToIndexedDB(migratedInfo);
+        }
+        console.info('[AegisVault Security] Biometric v3 wrappingSecret migrated to secure storage (P0-3).');
+      }
+    }
+
     isHydrated = true;
   } catch (e) {
     console.error('Failed to load biometric config from IndexedDB', e);
@@ -244,7 +265,7 @@ function hasWebAuthnSupport(): boolean {
 }
 
 function isTauriAndroidRuntime(): boolean {
-  if (typeof window === 'undefined' || !(window as any).__TAURI_INTERNALS__) {
+  if (typeof window === 'undefined' || !(window as unknown as Record<string, unknown>).__TAURI_INTERNALS__) {
     return false;
   }
 
@@ -441,7 +462,7 @@ async function registerWebAuthnBiometric(payload: string, type: 'platform' | 'cr
             first: prfSalt.buffer,
           },
         },
-      } as any,
+      } as unknown as AuthenticationExtensionsPublicKeyCredentialCreationOptions,
       timeout: 60000,
     }
   };
@@ -455,8 +476,10 @@ async function registerWebAuthnBiometric(payload: string, type: 'platform' | 'cr
   let keyMaterial: Uint8Array = rawIdBytes;
   let prfSupported = false;
 
-  const clientExtResults = (credential as any).getClientExtensionResults ? (credential as any).getClientExtensionResults() : null;
-  const prfResult = clientExtResults?.prf?.results?.first;
+  const credWithExt = credential as PublicKeyCredential & { getClientExtensionResults?: () => Record<string, unknown> };
+  const clientExtResults = credWithExt.getClientExtensionResults ? credWithExt.getClientExtensionResults() : null;
+  const prfExt = clientExtResults?.prf as { results?: { first?: ArrayBuffer } } | undefined;
+  const prfResult = prfExt?.results?.first;
   if (!prfResult) {
     throw new BiometricError(
       biometricErrorCodes.unsupported,
@@ -514,7 +537,7 @@ async function registerNativeBiometric(payload: string): Promise<void> {
     provider: 'Tauri Native Biometric',
     kdf: 'WebCrypto PBKDF2-SHA256',
     cipher: 'WebCrypto AES-256-GCM',
-    wrappingSecret: wrappingSecretB64,
+    // P0-3: wrappingSecret is NOT stored in the bundle anymore — only in OS secure storage
     salt: bytesToBase64(salt),
     bundle,
     pbkdf2Iterations: BIOMETRIC_PBKDF2_ITERATIONS,
@@ -537,7 +560,12 @@ async function authenticateBiometricRaw(): Promise<string> {
     await authenticateNativeBiometric();
 
     try {
-      const storedWrappingSecret = getSecureStorageItem(secureStorageKeys.biometricWrappingSecret) || biometricInfo.wrappingSecret;
+      const storedWrappingSecret = getSecureStorageItem(secureStorageKeys.biometricWrappingSecret);
+      if (!storedWrappingSecret) {
+        // P0-3: wrappingSecret MUST come from OS secure storage. If unavailable,
+        // the biometric binding is broken — force re-registration.
+        throw new BiometricError(biometricErrorCodes.integrityMismatch, 'Biometric wrapping secret not found in secure storage. Re-registration required.');
+      }
       const wrappingSecret = base64ToBytes(storedWrappingSecret);
       const saltBytes = base64ToBytes(biometricInfo.salt);
       const iterations = biometricInfo.pbkdf2Iterations ?? BIOMETRIC_PBKDF2_ITERATIONS;
@@ -552,7 +580,7 @@ async function authenticateBiometricRaw(): Promise<string> {
   const saltBytes = base64ToBytes(biometricInfo.salt);
   const challenge = secureRandomBytes(32);
 
-  const extensions: any = {};
+  const extensions: Record<string, unknown> = {};
   if ('prfSalt' in biometricInfo && biometricInfo.prfSalt) {
     extensions.prf = {
       eval: {
@@ -584,8 +612,10 @@ async function authenticateBiometricRaw(): Promise<string> {
   const rawIdBytes = new Uint8Array(assertion.rawId);
   let keyMaterial: Uint8Array = rawIdBytes;
 
-  const clientExtResults = (assertion as any).getClientExtensionResults ? (assertion as any).getClientExtensionResults() : null;
-  const prfResult = clientExtResults?.prf?.results?.first;
+  const assertionWithExt = assertion as PublicKeyCredential & { getClientExtensionResults?: () => Record<string, unknown> };
+  const clientExtResults = assertionWithExt.getClientExtensionResults ? assertionWithExt.getClientExtensionResults() : null;
+  const prfExt = clientExtResults?.prf as { results?: { first?: ArrayBuffer } } | undefined;
+  const prfResult = prfExt?.results?.first;
   if (prfResult) {
     const prfSecret = new Uint8Array(prfResult);
     keyMaterial = new Uint8Array(prfSecret.length + rawIdBytes.length);

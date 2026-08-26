@@ -24,6 +24,7 @@ import { setIndexedDbItemSync } from './indexedDbStorage';
 import { logSecurityEvent, securityEventCodes } from './securityEvents';
 import { parseVaultDatabaseState, type VersionedVaultDatabaseState } from './vaultDatabaseFormat';
 import { isTestEnv } from './environment';
+import { isArgon2WriteBlocked } from './argon2id';
 
 export const DB_FILENAME = 'aegis_sqlite.db';
 export const LOCAL_FALLBACK_KEY = 'aegis_sqlite_fallback';
@@ -159,7 +160,20 @@ async function writeToOPFSWithTimeout(payloadStr: string, timeoutMs: number): Pr
  * OPFS file third (awaited in tests / when desktop storage is unavailable).
  */
 export async function persistVaultDatabase(state: VersionedVaultDatabaseState): Promise<boolean> {
+  // P1-6: Prevent persisting records with degraded weak KDF profiles
+  if (isArgon2WriteBlocked()) {
+    logSecurityEvent(
+      securityEventCodes.storageDesktopWriteFailed,
+      'Blocked vault persistence because Argon2id memory profile is degraded below safe threshold.',
+      'critical',
+    );
+    return false;
+  }
+
   try {
+    // P1-5: Increment version counter monotonically on each persistent write
+    state.versionCounter = (state.versionCounter ?? 0) + 1;
+
     const payloadStr = JSON.stringify(state);
     const savedToDesktop = await writeDesktopVaultDatabase(payloadStr);
     writeLocalFallbackMirror(state, payloadStr, savedToDesktop);

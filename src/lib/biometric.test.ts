@@ -317,16 +317,19 @@ describe('biometric master password wrapper', () => {
 
     expect(nativeAuthenticate).toHaveBeenCalledTimes(1);
     expect(window.AegisAndroidSecureStorage.setItem).toHaveBeenCalledWith(
-      'aegis_biometric_info',
-      expect.stringContaining('"version":3'),
+      'aegis_biometric_wrapping_secret',
+      expect.any(String),
     );
     expect(await getStoredBiometricFromDB()).toBeNull();
-    expect(JSON.parse(secureValues.get('aegis_biometric_info') ?? '{}')).toMatchObject({
+    const storedInfo = JSON.parse(secureValues.get('aegis_biometric_info') ?? '{}');
+    expect(storedInfo).toMatchObject({
       version: 3,
       provider: 'Tauri Native Biometric',
-      wrappingSecret: expect.any(String),
       pbkdf2Iterations: BIOMETRIC_PBKDF2_ITERATIONS,
     });
+    // wrappingSecret must NOT be present in the bundle
+    expect(storedInfo.wrappingSecret).toBeUndefined();
+    expect(secureValues.get('aegis_biometric_wrapping_secret')).toBeDefined();
     expect(isBiometricEnabled()).toBe(true);
   });
 
@@ -438,12 +441,13 @@ describe('biometric master password wrapper', () => {
   });
 
   it('registers and authenticates native biometrics (version 3)', async () => {
+    const storageMap = new Map<string, string>();
     (window as any).AegisAndroidSecureStorage = {
       isBiometricAvailable: vi.fn(() => true),
       authenticateBiometric: vi.fn(() => true),
-      setItem: vi.fn(),
-      getItem: vi.fn(() => 'c2VjcmV0'),
-      removeItem: vi.fn(),
+      setItem: vi.fn((key, val) => { storageMap.set(key, val); return true; }),
+      getItem: vi.fn((key) => storageMap.get(key) || null),
+      removeItem: vi.fn((key) => storageMap.delete(key)),
     };
 
     await registerBiometric('native-pass', 'platform');

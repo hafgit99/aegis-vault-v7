@@ -67,6 +67,15 @@ import {
 export const LOCKOUT_STORAGE_KEY = 'aegis_lockout_state';
 export const MAX_LOCKOUT_MS = 5 * 60 * 1000;
 
+/**
+ * Client-side unlock lockout state.
+ *
+ * NOTE (P1-9 / L-2): This client-side lockout is a UX rate-limiting convenience
+ * for interactive UI sessions. It is NOT an offline security boundary against an
+ * attacker with physical or root access to the database file.
+ * The primary, mathematically enforced brute-force resistance of Aegis Vault is
+ * provided by Argon2id's memory-hard KDF parameters (32-64 MiB, 3-4 iterations).
+ */
 export interface LockoutState {
   failedAttempts: number;
   lockedUntil: number;

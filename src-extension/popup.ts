@@ -109,7 +109,7 @@ export function copyToClipboardSecurely(text: string, isSensitive = true) {
             navigator.clipboard.writeText('').catch(() => {});
           }
         }).catch(() => {
-          navigator.clipboard.writeText('').catch(() => {});
+          // L-8 / Security fix D1: Do NOT wipe clipboard blindly if reading fails (preserves user's other data)
         });
       }, 30000); // 30s auto-clear policy
     }

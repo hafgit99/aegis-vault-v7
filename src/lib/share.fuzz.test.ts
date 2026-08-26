@@ -32,6 +32,9 @@ const arbitraryVaultItem = fc.record({
   favorite: fc.boolean(),
 }) as fc.Arbitrary<VaultItem>;
 
+// Generate passwords that meet the minimum length requirement (>= 4 chars)
+const sharePassword = fc.string({ minLength: 4, maxLength: 64 });
+
 describe('share URL fuzz tests', () => {
   beforeEach(() => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -55,18 +58,21 @@ describe('share URL fuzz tests', () => {
     );
   });
 
-  it('generateShareUrl and decryptShareUrl round-trip for arbitrary valid vault items', async () => {
+  it('generateShareUrl and decryptShareUrl round-trip for arbitrary valid vault items with password', async () => {
     await fc.assert(
       fc.asyncProperty(
         arbitraryVaultItem,
-        fc.integer({ min: 1, max: 72 }),
-        async (item, durationHours) => {
-          const url = await generateShareUrl(item, durationHours);
+        fc.integer({ min: 1, max: 24 }),
+        sharePassword,
+        async (item, durationHours, password) => {
+          const url = await generateShareUrl(item, durationHours, password);
           expect(url).toContain('#share=');
-          expect(url).toContain('&k=');
+          expect(url).toContain('&s=');
+          // Key must NOT be in the URL
+          expect(url).not.toContain('&k=');
 
           const hash = url.slice(url.indexOf('#'));
-          const decrypted = await decryptShareUrl(hash);
+          const decrypted = await decryptShareUrl(hash, password);
 
           expect(decrypted).not.toBeNull();
           expect(decrypted?.title).toBe(item.title);
@@ -84,8 +90,9 @@ describe('share URL fuzz tests', () => {
     await fc.assert(
       fc.asyncProperty(
         fc.string({ maxLength: 512 }),
-        async (arbitraryHash) => {
-          const result = await decryptShareUrl(arbitraryHash);
+        sharePassword,
+        async (arbitraryHash, password) => {
+          const result = await decryptShareUrl(arbitraryHash, password);
           // Must either resolve to null safely or if by extreme coincidence valid, an object
           if (result !== null) {
             expect(typeof result.title).toBe('string');
@@ -98,26 +105,47 @@ describe('share URL fuzz tests', () => {
     );
   });
 
+  it('decryptShareUrl returns null when wrong password is used', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        arbitraryVaultItem,
+        sharePassword,
+        sharePassword.filter((p) => p.length >= 4),
+        async (item, correctPassword, wrongPassword) => {
+          // Ensure passwords are different
+          if (correctPassword === wrongPassword) return;
+
+          const url = await generateShareUrl(item, 1, correctPassword);
+          const hash = url.slice(url.indexOf('#'));
+          const result = await decryptShareUrl(hash, wrongPassword);
+          expect(result).toBeNull();
+        },
+      ),
+      fuzzConfig,
+    );
+  });
+
   it('decryptShareUrl returns null when share payload or key is corrupted/tampered', async () => {
     await fc.assert(
       fc.asyncProperty(
         arbitraryVaultItem,
-        fc.constantFrom('key', 'ciphertext', 'tag', 'iv', 'truncated'),
-        async (item, tamperTarget) => {
-          const url = await generateShareUrl(item, 24);
+        sharePassword,
+        fc.constantFrom('salt', 'ciphertext', 'tag', 'iv', 'truncated'),
+        async (item, password, tamperTarget) => {
+          const url = await generateShareUrl(item, 24, password);
           const hash = url.slice(url.indexOf('#'));
           const params = new URLSearchParams(hash.replace(/^#/, ''));
           const originalD = params.get('share') || '';
-          const originalK = params.get('k') || '';
+          const originalS = params.get('s') || '';
 
           let corruptedHash = '';
-          if (tamperTarget === 'key') {
-            const corruptedK = originalK.startsWith('AAAA')
-              ? 'BBBB' + originalK.slice(4)
-              : 'AAAA' + originalK.slice(4);
-            corruptedHash = `#share=${originalD}&k=${corruptedK}`;
+          if (tamperTarget === 'salt') {
+            const corruptedS = originalS.startsWith('AAAA')
+              ? 'BBBB' + originalS.slice(4)
+              : 'AAAA' + originalS.slice(4);
+            corruptedHash = `#share=${originalD}&s=${corruptedS}`;
           } else if (tamperTarget === 'truncated') {
-            corruptedHash = `#share=${originalD.slice(0, 12)}&k=${originalK}`;
+            corruptedHash = `#share=${originalD.slice(0, 12)}&s=${originalS}`;
           } else {
             const bundleBytes = base64urlDecode(originalD);
             const bundle = JSON.parse(new TextDecoder().decode(bundleBytes)) as { i: string; t: string; c: string };
@@ -131,10 +159,10 @@ describe('share URL fuzz tests', () => {
               bundle.i = (bundle.i.startsWith('00') ? 'ff' : '00') + bundle.i.slice(2);
             }
             const corruptedD = base64urlEncode(new TextEncoder().encode(JSON.stringify(bundle)));
-            corruptedHash = `#share=${corruptedD}&k=${originalK}`;
+            corruptedHash = `#share=${corruptedD}&s=${originalS}`;
           }
 
-          const result = await decryptShareUrl(corruptedHash);
+          const result = await decryptShareUrl(corruptedHash, password);
           expect(result).toBeNull();
         },
       ),
