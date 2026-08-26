@@ -7,8 +7,6 @@ import type { VaultItem } from '../types';
 import { secureRandomToken } from './random';
 import {
   createEmptyVaultDatabaseState,
-  normalizeVaultDatabaseState,
-  parseVaultDatabaseState,
   type VaultDatabaseRow,
   type VersionedVaultDatabaseState,
 } from './vaultDatabaseFormat';
@@ -18,13 +16,11 @@ import { reWrapPasskeysInVaultItems } from './passkey';
 import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, generateSafeIv, derivePerItemKey, type WebCryptoAesGcmPayload } from './webcrypto';
 import {
   getNativeVaultStorageScope,
-  readDesktopVaultDatabase,
   resetDesktopVaultDatabase,
-  writeDesktopVaultDatabase,
 } from './desktopStorage';
 import { logSecurityEvent, securityEventCodes } from './securityEvents';
 import { registerOnCloseSession } from './vaultSession';
-import { getIndexedDbItemSync, setIndexedDbItemSync, removeIndexedDbItemSync } from './indexedDbStorage';
+import { removeIndexedDbItemSync } from './indexedDbStorage';
 import type {
   SQLCommandLog,
   SQLCommandStatus,
@@ -43,7 +39,15 @@ import {
   sanitizeQueryForLog,
   VAULT_ITEM_KDF,
 } from './sqliteOpfsShared';
-import { isTestEnv } from './environment';
+import {
+  LOCAL_FALLBACK_KEY,
+  loadPersistedVaultDatabase,
+  persistVaultDatabase,
+  type PersistedLoadResult,
+} from './sqliteOpfsPersistence';
+import {
+  migrateLegacyLocalStorage as runLegacyLocalStorageMigration,
+} from './sqliteOpfsMigration';
 
 /**
  * SQLite simulated schema and data manager storing DB blocks in private OPFS.
@@ -51,11 +55,7 @@ import { isTestEnv } from './environment';
 export type SQLiteRow = VaultDatabaseRow;
 
 
-const DB_FILENAME = 'aegis_sqlite.db';
-const LOCAL_FALLBACK_KEY = 'aegis_sqlite_fallback';
-
-class SQLiteOPFS implements VaultStorageRepository {
-  private state: VersionedVaultDatabaseState = createEmptyVaultDatabaseState();
+class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVaultDatabaseState = createEmptyVaultDatabaseState();
 
   private logs: SQLCommandLog[] = [];
   private onLogsChangedCallbacks: (() => void)[] = [];
@@ -144,25 +144,6 @@ class SQLiteOPFS implements VaultStorageRepository {
     return this.state.user_secrets[0]?.argon_hash || '';
   }
 
-  private createDesktopManagedSetupMarker(): string {
-    return JSON.stringify({
-      schemaVersion: this.state.schemaVersion,
-      appId: this.state.appId,
-      desktopManaged: true,
-      user_secrets: this.state.user_secrets.length > 0
-        ? [{ username: 'owner', argon_hash: '[stored-in-desktop-app-data]' }]
-        : [],
-      vault_items: [],
-    }, null, 2);
-  }
-
-  private writeLocalFallbackMirror(payloadStr: string, savedToDesktop: boolean): void {
-    setIndexedDbItemSync(
-      LOCAL_FALLBACK_KEY,
-      savedToDesktop ? this.createDesktopManagedSetupMarker() : payloadStr,
-    );
-  }
-
   private cloneState(): VersionedVaultDatabaseState {
     return JSON.parse(JSON.stringify(this.state)) as VersionedVaultDatabaseState;
   }
@@ -190,229 +171,54 @@ class SQLiteOPFS implements VaultStorageRepository {
    * Loads SQLite file from OPFS (Origin Private File System) sandboxed directory.
    */
   private async loadFromPersistentStorage() {
-    try {
-      const desktopPayload = await readDesktopVaultDatabase();
-      if (desktopPayload) {
-        this.state = parseVaultDatabaseState(desktopPayload);
-        setIndexedDbItemSync(LOCAL_FALLBACK_KEY, this.createDesktopManagedSetupMarker());
-        this.logQuery(`sqlite3_open("${getNativeVaultStorageScope()}:///${DB_FILENAME}")`, 'SUCCESS', 1);
-        return;
-      }
-
-      if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.getDirectory) {
-        const root = await navigator.storage.getDirectory();
-        let fileHandle;
-        try {
-          fileHandle = await root.getFileHandle(DB_FILENAME);
-        } catch {
-          // File does not exist yet. Initialize using localStorage backup or start fresh
-          await this.migrateLegacyLocalStorage();
-          await this.saveToPersistentStorage();
-          return;
-        }
-
-        const file = await fileHandle.getFile();
-        const content = await file.text();
-        if (content) {
-          this.state = parseVaultDatabaseState(content);
-          this.logQuery(`sqlite3_open("opfs:///${DB_FILENAME}")`, 'SUCCESS', 1);
-          await this.saveToPersistentStorage();
-        }
-      } else {
-        // Fallback to standard sandbox-compliant simulated OPFS persistence
-        await this.migrateLegacyLocalStorage();
-      }
-    } catch (err) {
+    const result = await loadPersistedVaultDatabase().catch((err: unknown): PersistedLoadResult => {
       logSecurityEvent(
         securityEventCodes.storageDesktopReadFailed,
         'Persistent desktop storage could not be loaded; trying local fallback.',
         'warning',
         { error: err instanceof Error ? err.message : String(err) },
       );
+      return { kind: 'unavailable' };
+    });
+
+    if (result.kind === 'state') {
+      this.state = result.state;
+      this.logQuery(result.logLabel, 'SUCCESS', 1);
+      if (result.resaveAfterLoad) {
+        await this.saveToPersistentStorage();
+      }
+      return;
+    }
+
+    if (result.kind === 'missing') {
+      // File does not exist yet. Initialize using the fallback mirror or start fresh.
+      await this.migrateLegacyLocalStorage();
+      await this.saveToPersistentStorage();
+      return;
+    }
+
+    if (result.kind === 'unavailable') {
+      // Fallback to standard sandbox-compliant simulated OPFS persistence.
       await this.migrateLegacyLocalStorage();
     }
+    // kind === 'empty': nothing to load and nothing to migrate.
   }
 
   /**
    * Saves raw DB state to private OPFS.
    */
   private async saveToPersistentStorage(): Promise<boolean> {
-    try {
-      const payloadStr = JSON.stringify(this.state);
-      const savedToDesktop = await writeDesktopVaultDatabase(payloadStr);
-      this.writeLocalFallbackMirror(payloadStr, savedToDesktop);
-
-      if (isTestEnv || !savedToDesktop) {
-        await this.writeToOPFSWithTimeout(payloadStr, 1000);
-      } else {
-        // Native app-data writes are already durable; OPFS is only a secondary mirror there.
-        void this.writeToOPFSWithTimeout(payloadStr, 1000);
-      }
-      return true;
-    } catch (err) {
-      logSecurityEvent(
-        securityEventCodes.storageDesktopWriteFailed,
-        'Failed writing SQLite persistence block.',
-        'critical',
-        { error: err instanceof Error ? err.message : String(err) },
-      );
-      return false;
-    }
-  }
-
-  /**
-   * Writes the payload string to the sandboxed OPFS file standard in the background.
-   * Uses Promise.race to enforce a timeout in case file locks are held by old sessions (hot-reloads).
-   */
-  private async writeToOPFSWithTimeout(payloadStr: string, timeoutMs: number): Promise<void> {
-    if (typeof navigator === 'undefined' || !navigator.storage || !navigator.storage.getDirectory) {
-      return;
-    }
-
-    const opfsWritePromise = (async () => {
-      const root = await navigator.storage.getDirectory();
-      const fileHandle = await root.getFileHandle(DB_FILENAME, { create: true });
-
-      // Use createWritable if supported (standard), or fallback to alternative file APIs
-      if ('createWritable' in fileHandle) {
-        const writable = await (fileHandle as FileSystemFileHandle & { createWritable(): Promise<FileSystemWritableFileStream> }).createWritable();
-        await writable.write(payloadStr);
-        await writable.close();
-      }
-    })();
-
-    const timeoutPromise = new Promise<void>((_, reject) => {
-      setTimeout(() => reject(new Error('OPFS write timed out (lock leak suspected)')), timeoutMs);
-    });
-
-    try {
-      await Promise.race([opfsWritePromise, timeoutPromise]);
-    } catch (err) {
-      logSecurityEvent(
-        securityEventCodes.storageDesktopWriteFailed,
-        'OPFS mirror write failed or timed out.',
-        'critical',
-        { error: err instanceof Error ? err.message : String(err) },
-      );
-    }
+    return persistVaultDatabase(this.state);
   }
 
   /**
    * Migrate legacy plaintext vault items into relational SQLite rows with GCM encryption.
    */
   private async migrateLegacyLocalStorage() {
-    const fallback = getIndexedDbItemSync(LOCAL_FALLBACK_KEY);
-    if (fallback) {
-      try {
-        const parsed = JSON.parse(fallback);
-        if (!parsed.desktopManaged) {
-          this.state = parseVaultDatabaseState(fallback);
-          logSecurityEvent(securityEventCodes.storageLocalFallbackUsed, 'Loaded vault state from local fallback mirror.', 'warning');
-          return;
-        }
-      } catch {}
-    }
-
-    // Attempt to seed from standard legacy keys
-    const isSetup = localStorage.getItem('aegis_is_setup') === 'true';
-    const legacyPass = localStorage.getItem('aegis_master_password');
-    const legacyItemsStr = localStorage.getItem('aegis_vault_items');
-
-    if (isSetup && legacyPass && legacyItemsStr) {
-      try {
-        const passwordPlain = atob(legacyPass);
-        const argonHash = await createArgon2idHash(passwordPlain, createVaultEncryptionSalt());
-
-        this.state.user_secrets = [{
-          username: 'owner',
-          argon_hash: argonHash,
-        }];
-
-        const items: VaultItem[] = JSON.parse(legacyItemsStr);
-        this.state.encryption_salt = createVaultEncryptionSalt();
-        const derivedKey = await this.deriveEncryptionKey(passwordPlain);
-
-        this.state.vault_items = await Promise.all(items.map(async (item) => {
-          const sensitivePayload = JSON.stringify(item);
-          const encrypted = await webCryptoAesGcmEncrypt(sensitivePayload, derivedKey, generateSafeIv());
-
-          return buildVaultItemRow({
-            id: item.id,
-            encrypted,
-            item,
-            createdAt: item.createdAt,
-            updatedAt: item.updatedAt,
-          });
-        }));
-
-        this.logQuery('CREATE TABLE vault_items (id TEXT PRIMARY KEY, title TEXT, category TEXT, favorite INTEGER, deleted INTEGER, username_db TEXT, password_db TEXT, enc_metadata TEXT);', 'SUCCESS', this.state.vault_items.length);
-
-        // Security fix Y3: Purge legacy plaintext keys after successful migration.
-        // These contain base64-encoded master password and unencrypted vault items.
-        // Only delete AFTER migration succeeds to preserve rollback safety.
-        try {
-          localStorage.removeItem('aegis_master_password');
-          localStorage.removeItem('aegis_vault_items');
-          localStorage.removeItem('aegis_is_setup');
-          logSecurityEvent(
-            securityEventCodes.storageLegacyDataPurged,
-            'Legacy plaintext localStorage keys purged after successful migration.',
-            'info',
-          );
-        } catch (purgeErr) {
-          // Non-fatal: log but don't block the migration
-          logSecurityEvent(
-            securityEventCodes.storageLegacyMigrationFailed,
-            'Failed to purge legacy localStorage keys after migration.',
-            'warning',
-            { error: purgeErr instanceof Error ? purgeErr.message : String(purgeErr) },
-          );
-        }
-      } catch (e) {
-        // Migration failed — do NOT delete legacy keys (rollback safety)
-        logSecurityEvent(
-          securityEventCodes.storageLegacyMigrationFailed,
-          'Legacy localStorage vault migration failed.',
-          'critical',
-          { error: e instanceof Error ? e.message : String(e) },
-        );
-      }
-    } else {
-      // Security fix Y3: One-time cleanup for users who previously migrated
-      // but never had the plaintext purge applied. If SQLite state already
-      // has vault items (migration was done before), clean up stale keys.
-      this.purgeStaleLegacyLocalStorageKeys();
-    }
-
-    this.state = normalizeVaultDatabaseState(this.state);
-  }
-
-  /**
-   * Security fix Y3: Purge stale legacy plaintext localStorage keys.
-   * For users who migrated in a previous version without the cleanup,
-   * this removes any remaining plaintext data if the SQLite store is populated.
-   */
-  private purgeStaleLegacyLocalStorageKeys(): void {
-    try {
-      const hasLegacyPassword = localStorage.getItem('aegis_master_password');
-      const hasLegacyItems = localStorage.getItem('aegis_vault_items');
-
-      if (hasLegacyPassword || hasLegacyItems) {
-        // Only purge if we already have vault data in SQLite (i.e., migration happened before)
-        if (this.state.vault_items.length > 0 || this.state.user_secrets.length > 0) {
-          localStorage.removeItem('aegis_master_password');
-          localStorage.removeItem('aegis_vault_items');
-          localStorage.removeItem('aegis_is_setup');
-          logSecurityEvent(
-            securityEventCodes.storageLegacyDataPurged,
-            'Stale legacy plaintext localStorage keys purged (post-migration cleanup).',
-            'info',
-          );
-        }
-      }
-    } catch {
-      // Silently ignore — localStorage may not be available in all contexts
-    }
+    this.state = await runLegacyLocalStorageMigration(this.state, {
+      deriveEncryptionKey: (password) => this.deriveEncryptionKey(password),
+      logQuery: (query, status, rowsAffected) => this.logQuery(query, status, rowsAffected),
+    });
   }
 
   /**

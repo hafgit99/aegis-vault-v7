@@ -62,8 +62,18 @@ const baseline = {
     'withActiveMasterPassword': 0,
     'getActiveMasterPassword': 0,
     'masterPasswordPlain': 8,
-    'passwordPlain': 9,
-    'deriveEncryptionKey': 10,
+    'passwordPlain': 6,
+    'deriveEncryptionKey': 11,
+    'activeCredentialBytes': 0,
+    'activeBackupPasswordBytes': 0,
+    'activeAccountSecretKeyBytes': 0
+  },
+  'src/lib/sqliteOpfsMigration.ts': { // legacy plaintext migration (Rev. 8 extraction)
+    'withActiveMasterPassword': 0,
+    'getActiveMasterPassword': 0,
+    'masterPasswordPlain': 0,
+    'passwordPlain': 3,
+    'deriveEncryptionKey': 2,
     'activeCredentialBytes': 0,
     'activeBackupPasswordBytes': 0,
     'activeAccountSecretKeyBytes': 0
