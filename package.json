@@ -69,6 +69,8 @@
     "test:mutation:importer:dry": "stryker run stryker.importer.conf.mjs --dryRunOnly",
     "test:mutation:storage": "stryker run stryker.storage.conf.mjs",
     "test:mutation:storage:dry": "stryker run stryker.storage.conf.mjs --dryRunOnly",
+    "test:mutation:storage:sqlite": "stryker run stryker.storage-sqlite.conf.mjs",
+    "test:mutation:storage:sqlite:dry": "stryker run stryker.storage-sqlite.conf.mjs --dryRunOnly",
     "test:mutation:storage:orchestration": "stryker run stryker.storage-orchestration.conf.mjs",
     "test:mutation:storage:orchestration:dry": "stryker run stryker.storage-orchestration.conf.mjs --dryRunOnly",
     "test:mutation:importer:helpers": "stryker run stryker.importer-helpers.conf.mjs",

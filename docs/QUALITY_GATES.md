@@ -230,6 +230,53 @@ File scores:
 | `src/lib/desktopStorage.ts` | 91.46% |
 | `src/lib/secureStorage.ts` | 89.80% |
 
+## SQLite OPFS Storage Mutation Gate
+
+The extracted SQLite OPFS storage layers (shared row builder, persistence primitives, legacy migration, and the per-item row decryption engine) have a dedicated mutation gate. These layers own vault ciphertext handling, the one-time legacy master-key fallback upgrade, and rollback-safe plaintext migration — silent regressions here would be invisible to line coverage.
+
+Run it with:
+
+```bash
+npm run test:mutation:storage:sqlite:dry
+npm run test:mutation:storage:sqlite
+```
+
+Current mutation scope:
+
+- `src/lib/sqliteOpfsShared.ts`
+- `src/lib/sqliteOpfsPersistence.ts`
+- `src/lib/sqliteOpfsMigration.ts`
+- `src/lib/sqliteOpfsRowDecryptor.ts`
+
+Current measured SQLite OPFS storage mutation baseline:
+
+| Metric | Baseline |
+| --- | ---: |
+| Mutants | 333 |
+| Mutation score | 82.28% |
+| Covered mutation score | 85.09% |
+| Killed | 272 |
+| Timed out | 2 |
+| Survived | 48 |
+| No coverage | 11 |
+
+File scores:
+
+| File | Mutation score |
+| --- | ---: |
+| `src/lib/sqliteOpfsShared.ts` | 84.13% |
+| `src/lib/sqliteOpfsMigration.ts` | 84.29% |
+| `src/lib/sqliteOpfsRowDecryptor.ts` | 81.55% |
+| `src/lib/sqliteOpfsPersistence.ts` | 80.41% |
+
+SQLite OPFS storage mutation thresholds:
+
+| Threshold | Current value |
+| --- | ---: |
+| High | 75% |
+| Low | 60% |
+| Break | 45% |
+
 ## Storage Orchestration Mutation Gate
 
 Vault session orchestration has a dedicated mutation gate because it protects setup/unlock, Secret Key routing, master-password rotation, trash retention, reset cleanup, and bulk-save paths that can otherwise cause silent data-loss or session-integrity regressions.
