@@ -13,7 +13,7 @@ import {
 import { createArgon2idHash, verifyArgon2idHash, enforceMinimumKdfFloor, type Argon2idOptions } from './argon2id';
 import { deriveArgon2idKey as deriveVettedArgon2idKey } from './argon2id';
 import { reWrapPasskeysInVaultItems } from './passkey';
-import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, generateSafeIv, derivePerItemKey, type WebCryptoAesGcmPayload } from './webcrypto';
+import { webCryptoAesGcmEncrypt, generateSafeIv, derivePerItemKey } from './webcrypto';
 import {
   getNativeVaultStorageScope,
   resetDesktopVaultDatabase,
@@ -37,8 +37,8 @@ import {
   NEW_VAULT_ITEM_KDF_PARAMS,
   sanitizeLogValue,
   sanitizeQueryForLog,
-  VAULT_ITEM_KDF,
 } from './sqliteOpfsShared';
+import { decryptVaultRows } from './sqliteOpfsRowDecryptor';
 import {
   LOCAL_FALLBACK_KEY,
   loadPersistedVaultDatabase,
@@ -477,119 +477,12 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
         );
       }
 
-      let migratedLegacyRows = false;
-      const decryptedResults: Array<{ row: SQLiteRow; item: VaultItem }> = [];
-
-      // For very large datasets (600+ items), process decryption sequentially (not in parallel)
-      // with frequent yielding to absolutely prevent main thread blocking.
-      // Trade-off: Slower but zero UI freezing.
-      const totalItems = this.state.vault_items.length;
-      let decryptCount = 0;
-
-      for (let i = 0; i < totalItems; i++) {
-        const row = this.state.vault_items[i];
-        if (!row) continue;
-
-        try {
-          const cachedEntry = this.decryptedItemsCache.get(row.id);
-          const isLegacyRow = row.enc_kdf !== VAULT_ITEM_KDF;
-          let decryptedJson: string;
-          let usedLegacyMasterKeyFallback = false;
-
-          if (cachedEntry && cachedEntry.enc_metadata === row.enc_metadata && !shouldMigrateStaticSalt && !shouldMigrateKdf) {
-            decryptedResults.push({ row, item: cachedEntry.item });
-          } else {
-            if (cachedEntry && cachedEntry.enc_metadata === row.enc_metadata) {
-              decryptedJson = JSON.stringify(cachedEntry.item);
-            } else {
-              if (isLegacyRow) {
-                logSecurityEvent(
-                  securityEventCodes.securityLegacyCryptoWarning,
-                  'Legacy custom-crypto SQLite rows are no longer decrypted in this build. Re-export from an earlier migration build first.',
-                  'critical'
-                );
-                throw new Error('legacy-custom-crypto-row-unsupported');
-              }
-              const encryptedPayload: WebCryptoAesGcmPayload = JSON.parse(row.enc_metadata);
-              const itemKey = await derivePerItemKey(derivedKey, row.id);
-              try {
-                decryptedJson = await webCryptoAesGcmDecrypt(encryptedPayload, itemKey);
-              } catch {
-                // Pre-HKDF rows were encrypted with the raw derived key. The
-                // fallback is allowed once per row: the row is immediately
-                // re-encrypted under its per-item key below.
-                decryptedJson = await webCryptoAesGcmDecrypt(encryptedPayload, derivedKey);
-                usedLegacyMasterKeyFallback = true;
-              } finally {
-                itemKey.fill(0);
-              }
-            }
-
-            const originalItem: VaultItem = JSON.parse(decryptedJson);
-
-            if (usedLegacyMasterKeyFallback) {
-              // One-time upgrade: re-encrypt the row under its per-item key so
-              // the raw-master-key fallback never fires again for this row.
-              const upgradeKey = await derivePerItemKey(derivedKey, row.id);
-              const upgraded = await webCryptoAesGcmEncrypt(decryptedJson, upgradeKey, generateSafeIv());
-              upgradeKey.fill(0);
-              row.enc_metadata = JSON.stringify(upgraded);
-              row.enc_kdf = VAULT_ITEM_KDF;
-              migratedLegacyRows = true;
-              logSecurityEvent(
-                securityEventCodes.securityLegacyCryptoWarning,
-                `Vault item ${row.id} decrypted via legacy master-key fallback and re-encrypted with a per-item key.`,
-                'warning',
-                { itemId: row.id },
-              );
-            }
-
-            if (isLegacyRow || shouldMigrateStaticSalt || shouldMigrateKdf) {
-              const itemMigrationKey = await derivePerItemKey(migrationKey, row.id);
-              const encrypted = await webCryptoAesGcmEncrypt(decryptedJson, itemMigrationKey, generateSafeIv());
-              itemMigrationKey.fill(0);
-              row.enc_metadata = JSON.stringify(encrypted);
-              row.enc_kdf = VAULT_ITEM_KDF;
-              migratedLegacyRows = true;
-            }
-
-            this.decryptedItemsCache.set(row.id, {
-              enc_metadata: row.enc_metadata,
-              item: originalItem,
-            });
-
-            decryptedResults.push({ row, item: originalItem });
-            decryptCount++;
-          }
-        } catch (e) {
-          const errorMessage = e instanceof Error ? e.message : String(e);
-          logSecurityEvent(
-            securityEventCodes.storageLegacyMigrationFailed,
-            `Decryption failed for vault item ${row.id}: ${errorMessage}`,
-            'warning',
-            { itemId: row.id, error: errorMessage },
-          );
-          const fallbackItem: VaultItem = {
-            id: row.id,
-            title: '[encrypted: aes-256-gcm]',
-            username: '[encrypted: aes-256-gcm]',
-            url: '',
-            category: (row.category as VaultItem['category']) || 'login',
-            createdAt: row.created_at,
-            updatedAt: row.updated_at,
-            favorite: row.favorite === 1,
-            deleted: row.deleted === 1,
-          };
-          decryptedResults.push({ row, item: fallbackItem });
-          decryptCount++;
-        }
-
-        // Yield only if we are doing actual decryption work to prevent UI freezing
-        if (decryptCount > 0 && decryptCount % 10 === 0) {
-          await maybeDelay(10);
-          decryptCount = 0;
-        }
-      }
+      const { results: decryptedResults, migratedLegacyRows } = await decryptVaultRows({
+        rows: this.state.vault_items,
+        cache: this.decryptedItemsCache,
+        derivedKey,
+        migration,
+      });
 
       const list: VaultItem[] = decryptedResults.map(({ row, item }) => ({
         ...item,
