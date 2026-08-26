@@ -232,7 +232,7 @@ File scores:
 
 ## SQLite OPFS Storage Mutation Gate
 
-The extracted SQLite OPFS storage layers (shared row builder, persistence primitives, legacy migration, and the per-item row decryption engine) have a dedicated mutation gate. These layers own vault ciphertext handling, the one-time legacy master-key fallback upgrade, and rollback-safe plaintext migration — silent regressions here would be invisible to line coverage.
+The SQLite OPFS storage core (repository class, wa-sqlite vault storage repository, shared row builder, persistence primitives, legacy migration, and the per-item row decryption engine) has a dedicated mutation gate. These layers own vault ciphertext handling, the one-time legacy master-key fallback upgrade, and rollback-safe plaintext migration — silent regressions here would be invisible to line coverage.
 
 Run it with:
 
@@ -243,6 +243,8 @@ npm run test:mutation:storage:sqlite
 
 Current mutation scope:
 
+- `src/lib/sqlite_opfs.ts`
+- `src/lib/waSqliteVaultStorageRepository.ts`
 - `src/lib/sqliteOpfsShared.ts`
 - `src/lib/sqliteOpfsPersistence.ts`
 - `src/lib/sqliteOpfsMigration.ts`
@@ -252,22 +254,26 @@ Current measured SQLite OPFS storage mutation baseline:
 
 | Metric | Baseline |
 | --- | ---: |
-| Mutants | 333 |
-| Mutation score | 82.28% |
-| Covered mutation score | 85.09% |
-| Killed | 272 |
-| Timed out | 2 |
-| Survived | 48 |
-| No coverage | 11 |
+| Mutants | 1,638 |
+| Mutation score | 58.62% |
+| Covered mutation score | 66.57% |
+| Killed | 949 |
+| Timed out | 3 |
+| Survived | 478 |
+| No coverage | 194 |
 
 File scores:
 
 | File | Mutation score |
 | --- | ---: |
-| `src/lib/sqliteOpfsShared.ts` | 84.13% |
 | `src/lib/sqliteOpfsMigration.ts` | 84.29% |
+| `src/lib/sqliteOpfsShared.ts` | 84.13% |
 | `src/lib/sqliteOpfsRowDecryptor.ts` | 81.55% |
 | `src/lib/sqliteOpfsPersistence.ts` | 80.41% |
+| `src/lib/sqlite_opfs.ts` | 58.72% |
+| `src/lib/waSqliteVaultStorageRepository.ts` | 43.05% |
+
+The four extracted layers sit above the high threshold. The two monolithic repositories (`sqlite_opfs.ts`, `waSqliteVaultStorageRepository.ts`) carry defensive SQL parameter conditionals and log-message strings that need deeper integration flows to kill; raising them is tracked as follow-up work alongside further decomposition.
 
 SQLite OPFS storage mutation thresholds:
 

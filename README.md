@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
 
 # 🛡️ Aegis Vault 7
 
@@ -7,10 +7,10 @@
 *Enterprise-grade local cryptographic security for Desktop (Windows, Linux, macOS), Android, and WebExtensions.*
 
 ![Security Score](https://img.shields.io/badge/Security_Audit-92%2F100_(A%2B)-brightgreen?style=flat-square&logo=shield)
-![Tests](https://img.shields.io/badge/Unit_Tests-1573_Passed-success?style=flat-square&logo=vitest)
+![Tests](https://img.shields.io/badge/Unit_Tests-1633_Passed-success?style=flat-square&logo=vitest)
 ![Fuzz Tests](https://img.shields.io/badge/Fuzz_Tests-36_Passed-success?style=flat-square&logo=vitest)
-![Coverage](https://img.shields.io/badge/Coverage-92.3%25_Lines-brightgreen?style=flat-square&logo=vitest)
-![Mutation Testing](https://img.shields.io/badge/Mutation_Testing-Stryker_Ready-blue?style=flat-square&logo=stryker)
+![Coverage](https://img.shields.io/badge/Coverage-90.2%25_Lines_·_81.9%25_Branches-brightgreen?style=flat-square&logo=vitest)
+![Mutation Testing](https://img.shields.io/badge/Mutation_Testing-8_Stryker_Suites_·_90.8%25_Peak-blue?style=flat-square&logo=stryker)
 ![TypeScript](https://img.shields.io/badge/TypeScript-0_Errors-blue?style=flat-square&logo=typescript)
 ![License](https://img.shields.io/badge/License-Apache_2.0-orange?style=flat-square)
 ![i18n](https://img.shields.io/badge/i18n-12_Languages-purple?style=flat-square)
@@ -91,16 +91,16 @@ Aegis Vault 7 maintains rigorous automated testing standards with defense-in-dep
 | Metric | Result | Status | Framework / Tool |
 |---|---|---|---|
 | **TypeScript Typecheck** | **`0 errors`** | ✅ 100% Clean | `tsc --noEmit` |
-| **Unit & Integration Test Suite** | **`201 test files passed (201/201)`** | ✅ 100% Green | Vitest 4.1 |
-| **Unit Tests Executed** | **`1,496 tests passed (1,496/1,496)`** | ✅ 100% Green | Vitest / React Testing Library |
-| **Property-Based Fuzz Tests** | **`33 tests across 8 files passed`** | ✅ 100% Green | `fast-check` v4 |
-| **End-to-End (E2E) Suites** | **`All 5 Critical Feature Workflows Passed`** | ✅ 100% Green | Playwright (Chromium & Multi-Browser) |
-| **Mutation Testing** | **`7 Specialized Stryker Suites`** | ✅ Ready & Verified | `@stryker-mutator/core` v9 |
+| **Unit & Integration Test Suite** | **`208 test files passed (208/208)`** | ✅ 100% Green | Vitest 4.1 |
+| **Unit Tests Executed** | **`1,633 tests passed (1,633/1,633)`** | ✅ 100% Green | Vitest / React Testing Library |
+| **Property-Based Fuzz Tests** | **`36 tests across 9 files passed`** | ✅ 100% Green | fast-check v4 |
+| **End-to-End (E2E) Suites** | **`34 scenarios x 3 browsers = 102/102 passed`** | ✅ 100% Green | Playwright (Chromium, Firefox, WebKit) |
+| **Mutation Testing** | **`8 specialized Stryker suites - 90.8% peak gate score`** | ✅ Measured & Gated | @stryker-mutator/core v9 |
 | **Rust Backend Tests** | **`10 tests passed (10/10)`** | ✅ 100% Green | `cargo test` (Tauri 2) |
-| **Lines Coverage** | **`92.3%`** | ✅ Exceeds Global Target (≥ 90%) | Vitest V8 Coverage |
-| **Statements Coverage** | **`90.4%`** | ✅ Exceeds Global Target (≥ 88%) | Vitest V8 Coverage |
-| **Functions Coverage** | **`90.3%`** | ✅ Exceeds Global Target (≥ 85%) | Vitest V8 Coverage |
-| **Branches Coverage** | **`80.0%`** | ✅ Exceeds Global Target (≥ 80%) | Vitest V8 Coverage |
+| **Lines Coverage** | **`90.17%`** | ✅ Exceeds Global Target (>= 90%) | Vitest V8 Coverage |
+| **Statements Coverage** | **`91.61%`** | ✅ Exceeds Global Target (>= 88%) | Vitest V8 Coverage |
+| **Functions Coverage** | **`88.22%`** | ✅ Exceeds Global Target (>= 85%) | Vitest V8 Coverage |
+| **Branches Coverage** | **`81.93%`** | ✅ Exceeds Global Target (>= 80%) | Vitest V8 Coverage |
 
 ---
 
@@ -144,8 +144,22 @@ Mutation testing introduces deliberate faults (mutants) into source code to veri
 - **`stryker.conf.mjs` (Core)**: Tests `diceware.ts`, `emergencyKit.ts`, `otp.ts`, `random.ts`, `secretKey.ts`, `securityEvents.ts`
 - **`stryker.storage.conf.mjs`**: Tests `desktopStorage.ts`, `secureStorage.ts`
 - **`stryker.storage-orchestration.conf.mjs`**: Tests `storage.ts`
+- **`stryker.storage-sqlite.conf.mjs`**: Tests `sqlite_opfs.ts`, `waSqliteVaultStorageRepository.ts`, `sqliteOpfsShared/Persistence/Migration/RowDecryptor.ts`
 - **`stryker.importer.conf.mjs`**: Tests `importer.ts`
 - **`stryker.importer-helpers.conf.mjs`**: Tests `csvParser.ts`, `fileDecoder.ts`
+
+**Measured gate baselines** (full numbers in `docs/QUALITY_GATES.md`):
+
+| Mutation Gate | Score | Mutants |
+|---|---:|---:|
+| Storage Bridges (`desktopStorage`, `secureStorage`) | **90.84%** | 131 |
+| Importer Helpers (`csvParser`, `fileDecoder`) | **87.85%** | - |
+| Security (`share`, `recoveryKey`, `backupValidation`, `vaultDatabaseFormat`) | **86.15%** | 533 |
+| Storage Orchestration (`storage.ts`) | **88.43%** | - |
+| SQLite OPFS Storage (`sqlite_opfs`, wa-sqlite repository, extracted layers) | **58.62%** | 1,638 |
+| Core Crypto (`diceware`, `otp`, `random`, ...) | **81.74%** | - |
+| Search & Smart Folders (`fuzzySearch`, `tags`, ...) | **81.33%** | 1,082 |
+| Importer (`importer.ts`) | **80.35%** | - |
 
 ---
 
@@ -200,6 +214,9 @@ npm run test:mutation
 
 # Run Storage modules mutation test
 npm run test:mutation:storage
+
+# Run SQLite OPFS storage core mutation test
+npm run test:mutation:storage:sqlite
 
 # Run Importer modules mutation test
 npm run test:mutation:importer
