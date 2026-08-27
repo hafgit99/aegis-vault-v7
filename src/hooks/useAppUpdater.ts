@@ -13,6 +13,7 @@ import {
   type AppUpdateInfo,
   type UpdateDownloadProgress,
 } from '../lib/updater';
+import { isDesktopAppUpdaterSupported } from '../lib/environment';
 
 export type UpdaterStatus =
   | 'idle'
@@ -37,7 +38,7 @@ export interface UseAppUpdaterResult {
 
 export function useAppUpdater(): UseAppUpdaterResult {
   const [status, setStatus] = useState<UpdaterStatus>('idle');
-  const [supported, setSupported] = useState<boolean>(true);
+  const [supported, setSupported] = useState<boolean>(() => isDesktopAppUpdaterSupported());
   const [updateInfo, setUpdateInfo] = useState<AppUpdateInfo | null>(null);
   const [progress, setProgress] = useState<UpdateDownloadProgress>({ downloaded: 0, percent: 0 });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);

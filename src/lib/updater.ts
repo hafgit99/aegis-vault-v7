@@ -8,7 +8,7 @@
 
 import { check, type Update, type DownloadEvent } from '@tauri-apps/plugin-updater';
 import { invoke } from '@tauri-apps/api/core';
-import { isDesktopRuntime } from './environment';
+import { isDesktopAppUpdaterSupported } from './environment';
 
 export interface AppUpdateInfo {
   currentVersion: string;
@@ -37,7 +37,7 @@ export interface CheckAppUpdateResult {
  * Checks if a newer version of the desktop application is available on the update endpoint.
  */
 export async function checkAppUpdate(): Promise<CheckAppUpdateResult> {
-  if (!isDesktopRuntime()) {
+  if (!isDesktopAppUpdaterSupported()) {
     return { supported: false, hasUpdate: false };
   }
 
@@ -82,7 +82,7 @@ export async function checkAppUpdate(): Promise<CheckAppUpdateResult> {
 export async function downloadAndApplyUpdate(
   onProgress?: (progress: UpdateDownloadProgress) => void
 ): Promise<{ success: boolean; error?: string }> {
-  if (!isDesktopRuntime()) {
+  if (!isDesktopAppUpdaterSupported()) {
     return { success: false, error: 'Updater is only available on desktop.' };
   }
 
@@ -137,7 +137,7 @@ export async function downloadAndApplyUpdate(
  * Restarts the application to complete the update installation.
  */
 export async function restartApplication(): Promise<void> {
-  if (!isDesktopRuntime()) {
+  if (!isDesktopAppUpdaterSupported()) {
     if (typeof window !== 'undefined') {
       window.location.reload();
     }

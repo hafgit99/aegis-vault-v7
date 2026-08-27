@@ -7,6 +7,12 @@ import { renderHook, act } from '@testing-library/react';
 import { useAppUpdater } from './useAppUpdater';
 import * as updaterLib from '../lib/updater';
 
+vi.mock('../lib/environment', () => ({
+  isDesktopAppUpdaterSupported: vi.fn(() => true),
+  isDesktopRuntime: vi.fn(() => true),
+  isAndroidRuntime: vi.fn(() => false),
+}));
+
 describe('useAppUpdater hook', () => {
   beforeEach(() => {
     vi.clearAllMocks();

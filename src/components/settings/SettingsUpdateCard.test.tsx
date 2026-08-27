@@ -10,6 +10,8 @@ import * as updaterLib from '../../lib/updater';
 
 vi.mock('../../lib/environment', () => ({
   isDesktopRuntime: vi.fn(() => true),
+  isDesktopAppUpdaterSupported: vi.fn(() => true),
+  isAndroidRuntime: vi.fn(() => false),
 }));
 
 describe('SettingsUpdateCard', () => {

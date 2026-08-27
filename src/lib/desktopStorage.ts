@@ -3,12 +3,8 @@ import type { VaultItem } from '../types';
 
 export const EXTENSION_CREDENTIAL_LEASE_MS = 5 * 60 * 1000;
 
-export { isDesktopRuntime } from './environment';
-import { isDesktopRuntime } from './environment';
-
-export function isAndroidRuntime(): boolean {
-  return isDesktopRuntime() && /Android/i.test(navigator.userAgent || '');
-}
+export { isDesktopRuntime, isAndroidRuntime } from './environment';
+import { isDesktopRuntime, isAndroidRuntime } from './environment';
 
 export type NativeVaultStorageScope = 'android-app-private' | 'desktop-app-data' | 'browser-fallback';
 

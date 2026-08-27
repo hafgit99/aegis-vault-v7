@@ -19,6 +19,23 @@ export function isDesktopRuntime(): boolean {
   return typeof window !== 'undefined' && Boolean(window.__TAURI_INTERNALS__);
 }
 
+/** `true` when running inside the Android runtime (Tauri Android or WebView). */
+export function isAndroidRuntime(): boolean {
+  return (
+    typeof navigator !== 'undefined' &&
+    /Android/i.test(navigator.userAgent || '')
+  );
+}
+
+/** `true` when running on a true desktop platform (Windows, macOS, Linux) that supports binary auto-updates. */
+export function isDesktopAppUpdaterSupported(): boolean {
+  if (typeof window === 'undefined') return false;
+  if (!isDesktopRuntime()) return false;
+  const ua = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
+  if (/Android|iPhone|iPad|iPod|Mobile/i.test(ua)) return false;
+  return true;
+}
+
 /**
  * `true` inside jsdom / happy-dom unit test environments.
  * Used to skip real timers (e.g. `maybeDelay`) during tests.
