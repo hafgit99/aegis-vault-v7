@@ -191,7 +191,7 @@ Android is now an active signed release-candidate path, not a future-only target
 - Emergency Kit save flow.
 - Biometric behavior only on devices where support is actually available and tested.
 
-Required Android signing material stays outside the repository and is loaded from `.secrets/android-signing.env` or equivalent local environment variables:
+Required Android signing material stays outside the repository and is loaded from `%USERPROFILE%\AegisVaultKeys\android-signing.env` (outside cloud-synced folders — preferred) or equivalent local environment variables:
 
 - `AEGIS_ANDROID_KEYSTORE_PATH`
 - `AEGIS_ANDROID_KEY_ALIAS`
