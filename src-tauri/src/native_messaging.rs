@@ -29,8 +29,7 @@ pub fn derive_session_mac_key(pairing_token: &str) -> [u8; 32] {
 
 /// Computes a 32-byte HMAC-SHA256 integrity tag over an IPC message payload.
 pub fn compute_message_mac(key: &[u8; 32], payload: &[u8]) -> [u8; 32] {
-    let mut mac = HmacSha256::new_from_slice(key)
-        .expect("HMAC can take key of any size");
+    let mut mac = HmacSha256::new_from_slice(key).expect("HMAC can take key of any size");
     mac.update(payload);
     let result = mac.finalize().into_bytes();
     let mut out = [0u8; 32];
@@ -1073,7 +1072,9 @@ pub fn run_host() {
             }
 
             if !verify_message_mac(mac_key, &resp_buf, &resp_mac) {
-                log::error!("[Aegis Host] Response HMAC integrity verification failed! Dropping response.");
+                log::error!(
+                    "[Aegis Host] Response HMAC integrity verification failed! Dropping response."
+                );
                 break;
             }
 
@@ -1153,9 +1154,18 @@ mod tests {
         );
         assert_eq!(extract_etld_plus_one("sub.domain.com.tr"), "domain.com.tr");
         assert_eq!(extract_etld_plus_one("www.aegis.org"), "aegis.org");
-        assert_eq!(extract_etld_plus_one("login.portal.com.tn"), "portal.com.tn");
-        assert_eq!(extract_etld_plus_one("app.safaricom.co.ke"), "safaricom.co.ke");
-        assert_eq!(extract_etld_plus_one("shop.mercado.com.co"), "mercado.com.co");
+        assert_eq!(
+            extract_etld_plus_one("login.portal.com.tn"),
+            "portal.com.tn"
+        );
+        assert_eq!(
+            extract_etld_plus_one("app.safaricom.co.ke"),
+            "safaricom.co.ke"
+        );
+        assert_eq!(
+            extract_etld_plus_one("shop.mercado.com.co"),
+            "mercado.com.co"
+        );
     }
 
     #[test]
