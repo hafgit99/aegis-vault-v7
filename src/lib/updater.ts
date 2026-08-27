@@ -57,7 +57,13 @@ export async function checkAppUpdate(): Promise<{
       },
     };
   } catch (err: unknown) {
-    const errorMessage = err instanceof Error ? err.message : String(err);
+    const rawError = err instanceof Error ? err.message : String(err);
+    let errorMessage = rawError;
+
+    if (rawError.includes('Could not fetch a valid release JSON') || rawError.includes('404')) {
+      errorMessage = 'Henüz yayınlanmış bir sürüm bulunamadı veya sunucuya erişilemiyor (404 Not Found). GitHub Releases üzerinde henüz "latest.json" manifesti yüklenmemiş olabilir.';
+    }
+
     return {
       supported: true,
       hasUpdate: false,
