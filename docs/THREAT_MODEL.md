@@ -118,6 +118,16 @@ Import:
 - Encrypted Aegis imports require the correct decrypt password.
 - Android import/export/download flows use the system document picker bridge so the user explicitly chooses save and open locations.
 
+Extension bridge IPC channel:
+
+- **Loopback Transport & Port Binding:** The native messaging bridge connects the browser extension host process (`aegis-host`) to the running Aegis desktop instance over local loopback TCP (`127.0.0.1:49155..49165`). Network interfaces beyond loopback are never bound.
+- **Authentication & Pairing Token:** Authentication uses a 256-bit CSPRNG pairing token stored in an OS-protected file with strict permissions (fail-closed Windows `icacls` grant-only ACLs, and Unix `0o600` mode). Token validation uses constant-time comparison (`subtle::ConstantTimeEq`).
+- **Session Key Derivation & Message Integrity (HMAC-SHA256):** After successful handshake, both endpoints derive a 32-byte session MAC key from the pairing token using HKDF-SHA256 (`derive_session_mac_key`). All message frames in both directions are authenticated with a 32-byte HMAC-SHA256 tag (`[4-byte len][payload][32-byte HMAC]`). Any message with a corrupted or mismatched MAC causes immediate connection termination.
+- **Credential Lease & Memory Zeroization:** Credentials in the IPC cache are bound to a strict 5-minute lease TTL (`EXTENSION_CREDENTIAL_LEASE_MS`), zeroized upon expiry via `Zeroize` and `ZeroizeOnDrop`, and connections are rate-limited to 5 per second.
+- **Metadata Protection:** Unauthenticated or broad credential queries (`list_credentials` without active URL) return sanitized metadata with empty password strings to prevent single-message bulk credential exfiltration.
+- **Legacy Database Envelope Integrity Window (N-2):** Databases created prior to versioned HMAC integrity framing are admitted on first unlock and immediately authenticated with `computeStateIntegrityHmac` on the subsequent save cycle.
+- **Threat Boundary & Residual Risk:** Malware executing with the same OS user privileges has file access to the pairing token by definition. The IPC layer protects against non-privilege network tampering, unauthorized local loopback processes without file access, and payload corruption.
+
 Network:
 
 - Production builds install an air-gap policy around browser network primitives.

@@ -24,8 +24,8 @@ This project is a password vault, so security claims must stay conservative unti
 - Vault database payloads now include a versioned schema envelope with migration tests for legacy unversioned state.
 - Desktop vault persistence now mirrors database state through the Tauri app data directory, and native database writes use a temp-file + atomic replace flow to reduce crash/power-loss corruption risk.
 - Desktop import/export now uses controlled native Windows file dialogs.
-- Clipboard clearing now removes copied secrets after the safety delay when the clipboard remains unchanged, using a two-step overwrite-then-clear strategy. Windows native clipboard writes also set history/cloud/monitor exclusion formats where supported, and cross-platform frontends enforce automatic overwrite timers.
-- Browser extension IPC pairing token checks use constant-time comparison, and Unix/macOS token files are written with owner-only permissions.
+- Browser extension IPC pairing token checks use constant-time comparison, Unix/macOS token files are written with owner-only permissions (0o600), and Windows token files use fail-closed grant-only ACLs (icacls).
+- Browser extension IPC frames across the loopback TCP channel use HKDF-derived session keys and 32-byte HMAC-SHA256 authenticated frame tags (`[4-byte len][payload][32-byte HMAC]`) to guarantee request/response integrity and drop tampered or corrupt connections immediately.
 - WebDAV Basic Auth encoding avoids deprecated `unescape`, and sync local-network exceptions are limited to loopback plus RFC 1918 private address ranges.
 - Production builds install an air-gap network policy that blocks unexpected outbound `fetch`, XHR, WebSocket, `sendBeacon`, EventSource, and WebRTC connections while allowing app-local/Tauri IPC URLs and exact five-character HIBP SHA-1 range checks.
 - Security Audit can check passwords against Have I Been Pwned using the k-anonymity range API: only the first five SHA-1 hash characters are sent, full hashes and plaintext passwords stay local.

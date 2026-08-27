@@ -1,3 +1,5 @@
+use hmac::{Hmac, Mac};
+use sha2::Sha256;
 use std::fs;
 use std::io::{self, Read, Write};
 use std::net::{TcpListener, TcpStream};
@@ -8,8 +10,39 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use subtle::ConstantTimeEq;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
+type HmacSha256 = Hmac<Sha256>;
+
 pub const TOKEN_FILENAME: &str = "aegis_ipc_token.bin";
 pub const PORT_FILENAME: &str = "aegis_ipc_port.txt";
+pub const IPC_HMAC_INFO: &[u8] = b"aegis-ipc-session-hmac-v1";
+
+/// Derives a 32-byte session MAC key from the 256-bit pairing token using HKDF-Expand style HMAC-SHA256.
+pub fn derive_session_mac_key(pairing_token: &str) -> [u8; 32] {
+    let mut mac = HmacSha256::new_from_slice(pairing_token.as_bytes())
+        .expect("HMAC can take key of any size");
+    mac.update(IPC_HMAC_INFO);
+    let result = mac.finalize().into_bytes();
+    let mut key = [0u8; 32];
+    key.copy_from_slice(&result[..32]);
+    key
+}
+
+/// Computes a 32-byte HMAC-SHA256 integrity tag over an IPC message payload.
+pub fn compute_message_mac(key: &[u8; 32], payload: &[u8]) -> [u8; 32] {
+    let mut mac = HmacSha256::new_from_slice(key)
+        .expect("HMAC can take key of any size");
+    mac.update(payload);
+    let result = mac.finalize().into_bytes();
+    let mut out = [0u8; 32];
+    out.copy_from_slice(&result[..32]);
+    out
+}
+
+/// Verifies the 32-byte HMAC-SHA256 integrity tag of an IPC message payload using constant-time comparison.
+pub fn verify_message_mac(key: &[u8; 32], payload: &[u8], expected_mac: &[u8; 32]) -> bool {
+    let computed = compute_message_mac(key, payload);
+    computed.ct_eq(expected_mac).into()
+}
 
 struct ConnectionRateLimiter {
     connection_times: Mutex<std::collections::VecDeque<std::time::Instant>>,
@@ -707,6 +740,20 @@ fn focus_webview_window(window: &tauri::WebviewWindow) {
     }
 }
 
+/// Handles an authenticated TCP client connection from the browser native messaging host.
+///
+/// Security & Framing Architecture (R-4):
+/// 1. Handshake Phase: Client sends 4-byte token length + 256-bit token. Server verifies token
+///    in constant time. If valid, replies with `b"OK"`. If invalid, replies with `b"UNAUTHORIZED"`
+///    and immediately drops the connection.
+/// 2. Session Key Derivation: Server derives a 32-byte session MAC key from the pairing token using
+///    HKDF-SHA256 (`derive_session_mac_key`).
+/// 3. Message Framing: Each frame is encoded as:
+///    `[4-byte big-endian payload length][JSON payload bytes][32-byte HMAC-SHA256 tag]`
+/// 4. Frame Verification: Before parsing any request JSON, the HMAC tag is computed and verified
+///    using constant-time comparison against the received MAC. Any corrupt or tampered frames
+///    cause immediate session termination.
+/// 5. Response Integrity: All outgoing server responses are tagged with a 32-byte HMAC-SHA256.
 fn handle_client(
     app_handle: tauri::AppHandle,
     stream: &mut TcpStream,
@@ -736,7 +783,9 @@ fn handle_client(
     stream.write_all(b"OK")?;
     stream.flush()?;
 
-    // 2. Ana mesaj döngüsü
+    let session_mac_key = derive_session_mac_key(pairing_token);
+
+    // 2. Ana mesaj döngüsü (Framing: [4-byte len][payload][32-byte HMAC-SHA256])
     loop {
         let mut msg_len_buf = [0u8; 4];
         if stream.read_exact(&mut msg_len_buf).is_err() {
@@ -749,6 +798,14 @@ fn handle_client(
 
         let mut msg_buf = vec![0u8; msg_len];
         stream.read_exact(&mut msg_buf)?;
+
+        let mut received_mac = [0u8; 32];
+        stream.read_exact(&mut received_mac)?;
+
+        if !verify_message_mac(&session_mac_key, &msg_buf, &received_mac) {
+            log::warn!("[Aegis IPC] Frame HMAC-SHA256 verification failed! Terminating corrupted connection.");
+            return Err("Message integrity verification failed".into());
+        }
 
         let req: serde_json::Value = serde_json::from_slice(&msg_buf)?;
         let action = req["action"].as_str().unwrap_or("");
@@ -882,8 +939,11 @@ fn handle_client(
 
         let res_bytes = serde_json::to_vec(&response)?;
         let res_len = res_bytes.len() as u32;
+        let res_mac = compute_message_mac(&session_mac_key, &res_bytes);
+
         stream.write_all(&res_len.to_be_bytes())?;
         stream.write_all(&res_bytes)?;
+        stream.write_all(&res_mac)?;
         stream.flush()?;
     }
 
@@ -948,6 +1008,7 @@ pub fn run_host() {
         candidate_ports.push(DEFAULT_TCP_PORT);
     }
     let mut stream = None;
+    let mut session_mac_key: Option<[u8; 32]> = None;
     if let Some(ref token) = pairing_token {
         for port in candidate_ports {
             if let Ok(mut s) = TcpStream::connect(format!("127.0.0.1:{}", port)) {
@@ -962,6 +1023,7 @@ pub fn run_host() {
                     };
 
                 if handshake_success {
+                    session_mac_key = Some(derive_session_mac_key(token));
                     stream = Some(s);
                     break;
                 }
@@ -976,16 +1038,18 @@ pub fn run_host() {
             Err(_) => break,
         };
 
-        if let Some(ref mut s) = stream {
-            // TCP forwarding mode
+        if let (Some(ref mut s), Some(ref mac_key)) = (&mut stream, &session_mac_key) {
+            // TCP forwarding mode with HMAC-SHA256 frame integrity (R-4)
             let msg_bytes = match serde_json::to_vec(&msg) {
                 Ok(b) => b,
                 Err(_) => break,
             };
             let msg_len = msg_bytes.len() as u32;
+            let msg_mac = compute_message_mac(mac_key, &msg_bytes);
 
             if s.write_all(&msg_len.to_be_bytes()).is_err()
                 || s.write_all(&msg_bytes).is_err()
+                || s.write_all(&msg_mac).is_err()
                 || s.flush().is_err()
             {
                 break;
@@ -996,8 +1060,20 @@ pub fn run_host() {
                 break;
             }
             let resp_len = u32::from_be_bytes(resp_len_buf) as usize;
+            if resp_len > 1024 * 1024 {
+                break;
+            }
             let mut resp_buf = vec![0u8; resp_len];
             if s.read_exact(&mut resp_buf).is_err() {
+                break;
+            }
+            let mut resp_mac = [0u8; 32];
+            if s.read_exact(&mut resp_mac).is_err() {
+                break;
+            }
+
+            if !verify_message_mac(mac_key, &resp_buf, &resp_mac) {
+                log::error!("[Aegis Host] Response HMAC integrity verification failed! Dropping response.");
                 break;
             }
 
@@ -1158,5 +1234,52 @@ mod tests {
         assert_eq!(sanitized[0].title, "Test Item");
         assert_eq!(sanitized[0].username, "alice");
         assert!(sanitized[0].password.is_empty());
+    }
+
+    #[test]
+    fn test_derive_session_mac_key_is_deterministic_and_unique() {
+        let token1 = generate_token();
+        let token2 = generate_token();
+
+        let key1_a = derive_session_mac_key(&token1);
+        let key1_b = derive_session_mac_key(&token1);
+        let key2 = derive_session_mac_key(&token2);
+
+        assert_eq!(key1_a, key1_b);
+        assert_ne!(key1_a, key2);
+        assert_ne!(key1_a, [0u8; 32]);
+    }
+
+    #[test]
+    fn test_message_mac_computation_and_verification() {
+        let token = generate_token();
+        let key = derive_session_mac_key(&token);
+        let payload = b"{\"action\":\"get_credentials\",\"url\":\"https://example.com\"}";
+
+        let mac = compute_message_mac(&key, payload);
+        assert!(verify_message_mac(&key, payload, &mac));
+    }
+
+    #[test]
+    fn test_message_mac_fails_on_tampered_payload() {
+        let token = generate_token();
+        let key = derive_session_mac_key(&token);
+        let payload = b"{\"action\":\"get_credentials\",\"url\":\"https://example.com\"}";
+        let tampered_payload = b"{\"action\":\"get_credentials\",\"url\":\"https://attacker.com\"}";
+
+        let mac = compute_message_mac(&key, payload);
+        assert!(!verify_message_mac(&key, tampered_payload, &mac));
+    }
+
+    #[test]
+    fn test_message_mac_fails_with_wrong_key() {
+        let token1 = generate_token();
+        let token2 = generate_token();
+        let key1 = derive_session_mac_key(&token1);
+        let key2 = derive_session_mac_key(&token2);
+        let payload = b"{\"action\":\"ping\"}";
+
+        let mac = compute_message_mac(&key1, payload);
+        assert!(!verify_message_mac(&key2, payload, &mac));
     }
 }
