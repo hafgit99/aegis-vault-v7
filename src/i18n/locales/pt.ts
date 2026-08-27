@@ -1032,6 +1032,7 @@ export const pt = {
   'settings.updates.readyToRestart': 'Atualização baixada. Pronto para reiniciar.',
   'settings.updates.restartNow': 'Reiniciar Agora',
   'settings.updates.error': 'Não foi possível verificar atualizações',
+  'settings.updates.errorNotFound': 'Nenhuma versão publicada encontrada ou servidor inacessível (404 Not Found). O manifesto "latest.json" pode ainda não ter sido enviado para o GitHub Releases.',
   'settings.updates.desktopOnly': 'Atualizações automáticas estão ativas no desktop',
   'share.passwordTooShort': 'A senha deve ter pelo menos 8 caracteres.',
   'share.passwordLabel': 'Senha de Compartilhamento',

@@ -1032,6 +1032,7 @@ export const de = {
   'settings.updates.readyToRestart': 'Update heruntergeladen. Bereit zum Neustart.',
   'settings.updates.restartNow': 'Jetzt neu starten',
   'settings.updates.error': 'Updates konnten nicht geprüft werden',
+  'settings.updates.errorNotFound': 'Keine veröffentlichte Version gefunden oder Server nicht erreichbar (404 Not Found). Das "latest.json"-Manifest ist möglicherweise noch nicht auf GitHub Releases hochgeladen.',
   'settings.updates.desktopOnly': 'Automatische Updates sind auf dem Desktop aktiv',
   'share.passwordTooShort': 'Das Passwort muss mindestens 8 Zeichen lang sein.',
   'share.passwordLabel': 'Freigabe-Passwort',

@@ -1032,6 +1032,7 @@ export const it = {
   'settings.updates.readyToRestart': 'Aggiornamento scaricato. Pronto per il riavvio.',
   'settings.updates.restartNow': 'Riavvia ora',
   'settings.updates.error': 'Impossibile verificare gli aggiornamenti',
+  'settings.updates.errorNotFound': 'Nessuna versione pubblicata trovata o server non raggiungibile (404 Not Found). Il manifesto "latest.json" potrebbe non essere ancora caricato su GitHub Releases.',
   'settings.updates.desktopOnly': 'Gli aggiornamenti automatici sono attivi su desktop',
   'share.passwordTooShort': 'La password deve contenere almeno 8 caratteri.',
   'share.passwordLabel': 'Password di condivisione',

@@ -1032,6 +1032,7 @@ export const ar = {
   'settings.updates.readyToRestart': 'تم تنزيل التحديث. جاهز لإعادة التشغيل.',
   'settings.updates.restartNow': 'إعادة التشغيل الآن',
   'settings.updates.error': 'تعذر التحقق من التحديثات',
+  'settings.updates.errorNotFound': 'لم يتم العثور على إصدار منشور أو يتعذر الوصول إلى الخادم (404 Not Found). قد لا يكون بيان "latest.json" قد تم تحميله إلى GitHub Releases بعد.',
   'settings.updates.desktopOnly': 'التحديثات التلقائية نشطة على سطح المكتب',
   'share.passwordTooShort': 'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.',
   'share.passwordLabel': 'كلمة مرور المشاركة',

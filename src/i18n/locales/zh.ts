@@ -1037,6 +1037,7 @@ export const zh = {
   'settings.updates.readyToRestart': '更新已下载。准备重新启动。',
   'settings.updates.restartNow': '立即重启',
   'settings.updates.error': '无法检查更新',
+  'settings.updates.errorNotFound': '未找到已发布的版本或无法访问服务器（404 Not Found）。"latest.json" 清单可能尚未上传到 GitHub Releases。',
   'settings.updates.desktopOnly': '自动更新仅在桌面端可用',
   'share.passwordTooShort': '密码必须至少包含 8 个字符。',
   'share.passwordLabel': '共享密码',

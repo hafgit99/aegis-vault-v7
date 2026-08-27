@@ -132,4 +132,22 @@ describe('SettingsUpdateCard', () => {
     expect(screen.getByTestId('update-error-message')).toBeDefined();
     expect(screen.getByTestId('update-error-message').textContent).toContain('Network connection failed');
   });
+
+  it('displays localized error message when errorKey is returned', async () => {
+    vi.spyOn(updaterLib, 'checkAppUpdate').mockResolvedValueOnce({
+      supported: true,
+      hasUpdate: false,
+      error: 'Could not fetch a valid release JSON from the remote',
+      errorKey: 'settings.updates.errorNotFound',
+    });
+
+    render(<SettingsUpdateCard t={t} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('check-updates-button'));
+    });
+
+    expect(screen.getByTestId('update-error-message')).toBeDefined();
+    expect(screen.getByTestId('update-error-message').textContent).toContain('settings.updates.errorNotFound');
+  });
 });

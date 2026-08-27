@@ -1037,6 +1037,7 @@ export const en = {
   'settings.updates.readyToRestart': 'Update downloaded. Ready to restart.',
   'settings.updates.restartNow': 'Restart Now',
   'settings.updates.error': 'Could not check for updates',
+  'settings.updates.errorNotFound': 'No published release found or server unreachable (404 Not Found). "latest.json" manifest may not be uploaded to GitHub Releases yet.',
   'settings.updates.desktopOnly': 'Automatic updates are active on desktop',
   'share.passwordTooShort': 'Password must be at least 8 characters.',
   'share.passwordLabel': 'Share Password',

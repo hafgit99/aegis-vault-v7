@@ -1032,6 +1032,7 @@ export const ru = {
   'settings.updates.readyToRestart': 'Обновление загружено. Готово к перезапуску.',
   'settings.updates.restartNow': 'Перезапустить сейчас',
   'settings.updates.error': 'Не удалось проверить обновления',
+  'settings.updates.errorNotFound': 'Опубликованный релиз не найден или сервер недоступен (404 Not Found). Манифест "latest.json", возможно, еще не загружен в GitHub Releases.',
   'settings.updates.desktopOnly': 'Автоматические обновления активны на ПК',
   'share.passwordTooShort': 'Пароль должен содержать не менее 8 символов.',
   'share.passwordLabel': 'Пароль для общего доступа',

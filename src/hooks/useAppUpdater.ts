@@ -29,6 +29,7 @@ export interface UseAppUpdaterResult {
   updateInfo: AppUpdateInfo | null;
   progress: UpdateDownloadProgress;
   errorMessage: string | null;
+  errorKey: string | null;
   checkForUpdates: () => Promise<void>;
   installUpdate: () => Promise<void>;
   restartNow: () => Promise<void>;
@@ -40,10 +41,12 @@ export function useAppUpdater(): UseAppUpdaterResult {
   const [updateInfo, setUpdateInfo] = useState<AppUpdateInfo | null>(null);
   const [progress, setProgress] = useState<UpdateDownloadProgress>({ downloaded: 0, percent: 0 });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorKey, setErrorKey] = useState<string | null>(null);
 
   const checkForUpdates = useCallback(async () => {
     setStatus('checking');
     setErrorMessage(null);
+    setErrorKey(null);
 
     const result = await checkAppUpdate();
     setSupported(result.supported);
@@ -56,6 +59,7 @@ export function useAppUpdater(): UseAppUpdaterResult {
     if (result.error) {
       setStatus('error');
       setErrorMessage(result.error);
+      setErrorKey(result.errorKey || null);
       return;
     }
 
@@ -71,6 +75,7 @@ export function useAppUpdater(): UseAppUpdaterResult {
   const installUpdate = useCallback(async () => {
     setStatus('downloading');
     setErrorMessage(null);
+    setErrorKey(null);
     setProgress({ downloaded: 0, percent: 0 });
 
     const result = await downloadAndApplyUpdate((p) => {
@@ -95,6 +100,7 @@ export function useAppUpdater(): UseAppUpdaterResult {
     updateInfo,
     progress,
     errorMessage,
+    errorKey,
     checkForUpdates,
     installUpdate,
     restartNow,

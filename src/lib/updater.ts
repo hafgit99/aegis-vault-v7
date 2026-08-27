@@ -25,15 +25,18 @@ export interface UpdateDownloadProgress {
 
 let activeUpdateInstance: Update | null = null;
 
-/**
- * Checks if a newer version of the desktop application is available on the update endpoint.
- */
-export async function checkAppUpdate(): Promise<{
+export interface CheckAppUpdateResult {
   supported: boolean;
   hasUpdate: boolean;
   updateInfo?: AppUpdateInfo;
   error?: string;
-}> {
+  errorKey?: string;
+}
+
+/**
+ * Checks if a newer version of the desktop application is available on the update endpoint.
+ */
+export async function checkAppUpdate(): Promise<CheckAppUpdateResult> {
   if (!isDesktopRuntime()) {
     return { supported: false, hasUpdate: false };
   }
@@ -58,16 +61,17 @@ export async function checkAppUpdate(): Promise<{
     };
   } catch (err: unknown) {
     const rawError = err instanceof Error ? err.message : String(err);
-    let errorMessage = rawError;
+    let errorKey: string | undefined;
 
     if (rawError.includes('Could not fetch a valid release JSON') || rawError.includes('404')) {
-      errorMessage = 'Henüz yayınlanmış bir sürüm bulunamadı veya sunucuya erişilemiyor (404 Not Found). GitHub Releases üzerinde henüz "latest.json" manifesti yüklenmemiş olabilir.';
+      errorKey = 'settings.updates.errorNotFound';
     }
 
     return {
       supported: true,
       hasUpdate: false,
-      error: errorMessage,
+      error: rawError,
+      errorKey,
     };
   }
 }

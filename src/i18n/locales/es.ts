@@ -1032,6 +1032,7 @@ export const es = {
   'settings.updates.readyToRestart': 'Actualización descargada. Listo para reiniciar.',
   'settings.updates.restartNow': 'Reiniciar ahora',
   'settings.updates.error': 'No se pudieron comprobar las actualizaciones',
+  'settings.updates.errorNotFound': 'No se encontró ninguna versión publicada o no se puede acceder al servidor (404 Not Found). Es posible que el manifiesto "latest.json" aún no esté subido a GitHub Releases.',
   'settings.updates.desktopOnly': 'Las actualizaciones automáticas están activas en el escritorio',
   'share.passwordTooShort': 'La contraseña debe tener al menos 8 caracteres.',
   'share.passwordLabel': 'Contraseña para compartir',

@@ -1032,6 +1032,7 @@ export const fr = {
   'settings.updates.readyToRestart': 'Mise à jour téléchargée. Prêt à redémarrer.',
   'settings.updates.restartNow': 'Redémarrer maintenant',
   'settings.updates.error': 'Impossible de vérifier les mises à jour',
+  'settings.updates.errorNotFound': 'Aucune version publiée trouvée ou serveur inaccessible (404 Not Found). Le manifeste "latest.json" n\'est peut-être pas encore téléversé sur GitHub Releases.',
   'settings.updates.desktopOnly': 'Les mises à jour automatiques sont actives sur le bureau',
   'share.passwordTooShort': 'Le mot de passe doit comporter au moins 8 caractères.',
   'share.passwordLabel': 'Mot de passe de partage',

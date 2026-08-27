@@ -30,10 +30,13 @@ export function SettingsUpdateCard({ t }: SettingsUpdateCardProps) {
     updateInfo,
     progress,
     errorMessage,
+    errorKey,
     checkForUpdates,
     installUpdate,
     restartNow,
   } = useAppUpdater();
+
+  const displayErrorMessage = errorKey ? t(errorKey as Parameters<typeof t>[0]) : errorMessage;
 
   return (
     <div
@@ -184,14 +187,14 @@ export function SettingsUpdateCard({ t }: SettingsUpdateCardProps) {
       </div>
 
       {/* Error message */}
-      {status === 'error' && errorMessage && (
+      {status === 'error' && displayErrorMessage && (
         <div
           data-testid="update-error-message"
           className="flex items-start gap-2 rounded-lg border border-brand-error/20 bg-brand-error/10 p-3 text-xs text-brand-error"
         >
           <AlertCircle className="mt-0.5 w-3.5 h-3.5 shrink-0" />
           <span>
-            {t('settings.updates.error')}: {errorMessage}
+            {t('settings.updates.error')}: {displayErrorMessage}
           </span>
         </div>
       )}

@@ -1032,6 +1032,7 @@ export const ko = {
   'settings.updates.readyToRestart': '업데이트가 다운로드되었습니다. 다시 시작할 준비가 되었습니다.',
   'settings.updates.restartNow': '지금 다시 시작',
   'settings.updates.error': '업데이트를 확인할 수 없습니다',
+  'settings.updates.errorNotFound': '게시된 릴리스를 찾을 수 없거나 서버에 연결할 수 없습니다 (404 Not Found). GitHub Releases에 "latest.json" 매니페스트가 아직 업로드되지 않았을 수 있습니다.',
   'settings.updates.desktopOnly': '자동 업데이트는 데스크톱에서 활성화됩니다',
   'share.passwordTooShort': '비밀번호는 8자 이상이어야 합니다.',
   'share.passwordLabel': '공유 비밀번호',

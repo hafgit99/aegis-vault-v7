@@ -1032,6 +1032,7 @@ export const ja = {
   'settings.updates.readyToRestart': '更新がダウンロードされました。再起動の準備が完了しました。',
   'settings.updates.restartNow': '今すぐ再起動',
   'settings.updates.error': '更新を確認できませんでした',
+  'settings.updates.errorNotFound': '公開されたリリースが見つからないか、サーバーにアクセスできません (404 Not Found)。GitHub Releases に "latest.json" マニフェストがまだアップロードされていない可能性があります。',
   'settings.updates.desktopOnly': '自動更新はデスクトップ版で有効です',
   'share.passwordTooShort': 'パスワードは8文字以上である必要があります。',
   'share.passwordLabel': '共有パスワード',

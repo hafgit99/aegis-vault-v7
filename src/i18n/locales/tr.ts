@@ -1037,6 +1037,7 @@ export const tr = {
   'settings.updates.readyToRestart': 'Güncelleme indirildi. Yeniden başlatmaya hazır.',
   'settings.updates.restartNow': 'Şimdi Yeniden Başlat',
   'settings.updates.error': 'Güncellemeler denetlenemedi',
+  'settings.updates.errorNotFound': 'Henüz yayınlanmış bir sürüm bulunamadı veya sunucuya erişilemiyor (404 Not Found). GitHub Releases üzerinde henüz "latest.json" manifesti yüklenmemiş olabilir.',
   'settings.updates.desktopOnly': 'Otomatik güncellemeler masaüstü sürümünde aktiftir',
   'share.passwordTooShort': 'Şifre en az 8 karakter olmalıdır.',
   'share.passwordLabel': 'Paylaşım Şifresi',
