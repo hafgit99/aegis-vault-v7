@@ -8,7 +8,7 @@ interface UseAutoLockOptions {
 
 const ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'] as const;
 
-export const MAXIMUM_AUTO_LOCK_DURATION_SECONDS = 1800; // 30 minutes maximum ceiling
+export const MAXIMUM_AUTO_LOCK_DURATION_SECONDS = 7200; // 2 hours maximum ceiling (matches useAutoLockDuration + docs "15s–2h")
 
 export function useAutoLock({ unlocked, durationSeconds, onLock }: UseAutoLockOptions) {
   const effectiveDurationSeconds =
@@ -20,6 +20,8 @@ export function useAutoLock({ unlocked, durationSeconds, onLock }: UseAutoLockOp
     if (!unlocked) return;
 
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let deadline = Date.now() + effectiveDurationSeconds * 1000;
+    let fired = false;
 
     const clearTimer = () => {
       if (timeoutId) {
@@ -28,18 +30,45 @@ export function useAutoLock({ unlocked, durationSeconds, onLock }: UseAutoLockOp
       }
     };
 
-    const resetTimer = () => {
+    const fireLock = () => {
+      if (fired) return;
+      fired = true;
       clearTimer();
-      if (document.hidden) return;
-      timeoutId = setTimeout(onLock, effectiveDurationSeconds * 1000);
+      onLock();
+    };
+
+    // Arms a timer for the remaining wall-clock time. Background throttling may
+    // fire the callback early or late; the deadline check keeps the lock honest.
+    const armTimer = () => {
+      clearTimer();
+      const remainingMs = Math.max(0, deadline - Date.now());
+      timeoutId = setTimeout(() => {
+        if (Date.now() >= deadline) {
+          fireLock();
+        } else {
+          armTimer();
+        }
+      }, remainingMs);
+    };
+
+    const resetTimer = () => {
+      fired = false;
+      deadline = Date.now() + effectiveDurationSeconds * 1000;
+      armTimer();
     };
 
     const handleVisibilityChange = () => {
-      if (document.hidden) {
-        clearTimer();
-      } else {
-        resetTimer();
+      // Security: the deadline is NEVER cancelled while hidden. A vault that
+      // pauses its auto-lock when the window is hidden can stay unlocked
+      // indefinitely, so the countdown continues regardless of visibility.
+      if (document.hidden) return;
+      if (Date.now() >= deadline) {
+        // Timers can be throttled (or suspended) while hidden; enforce the
+        // passed deadline immediately when the window becomes visible again.
+        fireLock();
+        return;
       }
+      armTimer();
     };
 
     resetTimer();
@@ -55,5 +84,5 @@ export function useAutoLock({ unlocked, durationSeconds, onLock }: UseAutoLockOp
       });
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [durationSeconds, onLock, unlocked]);
+  }, [durationSeconds, effectiveDurationSeconds, onLock, unlocked]);
 }
