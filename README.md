@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
 
 # 🛡️ Aegis Vault 7
 
@@ -237,6 +237,12 @@ npm run desktop:build
 
 # Run Desktop Release Gate (18-step automated verification)
 npm run desktop:release:gate
+
+# Build Local Signed Desktop Release (Offline/Local CI fallback)
+npm run release:local
+
+# Generate Auto-Updater Manifest (release-local/updater/latest.json)
+npm run release:updater:manifest
 ```
 
 ### Building Android Applications
