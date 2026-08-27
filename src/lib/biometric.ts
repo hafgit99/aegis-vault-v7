@@ -462,7 +462,7 @@ async function registerWebAuthnBiometric(payload: string, type: 'platform' | 'cr
             first: prfSalt.buffer,
           },
         },
-      } as unknown as AuthenticationExtensionsPublicKeyCredentialCreationOptions,
+      } as unknown as Record<string, unknown>,
       timeout: 60000,
     }
   };

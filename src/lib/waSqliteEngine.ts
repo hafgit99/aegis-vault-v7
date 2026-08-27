@@ -153,10 +153,11 @@ async function loadDefaultWaSqliteRuntime(
     import('wa-sqlite'),
   ]);
   const module = await SQLiteESMFactory(createWaSqliteModuleConfig(options));
+  const sqlite3 = options.asyncRuntime
+    ? await (SQLite as unknown as { AsyncFactory: (m: typeof module) => Promise<SQLiteAPI> }).AsyncFactory(module)
+    : SQLite.Factory(module);
   return {
-    sqlite3: options.asyncRuntime
-      ? (SQLite as unknown as { AsyncFactory: (m: typeof module) => Promise<SQLiteAPI> }).AsyncFactory(module)
-      : SQLite.Factory(module),
+    sqlite3: sqlite3 as unknown as WaSqliteApi,
     module,
   };
 }

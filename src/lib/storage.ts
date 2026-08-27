@@ -29,6 +29,7 @@ import { disableBiometric, hydrateBiometric } from './biometric';
 import { createDemoItems } from './storageDemoItems';
 import {
   getSecureStorageItem,
+  isSecureStorageAvailable,
   removeSecureStorageItem,
   secureStorageKeys,
   setSecureStorageItem,

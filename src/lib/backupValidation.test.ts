@@ -38,7 +38,7 @@ describe('backupValidation', () => {
     const result = validateBackupPayload(payload);
     expect(result.items).toHaveLength(1);
     expect(result.attachments).toHaveLength(1);
-    expect(result.attachments[0].name).toBe('doc.txt');
+    expect((result.attachments[0] as { name: string }).name).toBe('doc.txt');
   });
 
   it('rejects backup exceeding max file size limit', () => {

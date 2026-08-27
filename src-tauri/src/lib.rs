@@ -43,6 +43,11 @@ fn get_asset_integrity_anchor() -> AssetIntegrityAnchor {
     }
 }
 
+#[tauri::command]
+fn restart_app(app_handle: AppHandle) {
+    app_handle.restart();
+}
+
 #[cfg(target_os = "windows")]
 fn apply_screen_capture_protection_to_window(window: &WebviewWindow) -> Result<bool, String> {
     use windows_sys::Win32::UI::WindowsAndMessaging::{
@@ -767,7 +772,8 @@ pub fn run() {
             credential_handler::rotate_rust_session,
             credential_handler::close_rust_session,
             credential_handler::update_rust_active_vault_key,
-            credential_handler::has_rust_session
+            credential_handler::has_rust_session,
+            restart_app
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");

@@ -561,7 +561,7 @@ describe('wa-sqlite vault storage repository', () => {
     engine.metadata.set('vault_kdf_params', JSON.stringify({ memoryKiB: 999999, iterations: 5 }));
     const repository = createWaSqliteVaultStorageRepository({ engine });
 
-    const params = await repository.getKdfParams?.();
+    const params = (await repository.getKdfParams?.()) as { memoryKiB: number; iterations: number };
     expect(params.memoryKiB).toBe(999999);
     expect(params.iterations).toBe(5);
   });

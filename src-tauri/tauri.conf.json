@@ -24,7 +24,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; base-uri 'none'; object-src 'none'; frame-src 'none'; form-action 'none'; img-src 'self' asset: https://asset.localhost data: blob:; style-src 'self'; font-src 'self' data:; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; media-src 'self' blob:; connect-src 'self' ipc: http://ipc.localhost https://api.pwnedpasswords.com"
+      "csp": "default-src 'self'; base-uri 'none'; object-src 'none'; frame-src 'none'; form-action 'none'; img-src 'self' asset: https://asset.localhost data: blob:; style-src 'self'; font-src 'self' data:; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; media-src 'self' blob:; connect-src 'self' ipc: http://ipc.localhost https://api.pwnedpasswords.com https://github.com https://objects.githubusercontent.com"
     }
   },
   "bundle": {
@@ -52,7 +52,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IGFlZ2lzLXZhdWx0LXY3IHB1YmxpYyBrZXkKUlRTV1Yyb1dDMUJldUoxdVZwQk03LytPZHkwTGlZcGsyMEZWV1FNS2hCdkxidGZCVVZOTVhJc1gK",
       "endpoints": [
-        "https://releases.aegisvault.app/update/{{target}}/{{current_version}}"
+        "https://github.com/hafgit99/aegis-vault-v7/releases/latest/download/latest.json"
       ]
     }
   }

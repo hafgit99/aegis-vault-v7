@@ -492,7 +492,7 @@ export function useSettingsBackupImport({
       // Validate the backup schema (items and attachments)
       const { items, attachments } = validateBackupPayload(parsedEnvelope);
 
-      const importedNum = await handleImportedItems(items, attachments);
+      const importedNum = await handleImportedItems(items as Partial<VaultItem>[], attachments as AttachmentBackupRecord[]);
 
       setImportState(prev => ({
         ...prev,
@@ -583,7 +583,7 @@ export function useSettingsBackupImport({
       if (parsedJson && parsedJson.version === 7 && parsedJson.items) {
         // Strict Validation
         const { items, attachments } = validateBackupPayload(parsedJson, file.size);
-        const count = await handleImportedItems(items, attachments);
+        const count = await handleImportedItems(items as Partial<VaultItem>[], attachments as AttachmentBackupRecord[]);
 
         setImportState(prev => ({
           ...prev,
@@ -631,7 +631,7 @@ export function useSettingsBackupImport({
           // which would otherwise be rejected with the misleading
           // "Yedek dosyasının içi liste yapısında değil" error.
           const { items } = validateBackupPayload(scanResult.items, file.size, { fromUniversalImport: true });
-          const count = await handleImportedItems(items);
+          const count = await handleImportedItems(items as Partial<VaultItem>[]);
 
           setImportState(prev => ({
             ...prev,

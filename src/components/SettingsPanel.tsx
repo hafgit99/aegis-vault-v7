@@ -30,6 +30,7 @@ import { SettingsEmergencyKitCard } from './settings/SettingsEmergencyKitCard';
 import { SettingsAutoLockCard } from './settings/SettingsAutoLockCard';
 import { SettingsStorageMigrationCard } from './settings/SettingsStorageMigrationCard';
 import { SettingsExtensionTokenCard } from './settings/SettingsExtensionTokenCard';
+import { SettingsUpdateCard } from './settings/SettingsUpdateCard';
 import PasswordConfirmModal from './PasswordConfirmModal';
 import { PasskeyManager } from './PasskeyManager';
 import type { AppNotification } from '../types';
@@ -372,6 +373,9 @@ export default function SettingsPanel({
         onRotateToken={handleRotateToken}
         t={t}
       />
+
+      {/* Desktop App Auto-Updates */}
+      <SettingsUpdateCard t={t} />
 
       {/* Extreme Danger Zone */}
       <SettingsDangerZone

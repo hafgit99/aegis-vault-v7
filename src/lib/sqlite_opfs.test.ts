@@ -1028,7 +1028,7 @@ expect(saved[0]!.id).toHaveLength(9);
     // Get the written payload from writeDesktopVaultDatabase call
     const lastWriteCall = writeDesktopVaultDatabase.mock.calls.at(-1);
     expect(lastWriteCall).toBeDefined();
-    const payloadStr = lastWriteCall![0] as string;
+    const payloadStr = (lastWriteCall as unknown[])[0] as string;
     const parsed = JSON.parse(payloadStr);
     expect(parsed.vault_items).toBeDefined();
     expect(parsed.integrityHmac).toBeDefined();

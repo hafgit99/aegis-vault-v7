@@ -73,27 +73,29 @@ export function validateBackupPayload(
     items = parsed;
   } else {
     // Envelope format
-    if (!parsed.items || !Array.isArray(parsed.items)) {
+    const envelope = parsed as Record<string, unknown>;
+    if (!envelope.items || !Array.isArray(envelope.items)) {
       throw new BackupValidationError(validationErrorCodes.missingItems, 'Backup envelope is missing items array.');
     }
-    items = parsed.items;
-    if (parsed.attachments) {
-      if (!Array.isArray(parsed.attachments)) {
+    items = envelope.items;
+    if (envelope.attachments) {
+      if (!Array.isArray(envelope.attachments)) {
         throw new BackupValidationError(validationErrorCodes.invalidBackupFormat, 'Backup attachments must be an array.');
       }
-      attachments = parsed.attachments;
+      attachments = envelope.attachments;
     }
   }
 
   // 3. Validate items schema
   for (let idx = 0; idx < items.length; idx++) {
-    const item = items[idx];
-    if (!item || typeof item !== 'object') {
+    const itemRaw = items[idx];
+    if (!itemRaw || typeof itemRaw !== 'object') {
       throw new BackupValidationError(
         validationErrorCodes.itemMissingRequiredFields,
         `Item at index ${idx} is not an object.`
       );
     }
+    const item = itemRaw as Record<string, unknown>;
 
     if (options.fromUniversalImport) {
       // The universal importer always materialises a non-empty title and
@@ -129,13 +131,14 @@ export function validateBackupPayload(
 
   // 4. Validate attachments schema
   for (let idx = 0; idx < attachments.length; idx++) {
-    const att = attachments[idx];
-    if (!att || typeof att !== 'object') {
+    const attRaw = attachments[idx];
+    if (!attRaw || typeof attRaw !== 'object') {
       throw new BackupValidationError(
         validationErrorCodes.attachmentMissingRequiredFields,
         `Attachment at index ${idx} is not an object.`
       );
     }
+    const att = attRaw as Record<string, unknown>;
     const { id, name, type, size, dataBase64 } = att;
     if (!id || !name || !type || typeof size !== 'number' || typeof dataBase64 !== 'string') {
       throw new BackupValidationError(

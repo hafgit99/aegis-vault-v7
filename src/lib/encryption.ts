@@ -107,7 +107,13 @@ export async function decryptDataWithPasswordSecure(envelopeJsonStr: string, pas
     throw new SecureBackupError(secureBackupErrorCodes.unsupportedLegacyEnvelope);
   }
 
-  if (!parsed.salt || !parsed.iv || !parsed.tag || !parsed.payload || !parsed.checksum) {
+  const salt = String(parsed.salt || '');
+  const iv = String(parsed.iv || '');
+  const tag = String(parsed.tag || '');
+  const payload = String(parsed.payload || '');
+  const checksum = String(parsed.checksum || '');
+
+  if (!salt || !iv || !tag || !payload || !checksum) {
     throw new SecureBackupError(secureBackupErrorCodes.missingFields);
   }
 
@@ -118,23 +124,24 @@ export async function decryptDataWithPasswordSecure(envelopeJsonStr: string, pas
   if (!parsed.kdfParams || typeof parsed.kdfParams !== 'object') {
     throw new SecureBackupError(secureBackupErrorCodes.weakKdfParams);
   }
-  const { memoryKiB, iterations } = parsed.kdfParams;
+  const kdfParams = parsed.kdfParams as { memoryKiB?: unknown; iterations?: unknown; parallelism?: unknown };
+  const { memoryKiB, iterations } = kdfParams;
   if (typeof memoryKiB !== 'number' || typeof iterations !== 'number' || memoryKiB < MIN_ARGON2ID_MEMORY_KIB || iterations < 3) {
     throw new SecureBackupError(secureBackupErrorCodes.weakKdfParams);
   }
 
   const encoder = new TextEncoder();
-  const cipherBytes = encoder.encode(parsed.payload);
+  const cipherBytes = encoder.encode(payload);
   const calculatedChecksumHex = await sha256Hex(cipherBytes);
 
-  if (calculatedChecksumHex !== parsed.checksum) {
+  if (calculatedChecksumHex !== checksum) {
     throw new SecureBackupError(secureBackupErrorCodes.checksumMismatch);
   }
 
-  const decryptWithParams = async (kdfParams: typeof parsed.kdfParams): Promise<string> => {
+  const decryptWithParams = async (params: { memoryKiB?: unknown; iterations?: unknown; parallelism?: unknown }): Promise<string> => {
     let aesKey: Uint8Array;
     try {
-      aesKey = await deriveArgon2idKey(password, parsed.salt, kdfParams);
+      aesKey = await deriveArgon2idKey(password, salt, params as Parameters<typeof deriveArgon2idKey>[2]);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error ?? '');
       if (/memory access out of bounds|out of memory|wasm/i.test(message)) {
@@ -145,16 +152,16 @@ export async function decryptDataWithPasswordSecure(envelopeJsonStr: string, pas
 
     return webCryptoAesGcmDecrypt(
       {
-        iv: parsed.iv,
-        tag: parsed.tag,
-        ciphertext: parsed.payload,
+        iv,
+        tag,
+        ciphertext: payload,
       },
       aesKey,
     );
   };
 
   try {
-    return await decryptWithParams(parsed.kdfParams);
+    return await decryptWithParams(kdfParams);
   } catch (error) {
     // Surface a stable KDF-runtime error directly to the caller.
     if (error instanceof SecureBackupError && error.code === secureBackupErrorCodes.kdfRuntimeFailure) {
