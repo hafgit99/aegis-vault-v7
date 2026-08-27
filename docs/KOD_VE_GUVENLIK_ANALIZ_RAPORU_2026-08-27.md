@@ -53,10 +53,7 @@
 
 **BULGU SEC-B1 — Otomatik kilit pencere gizlenince sayacı iptal ediyor** ✅ **ÇÖZÜLDÜ (27.08.2026):** `useAutoLock.ts` wall-clock deadline modeline taşındı — gizlilik değişimi sayacı artık asla iptal etmiyor; gizliyken süre dolarsa görünür olur olmaz anında kilit (throttle'lı timer'lar için deadline zorlaması); timer erken tetiklenirse erken kilit engelleniyor; çifte `onLock` koruması eklendi. Ayrıca UI/docs ile çelişen 30 dk tavanı, ürün tasarımıyla hizalanarak 2 saate çıkarıldı (`MAXIMUM_AUTO_LOCK_DURATION_SECONDS = 7200`). 7 birim test + typecheck + lint yeşil.
 
-**BULGU SEC-B2 — Sync config'de sabit salt + "zayıflatılmış" KDF**
-- **Dosya:** `src/lib/` sync zarf üretimi (fallback profiller 16 MiB / 8 MiB @ 3 iter)
-- **Risk:** WebDAV/S3 kimlik bilgileri içeren zarf için sabit salt savunulamaz; çevrimdışı brute-force maliyeti düşüyor.
-- **Düzeltme:** Sync zarfı için taze salt + vault ile aynı tam Argon2id profili zorunlu kılın.
+**BULGU SEC-B2 — Sync config'de sabit salt + "zayıflatılmış" KDF** ✅ **ÇÖZÜLDÜ (27.08.2026):** `syncConfigStorage.ts` v2 zarf formatına taşındı — her kayıtta CSPRNG ile üretilen 16-byte rastgele salt + tam vault KDF profili (`getDefaultKdfProfile`) kullanılıyor; yüklenen KDF parametreleri `sanitizeKdfParams` ile doğrulanıyor (floor altı değerler reddediliyor/clamp'leniyor → kurcalanmış parametreler şifre çözme hatası veriyor). v1 zarfları geriye dönük uyumluluk için okunmaya devam ediyor ve başarılı çözümde şeffaf olarak v2'ye yükseltiliyor. 12 birim test (4'ü yeni güvenlik davranışı) + typecheck + lint yeşil.
 
 **BULGU SEC-B3 — Master parola string olarak IPC/heap'te yaşıyor**
 - **Kanıt:** `withActiveSessionSecrets` string temelli; "No-JS-Master-String" gate'i isim-bazlı olduğundan bu yol kaçıyor.

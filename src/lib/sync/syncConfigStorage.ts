@@ -7,41 +7,114 @@ import type { S3SyncConfig, SyncConfig, WebDavSyncConfig } from './syncTypes';
 import { SyncError, syncErrorCodes } from './syncTypes';
 import type { WebCryptoAesGcmPayload } from '../webcrypto';
 import { webCryptoAesGcmEncrypt, webCryptoAesGcmDecrypt, generateSafeIv } from '../webcrypto';
-import { deriveArgon2idKey } from '../argon2id';
+import { deriveArgon2idKey, enforceMinimumKdfFloor, getDefaultKdfProfile } from '../argon2id';
+import type { Argon2idOptions } from '../argon2id';
+import { secureRandomBytes } from '../random';
 import { isPrivateOrLoopbackHostname } from '../airgapNetworkPolicy';
 
 const CONFIG_STORAGE_KEY = 'aegis_sync_config_v1';
 
 /**
- * Derives a 32-byte AES key from the master password specifically for
- * encrypting sync configuration. Uses a fixed salt suffix so we don't
- * need to store another random salt — the master password entropy is
- * sufficient since this is low-security metadata, not vault content.
- *
- * A separate HKDF-style domain label prevents key reuse with vault encryption.
+ * SEC-B2: sync configuration envelopes carry live WebDAV/S3 credentials, so
+ * they are NOT "low-security metadata". Version 1 used a fixed, deterministic
+ * salt and a weakened KDF profile, which made offline brute-force against a
+ * stolen envelope cheaper and enabled cross-install precomputation. Version 2
+ * stores a per-save random salt plus the exact KDF parameters used, matching
+ * the full vault KDF profile.
  */
-async function deriveConfigKey(masterPassword: string): Promise<Uint8Array> {
-  // Deterministic but domain-separated salt
-  const saltHex = Array.from(new TextEncoder().encode('aegis-sync-config-v1'))
+const LEGACY_V1_SALT_HEX = toHex(new TextEncoder().encode('aegis-sync-config-v1'));
+
+const LEGACY_V1_KDF: Argon2idOptions = {
+  memoryKiB: 16 * 1024,
+  iterations: 2, // historic value; the KDF floor raises this to 3 on derive
+  parallelism: 1,
+  hashLength: 32,
+};
+
+function toHex(bytes: Uint8Array): string {
+  return Array.from(bytes)
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
+}
 
-  return deriveArgon2idKey(masterPassword, saltHex, {
-    memoryKiB: 16 * 1024, // 16 MB — lighter than vault KDF, config is low-risk
-    iterations: 2,
-    parallelism: 1,
-    hashLength: 32,
+interface SyncConfigKdfParams {
+  salt: string;
+  memoryKiB: number;
+  iterations: number;
+  parallelism: number;
+  hashLength: number;
+}
+
+interface StoredSyncConfigEnvelopeV1 {
+  version: 1;
+  payload: WebCryptoAesGcmPayload;
+}
+
+interface StoredSyncConfigEnvelopeV2 {
+  version: 2;
+  payload: WebCryptoAesGcmPayload;
+  kdf: SyncConfigKdfParams;
+}
+
+type StoredSyncConfigEnvelope = StoredSyncConfigEnvelopeV1 | StoredSyncConfigEnvelopeV2;
+
+async function deriveConfigKey(masterPassword: string, kdf: SyncConfigKdfParams): Promise<Uint8Array> {
+  return deriveArgon2idKey(masterPassword, kdf.salt, {
+    memoryKiB: kdf.memoryKiB,
+    iterations: kdf.iterations,
+    parallelism: kdf.parallelism,
+    hashLength: kdf.hashLength,
   });
 }
 
-interface StoredSyncConfigEnvelope {
-  version: 1;
-  payload: WebCryptoAesGcmPayload;
+function createKdfParams(): SyncConfigKdfParams {
+  const profile = getDefaultKdfProfile();
+  return {
+    salt: toHex(secureRandomBytes(16)),
+    memoryKiB: profile.memoryKiB,
+    iterations: profile.iterations,
+    parallelism: profile.parallelism,
+    hashLength: profile.hashLength,
+  };
+}
+
+/**
+ * Validates stored KDF parameters before deriving. Rejects malformed input and
+ * clamps values to sane bounds so a tampered envelope cannot weaken the KDF
+ * below the cryptographic floor (lowered parameters simply fail to decrypt).
+ */
+function sanitizeKdfParams(raw: unknown): SyncConfigKdfParams | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const candidate = raw as Record<string, unknown>;
+
+  if (typeof candidate.salt !== 'string' || !/^[0-9a-f]+$/i.test(candidate.salt) || candidate.salt.length < 16) {
+    return null;
+  }
+
+  const numeric = (value: unknown): number | null =>
+    typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
+
+  const memoryKiB = numeric(candidate.memoryKiB);
+  const iterations = numeric(candidate.iterations);
+  const parallelism = numeric(candidate.parallelism);
+  const hashLength = numeric(candidate.hashLength);
+  if (memoryKiB === null || iterations === null || parallelism === null || hashLength === null) return null;
+  if (hashLength < 32) return null; // AES-256 requires a 32-byte key
+
+  const clamped = enforceMinimumKdfFloor({
+    memoryKiB: Math.min(memoryKiB, 1024 * 1024),
+    iterations: Math.min(iterations, 16),
+    parallelism: Math.min(parallelism, 4),
+    hashLength: Math.min(hashLength, 64),
+  });
+
+  return { salt: candidate.salt, ...clamped };
 }
 
 /**
  * Encrypt and persist the sync configuration.
  * Credentials (WebDAV password, OAuth tokens) never touch localStorage in plaintext.
+ * Always writes the version 2 envelope (random salt + full vault KDF profile).
  */
 export async function saveSyncConfig(config: SyncConfig, masterPassword: string): Promise<void> {
   if (config.type === 'disabled') {
@@ -49,16 +122,19 @@ export async function saveSyncConfig(config: SyncConfig, masterPassword: string)
     return;
   }
 
-  const key = await deriveConfigKey(masterPassword);
+  const kdf = createKdfParams();
+  const key = await deriveConfigKey(masterPassword, kdf);
   const payload = await webCryptoAesGcmEncrypt(JSON.stringify(config), key, generateSafeIv());
 
-  const envelope: StoredSyncConfigEnvelope = { version: 1, payload };
+  const envelope: StoredSyncConfigEnvelopeV2 = { version: 2, payload, kdf };
   localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(envelope));
 }
 
 /**
  * Load and decrypt the sync configuration.
  * Returns `{ type: 'disabled' }` when no configuration is stored.
+ * Version 1 envelopes (fixed salt, weakened KDF) remain readable and are
+ * transparently upgraded to version 2 on successful decryption.
  */
 export async function loadSyncConfig(masterPassword: string): Promise<SyncConfig> {
   const raw = localStorage.getItem(CONFIG_STORAGE_KEY);
@@ -71,21 +147,56 @@ export async function loadSyncConfig(masterPassword: string): Promise<SyncConfig
     return { type: 'disabled' };
   }
 
-  if (envelope.version !== 1 || !envelope.payload) {
-    return { type: 'disabled' };
+  if (envelope.version === 2) {
+    const kdf = sanitizeKdfParams((envelope as StoredSyncConfigEnvelopeV2).kdf);
+    if (!kdf || !envelope.payload) return { type: 'disabled' };
+
+    try {
+      const key = await deriveConfigKey(masterPassword, kdf);
+      const decrypted = await webCryptoAesGcmDecrypt(envelope.payload, key);
+      return JSON.parse(decrypted) as SyncConfig;
+    } catch {
+      // Wrong password, tampered KDF parameters, or corrupt data
+      throw new SyncError(
+        syncErrorCodes.authFailed,
+        'Failed to decrypt sync configuration — wrong master password or corrupt data.',
+      );
+    }
   }
 
-  try {
-    const key = await deriveConfigKey(masterPassword);
-    const decrypted = await webCryptoAesGcmDecrypt(envelope.payload, key);
+  if (envelope.version === 1 && envelope.payload) {
+    let decrypted: string;
+    try {
+      const legacyKey = await deriveConfigKey(masterPassword, {
+        salt: LEGACY_V1_SALT_HEX,
+        memoryKiB: LEGACY_V1_KDF.memoryKiB ?? 16 * 1024,
+        iterations: LEGACY_V1_KDF.iterations ?? 2,
+        parallelism: LEGACY_V1_KDF.parallelism ?? 1,
+        hashLength: LEGACY_V1_KDF.hashLength ?? 32,
+      });
+      decrypted = await webCryptoAesGcmDecrypt(envelope.payload, legacyKey);
+    } catch {
+      throw new SyncError(
+        syncErrorCodes.authFailed,
+        'Failed to decrypt sync configuration — wrong master password or corrupt data.',
+      );
+    }
+
+    // Transparent upgrade: re-encrypt with a random salt and the full KDF profile.
+    try {
+      const kdf = createKdfParams();
+      const key = await deriveConfigKey(masterPassword, kdf);
+      const payload = await webCryptoAesGcmEncrypt(decrypted, key, generateSafeIv());
+      const upgraded: StoredSyncConfigEnvelopeV2 = { version: 2, payload, kdf };
+      localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(upgraded));
+    } catch {
+      // Upgrade is best-effort; the legacy envelope stays readable.
+    }
+
     return JSON.parse(decrypted) as SyncConfig;
-  } catch {
-    // Wrong password or corrupt data — treat as unconfigured
-    throw new SyncError(
-      syncErrorCodes.authFailed,
-      'Failed to decrypt sync configuration — wrong master password or corrupt data.',
-    );
   }
+
+  return { type: 'disabled' };
 }
 
 /** Remove all sync configuration from local storage. */
