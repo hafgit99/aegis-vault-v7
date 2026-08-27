@@ -7,7 +7,8 @@
   ],
   "permissions": [
     "core:default",
-    "biometric:default"
+    "biometric:default",
+    "updater:default"
   ]
 }
 
