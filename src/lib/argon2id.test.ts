@@ -2,7 +2,15 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createArgon2idHash, deriveArgon2idKey, verifyArgon2idHash } from './argon2id';
+import {
+  createArgon2idHash,
+  deriveArgon2idKey,
+  enforceMinimumKdfFloor,
+  getDefaultKdfProfile,
+  isArgon2WriteBlocked,
+  subscribeArgon2Degradation,
+  verifyArgon2idHash,
+} from './argon2id';
 
 const hash = vi.fn(async ({ pass, salt, hashLen, time, mem, parallelism }) => ({
   hash: new Uint8Array(Array.from({ length: hashLen }, (_, index) => (pass.length + salt.length + index) % 256)),
@@ -182,6 +190,99 @@ describe('argon2id adapter', () => {
 
       expect(invoke).toHaveBeenCalled();
       expect(hash).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe('argon2id degradation signalling', () => {
+  it('unsubscribes cleanly without throwing', () => {
+    const callback = vi.fn();
+    const unsubscribe = subscribeArgon2Degradation(callback);
+
+    expect(typeof unsubscribe).toBe('function');
+    expect(() => unsubscribe()).not.toThrow();
+  });
+
+  it('records write-blocked degradation and replays it to new subscribers', async () => {
+    hash.mockImplementation(async ({ mem }) => {
+      if (mem >= 16 * 1024) throw new Error('memory access out of bounds');
+      return { hash: new Uint8Array(32).fill(7), encoded: '$argon2id$degraded' };
+    });
+
+    await deriveArgon2idKey('p', 's', { memoryKiB: 32 * 1024, iterations: 3, parallelism: 1, hashLength: 32 });
+
+    expect(isArgon2WriteBlocked()).toBe(true);
+
+    const callback = vi.fn();
+    const unsubscribe = subscribeArgon2Degradation(callback);
+    expect(callback).toHaveBeenCalledTimes(1);
+    expect(callback.mock.calls[0]![0]).toMatchObject({ degraded: true, writeBlocked: true });
+
+    unsubscribe();
+  });
+
+  it('isolates exceptions thrown by degradation subscribers', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const unsubscribe = subscribeArgon2Degradation(() => {
+      throw new Error('boom');
+    });
+
+    hash.mockImplementation(async ({ mem }) => {
+      if (mem >= 16 * 1024) throw new Error('memory access out of bounds');
+      return { hash: new Uint8Array(32).fill(9), encoded: '$argon2id$degraded' };
+    });
+
+    await expect(
+      deriveArgon2idKey('p', 's', { memoryKiB: 32 * 1024, iterations: 3, parallelism: 1, hashLength: 32 }),
+    ).resolves.toBeInstanceOf(Uint8Array);
+
+    unsubscribe();
+    errorSpy.mockRestore();
+  });
+});
+
+describe('argon2id KDF floor and defaults', () => {
+  it('selects the portable profile outside the desktop runtime', () => {
+    expect(getDefaultKdfProfile()).toMatchObject({
+      memoryKiB: 32 * 1024,
+      iterations: 3,
+      parallelism: 1,
+      hashLength: 32,
+    });
+  });
+
+  it('raises memory, iterations and parallelism to the minimum floor', () => {
+    const resolved = enforceMinimumKdfFloor({ memoryKiB: 1, iterations: 1, parallelism: 0 });
+    expect(resolved).toMatchObject({
+      memoryKiB: 8192,
+      iterations: 3,
+      parallelism: 1,
+      hashLength: 32,
+    });
+  });
+
+  it('keeps explicit parameters that already exceed the floor', () => {
+    const resolved = enforceMinimumKdfFloor({
+      memoryKiB: 128 * 1024,
+      iterations: 5,
+      parallelism: 2,
+      hashLength: 64,
+    });
+    expect(resolved).toEqual({
+      memoryKiB: 128 * 1024,
+      iterations: 5,
+      parallelism: 2,
+      hashLength: 64,
+    });
+  });
+
+  it('fills missing fields from the portable default profile', () => {
+    const resolved = enforceMinimumKdfFloor({ memoryKiB: 16 * 1024 });
+    expect(resolved).toMatchObject({
+      memoryKiB: 16 * 1024,
+      iterations: 3,
+      parallelism: 1,
+      hashLength: 32,
     });
   });
 });

@@ -106,4 +106,74 @@ describe('wa-sqlite persistence smoke orchestration', () => {
     });
     expect(createEngine).toHaveBeenCalledTimes(2);
   });
+it('reports write failures thrown by the engine', async () => {
+    const profile = createProfile(true);
+    const createEngine = vi.fn(() => ({
+      initialize: vi.fn(async () => ({ initialized: true, databaseName: '/smoke.db', tableCount: 0, persistenceProfile: profile })),
+      execute: vi.fn(async () => {
+        throw new Error('write exploded');
+      }),
+      executeReadOnly: vi.fn(async () => ({ columns: [], rows: [] })),
+      selectObjects: vi.fn(async () => []),
+      close: vi.fn(async () => undefined),
+    }));
+
+    await expect(verifyWaSqlitePersistentVfsSmoke({ persistenceProfile: profile, createEngine })).resolves.toMatchObject({
+      status: 'failed',
+      issue: 'write exploded',
+    });
+  });
+
+  it('reports read errors returned by the engine', async () => {
+    const profile = createProfile(true);
+    const createEngine = vi.fn(() => ({
+      initialize: vi.fn(async () => ({ initialized: true, databaseName: '/smoke.db', tableCount: 0, persistenceProfile: profile })),
+      execute: vi.fn(async () => ({ columns: [], rows: [] })),
+      executeReadOnly: vi.fn(async () => ({ columns: [], rows: [], error: 'read failed' })),
+      selectObjects: vi.fn(async () => []),
+      close: vi.fn(async () => undefined),
+    }));
+
+    await expect(verifyWaSqlitePersistentVfsSmoke({ persistenceProfile: profile, createEngine })).resolves.toMatchObject({
+      status: 'failed',
+      issue: 'read failed',
+    });
+  });
+
+  it('reports read failures thrown by the engine', async () => {
+    const profile = createProfile(true);
+    const createEngine = vi.fn(() => ({
+      initialize: vi.fn(async () => ({ initialized: true, databaseName: '/smoke.db', tableCount: 0, persistenceProfile: profile })),
+      execute: vi.fn(async () => ({ columns: [], rows: [] })),
+      executeReadOnly: vi.fn(async () => {
+        throw new Error('read exploded');
+      }),
+      selectObjects: vi.fn(async () => []),
+      close: vi.fn(async () => undefined),
+    }));
+
+    await expect(verifyWaSqlitePersistentVfsSmoke({ persistenceProfile: profile, createEngine })).resolves.toMatchObject({
+      status: 'failed',
+      issue: 'read exploded',
+    });
+  });
+
+  it('ignores close failures during smoke cleanup', async () => {
+    const profile = createProfile(true);
+    const createEngine = vi.fn(() => ({
+      initialize: vi.fn(async () => ({ initialized: true, databaseName: '/smoke.db', tableCount: 0, persistenceProfile: profile })),
+      execute: vi.fn(async () => ({ columns: [], rows: [] })),
+      executeReadOnly: vi.fn(async () => ({ columns: ['value'], rows: [['persisted']] })),
+      selectObjects: vi.fn(async () => []),
+      close: vi.fn(async () => {
+        throw new Error('close failed');
+      }),
+    }));
+
+    await expect(verifyWaSqlitePersistentVfsSmoke({
+      persistenceProfile: profile,
+      createEngine,
+      smokeValue: 'persisted',
+    })).resolves.toMatchObject({ status: 'passed' });
+  });
 });

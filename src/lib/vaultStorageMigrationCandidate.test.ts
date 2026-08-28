@@ -145,4 +145,28 @@ describe('wa-sqlite persistent migration candidate', () => {
       },
     })).rejects.toThrow(WA_SQLITE_PERSISTENT_VFS_UNAVAILABLE);
   });
+it('honours custom source and target backend kinds', async () => {
+    const sourceRepository = repositoryStub([item()]);
+    const targetRepository = repositoryStub([]);
+    const persistenceProfile = createWaSqlitePersistenceProfile('desktop-app-data', true);
+
+    await expect(runWaSqlitePersistentMigrationCandidate('master-pass', {
+      sourceRepository,
+      sourceBackend: 'wa-sqlite',
+      targetBackend: 'wa-sqlite',
+      verifyPersistentTarget: passingSmoke(),
+      migrationPair: {
+        targetRepository,
+        reopenTargetRepository: () => repositoryStub([item()]),
+        persistenceProfile,
+      },
+    })).resolves.toMatchObject({
+      migrationResult: {
+        status: 'migrated',
+        sourceBackend: 'wa-sqlite',
+        targetBackend: 'wa-sqlite',
+      },
+      persistenceProfile,
+    });
+  });
 });

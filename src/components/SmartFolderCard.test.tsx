@@ -102,4 +102,145 @@ describe('SmartFolderCard', () => {
     fireEvent.keyDown(renameBtn, { key: 'Enter' });
     expect(onRename).toHaveBeenCalledTimes(2);
   });
+
+  it('triggers onRename via the Space key', () => {
+    const onRename = vi.fn();
+    render(
+      <LanguageProvider>
+        <SmartFolderCard
+          folder={mockSmartFolder}
+          count={0}
+          isActive={false}
+          onSelect={vi.fn()}
+          onRename={onRename}
+        />
+      </LanguageProvider>,
+    );
+
+    fireEvent.keyDown(screen.getByRole('button', { name: /yeniden adlandır|rename/i }), { key: ' ' });
+
+    expect(onRename).toHaveBeenCalledTimes(1);
+  });
+
+  it('triggers onDelete via keyboard for user-defined folders', () => {
+    const onDelete = vi.fn();
+    render(
+      <LanguageProvider>
+        <SmartFolderCard
+          folder={mockSmartFolder}
+          count={1}
+          isActive={false}
+          onSelect={vi.fn()}
+          onDelete={onDelete}
+        />
+      </LanguageProvider>,
+    );
+
+    const deleteBtn = screen.getAllByRole('button', { name: /akıllı klasörü sil|sil|delete/i });
+    if (deleteBtn[0]) {
+      fireEvent.keyDown(deleteBtn[0], { key: 'Enter' });
+      fireEvent.keyDown(deleteBtn[0], { key: ' ' });
+      expect(onDelete).toHaveBeenCalledTimes(2);
+    }
+  });
+
+  it('hides the delete button when onDelete is omitted', () => {
+    render(
+      <LanguageProvider>
+        <SmartFolderCard
+          folder={mockSmartFolder}
+          count={0}
+          isActive={false}
+          onSelect={vi.fn()}
+        />
+      </LanguageProvider>,
+    );
+
+    expect(screen.queryByRole('button', { name: /akıllı klasörü sil|sil|delete/i })).toBeNull();
+  });
+
+  it('renders localized names and the built-in badge for built-in folders', () => {
+    const builtInFolder: SmartFolder = {
+      id: 'smart-favorites',
+      name: 'Favorites',
+      icon: 'star',
+      color: 'amber',
+      rules: [{ kind: 'favorite' }],
+      builtIn: true,
+      createdAt: '2026',
+    };
+
+    render(
+      <LanguageProvider>
+        <SmartFolderCard
+          folder={builtInFolder}
+          count={3}
+          isActive={true}
+          onSelect={vi.fn()}
+        />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByText('Favoriler')).toBeTruthy();
+    expect(screen.getByText('YERLEŞİK')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /akıllı klasörü sil|sil|delete/i })).toBeNull();
+  });
+
+  it('renders the localized description and stops event propagation on rename click', () => {
+    const onSelect = vi.fn();
+    const onRename = vi.fn();
+    const builtInFolder: SmartFolder = {
+      id: 'smart-favorites',
+      name: 'Favorites',
+      icon: 'star',
+      color: 'amber',
+      rules: [{ kind: 'favorite' }],
+      builtIn: true,
+      createdAt: '2026',
+      description: 'Built-in favourites',
+    };
+
+    render(
+      <LanguageProvider>
+        <SmartFolderCard
+          folder={builtInFolder}
+          count={3}
+          isActive={false}
+          onSelect={onSelect}
+          onRename={onRename}
+        />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByText('Favori olarak işaretlediğiniz ögeler.')).toBeTruthy();
+    fireEvent.click(screen.getByText('✎'));
+    expect(onRename).toHaveBeenCalledTimes(1);
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the folder icon for unknown icon keys', () => {
+    const unknownIcon: SmartFolder = {
+      id: 'sf-x',
+      name: 'Mystery',
+      icon: 'does-not-exist' as SmartFolder['icon'],
+      color: 'emerald',
+      rules: [{ kind: 'category', categories: ['login'] }],
+      builtIn: false,
+      createdAt: '2026',
+    };
+
+    render(
+      <LanguageProvider>
+        <SmartFolderCard
+          folder={unknownIcon}
+          count={0}
+          isActive={false}
+          onSelect={vi.fn()}
+        />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByText('Mystery')).toBeTruthy();
+    expect(screen.getByTestId('smart-folder-card')).toBeTruthy();
+  });
 });

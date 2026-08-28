@@ -134,4 +134,168 @@ describe('OrganisationSidebar', () => {
     expect(onSelectFolder).toHaveBeenCalledWith(null);
     expect(onSelectSmartFolder).toHaveBeenCalledWith('sf-weak');
   });
+
+  it('shows an empty-tags hint when no tags exist', () => {
+    render(
+      <LanguageProvider>
+        <OrganisationSidebar
+          folders={mockFolders}
+          tags={[]}
+          smartFolders={mockSmartFolders}
+          smartFolderCounts={{ 'sf-weak': 1 }}
+          items={mockItems}
+          activeFolderId={null}
+          activeSmartFolderId={null}
+          onSelectFolder={vi.fn()}
+          onSelectSmartFolder={vi.fn()}
+          onCreateFolder={vi.fn()}
+          onDeleteFolder={vi.fn()}
+          onCreateTag={vi.fn()}
+          onUpdateTag={vi.fn()}
+          onDeleteTag={vi.fn()}
+          onCreateSmartFolder={vi.fn()}
+          onDeleteSmartFolder={vi.fn()}
+          isOpen={true}
+        />
+      </LanguageProvider>,
+    );
+
+    const pills = screen.getByTestId('org-tag-pills');
+    expect(pills.textContent).toContain('Kayıtlı etiket yok');
+  });
+
+  it('creates a favourite smart folder through the prompt', () => {
+    const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('Work Favs');
+    const onCreateSmartFolder = vi.fn();
+
+    render(
+      <LanguageProvider>
+        <OrganisationSidebar
+          folders={mockFolders}
+          tags={mockTags}
+          smartFolders={[]}
+          smartFolderCounts={{}}
+          items={mockItems}
+          activeFolderId={null}
+          activeSmartFolderId={null}
+          onSelectFolder={vi.fn()}
+          onSelectSmartFolder={vi.fn()}
+          onCreateFolder={vi.fn()}
+          onDeleteFolder={vi.fn()}
+          onCreateTag={vi.fn()}
+          onUpdateTag={vi.fn()}
+          onDeleteTag={vi.fn()}
+          onCreateSmartFolder={onCreateSmartFolder}
+          onDeleteSmartFolder={vi.fn()}
+          isOpen={true}
+        />
+      </LanguageProvider>,
+    );
+
+    fireEvent.click(screen.getByTestId('org-new-smart-folder'));
+
+    expect(onCreateSmartFolder).toHaveBeenCalledWith({
+      name: 'Work Favs',
+      rules: [{ kind: 'favorite' }],
+    });
+
+    promptSpy.mockRestore();
+  });
+
+  it('ignores a cancelled smart-folder prompt', () => {
+    const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue(null);
+    const onCreateSmartFolder = vi.fn();
+
+    render(
+      <LanguageProvider>
+        <OrganisationSidebar
+          folders={mockFolders}
+          tags={mockTags}
+          smartFolders={[]}
+          smartFolderCounts={{}}
+          items={mockItems}
+          activeFolderId={null}
+          activeSmartFolderId={null}
+          onSelectFolder={vi.fn()}
+          onSelectSmartFolder={vi.fn()}
+          onCreateFolder={vi.fn()}
+          onDeleteFolder={vi.fn()}
+          onCreateTag={vi.fn()}
+          onUpdateTag={vi.fn()}
+          onDeleteTag={vi.fn()}
+          onCreateSmartFolder={onCreateSmartFolder}
+          onDeleteSmartFolder={vi.fn()}
+          isOpen={true}
+        />
+      </LanguageProvider>,
+    );
+
+    fireEvent.click(screen.getByTestId('org-new-smart-folder'));
+
+    expect(onCreateSmartFolder).not.toHaveBeenCalled();
+
+    promptSpy.mockRestore();
+  });
+
+  it('keeps the sidebar off-screen when closed', () => {
+    render(
+      <LanguageProvider>
+        <OrganisationSidebar
+          folders={mockFolders}
+          tags={mockTags}
+          smartFolders={mockSmartFolders}
+          smartFolderCounts={{ 'sf-weak': 1 }}
+          items={mockItems}
+          activeFolderId={null}
+          activeSmartFolderId={null}
+          onSelectFolder={vi.fn()}
+          onSelectSmartFolder={vi.fn()}
+          onCreateFolder={vi.fn()}
+          onDeleteFolder={vi.fn()}
+          onCreateTag={vi.fn()}
+          onUpdateTag={vi.fn()}
+          onDeleteTag={vi.fn()}
+          onCreateSmartFolder={vi.fn()}
+          onDeleteSmartFolder={vi.fn()}
+          isOpen={false}
+        />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByTestId('organisation-sidebar').className).toContain('-translate-x-full');
+  });
+
+  it('selects a folder and clears the active smart folder', () => {
+    const onSelectFolder = vi.fn();
+    const onSelectSmartFolder = vi.fn();
+
+    render(
+      <LanguageProvider>
+        <OrganisationSidebar
+          folders={mockFolders}
+          tags={mockTags}
+          smartFolders={mockSmartFolders}
+          smartFolderCounts={{ 'sf-weak': 1 }}
+          items={mockItems}
+          activeFolderId={null}
+          activeSmartFolderId={null}
+          onSelectFolder={onSelectFolder}
+          onSelectSmartFolder={onSelectSmartFolder}
+          onCreateFolder={vi.fn()}
+          onDeleteFolder={vi.fn()}
+          onCreateTag={vi.fn()}
+          onUpdateTag={vi.fn()}
+          onDeleteTag={vi.fn()}
+          onCreateSmartFolder={vi.fn()}
+          onDeleteSmartFolder={vi.fn()}
+          isOpen={true}
+        />
+      </LanguageProvider>,
+    );
+
+    fireEvent.click(screen.getByText('Personal'));
+
+    expect(onSelectFolder).toHaveBeenCalledWith('f1');
+    expect(onSelectSmartFolder).toHaveBeenCalledWith(null);
+  });
 });

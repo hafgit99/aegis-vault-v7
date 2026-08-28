@@ -89,4 +89,34 @@ describe('TrashWorkspace', () => {
     expect(screen.getByText('Empty Trash Completely')).toBeTruthy();
     expect(screen.getByText('Security and Data Protection Notice')).toBeTruthy();
   });
+
+  // Rendering 100 items through jsdom is heavy and can exceed the 5s default
+  // timeout when the coverage run is under full parallel load.
+  it('paginates long trash lists through the load-more button', () => {
+    const many = Array.from({ length: 100 }, (_, index) => ({
+      ...trashItem,
+      id: `trash-${index}`,
+      title: `Item ${index}`,
+    }));
+
+    render(
+      <TrashWorkspace
+        items={many}
+        onEmptyTrash={vi.fn()}
+        onRestore={vi.fn()}
+        onDeletePermanently={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Item 0')).toBeTruthy();
+    expect(screen.queryByText('Item 99')).toBeNull();
+
+    const loadMore = screen.getByRole('button', { name: /daha fazla yükle/i });
+    expect(loadMore.textContent).toContain('(20)');
+
+    fireEvent.click(loadMore);
+
+    expect(screen.getByText('Item 99')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /daha fazla yükle/i })).toBeNull();
+  }, 20_000);
 });

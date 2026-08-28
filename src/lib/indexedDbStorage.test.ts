@@ -118,5 +118,53 @@ describe('indexedDbStorage', () => {
     if (originalIndexedDb) {
       Object.defineProperty(globalThis, 'indexedDB', originalIndexedDb);
     }
-  });});
+  });
+
+  it('swallows IndexedDB open failures in async helpers', async () => {
+    const originalIndexedDb = Object.getOwnPropertyDescriptor(globalThis, 'indexedDB');
+    Object.defineProperty(globalThis, 'indexedDB', {
+      configurable: true,
+      value: {
+        open: () => {
+          throw new Error('idb unavailable');
+        },
+      },
+    });
+
+    try {
+      await expect(getIndexedDbItem('missing')).resolves.toBeNull();
+      await expect(setIndexedDbItem('missing', 'value')).resolves.toBeUndefined();
+      await expect(removeIndexedDbItem('missing')).resolves.toBeUndefined();
+      // clearAllSetupFlags surfaces init failures (no internal catch).
+      await expect(clearAllSetupFlags()).rejects.toThrow('idb unavailable');
+    } finally {
+      if (originalIndexedDb) {
+        Object.defineProperty(globalThis, 'indexedDB', originalIndexedDb);
+      }
+    }
+  });
+
+  it('falls back to empty cache values when batch initialization fails', async () => {
+    const originalIndexedDb = Object.getOwnPropertyDescriptor(globalThis, 'indexedDB');
+    Object.defineProperty(globalThis, 'indexedDB', {
+      configurable: true,
+      value: {
+        open: () => {
+          throw new Error('idb unavailable');
+        },
+      },
+    });
+
+    try {
+      await expect(initializeIndexedDbStorage()).resolves.toBeUndefined();
+
+      expect(getIndexedDbItemSync('aegis_is_setup')).toBeNull();
+      expect(console.error).toHaveBeenCalled();
+    } finally {
+      if (originalIndexedDb) {
+        Object.defineProperty(globalThis, 'indexedDB', originalIndexedDb);
+      }
+    }
+  });
+});
 

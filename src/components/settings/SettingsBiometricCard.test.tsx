@@ -19,7 +19,7 @@ vi.mock('../../lib/biometric', () => ({
   isBiometricHardwareBound: vi.fn(() => false),
 }));
 
-import { getBiometricType, isBiometricHardwareBound } from '../../lib/biometric';
+import { getBiometricType, isBiometricHardwareBound, isBiometricV2UpgradeRequired, setBiometricAutofillRequireEnabled } from '../../lib/biometric';
 
 const t = (key: string) => {
   const translations: Record<string, string> = {
@@ -42,6 +42,9 @@ const t = (key: string) => {
     'settings.biometric.securityLevelSoftware': 'Software-Based Convenience (Medium)',
     'settings.biometric.securityNoticeHardwareBound': 'Hardware-bound protection notice.',
     'settings.biometric.securityNoticeConvenience': 'Convenience mode notice.',
+    'settings.biometric.autofillConfirmTitle': 'Autofill Confirmation',
+    'settings.biometric.autofillConfirmDesc': 'Require confirmation before autofill.',
+    'settings.biometric.v2UpgradeNotice': 'Upgrade required',
   };
   return translations[key] || key;
 };
@@ -173,5 +176,58 @@ describe('SettingsBiometricCard', () => {
     );
 
     expect(screen.queryByText(/Security Level:/)).toBeNull();
+  });
+it('toggles the autofill-confirmation requirement checkbox', () => {
+    vi.mocked(isBiometricHardwareBound).mockReturnValue(false);
+    render(
+      <SettingsBiometricCard
+        biometricEnabled={true}
+        biometricLoading={false}
+        biometricSuccess={null}
+        biometricError={null}
+        onToggleBiometric={vi.fn()}
+        t={t}
+      />,
+    );
+
+    const checkbox = screen.getByRole('checkbox', { name: 'Autofill Confirmation' }) as HTMLInputElement;
+    expect(checkbox.checked).toBe(false);
+
+    fireEvent.click(checkbox);
+
+    expect(setBiometricAutofillRequireEnabled).toHaveBeenCalledWith(true);
+    expect(checkbox.checked).toBe(true);
+  });
+
+  it('shows the V2 upgrade notice when an upgrade is required and biometrics are off', () => {
+    vi.mocked(isBiometricV2UpgradeRequired).mockReturnValue(true);
+
+    render(
+      <SettingsBiometricCard
+        biometricEnabled={false}
+        biometricLoading={false}
+        biometricSuccess={null}
+        biometricError={null}
+        onToggleBiometric={vi.fn()}
+        t={t}
+      />,
+    );
+
+    expect(screen.getByText('Upgrade required')).toBeTruthy();
+  });
+
+  it('hides the autofill toggle when biometrics are disabled', () => {
+    render(
+      <SettingsBiometricCard
+        biometricEnabled={false}
+        biometricLoading={false}
+        biometricSuccess={null}
+        biometricError={null}
+        onToggleBiometric={vi.fn()}
+        t={t}
+      />,
+    );
+
+    expect(screen.queryByRole('checkbox')).toBeNull();
   });
 });

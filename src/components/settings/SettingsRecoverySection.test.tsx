@@ -8,15 +8,25 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SettingsRecoverySection } from './SettingsRecoverySection';
 import * as recoveryKeyModule from '../../lib/recoveryKey';
 import * as passwordHintModule from '../../lib/passwordHint';
+import * as vaultSessionModule from '../../lib/vaultSession';
+import * as desktopFilesModule from '../../lib/desktopFiles';
 
 vi.mock('../../lib/recoveryKey');
 vi.mock('../../lib/passwordHint');
+vi.mock('../../lib/vaultSession');
 vi.mock('../../lib/desktopFiles', () => ({
-  isNativeFileDialogSupported: () => false,
+  isNativeFileDialogSupported: vi.fn(() => false),
   saveDesktopExportFile: vi.fn(),
 }));
 
 const mockT = (key: string) => key;
+
+const MOCK_WORDS = [
+  'abandon', 'ability', 'able', 'about', 'above', 'absent',
+  'absorb', 'abstract', 'absurd', 'abuse', 'access', 'accident',
+  'account', 'accuse', 'achieve', 'acid', 'acoustic', 'acquire',
+  'across', 'act', 'action', 'actor', 'actress', 'actual',
+];
 
 describe('SettingsRecoverySection', () => {
   afterEach(() => {
@@ -34,13 +44,7 @@ describe('SettingsRecoverySection', () => {
   });
 
   it('generates recovery key, copies words, and saves recovery key', async () => {
-    const mockWords = [
-      'abandon', 'ability', 'able', 'about', 'above', 'absent',
-      'absorb', 'abstract', 'absurd', 'abuse', 'access', 'accident',
-      'account', 'accuse', 'achieve', 'acid', 'acoustic', 'acquire',
-      'across', 'act', 'action', 'actor', 'actress', 'actual'
-    ];
-    vi.mocked(recoveryKeyModule.generateRecoveryWords).mockReturnValue(mockWords);
+    vi.mocked(recoveryKeyModule.generateRecoveryWords).mockReturnValue(MOCK_WORDS);
     vi.mocked(recoveryKeyModule.setupRecoveryKey).mockResolvedValue();
 
     Object.defineProperty(navigator, 'clipboard', {
@@ -102,5 +106,108 @@ describe('SettingsRecoverySection', () => {
     fireEvent.click(confirmBtn);
 
     expect(recoveryKeyModule.disableRecoveryKey).toHaveBeenCalled();
+  });
+
+  it('falls back to the active session password when masterPassword is absent', async () => {
+    vi.mocked(vaultSessionModule.withActiveBackupPassword).mockResolvedValue('session-pass');
+    vi.mocked(recoveryKeyModule.isRecoveryKeySetup).mockReturnValue(false);
+    vi.mocked(recoveryKeyModule.generateRecoveryWords).mockReturnValue(MOCK_WORDS);
+    vi.mocked(recoveryKeyModule.setupRecoveryKey).mockResolvedValue();
+
+    render(<SettingsRecoverySection t={mockT as any} masterPassword={null} />);
+
+    fireEvent.click(screen.getByText('settings.recovery.keyGenerate'));
+    fireEvent.click(screen.getByText('settings.recovery.keySave'));
+
+    await waitFor(() => {
+      expect(recoveryKeyModule.setupRecoveryKey).toHaveBeenCalledWith('session-pass', MOCK_WORDS);
+    });
+  });
+
+  it('shows the session error when no password can be resolved', async () => {
+    vi.mocked(vaultSessionModule.withActiveBackupPassword).mockResolvedValue(null as unknown as string);
+    vi.mocked(recoveryKeyModule.isRecoveryKeySetup).mockReturnValue(false);
+    vi.mocked(recoveryKeyModule.generateRecoveryWords).mockReturnValue(MOCK_WORDS);
+
+    render(<SettingsRecoverySection t={mockT as any} masterPassword={null} />);
+
+    fireEvent.click(screen.getByText('settings.recovery.keyGenerate'));
+    fireEvent.click(screen.getByText('settings.recovery.keySave'));
+
+    await waitFor(() => {
+      expect(screen.getByText('settings.recovery.errorNoSession')).toBeTruthy();
+    });
+    expect(recoveryKeyModule.setupRecoveryKey).not.toHaveBeenCalled();
+  });
+
+  it('downloads the recovery words through the native file dialog', async () => {
+    vi.mocked(desktopFilesModule.saveDesktopExportFile).mockResolvedValue(true);
+    vi.mocked(recoveryKeyModule.isRecoveryKeySetup).mockReturnValue(false);
+    vi.mocked(recoveryKeyModule.generateRecoveryWords).mockReturnValue(MOCK_WORDS);
+
+    render(<SettingsRecoverySection t={mockT as any} masterPassword="pass" />);
+
+    fireEvent.click(screen.getByText('settings.recovery.keyGenerate'));
+    fireEvent.click(screen.getByText('settings.recovery.keyDownload'));
+
+    await waitFor(() => {
+      expect(desktopFilesModule.saveDesktopExportFile).toHaveBeenCalledWith(
+        'aegis-vault-recovery-key.txt',
+        expect.stringContaining('Recovery Words (24):'),
+      );
+    });
+  });
+
+  it('shows a warning when the saved hint strongly resembles the password', async () => {
+    vi.mocked(passwordHintModule.getPasswordHint).mockResolvedValue(null);
+    vi.mocked(passwordHintModule.setPasswordHint).mockResolvedValue({ saved: true, warning: true });
+
+    render(<SettingsRecoverySection t={mockT as any} masterPassword="pass" />);
+
+    fireEvent.change(screen.getByPlaceholderText('settings.recovery.hintPlaceholder'), { target: { value: 'H' } });
+    fireEvent.click(screen.getByText('settings.recovery.hintSave'));
+
+    await waitFor(() => {
+      expect(screen.getByText('settings.recovery.hintWarning')).toBeTruthy();
+    });
+  });
+
+  it('clears a stored password hint', async () => {
+    vi.mocked(passwordHintModule.getPasswordHint).mockResolvedValue('Old hint');
+    vi.mocked(passwordHintModule.clearPasswordHint).mockResolvedValue();
+
+    render(<SettingsRecoverySection t={mockT as any} masterPassword="pass" />);
+
+    await screen.findByDisplayValue('Old hint');
+
+    const clearButton = screen
+      .getAllByRole('button')
+      .find((button) => button.querySelector('.lucide-trash-2'));
+    expect(clearButton).toBeTruthy();
+
+    fireEvent.click(clearButton!);
+
+    await waitFor(() => {
+      expect(passwordHintModule.clearPasswordHint).toHaveBeenCalled();
+    });
+    expect((screen.getByPlaceholderText('settings.recovery.hintPlaceholder') as HTMLInputElement).value).toBe('');
+  });
+
+  it('tolerates clipboard failures when copying recovery words', async () => {
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
+      writable: true,
+      configurable: true,
+    });
+    vi.mocked(recoveryKeyModule.isRecoveryKeySetup).mockReturnValue(false);
+    vi.mocked(recoveryKeyModule.generateRecoveryWords).mockReturnValue(MOCK_WORDS);
+
+    render(<SettingsRecoverySection t={mockT as any} masterPassword="pass" />);
+
+    fireEvent.click(screen.getByText('settings.recovery.keyGenerate'));
+    fireEvent.click(screen.getByText('settings.recovery.keyCopy'));
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalled();
+    expect(screen.getByText('settings.recovery.keyCopy')).toBeTruthy();
   });
 });

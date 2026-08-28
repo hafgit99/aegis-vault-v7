@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -11,6 +11,7 @@ import { languageStorageKey } from '../i18n/translations';
 import { APP_NAME } from '../lib/branding';
 import type { AuditReport, VaultItem } from '../types';
 import VaultWorkspace from './VaultWorkspace';
+import type { UseBulkSelectionResult } from '../hooks/useOrganisation';
 
 const auditReport: AuditReport = {
   score: 80,
@@ -44,6 +45,23 @@ function buttonByText(text: string) {
     throw new Error(`Button not found: ${text}`);
   }
   return button;
+}
+
+function bulkSelectionStub(overrides: Partial<UseBulkSelectionResult> = {}): UseBulkSelectionResult {
+  return {
+    selectedIds: new Set<string>(),
+    isSelectionMode: true,
+    selectionCount: 0,
+    isSelected: () => false,
+    toggle: vi.fn(),
+    selectOnly: vi.fn(),
+    selectAll: vi.fn(),
+    clear: vi.fn(),
+    selectRange: vi.fn(),
+    enterSelectionMode: vi.fn(),
+    exitSelectionMode: vi.fn(),
+    ...overrides,
+  };
 }
 
 interface RenderWorkspaceOptions {
@@ -298,5 +316,148 @@ describe('VaultWorkspace', () => {
     const folderBtn = screen.getByTitle('Kasa Organizasyonu');
     fireEvent.click(folderBtn);
     expect(onOpenFolderSidebar).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders bulk selection checkboxes and toggles rows in selection mode', () => {
+    const toggle = vi.fn();
+    const bulkSelection = bulkSelectionStub({
+      selectedIds: new Set(['mail']),
+      selectionCount: 1,
+      isSelected: (id) => id === 'mail',
+      toggle,
+    });
+
+    renderWorkspace({ bulkSelection });
+
+    const checkboxes = screen.getAllByTestId('bulk-select-checkbox') as HTMLInputElement[];
+    expect(checkboxes.length).toBe(2);
+    expect(checkboxes[0]!.checked).toBe(true);
+    expect(checkboxes[1]!.checked).toBe(false);
+
+    fireEvent.click(screen.getAllByText('Aegis Bank')[0]!);
+    expect(toggle).toHaveBeenCalledWith('bank');
+  });
+
+  it('performs shift range selection from the selected anchor item', () => {
+    const selectRange = vi.fn();
+    const bulkSelection = bulkSelectionStub({
+      selectedIds: new Set(['mail']),
+      selectionCount: 1,
+      isSelected: (id) => id === 'mail',
+      selectRange,
+    });
+
+    renderWorkspace({ bulkSelection });
+
+    fireEvent.click(screen.getAllByText('Aegis Bank')[0]!, { shiftKey: true });
+
+    expect(selectRange).toHaveBeenCalledWith(['mail', 'bank'], 'mail', 'bank');
+  });
+
+  it('falls back to toggling when shift-selecting without an anchor', () => {
+    const toggle = vi.fn();
+    const selectRange = vi.fn();
+    const bulkSelection = bulkSelectionStub({ toggle, selectRange });
+
+    renderWorkspace({ bulkSelection });
+
+    fireEvent.click(screen.getAllByText('Aegis Bank')[0]!, { shiftKey: true });
+
+    expect(selectRange).not.toHaveBeenCalled();
+    expect(toggle).toHaveBeenCalledWith('bank');
+  });
+
+  it('enters bulk selection via ctrl+click on a row outside selection mode', () => {
+    const selectOnly = vi.fn();
+    const bulkSelection = bulkSelectionStub({ isSelectionMode: false, selectOnly });
+
+    renderWorkspace({ bulkSelection });
+
+    expect(screen.queryByTestId('bulk-select-checkbox')).toBeNull();
+
+    fireEvent.click(screen.getAllByText('Aegis Mail')[0]!, { ctrlKey: true });
+
+    expect(selectOnly).toHaveBeenCalledWith('mail');
+  });
+
+  it('toggles compact density and persists the choice', () => {
+    renderWorkspace();
+
+    const toggleButton = screen.getByTestId('vault-density-toggle-button');
+    fireEvent.click(toggleButton);
+    expect(window.localStorage.getItem('aegis_vault_view_density')).toBe('compact');
+
+    fireEvent.click(toggleButton);
+    expect(window.localStorage.getItem('aegis_vault_view_density')).toBe('comfortable');
+  });
+
+  it('paginates the vault list through the load-more sentinel', async () => {
+    const many = Array.from({ length: 100 }, (_, index) => item(`item-${index}`, `Item ${index}`));
+    renderWorkspace({ filteredItems: many, activeItems: many });
+
+    const loadMore = screen.getByTestId('vault-list-load-more');
+    expect(loadMore.textContent).toContain('60/100');
+
+    fireEvent.click(loadMore);
+    await waitFor(() => {
+      expect(screen.getByTestId('vault-list-load-more').textContent).toContain('90/100');
+    });
+
+    fireEvent.click(screen.getByTestId('vault-list-load-more'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('vault-list-load-more')).toBeNull();
+    });
+  });
+
+  it('selects categories from the chip row', () => {
+    const props = renderWorkspace();
+
+    fireEvent.click(screen.getByTestId('category-chip-card'));
+
+    expect(props.onSelectCategory).toHaveBeenCalledWith('card');
+  });
+
+  it('moves items onto category chips via drag and drop', () => {
+    const onUpdateItemCategory = vi.fn();
+    renderWorkspace({ onUpdateItemCategory });
+
+    const chip = screen.getByTestId('category-chip-card');
+    fireEvent.dragEnter(chip);
+    fireEvent.drop(chip, { dataTransfer: { getData: () => 'mail' } });
+
+    expect(onUpdateItemCategory).toHaveBeenCalledWith('mail', 'card');
+  });
+
+  it('ignores drops on the "all" chip', () => {
+    const onUpdateItemCategory = vi.fn();
+    renderWorkspace({ onUpdateItemCategory });
+
+    const chip = screen.getByTestId('category-chip-all');
+    fireEvent.drop(chip, { dataTransfer: { getData: () => 'mail' } });
+
+    expect(onUpdateItemCategory).not.toHaveBeenCalled();
+  });
+
+  it('falls back to regular list rows for secure notes in compact density', () => {
+    window.localStorage.setItem('aegis_vault_view_density', 'compact');
+    const noteItem: VaultItem = {
+      id: 'note-1',
+      title: 'Server Keys',
+      username: '',
+      url: 'https://notes.example.com',
+      notes: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQAB...',
+      createdAt: '2026-01-01',
+      updatedAt: '2026-01-01',
+      category: 'secure_note',
+    };
+
+    renderWorkspace({
+      selectedCategory: 'secure_note',
+      filteredItems: [noteItem],
+      activeItems: [noteItem],
+    });
+
+    expect(screen.queryByTestId('sticky-note-title')).toBeNull();
+    expect(screen.getAllByText('Server Keys').length).toBeGreaterThan(0);
   });
 });
