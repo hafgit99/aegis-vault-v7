@@ -297,6 +297,8 @@ export const tr = {
     'vaultForm.attachment.dropTitle': 'Tıklayın veya Dosyayı Sürükleyin',
     'vaultForm.attachment.dropDescription': 'PDF, Görsel, Video, Zip vb. tüm dosyalarınızı 250MB sınırına kadar tamamen lokal olarak şifreleyerek ekleyebilirsiniz.',
     'settings.title': 'Kasa Ayarları',
+    'vault.rollback.title': 'Kasa Bütünlüğü Uyarısı',
+    'vault.rollback.desc': 'Kasa veritabanında geri alma (rollback) tespit edildi — daha yeni veriler eski bir kopyayla değiştirilmiş olabilir. Kayıtlarınız hâlâ şifreli ve korumalı; ancak bu geri yüklemeyi siz yapmadıysanız, içeriğe güvenmeden önce yetkisiz değişiklikleri kontrol edin.',
     'airgap.toast.title': 'Ağ İsteği Engellendi',
     'airgap.toast.message': 'Air-gap politikası tarafından dış ağ isteği engellendi: {url}',
     'airgap.panel.title': 'Engellenen Ağ İstekleri',

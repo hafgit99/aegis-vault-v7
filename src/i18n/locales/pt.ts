@@ -296,6 +296,8 @@ export const pt = {
   'vaultForm.attachment.dropTitle': 'Clique ou arraste o arquivo',
   'vaultForm.attachment.dropDescription': 'Anexe PDFs, imagens, vídeos, ZIPs e outros arquivos de até 250 MB com criptografia totalmente local.',
   'settings.title': 'Configurações do cofre',
+  'vault.rollback.title': 'Aviso de integridade do cofre',
+  'vault.rollback.desc': 'Foi detetada uma reversão (rollback) da base de dados do cofre: um snapshot mais antigo pode ter substituído dados mais recentes. As suas entradas continuam cifradas e protegidas; se não foi você quem fez esta restauração, verifique se há alterações não autorizadas antes de confiar no conteúdo.',
   'airgap.toast.title': 'Solicitação de rede bloqueada',
   'airgap.toast.message': 'Solicitação de saída bloqueada pela política de air gap: {url}',
   'airgap.panel.title': 'Solicitações de rede bloqueadas',

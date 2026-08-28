@@ -470,14 +470,14 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
                   )}
 
                   {error && (
-                    <div className="flex items-start gap-3 p-4 rounded-xl bg-brand-error/10 border border-brand-error/20 text-brand-error text-xs leading-relaxed animate-fade-in text-left">
+                    <div role="alert" className="flex items-start gap-3 p-4 rounded-xl bg-brand-error/10 border border-brand-error/20 text-brand-error text-xs leading-relaxed animate-fade-in text-left">
                       <ShieldAlert className="w-5 h-5 shrink-0 text-red-400 mt-0.5" />
                       <span>{error}</span>
                     </div>
                   )}
 
                   {biometricError && (
-                    <div className="flex items-start gap-3 p-4 rounded-xl bg-brand-error/10 border border-brand-error/20 text-red-400 text-xs leading-relaxed animate-fade-in text-left">
+                    <div role="alert" className="flex items-start gap-3 p-4 rounded-xl bg-brand-error/10 border border-brand-error/20 text-red-400 text-xs leading-relaxed animate-fade-in text-left">
                       <Fingerprint className="w-5 h-5 shrink-0 text-red-400 mt-0.5" />
                       <span>{biometricError}</span>
                     </div>
@@ -486,15 +486,17 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
                   {/* Primary Password Input Container */}
                   <div className="text-left">
                     <div className="flex items-center justify-between mb-2">
-                      <label className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase">
+                      <label htmlFor="lock-master-password" className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase">
                         {isSetup ? t('lock.field.masterPassword') : t('lock.field.newMasterPassword')}
                       </label>
                       <span className="text-[10px] text-zinc-500 font-medium">{t('lock.field.minimumLength')}</span>
                     </div>
                     <div className="relative">
                       <input
+                        id="lock-master-password"
                         data-testid="lock-password-input"
                         type={showPassword ? 'text' : 'password'}
+                        aria-invalid={Boolean(error)}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         onKeyDown={(e) => {
@@ -535,6 +537,7 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
                     {isCapsLockOn && (
                       <div
                         data-testid="caps-lock-warning"
+                        role="status"
                         className="flex items-center gap-1.5 text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/25 px-2.5 py-1 rounded-lg mt-2 animate-fade-in"
                       >
                         <ArrowUpSquare className="w-3.5 h-3.5 shrink-0" />
@@ -551,13 +554,15 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
                   {/* Setup Mode: Password Confirmation */}
                   {!isSetup && (
                     <div className="text-left">
-                      <label className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase mb-2">
+                      <label htmlFor="lock-confirm-password" className="block text-[10px] font-bold tracking-wider text-on-surface-variant uppercase mb-2">
                         {t('lock.field.confirmPassword')}
                       </label>
                       <div className="relative">
                         <input
+                          id="lock-confirm-password"
                           data-testid="lock-confirm-password-input"
                           type={showConfirmPassword ? 'text' : 'password'}
+                          aria-invalid={Boolean(error)}
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
                           onKeyDown={(e) => setIsCapsLockOn(e.getModifierState('CapsLock'))}

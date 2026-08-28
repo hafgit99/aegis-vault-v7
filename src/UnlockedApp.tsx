@@ -38,6 +38,7 @@ import { useAndroidAutofillCoordinator } from './hooks/useAndroidAutofillCoordin
 import { useAndroidRuntimeSecurity } from './hooks/useAndroidRuntimeSecurity';
 import { useAssetIntegrity } from './hooks/useAssetIntegrity';
 import { useAirgapAlerts } from './hooks/useAirgapAlerts';
+import { useVaultRollbackAlert } from './hooks/useVaultRollbackAlert';
 import { useLinuxSecurityStatus } from './hooks/useLinuxSecurityStatus';
 import { useExtensionCredentialSync } from './hooks/useExtensionCredentialSync';
 import { useExtensionCredentialListener } from './hooks/useExtensionCredentialListener';
@@ -163,6 +164,11 @@ export default function UnlockedApp({
   });
 
   useAirgapAlerts({
+    unlocked,
+    onNotify: showNotification,
+  });
+
+  useVaultRollbackAlert({
     unlocked,
     onNotify: showNotification,
   });

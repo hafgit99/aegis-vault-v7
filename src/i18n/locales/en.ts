@@ -297,6 +297,8 @@ export const en = {
     'vaultForm.attachment.dropTitle': 'Click or Drag File',
     'vaultForm.attachment.dropDescription': 'Attach PDFs, images, videos, ZIPs, and other files up to 250MB with fully local encryption.',
     'settings.title': 'Vault Settings',
+    'vault.rollback.title': 'Vault Integrity Warning',
+    'vault.rollback.desc': 'A vault database rollback was detected — an older snapshot may have replaced newer data. Your entries remain encrypted and protected; if you did not perform this restore yourself, check for unauthorized changes before trusting the contents.',
     'airgap.toast.title': 'Network Request Blocked',
     'airgap.toast.message': 'Outbound request blocked by air-gap policy: {url}',
     'airgap.panel.title': 'Blocked Network Requests',

@@ -296,6 +296,8 @@ export const fr = {
   'vaultForm.attachment.dropTitle': 'Cliquez ou faites glisser le fichier',
   'vaultForm.attachment.dropDescription': 'Joignez des PDF, des images, des vidéos, des ZIP et d\'autres fichiers jusqu\'à 250 Mo avec un cryptage entièrement local.',
   'settings.title': 'Paramètres du coffre-fort',
+  'vault.rollback.title': 'Avertissement d’intégrité du coffre',
+  'vault.rollback.desc': 'Une restauration (rollback) de la base du coffre a été détectée : un instantané plus ancien a peut-être remplacé des données plus récentes. Vos entrées restent chiffrées et protégées ; si vous n’avez pas effectué cette restauration vous-même, vérifiez le contenu avant de vous y fier.',
   'airgap.toast.title': 'Requête réseau bloquée',
   'airgap.toast.message': 'Requête sortante bloquée par la stratégie d\'espacement : {url}',
   'airgap.panel.title': 'Requêtes réseau bloquées',

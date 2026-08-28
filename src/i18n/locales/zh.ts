@@ -297,6 +297,8 @@ export const zh = {
     'vaultForm.attachment.dropTitle': '点击或拖入文件',
     'vaultForm.attachment.dropDescription': '可附加 PDF、图像、视频、ZIP 等文件，最大 250MB，并完全本地加密。',
     'settings.title': '保险库设置',
+    'vault.rollback.title': '保管库完整性警告',
+    'vault.rollback.desc': '检测到保管库数据库回滚：较旧的快照可能替换了较新的数据。您的条目仍然处于加密保护之中；如果这次还原不是您本人操作，请先检查是否存在未经授权的更改。',
     'airgap.toast.title': '网络请求已拦截',
     'airgap.toast.message': '防漏网网络隔离策略已拦截外发请求: {url}',
     'airgap.panel.title': '已拦截的网络请求',

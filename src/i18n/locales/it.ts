@@ -296,6 +296,8 @@ export const it = {
   'vaultForm.attachment.dropTitle': 'Fare clic o trascinare il file',
   'vaultForm.attachment.dropDescription': 'Allega PDF, immagini, video, ZIP e altri file fino a 250 MB con crittografia completamente locale.',
   'settings.title': 'Impostazioni del deposito',
+  'vault.rollback.title': 'Avviso di integrità del vault',
+  'vault.rollback.desc': 'È stato rilevato un rollback del database del vault: uno snapshot precedente potrebbe aver sostituito dati più recenti. Le voci restano cifrate e protette; se non hai eseguito tu questo ripristino, verifica che non ci siano modifiche non autorizzate.',
   'airgap.toast.title': 'Richiesta di rete bloccata',
   'airgap.toast.message': 'Richiesta in uscita bloccata dal criterio air gap: {url}',
   'airgap.panel.title': 'Richieste di rete bloccate',

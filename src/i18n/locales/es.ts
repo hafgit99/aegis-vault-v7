@@ -296,6 +296,8 @@ export const es = {
   'vaultForm.attachment.dropTitle': 'Haga clic o arrastre el archivo',
   'vaultForm.attachment.dropDescription': 'Adjunte archivos PDF, imágenes, vídeos, ZIP y otros archivos de hasta 250 MB con cifrado totalmente local.',
   'settings.title': 'Configuración de la bóveda',
+  'vault.rollback.title': 'Advertencia de integridad del vault',
+  'vault.rollback.desc': 'Se detectó una reversión (rollback) de la base de datos del vault: una copia anterior podría haber reemplazado datos más recientes. Sus entradas siguen cifradas y protegidas; si usted no realizó esta restauración, revise si hay cambios no autorizados antes de confiar en el contenido.',
   'airgap.toast.title': 'Solicitud de red bloqueada',
   'airgap.toast.message': 'Solicitud saliente bloqueada por la política de espacio aéreo: {url}',
   'airgap.panel.title': 'Solicitudes de red bloqueadas',

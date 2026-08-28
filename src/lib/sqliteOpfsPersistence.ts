@@ -72,19 +72,30 @@ export function setLastObservedVersionCounter(val: number): void {
   lastObservedVersionCounter = val;
 }
 
-function processLoadedStateIntegrity(state: VersionedVaultDatabaseState): void {
+/** N-1: set when a vault database rollback is detected; consumed once by the UI alert hook. */
+let vaultRollbackDetected = false;
+
+export function consumeVaultRollbackDetected(): boolean {
+  const detected = vaultRollbackDetected;
+  vaultRollbackDetected = false;
+  return detected;
+}
+
+function processLoadedStateIntegrity(state: VersionedVaultDatabaseState): boolean {
   if (typeof state.versionCounter === 'number') {
     if (lastObservedVersionCounter > 0 && state.versionCounter < lastObservedVersionCounter) {
+      vaultRollbackDetected = true;
       logSecurityEvent(
         securityEventCodes.storageLegacyMigrationFailed,
         `Vault database rollback detected! Loaded versionCounter (${state.versionCounter}) is lower than last observed (${lastObservedVersionCounter}).`,
         'critical',
         { loadedVersion: state.versionCounter, expectedMinVersion: lastObservedVersionCounter },
       );
-    } else {
-      lastObservedVersionCounter = Math.max(lastObservedVersionCounter, state.versionCounter);
+      return true;
     }
+    lastObservedVersionCounter = Math.max(lastObservedVersionCounter, state.versionCounter);
   }
+  return false;
 }
 
 /**

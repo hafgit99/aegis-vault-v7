@@ -296,6 +296,8 @@ export const ja = {
   'vaultForm.attachment.dropTitle': 'ファイルをクリックまたはドラッグ',
   'vaultForm.attachment.dropDescription': '完全なローカル暗号化を使用して、最大 250 MB の PDF、画像、ビデオ、ZIP、その他のファイルを添付します。',
   'settings.title': 'ボールトの設定',
+  'vault.rollback.title': 'ボールト整合性の警告',
+  'vault.rollback.desc': 'ボールトデータベースのロールバックが検出されました：古いスナップショットが新しいデータを置き換えた可能性があります。エントリは引き続き暗号化され保護されていますが、この復元を自分で行っていない場合は、内容を信頼する前に不正な変更がないか確認してください。',
   'airgap.toast.title': 'ネットワークリクエストがブロックされました',
   'airgap.toast.message': 'エアギャップ ポリシーによってブロックされた送信リクエスト: {url}',
   'airgap.panel.title': 'ブロックされたネットワークリクエスト',

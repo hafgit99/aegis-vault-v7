@@ -25,6 +25,7 @@ import {
   VAULT_ITEM_KDF,
 } from './sqliteOpfsShared';
 import {
+  consumeVaultRollbackDetected,
   createDesktopManagedSetupMarker,
   DB_FILENAME,
   loadPersistedVaultDatabase,
@@ -378,6 +379,21 @@ describe('loadPersistedVaultDatabase', () => {
       'critical',
       expect.objectContaining({ loadedVersion: 2, expectedMinVersion: 5 }),
     );
+    // N-1: the detection is surfaced to the UI alert hook exactly once.
+    expect(consumeVaultRollbackDetected()).toBe(true);
+    expect(consumeVaultRollbackDetected()).toBe(false);
+  });
+
+  it('does not flag rollback when the loaded state moves the counter forward', async () => {
+    setLastObservedVersionCounter(3);
+    const newerState = {
+      ...createEmptyVaultDatabaseState(),
+      versionCounter: 7,
+    };
+    readDesktopVaultDatabase.mockResolvedValueOnce(JSON.stringify(newerState));
+
+    await loadPersistedVaultDatabase();
+    expect(consumeVaultRollbackDetected()).toBe(false);
   });
 });
 

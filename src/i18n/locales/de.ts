@@ -296,6 +296,8 @@ export const de = {
   'vaultForm.attachment.dropTitle': 'Klicken oder ziehen Sie die Datei',
   'vaultForm.attachment.dropDescription': 'Hängen Sie PDFs, Bilder, Videos, ZIPs und andere Dateien bis zu 250 MB mit vollständig lokaler Verschlüsselung an.',
   'settings.title': 'Tresoreinstellungen',
+  'vault.rollback.title': 'Tresor-Integritätswarnung',
+  'vault.rollback.desc': 'Ein Tresor-Datenbank-Rollback wurde erkannt — ein älterer Snapshot könnte neuere Daten ersetzt haben. Ihre Einträge bleiben verschlüsselt und geschützt; falls Sie diese Wiederherstellung nicht selbst vorgenommen haben, prüfen Sie den Inhalt auf unbefugte Änderungen.',
   'airgap.toast.title': 'Netzwerkanforderung blockiert',
   'airgap.toast.message': 'Ausgehende Anfrage durch Air-Gap-Richtlinie blockiert: {url}',
   'airgap.panel.title': 'Blockierte Netzwerkanfragen',

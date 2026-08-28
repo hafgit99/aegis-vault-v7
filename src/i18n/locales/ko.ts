@@ -296,6 +296,8 @@ export const ko = {
   'vaultForm.attachment.dropTitle': '파일을 클릭하거나 드래그하세요.',
   'vaultForm.attachment.dropDescription': '완전한 로컬 암호화를 사용하여 최대 250MB의 PDF, 이미지, 비디오, ZIP 및 기타 파일을 첨부하세요.',
   'settings.title': '볼트 설정',
+  'vault.rollback.title': '볼트 무결성 경고',
+  'vault.rollback.desc': '볼트 데이터베이스 롤백이 감지되었습니다: 이전 스냅샷이 최신 데이터를 대체했을 수 있습니다. 항목은 여전히 암호화되어 보호됩니다. 이 복원을 직접 수행하지 않았다면, 내용을 신뢰하기 전에 무단 변경이 있는지 확인하세요.',
   'airgap.toast.title': '네트워크 요청이 차단됨',
   'airgap.toast.message': '에어갭 정책으로 인해 차단된 아웃바운드 요청: {url}',
   'airgap.panel.title': '차단된 네트워크 요청',
