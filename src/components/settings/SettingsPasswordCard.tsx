@@ -4,10 +4,9 @@
  */
 
 import { CheckCircle, Key, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { useLanguage } from '../../i18n/LanguageContext';
 import type { FormEvent } from 'react';
-import type { TranslationKey } from '../../i18n/translations';
 
-type TFunction = (key: TranslationKey) => string;
 
 interface SettingsPasswordCardProps {
   oldPassword: string;
@@ -19,7 +18,6 @@ interface SettingsPasswordCardProps {
   onNewPasswordChange: (value: string) => void;
   onConfirmPasswordChange: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void | Promise<void>;
-  t: TFunction;
 }
 
 export function SettingsPasswordCard({
@@ -32,8 +30,8 @@ export function SettingsPasswordCard({
   onNewPasswordChange,
   onConfirmPasswordChange,
   onSubmit,
-  t,
 }: SettingsPasswordCardProps) {
+  const { t } = useLanguage();
   return (
     <div className="glass-panel p-4 sm:p-6 rounded-2xl md:col-span-2 space-y-4" id="change-pass-card">
       <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2 border-b border-outline-variant/10 pb-2">

@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import { useLanguage } from '../i18n/LanguageContext';
 import { Fingerprint, KeyRound, LogIn, Plus, Trash2 } from 'lucide-react';
 import type { TranslationKey } from '../i18n/translations';
 import {
@@ -20,11 +21,9 @@ import {
   type WebAuthnCapability,
 } from '../lib/passkey';
 
-type TFunction = (key: TranslationKey) => string;
 
 export interface PasskeyManagerProps {
   records: PasskeyRecord[];
-  t: TFunction;
   statusKey?: TranslationKey | null;
   statusKind?: 'success' | 'error' | 'info' | null;
   onCreatePasskey?: (input: RegisterPasskeyInput) => void | Promise<void>;
@@ -37,7 +36,6 @@ const ALGORITHM_OPTIONS: PasskeyAlgorithm[] = ['ES256', 'EdDSA', 'RS256'];
 
 export function PasskeyManager({
   records,
-  t,
   statusKey,
   statusKind,
   onCreatePasskey,
@@ -45,6 +43,7 @@ export function PasskeyManager({
   onDeletePasskey,
   busy = false,
 }: PasskeyManagerProps) {
+  const { t } = useLanguage();
   const [capability, setCapability] = useState<WebAuthnCapability | null>(null);
   const [rpId, setRpId] = useState('');
   const [rpName, setRpName] = useState('');

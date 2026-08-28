@@ -4,17 +4,17 @@
  */
 
 import { Settings } from 'lucide-react';
-import { languageFlags, languageLabels, supportedLanguages, type LanguageCode, type TranslationKey } from '../../i18n/translations';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { languageFlags, languageLabels, supportedLanguages, type LanguageCode } from '../../i18n/translations';
 
-type TFunction = (key: TranslationKey) => string;
 
 interface SettingsLanguageCardProps {
   language: LanguageCode;
   onLanguageChange: (language: LanguageCode) => void;
-  t: TFunction;
 }
 
-export function SettingsLanguageCard({ language, onLanguageChange, t }: SettingsLanguageCardProps) {
+export function SettingsLanguageCard({ language, onLanguageChange }: SettingsLanguageCardProps) {
+  const { t } = useLanguage();
   return (
     <section
       data-testid="language-settings-card"

@@ -5,6 +5,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import React from 'react';
 
 import { PasskeyManager } from './PasskeyManager';
+// M10 Dilim 1: identity translator via context mock — assertions verify the
+// rendered keys (previous inline t-prop semantics).
+vi.mock('../i18n/LanguageContext', () => ({
+  LanguageProvider: ({ children }: { children: React.ReactNode }) => children,
+  useLanguage: () => ({
+    language: 'tr',
+    setLanguage: () => {},
+    t: (key: string) => key,
+    isRtl: false,
+  }),
+}));
 import { LanguageProvider } from '../i18n/LanguageContext';
 import { openVaultSession, closeVaultSession } from '../lib/vaultSession';
 import type { PasskeyRecord } from '../lib/passkey';
@@ -28,7 +39,7 @@ const SAMPLE_RECORD: PasskeyRecord = {
 const renderComponent = (records: PasskeyRecord[] = []) => {
   return render(
     <LanguageProvider>
-      <PasskeyManager records={records} t={(key) => key as string} />
+      <PasskeyManager records={records} />
     </LanguageProvider>
   );
 };
@@ -111,7 +122,6 @@ describe('PasskeyManager', () => {
           records={[]}
           statusKey="passkey.create.success"
           statusKind="success"
-          t={(key) => key as string}
         />
       </LanguageProvider>
     );
@@ -127,7 +137,6 @@ describe('PasskeyManager', () => {
           records={[]}
           statusKey="passkey.create.failed"
           statusKind="error"
-          t={(key) => key as string}
         />
       </LanguageProvider>
     );
@@ -139,7 +148,7 @@ describe('PasskeyManager', () => {
     const onCreatePasskey = vi.fn(async () => undefined);
     render(
       <LanguageProvider>
-        <PasskeyManager records={[]} t={(key) => key as string} onCreatePasskey={onCreatePasskey} />
+        <PasskeyManager records={[]} onCreatePasskey={onCreatePasskey} />
       </LanguageProvider>,
     );
 
@@ -180,7 +189,6 @@ describe('PasskeyManager', () => {
       <LanguageProvider>
         <PasskeyManager
           records={[SAMPLE_RECORD]}
-          t={(key) => key as string}
           onAuthenticatePasskey={onAuthenticatePasskey}
           onDeletePasskey={onDeletePasskey}
         />
@@ -198,7 +206,7 @@ describe('PasskeyManager', () => {
     const onCreatePasskey = vi.fn(async () => undefined);
     render(
       <LanguageProvider>
-        <PasskeyManager records={[SAMPLE_RECORD]} t={(key) => key as string} onCreatePasskey={onCreatePasskey} />
+        <PasskeyManager records={[SAMPLE_RECORD]} onCreatePasskey={onCreatePasskey} />
       </LanguageProvider>,
     );
 

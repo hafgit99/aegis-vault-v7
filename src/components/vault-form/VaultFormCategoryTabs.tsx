@@ -4,16 +4,14 @@
  */
 
 import { CreditCard, FileText, Fingerprint, KeyRound, User } from 'lucide-react';
-import type { TranslationKey } from '../../i18n/translations';
+import { useLanguage } from '../../i18n/LanguageContext';
 
-type TFunction = (key: TranslationKey) => string;
 
 export type VaultFormCategory = 'login' | 'card' | 'passkey' | 'identity' | 'secure_note';
 
 interface VaultFormCategoryTabsProps {
   category: VaultFormCategory;
   onCategoryChange: (category: VaultFormCategory) => void;
-  t: TFunction;
 }
 
 const categoryTabs = [
@@ -24,7 +22,8 @@ const categoryTabs = [
   { id: 'secure_note', testId: 'vault-item-category-secure-note', labelKey: 'vaultForm.category.secureNote', Icon: FileText },
 ] as const;
 
-export function VaultFormCategoryTabs({ category, onCategoryChange, t }: VaultFormCategoryTabsProps) {
+export function VaultFormCategoryTabs({ category, onCategoryChange }: VaultFormCategoryTabsProps) {
+  const { t } = useLanguage();
   return (
     <div className="px-3 sm:px-6 py-2 sm:py-3 border-b border-outline-variant/5 bg-surface-container/95 shrink-0 overflow-x-auto scrollbar-hide">
       <div data-testid="vault-item-category-tabs" className="grid grid-cols-5 gap-1.5 sm:gap-2 min-w-[430px] sm:min-w-0">

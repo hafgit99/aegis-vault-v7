@@ -4,14 +4,13 @@
  */
 
 import { Smartphone, Check, ShieldAlert } from 'lucide-react';
-import type { TFunction } from '../../i18n/LanguageContext';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface SettingsAutofillCardProps {
   autofillEnabled: boolean;
   autofillMessage: string | null;
   autofillError: string | null;
   onOpenAutofillSettings: () => void;
-  t: TFunction;
 }
 
 export function SettingsAutofillCard({
@@ -19,8 +18,8 @@ export function SettingsAutofillCard({
   autofillMessage,
   autofillError,
   onOpenAutofillSettings,
-  t,
 }: SettingsAutofillCardProps) {
+  const { t } = useLanguage();
   return (
     <div className="glass-panel p-4 sm:p-6 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 items-center border border-outline-variant/10" id="android-autofill-settings-card">
       <div className="md:col-span-1 space-y-1.5">

@@ -4,8 +4,17 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SettingsExtensionTokenCard } from './SettingsExtensionTokenCard';
 
-const t = (key: string) => key;
 
+// M10 Dilim 1: components resolve translations via useLanguage(); these tests
+// assert on rendered keys, so the context is mocked with an identity translator.
+vi.mock('../../i18n/LanguageContext', () => ({
+  useLanguage: () => ({
+    language: 'tr',
+    setLanguage: vi.fn(),
+    t: (key: string) => key,
+    isRtl: false,
+  }),
+}));
 describe('SettingsExtensionTokenCard', () => {
   afterEach(() => {
     cleanup();
@@ -18,7 +27,6 @@ describe('SettingsExtensionTokenCard', () => {
         tokenRotateStatus="idle"
         tokenRotateMessage={null}
         onRotateToken={vi.fn()}
-        t={t as never}
       />,
     );
 
@@ -34,7 +42,6 @@ describe('SettingsExtensionTokenCard', () => {
         tokenRotateStatus="idle"
         tokenRotateMessage={null}
         onRotateToken={onRotateToken}
-        t={t as never}
       />,
     );
 
@@ -53,7 +60,6 @@ describe('SettingsExtensionTokenCard', () => {
         tokenRotateStatus="loading"
         tokenRotateMessage="working…"
         onRotateToken={vi.fn()}
-        t={t as never}
       />,
     );
 
@@ -66,7 +72,6 @@ describe('SettingsExtensionTokenCard', () => {
         tokenRotateStatus="success"
         tokenRotateMessage="done"
         onRotateToken={vi.fn()}
-        t={t as never}
       />,
     );
     expect(screen.getByText('done').className).toContain('text-green-400');
@@ -76,7 +81,6 @@ describe('SettingsExtensionTokenCard', () => {
         tokenRotateStatus="error"
         tokenRotateMessage="boom"
         onRotateToken={vi.fn()}
-        t={t as never}
       />,
     );
     expect(screen.getByText('boom').className).toContain('text-red-400');

@@ -211,7 +211,6 @@ export default function SettingsPanel({
       <SettingsLanguageCard
         language={language}
         onLanguageChange={setLanguage}
-        t={t}
       />
 
       <SettingsThemeCard />
@@ -220,7 +219,6 @@ export default function SettingsPanel({
         <SettingsStatsCard
           itemCount={items.length}
           onReseedDemo={triggerReseed}
-          t={t}
         />
 
         <SettingsPasswordCard
@@ -233,7 +231,6 @@ export default function SettingsPanel({
           onNewPasswordChange={onNewPasswordChange}
           onConfirmPasswordChange={onConfirmPasswordChange}
           onSubmit={handlePasswordChange}
-          t={t}
         />
       </div>
 
@@ -244,7 +241,6 @@ export default function SettingsPanel({
         emergencyKitSuccess={emergencyKitSuccess}
         emergencyKitError={emergencyKitError}
         onDownloadEmergencyKit={handleDownloadEmergencyKit}
-        t={t}
       />
 
       {/* Dynamic Auto-Lock Interval Card */}
@@ -252,7 +248,6 @@ export default function SettingsPanel({
         autoLockDuration={autoLockDuration}
         lockOptions={lockOptions}
         onAutoLockDurationChange={onAutoLockDurationChange}
-        t={t}
       />
 
       {/* Biometric Lock Settings Card */}
@@ -262,11 +257,10 @@ export default function SettingsPanel({
         biometricSuccess={biometricSuccess}
         biometricError={biometricError}
         onToggleBiometric={handleToggleBiometric}
-        t={t}
       />
 
       {/* Recovery Options (Recovery Key & Password Hint) */}
-      <SettingsRecoverySection t={t} />
+      <SettingsRecoverySection />
 
       {/* Android Autofill Settings Card */}
       {isAndroidAutofillSupported() && (
@@ -275,14 +269,12 @@ export default function SettingsPanel({
           autofillMessage={autofillMessage}
           autofillError={autofillError}
           onOpenAutofillSettings={handleOpenAndroidAutofillSettings}
-          t={t}
         />
       )}
 
       {/* Passkey (WebAuthn) management */}
       <PasskeyManager
         records={passkeyRecords}
-        t={t}
         statusKey={passkeyStatusKey}
         statusKind={passkeyStatusKind}
         busy={passkeyBusy}
@@ -322,7 +314,6 @@ export default function SettingsPanel({
         isDragOver={isDragOver}
         fileInputRef={fileInputRef}
         handleFileSelect={handleFileSelect}
-        t={t}
       />
 
       {/* Storage Backend Migration Section */}
@@ -330,7 +321,6 @@ export default function SettingsPanel({
         storageMigrationStatus={storageMigrationStatus}
         storageMigrationMessage={storageMigrationMessage}
         onMigrate={handleWaSqliteMigration}
-        t={t}
       />
 
       {/* Cloud Sync (E2EE) Section */}
@@ -363,7 +353,6 @@ export default function SettingsPanel({
         onSyncSave={onSyncSave}
         onSyncDisable={onSyncDisable}
         onSyncNow={onSyncNow}
-        t={t}
       />
 
       {/* Extension Token Rotation — desktop only */}
@@ -371,16 +360,14 @@ export default function SettingsPanel({
         tokenRotateStatus={tokenRotateStatus}
         tokenRotateMessage={tokenRotateMessage}
         onRotateToken={handleRotateToken}
-        t={t}
       />
 
       {/* Desktop App Auto-Updates */}
-      <SettingsUpdateCard t={t} />
+      <SettingsUpdateCard />
 
       {/* Extreme Danger Zone */}
       <SettingsDangerZone
         onResetAll={triggerResetAll}
-        t={t}
       />
 
       {/* Biometric Master Password Confirmation Modal */}

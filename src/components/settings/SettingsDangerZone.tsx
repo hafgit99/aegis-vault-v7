@@ -4,14 +4,14 @@
  */
 
 import { Trash2 } from 'lucide-react';
-import type { TFunction } from '../../i18n/LanguageContext';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface SettingsDangerZoneProps {
   onResetAll: () => void;
-  t: TFunction;
 }
 
-export function SettingsDangerZone({ onResetAll, t }: SettingsDangerZoneProps) {
+export function SettingsDangerZone({ onResetAll }: SettingsDangerZoneProps) {
+  const { t } = useLanguage();
   return (
     <div className="p-4 sm:p-6 bg-brand-error/5 border border-brand-error/20 rounded-2xl space-y-4" id="danger-zone-section">
       <h3 className="font-bold text-sm text-brand-error uppercase tracking-wider flex items-center gap-2 border-b border-brand-error/10 pb-2">

@@ -4,22 +4,21 @@
  */
 
 import React from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { Database, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
-import type { useLanguage } from '../../i18n/LanguageContext';
 
 interface SettingsStorageMigrationCardProps {
   storageMigrationStatus: 'idle' | 'running' | 'promoted' | 'blocked' | 'error';
   storageMigrationMessage: string | null;
   onMigrate: () => void | Promise<void>;
-  t: ReturnType<typeof useLanguage>['t'];
 }
 
 export function SettingsStorageMigrationCard({
   storageMigrationStatus,
   storageMigrationMessage,
   onMigrate,
-  t,
 }: SettingsStorageMigrationCardProps) {
+  const { t } = useLanguage();
   return (
     <div className="p-4 sm:p-6 bg-surface-elevated border border-white/5 rounded-2xl space-y-4" id="storage-backend-section">
       <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2 border-b border-white/10 pb-2">

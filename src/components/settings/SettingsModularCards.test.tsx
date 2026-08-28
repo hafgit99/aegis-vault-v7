@@ -35,7 +35,6 @@ afterEach(() => {
 });
 
 describe('Settings Modular Cards', () => {
-  const t = (key: string) => key;
 
   it('renders SettingsEmergencyKitCard and triggers download', () => {
     const onKeyChange = vi.fn();
@@ -48,7 +47,6 @@ describe('Settings Modular Cards', () => {
         emergencyKitSuccess={null}
         emergencyKitError={null}
         onDownloadEmergencyKit={onDownload}
-        t={t}
       />
     );
 
@@ -74,7 +72,6 @@ describe('Settings Modular Cards', () => {
         autoLockDuration={15}
         lockOptions={lockOptions}
         onAutoLockDurationChange={onChange}
-        t={t}
       />
     );
 
@@ -90,7 +87,6 @@ describe('Settings Modular Cards', () => {
         storageMigrationStatus="idle"
         storageMigrationMessage={null}
         onMigrate={onMigrate}
-        t={t}
       />
     );
 
@@ -108,7 +104,6 @@ describe('Settings Modular Cards', () => {
         tokenRotateStatus="idle"
         tokenRotateMessage={null}
         onRotateToken={onRotate}
-        t={t}
       />
     );
 

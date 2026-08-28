@@ -4,22 +4,21 @@
  */
 
 import React from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { RefreshCw } from 'lucide-react';
-import type { useLanguage } from '../../i18n/LanguageContext';
 
 interface SettingsExtensionTokenCardProps {
   tokenRotateStatus: 'idle' | 'loading' | 'success' | 'error';
   tokenRotateMessage: string | null;
   onRotateToken: () => void | Promise<void>;
-  t: ReturnType<typeof useLanguage>['t'];
 }
 
 export function SettingsExtensionTokenCard({
   tokenRotateStatus,
   tokenRotateMessage,
   onRotateToken,
-  t,
 }: SettingsExtensionTokenCardProps) {
+  const { t } = useLanguage();
   if (typeof window === 'undefined' || !window.__TAURI_INTERNALS__) {
     return null;
   }

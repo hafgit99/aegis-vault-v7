@@ -4,16 +4,14 @@
  */
 
 import { Globe, Shield, Sparkle } from 'lucide-react';
-import type { TranslationKey } from '../../i18n/translations';
+import { useLanguage } from '../../i18n/LanguageContext';
 
-type TFunction = (key: TranslationKey) => string;
 
 interface VaultFormGeneralFieldsProps {
   title: string;
   url: string;
   onTitleChange: (value: string) => void;
   onUrlChange: (value: string) => void;
-  t: TFunction;
 }
 
 export function VaultFormGeneralFields({
@@ -21,8 +19,8 @@ export function VaultFormGeneralFields({
   url,
   onTitleChange,
   onUrlChange,
-  t,
 }: VaultFormGeneralFieldsProps) {
+  const { t } = useLanguage();
   return (
     <div className="bg-surface-low/50 p-3 sm:p-4 rounded-xl border border-outline-variant/10 space-y-4">
       <h4 className="text-[10px] font-bold text-brand-primary tracking-widest uppercase flex items-center gap-1.5">

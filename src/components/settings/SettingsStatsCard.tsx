@@ -4,17 +4,16 @@
  */
 
 import { Database, RefreshCw, ShieldCheck } from 'lucide-react';
-import type { TranslationKey } from '../../i18n/translations';
+import { useLanguage } from '../../i18n/LanguageContext';
 
-type TFunction = (key: TranslationKey) => string;
 
 interface SettingsStatsCardProps {
   itemCount: number;
   onReseedDemo: () => void;
-  t: TFunction;
 }
 
-export function SettingsStatsCard({ itemCount, onReseedDemo, t }: SettingsStatsCardProps) {
+export function SettingsStatsCard({ itemCount, onReseedDemo }: SettingsStatsCardProps) {
+  const { t } = useLanguage();
   return (
     <div className="glass-panel p-4 sm:p-6 rounded-2xl md:col-span-1 space-y-4" id="stats-card">
       <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2 border-b border-outline-variant/10 pb-2">

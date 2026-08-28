@@ -6,6 +6,7 @@
  */
 
 import React from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
 import {
   ArrowUpCircle,
   RefreshCw,
@@ -17,13 +18,9 @@ import {
   Info,
 } from 'lucide-react';
 import { useAppUpdater } from '../../hooks/useAppUpdater';
-import type { useLanguage } from '../../i18n/LanguageContext';
 
-interface SettingsUpdateCardProps {
-  t: ReturnType<typeof useLanguage>['t'];
-}
-
-export function SettingsUpdateCard({ t }: SettingsUpdateCardProps) {
+export function SettingsUpdateCard() {
+  const { t } = useLanguage();
   const {
     status,
     supported,

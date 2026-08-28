@@ -14,9 +14,18 @@ vi.mock('../../lib/environment', () => ({
   isAndroidRuntime: vi.fn(() => false),
 }));
 
+// M10 Dilim 1: components resolve translations via useLanguage(); these tests
+// assert on rendered keys, so the context is mocked with an identity translator.
+vi.mock('../../i18n/LanguageContext', () => ({
+  useLanguage: () => ({
+    language: 'tr',
+    setLanguage: vi.fn(),
+    t: (key: string) => key,
+    isRtl: false,
+  }),
+}));
 describe('SettingsUpdateCard', () => {
-  const t = (key: string) => key;
-
+  
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -26,7 +35,7 @@ describe('SettingsUpdateCard', () => {
   });
 
   it('renders SettingsUpdateCard with current version and check button', () => {
-    render(<SettingsUpdateCard t={t} />);
+    render(<SettingsUpdateCard />);
 
     expect(screen.getByTestId('app-updates-card')).toBeDefined();
     expect(screen.getByTestId('current-version-badge').textContent).toContain('v7.0.2');
@@ -39,7 +48,7 @@ describe('SettingsUpdateCard', () => {
       hasUpdate: false,
     });
 
-    render(<SettingsUpdateCard t={t} />);
+    render(<SettingsUpdateCard />);
 
     const checkButton = screen.getByTestId('check-updates-button');
     await act(async () => {
@@ -62,7 +71,7 @@ describe('SettingsUpdateCard', () => {
       },
     });
 
-    render(<SettingsUpdateCard t={t} />);
+    render(<SettingsUpdateCard />);
 
     const checkButton = screen.getByTestId('check-updates-button');
     await act(async () => {
@@ -93,7 +102,7 @@ describe('SettingsUpdateCard', () => {
 
     const restartSpy = vi.spyOn(updaterLib, 'restartApplication').mockResolvedValueOnce();
 
-    render(<SettingsUpdateCard t={t} />);
+    render(<SettingsUpdateCard />);
 
     // Step 1: Check for updates
     await act(async () => {
@@ -125,7 +134,7 @@ describe('SettingsUpdateCard', () => {
       error: 'Network connection failed',
     });
 
-    render(<SettingsUpdateCard t={t} />);
+    render(<SettingsUpdateCard />);
 
     await act(async () => {
       fireEvent.click(screen.getByTestId('check-updates-button'));
@@ -143,7 +152,7 @@ describe('SettingsUpdateCard', () => {
       errorKey: 'settings.updates.errorNotFound',
     });
 
-    render(<SettingsUpdateCard t={t} />);
+    render(<SettingsUpdateCard />);
 
     await act(async () => {
       fireEvent.click(screen.getByTestId('check-updates-button'));

@@ -4,9 +4,9 @@
  */
 
 import React from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { Cloud, Wifi, Check, CloudOff, RotateCcw, CheckCircle, AlertCircle, RefreshCw, Server, Database } from 'lucide-react';
 import type { SyncProviderType } from '../../lib/sync';
-import type { TFunction } from '../../i18n/LanguageContext';
 
 export interface SettingsSyncSectionProps {
   syncProvider: SyncProviderType;
@@ -40,7 +40,6 @@ export interface SettingsSyncSectionProps {
   onSyncSave: () => void;
   onSyncDisable: () => void;
   onSyncNow: () => void;
-  t: TFunction;
 }
 
 export function SettingsSyncSection({
@@ -72,8 +71,8 @@ export function SettingsSyncSection({
   onSyncSave,
   onSyncDisable,
   onSyncNow,
-  t,
 }: SettingsSyncSectionProps) {
+  const { t } = useLanguage();
   const syncTestSucceeded = syncTestResult === t('settings.sync.test.success');
 
   return (

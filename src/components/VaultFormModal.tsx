@@ -423,7 +423,6 @@ export default function VaultFormModal({
         <VaultFormCategoryTabs
           category={category}
           onCategoryChange={setCategory}
-          t={t}
         />
 
         {/* Global Error Banner */}
@@ -441,7 +440,6 @@ export default function VaultFormModal({
             url={url}
             onTitleChange={setTitle}
             onUrlChange={setUrl}
-            t={t}
           />
 
           {/* Folder & Tags Section */}

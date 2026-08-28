@@ -11,6 +11,15 @@ import * as passwordHintModule from '../../lib/passwordHint';
 import * as vaultSessionModule from '../../lib/vaultSession';
 import * as desktopFilesModule from '../../lib/desktopFiles';
 
+vi.mock('../../i18n/LanguageContext', () => ({
+  useLanguage: () => ({
+    language: 'tr',
+    setLanguage: vi.fn(),
+    // Identity translator: assertions below verify the rendered keys.
+    t: (key: string) => key,
+    isRtl: false,
+  }),
+}));
 vi.mock('../../lib/recoveryKey');
 vi.mock('../../lib/passwordHint');
 vi.mock('../../lib/vaultSession');
@@ -18,8 +27,6 @@ vi.mock('../../lib/desktopFiles', () => ({
   isNativeFileDialogSupported: vi.fn(() => false),
   saveDesktopExportFile: vi.fn(),
 }));
-
-const mockT = (key: string) => key;
 
 const MOCK_WORDS = [
   'abandon', 'ability', 'able', 'about', 'above', 'absent',
@@ -38,7 +45,7 @@ describe('SettingsRecoverySection', () => {
     vi.mocked(recoveryKeyModule.isRecoveryKeySetup).mockReturnValue(false);
     vi.mocked(passwordHintModule.getPasswordHint).mockResolvedValue('Hint 123');
 
-    render(<SettingsRecoverySection t={mockT as any} masterPassword="pass" />);
+    render(<SettingsRecoverySection masterPassword="pass" />);
 
     expect(screen.getByRole('heading', { name: 'settings.recovery.title' })).toBeDefined();
   });
@@ -53,7 +60,7 @@ describe('SettingsRecoverySection', () => {
       configurable: true,
     });
 
-    render(<SettingsRecoverySection t={mockT as any} masterPassword="pass" />);
+    render(<SettingsRecoverySection masterPassword="pass" />);
 
     // Click generate button
     const generateBtn = screen.getByText('settings.recovery.keyGenerate');
@@ -79,7 +86,7 @@ describe('SettingsRecoverySection', () => {
     vi.mocked(passwordHintModule.getPasswordHint).mockResolvedValue(null);
     vi.mocked(passwordHintModule.setPasswordHint).mockResolvedValue({ saved: true, warning: false });
 
-    render(<SettingsRecoverySection t={mockT as any} masterPassword="pass" />);
+    render(<SettingsRecoverySection masterPassword="pass" />);
 
     const hintInput = screen.getByPlaceholderText('settings.recovery.hintPlaceholder');
     fireEvent.change(hintInput, { target: { value: 'New Hint' } });
@@ -95,7 +102,7 @@ describe('SettingsRecoverySection', () => {
   it('disables active recovery key when confirmed', () => {
     vi.mocked(recoveryKeyModule.isRecoveryKeySetup).mockReturnValue(true);
 
-    const { container } = render(<SettingsRecoverySection t={mockT as any} masterPassword="pass" />);
+    const { container } = render(<SettingsRecoverySection masterPassword="pass" />);
 
     // Click trash button (first red button)
     const trashBtn = container.querySelector('.border-red-500\\/20');
@@ -114,7 +121,7 @@ describe('SettingsRecoverySection', () => {
     vi.mocked(recoveryKeyModule.generateRecoveryWords).mockReturnValue(MOCK_WORDS);
     vi.mocked(recoveryKeyModule.setupRecoveryKey).mockResolvedValue();
 
-    render(<SettingsRecoverySection t={mockT as any} masterPassword={null} />);
+    render(<SettingsRecoverySection masterPassword={null} />);
 
     fireEvent.click(screen.getByText('settings.recovery.keyGenerate'));
     fireEvent.click(screen.getByText('settings.recovery.keySave'));
@@ -129,7 +136,7 @@ describe('SettingsRecoverySection', () => {
     vi.mocked(recoveryKeyModule.isRecoveryKeySetup).mockReturnValue(false);
     vi.mocked(recoveryKeyModule.generateRecoveryWords).mockReturnValue(MOCK_WORDS);
 
-    render(<SettingsRecoverySection t={mockT as any} masterPassword={null} />);
+    render(<SettingsRecoverySection masterPassword={null} />);
 
     fireEvent.click(screen.getByText('settings.recovery.keyGenerate'));
     fireEvent.click(screen.getByText('settings.recovery.keySave'));
@@ -145,7 +152,7 @@ describe('SettingsRecoverySection', () => {
     vi.mocked(recoveryKeyModule.isRecoveryKeySetup).mockReturnValue(false);
     vi.mocked(recoveryKeyModule.generateRecoveryWords).mockReturnValue(MOCK_WORDS);
 
-    render(<SettingsRecoverySection t={mockT as any} masterPassword="pass" />);
+    render(<SettingsRecoverySection masterPassword="pass" />);
 
     fireEvent.click(screen.getByText('settings.recovery.keyGenerate'));
     fireEvent.click(screen.getByText('settings.recovery.keyDownload'));
@@ -162,7 +169,7 @@ describe('SettingsRecoverySection', () => {
     vi.mocked(passwordHintModule.getPasswordHint).mockResolvedValue(null);
     vi.mocked(passwordHintModule.setPasswordHint).mockResolvedValue({ saved: true, warning: true });
 
-    render(<SettingsRecoverySection t={mockT as any} masterPassword="pass" />);
+    render(<SettingsRecoverySection masterPassword="pass" />);
 
     fireEvent.change(screen.getByPlaceholderText('settings.recovery.hintPlaceholder'), { target: { value: 'H' } });
     fireEvent.click(screen.getByText('settings.recovery.hintSave'));
@@ -176,7 +183,7 @@ describe('SettingsRecoverySection', () => {
     vi.mocked(passwordHintModule.getPasswordHint).mockResolvedValue('Old hint');
     vi.mocked(passwordHintModule.clearPasswordHint).mockResolvedValue();
 
-    render(<SettingsRecoverySection t={mockT as any} masterPassword="pass" />);
+    render(<SettingsRecoverySection masterPassword="pass" />);
 
     await screen.findByDisplayValue('Old hint');
 
@@ -202,7 +209,7 @@ describe('SettingsRecoverySection', () => {
     vi.mocked(recoveryKeyModule.isRecoveryKeySetup).mockReturnValue(false);
     vi.mocked(recoveryKeyModule.generateRecoveryWords).mockReturnValue(MOCK_WORDS);
 
-    render(<SettingsRecoverySection t={mockT as any} masterPassword="pass" />);
+    render(<SettingsRecoverySection masterPassword="pass" />);
 
     fireEvent.click(screen.getByText('settings.recovery.keyGenerate'));
     fireEvent.click(screen.getByText('settings.recovery.keyCopy'));

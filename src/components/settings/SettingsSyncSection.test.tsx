@@ -15,6 +15,16 @@ afterEach(() => {
   cleanup();
 });
 
+// M10 Dilim 1: components resolve translations via useLanguage(); these tests
+// assert on rendered keys, so the context is mocked with an identity translator.
+vi.mock('../../i18n/LanguageContext', () => ({
+  useLanguage: () => ({
+    language: 'tr',
+    setLanguage: vi.fn(),
+    t: (key: string) => key,
+    isRtl: false,
+  }),
+}));
 describe('SettingsSyncSection', () => {
   const defaultProps = {
     syncProvider: 'disabled' as const,

@@ -8,19 +8,8 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { SettingsAutofillCard } from './SettingsAutofillCard';
 
-const t = (key: string) => {
-  const translations: Record<string, string> = {
-    'settings.autofill.title': 'Autofill',
-    'settings.autofill.description': 'Android Autofill Integration',
-    'settings.autofill.statusLabel': 'Status',
-    'settings.autofill.statusActive': 'Active',
-    'settings.autofill.statusSetup': 'Not Configured',
-    'settings.autofill.safetyNote': 'Secure storage note.',
-    'settings.autofill.openSettings': 'Open Settings',
-  };
-  return translations[key] || key;
-};
-
+// M10 Dilim 1: the component resolves translations through useLanguage() —
+// these tests assert against the real default (tr) locale strings.
 describe('SettingsAutofillCard', () => {
   it('renders status and handles open settings click when disabled', () => {
     const handleOpen = vi.fn();
@@ -30,12 +19,11 @@ describe('SettingsAutofillCard', () => {
         autofillMessage={null}
         autofillError={null}
         onOpenAutofillSettings={handleOpen}
-        t={t}
       />
     );
 
-    expect(screen.getByText('Status: Not Configured')).toBeTruthy();
-    const btn = screen.getByText('Open Settings');
+    expect(screen.getByText('Durum: Kurulum bekliyor')).toBeTruthy();
+    const btn = screen.getByText('Android Autofill Ayarlarını Aç');
     fireEvent.click(btn);
     expect(handleOpen).toHaveBeenCalled();
   });
@@ -47,11 +35,10 @@ describe('SettingsAutofillCard', () => {
         autofillMessage={null}
         autofillError={null}
         onOpenAutofillSettings={vi.fn()}
-        t={t}
       />
     );
 
-    expect(screen.getByText('Status: Active')).toBeTruthy();
+    expect(screen.getByText('Durum: Sistem tarafından etkin')).toBeTruthy();
   });
 
   it('displays message and error banners', () => {
@@ -61,7 +48,6 @@ describe('SettingsAutofillCard', () => {
         autofillMessage="Success message"
         autofillError="Error message"
         onOpenAutofillSettings={vi.fn()}
-        t={t}
       />
     );
 

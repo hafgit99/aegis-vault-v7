@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
 import {
   KeyRound,
   ShieldCheck,
@@ -31,14 +32,13 @@ import {
 } from '../../lib/passwordHint';
 import { withActiveBackupPassword } from '../../lib/vaultSession';
 import { isNativeFileDialogSupported, saveDesktopExportFile } from '../../lib/desktopFiles';
-import type { TFunction } from '../../i18n/LanguageContext';
 
 interface SettingsRecoverySectionProps {
   masterPassword?: string | null;
-  t: TFunction;
 }
 
-export function SettingsRecoverySection({ masterPassword, t }: SettingsRecoverySectionProps) {
+export function SettingsRecoverySection({ masterPassword }: SettingsRecoverySectionProps) {
+  const { t } = useLanguage();
   // ── Recovery Key State ────────────────────────────────────────────
   const [recoverySetup, setRecoverySetup] = useState(isRecoveryKeySetup());
   const [recoveryCreatedAt] = useState(getRecoveryKeyCreatedAt());

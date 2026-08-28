@@ -4,9 +4,9 @@
  */
 
 import React from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { Lock, Unlock, Download, Upload, ShieldAlert, AlertCircle } from 'lucide-react';
 import { progressWidthClass } from '../../lib/progressWidth';
-import type { TFunction } from '../../i18n/LanguageContext';
 import type { TranslationKey } from '../../i18n/translations';
 
 interface SettingsBackupSectionProps {
@@ -42,7 +42,6 @@ interface SettingsBackupSectionProps {
   isDragOver: boolean;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  t: TFunction;
 }
 
 export function SettingsBackupSection({
@@ -72,8 +71,8 @@ export function SettingsBackupSection({
   isDragOver,
   fileInputRef,
   handleFileSelect,
-  t,
 }: SettingsBackupSectionProps) {
+  const { t } = useLanguage();
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6" id="backup-restore-rows">
       {/* Encrypted Export Card */}

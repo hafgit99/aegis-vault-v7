@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { Download, Check, ShieldAlert } from 'lucide-react';
-import type { useLanguage } from '../../i18n/LanguageContext';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface SettingsEmergencyKitCardProps {
   emergencySecretKey: string;
@@ -13,7 +13,6 @@ interface SettingsEmergencyKitCardProps {
   emergencyKitSuccess: string | null;
   emergencyKitError: string | null;
   onDownloadEmergencyKit: () => void | Promise<void>;
-  t: ReturnType<typeof useLanguage>['t'];
 }
 
 export function SettingsEmergencyKitCard({
@@ -22,8 +21,8 @@ export function SettingsEmergencyKitCard({
   emergencyKitSuccess,
   emergencyKitError,
   onDownloadEmergencyKit,
-  t,
 }: SettingsEmergencyKitCardProps) {
+  const { t } = useLanguage();
   return (
     <div data-testid="settings-emergency-kit-card" className="glass-panel p-4 sm:p-6 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 items-center border border-outline-variant/10" id="emergency-kit-settings-card">
       <div className="md:col-span-1 space-y-1.5">

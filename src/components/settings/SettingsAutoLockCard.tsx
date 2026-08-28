@@ -4,8 +4,8 @@
  */
 
 import React from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { Clock } from 'lucide-react';
-import type { useLanguage } from '../../i18n/LanguageContext';
 
 interface LockOption {
   label: string;
@@ -16,15 +16,14 @@ interface SettingsAutoLockCardProps {
   autoLockDuration: number;
   lockOptions: LockOption[];
   onAutoLockDurationChange: (val: number) => void;
-  t: ReturnType<typeof useLanguage>['t'];
 }
 
 export function SettingsAutoLockCard({
   autoLockDuration,
   lockOptions,
   onAutoLockDurationChange,
-  t,
 }: SettingsAutoLockCardProps) {
+  const { t } = useLanguage();
   return (
     <div className="glass-panel p-4 sm:p-6 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 items-center" id="auto-lock-settings-card">
       <div className="md:col-span-1 space-y-1.5">
