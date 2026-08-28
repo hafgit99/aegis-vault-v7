@@ -16,6 +16,7 @@ import android.view.autofill.AutofillId
 import android.webkit.WebView
 import androidx.activity.enableEdgeToEdge
 import com.hafgit99.aegisvault7.bridges.AndroidAutofillBridge
+import com.hafgit99.aegisvault7.bridges.AndroidBiometricKeyStoreBridge
 import com.hafgit99.aegisvault7.bridges.AndroidFileBridge
 import com.hafgit99.aegisvault7.bridges.AndroidRuntimeSecurityBridge
 import com.hafgit99.aegisvault7.bridges.AndroidSecureStorageBridge
@@ -103,10 +104,14 @@ class MainActivity : TauriActivity() {
 
     val securityBridge = AndroidRuntimeSecurityBridge(runtimePosture)
 
+    // RUST-O4: biometric-bound wrapping key bridge (wrap/unwrap only; opaque handle transport)
+    val biometricKeyBridge = AndroidBiometricKeyStoreBridge(this, secureKeyStore, ::evaluateOnWebView)
+
     webView.addJavascriptInterface(fileBridge, "AegisAndroidFiles")
     webView.addJavascriptInterface(secureStorageBridge, "AegisAndroidSecureStorage")
     webView.addJavascriptInterface(autofillBridge, "AegisAndroidAutofill")
     webView.addJavascriptInterface(securityBridge, "AegisAndroidSecurity")
+    webView.addJavascriptInterface(biometricKeyBridge, "AegisAndroidBiometric")
 
     webView.post {
       notifyAutofillIntent()

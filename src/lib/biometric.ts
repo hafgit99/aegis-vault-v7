@@ -12,6 +12,13 @@ import {
   setSecureStorageItem,
   isSecureStorageAvailable,
 } from './secureStorage';
+import {
+  clearAndroidBiometricKey,
+  isBiometricAndroidBridgeAvailable,
+  isBiometricHandle,
+  unwrapAndroidBiometricSecret,
+  wrapAndroidBiometricSecret,
+} from './biometricAndroid';
 import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, generateSafeIv, type WebCryptoAesGcmPayload } from './webcrypto';
 
 export const BIOMETRIC_PBKDF2_ITERATIONS = 600_000;
@@ -331,7 +338,10 @@ export function getBiometricType(): 'platform' | 'cross-platform' | 'native' | n
 export function isBiometricHardwareBound(): boolean {
   if (!cachedBiometricInfo) return false;
   if (cachedBiometricInfo.version === 4 && cachedBiometricInfo.prfSupported) return true;
-  if (cachedBiometricInfo.version === 3 && isSecureStorageAvailable()) return true;
+  // RUST-O4: native biometrics are truly hardware-bound only when the
+  // auth-bound AndroidKeyStore bridge is available (legacy KeyStore-only
+  // secure storage without auth binding does not qualify).
+  if (cachedBiometricInfo.version === 3 && isBiometricAndroidBridgeAvailable()) return true;
   return false;
 }
 
@@ -351,6 +361,7 @@ export function disableBiometric(): void {
   cachedBiometricInfo = null;
   removeSecureStorageItem(secureStorageKeys.biometricInfo);
   removeSecureStorageItem(secureStorageKeys.biometricWrappingSecret);
+  clearAndroidBiometricKey();
   void deleteBiometricFromIndexedDBWithRetry().catch((err) => {
     console.error('Failed to delete biometric from IndexedDB after retries:', err);
   });
@@ -360,6 +371,7 @@ export async function disableBiometricAsync(): Promise<void> {
   cachedBiometricInfo = null;
   removeSecureStorageItem(secureStorageKeys.biometricInfo);
   removeSecureStorageItem(secureStorageKeys.biometricWrappingSecret);
+  clearAndroidBiometricKey();
   await deleteBiometricFromIndexedDBWithRetry();
 }
 
@@ -526,7 +538,16 @@ async function registerNativeBiometric(payload: string): Promise<void> {
 
   const wrappingSecret = secureRandomBytes(32);
   const wrappingSecretB64 = bytesToBase64(wrappingSecret);
-  setSecureStorageItem(secureStorageKeys.biometricWrappingSecret, wrappingSecretB64);
+
+  // RUST-O4: when the auth-bound AndroidKeyStore bridge is available, only the
+  // opaque wrapped handle is persisted — the raw secret never reaches storage.
+  // Otherwise fall back to the legacy KeyStore-encrypted raw secret storage.
+  if (isBiometricAndroidBridgeAvailable()) {
+    const handle = await wrapAndroidBiometricSecret(wrappingSecret);
+    setSecureStorageItem(secureStorageKeys.biometricWrappingSecret, handle);
+  } else {
+    setSecureStorageItem(secureStorageKeys.biometricWrappingSecret, wrappingSecretB64);
+  }
 
   const salt = secureRandomBytes(16);
   const wrappingKey = await deriveWebCryptoPbkdf2Key(wrappingSecret, salt, BIOMETRIC_PBKDF2_ITERATIONS, 32);
@@ -560,18 +581,26 @@ async function authenticateBiometricRaw(): Promise<string> {
     await authenticateNativeBiometric();
 
     try {
-      const storedWrappingSecret = getSecureStorageItem(secureStorageKeys.biometricWrappingSecret);
-      if (!storedWrappingSecret) {
+      const stored = getSecureStorageItem(secureStorageKeys.biometricWrappingSecret);
+      if (!stored) {
         // P0-3: wrappingSecret MUST come from OS secure storage. If unavailable,
         // the biometric binding is broken — force re-registration.
         throw new BiometricError(biometricErrorCodes.integrityMismatch, 'Biometric wrapping secret not found in secure storage. Re-registration required.');
       }
-      const wrappingSecret = base64ToBytes(storedWrappingSecret);
+      let wrappingSecret: Uint8Array;
+      if (isBiometricAndroidBridgeAvailable() && isBiometricHandle(stored)) {
+        // RUST-O4: opaque handle wrapped by the auth-bound AndroidKeyStore key.
+        wrappingSecret = await unwrapAndroidBiometricSecret(stored);
+      } else {
+        // Legacy: raw KeyStore-encrypted secret (kept for back-compat).
+        wrappingSecret = base64ToBytes(stored);
+      }
       const saltBytes = base64ToBytes(biometricInfo.salt);
       const iterations = biometricInfo.pbkdf2Iterations ?? BIOMETRIC_PBKDF2_ITERATIONS;
       const wrappingKey = await deriveWebCryptoPbkdf2Key(wrappingSecret, saltBytes, iterations, 32);
       return webCryptoAesGcmDecrypt(biometricInfo.bundle, wrappingKey);
-    } catch {
+    } catch (error) {
+      if (error instanceof BiometricError) throw error;
       throw new BiometricError(biometricErrorCodes.integrityMismatch);
     }
   }
