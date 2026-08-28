@@ -57,8 +57,7 @@ pub fn encrypt_message_frame(key: &[u8; 32], plaintext: &[u8]) -> io::Result<Vec
         ));
     }
 
-    let cipher = XChaCha20Poly1305::new_from_slice(key)
-        .expect("AEAD can take a 32-byte key");
+    let cipher = XChaCha20Poly1305::new_from_slice(key).expect("AEAD can take a 32-byte key");
     let mut nonce_bytes = [0u8; IPC_AEAD_NONCE_LEN];
     OsRng.fill_bytes(&mut nonce_bytes);
     let nonce = XNonce::from_slice(&nonce_bytes);
@@ -79,7 +78,10 @@ pub fn encrypt_message_frame(key: &[u8; 32], plaintext: &[u8]) -> io::Result<Vec
 /// authentication failure returns an error (fail-closed).
 pub fn decrypt_message_frame(key: &[u8; 32], frame: &[u8]) -> io::Result<Vec<u8>> {
     if frame.len() < IPC_FRAME_HEADER_LEN {
-        return Err(io::Error::new(io::ErrorKind::InvalidData, "IPC frame too short"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "IPC frame too short",
+        ));
     }
 
     let ciphertext_len = u32::from_be_bytes([frame[0], frame[1], frame[2], frame[3]]) as usize;
@@ -104,20 +106,19 @@ pub fn decrypt_message_frame(key: &[u8; 32], frame: &[u8]) -> io::Result<Vec<u8>
 
     let nonce = XNonce::from_slice(&frame[4 + 1..4 + 1 + IPC_AEAD_NONCE_LEN]);
     let ciphertext = &frame[IPC_FRAME_HEADER_LEN..];
-    let cipher = XChaCha20Poly1305::new_from_slice(key)
-        .expect("AEAD can take a 32-byte key");
-    cipher
-        .decrypt(nonce, ciphertext)
-        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "IPC frame authentication failed"))
+    let cipher = XChaCha20Poly1305::new_from_slice(key).expect("AEAD can take a 32-byte key");
+    cipher.decrypt(nonce, ciphertext).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            "IPC frame authentication failed",
+        )
+    })
 }
 
 /// Reads a length-prefixed authenticated frame from the stream and returns the
 /// decrypted plaintext. Requires a 4-byte BE ciphertext length prefix, then the
 /// `[version][nonce][ciphertext||tag]` body.
-fn read_authenticated_frame(
-    stream: &mut TcpStream,
-    key: &[u8; 32],
-) -> io::Result<Vec<u8>> {
+fn read_authenticated_frame(stream: &mut TcpStream, key: &[u8; 32]) -> io::Result<Vec<u8>> {
     let mut len_buf = [0u8; 4];
     stream.read_exact(&mut len_buf)?;
     let frame_len = u32::from_be_bytes(len_buf) as usize;
