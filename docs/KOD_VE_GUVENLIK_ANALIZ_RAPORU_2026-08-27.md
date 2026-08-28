@@ -68,10 +68,7 @@
 - **Risk:** README'deki "hardware-backed biometrics" iddiası AndroidKeyStore'a bağlı olmayan anahtarla zayıf kalıyor; root'ta bağlantı silinip yeniden kurulabilir.
 - **Düzeltme:** Anahtarı AndroidKeyStore sarmalama anahtarıyla sarmalayın; `setUserAuthenticationRequired(true)` ile bağlayın; transport'ta yalnızca opak handle taşıyın.
 
-**BULGU EXT-B2 — Native host manifest'i OneDrive mutlak yolu + 3 tarayıcı ID'si**
-- **Dosya:** `dist-extension*/com.hafgit99.aegisvault7.json`
-- **Risk:** Cihaz-spesifik mutlak yol taşınıyor; 3 ID kimlik doğrulama yüzeyini büyütüyor.
-- **Düzeltme:** Host manifest'ini kurulum zamanında oluşturun; allowed_origins'ı yalnızca imzalı extension ID'lerle sınırlandırın.
+**BULGU EXT-B2 — Native host manifest'i OneDrive mutlak yolu + 3 tarayıcı ID'si** ✅ **ÇÖZÜLDÜ (28.08.2026):** Host manifest'leri (`com.hafgit99.aegisvault7.json` + `aegis-host.bat`) git'ten çıkarıldı (`git rm --cached`; 4 izli dosya) ve üretim zincirinden kaldırıldı — `build-extension.js` artık hiçbir registration dosyası üretmiyor (dist/release çıktıları doğrulandı: 0 adet). Manifest üretimi **kurulum/kayıt zamanına** taşındı: `register-host.js` artık cihaza özgü mutlak yolları yalnızca gitignored `native-host-local/{chromium,firefox}/` altına yazıyor ve `allowed_origins` listesini saf, birim-testli `scripts/native-host-manifest.mjs` modülü üzerinden üretiyor (32-char `[a-p]` ID doğrulaması; geçersiz ID'ler reddediliyor, genişletici wildcard yok). Mevcut kayıtlı ID'ler legacy manifest'lerinden otomatik migrate ediliyor; ek ID'ler yalnızca `npm run register:extension <id>` ile validate edilerek eklenebiliyor. Ayrıca kayıt akışındaki **sessiz PowerShell hatası** düzeltildi: `powershell -Command` + `param()` binding'i hiç çalışmıyordu; yerine parametreli `register-host-registry.ps1` yardımcısı `-File` ile çağrılıyor (registry üç tarayıcı için de doğrulandı: Chrome/Edge/Firefox → `native-host-local/`). 13 birim test + typecheck + lint yeşil.
 
 ### 3.3 🟡 ORTA
 
@@ -180,9 +177,9 @@ Aegis Vault v7, "offline-first, sıfır-bilgi parola kasası" kategorisinde değ
 ## 6. Önceliklendirilmiş İyileştirme Yol Haritası
 
 **P0 — Bu hafta (acil):**
-1. EXT-B1: Android keystore şifresi rotasyonu + secrets dosyasını OneDrive dışına taşıma
-2. SEC-B1: Auto-lock sayacını wall-clock'a bağlama (15-30 satırlık değişiklik)
-3. EXT-B2: Host manifest'ini installer'a taşıma (mutlak yol + 3 ID sızma yüzeyi)
+1. ✅ EXT-B1: Android keystore şifresi rotasyonu + secrets dosyasını OneDrive dışına taşıma — **ÇÖZÜLDÜ (27.08.2026)**
+2. ✅ SEC-B1: Auto-lock sayacını wall-clock'a bağlama — **ÇÖZÜLDÜ (27.08.2026)**
+3. ✅ EXT-B2: Host manifest'ini installer'a taşıma (mutlak yol + 3 ID sızma yüzeyi) — **ÇÖZÜLDÜ (28.08.2026)**
 
 **P1 — Bu ay:**
 4. SEC-B2: Sync zarfı KDF'ini vault ile aynı tabana çekme (taze salt zorunlu)

@@ -16,6 +16,15 @@ coverage/
 keystore.properties
 key.properties
 
+# Native messaging host registration files (EXT-B2: generated at install/registration
+# time by scripts/register-host.js; contain machine-specific absolute paths and must
+# never be committed or shipped in build outputs)
+native-host-local/
+dist-extension*/com.hafgit99.aegisvault7.json
+dist-extension*/aegis-host.bat
+release-local/**/com.hafgit99.aegisvault7.json
+release-local/**/aegis-host.bat
+
 # Local tool states
 .commandcode/
 .kilo/

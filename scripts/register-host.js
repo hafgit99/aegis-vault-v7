@@ -3,18 +3,41 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { spawnSync } from 'child_process';
 
+import {
+  buildChromeHostManifest,
+  buildFirefoxHostManifest,
+  chromeOriginFromId,
+  collectValidatedOriginsFromObjects,
+  FIREFOX_EXTENSION_ID,
+  HOST_NAME,
+  PRIMARY_CHROME_EXTENSION_ID,
+} from './native-host-manifest.mjs';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 
-const HOST_NAME = 'com.hafgit99.aegisvault7';
-const FIREFOX_EXTENSION_ID = 'aegisvault7@hafgit99.com';
+// EXT-B2: host manifests embed a machine-specific absolute executable path,
+// so they are generated at registration (install) time into a dedicated,
+// gitignored directory — never inside extension build outputs and never in git.
+const hostDir = path.resolve(projectRoot, 'native-host-local');
+const registryHelperScript = path.resolve(__dirname, 'register-host-registry.ps1');
+const chromiumHostDir = path.join(hostDir, 'chromium');
+const firefoxHostDir = path.join(hostDir, 'firefox');
+const batPath = path.join(chromiumHostDir, 'aegis-host.bat');
+const chromeManifestPath = path.join(chromiumHostDir, `${HOST_NAME}.json`);
+const firefoxManifestPath = path.join(firefoxHostDir, `${HOST_NAME}.json`);
 
-const distDir = path.resolve(projectRoot, 'dist-extension');
-const firefoxDistDir = path.resolve(projectRoot, 'dist-extension-firefox');
-const batPath = path.join(distDir, 'aegis-host.bat');
-const chromeManifestPath = path.join(distDir, `${HOST_NAME}.json`);
-const firefoxManifestPath = path.join(firefoxDistDir, `${HOST_NAME}.json`);
+// Legacy locations that previously (incorrectly) held host manifests; used
+// once here to migrate already-registered extension IDs forward.
+const legacyManifestPaths = [
+  path.resolve(projectRoot, 'dist-extension', `${HOST_NAME}.json`),
+  path.resolve(projectRoot, 'dist-extension-firefox', `${HOST_NAME}.json`),
+  path.resolve(projectRoot, 'dist-extension-safari', `${HOST_NAME}.json`),
+  path.resolve(projectRoot, 'release-local', 'windows', 'browser-extension', 'chromium', `${HOST_NAME}.json`),
+  path.resolve(projectRoot, 'release-local', 'windows', 'browser-extension', 'firefox', `${HOST_NAME}.json`),
+  path.resolve(projectRoot, 'release-local', 'windows', 'browser-extension', 'safari', `${HOST_NAME}.json`),
+];
 
 const isWin = process.platform === 'win32';
 const exeName = isWin ? 'aegis-vault-v7.exe' : 'aegis-vault-v7';
@@ -43,19 +66,34 @@ if exist "${releaseExe}" (
   "${releaseExe}" --native-messaging-host %*
 )
 `;
-fs.mkdirSync(distDir, { recursive: true });
-fs.mkdirSync(firefoxDistDir, { recursive: true });
+fs.mkdirSync(chromiumHostDir, { recursive: true });
+fs.mkdirSync(firefoxHostDir, { recursive: true });
 fs.writeFileSync(batPath, batContent);
 console.log(`Created: ${batPath}`);
 
 // 2. Create com.hafgit99.aegisvault7.json
 // Note: Chrome/Edge do NOT support wildcards (*) in allowed_origins.
 // We only permit official/configured extension IDs and reject arbitrary placeholders.
-const allowedOrigins = [
-  "chrome-extension://bfjfdbphbmdfinjddbbegnlclanbpnch/", // Primary Aegis Extension ID
-];
-
 const extensionId = process.argv[2] || process.env.AEGIS_EXTENSION_ID;
+
+// EXT-B2: migrate origins from legacy manifests (dist-extension*/, release-local)
+// so an existing local registration keeps working after the move to native-host-local/.
+const legacyManifests = [];
+for (const legacyPath of legacyManifestPaths) {
+  try {
+    if (fs.existsSync(legacyPath)) {
+      legacyManifests.push(JSON.parse(fs.readFileSync(legacyPath, 'utf8')));
+      console.log(`Migrating existing origins from legacy manifest: ${legacyPath}`);
+    }
+  } catch {
+    console.warn(`Warning: could not parse legacy manifest at ${legacyPath}; skipping.`);
+  }
+}
+
+const allowedOrigins = [
+  chromeOriginFromId(PRIMARY_CHROME_EXTENSION_ID),
+  ...collectValidatedOriginsFromObjects(legacyManifests),
+].filter((origin, index, all) => origin !== null && !all.slice(0, index).includes(origin));
 if (extensionId) {
   let cleanId = extensionId.replace(/^chrome-extension:\/\//, '').replace(/\/+$/, '').trim();
   if (/^[a-p]{32}$/i.test(cleanId)) {
@@ -71,31 +109,26 @@ if (extensionId) {
   console.log('No extra extension ID provided. You can pass it as: npm run register:extension <extension-id>');
 }
 
-const baseManifest = {
-  name: HOST_NAME,
-  description: "Aegis Vault Native Messaging Host",
-  path: selectedExe,
-  type: "stdio"
-};
+const chromeManifestContent = buildChromeHostManifest({
+  hostPath: selectedExe,
+  extensionIds: allowedOrigins.map((origin) =>
+    origin.replace(/^chrome-extension:\/\//, '').replace(/\/+$/, ''),
+  ),
+});
 
-const chromeManifestContent = {
-  ...baseManifest,
-  allowed_origins: allowedOrigins
-};
-
-const firefoxManifestContent = {
-  ...baseManifest,
-  allowed_extensions: [
-    FIREFOX_EXTENSION_ID
-  ]
-};
+const firefoxManifestContent = buildFirefoxHostManifest({
+  hostPath: selectedExe,
+  firefoxExtensionId: FIREFOX_EXTENSION_ID,
+});
 
 fs.writeFileSync(chromeManifestPath, JSON.stringify(chromeManifestContent, null, 2));
 fs.writeFileSync(firefoxManifestPath, JSON.stringify(firefoxManifestContent, null, 2));
 console.log(`Created Chrome/Edge manifest: ${chromeManifestPath}`);
 console.log(`Created Firefox manifest: ${firefoxManifestPath}`);
 
-// 3. Register on Windows Registry via parameterized PowerShell (no string concatenation)
+// 3. Register on Windows Registry via reg.exe (argv-based, no shell string
+// concatenation — injection-safe, and unlike `powershell -Command` it
+// reliably binds the parameters)
 if (process.platform === 'win32') {
   try {
     console.log('Registering Host in Windows Registry for Chrome, Edge, and Firefox...');
@@ -115,21 +148,17 @@ if (process.platform === 'win32') {
       }
     ];
 
-    const psRegistryScript = `
-      param($regPath, $manifestFile)
-      if (!(Test-Path -LiteralPath $regPath)) {
-        New-Item -Path $regPath -Force | Out-Null
-      }
-      Set-ItemProperty -LiteralPath $regPath -Name '(Default)' -Value $manifestFile -Force
-    `;
-
     for (const entry of registryEntries) {
       const regRes = spawnSync('powershell', [
         '-NoProfile',
         '-NonInteractive',
-        '-Command',
-        psRegistryScript,
+        '-ExecutionPolicy',
+        'Bypass',
+        '-File',
+        registryHelperScript,
+        '-regPath',
         entry.path,
+        '-manifestFile',
         entry.manifest,
       ], { stdio: 'inherit' });
 
@@ -154,10 +183,10 @@ if (process.platform === 'win32') {
     console.error('Failed to update Windows Registry:', error.message);
     console.log('\n--- MANUAL REGISTRY INSTRUCTIONS ---');
     console.log('Please run the following commands in an Administrator PowerShell to register the host:');
-    console.log(`New-Item -Path "HKCU:\\Software\\Google\\Chrome\\NativeMessagingHosts\\${HOST_NAME}" -Force`);
-    console.log(`Set-ItemProperty -Path "HKCU:\\Software\\Google\\Chrome\\NativeMessagingHosts\\${HOST_NAME}" -Name "(Default)" -Value "${chromeManifestPath}"`);
-    console.log(`New-Item -Path "HKCU:\\Software\\Mozilla\\NativeMessagingHosts\\${HOST_NAME}" -Force`);
-    console.log(`Set-ItemProperty -Path "HKCU:\\Software\\Mozilla\\NativeMessagingHosts\\${HOST_NAME}" -Name "(Default)" -Value "${firefoxManifestPath}"`);
+    console.log(`New-Item -Path "HKCU:\Software\\Google\\Chrome\\NativeMessagingHosts\\${HOST_NAME}" -Force`);
+    console.log(`Set-ItemProperty -Path "HKCU:\Software\\Google\\Chrome\\NativeMessagingHosts\\${HOST_NAME}" -Name "(Default)" -Value "${chromeManifestPath}"`);
+    console.log(`New-Item -Path "HKCU:\Software\\Mozilla\\NativeMessagingHosts\\${HOST_NAME}" -Force`);
+    console.log(`Set-ItemProperty -Path "HKCU:\Software\\Mozilla\\NativeMessagingHosts\\${HOST_NAME}" -Name "(Default)" -Value "${firefoxManifestPath}"`);
   }
 } else {
   console.log('Registering Host for macOS/Linux...');

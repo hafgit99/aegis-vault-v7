@@ -73,7 +73,10 @@ npm run sign:firefox:xpi
 The signed XPI only installs the browser extension. The desktop app must still register the native messaging host:
 
 ```bash
+
 npm run register:extension
 ```
 
 On Windows, this writes the Firefox native messaging manifest to both registry and the Mozilla NativeMessagingHosts directory.
+
+Host manifests are generated at registration time (never committed or shipped in build outputs). They live in the gitignored `native-host-local/` directory: `chromium/com.hafgit99.aegisvault7.json` for Chrome/Edge and `firefox/com.hafgit99.aegisvault7.json` for Firefox. Additional Chromium extension IDs can be added with `npm run register:extension <extension-id>`; entries are validated and migrated from previously generated manifests automatically.

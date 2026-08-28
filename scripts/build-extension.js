@@ -12,26 +12,16 @@ const outDirFirefox = path.resolve(projectRoot, 'dist-extension-firefox');
 const srcDir = path.resolve(projectRoot, 'src-extension');
 const isDebugBuild = process.argv.includes('--debug');
 
-const batPath = path.join(outDir, 'aegis-host.bat');
-const manifestPath = path.join(outDir, 'com.hafgit99.aegisvault7.json');
-const firefoxBatPath = path.join(outDirFirefox, 'aegis-host.bat');
-const firefoxHostManifestPath = path.join(outDirFirefox, 'com.hafgit99.aegisvault7.json');
-
-// Backup host registry files if they exist
-const batBackup = fs.existsSync(batPath) ? fs.readFileSync(batPath) : null;
-const jsonBackup = fs.existsSync(manifestPath) ? fs.readFileSync(manifestPath) : null;
-const firefoxBatBackup = fs.existsSync(firefoxBatPath) ? fs.readFileSync(firefoxBatPath) : null;
-const firefoxJsonBackup = fs.existsSync(firefoxHostManifestPath) ? fs.readFileSync(firefoxHostManifestPath) : null;
+// EXT-B2: Native messaging host registration files (aegis-host.bat,
+// com.hafgit99.aegisvault7.json) embed machine-specific absolute paths and are
+// generated at registration time by scripts/register-host.js into
+// native-host-local/ — they are intentionally NOT produced by this build.
 
 // Ensure outDir exists
 if (fs.existsSync(outDir)) {
   fs.rmSync(outDir, { recursive: true, force: true });
 }
 fs.mkdirSync(outDir, { recursive: true });
-
-// Restore backup
-if (batBackup) fs.writeFileSync(batPath, batBackup);
-if (jsonBackup) fs.writeFileSync(manifestPath, jsonBackup);
 
 async function build() {
   console.log('Compiling extension TS files using esbuild (' + (isDebugBuild ? 'debug' : 'release') + ')...');
@@ -111,9 +101,6 @@ async function build() {
   }
   
   fs.writeFileSync(firefoxManifestPath, JSON.stringify(manifest, null, 2));
-
-  if (firefoxBatBackup) fs.writeFileSync(firefoxBatPath, firefoxBatBackup);
-  if (firefoxJsonBackup) fs.writeFileSync(firefoxHostManifestPath, firefoxJsonBackup);
 
   console.log('Firefox-optimized extension build completed inside dist-extension-firefox/ !');
 
