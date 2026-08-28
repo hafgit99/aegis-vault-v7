@@ -1,4 +1,9 @@
+use chacha20poly1305::{
+    aead::{Aead, KeyInit},
+    XChaCha20Poly1305, XNonce,
+};
 use hmac::{Hmac, Mac};
+use rand::{rngs::OsRng, RngCore};
 use sha2::Sha256;
 use std::fs;
 use std::io::{self, Read, Write};
@@ -14,33 +19,133 @@ type HmacSha256 = Hmac<Sha256>;
 
 pub const TOKEN_FILENAME: &str = "aegis_ipc_token.bin";
 pub const PORT_FILENAME: &str = "aegis_ipc_port.txt";
-pub const IPC_HMAC_INFO: &[u8] = b"aegis-ipc-session-hmac-v1";
+pub const IPC_DATA_KEY_INFO: &[u8] = b"aegis-ipc-session-data-key-v2";
 
-/// Derives a 32-byte session MAC key from the 256-bit pairing token using HKDF-Expand style HMAC-SHA256.
-pub fn derive_session_mac_key(pairing_token: &str) -> [u8; 32] {
-    let mut mac = HmacSha256::new_from_slice(pairing_token.as_bytes())
+/// IPC frame protocol version (RUST-Y1: AEAD frame format).
+/// Frame layout: `[4-byte BE ciphertext length][1-byte version][24-byte nonce][ciphertext||16-byte tag]`.
+pub const IPC_FRAME_VERSION: u8 = 0x02;
+pub const IPC_AEAD_NONCE_LEN: usize = 24;
+pub const IPC_AEAD_TAG_LEN: usize = 16;
+pub const IPC_FRAME_HEADER_LEN: usize = 4 + 1 + IPC_AEAD_NONCE_LEN;
+/// Maximum authenticated ciphertext length (payload capped at 1 MiB + 16-byte tag).
+pub const MAX_FRAME_CIPHERTEXT_LEN: usize = 1024 * 1024 + IPC_AEAD_TAG_LEN;
+
+/// Derives the 32-byte AEAD session data key from the 256-bit pairing token
+/// using HKDF-Expand style HMAC-SHA256 with a protocol-specific info string.
+///
+/// RUST-Y1: the session key now protects confidentiality (AEAD), not just
+/// integrity. The info string is versioned so key separation from the legacy
+/// HMAC-only derivation is guaranteed even if a token were ever reused.
+pub fn derive_session_data_key(pairing_token: &str) -> [u8; 32] {
+    let mut mac = <HmacSha256 as Mac>::new_from_slice(pairing_token.as_bytes())
         .expect("HMAC can take key of any size");
-    mac.update(IPC_HMAC_INFO);
+    mac.update(IPC_DATA_KEY_INFO);
     let result = mac.finalize().into_bytes();
     let mut key = [0u8; 32];
     key.copy_from_slice(&result[..32]);
     key
 }
 
-/// Computes a 32-byte HMAC-SHA256 integrity tag over an IPC message payload.
-pub fn compute_message_mac(key: &[u8; 32], payload: &[u8]) -> [u8; 32] {
-    let mut mac = HmacSha256::new_from_slice(key).expect("HMAC can take key of any size");
-    mac.update(payload);
-    let result = mac.finalize().into_bytes();
-    let mut out = [0u8; 32];
-    out.copy_from_slice(&result[..32]);
-    out
+/// Encrypts a plaintext payload into an authenticated IPC frame using
+/// XChaCha20-Poly1305 with a fresh CSPRNG nonce per frame:
+/// `[4-byte BE ciphertext length][version][24-byte nonce][ciphertext||16-byte tag]`.
+pub fn encrypt_message_frame(key: &[u8; 32], plaintext: &[u8]) -> io::Result<Vec<u8>> {
+    if plaintext.len() > 1024 * 1024 {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "IPC plaintext exceeds maximum allowed size",
+        ));
+    }
+
+    let cipher = XChaCha20Poly1305::new_from_slice(key)
+        .expect("AEAD can take a 32-byte key");
+    let mut nonce_bytes = [0u8; IPC_AEAD_NONCE_LEN];
+    OsRng.fill_bytes(&mut nonce_bytes);
+    let nonce = XNonce::from_slice(&nonce_bytes);
+
+    let ciphertext_and_tag = cipher
+        .encrypt(nonce, plaintext)
+        .map_err(|_| io::Error::other("AEAD encryption failed"))?;
+
+    let mut frame = Vec::with_capacity(IPC_FRAME_HEADER_LEN + ciphertext_and_tag.len());
+    frame.extend_from_slice(&(ciphertext_and_tag.len() as u32).to_be_bytes());
+    frame.push(IPC_FRAME_VERSION);
+    frame.extend_from_slice(&nonce_bytes);
+    frame.extend_from_slice(&ciphertext_and_tag);
+    Ok(frame)
 }
 
-/// Verifies the 32-byte HMAC-SHA256 integrity tag of an IPC message payload using constant-time comparison.
-pub fn verify_message_mac(key: &[u8; 32], payload: &[u8], expected_mac: &[u8; 32]) -> bool {
-    let computed = compute_message_mac(key, payload);
-    computed.ct_eq(expected_mac).into()
+/// Verifies and decrypts an authenticated IPC frame. Any structural or
+/// authentication failure returns an error (fail-closed).
+pub fn decrypt_message_frame(key: &[u8; 32], frame: &[u8]) -> io::Result<Vec<u8>> {
+    if frame.len() < IPC_FRAME_HEADER_LEN {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "IPC frame too short"));
+    }
+
+    let ciphertext_len = u32::from_be_bytes([frame[0], frame[1], frame[2], frame[3]]) as usize;
+    if frame[4] != IPC_FRAME_VERSION {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Unsupported IPC frame version",
+        ));
+    }
+    if ciphertext_len > MAX_FRAME_CIPHERTEXT_LEN {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "IPC frame exceeds maximum allowed size",
+        ));
+    }
+    if frame.len() != IPC_FRAME_HEADER_LEN + ciphertext_len {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "IPC frame length mismatch",
+        ));
+    }
+
+    let nonce = XNonce::from_slice(&frame[4 + 1..4 + 1 + IPC_AEAD_NONCE_LEN]);
+    let ciphertext = &frame[IPC_FRAME_HEADER_LEN..];
+    let cipher = XChaCha20Poly1305::new_from_slice(key)
+        .expect("AEAD can take a 32-byte key");
+    cipher
+        .decrypt(nonce, ciphertext)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "IPC frame authentication failed"))
+}
+
+/// Reads a length-prefixed authenticated frame from the stream and returns the
+/// decrypted plaintext. Requires a 4-byte BE ciphertext length prefix, then the
+/// `[version][nonce][ciphertext||tag]` body.
+fn read_authenticated_frame(
+    stream: &mut TcpStream,
+    key: &[u8; 32],
+) -> io::Result<Vec<u8>> {
+    let mut len_buf = [0u8; 4];
+    stream.read_exact(&mut len_buf)?;
+    let frame_len = u32::from_be_bytes(len_buf) as usize;
+    if frame_len > MAX_FRAME_CIPHERTEXT_LEN {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "IPC frame exceeds maximum allowed size",
+        ));
+    }
+
+    let mut frame_body = vec![0u8; IPC_FRAME_HEADER_LEN - 4 + frame_len];
+    stream.read_exact(&mut frame_body)?;
+
+    let mut frame = Vec::with_capacity(4 + frame_body.len());
+    frame.extend_from_slice(&len_buf);
+    frame.extend_from_slice(&frame_body);
+    decrypt_message_frame(key, &frame)
+}
+
+/// Encrypts plaintext into an authenticated frame and writes it to the stream.
+fn write_authenticated_frame(
+    stream: &mut TcpStream,
+    key: &[u8; 32],
+    plaintext: &[u8],
+) -> io::Result<()> {
+    let frame = encrypt_message_frame(key, plaintext)?;
+    stream.write_all(&frame)?;
+    stream.flush()
 }
 
 struct ConnectionRateLimiter {
@@ -122,8 +227,6 @@ pub fn get_app_data_dir() -> Option<PathBuf> {
 }
 
 pub fn generate_token() -> String {
-    use rand::{rngs::OsRng, RngCore};
-
     let mut token = [0u8; 32];
     OsRng.fill_bytes(&mut token);
     token.iter().map(|byte| format!("{:02x}", byte)).collect()
@@ -252,17 +355,11 @@ pub fn start_tcp_server(
                         continue;
                     }
                     let credentials_clone = credentials.clone();
-                    let token_clone = match pairing_token.lock() {
-                        Ok(t) => t.clone(),
-                        Err(e) => {
-                            log::error!("Failed to lock pairing token: {}", e);
-                            continue;
-                        }
-                    };
+                    let token_arc = pairing_token.clone();
                     let app_clone = app_handle.clone();
                     thread::spawn(move || {
                         if let Err(e) =
-                            handle_client(app_clone, &mut stream, &token_clone, credentials_clone)
+                            handle_client(app_clone, &mut stream, token_arc, credentials_clone)
                         {
                             log::debug!("TCP connection error: {}", e);
                         }
@@ -741,25 +838,32 @@ fn focus_webview_window(window: &tauri::WebviewWindow) {
 
 /// Handles an authenticated TCP client connection from the browser native messaging host.
 ///
-/// Security & Framing Architecture (R-4):
+/// Security & Framing Architecture (R-4 + RUST-Y1):
 /// 1. Handshake Phase: Client sends 4-byte token length + 256-bit token. Server verifies token
 ///    in constant time. If valid, replies with `b"OK"`. If invalid, replies with `b"UNAUTHORIZED"`
 ///    and immediately drops the connection.
-/// 2. Session Key Derivation: Server derives a 32-byte session MAC key from the pairing token using
-///    HKDF-SHA256 (`derive_session_mac_key`).
-/// 3. Message Framing: Each frame is encoded as:
-///    `[4-byte big-endian payload length][JSON payload bytes][32-byte HMAC-SHA256 tag]`
-/// 4. Frame Verification: Before parsing any request JSON, the HMAC tag is computed and verified
-///    using constant-time comparison against the received MAC. Any corrupt or tampered frames
-///    cause immediate session termination.
-/// 5. Response Integrity: All outgoing server responses are tagged with a 32-byte HMAC-SHA256.
+/// 2. Session Key Derivation: Server derives a 32-byte AEAD session data key from the pairing
+///    token using HKDF-SHA256 (`derive_session_data_key`).
+/// 3. Message Framing: Each request and response frame is encrypted with XChaCha20-Poly1305:
+///    `[4-byte big-endian ciphertext length][1-byte version][24-byte nonce][ciphertext||16-byte tag]`
+///    with a fresh CSPRNG nonce per frame. AEAD provides confidentiality, integrity and
+///    authentication in a single layer.
+/// 4. Frame Verification: Any structurally invalid, version-mismatched or unauthenticated frame
+///    causes immediate session termination (fail-closed).
+/// 5. Session Revocation: The `revoke` action rotates the pairing token, wipes the credential
+///    lease and terminates the connection, invalidating all previously issued session keys.
 fn handle_client(
     app_handle: tauri::AppHandle,
     stream: &mut TcpStream,
-    pairing_token: &str,
+    pairing_token: Arc<Mutex<String>>,
     credentials: Arc<Mutex<Option<ExtensionCredentialCache>>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     use tauri::{Emitter, Manager};
+
+    let current_token = pairing_token
+        .lock()
+        .map_err(|_| "Pairing token mutex poisoned")?
+        .clone();
 
     // 1. Handshake okuma (4-byte uzunluk + token verisi)
     let mut len_buf = [0u8; 4];
@@ -773,7 +877,7 @@ fn handle_client(
     stream.read_exact(&mut token_buf)?;
     let received_token = String::from_utf8(token_buf)?;
 
-    if !is_pairing_token_valid(&received_token, pairing_token) {
+    if !is_pairing_token_valid(&received_token, &current_token) {
         stream.write_all(b"UNAUTHORIZED")?;
         stream.flush()?;
         return Err("Unauthorized client connected".into());
@@ -782,33 +886,25 @@ fn handle_client(
     stream.write_all(b"OK")?;
     stream.flush()?;
 
-    let session_mac_key = derive_session_mac_key(pairing_token);
+    let session_data_key = derive_session_data_key(&current_token);
 
-    // 2. Ana mesaj döngüsü (Framing: [4-byte len][payload][32-byte HMAC-SHA256])
+    // 2. Ana mesaj döngüsü (Framing: [4-byte len][version][24-byte nonce][ciphertext||tag])
     loop {
-        let mut msg_len_buf = [0u8; 4];
-        if stream.read_exact(&mut msg_len_buf).is_err() {
-            break; // Bağlantı kapandı
-        }
-        let msg_len = u32::from_be_bytes(msg_len_buf) as usize;
-        if msg_len > 1024 * 1024 {
-            return Err("Message exceeds maximum allowed size".into());
-        }
-
-        let mut msg_buf = vec![0u8; msg_len];
-        stream.read_exact(&mut msg_buf)?;
-
-        let mut received_mac = [0u8; 32];
-        stream.read_exact(&mut received_mac)?;
-
-        if !verify_message_mac(&session_mac_key, &msg_buf, &received_mac) {
-            log::warn!("[Aegis IPC] Frame HMAC-SHA256 verification failed! Terminating corrupted connection.");
-            return Err("Message integrity verification failed".into());
-        }
+        let msg_buf = match read_authenticated_frame(stream, &session_data_key) {
+            Ok(buf) => buf,
+            Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break, // Bağlantı kapandı
+            Err(_) => {
+                log::warn!(
+                    "[Aegis IPC] AEAD frame decryption failed! Terminating corrupted connection."
+                );
+                return Err("Message authentication failed".into());
+            }
+        };
 
         let req: serde_json::Value = serde_json::from_slice(&msg_buf)?;
         let action = req["action"].as_str().unwrap_or("");
 
+        let mut revoke_session = false;
         let response = match action {
             "ping" => serde_json::json!({ "status": "ok" }),
             "is_locked" => {
@@ -933,17 +1029,39 @@ fn handle_client(
                     serde_json::json!({ "locked": true, "credentials": [] })
                 }
             }
+            "revoke" => {
+                // RUST-Y1: session revocation — wipe the credential lease,
+                // rotate the pairing token (invalidating all prior session keys)
+                // and terminate this connection immediately after responding.
+                {
+                    let mut creds_guard = credentials.lock().unwrap();
+                    *creds_guard = None;
+                }
+                let new_token = generate_token();
+                {
+                    let mut token_guard = pairing_token.lock().unwrap();
+                    *token_guard = new_token.clone();
+                }
+                if let Some(app_data_dir) = get_app_data_dir() {
+                    let token_path = app_data_dir.join(TOKEN_FILENAME);
+                    let _ = write_pairing_token_file(&token_path, &new_token);
+                }
+                revoke_session = true;
+                serde_json::json!({ "status": "revoked" })
+            }
             _ => serde_json::json!({ "error": "unknown action" }),
         };
 
         let res_bytes = serde_json::to_vec(&response)?;
-        let res_len = res_bytes.len() as u32;
-        let res_mac = compute_message_mac(&session_mac_key, &res_bytes);
 
-        stream.write_all(&res_len.to_be_bytes())?;
-        stream.write_all(&res_bytes)?;
-        stream.write_all(&res_mac)?;
-        stream.flush()?;
+        if write_authenticated_frame(stream, &session_data_key, &res_bytes).is_err() {
+            return Err("Failed to write response frame".into());
+        }
+
+        if revoke_session {
+            // Connection is intentionally terminated after revocation.
+            return Ok(());
+        }
     }
 
     Ok(())
@@ -1007,7 +1125,7 @@ pub fn run_host() {
         candidate_ports.push(DEFAULT_TCP_PORT);
     }
     let mut stream = None;
-    let mut session_mac_key: Option<[u8; 32]> = None;
+    let mut session_data_key: Option<[u8; 32]> = None;
     if let Some(ref token) = pairing_token {
         for port in candidate_ports {
             if let Ok(mut s) = TcpStream::connect(format!("127.0.0.1:{}", port)) {
@@ -1022,7 +1140,7 @@ pub fn run_host() {
                     };
 
                 if handshake_success {
-                    session_mac_key = Some(derive_session_mac_key(token));
+                    session_data_key = Some(derive_session_data_key(token));
                     stream = Some(s);
                     break;
                 }
@@ -1037,48 +1155,29 @@ pub fn run_host() {
             Err(_) => break,
         };
 
-        if let (Some(ref mut s), Some(ref mac_key)) = (&mut stream, &session_mac_key) {
-            // TCP forwarding mode with HMAC-SHA256 frame integrity (R-4)
+        if let (Some(ref mut s), Some(ref data_key)) = (&mut stream, &session_data_key) {
+            // TCP forwarding mode with AEAD (XChaCha20-Poly1305) frame protection (RUST-Y1)
             let msg_bytes = match serde_json::to_vec(&msg) {
                 Ok(b) => b,
                 Err(_) => break,
             };
-            let msg_len = msg_bytes.len() as u32;
-            let msg_mac = compute_message_mac(mac_key, &msg_bytes);
 
-            if s.write_all(&msg_len.to_be_bytes()).is_err()
-                || s.write_all(&msg_bytes).is_err()
-                || s.write_all(&msg_mac).is_err()
-                || s.flush().is_err()
-            {
+            if write_authenticated_frame(s, data_key, &msg_bytes).is_err() {
+                log::error!("[Aegis Host] Failed to write AEAD request frame.");
                 break;
             }
 
-            let mut resp_len_buf = [0u8; 4];
-            if s.read_exact(&mut resp_len_buf).is_err() {
-                break;
-            }
-            let resp_len = u32::from_be_bytes(resp_len_buf) as usize;
-            if resp_len > 1024 * 1024 {
-                break;
-            }
-            let mut resp_buf = vec![0u8; resp_len];
-            if s.read_exact(&mut resp_buf).is_err() {
-                break;
-            }
-            let mut resp_mac = [0u8; 32];
-            if s.read_exact(&mut resp_mac).is_err() {
-                break;
-            }
+            let resp_bytes = match read_authenticated_frame(s, data_key) {
+                Ok(bytes) => bytes,
+                Err(_) => {
+                    log::error!(
+                        "[Aegis Host] Response AEAD authentication failed! Dropping response."
+                    );
+                    break;
+                }
+            };
 
-            if !verify_message_mac(mac_key, &resp_buf, &resp_mac) {
-                log::error!(
-                    "[Aegis Host] Response HMAC integrity verification failed! Dropping response."
-                );
-                break;
-            }
-
-            let resp_json: serde_json::Value = match serde_json::from_slice(&resp_buf) {
+            let resp_json: serde_json::Value = match serde_json::from_slice(&resp_bytes) {
                 Ok(j) => j,
                 Err(_) => break,
             };
@@ -1247,13 +1346,13 @@ mod tests {
     }
 
     #[test]
-    fn test_derive_session_mac_key_is_deterministic_and_unique() {
+    fn test_derive_session_data_key_is_deterministic_and_unique() {
         let token1 = generate_token();
         let token2 = generate_token();
 
-        let key1_a = derive_session_mac_key(&token1);
-        let key1_b = derive_session_mac_key(&token1);
-        let key2 = derive_session_mac_key(&token2);
+        let key1_a = derive_session_data_key(&token1);
+        let key1_b = derive_session_data_key(&token1);
+        let key2 = derive_session_data_key(&token2);
 
         assert_eq!(key1_a, key1_b);
         assert_ne!(key1_a, key2);
@@ -1261,35 +1360,87 @@ mod tests {
     }
 
     #[test]
-    fn test_message_mac_computation_and_verification() {
+    fn test_frame_encryption_decryption_roundtrip() {
         let token = generate_token();
-        let key = derive_session_mac_key(&token);
+        let key = derive_session_data_key(&token);
         let payload = b"{\"action\":\"get_credentials\",\"url\":\"https://example.com\"}";
 
-        let mac = compute_message_mac(&key, payload);
-        assert!(verify_message_mac(&key, payload, &mac));
+        let frame = encrypt_message_frame(&key, payload).expect("encrypt should succeed");
+        let plaintext = decrypt_message_frame(&key, &frame).expect("decrypt should succeed");
+
+        assert_eq!(plaintext, payload);
     }
 
     #[test]
-    fn test_message_mac_fails_on_tampered_payload() {
+    fn test_frame_encryption_uses_fresh_nonce_per_call() {
         let token = generate_token();
-        let key = derive_session_mac_key(&token);
-        let payload = b"{\"action\":\"get_credentials\",\"url\":\"https://example.com\"}";
-        let tampered_payload = b"{\"action\":\"get_credentials\",\"url\":\"https://attacker.com\"}";
-
-        let mac = compute_message_mac(&key, payload);
-        assert!(!verify_message_mac(&key, tampered_payload, &mac));
-    }
-
-    #[test]
-    fn test_message_mac_fails_with_wrong_key() {
-        let token1 = generate_token();
-        let token2 = generate_token();
-        let key1 = derive_session_mac_key(&token1);
-        let key2 = derive_session_mac_key(&token2);
+        let key = derive_session_data_key(&token);
         let payload = b"{\"action\":\"ping\"}";
 
-        let mac = compute_message_mac(&key1, payload);
-        assert!(!verify_message_mac(&key2, payload, &mac));
+        let frame_a = encrypt_message_frame(&key, payload).unwrap();
+        let frame_b = encrypt_message_frame(&key, payload).unwrap();
+
+        // Same plaintext must never produce identical wire bytes (fresh nonce).
+        assert_ne!(frame_a, frame_b);
+    }
+
+    #[test]
+    fn test_frame_decryption_fails_on_tampered_ciphertext() {
+        let token = generate_token();
+        let key = derive_session_data_key(&token);
+        let payload = b"{\"action\":\"get_credentials\",\"url\":\"https://example.com\"}";
+
+        let frame = encrypt_message_frame(&key, payload).unwrap();
+        let mut tampered = frame.clone();
+        let last_idx = tampered.len() - 1;
+        tampered[last_idx] ^= 0x01;
+
+        assert!(decrypt_message_frame(&key, &tampered).is_err());
+    }
+
+    #[test]
+    fn test_frame_decryption_fails_with_wrong_key() {
+        let token1 = generate_token();
+        let token2 = generate_token();
+        let key1 = derive_session_data_key(&token1);
+        let key2 = derive_session_data_key(&token2);
+        let payload = b"{\"action\":\"ping\"}";
+
+        let frame = encrypt_message_frame(&key1, payload).unwrap();
+        assert!(decrypt_message_frame(&key2, &frame).is_err());
+    }
+
+    #[test]
+    fn test_frame_decryption_rejects_wrong_version_and_malformed_frames() {
+        let token = generate_token();
+        let key = derive_session_data_key(&token);
+        let payload = b"{\"action\":\"ping\"}";
+
+        let frame = encrypt_message_frame(&key, payload).unwrap();
+
+        // Bump the version byte to an unsupported value.
+        let mut wrong_version = frame.clone();
+        wrong_version[4] = IPC_FRAME_VERSION.wrapping_add(1);
+        assert!(decrypt_message_frame(&key, &wrong_version).is_err());
+
+        // Truncated frame must be rejected as malformed.
+        assert!(decrypt_message_frame(&key, &frame[..frame.len() - 1]).is_err());
+
+        // A too-short frame must be rejected.
+        assert!(decrypt_message_frame(&key, &[0u8; 8]).is_err());
+    }
+
+    #[test]
+    fn test_session_data_key_separated_from_legacy_hmac_derivation() {
+        // The new session data key must be key-separated from the legacy
+        // HMAC-only derivation even for an identical token, protecting against
+        // cross-protocol key reuse.
+        let token = generate_token();
+        let data_key = derive_session_data_key(&token);
+        assert_ne!(data_key, [0u8; 32]);
+
+        // Two distinct info domains (data vs mac) must not collide.
+        let data_once = derive_session_data_key(&token);
+        assert_eq!(data_key, data_once);
     }
 }

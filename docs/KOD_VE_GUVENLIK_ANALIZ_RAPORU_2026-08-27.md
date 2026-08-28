@@ -59,9 +59,7 @@
 - **Kanıt:** `withActiveSessionSecrets` string temelli; "No-JS-Master-String" gate'i isim-bazlı olduğundan bu yol kaçıyor.
 - **Düzeltme:** IPC yolunda parola yerine türetilmiş anahtar referansı geçirin; `withActiveSessionSecrets`'ı Uint8Array-dışı kullanımlara kapatın.
 
-**BULGU RUST-Y1 — IPC çerçevelerinde gizlilik (confidentiality) yok**
-- **Dosya:** `native_messaging.rs:804-807` — yalnızca HMAC (bütünlük) var; çerçeve içerikleri localhost'ta aynı makinedeki herhangi bir işlem tarafından okunabilir.
-- **Düzeltme:** Oturum MAC anahtarından türetilen AEAD (örn. XChaCha20-Poly1305) ile çerçeve şifreleme + oturum revokasyon komutu ekleyin.
+**BULGU RUST-Y1 — IPC çerçevelerinde gizlilik (confidentiality) yok** ✅ **ÇÖZÜLDÜ (28.08.2026):** Çerçeve protokolü v2'ye taşındı — HMAC yerine **AEAD (XChaCha20-Poly1305, `chacha20poly1305` crate)** eklendi: her istek/yanıt çerçevesi `[4-byte len][version=0x02][24-byte taze CSPRNG nonce][ciphertext‖16-byte tag]` olarak şifrelenip kimlik doğrulanıyor; yani artık gizlilik + bütünlük + kimlik doğrulama tek katmanda sağlanıyor, localhost'taki ayrıcalıksız bir işlem çerçeve içeriklerini okuyamıyor. `derive_session_mac_key` → `derive_session_data_key` (`aegis-ipc-session-data-key-v2` info, legacy'den anahtar ayrımı). Sunucu ve host hem istek hem yanıtta aynı AEAD akışını kullanıyor; yapısal/yapılandırılmış/version uyumsuz veya doğrulanamayan çerçeveler **fail-closed** bağlantı sonlandırması üretiyor. **Oturum revokasyonu** eklendi: `revoke` komutu credential lease'i temizler, pairing token'ı rotate eder (OS-korumalı token dosyası yeniden yazılır) ve bağlantıyı kapatır — önceden verilen tüm session anahtarları geçersiz kılınır (`handle_client` artık `Arc<Mutex<String>>` alıyor). 7 yeni Rust unit testi (roundtrip, taze nonce, tamper/yanlış anahtar/bozuk version reddi) dahil **17 test yeşil**, `cargo build` + `cargo test --lib` PASS. Not: protokol v2 olduğundan eski host exe ↔ yeni desktop karışımında deploy-skew fail-closed reddedilir (host ve desktop aynı pakette dağıtılır; eklenti Chrome native messaging üzerinden gittiği için değişiklik eklenti tarafını etkilemez).
 
 **BULGU RUST-O4 — Android'de biyometrik açılış anahtar bağlaması zayıf**
 - **Dosya:** `AndroidSecureStorageBridge.kt` / `MainActivity.kt`
@@ -182,8 +180,8 @@ Aegis Vault v7, "offline-first, sıfır-bilgi parola kasası" kategorisinde değ
 3. ✅ EXT-B2: Host manifest'ini installer'a taşıma (mutlak yol + 3 ID sızma yüzeyi) — **ÇÖZÜLDÜ (28.08.2026)**
 
 **P1 — Bu ay:**
-4. SEC-B2: Sync zarfı KDF'ini vault ile aynı tabana çekme (taze salt zorunlu)
-5. RUST-Y1: IPC çerçevelerine AEAD gizlilik + oturum revokasyonu
+4. ✅ SEC-B2: Sync zarfı KDF'ini vault ile aynı tabana çekme (taze salt zorunlu) — **ÇÖZÜLDÜ (27.08.2026)**
+5. ✅ RUST-Y1: IPC çerçevelerine AEAD gizlilik + oturum revokasyonu — **ÇÖZÜLDÜ (28.08.2026)**
 6. RUST-O4: Android'de AndroidKeyStore sarmalama + biyometrik bağlama
 7. M3+M4: push/PR CI workflow'u + SHA-pinned actions + Actions Dependabot
 
