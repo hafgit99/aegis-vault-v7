@@ -534,19 +534,19 @@ async function registerNativeBiometric(payload: string): Promise<void> {
     throw new BiometricError(biometricErrorCodes.unsupported);
   }
 
-  await authenticateNativeBiometric();
-
   const wrappingSecret = secureRandomBytes(32);
-  const wrappingSecretB64 = bytesToBase64(wrappingSecret);
 
   // RUST-O4: when the auth-bound AndroidKeyStore bridge is available, only the
   // opaque wrapped handle is persisted — the raw secret never reaches storage.
-  // Otherwise fall back to the legacy KeyStore-encrypted raw secret storage.
+  // The bridge's BiometricPrompt + CryptoObject gate IS the strong user
+  // authentication, so a separate native prompt would ask for a redundant
+  // second fingerprint scan.
   if (isBiometricAndroidBridgeAvailable()) {
     const handle = await wrapAndroidBiometricSecret(wrappingSecret);
     setSecureStorageItem(secureStorageKeys.biometricWrappingSecret, handle);
   } else {
-    setSecureStorageItem(secureStorageKeys.biometricWrappingSecret, wrappingSecretB64);
+    await authenticateNativeBiometric();
+    setSecureStorageItem(secureStorageKeys.biometricWrappingSecret, bytesToBase64(wrappingSecret));
   }
 
   const salt = secureRandomBytes(16);
@@ -578,8 +578,6 @@ async function authenticateBiometricRaw(): Promise<string> {
   }
 
   if (biometricInfo.version === 3) {
-    await authenticateNativeBiometric();
-
     try {
       const stored = getSecureStorageItem(secureStorageKeys.biometricWrappingSecret);
       if (!stored) {
@@ -590,9 +588,14 @@ async function authenticateBiometricRaw(): Promise<string> {
       let wrappingSecret: Uint8Array;
       if (isBiometricAndroidBridgeAvailable() && isBiometricHandle(stored)) {
         // RUST-O4: opaque handle wrapped by the auth-bound AndroidKeyStore key.
+        // unwrapAndroidBiometricSecret runs BiometricPrompt + CryptoObject, which
+        // IS the strong user authentication — no separate native prompt needed
+        // (that would ask for a redundant second fingerprint scan).
         wrappingSecret = await unwrapAndroidBiometricSecret(stored);
       } else {
-        // Legacy: raw KeyStore-encrypted secret (kept for back-compat).
+        // Legacy path: raw KeyStore-encrypted secret without the auth-bound
+        // bridge, so an explicit native biometric prompt is still required.
+        await authenticateNativeBiometric();
         wrappingSecret = base64ToBytes(stored);
       }
       const saltBytes = base64ToBytes(biometricInfo.salt);
@@ -601,6 +604,9 @@ async function authenticateBiometricRaw(): Promise<string> {
       return webCryptoAesGcmDecrypt(biometricInfo.bundle, wrappingKey);
     } catch (error) {
       if (error instanceof BiometricError) throw error;
+      if (error instanceof Error && error.message === 'cancelled') {
+        throw new BiometricError(biometricErrorCodes.authenticationCancelled);
+      }
       throw new BiometricError(biometricErrorCodes.integrityMismatch);
     }
   }

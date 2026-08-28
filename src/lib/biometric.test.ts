@@ -118,11 +118,63 @@ beforeEach(async () => {
 afterEach(async () => {
   localStorage.clear();
   delete window.AegisAndroidSecureStorage;
+  delete (window as any).AegisAndroidBiometric;
   delete window.__TAURI_INTERNALS__;
+  Object.defineProperty(navigator, 'userAgent', { configurable: true, value: originalUserAgent });
   await deleteBiometricDatabase();
   resetBiometricCacheForTesting();
   vi.restoreAllMocks();
 });
+
+const originalUserAgent = navigator.userAgent;
+
+/**
+ * Simulates the FIXED native Android bridge contract (RUST-O4 follow-up):
+ *  - wrap(plaintextB64)  -> opaque JSON handle {"v":2,"iv":...,"ct":...}
+ *  - unwrap(handleJson)  -> PLAIN base64 plaintext (no JSON envelope)
+ * The fake "cipher" simply roundtrips the ct field, mirroring the native
+ * decrypt result format without requiring real AndroidKeyStore crypto.
+ */
+function installAndroidBridgeMock(opts?: { unwrapError?: string }) {
+  const storageMap = new Map<string, string>();
+  (window as any).AegisAndroidSecureStorage = {
+    isBiometricAvailable: vi.fn(() => true),
+    authenticateBiometric: vi.fn(() => true),
+    setItem: vi.fn((key: string, val: string) => { storageMap.set(key, val); return true; }),
+    getItem: vi.fn((key: string) => storageMap.get(key) ?? null),
+    removeItem: vi.fn((key: string) => { storageMap.delete(key); }),
+  };
+
+  const wrap = vi.fn((plaintextB64: string, callbackId: string) => {
+    setTimeout(() => {
+      window.__aegisBiometric!.resolve(callbackId, JSON.stringify({ v: 2, iv: 'aXY=', ct: plaintextB64 }));
+    }, 0);
+  });
+  const unwrap = vi.fn((handleJson: string, callbackId: string) => {
+    setTimeout(() => {
+      if (opts?.unwrapError) {
+        window.__aegisBiometric!.reject(callbackId, opts.unwrapError);
+        return;
+      }
+      const handle = JSON.parse(handleJson);
+      window.__aegisBiometric!.resolve(callbackId, handle.ct);
+    }, 0);
+  });
+
+  (window as any).AegisAndroidBiometric = { wrap, unwrap, isAvailable: () => true, clear: () => true };
+  return { storageMap, wrap, unwrap };
+}
+
+function mockTauriAndroidRuntime(): void {
+  (window as any).__TAURI_INTERNALS__ = {};
+  Object.defineProperty(navigator, 'userAgent', {
+    configurable: true,
+    value: 'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36',
+  });
+  // Force the native (non-WebAuthn) path.
+  Object.defineProperty(window, 'PublicKeyCredential', { configurable: true, value: undefined });
+  Object.defineProperty(navigator, 'credentials', { configurable: true, value: undefined });
+}
 
 describe('biometric master password wrapper', () => {
 
@@ -480,6 +532,50 @@ describe('biometric master password wrapper', () => {
 
     await expect(authenticateBiometricCredentials()).rejects.toMatchObject({
       code: biometricErrorCodes.missingBundle,
+    });
+  });
+
+  it('android bridge: registers with a single biometric prompt and unlocks via the opaque handle', async () => {
+    mockTauriAndroidRuntime();
+    const { storageMap, wrap, unwrap } = installAndroidBridgeMock();
+
+    await registerBiometric('android-pass', 'platform');
+
+    // The bridge's BiometricPrompt + CryptoObject IS the authentication — the
+    // separate tauri-plugin-biometric prompt must NOT fire (no double scan).
+    expect(nativeAuthenticate).not.toHaveBeenCalled();
+    expect(wrap).toHaveBeenCalledTimes(1);
+
+    const storedHandle = storageMap.get('aegis_biometric_wrapping_secret');
+    expect(storedHandle).toBeDefined();
+    expect(JSON.parse(storedHandle!)).toMatchObject({ v: 2, iv: expect.any(String), ct: expect.any(String) });
+
+    await expect(authenticateBiometric()).resolves.toBe('android-pass');
+    expect(unwrap).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(unwrap.mock.calls[0]![0])).toMatchObject({ v: 2 });
+  });
+
+  it('android bridge: maps a cancelled unwrap to authenticationCancelled (not integrityMismatch)', async () => {
+    mockTauriAndroidRuntime();
+    installAndroidBridgeMock({ unwrapError: 'cancelled' });
+
+    await registerBiometric('android-pass', 'platform');
+
+    await expect(authenticateBiometric()).rejects.toMatchObject({
+      code: biometricErrorCodes.authenticationCancelled,
+      name: 'BiometricError',
+    });
+  });
+
+  it('android bridge: an unwrap failure surfaces as integrityMismatch (fail-closed)', async () => {
+    mockTauriAndroidRuntime();
+    installAndroidBridgeMock({ unwrapError: 'Biometric failed: Key invalidated' });
+
+    await registerBiometric('android-pass', 'platform');
+
+    await expect(authenticateBiometric()).rejects.toMatchObject({
+      code: biometricErrorCodes.integrityMismatch,
+      name: 'BiometricError',
     });
   });
 });

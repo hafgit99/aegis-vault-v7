@@ -45,7 +45,7 @@ class AndroidBiometricKeyStoreBridge(
         activity.runOnUiThread {
             try {
                 val cipher = keyStore.newBiometricCipher(Cipher.ENCRYPT_MODE)
-                val prompt = newPrompt(callbackId, cipher, plaintext)
+                val prompt = newPrompt(callbackId, cipher, plaintext, isWrap = true)
                 prompt.authenticate(promptInfo(), BiometricPrompt.CryptoObject(cipher))
             } catch (error: Exception) {
                 reject(callbackId, "Encrypt setup failed: ${error.message}")
@@ -69,7 +69,7 @@ class AndroidBiometricKeyStoreBridge(
         activity.runOnUiThread {
             try {
                 val cipher = keyStore.newBiometricCipher(Cipher.DECRYPT_MODE, ivBase64)
-                val prompt = newPrompt(callbackId, cipher, ciphertext)
+                val prompt = newPrompt(callbackId, cipher, ciphertext, isWrap = false)
                 prompt.authenticate(promptInfo(), BiometricPrompt.CryptoObject(cipher))
             } catch (error: Exception) {
                 reject(callbackId, "Decrypt setup failed: ${error.message}")
@@ -77,7 +77,7 @@ class AndroidBiometricKeyStoreBridge(
         }
     }
 
-    private fun newPrompt(callbackId: String, cipher: Cipher, input: ByteArray): BiometricPrompt {
+    private fun newPrompt(callbackId: String, cipher: Cipher, input: ByteArray, isWrap: Boolean): BiometricPrompt {
         return BiometricPrompt(
             activity,
             executor,
@@ -87,7 +87,13 @@ class AndroidBiometricKeyStoreBridge(
                     try {
                         if (cryptoCipher == null) throw IllegalStateException("No cipher in auth result")
                         val output = cryptoCipher.doFinal(input)
-                        val value = if (cipher.iv != null) {
+                        // BUGFIX (RUST-O4 follow-up): only the wrap result is an
+                        // opaque JSON handle. A decrypt cipher ALWAYS has a
+                        // non-null IV (it is set explicitly via GCMParameterSpec),
+                        // so wrapping the unwrap result in the same envelope
+                        // corrupted the secret and broke every Android unlock
+                        // with an integrity failure on the JS side.
+                        val value = if (isWrap) {
                             JSONObject()
                                 .put("v", 2)
                                 .put("iv", Base64.encodeToString(cipher.iv, Base64.NO_WRAP))
@@ -107,7 +113,10 @@ class AndroidBiometricKeyStoreBridge(
                 }
 
                 override fun onAuthenticationFailed() {
-                    reject(callbackId, "Biometric not recognized")
+                    // NOT terminal: BiometricPrompt keeps the dialog open so the
+                    // user can retry in place. Rejecting here would fail the JS
+                    // promise while the prompt is still on screen.
+                    Log.w("AegisBiometric", "Biometric attempt not recognized; awaiting retry")
                 }
             }
         )
