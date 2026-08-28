@@ -98,6 +98,7 @@ vi.mock('../lib/biometric', () => ({
   isBiometricAutofillRequireEnabled: vi.fn(() => false),
   setBiometricAutofillRequireEnabled: vi.fn(),
   isBiometricV2UpgradeRequired: vi.fn(() => false),
+  isBiometricHardwareBound: vi.fn(() => false),
   dismissBiometricV2UpgradeNotification: vi.fn(),
 }));
 

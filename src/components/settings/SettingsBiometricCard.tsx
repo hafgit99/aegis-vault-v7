@@ -4,8 +4,8 @@
  */
 
 import { useState } from 'react';
-import { Fingerprint, Key, Check, ShieldAlert, AlertTriangle } from 'lucide-react';
-import { getBiometricType, isBiometricAutofillRequireEnabled, isBiometricV2UpgradeRequired, setBiometricAutofillRequireEnabled } from '../../lib/biometric';
+import { Fingerprint, Key, Check, ShieldAlert, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { getBiometricType, isBiometricAutofillRequireEnabled, isBiometricHardwareBound, isBiometricV2UpgradeRequired, setBiometricAutofillRequireEnabled } from '../../lib/biometric';
 import type { TFunction } from '../../i18n/LanguageContext';
 
 interface SettingsBiometricCardProps {
@@ -28,6 +28,9 @@ export function SettingsBiometricCard({
   const biometricType = getBiometricType();
   const [autofillRequire, setAutofillRequire] = useState(isBiometricAutofillRequireEnabled());
   const v2UpgradeRequired = isBiometricV2UpgradeRequired();
+  // RUST-O6: surface whether the active binding is hardware-bound
+  // (WebAuthn PRF authenticator, or the auth-bound AndroidKeyStore bridge).
+  const hardwareBound = biometricEnabled && isBiometricHardwareBound();
 
   const handleToggleAutofillRequire = () => {
     const next = !autofillRequire;
@@ -72,6 +75,33 @@ export function SettingsBiometricCard({
                   : t('settings.biometric.activeDescriptionPlatform')
                 : t('settings.biometric.passiveDescription')}
             </p>
+
+            {biometricEnabled && (
+              <div className="mt-2.5 pt-2.5 border-t border-outline-variant/10 min-w-0">
+                <span className="text-[11px] font-bold text-on-surface block leading-snug whitespace-normal break-words">
+                  {t('settings.biometric.securityLevelLabel')}:{' '}
+                  {hardwareBound
+                    ? t('settings.biometric.securityLevelHardware')
+                    : t('settings.biometric.securityLevelSoftware')}
+                </span>
+                <p
+                  className={`text-[11px] mt-1 leading-relaxed whitespace-normal break-words flex items-start gap-1.5 ${
+                    hardwareBound ? 'text-brand-tertiary' : 'text-amber-300'
+                  }`}
+                >
+                  {hardwareBound ? (
+                    <ShieldCheck className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                  )}
+                  <span className="min-w-0">
+                    {hardwareBound
+                      ? t('settings.biometric.securityNoticeHardwareBound')
+                      : t('settings.biometric.securityNoticeConvenience')}
+                  </span>
+                </p>
+              </div>
+            )}
           </div>
           {biometricEnabled ? (
             <button

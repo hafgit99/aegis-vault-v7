@@ -30,6 +30,7 @@ import {
   isBiometricAutofillRequireEnabled,
   setBiometricAutofillRequireEnabled,
 } from './biometric';
+import { webCryptoAesGcmEncrypt, generateSafeIv } from './webcrypto';
 
 const rawId = new Uint8Array([1, 2, 3, 4]).buffer;
 const encoder = new TextEncoder();
@@ -135,7 +136,7 @@ const originalUserAgent = navigator.userAgent;
  * The fake "cipher" simply roundtrips the ct field, mirroring the native
  * decrypt result format without requiring real AndroidKeyStore crypto.
  */
-function installAndroidBridgeMock(opts?: { unwrapError?: string }) {
+function installAndroidBridgeMock(opts?: { unwrapError?: string; wrapError?: string }) {
   const storageMap = new Map<string, string>();
   (window as any).AegisAndroidSecureStorage = {
     isBiometricAvailable: vi.fn(() => true),
@@ -147,6 +148,10 @@ function installAndroidBridgeMock(opts?: { unwrapError?: string }) {
 
   const wrap = vi.fn((plaintextB64: string, callbackId: string) => {
     setTimeout(() => {
+      if (opts?.wrapError) {
+        window.__aegisBiometric!.reject(callbackId, opts.wrapError);
+        return;
+      }
       window.__aegisBiometric!.resolve(callbackId, JSON.stringify({ v: 2, iv: 'aXY=', ct: plaintextB64 }));
     }, 0);
   });
@@ -578,4 +583,85 @@ describe('biometric master password wrapper', () => {
       name: 'BiometricError',
     });
   });
+
+  it('android bridge: rotates a legacy raw secret to the hardware-bound handle after a successful unlock (RUST-O5)', async () => {
+    mockTauriAndroidRuntime();
+    const { storageMap, wrap, unwrap } = installAndroidBridgeMock();
+
+    // Seed a legacy (pre-RUST-O4) v3 registration: raw base64 wrapping secret
+    // under the general (non-auth-bound) secure-storage key.
+    const secret = crypto.getRandomValues(new Uint8Array(32));
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const wrappingKey = await derivePbkdf2KeyForTest(secret, salt, 1000);
+    const bundle = await webCryptoAesGcmEncrypt('legacy-pass', wrappingKey, generateSafeIv());
+    storageMap.set('aegis_biometric_info', JSON.stringify({
+      version: 3,
+      provider: 'Tauri Native Biometric',
+      kdf: 'WebCrypto PBKDF2-SHA256',
+      cipher: 'WebCrypto AES-256-GCM',
+      salt: bytesToBase64(salt),
+      bundle,
+      pbkdf2Iterations: 1000,
+    }));
+    const legacyRawSecret = bytesToBase64(secret);
+    storageMap.set('aegis_biometric_wrapping_secret', legacyRawSecret);
+
+    resetBiometricCacheForTesting();
+    await hydrateBiometric();
+
+    // First unlock takes the legacy path (native prompt) and rotates.
+    await expect(authenticateBiometric()).resolves.toBe('legacy-pass');
+    expect(nativeAuthenticate).toHaveBeenCalledTimes(1);
+    expect(wrap).toHaveBeenCalledTimes(1);
+
+    const rotated = storageMap.get('aegis_biometric_wrapping_secret')!;
+    expect(() => JSON.parse(rotated)).not.toThrow();
+    expect(JSON.parse(rotated)).toMatchObject({ v: 2, iv: expect.any(String), ct: expect.any(String) });
+
+    // Second unlock goes through the hardware-bound handle only (single prompt).
+    resetBiometricCacheForTesting();
+    await hydrateBiometric();
+    await expect(authenticateBiometric()).resolves.toBe('legacy-pass');
+    expect(nativeAuthenticate).toHaveBeenCalledTimes(1); // unchanged
+    expect(unwrap).toHaveBeenCalledTimes(1);
+  });
+
+  it('android bridge: rotation failure never breaks the legacy unlock (best-effort, RUST-O5)', async () => {
+    mockTauriAndroidRuntime();
+    const { storageMap, wrap } = installAndroidBridgeMock({ wrapError: 'Encrypt setup failed: user cancelled' });
+
+    const secret = crypto.getRandomValues(new Uint8Array(32));
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const wrappingKey = await derivePbkdf2KeyForTest(secret, salt, 1000);
+    const bundle = await webCryptoAesGcmEncrypt('legacy-pass', wrappingKey, generateSafeIv());
+    storageMap.set('aegis_biometric_info', JSON.stringify({
+      version: 3,
+      provider: 'Tauri Native Biometric',
+      kdf: 'WebCrypto PBKDF2-SHA256',
+      cipher: 'WebCrypto AES-256-GCM',
+      salt: bytesToBase64(salt),
+      bundle,
+      pbkdf2Iterations: 1000,
+    }));
+    const legacyRawSecret = bytesToBase64(secret);
+    storageMap.set('aegis_biometric_wrapping_secret', legacyRawSecret);
+
+    resetBiometricCacheForTesting();
+    await hydrateBiometric();
+
+    await expect(authenticateBiometric()).resolves.toBe('legacy-pass');
+    expect(wrap).toHaveBeenCalledTimes(1);
+    // The legacy raw secret is retained so rotation is retried on the next unlock.
+    expect(storageMap.get('aegis_biometric_wrapping_secret')).toBe(legacyRawSecret);
+  });
 });
+
+async function derivePbkdf2KeyForTest(secret: Uint8Array, salt: Uint8Array, iterations: number): Promise<Uint8Array> {
+  const keyMaterial = await crypto.subtle.importKey('raw', secret, 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations },
+    keyMaterial,
+    256,
+  );
+  return new Uint8Array(bits);
+}

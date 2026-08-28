@@ -571,6 +571,26 @@ async function registerNativeBiometric(payload: string): Promise<void> {
   await deleteBiometricFromIndexedDB();
 }
 
+/**
+ * RUST-O5: Rotates a legacy native biometric wrapping secret (raw base64,
+ * encrypted only by the general KeyStore key — not auth-bound) to the
+ * hardware-bound AndroidKeyStore opaque handle. Called after a successful
+ * legacy unlock has proven the secret is still valid. Best-effort: a rotation
+ * failure (e.g. the user cancels the rotation BiometricPrompt) never breaks
+ * the unlock — the legacy binding stays usable and rotation is retried on the
+ * next unlock. One-time cost: afterwards unlocks use the single-prompt
+ * hardware-bound path.
+ */
+async function rotateLegacyNativeSecretToHardwareBound(wrappingSecret: Uint8Array): Promise<void> {
+  try {
+    const handle = await wrapAndroidBiometricSecret(wrappingSecret);
+    setSecureStorageItem(secureStorageKeys.biometricWrappingSecret, handle);
+    console.info('[AegisVault Security] Legacy native biometric wrapping secret rotated to hardware-bound AndroidKeyStore handle (RUST-O5).');
+  } catch {
+    // Non-fatal: keep the legacy raw secret; retry on the next unlock.
+  }
+}
+
 async function authenticateBiometricRaw(): Promise<string> {
   const biometricInfo = cachedBiometricInfo;
   if (!biometricInfo) {
@@ -601,7 +621,14 @@ async function authenticateBiometricRaw(): Promise<string> {
       const saltBytes = base64ToBytes(biometricInfo.salt);
       const iterations = biometricInfo.pbkdf2Iterations ?? BIOMETRIC_PBKDF2_ITERATIONS;
       const wrappingKey = await deriveWebCryptoPbkdf2Key(wrappingSecret, saltBytes, iterations, 32);
-      return webCryptoAesGcmDecrypt(biometricInfo.bundle, wrappingKey);
+      const decrypted = await webCryptoAesGcmDecrypt(biometricInfo.bundle, wrappingKey);
+      // RUST-O5: a successful legacy unlock proves the raw secret is still
+      // valid — rotate it to the hardware-bound AndroidKeyStore handle so the
+      // raw secret stops living in (KeyStore-encrypted) storage.
+      if (isBiometricAndroidBridgeAvailable() && !isBiometricHandle(stored)) {
+        await rotateLegacyNativeSecretToHardwareBound(wrappingSecret);
+      }
+      return decrypted;
     } catch (error) {
       if (error instanceof BiometricError) throw error;
       if (error instanceof Error && error.message === 'cancelled') {

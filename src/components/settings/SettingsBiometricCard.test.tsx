@@ -4,9 +4,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SettingsBiometricCard } from './SettingsBiometricCard';
+
+afterEach(cleanup);
 
 // Mock biometric utility functions
 vi.mock('../../lib/biometric', () => ({
@@ -14,9 +16,10 @@ vi.mock('../../lib/biometric', () => ({
   isBiometricAutofillRequireEnabled: vi.fn(() => false),
   setBiometricAutofillRequireEnabled: vi.fn(),
   isBiometricV2UpgradeRequired: vi.fn(() => false),
+  isBiometricHardwareBound: vi.fn(() => false),
 }));
 
-import { getBiometricType } from '../../lib/biometric';
+import { getBiometricType, isBiometricHardwareBound } from '../../lib/biometric';
 
 const t = (key: string) => {
   const translations: Record<string, string> = {
@@ -34,6 +37,11 @@ const t = (key: string) => {
     'settings.biometric.enableFido2': 'Enable FIDO2',
     'settings.biometric.disable': 'Disable Biometrics',
     'settings.biometric.loading': 'Loading...',
+    'settings.biometric.securityLevelLabel': 'Security Level',
+    'settings.biometric.securityLevelHardware': 'Hardware-Bound (High)',
+    'settings.biometric.securityLevelSoftware': 'Software-Based Convenience (Medium)',
+    'settings.biometric.securityNoticeHardwareBound': 'Hardware-bound protection notice.',
+    'settings.biometric.securityNoticeConvenience': 'Convenience mode notice.',
   };
   return translations[key] || key;
 };
@@ -115,5 +123,55 @@ describe('SettingsBiometricCard', () => {
 
     expect(screen.getByText('Successfully enabled!')).toBeTruthy();
     expect(screen.getByText('Failed to enable.')).toBeTruthy();
+  });
+
+  it('shows the hardware-bound security level when the binding is hardware-bound (RUST-O6)', () => {
+    vi.mocked(isBiometricHardwareBound).mockReturnValue(true);
+    render(
+      <SettingsBiometricCard
+        biometricEnabled={true}
+        biometricLoading={false}
+        biometricSuccess={null}
+        biometricError={null}
+        onToggleBiometric={vi.fn()}
+        t={t}
+      />
+    );
+
+    expect(screen.getByText('Security Level: Hardware-Bound (High)')).toBeTruthy();
+    expect(screen.getByText('Hardware-bound protection notice.')).toBeTruthy();
+  });
+
+  it('shows the software convenience security level when the binding is not hardware-bound (RUST-O6)', () => {
+    vi.mocked(isBiometricHardwareBound).mockReturnValue(false);
+    render(
+      <SettingsBiometricCard
+        biometricEnabled={true}
+        biometricLoading={false}
+        biometricSuccess={null}
+        biometricError={null}
+        onToggleBiometric={vi.fn()}
+        t={t}
+      />
+    );
+
+    expect(screen.getByText('Security Level: Software-Based Convenience (Medium)')).toBeTruthy();
+    expect(screen.getByText('Convenience mode notice.')).toBeTruthy();
+  });
+
+  it('hides the security level block when biometric unlock is disabled (RUST-O6)', () => {
+    vi.mocked(isBiometricHardwareBound).mockReturnValue(true);
+    render(
+      <SettingsBiometricCard
+        biometricEnabled={false}
+        biometricLoading={false}
+        biometricSuccess={null}
+        biometricError={null}
+        onToggleBiometric={vi.fn()}
+        t={t}
+      />
+    );
+
+    expect(screen.queryByText(/Security Level:/)).toBeNull();
   });
 });
