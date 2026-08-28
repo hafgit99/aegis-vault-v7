@@ -682,11 +682,10 @@ fn verify_argon2id_hash(mut password: String, encoded_hash: String) -> Result<bo
     };
 
     // SEC-B3: zeroize the master password on every exit path.
-    let parsed_hash = PasswordHash::new(&encoded_hash)
-        .map_err(|e| {
-            password.zeroize();
-            format!("invalid password hash format: {e}")
-        })?;
+    let parsed_hash = PasswordHash::new(&encoded_hash).map_err(|e| {
+        password.zeroize();
+        format!("invalid password hash format: {e}")
+    })?;
 
     let verified = Argon2::default()
         .verify_password(password.as_bytes(), &parsed_hash)
