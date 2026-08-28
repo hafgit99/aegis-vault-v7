@@ -44,3 +44,11 @@ SOFTWARE.
 ## 4. Tauri (v2.11.2)
 - **Repository:** https://github.com/tauri-apps/tauri
 - **License:** Apache-2.0 / MIT Dual License
+
+
+## Public Suffix List (baked snapshot)
+- **Source:** https://publicsuffix.org/list/ (snapshot: `scripts/psl/public_suffix_list.dat`)
+- **License:** Mozilla Public License 2.0
+- **Copyright:** Mozilla Contributors
+- **Usage:** Baked into `src-extension/psl-data.generated.ts` and `src-tauri/src/psl_data.generated.rs`
+  via `scripts/generate-psl-data.cjs` for registrable-domain (eTLD+1) extraction.

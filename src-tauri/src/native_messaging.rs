@@ -5,11 +5,16 @@ use chacha20poly1305::{
 use hmac::{Hmac, Mac};
 use rand::{rngs::OsRng, RngCore};
 use sha2::Sha256;
+use std::collections::HashSet;
+
+#[path = "psl_data.generated.rs"]
+mod psl_data_generated;
+use psl_data_generated::{PSL_ICANN_RULES, PSL_PRIVATE_RULES};
 use std::fs;
 use std::io::{self, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 use subtle::ConstantTimeEq;
@@ -422,346 +427,90 @@ fn parse_url(url_str: &str) -> ParsedUrl {
     ParsedUrl { host, port, path }
 }
 
-const PUBLIC_SUFFIXES: &[&str] = &[
-    "co.uk",
-    "org.uk",
-    "gov.uk",
-    "ac.uk",
-    "me.uk",
-    "ltd.uk",
-    "plc.uk",
-    "net.uk",
-    "com.tr",
-    "org.tr",
-    "net.tr",
-    "gov.tr",
-    "edu.tr",
-    "bel.tr",
-    "k12.tr",
-    "av.tr",
-    "dr.tr",
-    "biz.tr",
-    "info.tr",
-    "tv.tr",
-    "gen.tr",
-    "name.tr",
-    "co.jp",
-    "ne.jp",
-    "or.jp",
-    "go.jp",
-    "ac.jp",
-    "ad.jp",
-    "ed.jp",
-    "gr.jp",
-    "lg.jp",
-    "com.au",
-    "net.au",
-    "org.au",
-    "edu.au",
-    "gov.au",
-    "id.au",
-    "asn.au",
-    "csiro.au",
-    "co.nz",
-    "net.nz",
-    "org.nz",
-    "govt.nz",
-    "ac.nz",
-    "school.nz",
-    "iwi.nz",
-    "com.br",
-    "net.br",
-    "org.br",
-    "gov.br",
-    "edu.br",
-    "ind.br",
-    "inf.br",
-    "tur.br",
-    "b.br",
-    "com.de",
-    "co.at",
-    "or.at",
-    "gv.at",
-    "ac.at",
-    "co.ch",
-    "com.mx",
-    "org.mx",
-    "net.mx",
-    "edu.mx",
-    "gob.mx",
-    "com.ar",
-    "org.ar",
-    "net.ar",
-    "gov.ar",
-    "edu.ar",
-    "co.in",
-    "net.in",
-    "org.in",
-    "gen.in",
-    "firm.in",
-    "ind.in",
-    "nic.in",
-    "ac.in",
-    "edu.in",
-    "res.in",
-    "gov.in",
-    "com.cn",
-    "net.cn",
-    "org.cn",
-    "gov.cn",
-    "edu.cn",
-    "com.hk",
-    "org.hk",
-    "net.hk",
-    "edu.hk",
-    "gov.hk",
-    "idv.hk",
-    "com.sg",
-    "org.sg",
-    "net.sg",
-    "edu.sg",
-    "gov.sg",
-    "per.sg",
-    "co.kr",
-    "ne.kr",
-    "or.kr",
-    "re.kr",
-    "pe.kr",
-    "go.kr",
-    "ac.kr",
-    "com.tw",
-    "org.tw",
-    "net.tw",
-    "edu.tw",
-    "gov.tw",
-    "idv.tw",
-    "co.za",
-    "net.za",
-    "org.za",
-    "gov.za",
-    "edu.za",
-    "com.eg",
-    "edu.eg",
-    "gov.eg",
-    "org.eg",
-    "com.sa",
-    "net.sa",
-    "org.sa",
-    "gov.sa",
-    "edu.sa",
-    "com.ae",
-    "net.ae",
-    "org.ae",
-    "gov.ae",
-    "ac.ae",
-    "co.il",
-    "org.il",
-    "net.il",
-    "ac.il",
-    "gov.il",
-    "k12.il",
-    "com.ca",
-    "co.ca",
-    "ab.ca",
-    "bc.ca",
-    "mb.ca",
-    "nb.ca",
-    "nl.ca",
-    "ns.ca",
-    "nt.ca",
-    "nu.ca",
-    "on.ca",
-    "pe.ca",
-    "qc.ca",
-    "sk.ca",
-    "yk.ca",
-    "com.es",
-    "nom.es",
-    "org.es",
-    "gob.es",
-    "edu.es",
-    "com.fr",
-    "asso.fr",
-    "gouv.fr",
-    "co.it",
-    "gov.it",
-    "com.nl",
-    "co.nl",
-    "co.no",
-    "org.no",
-    "com.se",
-    "org.se",
-    "com.fi",
-    "co.fi",
-    "com.dk",
-    "co.dk",
-    "com.pl",
-    "net.pl",
-    "org.pl",
-    "biz.pl",
-    "info.pl",
-    "com.ru",
-    "net.ru",
-    "org.ru",
-    "pp.ru",
-    "com.ua",
-    "net.ua",
-    "org.ua",
-    "gov.ua",
-    "edu.ua",
-    "com.co",
-    "net.co",
-    "nom.co",
-    "org.co",
-    "gov.co",
-    "edu.co",
-    "com.pe",
-    "org.pe",
-    "net.pe",
-    "gob.pe",
-    "edu.pe",
-    "co.cl",
-    "gob.cl",
-    "gov.cl",
-    "com.ve",
-    "org.ve",
-    "net.ve",
-    "gob.ve",
-    "edu.ve",
-    "com.ec",
-    "org.ec",
-    "net.ec",
-    "gob.ec",
-    "edu.ec",
-    "com.sa",
-    "net.sa",
-    "org.sa",
-    "gov.sa",
-    "edu.sa",
-    "med.sa",
-    "com.ae",
-    "net.ae",
-    "org.ae",
-    "gov.ae",
-    "ac.ae",
-    "sch.ae",
-    "com.kw",
-    "net.kw",
-    "org.kw",
-    "gov.kw",
-    "edu.kw",
-    "com.qa",
-    "net.qa",
-    "org.qa",
-    "gov.qa",
-    "edu.qa",
-    "com.bh",
-    "net.bh",
-    "org.bh",
-    "gov.bh",
-    "edu.bh",
-    "com.om",
-    "net.om",
-    "org.om",
-    "gov.om",
-    "edu.om",
-    "com.jo",
-    "net.jo",
-    "org.jo",
-    "gov.jo",
-    "edu.jo",
-    "com.lb",
-    "net.lb",
-    "org.lb",
-    "gov.lb",
-    "edu.lb",
-    "co.ke",
-    "or.ke",
-    "ne.ke",
-    "go.ke",
-    "ac.ke",
-    "sc.ke",
-    "co.ug",
-    "or.ug",
-    "ne.ug",
-    "go.ug",
-    "ac.ug",
-    "sc.ug",
-    "co.tz",
-    "or.tz",
-    "ne.tz",
-    "go.tz",
-    "ac.tz",
-    "sc.tz",
-    "com.gh",
-    "org.gh",
-    "net.gh",
-    "gov.gh",
-    "edu.gh",
-    "com.tn",
-    "org.tn",
-    "net.tn",
-    "gov.tn",
-    "edunet.tn",
-    "com.ma",
-    "org.ma",
-    "net.ma",
-    "gov.ma",
-    "ac.ma",
-    "com.dz",
-    "org.dz",
-    "net.dz",
-    "gov.dz",
-    "edu.dz",
-    "com.sn",
-    "org.sn",
-    "net.sn",
-    "gov.sn",
-    "univ.sn",
-    "github.io",
-    "gitlab.io",
-    "herokuapp.com",
-    "vercel.app",
-    "netlify.app",
-    "pages.dev",
-    "workers.dev",
-    "web.app",
-    "firebaseapp.com",
-    "appspot.com",
-    "azurewebsites.net",
-    "cloudfront.net",
-    "amazonaws.com",
-    "blogspot.com",
-    "s3.amazonaws.com",
-    "storage.googleapis.com",
-    "cloudapp.net",
-    "fly.dev",
-    "render.com",
-    "cloudflare.dev",
-];
+// M6: The curated suffix list was replaced by the full Public Suffix List.
+// Rules live in psl_data.generated.rs (generated by scripts/generate-psl-data.cjs);
+// matching below implements the standard PSL algorithm, including wildcard and
+// exception rules.
 
-pub fn extract_etld_plus_one(host: &str) -> String {
-    let mut clean_host = host.trim().to_lowercase();
-    if clean_host.starts_with("www.") {
-        clean_host = clean_host[4..].to_string();
+struct PslMatcher {
+    rules: HashSet<&'static str>,
+    exceptions: HashSet<&'static str>,
+    max_rule_labels: usize,
+}
+
+fn psl_matcher() -> &'static PslMatcher {
+    static MATCHER: OnceLock<PslMatcher> = OnceLock::new();
+    MATCHER.get_or_init(|| {
+        let mut rules = HashSet::new();
+        let mut exceptions = HashSet::new();
+        let mut max_rule_labels = 1;
+        for rule in PSL_ICANN_RULES.iter().chain(PSL_PRIVATE_RULES.iter()) {
+            max_rule_labels = max_rule_labels.max(rule.split('.').count());
+            if let Some(stripped) = rule.strip_prefix('!') {
+                exceptions.insert(stripped);
+            } else {
+                rules.insert(*rule);
+            }
+        }
+        PslMatcher {
+            rules,
+            exceptions,
+            max_rule_labels,
+        }
+    })
+}
+
+/// Number of labels composing the public suffix of a hostname per the PSL
+/// algorithm: exception rules win first, then the longest matching rule
+/// (exact or `*` wildcard on the leftmost label); default rule is `*`.
+fn public_suffix_label_count(labels: &[&str]) -> usize {
+    let matcher = psl_matcher();
+    let max = labels.len().min(matcher.max_rule_labels);
+
+    for k in (1..=max).rev() {
+        let candidate = labels[labels.len() - k..].join(".");
+        if matcher.exceptions.contains(candidate.as_str()) {
+            return k - 1;
+        }
     }
 
-    let parts: Vec<&str> = clean_host.split('.').collect();
-    if parts.len() <= 2 {
-        return clean_host;
-    }
-
-    for suffix in PUBLIC_SUFFIXES {
-        if clean_host.ends_with(suffix) {
-            let suffix_parts: Vec<&str> = suffix.split('.').collect();
-            let keep_count = suffix_parts.len() + 1;
-            if parts.len() >= keep_count {
-                return parts[parts.len() - keep_count..].join(".");
+    for k in (1..=max).rev() {
+        let candidate = labels[labels.len() - k..].join(".");
+        if matcher.rules.contains(candidate.as_str()) {
+            return k;
+        }
+        if k >= 2 {
+            let mut wildcard = String::with_capacity(candidate.len());
+            wildcard.push('*');
+            for label in &labels[labels.len() - k + 1..] {
+                wildcard.push('.');
+                wildcard.push_str(label);
+            }
+            if matcher.rules.contains(wildcard.as_str()) {
+                return k;
             }
         }
     }
 
-    parts[parts.len() - 2..].join(".")
+    1
+}
+
+/// Extracts the registrable domain (eTLD+1) of a hostname using the full
+/// Public Suffix List. No manual `www.` stripping: the PSL algorithm already
+/// treats www as an ordinary subdomain (and stripping breaks !www.ck).
+pub fn extract_etld_plus_one(host: &str) -> String {
+    let clean_host = host.trim().to_lowercase();
+    let labels: Vec<&str> = clean_host.split('.').collect();
+    if labels.len() <= 1 {
+        return clean_host;
+    }
+
+    let suffix_len = public_suffix_label_count(&labels);
+    if labels.len() <= suffix_len {
+        // Host is itself a public suffix — nothing registrable beyond it.
+        return clean_host;
+    }
+    labels[labels.len() - suffix_len - 1..].join(".")
 }
 
 fn match_credentials(active: &ParsedUrl, item: &ParsedUrl) -> Option<u32> {
@@ -1217,6 +966,44 @@ pub fn run_host() {
 
 #[cfg(test)]
 mod tests {
+    use super::extract_etld_plus_one;
+
+    #[test]
+    fn etld_plus_one_matches_psl_spec_vectors() {
+        assert_eq!(extract_etld_plus_one("example.com"), "example.com");
+        assert_eq!(extract_etld_plus_one("www.example.com"), "example.com");
+        assert_eq!(
+            extract_etld_plus_one("login.facebook.co.uk"),
+            "facebook.co.uk"
+        );
+        assert_eq!(
+            extract_etld_plus_one("my-site.github.io"),
+            "my-site.github.io"
+        );
+        // Wildcard rule *.ck
+        assert_eq!(extract_etld_plus_one("foo.bar.ck"), "foo.bar.ck");
+        // Exception rule !www.ck
+        assert_eq!(extract_etld_plus_one("www.ck"), "www.ck");
+        assert_eq!(extract_etld_plus_one("www.www.ck"), "www.ck");
+        // Exception !city.kobe.jp shortens the public suffix under *.kobe.jp
+        assert_eq!(extract_etld_plus_one("www.city.kobe.jp"), "city.kobe.jp");
+        assert_eq!(
+            extract_etld_plus_one("example.test.city.kobe.jp"),
+            "city.kobe.jp"
+        );
+        // Deep private wildcard *.compute.amazonaws.com
+        assert_eq!(
+            extract_etld_plus_one("a.b.compute.amazonaws.com"),
+            "a.b.compute.amazonaws.com"
+        );
+        // Default rule: unknown TLD falls back to the last two labels
+        assert_eq!(
+            extract_etld_plus_one("shop.example.museum"),
+            "example.museum"
+        );
+        assert_eq!(extract_etld_plus_one("localhost"), "localhost");
+    }
+
     use super::*;
 
     #[test]

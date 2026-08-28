@@ -29,6 +29,8 @@ describe('psl-utils (Public Suffix List domain extractor)', () => {
     it('correctly handles service suffixes (.github.io, etc.)', () => {
       expect(extractRegistrableDomain('my-site.github.io')).toBe('my-site.github.io');
       expect(extractRegistrableDomain('app.vercel.app')).toBe('app.vercel.app');
+      expect(extractRegistrableDomain('x.users.example.github.io')).toBe('example.github.io');
+      expect(extractRegistrableDomain('app.vercel.app')).toBe('app.vercel.app');
     });
 
     it('preserves registrable domains for phishing comparisons', () => {
@@ -66,4 +68,35 @@ describe('psl-utils (Public Suffix List domain extractor)', () => {
       expect(isSameRegistrableDomain('https://invalid', 'not-a-url')).toBe(false);
     });
   });
+
+describe('M6: full PSL algorithm behaviours', () => {
+  it('applies wildcard rules (*.ck)', () => {
+    expect(extractRegistrableDomain('foo.bar.ck')).toBe('foo.bar.ck');
+    expect(extractRegistrableDomain('bar.ck')).toBe('bar.ck');
+  });
+
+  it('applies exception rules (!www.ck)', () => {
+    expect(extractRegistrableDomain('www.ck')).toBe('www.ck');
+    expect(extractRegistrableDomain('www.www.ck')).toBe('www.ck');
+  });
+
+  it('applies exception rule precedence over multi-level wildcards (*.kobe.jp / !city.kobe.jp)', () => {
+    expect(extractRegistrableDomain('www.city.kobe.jp')).toBe('city.kobe.jp');
+    // The exception !city.kobe.jp shortens the public suffix to kobe.jp, so
+    // everything under city.kobe.jp shares one registrable domain.
+    expect(extractRegistrableDomain('example.test.city.kobe.jp')).toBe('city.kobe.jp');
+  });
+
+  it('keeps unrelated sites under unrecognized multi-part registries distinct', () => {
+    expect(extractRegistrableDomain('shop.co.ke')).not.toBe(
+      extractRegistrableDomain('evil.co.ke'),
+    );
+  });
+
+  it('handles deep private suffixes (compute.amazonaws.com)', () => {
+    expect(extractRegistrableDomain('a.b.compute.amazonaws.com')).toBe(
+      'a.b.compute.amazonaws.com',
+    );
+  });
+});
 });

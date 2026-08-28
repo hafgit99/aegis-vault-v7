@@ -104,7 +104,8 @@
     "rust:fmt:check": "cargo fmt --check --manifest-path src-tauri/Cargo.toml",
     "rust:test:native": "cargo test --manifest-path src-tauri/Cargo.toml write_vault_database_file",
     "release:readiness": "node scripts/release-readiness-summary.cjs",
-    "release:readiness:final": "node scripts/release-readiness-summary.cjs --final --output release-local/RELEASE_READINESS_FINAL.md"
+    "release:readiness:final": "node scripts/release-readiness-summary.cjs --final --output release-local/RELEASE_READINESS_FINAL.md",
+    "psl:generate": "node scripts/generate-psl-data.cjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",
