@@ -7,9 +7,9 @@
 *Enterprise-grade local cryptographic security for Desktop (Windows, Linux, macOS), Android, and WebExtensions.*
 
 ![Security Score](https://img.shields.io/badge/Security_Audit-92%2F100_(A%2B)-brightgreen?style=flat-square&logo=shield)
-![Tests](https://img.shields.io/badge/Unit_Tests-1633_Passed-success?style=flat-square&logo=vitest)
+![Tests](https://img.shields.io/badge/Unit_Tests-1788_Passed-success?style=flat-square&logo=vitest)
 ![Fuzz Tests](https://img.shields.io/badge/Fuzz_Tests-36_Passed-success?style=flat-square&logo=vitest)
-![Coverage](https://img.shields.io/badge/Coverage-90.2%25_Lines_·_81.9%25_Branches-brightgreen?style=flat-square&logo=vitest)
+![Coverage](https://img.shields.io/badge/Coverage-92.2%25_Lines_·_82.7%25_Branches-brightgreen?style=flat-square&logo=vitest)
 ![Mutation Testing](https://img.shields.io/badge/Mutation_Testing-8_Stryker_Suites_·_90.8%25_Peak-blue?style=flat-square&logo=stryker)
 ![TypeScript](https://img.shields.io/badge/TypeScript-0_Errors-blue?style=flat-square&logo=typescript)
 ![License](https://img.shields.io/badge/License-Apache_2.0-orange?style=flat-square)
@@ -91,16 +91,16 @@ Aegis Vault 7 maintains rigorous automated testing standards with defense-in-dep
 | Metric | Result | Status | Framework / Tool |
 |---|---|---|---|
 | **TypeScript Typecheck** | **`0 errors`** | ✅ 100% Clean | `tsc --noEmit` |
-| **Unit & Integration Test Suite** | **`208 test files passed (208/208)`** | ✅ 100% Green | Vitest 4.1 |
-| **Unit Tests Executed** | **`1,633 tests passed (1,633/1,633)`** | ✅ 100% Green | Vitest / React Testing Library |
+| **Unit & Integration Test Suite** | **`215 test files passed (215/215)`** | ✅ 100% Green | Vitest 4.1 |
+| **Unit Tests Executed** | **`1,788 tests passed (1,788/1,788)`** | ✅ 100% Green | Vitest / React Testing Library |
 | **Property-Based Fuzz Tests** | **`36 tests across 9 files passed`** | ✅ 100% Green | fast-check v4 |
 | **End-to-End (E2E) Suites** | **`34 scenarios x 3 browsers = 102/102 passed`** | ✅ 100% Green | Playwright (Chromium, Firefox, WebKit) |
 | **Mutation Testing** | **`8 specialized Stryker suites - 90.8% peak gate score`** | ✅ Measured & Gated | @stryker-mutator/core v9 |
-| **Rust Backend Tests** | **`10 tests passed (10/10)`** | ✅ 100% Green | `cargo test` (Tauri 2) |
-| **Lines Coverage** | **`90.17%`** | ✅ Exceeds Global Target (>= 90%) | Vitest V8 Coverage |
-| **Statements Coverage** | **`91.61%`** | ✅ Exceeds Global Target (>= 88%) | Vitest V8 Coverage |
-| **Functions Coverage** | **`88.22%`** | ✅ Exceeds Global Target (>= 85%) | Vitest V8 Coverage |
-| **Branches Coverage** | **`81.93%`** | ✅ Exceeds Global Target (>= 80%) | Vitest V8 Coverage |
+| **Rust Backend Tests** | **`17 tests passed (17/17)`** | ✅ 100% Green | `cargo test` (Tauri 2) |
+| **Lines Coverage** | **`92.17%`** | ✅ Exceeds Global Target (>= 90%) | Vitest V8 Coverage |
+| **Statements Coverage** | **`90.62%`** | ✅ Exceeds Global Target (>= 88%) | Vitest V8 Coverage |
+| **Functions Coverage** | **`88.85%`** | ✅ Exceeds Global Target (>= 85%) | Vitest V8 Coverage |
+| **Branches Coverage** | **`82.72%`** | ✅ Exceeds Global Target (>= 80%) | Vitest V8 Coverage |
 
 ---
 
