@@ -327,12 +327,36 @@ export async function withActiveBackupPassword<T>(callback: (backupPassword: str
   return await callback(backupPassword);
 }
 
-export async function withActiveSessionSecrets<T>(
-  callback: (masterPassword: string, backupPassword: string) => Promise<T> | T,
-): Promise<T | null> {
-  const masterPassword = decodeSecret(fallbackCredentialBytes);
-  const backupPassword = decodeSecret(fallbackBackupPasswordBytes);
-  if (!masterPassword || !backupPassword) return null;
-  return await callback(masterPassword, backupPassword);
+/**
+ * SEC-B3: session secrets are exposed ONLY as zeroizable byte clones — never
+ * as JavaScript strings. Strings are immutable in JS and cannot be scrubbed
+ * from the heap, so callers that genuinely need a string must decode the
+ * bytes inside their own (narrowest possible) scope after verifying them;
+ * the raw session credential can no longer be pulled out of the callback
+ * wholesale. Byte clones are zeroized on every exit path (sync return,
+ * thrown error, async completion).
+ */
+export function withActiveSessionSecrets<T>(
+  callback: (masterPassword: Uint8Array, backupPassword: Uint8Array) => T | Promise<T>,
+): T | null {
+  if (!fallbackCredentialBytes || !fallbackBackupPasswordBytes) return null;
+  const masterClone = cloneBytes(fallbackCredentialBytes);
+  const backupClone = cloneBytes(fallbackBackupPasswordBytes);
+  try {
+    const result = callback(masterClone, backupClone);
+    if (result instanceof Promise) {
+      return (result as Promise<unknown>).finally(() => {
+        wasmZeroizeArray(masterClone);
+        wasmZeroizeArray(backupClone);
+      }) as unknown as T;
+    }
+    wasmZeroizeArray(masterClone);
+    wasmZeroizeArray(backupClone);
+    return result;
+  } catch (err) {
+    wasmZeroizeArray(masterClone);
+    wasmZeroizeArray(backupClone);
+    throw err;
+  }
 }
 

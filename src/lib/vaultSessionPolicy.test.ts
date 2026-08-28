@@ -154,10 +154,26 @@ describe('vaultSession comprehensive lifecycle and byte callbacks', () => {
     await withActiveBackupPassword((p) => {
       expect(p).toBe('backupPass456');
     });
+    // SEC-B3: withActiveSessionSecrets is now bytes-only — no string decoding
+    // happens inside the session callback boundary itself.
     await withActiveSessionSecrets((m, b) => {
-      expect(m).toContain('aegis-vault-v7:master');
-      expect(b).toBe('backupPass456');
+      expect(new TextDecoder().decode(m)).toBe('aegis-vault-v7:master\0secret123');
+      expect(new TextDecoder().decode(b)).toBe('backupPass456');
     });
+  });
+
+  it('zeroizes withActiveSessionSecrets byte clones on callback exit (SEC-B3)', async () => {
+    openVaultSession('aegis-vault-v7:master\0secret123', 'backupPass456', new Uint8Array(32).fill(5));
+    let capturedMaster: Uint8Array | null = null;
+    let capturedBackup: Uint8Array | null = null;
+    await withActiveSessionSecrets((m, b) => {
+      capturedMaster = m;
+      capturedBackup = b;
+      return true;
+    });
+    expect(capturedMaster!.length).toBeGreaterThan(0);
+    expect(capturedMaster!.every((byte) => byte === 0)).toBe(true);
+    expect(capturedBackup!.every((byte) => byte === 0)).toBe(true);
   });
 
   it('returns null for withActive* callbacks when session is locked', async () => {
@@ -168,7 +184,7 @@ describe('vaultSession comprehensive lifecycle and byte callbacks', () => {
     expect(withActiveAccountSecretKeyBytes((b) => b)).toBeNull();
     expect(await withActiveAccountSecretKey((s) => s)).toBeNull();
     expect(await withActiveBackupPassword((p) => p)).toBeNull();
-    expect(await withActiveSessionSecrets((m, b) => m + b)).toBeNull();
+    expect(await withActiveSessionSecrets((m, b) => m.length + b.length)).toBeNull();
   });
 
   it('handles error throwing inside withActive* callbacks safely', async () => {

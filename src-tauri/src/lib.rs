@@ -2,6 +2,7 @@ use base64::Engine;
 use std::fs;
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager, WebviewWindow};
+use zeroize::Zeroize;
 
 const VAULT_DATABASE_FILENAME: &str = "aegis_sqlite.db";
 #[allow(dead_code)]
@@ -621,25 +622,29 @@ use credential_handler::{get_params, RustArgon2idOptions};
 
 #[tauri::command]
 fn derive_argon2id_key(
-    password: String,
+    mut password: String,
     salt: String,
     options: Option<RustArgon2idOptions>,
 ) -> Result<Vec<u8>, String> {
     use argon2::{Algorithm, Argon2, Version};
 
+    // SEC-B3: the master password must never be left unscrubbed in the Rust
+    // heap — zeroize it on every exit path (success and error).
     let params = get_params(options)?;
     let output_len = params.output_len().unwrap_or(32);
     let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
     let mut hash = vec![0u8; output_len];
-    argon2
+    let derived = argon2
         .hash_password_into(password.as_bytes(), salt.as_bytes(), &mut hash)
-        .map_err(|e| format!("Argon2id key derivation failed: {e}"))?;
+        .map_err(|e| format!("Argon2id key derivation failed: {e}"));
+    password.zeroize();
+    derived?;
     Ok(hash)
 }
 
 #[tauri::command]
 fn create_argon2id_hash(
-    password: String,
+    mut password: String,
     salt: String,
     options: Option<RustArgon2idOptions>,
 ) -> Result<String, String> {
@@ -648,31 +653,45 @@ fn create_argon2id_hash(
         Algorithm, Argon2, Version,
     };
 
+    // SEC-B3: zeroize the master password on every exit path.
     let params = get_params(options)?;
     let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
     let salt_string = SaltString::from_b64(&salt)
         .or_else(|_| SaltString::encode_b64(salt.as_bytes()))
-        .map_err(|e| format!("invalid salt format: {e}"))?;
+        .map_err(|e| {
+            password.zeroize();
+            format!("invalid salt format: {e}")
+        })?;
 
-    let hash = argon2
+    let hashed = argon2
         .hash_password(password.as_bytes(), &salt_string)
-        .map_err(|e| format!("Argon2id hashing failed: {e}"))?;
-    Ok(hash.to_string())
+        .map_err(|e| {
+            password.zeroize();
+            format!("Argon2id hashing failed: {e}")
+        })?;
+    let encoded = hashed.to_string();
+    password.zeroize();
+    Ok(encoded)
 }
 
 #[tauri::command]
-fn verify_argon2id_hash(password: String, encoded_hash: String) -> Result<bool, String> {
+fn verify_argon2id_hash(mut password: String, encoded_hash: String) -> Result<bool, String> {
     use argon2::{
         password_hash::{PasswordHash, PasswordVerifier},
         Argon2,
     };
 
+    // SEC-B3: zeroize the master password on every exit path.
     let parsed_hash = PasswordHash::new(&encoded_hash)
-        .map_err(|e| format!("invalid password hash format: {e}"))?;
+        .map_err(|e| {
+            password.zeroize();
+            format!("invalid password hash format: {e}")
+        })?;
 
     let verified = Argon2::default()
         .verify_password(password.as_bytes(), &parsed_hash)
         .is_ok();
+    password.zeroize();
     Ok(verified)
 }
 

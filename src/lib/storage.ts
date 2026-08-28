@@ -186,14 +186,27 @@ async function resolveRotatedVaultCredential(newPassword: string): Promise<strin
 }
 
 async function resolveCurrentVaultCredential(password: string): Promise<string> {
-  const secrets = await withActiveSessionSecrets((activeCredential, activeBackupPassword) => {
-    if (activeCredential.startsWith('aegis-vault-v7:') && activeBackupPassword === password) {
-      return activeCredential;
-    }
+  // SEC-B3: session secrets arrive as zeroizable byte clones. The backup
+  // password is verified byte-wise first, and the credential string is decoded
+  // only after that verification passes — scoped to this return value alone.
+  const resolved = withActiveSessionSecrets((masterCredBytes, backupCredBytes) => {
+    const passwordBytes = new TextEncoder().encode(password);
+    try {
+      const backupMatches = backupCredBytes.length === passwordBytes.length
+        && passwordBytes.every((byte, index) => backupCredBytes[index] === byte);
+      if (!backupMatches) return null;
 
-    return resolveVaultCredential(password);
+      const credentialPrefix = new TextEncoder().encode('aegis-vault-v7:');
+      const hasCredentialPrefix = masterCredBytes.length >= credentialPrefix.length
+        && credentialPrefix.every((byte, index) => masterCredBytes[index] === byte);
+      if (!hasCredentialPrefix) return null;
+
+      return new TextDecoder().decode(masterCredBytes);
+    } finally {
+      passwordBytes.fill(0);
+    }
   });
-  return secrets ?? resolveVaultCredential(password);
+  return resolved ?? resolveVaultCredential(password);
 }
 
 /**
@@ -430,7 +443,10 @@ export async function changeMasterPassword(oldPassword: string, newPassword: str
 
     let rotatedAttachmentCount = 0;
     try {
-      const oldCredential = (await withActiveSessionSecrets((masterPassword) => masterPassword)) || '';
+      // SEC-B3: decode the credential bytes inside the narrowest scope needed
+      // by the legacy attachment path; byte clones are zeroized by the session
+      // callback on exit.
+      const oldCredential = withActiveSessionSecrets((credentialBytes) => new TextDecoder().decode(credentialBytes)) ?? '';
       rotatedAttachmentCount = await reencryptAttachmentsForVaultKeyChange(
         oldVaultKey,
         newVaultKey,
@@ -446,13 +462,13 @@ export async function changeMasterPassword(oldPassword: string, newPassword: str
       if (repo.changeMasterPasswordWithHash) {
         await repo.changeMasterPasswordWithHash(result.newArgonHash, newSalt, kdfParams, oldVaultKey, newVaultKey);
       } else {
-        const oldCredential = (await withActiveSessionSecrets((masterPassword) => masterPassword)) || '';
+        const oldCredential = withActiveSessionSecrets((credentialBytes) => new TextDecoder().decode(credentialBytes)) ?? '';
         const newCredential = await resolveRotatedVaultCredential(newPassword);
         await repo.changeMasterPassword(oldCredential, newCredential);
       }
     } catch (err) {
       if (rotatedAttachmentCount > 0) {
-        const oldCredential = (await withActiveSessionSecrets((masterPassword) => masterPassword)) || '';
+        const oldCredential = withActiveSessionSecrets((credentialBytes) => new TextDecoder().decode(credentialBytes)) ?? '';
         await reencryptAttachmentsForVaultKeyChange(newVaultKey, oldVaultKey, oldCredential).catch(() => {});
       }
       oldVaultKey.fill(0);
@@ -537,7 +553,8 @@ export async function migrateActiveVaultStorageToWaSqlite(): Promise<WaSqliteAct
     throw new Error('wa-sqlite-android-webview-wasm-memory-unsupported');
   }
 
-  const result = await withActiveSessionSecrets(async (credential) => {
+  const result = await withActiveSessionSecrets(async (credentialBytes) => {
+    const credential = new TextDecoder().decode(credentialBytes);
     let migrationResult: WaSqliteActiveBackendMigrationResult;
     try {
       migrationResult = await runWaSqliteActiveBackendMigration(credential);
@@ -550,9 +567,18 @@ export async function migrateActiveVaultStorageToWaSqlite(): Promise<WaSqliteAct
     }
     if (migrationResult.status === 'promoted') {
       setIndexedDbItemSync(STORAGE_KEYS.IS_SET_UP, 'true');
-      const newKey = await getVaultStorageRepository().deriveEncryptionKey(credential);
-      updateActiveVaultEncryptionKey(newKey);
-      newKey.fill(0);
+      // SEC-B3: reuse the already-derived vault key from the active session
+      // instead of re-deriving it over IPC (which would cross the boundary
+      // with the master password again). Derive only when no key is held.
+      const existingKey = withActiveVaultEncryptionKey((key) => new Uint8Array(key));
+      if (existingKey) {
+        updateActiveVaultEncryptionKey(existingKey);
+        existingKey.fill(0);
+      } else {
+        const newKey = await getVaultStorageRepository().deriveEncryptionKey(credential);
+        updateActiveVaultEncryptionKey(newKey);
+        newKey.fill(0);
+      }
     }
     return migrationResult;
   });
