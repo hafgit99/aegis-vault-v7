@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   X, 
   HelpCircle, 
@@ -47,6 +47,22 @@ export function LockScreenRecoveryModal({
   const [recoveryModalError, setRecoveryModalError] = useState<string | null>(null);
   const [recoveryModalSuccess, setRecoveryModalSuccess] = useState<string | null>(null);
   const [recoveryModalLoading, setRecoveryModalLoading] = useState(false);
+  // M1: the hint lives in an encrypted envelope and is loaded asynchronously.
+  const [hintContent, setHintContent] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getPasswordHint()
+      .then((hint) => {
+        if (!cancelled) setHintContent(hint);
+      })
+      .catch(() => {
+        if (!cancelled) setHintContent(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   if (!isOpen) return null;
 
@@ -254,14 +270,14 @@ export function LockScreenRecoveryModal({
         {/* Tab 2: Password Hint */}
         {!recoveredMasterPassword && activeRecoveryTab === 'hint' && (
           <div className="space-y-3 py-2">
-            {getPasswordHint() ? (
+            {hintContent ? (
               <div data-testid="lock-recovery-hint-content" className="p-4 rounded-xl bg-surface-lowest border border-outline-variant/20 space-y-2">
                 <p className="text-xs font-bold text-amber-400 flex items-center gap-2">
                   <Lightbulb className="w-4 h-4" />
                   {t('lock.recoveryModal.hintText')}
                 </p>
                 <p className="text-sm font-medium text-on-surface bg-surface-low p-3 rounded-lg border border-outline-variant/10">
-                  "{getPasswordHint()}"
+                  "{hintContent}"
                 </p>
               </div>
             ) : (

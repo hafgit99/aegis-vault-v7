@@ -24,9 +24,9 @@ describe('SettingsRecoverySection', () => {
     vi.clearAllMocks();
   });
 
-  it('renders recovery key and password hint controls', () => {
+  it('renders recovery key and password hint controls', async () => {
     vi.mocked(recoveryKeyModule.isRecoveryKeySetup).mockReturnValue(false);
-    vi.mocked(passwordHintModule.getPasswordHint).mockReturnValue('Hint 123');
+    vi.mocked(passwordHintModule.getPasswordHint).mockResolvedValue('Hint 123');
 
     render(<SettingsRecoverySection t={mockT as any} masterPassword="pass" />);
 
@@ -71,8 +71,9 @@ describe('SettingsRecoverySection', () => {
     });
   });
 
-  it('handles saving and clearing password hint', () => {
-    vi.mocked(passwordHintModule.setPasswordHint).mockReturnValue({ saved: true, warning: false });
+  it('handles saving and clearing password hint', async () => {
+    vi.mocked(passwordHintModule.getPasswordHint).mockResolvedValue(null);
+    vi.mocked(passwordHintModule.setPasswordHint).mockResolvedValue({ saved: true, warning: false });
 
     render(<SettingsRecoverySection t={mockT as any} masterPassword="pass" />);
 
@@ -82,7 +83,9 @@ describe('SettingsRecoverySection', () => {
     const saveHintBtn = screen.getByText('settings.recovery.hintSave');
     fireEvent.click(saveHintBtn);
 
-    expect(passwordHintModule.setPasswordHint).toHaveBeenCalledWith('New Hint', 'pass');
+    await waitFor(() => {
+      expect(passwordHintModule.setPasswordHint).toHaveBeenCalledWith('New Hint', 'pass');
+    });
   });
 
   it('disables active recovery key when confirmed', () => {

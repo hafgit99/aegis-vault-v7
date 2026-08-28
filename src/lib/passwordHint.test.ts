@@ -12,13 +12,31 @@ vi.mock('./indexedDbStorage', () => {
   };
 });
 
+vi.mock('./secureStorage', async () => {
+  const actual = await vi.importActual<typeof import('./secureStorage')>('./secureStorage');
+  // No Android secure-storage bridge in tests → the module falls back to the
+  // separate IndexedDB record for the wrapping key (desktop/browser path).
+  return {
+    ...actual,
+    getSecureStorageItem: vi.fn(() => null),
+    setSecureStorageItem: vi.fn(() => false),
+    removeSecureStorageItem: vi.fn(),
+  };
+});
+
 import {
   setPasswordHint,
   getPasswordHint,
   clearPasswordHint,
   isHintDangerouslySimilar,
 } from './passwordHint';
-import { removeIndexedDbItemSync } from './indexedDbStorage';
+import {
+  removeIndexedDbItemSync,
+  getIndexedDbItemSync,
+  setIndexedDbItemSync,
+} from './indexedDbStorage';
+
+const HINT_STORAGE_KEY = 'aegis_password_hint';
 
 describe('passwordHint', () => {
   beforeEach(() => {
@@ -27,48 +45,72 @@ describe('passwordHint', () => {
 
   // ── CRUD ──────────────────────────────────────────────────────────────
 
-  it('stores and retrieves a hint', () => {
-    setPasswordHint('My favourite color + year');
-    expect(getPasswordHint()).toBe('My favourite color + year');
+  it('stores and retrieves a hint', async () => {
+    await setPasswordHint('My favourite color + year');
+    await expect(getPasswordHint()).resolves.toBe('My favourite colour + year'.replace('colour', 'color'));
   });
 
-  it('returns null when no hint is set', () => {
-    expect(getPasswordHint()).toBeNull();
+  it('stores the hint as an encrypted envelope, not plaintext', async () => {
+    const hint = 'SecretHintPhrase-2026';
+    await setPasswordHint(hint);
+
+    const raw = getIndexedDbItemSync(HINT_STORAGE_KEY);
+    expect(raw).toBeTruthy();
+    // The stored record must NOT contain the plaintext hint.
+    expect(raw).not.toContain(hint);
+    const envelope = JSON.parse(raw!);
+    expect(envelope).toMatchObject({ version: 2, cipher: 'AES-256-GCM' });
+    expect(typeof envelope.payload?.ciphertext).toBe('string');
   });
 
-  it('clears the hint', () => {
-    setPasswordHint('hint text');
+  it('migrates a legacy plaintext hint to the encrypted envelope on read', async () => {
+    // Simulate a pre-M1 v1 plaintext record.
+    const legacy = 'Legacy plaintext hint';
+    setIndexedDbItemSync(HINT_STORAGE_KEY, legacy);
+
+    await expect(getPasswordHint()).resolves.toBe(legacy);
+    const raw = getIndexedDbItemSync(HINT_STORAGE_KEY);
+    expect(raw).not.toBe(legacy);
+    expect(JSON.parse(raw!).version).toBe(2);
+  });
+
+  it('returns null when no hint is set', async () => {
+    await expect(getPasswordHint()).resolves.toBeNull();
+  });
+
+  it('clears the hint', async () => {
+    await setPasswordHint('hint text');
     clearPasswordHint();
-    expect(getPasswordHint()).toBeNull();
+    await expect(getPasswordHint()).resolves.toBeNull();
   });
 
-  it('trims whitespace', () => {
-    setPasswordHint('  spaced  ');
-    expect(getPasswordHint()).toBe('spaced');
+  it('trims whitespace', async () => {
+    await setPasswordHint('  spaced  ');
+    await expect(getPasswordHint()).resolves.toBe('spaced');
   });
 
-  it('clears when saving an empty string', () => {
-    setPasswordHint('initial');
-    setPasswordHint('   ');
-    expect(getPasswordHint()).toBeNull();
+  it('clears when saving an empty string', async () => {
+    await setPasswordHint('initial');
+    await setPasswordHint('   ');
+    await expect(getPasswordHint()).resolves.toBeNull();
     expect(removeIndexedDbItemSync).toHaveBeenCalled();
   });
 
   // ── Safety Checks ────────────────────────────────────────────────────
 
-  it('warns when hint exactly matches password (case-insensitive)', () => {
-    const result = setPasswordHint('MyP@ssword123!', 'myp@ssword123!');
+  it('warns when hint exactly matches password (case-insensitive)', async () => {
+    const result = await setPasswordHint('MyP@ssword123!', 'myp@ssword123!');
     expect(result.warning).toBe(true);
     expect(result.saved).toBe(true);
   });
 
-  it('warns when hint is a substring of password', () => {
-    const result = setPasswordHint('P@ssword', 'MyP@ssword123!');
+  it('warns when hint is a substring of password', async () => {
+    const result = await setPasswordHint('P@ssword', 'MyP@ssword123!');
     expect(result.warning).toBe(true);
   });
 
-  it('warns when password is a substring of hint', () => {
-    const result = setPasswordHint('My password is: SecretKey99', 'SecretKey99');
+  it('warns when password is a substring of hint', async () => {
+    const result = await setPasswordHint('My password is: SecretKey99', 'SecretKey99');
     expect(result.warning).toBe(true);
   });
 
@@ -88,13 +130,13 @@ describe('passwordHint', () => {
     expect(isHintDangerouslySimilar('pass-drowssap-word', 'password')).toBe(true);
   });
 
-  it('does not warn for clearly different hint and password', () => {
-    const result = setPasswordHint('My cat name + birthday year', 'Tr0ub4dor&3Horse');
+  it('does not warn for clearly different hint and password', async () => {
+    const result = await setPasswordHint('My cat name + birthday year', 'Tr0ub4dor&3Horse');
     expect(result.warning).toBe(false);
   });
 
-  it('does not warn when no password is provided', () => {
-    const result = setPasswordHint('some hint');
+  it('does not warn when no password is provided', async () => {
+    const result = await setPasswordHint('some hint');
     expect(result.warning).toBe(false);
   });
 

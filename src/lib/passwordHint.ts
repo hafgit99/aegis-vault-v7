@@ -1,11 +1,21 @@
 /**
  * @file passwordHint.ts
- * @description Manages the master password hint — a plaintext reminder stored
- * locally that helps the user recall their master password. The hint is never
- * the password itself; a safety check warns if they are too similar.
+ * @description Manages the master password hint — a locally stored reminder
+ * that helps the user recall their master password. The hint is never the
+ * password itself; a safety check warns if they are too similar.
  *
- * Storage: IndexedDB via the shared indexedDbStorage helpers so the hint
- * survives browser-level localStorage clears while remaining local-only.
+ * M1 (SEC-B3 follow-up): the hint is no longer stored as searchable
+ * plaintext. It lives inside an AES-256-GCM envelope (v2) wrapped by a fresh
+ * CSPRNG 256-bit key:
+ *  - Android: the wrapping key is stored in the OS secure storage bridge,
+ *    which encrypts it with the hardware-backed AndroidKeyStore key.
+ *  - Desktop/browser fallback: the wrapping key is kept in a separate
+ *    IndexedDB record. This is defense-in-depth (the hint is no longer a
+ *    greppable plaintext string and lives in a different storage record than
+ *    its key), not a hardware boundary — documented honestly in the security
+ *    report.
+ * Legacy v1 plaintext hints found on read are transparently upgraded to v2
+ * envelopes and the plaintext record is removed.
  *
  * @license SPDX-License-Identifier: Apache-2.0
  */
@@ -15,8 +25,62 @@ import {
   setIndexedDbItemSync,
   removeIndexedDbItemSync,
 } from './indexedDbStorage';
+import {
+  secureStorageKeys,
+  getSecureStorageItem,
+  setSecureStorageItem,
+  removeSecureStorageItem,
+} from './secureStorage';
+import { secureRandomBytes } from './random';
+import {
+  webCryptoAesGcmEncrypt,
+  webCryptoAesGcmDecrypt,
+  generateSafeIv,
+  type WebCryptoAesGcmPayload,
+} from './webcrypto';
 
 const HINT_STORAGE_KEY = 'aegis_password_hint';
+const HINT_KEY_INDEXED_DB_STORAGE_KEY = 'aegis_password_hint_key';
+
+interface PasswordHintEnvelope {
+  version: 2;
+  cipher: 'AES-256-GCM';
+  payload: WebCryptoAesGcmPayload;
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary);
+}
+
+function base64ToBytes(value: string): Uint8Array {
+  return new Uint8Array(atob(value).split('').map((char) => char.charCodeAt(0)));
+}
+
+function getOrCreateWrappingKey(): Uint8Array {
+  // Preferred: OS secure storage (Android → hardware-backed AndroidKeyStore).
+  const storedKey = getSecureStorageItem(secureStorageKeys.passwordHintWrappingKey);
+  if (storedKey) {
+    return base64ToBytes(storedKey);
+  }
+
+  const generatedKey = secureRandomBytes(32);
+  if (setSecureStorageItem(secureStorageKeys.passwordHintWrappingKey, bytesToBase64(generatedKey))) {
+    return generatedKey;
+  }
+
+  // Fallback (desktop/browser): separate IndexedDB record. Defense-in-depth
+  // only — see module docstring.
+  const fallbackKey = getIndexedDbItemSync(HINT_KEY_INDEXED_DB_STORAGE_KEY);
+  if (fallbackKey) {
+    return base64ToBytes(fallbackKey);
+  }
+  setIndexedDbItemSync(HINT_KEY_INDEXED_DB_STORAGE_KEY, bytesToBase64(generatedKey));
+  return generatedKey;
+}
 
 /**
  * Returns `true` when the hint is dangerously close to the actual password
@@ -95,10 +159,11 @@ function levenshtein(a: string, b: string): number {
 // ── CRUD ────────────────────────────────────────────────────────────────
 
 /**
- * Stores the password hint. Returns a warning flag if the hint looks too
- * similar to the password (callers should display a UI warning in that case).
+ * Stores the password hint inside an encrypted envelope. Returns a warning
+ * flag if the hint looks too similar to the password (callers should display
+ * a UI warning in that case).
  */
-export function setPasswordHint(hint: string, masterPassword?: string): { saved: boolean; warning: boolean } {
+export async function setPasswordHint(hint: string, masterPassword?: string): Promise<{ saved: boolean; warning: boolean }> {
   const trimmed = hint.trim();
   if (!trimmed) {
     clearPasswordHint();
@@ -106,16 +171,52 @@ export function setPasswordHint(hint: string, masterPassword?: string): { saved:
   }
 
   const warning = masterPassword ? isHintDangerouslySimilar(trimmed, masterPassword) : false;
-  setIndexedDbItemSync(HINT_STORAGE_KEY, trimmed);
-  return { saved: true, warning };
+  const wrappingKey = getOrCreateWrappingKey();
+  try {
+    const payload = await webCryptoAesGcmEncrypt(trimmed, wrappingKey, generateSafeIv());
+    const envelope: PasswordHintEnvelope = {
+      version: 2,
+      cipher: 'AES-256-GCM',
+      payload,
+    };
+    setIndexedDbItemSync(HINT_STORAGE_KEY, JSON.stringify(envelope));
+    return { saved: true, warning };
+  } finally {
+    wrappingKey.fill(0);
+  }
 }
 
-/** Returns the stored hint, or `null` if none exists. */
-export function getPasswordHint(): string | null {
-  return getIndexedDbItemSync(HINT_STORAGE_KEY) || null;
+/** Returns the decrypted stored hint, or `null` if none exists. */
+export async function getPasswordHint(): Promise<string | null> {
+  const raw = getIndexedDbItemSync(HINT_STORAGE_KEY);
+  if (!raw) return null;
+
+  // Legacy v1 migration: transparently upgrade a plaintext hint to the v2
+  // envelope and remove the plaintext record.
+  if (!raw.trimStart().startsWith('{')) {
+    const migrated = await setPasswordHint(raw);
+    return migrated.saved ? raw : null;
+  }
+
+  try {
+    const envelope = JSON.parse(raw) as PasswordHintEnvelope;
+    if (envelope.version !== 2 || envelope.cipher !== 'AES-256-GCM') return null;
+    const wrappingKey = getOrCreateWrappingKey();
+    try {
+      return await webCryptoAesGcmDecrypt(envelope.payload, wrappingKey);
+    } finally {
+      wrappingKey.fill(0);
+    }
+  } catch {
+    // Corrupt envelope or missing key — fail closed, clear the stale record.
+    clearPasswordHint();
+    return null;
+  }
 }
 
-/** Deletes the stored hint. */
+/** Deletes the stored hint (envelope and, where present, the wrapping key). */
 export function clearPasswordHint(): void {
   removeIndexedDbItemSync(HINT_STORAGE_KEY);
+  removeSecureStorageItem(secureStorageKeys.passwordHintWrappingKey);
+  removeIndexedDbItemSync(HINT_KEY_INDEXED_DB_STORAGE_KEY);
 }

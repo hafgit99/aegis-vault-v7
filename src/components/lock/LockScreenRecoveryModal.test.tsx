@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LockScreenRecoveryModal } from './LockScreenRecoveryModal';
 import { LanguageProvider } from '../../i18n/LanguageContext';
 import * as recoveryKeyModule from '../../lib/recoveryKey';
@@ -18,6 +18,12 @@ vi.mock('../../lib/passwordHint');
 vi.mock('../../lib/storage');
 
 describe('LockScreenRecoveryModal', () => {
+  beforeEach(() => {
+    // getPasswordHint is async (M1 encrypted envelope) — provide a safe
+    // default so the modal's load effect always gets a promise.
+    vi.mocked(passwordHintModule.getPasswordHint).mockResolvedValue(null);
+  });
+
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
@@ -37,8 +43,8 @@ describe('LockScreenRecoveryModal', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('renders modal tabs and handles tab switching', () => {
-    vi.mocked(passwordHintModule.getPasswordHint).mockReturnValue('My pet name');
+  it('renders modal tabs and handles tab switching', async () => {
+    vi.mocked(passwordHintModule.getPasswordHint).mockResolvedValue('My pet name');
 
     render(
       <LanguageProvider>
@@ -56,7 +62,7 @@ describe('LockScreenRecoveryModal', () => {
 
     // Switch to hint tab
     fireEvent.click(screen.getByTestId('lock-recovery-tab-hint'));
-    expect(screen.getByTestId('lock-recovery-hint-content')).toBeDefined();
+    expect(await screen.findByTestId('lock-recovery-hint-content')).toBeDefined();
   });
 
   it('handles recovery key submission and password reset flow', async () => {

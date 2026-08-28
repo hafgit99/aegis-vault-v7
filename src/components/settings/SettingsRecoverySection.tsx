@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   KeyRound,
   ShieldCheck,
@@ -52,9 +52,27 @@ export function SettingsRecoverySection({ masterPassword, t }: SettingsRecoveryS
   const [confirmDisable, setConfirmDisable] = useState(false);
 
   // ── Password Hint State ───────────────────────────────────────────
-  const [hint, setHint] = useState(getPasswordHint() || '');
+  // M1: the hint lives in an encrypted envelope — load it asynchronously.
+  const [hint, setHint] = useState('');
+  const [hintLoaded, setHintLoaded] = useState(false);
   const [hintSaved, setHintSaved] = useState(false);
   const [hintWarning, setHintWarning] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    getPasswordHint()
+      .then((stored) => {
+        if (cancelled) return;
+        setHint(stored ?? '');
+        setHintLoaded(true);
+      })
+      .catch(() => {
+        if (!cancelled) setHintLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // ── Recovery Key Handlers ─────────────────────────────────────────
 
@@ -153,7 +171,7 @@ export function SettingsRecoverySection({ masterPassword, t }: SettingsRecoveryS
     if (!activePassword) {
       activePassword = await withActiveBackupPassword((pass) => pass);
     }
-    const result = setPasswordHint(hint, activePassword || undefined);
+    const result = await setPasswordHint(hint, activePassword || undefined);
     setHintWarning(result.warning);
     setHintSaved(true);
     setTimeout(() => setHintSaved(false), 2000);
@@ -370,7 +388,7 @@ export function SettingsRecoverySection({ masterPassword, t }: SettingsRecoveryS
               {hintSaved ? <Check className="w-3.5 h-3.5 text-brand-tertiary" /> : <ShieldCheck className="w-3.5 h-3.5" />}
               {hintSaved ? t('settings.recovery.hintSaved') : t('settings.recovery.hintSave')}
             </button>
-            {getPasswordHint() && (
+            {hintLoaded && hint && (
               <button
                 type="button"
                 onClick={handleClearHint}
