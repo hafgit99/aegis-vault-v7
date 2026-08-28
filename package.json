@@ -7,7 +7,7 @@
     "aegis-cli": "./scripts/aegis-cli.cjs"
   },
   "scripts": {
-    "dev": "vite --port=3000 --host=0.0.0.0",
+    "dev": "vite --port=3000",
     "build": "vite build && node scripts/generate-asset-integrity-manifest.cjs",
     "preview": "vite preview",
     "clean": "node -e \"const fs=require('fs'); for (const p of ['dist','coverage','server.js']) fs.rmSync(p,{recursive:true,force:true});\"",

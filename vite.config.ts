@@ -21,7 +21,7 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000,
       strictPort: true,
-      host: tauriHost || '0.0.0.0',
+      host: tauriHost || '127.0.0.1',
       hmr: tauriHost
         ? {
             protocol: 'ws',

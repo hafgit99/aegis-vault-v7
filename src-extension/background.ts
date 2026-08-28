@@ -267,6 +267,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           return;
         }
 
+        // M5: Insecure HTTP pages require explicit user confirmation — unencrypted
+        // transport exposes credentials to network-level observers.
+        if (tabUrl.startsWith('http://') && !request.userConfirmedMismatch) {
+          console.warn(
+            '[AegisVault Security] Autofill into insecure HTTP page blocked by background service worker:',
+            `tab=${tabUrl}`
+          );
+          sendResponse({ status: 'blocked', reason: 'insecure_connection' });
+          return;
+        }
+
         // P1-7a: Domain validation is MANDATORY — if targetDomain is missing/empty,
         // treat it as a domain mismatch (credential has no URL, user must confirm).
         const tabDomain = extractRegistrableDomainFromUrl(tabUrl);

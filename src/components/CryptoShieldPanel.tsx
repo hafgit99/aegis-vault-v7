@@ -1,9 +1,14 @@
-import { Fingerprint } from 'lucide-react';
+import { useSyncExternalStore } from 'react';
+import { AlertTriangle, Fingerprint } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
+import { getArgon2DegradationInfo, subscribeArgon2Degradation } from '../lib/argon2id';
 
 export default function CryptoShieldPanel() {
   const { t } = useLanguage();
+
+  // D2: Surface KDF memory degradation to the user instead of logging it silently.
+  const degradation = useSyncExternalStore(subscribeArgon2Degradation, getArgon2DegradationInfo);
 
   return (
     <div className="surface-panel rounded-xl p-5 flex flex-col justify-between gap-4">
@@ -41,6 +46,28 @@ export default function CryptoShieldPanel() {
             </span>
           </div>
         </div>
+        {degradation && (
+          <div
+            role="alert"
+            className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-on-surface-variant leading-relaxed"
+          >
+            <div className="flex items-center gap-1.5 font-bold text-amber-400">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+              <span>{t('dashboard.crypto.degradedTitle')}</span>
+            </div>
+            <p className="mt-1">{t('dashboard.crypto.degradedDesc')}</p>
+            <div className="mt-2 flex items-center justify-between font-mono text-[10px]">
+              <span>
+                Argon2id: {Math.round(degradation.activeMemoryKiB / 1024)} / {Math.round(degradation.requestedMemoryKiB / 1024)} MiB
+              </span>
+              <span className={degradation.writeBlocked ? 'font-bold text-red-400' : 'font-bold text-amber-400'}>
+                {degradation.writeBlocked
+                  ? t('dashboard.crypto.degradedWritesBlocked')
+                  : t('dashboard.crypto.degradedReducedSecurity')}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

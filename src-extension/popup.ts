@@ -636,9 +636,16 @@ function validateAndAutofill(item: CredentialItem): void {
     const activeTab = tabs[0];
     const tabUrl = activeTab?.url || '';
 
-    // If no URL available (e.g., chrome:// pages), block autofill entirely
+    // Only http(s) pages can ever be autofilled
     if (!tabUrl || (!tabUrl.startsWith('http://') && !tabUrl.startsWith('https://'))) {
       showToast('⚠️ Autofill not available on this page.');
+      return;
+    }
+
+    // M5: Insecure HTTP pages require explicit user confirmation per fill —
+    // credentials transmitted to an unencrypted page can be observed on the network.
+    if (tabUrl.startsWith('http://')) {
+      showInsecureHttpWarning(item, tabUrl);
       return;
     }
 
@@ -656,6 +663,94 @@ function validateAndAutofill(item: CredentialItem): void {
     // Domain mismatch or URL-less credential detected — show confirmation warning (R-3)
     showDomainMismatchWarning(item, tabDomain, credDomain);
   });
+}
+
+/**
+ * Shows an insecure-connection (HTTP) warning overlay in the popup.
+ * Autofill into unencrypted pages is opt-in per fill (M5).
+ */
+function showInsecureHttpWarning(item: CredentialItem, tabUrl: string): void {
+  const existing = document.getElementById('insecureHttpOverlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'insecureHttpOverlay';
+  overlay.style.cssText = `
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+  `;
+
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    background: var(--bg-card, #1e1e2e); border-radius: 12px;
+    padding: 20px; max-width: 320px; width: 100%;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    border: 1px solid var(--border, rgba(255,255,255,0.1));
+  `;
+
+  const icon = document.createElement('div');
+  icon.textContent = '🔓';
+  icon.style.cssText = 'font-size: 32px; text-align: center; margin-bottom: 12px;';
+
+  const title = document.createElement('div');
+  title.textContent = translate('insecure.title', activeLanguage);
+  title.style.cssText = `
+    font-size: 15px; font-weight: 700; text-align: center;
+    color: var(--text-primary, #fff); margin-bottom: 8px;
+  `;
+
+  const desc = document.createElement('div');
+  desc.style.cssText = `
+    font-size: 12px; color: var(--text-secondary, #aaa);
+    text-align: center; line-height: 1.5;
+  `;
+  desc.textContent = translate('insecure.desc', activeLanguage);
+
+  const urlLine = document.createElement('div');
+  urlLine.style.cssText = 'margin-top: 12px; text-align: left; background: rgba(0,0,0,0.25); padding: 8px 12px; border-radius: 6px; font-size: 12px; word-break: break-all;';
+  const urlStrong = document.createElement('strong');
+  urlStrong.style.color = 'var(--accent-red, #ef4444)';
+  urlStrong.textContent = `${translate('mismatch.page', activeLanguage)}: `;
+  const urlSpan = document.createElement('span');
+  urlSpan.textContent = tabUrl;
+  urlLine.appendChild(urlStrong);
+  urlLine.appendChild(urlSpan);
+  desc.appendChild(urlLine);
+
+  const btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display: flex; gap: 8px; margin-top: 16px;';
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = translate('mismatch.cancel', activeLanguage);
+  cancelBtn.style.cssText = `
+    flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border, rgba(255,255,255,0.15));
+    background: transparent; color: var(--text-primary, #fff); cursor: pointer;
+    font-size: 13px; font-weight: 600;
+  `;
+  cancelBtn.addEventListener('click', () => overlay.remove());
+
+  const proceedBtn = document.createElement('button');
+  proceedBtn.textContent = translate('mismatch.proceed', activeLanguage);
+  proceedBtn.style.cssText = `
+    flex: 1; padding: 10px; border-radius: 8px; border: none;
+    background: #ef4444; color: #fff; cursor: pointer;
+    font-size: 13px; font-weight: 600;
+  `;
+  proceedBtn.addEventListener('click', () => {
+    overlay.remove();
+    sendAutofillMessage(item, true /* userConfirmedMismatch: explicit HTTP opt-in (M5) */);
+  });
+
+  btnRow.appendChild(cancelBtn);
+  btnRow.appendChild(proceedBtn);
+  dialog.appendChild(icon);
+  dialog.appendChild(title);
+  dialog.appendChild(desc);
+  dialog.appendChild(btnRow);
+  overlay.appendChild(dialog);
+  document.body.appendChild(overlay);
 }
 
 /**

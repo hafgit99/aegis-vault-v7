@@ -40,6 +40,8 @@ export const extensionTranslations = {
     'mismatch.page': 'Mevcut sayfa',
     'mismatch.cancel': 'İptal',
     'mismatch.proceed': 'Yine de Doldur',
+    'insecure.title': 'Güvensiz Bağlantı',
+    'insecure.desc': 'Bu sayfa şifrelenmemiş HTTP üzerinden açılıyor. Kimlik bilgileriniz ağdaki saldırganlar tarafından görülebilir. Yine de doldurulsun mu?',
   },
   en: {
     'locked.title': 'Aegis Vault Locked',
@@ -82,6 +84,8 @@ export const extensionTranslations = {
     'mismatch.page': 'Current page',
     'mismatch.cancel': 'Cancel',
     'mismatch.proceed': 'Fill Anyway',
+    'insecure.title': 'Insecure Connection',
+    'insecure.desc': 'This page is loaded over unencrypted HTTP. Your credentials could be visible to attackers on the network. Fill anyway?',
   },
   de: {
     'locked.title': 'Aegis Vault Gesperrt',
@@ -124,6 +128,8 @@ export const extensionTranslations = {
     'mismatch.page': 'Aktuelle Seite',
     'mismatch.cancel': 'Abbrechen',
     'mismatch.proceed': 'Trotzdem ausfüllen',
+    'insecure.title': 'Unsichere Verbindung',
+    'insecure.desc': 'Diese Seite wird über unverschlüsseltes HTTP geladen. Ihre Zugangsdaten könnten für Angreifer im Netzwerk sichtbar sein. Trotzdem ausfüllen?',
   },
   es: {
     'locked.title': 'Aegis Vault Bloqueado',
@@ -166,6 +172,8 @@ export const extensionTranslations = {
     'mismatch.page': 'Página actual',
     'mismatch.cancel': 'Cancelar',
     'mismatch.proceed': 'Rellenar de todos modos',
+    'insecure.title': 'Conexión insegura',
+    'insecure.desc': 'Esta página se carga mediante HTTP sin cifrar. Tus credenciales podrían ser visibles para atacantes en la red. ¿Rellenar de todos modos?',
   },
   fr: {
     'locked.title': 'Aegis Vault Verrouillé',
@@ -208,6 +216,8 @@ export const extensionTranslations = {
     'mismatch.page': 'Page actuelle',
     'mismatch.cancel': 'Annuler',
     'mismatch.proceed': 'Remplir quand même',
+    'insecure.title': 'Connexion non sécurisée',
+    'insecure.desc': 'Cette page est chargée en HTTP non chiffré. Vos identifiants pourraient être visibles par des attaquants sur le réseau. Remplir quand même ? ',
   },
   it: {
     'locked.title': 'Aegis Vault Bloccato',
@@ -250,6 +260,8 @@ export const extensionTranslations = {
     'mismatch.page': 'Pagina corrente',
     'mismatch.cancel': 'Annulla',
     'mismatch.proceed': 'Compila comunque',
+    'insecure.title': 'Connessione non sicura',
+    'insecure.desc': 'Questa pagina è caricata tramite HTTP non crittografato. Le tue credenziali potrebbero essere visibili ad attaccanti sulla rete. Compilare comunque?',
   },
   pt: {
     'locked.title': 'Aegis Vault Bloqueado',
@@ -292,6 +304,8 @@ export const extensionTranslations = {
     'mismatch.page': 'Página atual',
     'mismatch.cancel': 'Cancelar',
     'mismatch.proceed': 'Preencher assim mesmo',
+    'insecure.title': 'Conexão insegura',
+    'insecure.desc': 'Esta página é carregada por HTTP não criptografado. Suas credenciais podem ficar visíveis para atacantes na rede. Preencher assim mesmo?',
   },
   ru: {
     'locked.title': 'Aegis Vault Заблокирован',
@@ -334,6 +348,8 @@ export const extensionTranslations = {
     'mismatch.page': 'Текущая страница',
     'mismatch.cancel': 'Отмена',
     'mismatch.proceed': 'Все равно заполнить',
+    'insecure.title': 'Небезопасное соединение',
+    'insecure.desc': 'Эта страница загружена по незашифрованному HTTP. Ваши учётные данные могут быть видны злоумышленникам в сети. Всё равно заполнить?',
   },
   zh: {
     'locked.title': 'Aegis Vault 已锁定',
@@ -376,6 +392,8 @@ export const extensionTranslations = {
     'mismatch.page': '当前页面',
     'mismatch.cancel': '取消',
     'mismatch.proceed': '仍然填充',
+    'insecure.title': '不安全连接',
+    'insecure.desc': '此页面通过未加密的 HTTP 加载。您的凭据可能被网络上的攻击者窃取。仍要填充吗？',
   },
   ja: {
     'locked.title': 'Aegis Vault ロック中',
@@ -418,6 +436,8 @@ export const extensionTranslations = {
     'mismatch.page': '現在のページ',
     'mismatch.cancel': 'キャンセル',
     'mismatch.proceed': 'それでも入力',
+    'insecure.title': '安全でない接続',
+    'insecure.desc': 'このページは暗号化されていない HTTP で読み込まれています。ネットワーク上の攻撃者に認証情報が見られる可能性があります。それでも入力しますか？',
   },
   ko: {
     'locked.title': 'Aegis Vault 잠김',
@@ -460,6 +480,8 @@ export const extensionTranslations = {
     'mismatch.page': '현재 페이지',
     'mismatch.cancel': '취소',
     'mismatch.proceed': '계속 입력',
+    'insecure.title': '안전하지 않은 연결',
+    'insecure.desc': '이 페이지는 암호화되지 않은 HTTP로 로드됩니다. 네트워크의 공격자에게 자격 증명이 노출될 수 있습니다. 계속 입력하시겠습니까?',
   },
   ar: {
     'locked.title': 'Aegis Vault مقفل',
@@ -502,6 +524,8 @@ export const extensionTranslations = {
     'mismatch.page': 'الصفحة الحالية',
     'mismatch.cancel': 'إلغاء',
     'mismatch.proceed': 'التعبئة على أي حال',
+    'insecure.title': 'اتصال غير آمن',
+    'insecure.desc': 'يتم تحميل هذه الصفحة عبر HTTP غير المشفر. قد تكون بيانات اعتمادك مرئية للمهاجمين على الشبكة. هل تريد التعبئة على أي حال؟',
   }
 };
 
