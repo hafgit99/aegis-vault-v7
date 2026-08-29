@@ -13,7 +13,6 @@ import { useSettingsEmergencyKit } from '../hooks/useSettingsEmergencyKit';
 import { useSettingsStorageMigration } from '../hooks/useSettingsStorageMigration';
 import { useSettingsExtensionToken } from '../hooks/useSettingsExtensionToken';
 import { useSettingsPasskey } from '../hooks/useSettingsPasskey';
-import { useSettingsSync } from '../hooks/useSettingsSync';
 import { useSettingsBackupImport } from '../hooks/useSettingsBackupImport';
 import { SettingsLanguageCard } from './settings/SettingsLanguageCard';
 import { SettingsThemeCard } from './settings/SettingsThemeCard';
@@ -119,37 +118,6 @@ export default function SettingsPanel({
     setItems,
     onDatabaseChanged,
   });
-
-  const {
-    syncProvider,
-    setSyncProvider,
-    syncUrl,
-    setSyncUrl,
-    syncUsername,
-    setSyncUsername,
-    syncPassword,
-    setSyncPassword,
-    s3Endpoint,
-    setS3Endpoint,
-    s3Region,
-    setS3Region,
-    s3Bucket,
-    setS3Bucket,
-    s3AccessKeyId,
-    setS3AccessKeyId,
-    s3SecretAccessKey,
-    setS3SecretAccessKey,
-    syncStatus,
-    syncMessage,
-    syncLastAt,
-    syncTestResult,
-    syncTestLoading,
-    syncLoading,
-    onSyncTest,
-    onSyncSave,
-    onSyncDisable,
-    onSyncNow,
-  } = useSettingsSync({ onDatabaseChanged });
 
   const {
     useMasterForBackup,
@@ -324,36 +292,7 @@ export default function SettingsPanel({
       />
 
       {/* Cloud Sync (E2EE) Section */}
-      <SettingsSyncSection
-        syncProvider={syncProvider}
-        setSyncProvider={setSyncProvider}
-        syncUrl={syncUrl}
-        setSyncUrl={setSyncUrl}
-        syncUsername={syncUsername}
-        setSyncUsername={setSyncUsername}
-        syncPassword={syncPassword}
-        setSyncPassword={setSyncPassword}
-        s3Endpoint={s3Endpoint}
-        setS3Endpoint={setS3Endpoint}
-        s3Region={s3Region}
-        setS3Region={setS3Region}
-        s3Bucket={s3Bucket}
-        setS3Bucket={setS3Bucket}
-        s3AccessKeyId={s3AccessKeyId}
-        setS3AccessKeyId={setS3AccessKeyId}
-        s3SecretAccessKey={s3SecretAccessKey}
-        setS3SecretAccessKey={setS3SecretAccessKey}
-        syncStatus={syncStatus}
-        syncMessage={syncMessage}
-        syncLastAt={syncLastAt}
-        syncTestResult={syncTestResult}
-        syncTestLoading={syncTestLoading}
-        syncLoading={syncLoading}
-        onSyncTest={onSyncTest}
-        onSyncSave={onSyncSave}
-        onSyncDisable={onSyncDisable}
-        onSyncNow={onSyncNow}
-      />
+      <SettingsSyncSection />
 
       {/* Extension Token Rotation — desktop only */}
       <SettingsExtensionTokenCard

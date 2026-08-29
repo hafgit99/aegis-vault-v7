@@ -10,11 +10,18 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SettingsSyncSection } from './SettingsSyncSection';
+import { SyncSettingsProvider, type SyncSettings } from './SyncSettingsContext';
+import { useSettingsSync } from '../../hooks/useSettingsSync';
 
 afterEach(() => {
   cleanup();
 });
 
+// M10 Dilim 2: the section consumes sync state from SyncSettingsContext; the
+// state-producing hook is mocked so tests drive it directly.
+vi.mock('../../hooks/useSettingsSync', () => ({
+  useSettingsSync: vi.fn(),
+}));
 // M10 Dilim 1: components resolve translations via useLanguage(); these tests
 // assert on rendered keys, so the context is mocked with an identity translator.
 vi.mock('../../i18n/LanguageContext', () => ({
@@ -55,11 +62,26 @@ describe('SettingsSyncSection', () => {
     onSyncSave: vi.fn(),
     onSyncDisable: vi.fn(),
     onSyncNow: vi.fn(),
-    t: (key: string) => key,
+  };
+
+  const sectionElement = () => (
+    <SyncSettingsProvider onDatabaseChanged={vi.fn()}>
+      <SettingsSyncSection />
+    </SyncSettingsProvider>
+  );
+
+  const renderSection = (overrides: Record<string, unknown> = {}) => {
+    vi.mocked(useSettingsSync).mockReturnValue({ ...defaultProps, ...overrides } as unknown as SyncSettings);
+    return render(sectionElement());
+  };
+
+  const rerenderSection = (rerender: (ui: React.ReactElement) => void, overrides: Record<string, unknown> = {}) => {
+    vi.mocked(useSettingsSync).mockReturnValue({ ...defaultProps, ...overrides } as unknown as SyncSettings);
+    rerender(sectionElement());
   };
 
   it('renders disabled state overview', () => {
-    render(<SettingsSyncSection {...defaultProps} />);
+    renderSection();
 
     expect(screen.getByText('settings.sync.title')).toBeTruthy();
     expect(screen.getByText('settings.sync.description')).toBeTruthy();
@@ -67,7 +89,7 @@ describe('SettingsSyncSection', () => {
   });
 
   it('calls setSyncProvider when provider selection changes', () => {
-    render(<SettingsSyncSection {...defaultProps} />);
+    renderSection();
 
     const webdavBtn = screen.getByText('WebDAV / Nextcloud');
     fireEvent.click(webdavBtn);
@@ -84,7 +106,7 @@ describe('SettingsSyncSection', () => {
       syncPassword: 'password123',
     };
 
-    render(<SettingsSyncSection {...props} />);
+    renderSection(props);
 
     const urlInput = screen.getByPlaceholderText('settings.sync.configure.urlPlaceholder') as HTMLInputElement;
     const userInput = screen.getByPlaceholderText('settings.sync.configure.usernamePlaceholder') as HTMLInputElement;
@@ -110,7 +132,7 @@ describe('SettingsSyncSection', () => {
       syncProvider: 'webdav' as const,
     };
 
-    render(<SettingsSyncSection {...props} />);
+    renderSection(props);
 
     fireEvent.click(screen.getByText('settings.sync.configure.testConnection'));
     expect(props.onSyncTest).toHaveBeenCalled();
@@ -133,7 +155,7 @@ describe('SettingsSyncSection', () => {
       syncTestLoading: true,
     };
 
-    const { rerender } = render(<SettingsSyncSection {...props} />);
+    const { rerender } = renderSection(props);
     expect(screen.getByText('…')).toBeTruthy();
     expect(screen.getByText('settings.sync.test.success')).toBeTruthy();
 
@@ -142,7 +164,7 @@ describe('SettingsSyncSection', () => {
       syncTestResult: 'settings.sync.test.failed',
       syncTestLoading: false,
     };
-    rerender(<SettingsSyncSection {...propsFailed} />);
+    rerenderSection(rerender, propsFailed);
     expect(screen.getByText('settings.sync.configure.testConnection')).toBeTruthy();
     expect(screen.getByText('settings.sync.test.failed')).toBeTruthy();
   });
@@ -155,7 +177,7 @@ describe('SettingsSyncSection', () => {
       syncLastAt: timeStr,
     };
 
-    render(<SettingsSyncSection {...props} />);
+    renderSection(props);
     expect(screen.getByText(new Date(timeStr).toLocaleString())).toBeTruthy();
   });
 
@@ -167,7 +189,7 @@ describe('SettingsSyncSection', () => {
       syncMessage: 'conflict occurred',
     };
 
-    render(<SettingsSyncSection {...props} />);
+    renderSection(props);
     expect(screen.getByText('settings.sync.status.conflict')).toBeTruthy();
     expect(screen.getByText('settings.sync.conflict.title')).toBeTruthy();
     expect(screen.getByText('settings.sync.conflict.description')).toBeTruthy();
@@ -183,7 +205,7 @@ describe('SettingsSyncSection', () => {
       syncMessage: 'sync details',
     };
 
-    const { rerender } = render(<SettingsSyncSection {...props} />);
+    const { rerender } = renderSection(props);
     expect(screen.getByText('settings.sync.status.syncing')).toBeTruthy();
     expect(screen.getByText('settings.sync.syncNowLoading')).toBeTruthy();
     expect(screen.getByText(/— sync details/)).toBeTruthy();
@@ -193,7 +215,7 @@ describe('SettingsSyncSection', () => {
       syncStatus: 'error' as const,
       syncLoading: false,
     };
-    rerender(<SettingsSyncSection {...propsError} />);
+    rerenderSection(rerender, propsError);
     expect(screen.getByText('settings.sync.status.error')).toBeTruthy();
     expect(screen.getByText('settings.sync.syncNow')).toBeTruthy();
 
@@ -202,7 +224,7 @@ describe('SettingsSyncSection', () => {
       syncStatus: 'success' as const,
       syncLoading: false,
     };
-    rerender(<SettingsSyncSection {...propsSuccess} />);
+    rerenderSection(rerender, propsSuccess);
     expect(screen.getByText('settings.sync.status.success')).toBeTruthy();
   });
 
@@ -217,7 +239,7 @@ describe('SettingsSyncSection', () => {
       s3SecretAccessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
     };
 
-    render(<SettingsSyncSection {...props} />);
+    renderSection(props);
 
     const endpointInput = screen.getByPlaceholderText('settings.sync.s3.endpointPlaceholder') as HTMLInputElement;
     const regionInput = screen.getByPlaceholderText('settings.sync.s3.regionPlaceholder') as HTMLInputElement;

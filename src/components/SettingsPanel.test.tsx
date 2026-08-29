@@ -45,6 +45,12 @@ const vaultItems: VaultItem[] = [
 
 const invoke = vi.fn();
 
+// M10 Dilim 2: sync state moved behind SyncSettingsProvider; the panel test
+// supplies a stable mock so the section renders inertly.
+vi.mock('./settings/SettingsSyncSection', () => ({
+  SettingsSyncSection: () => null,
+}));
+
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: (...args: unknown[]) => invoke(...args),
 }));

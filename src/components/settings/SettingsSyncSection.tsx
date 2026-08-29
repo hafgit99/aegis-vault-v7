@@ -3,75 +3,42 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { memo } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { useSyncSettings } from './SyncSettingsContext';
 import { Cloud, Wifi, Check, CloudOff, RotateCcw, CheckCircle, AlertCircle, RefreshCw, Server, Database } from 'lucide-react';
-import type { SyncProviderType } from '../../lib/sync';
 
-export interface SettingsSyncSectionProps {
-  syncProvider: SyncProviderType;
-  setSyncProvider: (provider: SyncProviderType) => void;
-  // WebDAV fields
-  syncUrl: string;
-  setSyncUrl: (url: string) => void;
-  syncUsername: string;
-  setSyncUsername: (username: string) => void;
-  syncPassword: string;
-  setSyncPassword: (password: string) => void;
-  // S3 fields
-  s3Endpoint: string;
-  setS3Endpoint: (endpoint: string) => void;
-  s3Region: string;
-  setS3Region: (region: string) => void;
-  s3Bucket: string;
-  setS3Bucket: (bucket: string) => void;
-  s3AccessKeyId: string;
-  setS3AccessKeyId: (accessKeyId: string) => void;
-  s3SecretAccessKey: string;
-  setS3SecretAccessKey: (secretAccessKey: string) => void;
-  // State & Callbacks
-  syncStatus: 'idle' | 'syncing' | 'success' | 'error' | 'conflict';
-  syncMessage: string | null;
-  syncLastAt: string | null;
-  syncTestResult: string | null;
-  syncTestLoading: boolean;
-  syncLoading: boolean;
-  onSyncTest: () => void;
-  onSyncSave: () => void;
-  onSyncDisable: () => void;
-  onSyncNow: () => void;
-}
-
-export function SettingsSyncSection({
-  syncProvider,
-  setSyncProvider,
-  syncUrl,
-  setSyncUrl,
-  syncUsername,
-  setSyncUsername,
-  syncPassword,
-  setSyncPassword,
-  s3Endpoint,
-  setS3Endpoint,
-  s3Region,
-  setS3Region,
-  s3Bucket,
-  setS3Bucket,
-  s3AccessKeyId,
-  setS3AccessKeyId,
-  s3SecretAccessKey,
-  setS3SecretAccessKey,
-  syncStatus,
-  syncMessage,
-  syncLastAt,
-  syncTestResult,
-  syncTestLoading,
-  syncLoading,
-  onSyncTest,
-  onSyncSave,
-  onSyncDisable,
-  onSyncNow,
-}: SettingsSyncSectionProps) {
+export const SettingsSyncSection = memo(function SettingsSyncSection() {
+  const {
+    syncProvider,
+    setSyncProvider,
+    syncUrl,
+    setSyncUrl,
+    syncUsername,
+    setSyncUsername,
+    syncPassword,
+    setSyncPassword,
+    s3Endpoint,
+    setS3Endpoint,
+    s3Region,
+    setS3Region,
+    s3Bucket,
+    setS3Bucket,
+    s3AccessKeyId,
+    setS3AccessKeyId,
+    s3SecretAccessKey,
+    setS3SecretAccessKey,
+    syncStatus,
+    syncMessage,
+    syncLastAt,
+    syncTestResult,
+    syncTestLoading,
+    syncLoading,
+    onSyncTest,
+    onSyncSave,
+    onSyncDisable,
+    onSyncNow,
+  } = useSyncSettings();
   const { t } = useLanguage();
   const syncTestSucceeded = syncTestResult === t('settings.sync.test.success');
 
@@ -352,4 +319,4 @@ export function SettingsSyncSection({
       </p>
     </div>
   );
-}
+});

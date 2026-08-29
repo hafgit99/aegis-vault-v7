@@ -7,7 +7,7 @@
  * @license SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import type {
@@ -80,7 +80,7 @@ export function useSettingsSync({ onDatabaseChanged }: UseSettingsSyncOptions) {
     }
   }, []);
 
-  const handleSyncTest = async () => {
+  const handleSyncTest = useCallback(async () => {
     if (syncProvider === 'webdav') {
       const err = validateWebDavConfig({ url: syncUrl, username: syncUsername, password: syncPassword });
       if (err) { setSyncTestResult(`❌ ${err}`); return; }
@@ -125,9 +125,11 @@ export function useSettingsSync({ onDatabaseChanged }: UseSettingsSyncOptions) {
         setSyncTestLoading(false);
       }
     }
-  };
+  },
+    [syncProvider, syncUrl, syncUsername, syncPassword, s3Endpoint, s3Region, s3Bucket, s3AccessKeyId, s3SecretAccessKey, t]
+  );
 
-  const handleSyncSave = async () => {
+  const handleSyncSave = useCallback(async () => {
     if (syncProvider === 'webdav') {
       const err = validateWebDavConfig({ url: syncUrl, username: syncUsername, password: syncPassword });
       if (err) { setSyncMessage(`Error: ${err}`); return; }
@@ -160,9 +162,11 @@ export function useSettingsSync({ onDatabaseChanged }: UseSettingsSyncOptions) {
       if (!saved) return;
       setSyncMessage(t('settings.sync.configure.save'));
     }
-  };
+  },
+    [syncProvider, syncUrl, syncUsername, syncPassword, s3Endpoint, s3Region, s3Bucket, s3AccessKeyId, s3SecretAccessKey, t]
+  );
 
-  const handleSyncDisable = async () => {
+  const handleSyncDisable = useCallback(async () => {
     clearSyncConfig();
     setSyncProvider('disabled');
     setSyncUrl(''); setSyncUsername(''); setSyncPassword('');
@@ -172,9 +176,9 @@ export function useSettingsSync({ onDatabaseChanged }: UseSettingsSyncOptions) {
     setSyncProvider('disabled');
     setSyncUrl(''); setSyncUsername(''); setSyncPassword('');
     setSyncMessage(null); setSyncStatus('idle');
-  };
+  }, []);
 
-  const handleSyncNow = async () => {
+  const handleSyncNow = useCallback(async () => {
     await withActiveBackupPassword(async (backupPassword) => {
       setSyncLoading(true);
       setSyncStatus('syncing');
@@ -214,12 +218,13 @@ export function useSettingsSync({ onDatabaseChanged }: UseSettingsSyncOptions) {
         setSyncLoading(false);
       }
     });
-  };
+  }, [t, onDatabaseChanged]);
 
   const syncTestSucceeded = syncTestResult === t('settings.sync.test.success');
 
-  return {
-    syncProvider,
+  return useMemo(
+    () => ({
+      syncProvider,
     setSyncProvider,
     syncUrl,
     setSyncUrl,
@@ -247,6 +252,30 @@ export function useSettingsSync({ onDatabaseChanged }: UseSettingsSyncOptions) {
     onSyncTest: handleSyncTest,
     onSyncSave: handleSyncSave,
     onSyncDisable: handleSyncDisable,
-    onSyncNow: handleSyncNow,
-  };
+      onSyncNow: handleSyncNow,
+    }),
+    [
+      syncProvider,
+      syncUrl,
+      syncUsername,
+      syncPassword,
+      s3Endpoint,
+      s3Region,
+      s3Bucket,
+      s3AccessKeyId,
+      s3SecretAccessKey,
+      syncStatus,
+      syncMessage,
+      syncLastAt,
+      syncTestResult,
+      syncTestLoading,
+      syncLoading,
+      syncTestSucceeded,
+      t,
+      handleSyncTest,
+      handleSyncSave,
+      handleSyncDisable,
+      handleSyncNow,
+    ],
+  );
 }
