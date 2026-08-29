@@ -1,0 +1,18 @@
+# Gitleaks configuration for Aegis Vault 7.
+# Extends the default rules; allows the deliberate test fixtures that tripped
+# the generic-api-key heuristics during the full-history scan (2026-08-29).
+# Run: gitleaks git -v --config .gitleaks.toml
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Deliberate test fixtures and documentation identifiers"
+paths = [
+  '''(^|/)src/lib/otp\.test\.ts$''',
+  '''(^|/)src/lib/emergencyKit\.test\.ts$''',
+  '''(^|/)src/lib/syncConfigStorage\.test\.ts$''',
+  '''(^|/)src/components/lock/LockScreenComponents\.test\.tsx$''',
+  '''(^|/)src/components/SettingsPanel\.test\.tsx$''',
+  '''(^|/)docs/ARCHITECTURE_REVIEW\.md$''',
+]
