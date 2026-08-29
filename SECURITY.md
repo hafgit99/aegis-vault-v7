@@ -13,7 +13,7 @@ Aegis Vault 7 is a local-first, zero-knowledge password manager. Security is the
 
 **Please do not open a public GitHub issue for security reports.**
 
-Report vulnerabilities privately to: **aegisvault7@hafgit99.com**
+Report vulnerabilities privately to: **admin@aegisvault.xyz**
 
 You will receive:
 
