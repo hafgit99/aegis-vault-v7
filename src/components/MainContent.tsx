@@ -7,7 +7,6 @@ import type { FilteredVaultItem } from '../hooks/useVaultQueries';
 import type { ActiveTab, AppNotification, AuditReport, VaultItem } from '../types';
 import type { SmartFolder, TagColorKey, TagDefinition, VaultFolder } from '../types';
 import type { CreateSmartFolderInput } from '../lib/smartFolders';
-import type { UseBulkSelectionResult } from '../hooks/useOrganisation';
 import TrashWorkspace from './TrashWorkspace';
 import VaultPage from '../pages/VaultPage';
 import { AuditPage } from '../pages/AuditPage';
@@ -87,7 +86,6 @@ interface MainContentProps {
   onUpdateTag?: (id: string, patch: { name?: string; color?: TagColorKey }) => void;
   onDeleteTag?: (id: string) => void;
   onItemsChange?: (next: VaultItem[]) => void;
-  bulkSelection?: UseBulkSelectionResult;
   onCreateSmartFolder?: (input: CreateSmartFolderInput) => SmartFolder;
   onDeleteSmartFolder?: (id: string) => void;
 }

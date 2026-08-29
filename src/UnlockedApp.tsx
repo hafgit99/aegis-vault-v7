@@ -264,7 +264,6 @@ export default function UnlockedApp({
     smartFolderCounts,
     createSmartFolder,
     deleteSmartFolder,
-    bulkSelection,
     selectedFolderId,
     setSelectedFolderId,
     activeSmartFolderId,
@@ -464,7 +463,6 @@ export default function UnlockedApp({
             onUpdateTag={updateTag}
             onDeleteTag={deleteTag}
             onItemsChange={handleItemsChange}
-            bulkSelection={bulkSelection}
             onCreateSmartFolder={createSmartFolder}
             onDeleteSmartFolder={deleteSmartFolder}
             isAutofillMode={Boolean(pendingAutofillRequest)}

@@ -13,7 +13,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { androidAutofillTargetLabel, type AndroidAutofillRequest } from '../lib/androidAutofill';
 import { isAndroidAutofillTargetMatch, sortAndroidAutofillMatches } from '../lib/androidAutofillMatching';
 import type { AuditReport, TagDefinition, VaultFolder, VaultItem } from '../types';
-import type { UseBulkSelectionResult } from '../hooks/useOrganisation';
+import { useBulkSelection } from '../hooks/useOrganisation';
 import type { BulkActionDescriptor } from './BulkActionBar';
 import AegisGuardReport from './AegisGuardReport';
 import CryptoShieldPanel from './CryptoShieldPanel';
@@ -78,26 +78,11 @@ interface VaultWorkspaceProps {
   onUpdateItemCategory?: (itemId: string, category: VaultItem['category']) => void;
   onSecureShare?: (item: VaultItem) => void;
   // 5.3 Tags & Organisation
-  bulkSelection?: UseBulkSelectionResult;
   folders?: VaultFolder[];
   tags?: TagDefinition[];
   onApplyBulkAction?: (action: BulkActionDescriptor) => void;
   onOpenFolderSidebar?: () => void;
 }
-
-const defaultBulkSelection: UseBulkSelectionResult = {
-  selectedIds: new Set<string>(),
-  isSelectionMode: false,
-  selectionCount: 0,
-  isSelected: () => false,
-  toggle: () => {},
-  selectOnly: () => {},
-  selectAll: () => {},
-  clear: () => {},
-  selectRange: () => {},
-  enterSelectionMode: () => {},
-  exitSelectionMode: () => {},
-};
 
 export function VaultWorkspaceContent({
   selectedItem,
@@ -144,13 +129,15 @@ export function VaultWorkspaceContent({
   onCancelAutofill,
   onApproveAutofill,
   onUpdateItemCategory,
-  bulkSelection = defaultBulkSelection,
   folders = [],
   tags = [],
   onApplyBulkAction = () => {},
   onSecureShare = () => {},
   onOpenFolderSidebar = () => {},
 }: VaultWorkspaceProps) {
+  // M10 Dilim 3: selection state is owned here — UnlockedApp no longer
+  // re-renders (and defeats this memo) on every selection toggle.
+  const bulkSelection = useBulkSelection();
   const { t } = useLanguage();
   const autofillTargetLabel = androidAutofillTargetLabel(autofillRequest);
 

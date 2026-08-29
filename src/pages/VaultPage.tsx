@@ -5,24 +5,10 @@ import type { AndroidAutofillRequest } from '../lib/androidAutofill';
 import type { FilteredVaultItem } from '../hooks/useVaultQueries';
 import type { AuditReport, SmartFolder, TagColorKey, TagDefinition, VaultFolder, VaultItem } from '../types';
 import type { CreateSmartFolderInput } from '../lib/smartFolders';
-import { useBulkActionRunner, type UseBulkSelectionResult } from '../hooks/useOrganisation';
+import { useBulkActionRunner, useBulkSelection } from '../hooks/useOrganisation';
 import type { BulkActionDescriptor } from '../components/BulkActionBar';
 import OrganisationSidebar from '../components/OrganisationSidebar';
 import VaultWorkspace from '../components/VaultWorkspace';
-
-const defaultBulkSelection: UseBulkSelectionResult = {
-  selectedIds: new Set<string>(),
-  isSelectionMode: false,
-  selectionCount: 0,
-  isSelected: () => false,
-  toggle: () => {},
-  selectOnly: () => {},
-  selectAll: () => {},
-  clear: () => {},
-  selectRange: () => {},
-  enterSelectionMode: () => {},
-  exitSelectionMode: () => {},
-};
 
 interface VaultPageProps {
   selectedItem: VaultItem | null;
@@ -82,7 +68,6 @@ interface VaultPageProps {
   onCreateTag?: (input: { name: string; color?: TagColorKey }) => TagDefinition | null;
   onUpdateTag?: (id: string, patch: { name?: string; color?: TagColorKey }) => void;
   onDeleteTag?: (id: string) => void;
-  bulkSelection?: UseBulkSelectionResult;
   onCreateSmartFolder?: (input: CreateSmartFolderInput) => SmartFolder;
   onDeleteSmartFolder?: (id: string) => void;
   onSecureShare?: (item: VaultItem) => void;
@@ -148,7 +133,6 @@ export function VaultPage({
   onCreateTag = () => null,
   onUpdateTag = () => {},
   onDeleteTag = () => {},
-  bulkSelection = defaultBulkSelection,
   onCreateSmartFolder = (input: CreateSmartFolderInput): SmartFolder => ({
     id: 'dummy',
     name: input.name,
@@ -165,6 +149,8 @@ export function VaultPage({
   onApproveAutofill,
 }: VaultPageProps) {
   const [isFolderSidebarOpen, setIsFolderSidebarOpen] = useState(false);
+  // M10 Dilim 3: selection state is owned at this level.
+  const bulkSelection = useBulkSelection();
   const runBulkAction = useBulkActionRunner(activeItems, onItemsChange);
 
   const handleApplyBulkAction = (action: BulkActionDescriptor) => {
@@ -260,7 +246,6 @@ export function VaultPage({
         onCancelAutofill={onCancelAutofill}
         onApproveAutofill={onApproveAutofill}
         onUpdateItemCategory={onUpdateItemCategory}
-        bulkSelection={bulkSelection}
         folders={folders}
         tags={tags}
         onApplyBulkAction={handleApplyBulkAction}

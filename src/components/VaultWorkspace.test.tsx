@@ -11,7 +11,6 @@ import { languageStorageKey } from '../i18n/translations';
 import { APP_NAME } from '../lib/branding';
 import type { AuditReport, VaultItem } from '../types';
 import VaultWorkspace from './VaultWorkspace';
-import type { UseBulkSelectionResult } from '../hooks/useOrganisation';
 
 const auditReport: AuditReport = {
   score: 80,
@@ -45,23 +44,6 @@ function buttonByText(text: string) {
     throw new Error(`Button not found: ${text}`);
   }
   return button;
-}
-
-function bulkSelectionStub(overrides: Partial<UseBulkSelectionResult> = {}): UseBulkSelectionResult {
-  return {
-    selectedIds: new Set<string>(),
-    isSelectionMode: true,
-    selectionCount: 0,
-    isSelected: () => false,
-    toggle: vi.fn(),
-    selectOnly: vi.fn(),
-    selectAll: vi.fn(),
-    clear: vi.fn(),
-    selectRange: vi.fn(),
-    enterSelectionMode: vi.fn(),
-    exitSelectionMode: vi.fn(),
-    ...overrides,
-  };
 }
 
 interface RenderWorkspaceOptions {
@@ -319,65 +301,50 @@ describe('VaultWorkspace', () => {
   });
 
   it('renders bulk selection checkboxes and toggles rows in selection mode', () => {
-    const toggle = vi.fn();
-    const bulkSelection = bulkSelectionStub({
-      selectedIds: new Set(['mail']),
-      selectionCount: 1,
-      isSelected: (id) => id === 'mail',
-      toggle,
-    });
+    // M10 Dilim 3: selection state is owned inside the component — driven via UI.
+    renderWorkspace();
 
-    renderWorkspace({ bulkSelection });
-
+    fireEvent.click(screen.getAllByText('Aegis Mail')[0]!, { ctrlKey: true });
     const checkboxes = screen.getAllByTestId('bulk-select-checkbox') as HTMLInputElement[];
     expect(checkboxes.length).toBe(2);
     expect(checkboxes[0]!.checked).toBe(true);
     expect(checkboxes[1]!.checked).toBe(false);
 
     fireEvent.click(screen.getAllByText('Aegis Bank')[0]!);
-    expect(toggle).toHaveBeenCalledWith('bank');
+    const checkboxesAfter = screen.getAllByTestId('bulk-select-checkbox') as HTMLInputElement[];
+    expect(checkboxesAfter.map((c) => c.checked)).toEqual([true, true]);
   });
 
   it('performs shift range selection from the selected anchor item', () => {
-    const selectRange = vi.fn();
-    const bulkSelection = bulkSelectionStub({
-      selectedIds: new Set(['mail']),
-      selectionCount: 1,
-      isSelected: (id) => id === 'mail',
-      selectRange,
-    });
+    renderWorkspace();
 
-    renderWorkspace({ bulkSelection });
-
+    fireEvent.click(screen.getAllByText('Aegis Mail')[0]!, { ctrlKey: true });
     fireEvent.click(screen.getAllByText('Aegis Bank')[0]!, { shiftKey: true });
 
-    expect(selectRange).toHaveBeenCalledWith(['mail', 'bank'], 'mail', 'bank');
+    const checkboxes = screen.getAllByTestId('bulk-select-checkbox') as HTMLInputElement[];
+    expect(checkboxes.map((c) => c.checked)).toEqual([true, true]);
   });
 
-  it('falls back to toggling when shift-selecting without an anchor', () => {
-    const toggle = vi.fn();
-    const selectRange = vi.fn();
-    const bulkSelection = bulkSelectionStub({ toggle, selectRange });
-
-    renderWorkspace({ bulkSelection });
+  it('keeps selection mode off when shift-selecting without an anchor', () => {
+    renderWorkspace();
 
     fireEvent.click(screen.getAllByText('Aegis Bank')[0]!, { shiftKey: true });
 
-    expect(selectRange).not.toHaveBeenCalled();
-    expect(toggle).toHaveBeenCalledWith('bank');
+    // The fallback calls toggle() but — matching the pre-slice-3 behaviour —
+    // plain toggle() does not activate selection mode on its own.
+    expect(screen.queryByTestId('bulk-select-checkbox')).toBeNull();
   });
 
   it('enters bulk selection via ctrl+click on a row outside selection mode', () => {
-    const selectOnly = vi.fn();
-    const bulkSelection = bulkSelectionStub({ isSelectionMode: false, selectOnly });
-
-    renderWorkspace({ bulkSelection });
+    renderWorkspace();
 
     expect(screen.queryByTestId('bulk-select-checkbox')).toBeNull();
 
     fireEvent.click(screen.getAllByText('Aegis Mail')[0]!, { ctrlKey: true });
 
-    expect(selectOnly).toHaveBeenCalledWith('mail');
+    const checkboxes = screen.getAllByTestId('bulk-select-checkbox') as HTMLInputElement[];
+    expect(checkboxes.length).toBe(2);
+    expect(checkboxes[0]!.checked).toBe(true);
   });
 
   it('toggles compact density and persists the choice', () => {

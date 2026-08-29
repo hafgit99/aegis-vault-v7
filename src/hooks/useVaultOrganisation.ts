@@ -4,7 +4,6 @@ import {
   useTagLibrary,
   useVaultFolders,
   useSmartFolders,
-  useBulkSelection,
 } from './useOrganisation';
 import type { VaultItem } from '../types';
 
@@ -22,8 +21,6 @@ export function useVaultOrganisation(items: VaultItem[]) {
   const { tags, createTag, updateTag, deleteTag } = useTagLibrary();
   const { folders, createFolder, deleteFolder } = useVaultFolders();
   const { smartFolders, createSmartFolder, deleteSmartFolder, counts: smartFolderCounts } = useSmartFolders(items);
-  const bulkSelection = useBulkSelection();
-
   const handleCreateFolder = (parentId: string | null) => {
     const name = window.prompt(t('folders.createPrompt') || 'New folder name:');
     if (name && name.trim()) {
@@ -50,7 +47,6 @@ export function useVaultOrganisation(items: VaultItem[]) {
     smartFolderCounts,
     createSmartFolder,
     deleteSmartFolder,
-    bulkSelection,
     selectedFolderId,
     setSelectedFolderId,
     activeSmartFolderId,
