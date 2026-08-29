@@ -73,3 +73,5 @@ session-*.md
 # Scratchpad
 scratch/
 
+# Website (kept local, excluded from GitHub remote)
+aegisvault-website/
