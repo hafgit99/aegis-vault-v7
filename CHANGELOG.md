@@ -2,6 +2,40 @@
 
 All notable Aegis Vault 7 changes are tracked here. The project follows a security-first release style: release notes summarize user-facing changes, while this changelog also records release-gate and validation work.
 
+## 7.0.2.0 - Security Hardening (Unreleased)
+
+### Added
+
+- Full Mozilla Public Suffix List (10k+ rules, SHA-256-pinned snapshot) baked into the browser extension and the Rust IPC host via `scripts/generate-psl-data.cjs`, replacing the curated subset; standard wildcard (`*.ck`) and exception (`!www.ck`) rule semantics for eTLD+1 matching (`npm run psl:generate` to refresh).
+- Per-frame XChaCha20-Poly1305 AEAD encryption for the extension bridge IPC channel (protocol v2) with session-key derivation from the pairing token, fail-closed frame rejection, and session revocation via pairing-token rotation.
+- Vault-database integrity framing: HKDF-derived HMAC over canonical state with a monotonic `versionCounter`; tampering and rollback are rejected on load with critical security events.
+- User-visible vault database rollback alert surfaced through the notification system (`useVaultRollbackAlert`).
+- Safe share links: recipients now decrypt with a user-chosen share password via HKDF-SHA256 — the decryption key is no longer embedded in the URL fragment.
+- React ErrorBoundary around the unlocked tree that locks the vault and clears decrypted state on render crashes.
+- Inline WASM-backed KDF write-block so degraded Argon2id memory profiles can never persist weaker parameters into the vault.
+- Extension autofill hardening: mandatory background-side domain gate (including for URL-less credentials), insecure-HTTP per-fill consent dialog, form-bound password refill, payload schema validation, and full-PSL domain matching.
+- Visible Argon2id memory-degradation warning in the Crypto Shield panel with active vs requested memory profile.
+- LockScreen accessibility: programmatic labels for password fields, `aria-invalid` state, `role="alert"` error regions, and `role="status"` caps-lock notice.
+- Biometric security-level indicator in Settings distinguishing hardware-bound (AndroidKeyStore auth-bound / WebAuthn PRF) from software-convenience unlock.
+- External audit scope document (`docs/EXTERNAL_AUDIT_SCOPE.md`).
+
+### Changed
+
+- Biometric unlock migrated to hardware-bound storage: Android uses an auth-bound AndroidKeyStore wrapping key with BiometricPrompt CryptoObject (legacy registrations rotate automatically on next unlock); the wrapping secret is never stored inside the persisted bundle.
+- Remembered Secret Key is fail-closed: it is only stored when OS secure storage is available.
+- Dev server binds to `127.0.0.1` by default (`TAURI_DEV_HOST` override preserved for Android device testing).
+- Tauri updater plugin registered and wired for signed updates.
+- Windows pairing-token ACL hardening is fail-closed; IPC port probing no longer sprays the token to non-target ports.
+- SettingsPanel and VaultWorkspace render isolation: translator and cloud-sync state no longer drill through props (`useLanguage()` in leaves, `SyncSettingsProvider` + memoized `useSettingsSync`, bulk-selection state owned by the vault workspace) — unrelated settings/vault state changes no longer re-render those subtrees.
+- Recovered performance headroom measured with render counters: 10 unrelated parent re-renders no longer produce 12 full vault renders (now 0).
+
+### Security
+
+- Rotated the Android keystore signing password to a CSPRNG value and moved signing secrets outside the OneDrive-synced project directory (fail-closed signing checks verify the new location).
+- Zeroized the master password on every exit path of the Rust KDF commands and restricted session-secret callbacks to byte arrays only (no JS master-password strings).
+- Enforced KDF floors for sync-config envelopes (v2 format with per-save random salt, transparent v1 migration).
+- Auto-lock now uses a wall-clock deadline: hiding the window can no longer cancel or postpone the lock timer.
+
 ## 7.0.1.0 - Release Candidate Hardening
 
 ### Added

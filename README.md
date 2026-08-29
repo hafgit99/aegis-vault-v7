@@ -7,7 +7,7 @@
 *Enterprise-grade local cryptographic security for Desktop (Windows, Linux, macOS), Android, and WebExtensions.*
 
 ![Security Score](https://img.shields.io/badge/Security_Audit-92%2F100_(A%2B)-brightgreen?style=flat-square&logo=shield)
-![Tests](https://img.shields.io/badge/Unit_Tests-1788_Passed-success?style=flat-square&logo=vitest)
+![Tests](https://img.shields.io/badge/Unit_Tests-1800_Passed-success?style=flat-square&logo=vitest)
 ![Fuzz Tests](https://img.shields.io/badge/Fuzz_Tests-36_Passed-success?style=flat-square&logo=vitest)
 ![Coverage](https://img.shields.io/badge/Coverage-92.2%25_Lines_·_82.7%25_Branches-brightgreen?style=flat-square&logo=vitest)
 ![Mutation Testing](https://img.shields.io/badge/Mutation_Testing-8_Stryker_Suites_·_90.8%25_Peak-blue?style=flat-square&logo=stryker)
@@ -37,9 +37,9 @@ Aegis Vault 7 underwent a comprehensive deep-dive security audit evaluating its 
 |---|---|---|---|---|
 | **Architecture Quality** | **92 / 100** | **A+** | ✅ Excellent | Concern-driven module organization, multi-ABI Android splits, wa-sqlite OPFS VFS |
 | **Security Primitives** | **90 / 100** | **A+** | ✅ Excellent | Argon2id KDF (32 MiB / 3 iter), WebCrypto AES-256-GCM, **WebCrypto HKDF-SHA256 Per-Item Keys** |
-| **IPC & Native Bridge** | **92 / 100** | **A+** | ✅ Excellent | **Dynamic TCP Port Probe (49155–49165 + OS Ephemeral)**, `aegis_ipc_port.txt` discovery, 256-bit pairing token |
-| **Domain & Anti-Phishing** | **92 / 100** | **A+** | ✅ Excellent | **Public Suffix List (eTLD+1)** matching (33+ suffixes), AI heuristic typosquat/confusable engine |
-| **Memory & Storage Safety** | **88 / 100** | **A** | ✅ High | Uint8Array secret buffers, WASM zeroizer, Rust `ZeroizeOnDrop`, 5-min decrypted items cache TTL |
+| **IPC & Native Bridge** | **92 / 100** | **A+** | ✅ Excellent | **Dynamic TCP Port Probe (49155–49165 + OS Ephemeral)**, `aegis_ipc_port.txt` discovery, 256-bit pairing token, **per-frame XChaCha20-Poly1305 AEAD encryption**, session revocation |
+| **Domain & Anti-Phishing** | **92 / 100** | **A+** | ✅ Excellent | **Full Public Suffix List** (10k+ rules, wildcard + exception semantics), AI heuristic typosquat/confusable engine |
+| **Memory & Storage Safety** | **88 / 100** | **A** | ✅ High | Uint8Array secret buffers, WASM zeroizer, Rust `ZeroizeOnDrop`, 5-min decrypted items cache TTL, vault-database HMAC integrity + rollback counter |
 | **Overall Weighted Score** | **92 / 100** | **A+** | 🏆 **Category Leader** | **100% of P0 & P1 Critical Audit Issues Resolved** |
 
 ---
@@ -54,7 +54,7 @@ Aegis Vault 7 underwent a comprehensive deep-dive security audit evaluating its 
 
 ### 🔌 Dynamic IPC & Browser Extension Companion
 - **Dynamic TCP Port Probe & Discovery**: Native messaging IPC host dynamically probes ports `49155..=49165` (with fallback to OS ephemeral port) and writes active port to `aegis_ipc_port.txt` in secure app data.
-- **eTLD+1 Domain Matching**: Embedded Public Suffix List (33+ multi-part TLDs including `.co.uk`, `.com.tr`, `.co.jp`, `.github.io`) prevents credential leaks across shared hosting domains.
+- **eTLD+1 Domain Matching**: Embedded **full Mozilla Public Suffix List** (10k+ rules with wildcard `*.ck` and exception `!www.ck` semantics, SHA-256-pinned snapshot) prevents credential leaks across shared hosting domains.
 - **Closed Shadow DOM UI Isolation**: Extension autofill dropdowns, password generators, and phishing alerts render inside `<aegis-autofill-host>` closed Shadow DOM boundaries, preventing host page JS tampering.
 - **Scoped Extension Permissions**: Script matches narrowed strictly to `http://*/*` and `https://*/*`, excluding internal browser schemes (`chrome://`, `about:`).
 
@@ -91,12 +91,12 @@ Aegis Vault 7 maintains rigorous automated testing standards with defense-in-dep
 | Metric | Result | Status | Framework / Tool |
 |---|---|---|---|
 | **TypeScript Typecheck** | **`0 errors`** | ✅ 100% Clean | `tsc --noEmit` |
-| **Unit & Integration Test Suite** | **`215 test files passed (215/215)`** | ✅ 100% Green | Vitest 4.1 |
-| **Unit Tests Executed** | **`1,788 tests passed (1,788/1,788)`** | ✅ 100% Green | Vitest / React Testing Library |
+| **Unit & Integration Test Suite** | **`216 test files passed (216/216)`** | ✅ 100% Green | Vitest 4.1 |
+| **Unit Tests Executed** | **`1,800 tests passed (1,800/1,800)`** | ✅ 100% Green | Vitest / React Testing Library |
 | **Property-Based Fuzz Tests** | **`36 tests across 9 files passed`** | ✅ 100% Green | fast-check v4 |
 | **End-to-End (E2E) Suites** | **`34 scenarios x 3 browsers = 102/102 passed`** | ✅ 100% Green | Playwright (Chromium, Firefox, WebKit) |
 | **Mutation Testing** | **`8 specialized Stryker suites - 90.8% peak gate score`** | ✅ Measured & Gated | @stryker-mutator/core v9 |
-| **Rust Backend Tests** | **`17 tests passed (17/17)`** | ✅ 100% Green | `cargo test` (Tauri 2) |
+| **Rust Backend Tests** | **`18 tests passed (18/18)`** | ✅ 100% Green | `cargo test` (Tauri 2) |
 | **Lines Coverage** | **`92.17%`** | ✅ Exceeds Global Target (>= 90%) | Vitest V8 Coverage |
 | **Statements Coverage** | **`90.62%`** | ✅ Exceeds Global Target (>= 88%) | Vitest V8 Coverage |
 | **Functions Coverage** | **`88.85%`** | ✅ Exceeds Global Target (>= 85%) | Vitest V8 Coverage |
