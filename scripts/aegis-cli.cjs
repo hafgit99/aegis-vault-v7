@@ -81,6 +81,13 @@ COMMANDS:
     --id <idOrTitle>                     Item ID or exact Title to retrieve
     --password <masterPassword>          (Optional) Master password for decryption
 
+SCOPE NOTES:
+  aegis-cli runs fully offline against exported vault backup files
+  (.aegis / .json, and plain JSON/CSV exports read-only). It never connects
+  to the running desktop app and does not use the IPC bridge — the live
+  wa-sqlite vault is not read. Envelopes with Argon2id parameters below the
+  8192 KiB / 3-iteration floor are refused (anti-downgrade, same as the app).
+
 ENVIRONMENT VARIABLES:
   AEGIS_PASSWORD                         Pass master password securely via environment variable
 
@@ -211,6 +218,19 @@ async function parseVaultEnvelope(filePath, password) {
     }
 
     const { salt, iv, tag, payload, kdfParams, checksum } = envelope;
+
+    // Anti-downgrade floor — mirrors src/lib/encryption.ts. The desktop app
+    // refuses envelopes with weakened Argon2id parameters; the CLI must not
+    // silently accept what the app rejects.
+    const effectiveMemoryKiB = Number(kdfParams?.memoryKiB) || 32768;
+    const effectiveIterations = Number(kdfParams?.iterations) || 3;
+    if (effectiveMemoryKiB < 8192 || effectiveIterations < 3) {
+      throw new Error(
+        `Refusing envelope with weakened Argon2id parameters ` +
+        `(memoryKiB=${kdfParams?.memoryKiB ?? 'missing'}, iterations=${kdfParams?.iterations ?? 'missing'}). ` +
+        `Floor: 8192 KiB / 3 iterations.`,
+      );
+    }
 
     if (!salt || !iv || !tag || !payload) {
       throw new Error('Encrypted vault envelope is missing required cryptographic fields (salt, iv, tag, payload).');
