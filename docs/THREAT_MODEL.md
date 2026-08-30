@@ -83,6 +83,13 @@ Screen capture:
 - Android builds set `FLAG_SECURE` on the main activity.
 - These controls reduce ordinary screenshots, screen recording, and task-switcher preview exposure on supported OS surfaces, but do not defend against privileged capture software or compromised devices.
 
+Hardware-bound convenience unlock:
+
+- Android: the biometric wrapping key is an auth-bound, non-exportable AndroidKeyStore key (`setUserAuthenticationRequired`, invalidated by biometric enrollment). Unlock is authorized through BiometricPrompt with `CryptoObject`, binding the OS auth token to the key's crypto operation.
+- Desktop: the WebAuthn PRF platform authenticator wraps the master-credential payload — Windows Hello is TPM 2.0-backed and macOS Touch ID is Secure Enclave-backed. PRF-derived wrapping key material never leaves the secure hardware.
+- Cross-platform FIDO2 security keys with PRF-capable firmware (e.g. YubiKey 5, firmware 5.3+) can serve as the wrapping authenticator; unlock then requires physical presence of the key.
+- Design invariant: hardware binding only wraps the local convenience-unlock payload. Vault key derivation remains master password + Secret Key via Argon2id, and the vault file is never hardware-sealed — device loss, TPM reset, or authenticator replacement degrades convenience only, never vault access or portability (sync, backups, sharing).
+
 Vault database:
 
 - Database persistence payloads use a versioned schema envelope.
@@ -171,6 +178,7 @@ Required user-facing recovery rules:
 | TOTP follows RFC 6238 for HMAC-SHA1/SHA-256/SHA-512, accepts `otpauth://totp` imports, and rejects unsupported digit/period parameters with explicit validation errors, but broad provider QR compatibility still needs manual verification | Mitigated with residual compatibility risk | Add fixture coverage from more authenticator exports before broad public release |
 | Plaintext export option can create unsafe files | Partially mitigated | Warning and typed confirmation are required; decide whether to remove it from final release builds |
 | Android remembered Secret Key and biometric wrapping use the Keystore-backed secure-storage bridge, but production biometric claims require explicit OEM/version matrix evidence | Partially mitigated | Complete Pixel, Samsung, Xiaomi, and Android 12/13/14/15 biometric matrix before using production biometric wording |
+| Hardware-bound convenience unlock depends on platform authenticator availability; a lost/replaced device or biometric re-enrollment invalidates the wrapping key | Mitigated by design | Master password + Secret Key remain the full vault-derivation path (the vault file is never hardware-sealed); re-registration re-seals the payload on the new authenticator |
 | Background-to-content `fill_inputs` messages are not replay-protected (no per-message nonce or tab-ID binding) — M7 | Accepted (defense-in-depth gap, not an attack path) | `chrome.runtime.onMessage` in a content script only receives messages from the same extension (`externally_connectable` is intentionally absent, so pages cannot reach this channel), and fills are already gated by tab-URL validation and the phishing-alert latch. A forged `fill_inputs` would require prior control of the extension's own background worker, at which point message hardening would not stop the attacker. Revisit only if an external audit requests it; adding nonce state to the autofill path risks regressions in the most critical user flow. |
 
 ## Release Claim Rules

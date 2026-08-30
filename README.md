@@ -64,6 +64,13 @@ Aegis Vault 7 underwent a comprehensive deep-dive security audit evaluating its 
 - **Multi-ABI Native Packaging**: Built with ABI splits supporting `arm64-v8a`, `armeabi-v7a`, and `x86_64`.
 - **Screen Capture Protection**: `FLAG_SECURE` enforced across all Android activities and task switcher previews.
 
+### 🔐 Hardware-Bound Unlock & Security Keys
+- **Android — Hardware-Backed Keystore**: The biometric wrapping key is an auth-bound, non-exportable AndroidKeyStore key (user authentication required, invalidated by biometric re-enrollment). Unlock is authorized through **BiometricPrompt `CryptoObject`**, binding the OS auth token directly to the key's crypto operation.
+- **Windows — TPM 2.0 via Windows Hello**: The WebAuthn PRF platform authenticator is TPM 2.0-backed — the PRF-derived wrapping key material never leaves the secure hardware boundary.
+- **macOS — Secure Enclave via Touch ID**: Platform authenticator PRF output is sealed by the Secure Enclave.
+- **🔑 YubiKey / FIDO2 Hardware Security Keys**: Cross-platform authenticators with PRF-capable firmware (e.g. **YubiKey 5, firmware 5.3+**) can act as the unlock factor — the vault credential is wrapped with a key derived **on the physical key itself**, so unlock requires its physical presence. Ideal for users who want a tangible, pocket-carried second factor.
+- **Design invariant — hardware binding is a convenience layer**: Vault key derivation always remains **master password + Secret Key via Argon2id**. Device loss, TPM reset, or authenticator replacement degrades only convenience — never access to the vault. The vault file stays fully portable (sync, encrypted backups, sharing).
+
 ### 🌐 Internationalization (i18n)
 Full localization across 12 languages:  
 **Turkish (TR) • English (EN) • German (DE) • French (FR) • Spanish (ES) • Italian (IT) • Portuguese (PT) • Russian (RU) • Japanese (JA) • Chinese (ZH) • Korean (KO) • Arabic (AR)**.
