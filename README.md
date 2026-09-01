@@ -15,6 +15,11 @@
 ![License](https://img.shields.io/badge/License-Apache_2.0-orange?style=flat-square)
 ![i18n](https://img.shields.io/badge/i18n-12_Languages-purple?style=flat-square)
 
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/14390/badge)](https://www.bestpractices.dev/projects/14390)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/hafgit99/aegis-vault-v7/badge)](https://scorecard.dev/viewer/?uri=github.com/hafgit99/aegis-vault-v7)
+[![CodeQL](https://github.com/hafgit99/aegis-vault-v7/actions/workflows/codeql.yml/badge.svg)](https://github.com/hafgit99/aegis-vault-v7/actions/workflows/codeql.yml)
+[![CI](https://github.com/hafgit99/aegis-vault-v7/actions/workflows/ci.yml/badge.svg)](https://github.com/hafgit99/aegis-vault-v7/actions/workflows/ci.yml)
+
 [Features](#-key-features) • [Security Architecture](#-security-architecture) • [Security Audit](#-2026-security-audit-report) • [Platforms](#-platform-matrix) • [Build & Verification](#-build--verification) • [Documentation](#-documentation)
 
 </div>
