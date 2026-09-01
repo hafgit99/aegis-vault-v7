@@ -1,0 +1,11 @@
+# CODEOWNERS — code review ownership
+# Every change touching matching paths requires review by the owners below.
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+*                                 @hafgit99
+/src-tauri/**                     @hafgit99
+/src/lib/security.ts              @hafgit99
+/src/lib/nativeSecurity.ts        @hafgit99
+/scripts/security-*.cjs           @hafgit99
+/.github/workflows/**             @hafgit99
+/SECURITY.md                      @hafgit99

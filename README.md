@@ -182,8 +182,8 @@ Mutation testing introduces deliberate faults (mutants) into source code to veri
 
 ```bash
 # Clone repository
-git clone https://github.com/kodbest/AegisV7.git
-cd AegisV7
+git clone https://github.com/hafgit99/aegis-vault-v7.git
+cd aegis-vault-v7
 
 # Install dependencies
 npm ci
