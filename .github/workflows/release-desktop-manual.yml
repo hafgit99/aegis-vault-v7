@@ -95,7 +95,7 @@ jobs:
         run: npm run release:collect -- --platform linux
 
       - name: Upload Linux release artifacts
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0 (SHA-pinned)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
         with:
           name: aegis-vault-v7-linux
           if-no-files-found: error
@@ -151,7 +151,7 @@ jobs:
         run: npm run release:collect -- --platform macos
 
       - name: Upload macOS release artifacts
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0 (SHA-pinned)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
         with:
           name: aegis-vault-v7-macos
           if-no-files-found: error
