@@ -181,6 +181,53 @@ Required user-facing recovery rules:
 | Hardware-bound convenience unlock depends on platform authenticator availability; a lost/replaced device or biometric re-enrollment invalidates the wrapping key | Mitigated by design | Master password + Secret Key remain the full vault-derivation path (the vault file is never hardware-sealed); re-registration re-seals the payload on the new authenticator |
 | Background-to-content `fill_inputs` messages are not replay-protected (no per-message nonce or tab-ID binding) — M7 | Accepted (defense-in-depth gap, not an attack path) | `chrome.runtime.onMessage` in a content script only receives messages from the same extension (`externally_connectable` is intentionally absent, so pages cannot reach this channel), and fills are already gated by tab-URL validation and the phishing-alert latch. A forged `fill_inputs` would require prior control of the extension's own background worker, at which point message hardening would not stop the attacker. Revisit only if an external audit requests it; adding nonce state to the autofill path risks regressions in the most critical user flow. |
 
+## Dependency Advisory Acceptance Register (RUSTSEC)
+
+**Last reviewed:** 2026-09-01 (17 open advisories, OSV/RustSec database state at commit `71b8491`)
+
+### Policy
+
+Dependency advisories are continuously monitored via the Dependabot `cargo` ecosystem (weekly) and validated in CI. Every advisory is individually classified against this threat model before it is accepted or fixed:
+
+1. **Fix** — the advisory affects a crate reachable from a trust-boundary path and a patched version exists: the update is merged through the Dependabot PR pipeline with full CI validation.
+2. **Accept** — the advisory is *informational* (unmaintained/soundness with no known exploit), the crate is transitive (not a direct dependency), the affected API is not reachable from Aegis Vault 7's code, and no maintained drop-in alternative exists. Accepted advisories must be re-evaluated on every release and whenever an upstream update changes the dependency tree.
+3. **Document** — the acceptance rationale is recorded here so an external auditor can review each decision instead of re-deriving it.
+
+The scorecard "Vulnerabilities" check currently reports these accepted advisories. None of the seventeen is a known exploitable vulnerability in Aegis Vault 7's own code; the register below states the basis for each acceptance.
+
+### Accepted advisories
+
+**Group A — gtk-rs GTK3 bindings, unmaintained (10 advisories):**
+`RUSTSEC-2024-0411` (`gdkwayland-sys`), `RUSTSEC-2024-0412` (`gdk`), `RUSTSEC-2024-0413` (`atk`), `RUSTSEC-2024-0414` (`gdkx11-sys`), `RUSTSEC-2024-0415` (`gtk`), `RUSTSEC-2024-0416` (`atk-sys`), `RUSTSEC-2024-0417` (`gdkx11`), `RUSTSEC-2024-0418` (`gdk-sys`), `RUSTSEC-2024-0419` (`gtk3-macros`), `RUSTSEC-2024-0420` (`gtk-sys`)
+
+- **Class:** informational (no longer maintained) — no known vulnerability is claimed by the advisory.
+- **Reachability:** transitive dependencies of the Linux windowing stack (`tao`/`wry` → WebKitGTK → GTK3) used by Tauri; none is a direct dependency of Aegis Vault 7, and none appears in the vault, crypto, or IPC trust-boundary paths.
+- **Why accepted:** the GTK3 binding stack is the current upstream default for Tauri on Linux; no maintained drop-in replacement exists in the Tauri ecosystem. The exposure is an ecosystem-maintenance risk, not an exploitable path.
+- **Re-evaluation:** revisit on every Tauri/wry major update; migrate if upstream ships a GTK4-based backend or an audit demonstrates an exploitable path.
+
+**Group B — proc-macro-error, unmaintained (1 advisory):** `RUSTSEC-2024-0370`
+
+- **Class:** informational (no longer maintained) — no known vulnerability.
+- **Reachability:** build-time procedural-macro dependency only; it is not compiled into the shipped binary and has no runtime surface.
+- **Why accepted:** retained until upstream transitive dependencies drop it; zero runtime exposure.
+
+**Group C — unic-* crates, unmaintained (5 advisories):** `RUSTSEC-2025-0075` (`unic-char-range`), `RUSTSEC-2025-0080` (`unic-common`), `RUSTSEC-2025-0081` (`unic-char-property`), `RUSTSEC-2025-0098` (`unic-ucd-version`), `RUSTSEC-2025-0100` (`unic-ucd-ident`)
+
+- **Class:** informational (no longer maintained) — no known vulnerability.
+- **Reachability:** transitive text-processing dependencies pulled in by the Linux UI/toolchain stack; not direct dependencies and not part of the trust boundary.
+- **Why accepted:** unmaintained status alone, with no vulnerability claim and no Aegis Vault 7 code path through the affected APIs.
+
+**Group D — glib soundness note (1 advisory):** `RUSTSEC-2024-0429`
+
+- **Class:** soundness in `glib::VariantStrIter` (a niche `Iterator`/`DoubleEndedIterator` implementation) — not a remotely exploitable vulnerability by itself.
+- **Reachability:** Aegis Vault 7 does not call `VariantStrIter` directly; exploiting the unsoundness requires malformed `GVariant` input reaching that API through an IPC/D-Bus surface, which the application does not expose (the threat model's IPC boundary is the Tauri IPC and native messaging loopback channel, not GVariant).
+- **Why accepted:** no reachable path from untrusted input to the affected API inside the documented trust boundaries.
+- **Re-evaluation:** track glib updates; the GTK3→GTK4 migration trigger from Group A applies here as well.
+
+### Re-evaluation triggers
+
+This register is reviewed on: (a) every release, (b) every `Cargo.lock` refresh or Tauri/wry major update, (c) any new advisory affecting the same crates or their replacement crates, and (d) any external audit request. A dependency whose advisory acquires a known exploit or becomes reachable from a trust-boundary path is immediately reclassified from *accept* to *fix* and handled under the SECURITY.md timelines.
+
 ## Release Claim Rules
 
 Allowed current claims:
