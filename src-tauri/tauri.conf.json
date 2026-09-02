@@ -50,7 +50,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IGFlZ2lzLXZhdWx0LXY3IHB1YmxpYyBrZXkKUlRTV1Yyb1dDMUJldUoxdVZwQk03LytPZHkwTGlZcGsyMEZWV1FNS2hCdkxidGZCVVZOTVhJc1gK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVBREY5OThBMjI0QUY5N0QKUldSOStVb2lpcG5mV3JuUUdIQ3doaW8wRkJlY0FLSmU2RUVBUGdkZ01OcE9XQlRWQXBybVNoRU4K",
       "endpoints": [
         "https://github.com/hafgit99/aegis-vault-v7/releases/latest/download/latest.json"
       ]
