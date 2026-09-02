@@ -648,23 +648,19 @@ fn create_argon2id_hash(
     salt: String,
     options: Option<RustArgon2idOptions>,
 ) -> Result<String, String> {
-    use argon2::{
-        password_hash::{PasswordHasher, SaltString},
-        Algorithm, Argon2, Version,
-    };
+    use argon2::password_hash::PasswordHasher;
+    use argon2::{Algorithm, Argon2, Version};
 
     // SEC-B3: zeroize the master password on every exit path.
     let params = get_params(options)?;
     let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
-    let salt_string = SaltString::from_b64(&salt)
-        .or_else(|_| SaltString::encode_b64(salt.as_bytes()))
-        .map_err(|e| {
-            password.zeroize();
-            format!("invalid salt format: {e}")
-        })?;
 
+    // argon2 0.6: hash_password_with_salt takes the raw salt bytes. The salt
+    // string is consumed as raw bytes, matching the KDF path in
+    // derive_argon2id_key_internal (also raw bytes) — a consistent
+    // interpretation across both call sites.
     let hashed = argon2
-        .hash_password(password.as_bytes(), &salt_string)
+        .hash_password_with_salt(password.as_bytes(), salt.as_bytes())
         .map_err(|e| {
             password.zeroize();
             format!("Argon2id hashing failed: {e}")
@@ -677,8 +673,7 @@ fn create_argon2id_hash(
 #[tauri::command]
 fn verify_argon2id_hash(mut password: String, encoded_hash: String) -> Result<bool, String> {
     use argon2::{
-        password_hash::{PasswordHash, PasswordVerifier},
-        Argon2,
+        password_hash::phc::PasswordHash, password_hash::PasswordVerifier, Argon2,
     };
 
     // SEC-B3: zeroize the master password on every exit path.
