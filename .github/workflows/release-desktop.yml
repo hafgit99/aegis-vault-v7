@@ -416,6 +416,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install dependencies (full, incl. dev — required by @cyclonedx/cyclonedx-npm)
+        run: npm ci
+
       - name: Install cargo-cyclonedx
         uses: taiki-e/install-action@899b013517f9e7774591216672bf75a46bb9a481 # v2.9.4 (SHA-pinned)
         with:
