@@ -3,7 +3,6 @@ use chacha20poly1305::{
     XChaCha20Poly1305, XNonce,
 };
 use hmac::{Hmac, Mac};
-use rand::{rngs::OsRng, RngCore};
 use sha2::Sha256;
 use std::collections::HashSet;
 
@@ -42,7 +41,7 @@ pub const MAX_FRAME_CIPHERTEXT_LEN: usize = 1024 * 1024 + IPC_AEAD_TAG_LEN;
 /// integrity. The info string is versioned so key separation from the legacy
 /// HMAC-only derivation is guaranteed even if a token were ever reused.
 pub fn derive_session_data_key(pairing_token: &str) -> [u8; 32] {
-    let mut mac = <HmacSha256 as Mac>::new_from_slice(pairing_token.as_bytes())
+    let mut mac = <HmacSha256 as KeyInit>::new_from_slice(pairing_token.as_bytes())
         .expect("HMAC can take key of any size");
     mac.update(IPC_DATA_KEY_INFO);
     let result = mac.finalize().into_bytes();
@@ -64,11 +63,11 @@ pub fn encrypt_message_frame(key: &[u8; 32], plaintext: &[u8]) -> io::Result<Vec
 
     let cipher = XChaCha20Poly1305::new_from_slice(key).expect("AEAD can take a 32-byte key");
     let mut nonce_bytes = [0u8; IPC_AEAD_NONCE_LEN];
-    OsRng.fill_bytes(&mut nonce_bytes);
-    let nonce = XNonce::from_slice(&nonce_bytes);
+    getrandom::fill(&mut nonce_bytes).expect("OS CSPRNG failure");
+    let nonce = XNonce::try_from(&nonce_bytes[..]).expect("24-byte AEAD nonce");
 
     let ciphertext_and_tag = cipher
-        .encrypt(nonce, plaintext)
+        .encrypt(&nonce, plaintext)
         .map_err(|_| io::Error::other("AEAD encryption failed"))?;
 
     let mut frame = Vec::with_capacity(IPC_FRAME_HEADER_LEN + ciphertext_and_tag.len());
@@ -109,10 +108,11 @@ pub fn decrypt_message_frame(key: &[u8; 32], frame: &[u8]) -> io::Result<Vec<u8>
         ));
     }
 
-    let nonce = XNonce::from_slice(&frame[4 + 1..4 + 1 + IPC_AEAD_NONCE_LEN]);
+    let nonce = XNonce::try_from(&frame[4 + 1..4 + 1 + IPC_AEAD_NONCE_LEN])
+        .expect("24-byte AEAD nonce");
     let ciphertext = &frame[IPC_FRAME_HEADER_LEN..];
     let cipher = XChaCha20Poly1305::new_from_slice(key).expect("AEAD can take a 32-byte key");
-    cipher.decrypt(nonce, ciphertext).map_err(|_| {
+    cipher.decrypt(&nonce, ciphertext).map_err(|_| {
         io::Error::new(
             io::ErrorKind::InvalidData,
             "IPC frame authentication failed",
@@ -234,7 +234,7 @@ pub fn get_app_data_dir() -> Option<PathBuf> {
 
 pub fn generate_token() -> String {
     let mut token = [0u8; 32];
-    OsRng.fill_bytes(&mut token);
+    getrandom::fill(&mut token).expect("OS CSPRNG failure");
     token.iter().map(|byte| format!("{:02x}", byte)).collect()
 }
 
