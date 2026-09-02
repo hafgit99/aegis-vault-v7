@@ -91,18 +91,22 @@ function assertChromeManifest() {
 }
 
 function createZip(sourceDirectory, destinationZipPath) {
-  let AdmZip;
-  try {
-    AdmZip = require('adm-zip');
-  } catch {
-    // fallback if AdmZip not found directly
-  }
+  if (process.platform === 'win32') {
+    // Windows: prefer AdmZip; fall back to PowerShell Compress-Archive
+    let AdmZip;
+    try {
+      AdmZip = require('adm-zip');
+    } catch {
+      // fallback if AdmZip not found directly
+    }
 
-  if (AdmZip) {
-    const zip = new AdmZip();
-    zip.addLocalFolder(sourceDirectory, '');
-    zip.writeZip(destinationZipPath);
-  } else {
+    if (AdmZip) {
+      const zip = new AdmZip();
+      zip.addLocalFolder(sourceDirectory, '');
+      zip.writeZip(destinationZipPath);
+      return;
+    }
+
     // PowerShell Compress-Archive fallback with safe parameter passing
     const psScript = `
       param($src, $dst)
@@ -112,6 +116,15 @@ function createZip(sourceDirectory, destinationZipPath) {
     if (res.status !== 0) {
       throw new Error(`Failed to create zip archive with PowerShell: ${destinationZipPath}`);
     }
+    return;
+  }
+
+  // Linux/macOS: use the system `zip` CLI (available on GitHub runners and standard Unix systems)
+  const zipDir = path.dirname(destinationZipPath);
+  fs.mkdirSync(zipDir, { recursive: true });
+  const res = spawnSync('zip', ['-r', '-X', destinationZipPath, '.'], { cwd: sourceDirectory, stdio: 'inherit' });
+  if (res.status !== 0 || (res.error && typeof res.error === 'object')) {
+    throw new Error(`Failed to create zip archive with zip CLI (is 'zip' installed?): ${destinationZipPath}`);
   }
 }
 
