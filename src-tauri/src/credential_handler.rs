@@ -123,7 +123,8 @@ pub fn open_rust_session(
     mut secret_key: Option<String>,
 ) -> Result<Vec<u8>, String> {
     use argon2::{
-        password_hash::{PasswordHash, PasswordVerifier},
+        password_hash::phc::PasswordHash,
+        password_hash::PasswordVerifier,
         Argon2,
     };
 
@@ -173,11 +174,8 @@ pub fn setup_rust_session(
     salt: String,
     kdf_params: Option<RustArgon2idOptions>,
 ) -> Result<RustSetupResult, String> {
-    use argon2::{
-        password_hash::{PasswordHasher, SaltString},
-        Algorithm, Argon2, Version,
-    };
-    use rand::Rng;
+    use argon2::password_hash::PasswordHasher;
+    use argon2::{Algorithm, Argon2, Version};
 
     let derived_key = derive_argon2id_key_internal(&password, &salt, kdf_params.clone())?;
 
@@ -185,14 +183,14 @@ pub fn setup_rust_session(
     let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
 
     let mut rng_bytes = [0u8; 16];
-    rand::thread_rng().fill(&mut rng_bytes);
-    let salt_str = SaltString::encode_b64(&rng_bytes).map_err(|e| {
-        password.zeroize();
-        format!("failed to encode random salt: {e}")
-    })?;
+    getrandom::fill(&mut rng_bytes)
+        .map_err(|e| {
+            password.zeroize();
+            format!("CSPRNG failure: {e}")
+        })?;
 
     let argon_hash = argon2
-        .hash_password(password.as_bytes(), &salt_str)
+        .hash_password_with_salt(password.as_bytes(), &rng_bytes)
         .map_err(|e| {
             password.zeroize();
             format!("Argon2id hashing failed: {e}")
@@ -232,11 +230,8 @@ pub fn rotate_rust_session(
     new_salt: String,
     kdf_params: Option<RustArgon2idOptions>,
 ) -> Result<RustRotationResult, String> {
-    use argon2::{
-        password_hash::{PasswordHasher, SaltString},
-        Algorithm, Argon2, Version,
-    };
-    use rand::Rng;
+    use argon2::password_hash::PasswordHasher;
+    use argon2::{Algorithm, Argon2, Version};
     use subtle::ConstantTimeEq;
 
     let mut state = session.state.lock().map_err(|e| e.to_string())?;
@@ -265,15 +260,15 @@ pub fn rotate_rust_session(
     let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
 
     let mut rng_bytes = [0u8; 16];
-    rand::thread_rng().fill(&mut rng_bytes);
-    let salt_str = SaltString::encode_b64(&rng_bytes).map_err(|e| {
-        old_password.zeroize();
-        new_password.zeroize();
-        format!("failed to encode random salt: {e}")
-    })?;
+    getrandom::fill(&mut rng_bytes)
+        .map_err(|e| {
+            old_password.zeroize();
+            new_password.zeroize();
+            format!("CSPRNG failure: {e}")
+        })?;
 
     let new_argon_hash = argon2
-        .hash_password(new_password.as_bytes(), &salt_str)
+        .hash_password_with_salt(new_password.as_bytes(), &rng_bytes)
         .map_err(|e| {
             old_password.zeroize();
             new_password.zeroize();
@@ -337,5 +332,38 @@ mod tests {
             resolve_backup_password("aegis-vault-v7:my-pass\0A3-SECRET-KEY", None),
             "my-pass"
         );
+    }
+
+    /// Backward-compatibility golden test: verifies a PHC-format Argon2id
+    /// hash in the exact format stored by every previous release of the
+    /// vault. Argon2id is a deterministic function defined by RFC 9106, so
+    /// this vector is byte-for-byte identical to the output of the prior
+    /// argon2 crate versions (0.4/0.5) for the same parameters
+    /// (m=32, t=1, p=1, v=19, 16-byte salt 0x02*16). If this test fails,
+    /// existing users' vaults would no longer unlock — release must block.
+    #[test]
+    fn test_verify_phc_golden() {
+        use argon2::{
+            password_hash::{phc::PasswordHash, PasswordVerifier},
+            Algorithm, Argon2, Params, Version,
+        };
+
+        const GOLDEN_PHC: &str =
+            "$argon2id$v=19$m=32,t=1,p=1$AgICAgICAgICAgICAgICAg$GJsoyDAQFNCICzYmOVGV4M6jznJXRfccXuQEVAbm9dc";
+
+        let parsed = PasswordHash::new(GOLDEN_PHC).expect("golden PHC must parse");
+        let argon2 = Argon2::new(
+            Algorithm::Argon2id,
+            Version::V0x13,
+            Params::new(32, 1, 1, Some(32)).unwrap(),
+        );
+        // Correct password verifies.
+        assert!(argon2
+            .verify_password(b"aegis-golden-password", &parsed)
+            .is_ok());
+        // Wrong password rejects.
+        assert!(argon2
+            .verify_password(b"wrong-password", &parsed)
+            .is_err());
     }
 }
