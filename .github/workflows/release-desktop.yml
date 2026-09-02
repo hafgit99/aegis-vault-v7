@@ -1,7 +1,8 @@
-# Desktop Release — tag-gated, signed, reproducible release pipeline
+# Desktop + Android + Extensions Release — tag-gated, signed, reproducible release pipeline
 #
 # Flow: push tag `v*` (package.json version MUST match the tag)
-#   1. Build Linux / macOS / Windows packages in parallel (tests always run)
+#   1. Build Linux / macOS / Windows packages, signed Android APKs and browser
+#      extension packages (Chrome / Edge / Firefox / Safari) in parallel (tests always run)
 #   2. Collect artifacts + Tauri updater bundles (incl. minisign .sig files)
 #   3. Generate latest.json updater manifest
 #   4. Sign every artifact with cosign (Sigstore keyless, OIDC-bound)
@@ -231,9 +232,168 @@ jobs:
           retention-days: 14
           path: release-local/windows/**
 
+  build-android:
+    name: Build signed Android APKs
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (SHA-pinned)
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.1 (SHA-pinned)
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Rust (with Android targets)
+        uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable (SHA-pinned)
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Cache Rust builds
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2 (SHA-pinned)
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0 (SHA-pinned)
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: Resolve Android NDK path
+        run: |
+          NDK_DIR=$(ls -d "${ANDROID_HOME}/ndk/"* 2>/dev/null | head -n 1 || true)
+          if [ -z "$NDK_DIR" ]; then
+            echo "::error::Android NDK not found on runner (ANDROID_HOME=${ANDROID_HOME})"
+            exit 1
+          fi
+          echo "NDK_HOME=$NDK_DIR" >> "$GITHUB_ENV"
+          echo "NDK resolved: $NDK_DIR"
+
+      - name: Verify and decode Android signing secrets
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.AEGIS_ANDROID_KEY_ALIAS }}
+          KEYSTORE_PASSWORD: ${{ secrets.AEGIS_ANDROID_KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.AEGIS_ANDROID_KEY_PASSWORD }}
+        run: |
+          missing=0
+          for v in KEYSTORE_B64 KEY_ALIAS KEYSTORE_PASSWORD KEY_PASSWORD; do
+            if [ -z "${!v}" ]; then
+              echo "::error::Missing Android signing secret: $v (add ANDROID_KEYSTORE_BASE64, AEGIS_ANDROID_KEY_ALIAS, AEGIS_ANDROID_KEYSTORE_PASSWORD, AEGIS_ANDROID_KEY_PASSWORD as repository secrets)"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then exit 1; fi
+          echo "$KEYSTORE_B64" | base64 -d > "${RUNNER_TEMP}/aegis-release.keystore"
+          echo "Keystore decoded to ${RUNNER_TEMP}/aegis-release.keystore"
+
+      - name: Build Android release APKs (all ABIs)
+        env:
+          AEGIS_ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/aegis-release.keystore
+          AEGIS_ANDROID_KEY_ALIAS: ${{ secrets.AEGIS_ANDROID_KEY_ALIAS }}
+          AEGIS_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.AEGIS_ANDROID_KEYSTORE_PASSWORD }}
+          AEGIS_ANDROID_KEY_PASSWORD: ${{ secrets.AEGIS_ANDROID_KEY_PASSWORD }}
+        run: npx tauri android build --apk
+
+      - name: Collect Android release artifacts
+        run: |
+          mkdir -p release-local/android
+          find src-tauri/gen/android/app/build/outputs/apk -type f -name '*.apk' \
+            -exec cp {} release-local/android/ \;
+          count=$(find release-local/android -name '*.apk' | wc -l)
+          if [ "$count" -eq 0 ]; then
+            echo "::error::No release APKs were produced"
+            exit 1
+          fi
+          echo "Collected ${count} APK(s):"
+          ls -la release-local/android/
+
+      - name: Upload Android release artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
+        with:
+          name: aegis-vault-v7-android
+          if-no-files-found: error
+          retention-days: 14
+          path: release-local/android/**
+
+  build-extensions:
+    name: Build browser extension packages
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (SHA-pinned)
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.1 (SHA-pinned)
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build extension bundles (Chrome / Firefox / Safari)
+        run: npm run build:extension
+
+      - name: Package Chrome and Edge zips
+        run: npm run package:chrome:zip -- --skip-build
+
+      - name: Package Firefox xpi
+        run: npm run package:firefox:xpi -- --skip-build
+
+      - name: Sign Firefox xpi with Mozilla AMO (optional)
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
+          WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
+          AMO_CHANNEL: unlisted
+        run: |
+          if [ -n "$WEB_EXT_API_KEY" ] && [ -n "$WEB_EXT_API_SECRET" ]; then
+            npm run sign:firefox:xpi -- --skip-build
+          else
+            echo "AMO credentials (WEB_EXT_API_KEY / WEB_EXT_API_SECRET) not configured — publishing unsigned xpi only."
+          fi
+
+      - name: Package Safari WebExtension bundle
+        run: |
+          npm run extension:safari
+          mkdir -p release-local/safari
+          VERSION=$(node -p "require('./package.json').version")
+          zip -qr "release-local/safari/aegis-vault-7-safari-v${VERSION}-webextension.zip" dist-extension-safari
+          echo "Safari WebExtension bundle zipped (native Safari app wrapper still requires Xcode conversion on macOS)."
+
+      - name: Upload extension artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
+        with:
+          name: aegis-vault-v7-extensions
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            release-local/chrome/**
+            release-local/edge/**
+            release-local/firefox/**
+            release-local/safari/**
+
   publish:
     name: Sign and publish GitHub Release
-    needs: [build-linux, build-macos, build-windows]
+    needs: [build-linux, build-macos, build-windows, build-android, build-extensions]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -272,13 +432,25 @@ jobs:
           name: aegis-vault-v7-windows
           path: release-local/windows
 
+      - name: Download Android artifacts
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0 (SHA-pinned)
+        with:
+          name: aegis-vault-v7-android
+          path: release-local/android
+
+      - name: Download extension artifacts
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0 (SHA-pinned)
+        with:
+          name: aegis-vault-v7-extensions
+          path: release-local/extensions
+
       - name: Generate Tauri updater manifest (latest.json)
         run: node scripts/generate-updater-manifest.cjs
 
       - name: Generate global SHA256SUMS.txt
         run: |
           cd release-local
-          find linux macos windows updater -type f ! -name 'metadata.json' ! -name 'README.md' \
+          find linux macos windows android extensions updater -type f ! -name 'metadata.json' ! -name 'README.md' \
             -exec sha256sum {} \; \
             | awk '{ n=split($2, p, "/"); printf "%s  %s\n", $1, p[n] }' \
             | sort > SHA256SUMS.txt
@@ -302,7 +474,7 @@ jobs:
               --output-certificate "${f}.pem" \
               "$f"
             signed=$((signed + 1))
-          done < <(find release-local/linux release-local/macos release-local/windows release-local/updater -type f ! -name '*.sig' ! -name '*.pem' -print0)
+          done < <(find release-local/linux release-local/macos release-local/windows release-local/android release-local/extensions release-local/updater -type f ! -name '*.sig' ! -name '*.pem' -print0)
           echo "Signed ${signed} artifact(s) with Sigstore keyless."
           [ "$signed" -gt 0 ] || { echo "::error::No artifacts were signed"; exit 1; }
 
@@ -315,5 +487,7 @@ jobs:
             release-local/linux/**
             release-local/macos/**
             release-local/windows/**
+            release-local/android/**
+            release-local/extensions/**
             release-local/updater/latest.json
             release-local/SHA256SUMS.txt
