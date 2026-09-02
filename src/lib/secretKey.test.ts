@@ -47,11 +47,4 @@ describe('account secret key helpers', () => {
       'aegis-vault-v7:master pass\0A3-ABCD-EFGH',
     );
   });
-
-  it('creates a display-safe fingerprint from the last eight normalized key characters', async () => {
-    const { getSecretKeyFingerprint } = await import('./secretKey');
-
-    expect(getSecretKeyFingerprint('A3-ABCD-EFGH-JKLM-NPQR-STUV-WXYZ-2345-2673')).toBe('2345-2673');
-    expect(getSecretKeyFingerprint('')).toBe('UNKNOWN');
-  });
 });

@@ -8,7 +8,6 @@ import { getDefaultKdfProfile } from './argon2id';
 import { migrateLegacyAttachmentsToAesGcm, reencryptAttachmentsForVaultKeyChange } from './attachments';
 import {
   combineMasterPasswordAndSecretKey,
-  getSecretKeyFingerprint,
   normalizeAccountSecretKey,
 } from './secretKey';
 import { clearPersistedActiveVaultStorageBackend, getVaultStorageRepository, restoreOrActivateDefaultVaultStorageBackend } from './vaultStorageProvider';
@@ -53,7 +52,6 @@ const STORAGE_KEYS = {
 
 interface AccountSecretProfile {
   enabled: true;
-  fingerprint: string;
 }
 
 export async function initializeStorage(): Promise<void> {
@@ -401,7 +399,6 @@ export async function setupMasterPasswordWithSecretKey(
   setIndexedDbItemSync(STORAGE_KEYS.IS_SET_UP, 'true');
   setIndexedDbItemSync(STORAGE_KEYS.SECRET_PROFILE, JSON.stringify({
     enabled: true,
-    fingerprint: getSecretKeyFingerprint(normalizedSecretKey),
   }));
 
   if (rememberSecretKeyOnThisDevice) {
