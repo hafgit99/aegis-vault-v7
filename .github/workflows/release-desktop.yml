@@ -391,9 +391,53 @@ jobs:
             release-local/firefox/**
             release-local/safari/**
 
+  generate-sbom:
+    name: Generate SBOM (CycloneDX)
+    needs: [build-linux, build-macos, build-windows, build-android, build-extensions]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (SHA-pinned)
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0 (SHA-pinned)
+        with:
+          node-version: 22
+
+      - name: Install cargo-cyclonedx
+        uses: taiki-e/install-action@899b013517f9e7774591216672bf75a46bb9a481 # v2.9.4 (SHA-pinned)
+        with:
+          tool: cargo-cyclonedx
+
+      - name: Generate npm SBOM (CycloneDX 1.6, JSON)
+        run: node scripts/generate-npm-sbom.cjs
+
+      - name: Generate Rust/Tauri SBOM (CycloneDX 1.5, JSON, all targets)
+        working-directory: src-tauri
+        run: cargo cyclonedx --all-features --format json --spec-version 1.5 --target all --override-filename cargo-sbom
+
+      - name: Stage SBOMs
+        run: |
+          mkdir -p release-local/sbom
+          mv src-tauri/cargo-sbom.json release-local/sbom/cargo-sbom.json
+          ls -la release-local/sbom/
+
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
+        with:
+          name: aegis-vault-v7-sbom
+          if-no-files-found: error
+          retention-days: 14
+          path: release-local/sbom/*.json
+
   publish:
     name: Sign and publish GitHub Release
-    needs: [build-linux, build-macos, build-windows, build-android, build-extensions]
+    needs: [build-linux, build-macos, build-windows, build-android, build-extensions, generate-sbom]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -446,13 +490,19 @@ jobs:
           name: aegis-vault-v7-extensions
           path: release-local/extensions
 
+      - name: Download SBOM artifacts
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0 (SHA-pinned)
+        with:
+          name: aegis-vault-v7-sbom
+          path: release-local/sbom
+
       - name: Generate Tauri updater manifest (latest.json)
         run: node scripts/generate-updater-manifest.cjs
 
       - name: Generate global SHA256SUMS.txt
         run: |
           cd release-local
-          find linux macos windows android extensions updater -type f ! -name 'metadata.json' ! -name 'README.md' \
+          find linux macos windows android extensions sbom updater -type f ! -name 'metadata.json' ! -name 'README.md' \
             -exec sha256sum {} \; \
             | awk '{ n=split($2, p, "/"); printf "%s  %s\n", $1, p[n] }' \
             | sort > SHA256SUMS.txt
@@ -476,7 +526,7 @@ jobs:
               --output-certificate "${f}.pem" \
               "$f"
             signed=$((signed + 1))
-          done < <(find release-local/linux release-local/macos release-local/windows release-local/android release-local/extensions release-local/updater -type f ! -name '*.sig' ! -name '*.pem' -print0)
+          done < <(find release-local/linux release-local/macos release-local/windows release-local/android release-local/extensions release-local/sbom release-local/updater -type f ! -name '*.sig' ! -name '*.pem' -print0)
           echo "Signed ${signed} artifact(s) with Sigstore keyless."
           [ "$signed" -gt 0 ] || { echo "::error::No artifacts were signed"; exit 1; }
 
@@ -491,5 +541,6 @@ jobs:
             release-local/windows/**
             release-local/android/**
             release-local/extensions/**
+            release-local/sbom/**
             release-local/updater/latest.json
             release-local/SHA256SUMS.txt
