@@ -86,7 +86,7 @@ jobs:
         run: npm run security:release-hardening
 
       - name: Collect Linux release artifacts
-        run: npm run release:collect -- --platform linux
+        run: npm run release:collect -- --platform linux --skip-extensions
 
       - name: Collect Linux updater bundles and signatures
         run: |
@@ -151,7 +151,7 @@ jobs:
         run: npm run security:release-hardening
 
       - name: Collect macOS release artifacts
-        run: npm run release:collect -- --platform macos
+        run: npm run release:collect -- --platform macos --skip-extensions
 
       - name: Collect macOS updater bundles and signatures
         run: |
@@ -213,7 +213,7 @@ jobs:
         run: npm run security:release-hardening
 
       - name: Collect Windows release artifacts
-        run: npm run release:collect -- --platform windows
+        run: npm run release:collect -- --platform windows --skip-extensions
 
       - name: Collect Windows updater bundles and signatures
         shell: pwsh

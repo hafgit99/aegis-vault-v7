@@ -13,6 +13,7 @@ const packageJson = require(path.join(rootDir, 'package.json'));
 const args = process.argv.slice(2);
 const explicitPlatform = getArgValue('--platform');
 const platform = explicitPlatform || detectPlatform();
+const skipExtensions = args.includes('--skip-extensions');
 const version = packageJson.version;
 const outputDir = path.join(releaseLocalDir, platform);
 const manualSmokeChecklistPath = path.join(rootDir, 'docs', 'DESKTOP_MANUAL_SMOKE_CHECKLIST.md');
@@ -340,7 +341,7 @@ function writeReleaseMetadata(artifacts) {
       '- `metadata.json`: machine-readable release evidence.',
       '- `SHA256SUMS.txt`: SHA-256 checksums for file artifacts.',
       '- `DESKTOP_MANUAL_SMOKE_CHECKLIST.md`: manual QA checklist for this candidate.',
-      '- Copied installers/packages and browser extension assets for this platform.',
+      '- Copied installers/packages' + (skipExtensions ? '' : ' and browser extension assets') + ' for this platform.',
       '',
       '## Artifacts',
       '',
@@ -364,7 +365,9 @@ if (platform === 'windows') {
   throw new Error(`Unsupported platform: ${platform}`);
 }
 
-artifacts = artifacts.concat(copyBrowserExtensions());
+if (!skipExtensions) {
+  artifacts = artifacts.concat(copyBrowserExtensions());
+}
 writeChecksums(artifacts);
 writeReleaseMetadata(artifacts);
 
