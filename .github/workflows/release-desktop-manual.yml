@@ -90,6 +90,9 @@ jobs:
 
       - name: Build Linux desktop packages
         run: npx tauri build
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
       - name: Collect Linux release artifacts
         run: npm run release:collect -- --platform linux
@@ -146,6 +149,8 @@ jobs:
         run: npx tauri build --target universal-apple-darwin
         env:
           APPLE_SIGNING_IDENTITY: "-"
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
       - name: Collect macOS release artifacts
         run: npm run release:collect -- --platform macos
