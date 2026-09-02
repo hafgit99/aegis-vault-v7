@@ -407,8 +407,10 @@ jobs:
       - name: Verify tag matches package version
         run: |
           PKG_VERSION=$(node -p "require('./package.json').version")
+          # package.json carries a 4-part version (Android versionCode scheme); normalize to the 3-part release version.
+          PKG_BASE=$(node -p "require('./package.json').version.split('.').slice(0,3).join('.')")
           TAG_VERSION="${GITHUB_REF_NAME#v}"
-          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+          if [ "$PKG_BASE" != "$TAG_VERSION" ]; then
             echo "::error::Tag ${GITHUB_REF_NAME} does not match package.json version ${PKG_VERSION}"
             exit 1
           fi
