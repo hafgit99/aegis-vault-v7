@@ -20,7 +20,7 @@ dependencies = [
 
 [[package]]
 name = "aegis-vault-v7"
-version = "7.0.2"
+version = "7.0.3"
 dependencies = [
  "argon2",
  "base64 0.23.1",
