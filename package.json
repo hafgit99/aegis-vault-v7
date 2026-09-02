@@ -146,7 +146,7 @@
     "fake-indexeddb": "^6.2.5",
     "fast-check": "^4.8.0",
     "globals": "^17.11.0",
-    "jsdom": "^25.0.1",
+    "jsdom": "^30.0.1",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",
     "typescript-eslint": "^8.67.0",
