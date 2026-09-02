@@ -11,11 +11,11 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react(), tailwindcss()],
     clearScreen: false,
-    cacheDir: process.env.VITE_CACHE_DIR || path.resolve(__dirname, '.vite'),
+    cacheDir: process.env.VITE_CACHE_DIR || path.resolve(import.meta.dirname, '.vite'),
     envPrefix: ['VITE_', 'TAURI_ENV_*'],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': path.resolve(import.meta.dirname, '.'),
       },
     },
     server: {
@@ -37,7 +37,10 @@ export default defineConfig(({ mode }) => {
             },
     },
     build: {
-      target: process.env.TAURI_ENV_PLATFORM === 'windows' ? 'chrome105' : 'safari13',
+      // safari13: Vite 8 (rolldown/esbuild transpile) cannot lower destructuring to safari13.
+      // Tauri v2 requires macOS 10.15+ (Safari 14+); safari15 is a safe modern floor for all
+      // non-Windows webviews (WKWebView / webkit2gtk).
+      target: process.env.TAURI_ENV_PLATFORM === 'windows' ? 'chrome105' : 'safari15',
       minify: isDebugBuild ? false : ('esbuild' as const),
       sourcemap: isDebugBuild,
       chunkSizeWarningLimit: 900,
