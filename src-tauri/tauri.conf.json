@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Aegis Vault 7",
-  "version": "7.0.3",
+  "version": "7.0.4",
   "identifier": "com.hafgit99.aegisvault7",
   "build": {
     "frontendDist": "../dist",

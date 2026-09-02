@@ -158,6 +158,13 @@ jobs:
           find src-tauri/target -path '*release/bundle*' -type f \( \
             -name '*.sig' -o -name '*.tar.gz' -o -name '*.nsis.zip' \) \
             -exec cp {} release-local/macos/ \;
+          # GitHub normalizes spaces in release asset names to dots. Rename locally so that
+          # artifact filename == release asset name == latest.json updater URL (exact match).
+          for f in release-local/macos/*; do
+            case "$f" in
+              *' '*) mv "$f" "release-local/macos/$(basename "$f" | tr ' ' '.')" ;;
+            esac
+          done
           ls -la release-local/macos/
 
       - name: Upload macOS release artifacts
