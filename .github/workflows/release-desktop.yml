@@ -509,6 +509,36 @@ jobs:
       - name: Generate Tauri updater manifest (latest.json)
         run: node scripts/generate-updater-manifest.cjs
 
+      - name: Prune non-distributable files and deduplicate basenames
+        run: |
+          cd release-local
+          # 1) Remove internal/evidence/build-intermediate files that must not be
+          #    published as release assets (per-platform copies also collide on
+          #    identical basenames and break action-gh-release asset uploads).
+          prune_names='README.md DESKTOP_MANUAL_SMOKE_CHECKLIST.md metadata.json Info.plist CodeResources icon.icns aegis-vault-v7 control.tar.gz data.tar.gz manifest.json'
+          for name in $prune_names; do
+            find linux macos windows android extensions sbom updater -type f \( \
+              -name "$name" -o -name "$name.sig" -o -name "$name.pem" \) -delete 2>/dev/null || true
+          done
+          # 2) Deduplicate basenames across staging dirs: keep first (sorted), drop
+          #    later copies together with their signatures.
+          dupes=$(find linux macos windows android extensions sbom updater -type f ! -name '*.sig' ! -name '*.pem' -printf '%f\n' | sort | uniq -d)
+          for dup in $dupes; do
+            first=1
+            while IFS= read -r f; do
+              if [ "$first" = "1" ]; then first=0; continue; fi
+              echo "dedupe: removing duplicate '$dup' at $f"
+              rm -f "$f" "$f.sig" "$f.pem"
+            done < <(find linux macos windows android extensions sbom updater -type f -name "$dup" | sort)
+          done
+          # 3) Fail hard if duplicate basenames remain (upload would break anyway).
+          if find linux macos windows android extensions sbom updater -type f ! -name '*.sig' ! -name '*.pem' -printf '%f\n' | sort | uniq -d | grep -q .; then
+            echo "::error::Duplicate basenames remain in release staging"
+            exit 1
+          fi
+          echo "Prune + dedupe complete."
+          find linux macos windows android extensions sbom updater -type f | wc -l
+
       - name: Generate global SHA256SUMS.txt
         run: |
           cd release-local
