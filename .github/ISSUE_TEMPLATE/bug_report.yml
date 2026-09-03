@@ -1,0 +1,66 @@
+name: 🐞 Bug Report
+description: Report a reproducible defect in Aegis Vault 7
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. **If this is a security issue
+        (anything involving credential exposure, crypto behavior, or bypass of
+        vault protections), do NOT open a public issue** — see
+        [SECURITY.md](../blob/main/SECURITY.md) for private disclosure.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened, and what did you expect to happen?
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Windows (desktop)
+        - macOS (desktop)
+        - Linux (desktop)
+        - Android
+        - Browser extension (Chromium)
+        - Browser extension (Firefox)
+        - Browser extension (Safari)
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: e.g. 7.0.4 (Settings → About, or release tag)
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Click ...
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: |
+        ⚠️ Redact ALL vault content, master password, secret key, and any
+        ciphertext before attaching. Screenshots showing decrypted items will
+        be removed.
+  - type: checkboxes
+    id: attestations
+    attributes:
+      label: Attestations
+      options:
+        - label: This is not a security vulnerability (those go to SECURITY.md)
+          required: true
+        - label: I redacted all sensitive data from logs/screenshots
+          required: true
