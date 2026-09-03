@@ -1,5 +1,6 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import fs from 'fs';
 import path from 'path';
 import { defineConfig } from 'vite';
 
@@ -8,7 +9,13 @@ export default defineConfig(({ mode }) => {
   const tauriDebug = process.env.TAURI_ENV_DEBUG === 'true' || process.env.TAURI_ENV_DEBUG === '1';
   const isDebugBuild = mode !== 'production' || tauriDebug;
 
+  const pkg = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, 'package.json'), 'utf8'));
+  const appVersion = pkg.version.replace(/\.0$/, '');
+
   return {
+    define: {
+      __APP_VERSION__: JSON.stringify(appVersion),
+    },
     plugins: [react(), tailwindcss()],
     clearScreen: false,
     cacheDir: process.env.VITE_CACHE_DIR || path.resolve(import.meta.dirname, '.vite'),

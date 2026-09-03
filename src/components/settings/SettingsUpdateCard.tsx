@@ -5,7 +5,7 @@
  * @license Apache-2.0
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import {
   ArrowUpCircle,
@@ -18,6 +18,7 @@ import {
   Info,
 } from 'lucide-react';
 import { useAppUpdater } from '../../hooks/useAppUpdater';
+import { isDesktopRuntime } from '../../lib/environment';
 
 export function SettingsUpdateCard() {
   const { t } = useLanguage();
@@ -32,6 +33,27 @@ export function SettingsUpdateCard() {
     installUpdate,
     restartNow,
   } = useAppUpdater();
+
+  const [currentVersion, setCurrentVersion] = useState<string>(() => {
+    return typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '7.0.4';
+  });
+
+  useEffect(() => {
+    let active = true;
+    if (isDesktopRuntime()) {
+      import('@tauri-apps/api/app')
+        .then((m) => m.getVersion())
+        .then((ver) => {
+          if (active && ver) {
+            setCurrentVersion(ver);
+          }
+        })
+        .catch(() => {});
+    }
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const displayErrorMessage = errorKey ? t(errorKey as Parameters<typeof t>[0]) : errorMessage;
 
@@ -58,7 +80,7 @@ export function SettingsUpdateCard() {
               className="px-2.5 py-1 rounded-full border border-white/10 bg-surface text-on-surface-variant flex items-center gap-1.5"
             >
               <Info className="w-3 h-3 text-on-surface-variant/70" />
-              <span>{t('settings.updates.currentVersion')}: v7.0.2</span>
+              <span>{t('settings.updates.currentVersion')}: v{currentVersion}</span>
             </span>
 
             {!supported && (

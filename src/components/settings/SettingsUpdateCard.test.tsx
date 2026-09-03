@@ -38,7 +38,7 @@ describe('SettingsUpdateCard', () => {
     render(<SettingsUpdateCard />);
 
     expect(screen.getByTestId('app-updates-card')).toBeDefined();
-    expect(screen.getByTestId('current-version-badge').textContent).toContain('v7.0.2');
+    expect(screen.getByTestId('current-version-badge').textContent).toContain('v7.0.4');
     expect(screen.getByTestId('check-updates-button')).toBeDefined();
   });
 
