@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability report
+    url: https://github.com/hafgit99/aegis-vault-v7/blob/main/SECURITY.md
+    about: Please report security vulnerabilities responsibly via the process in SECURITY.md (48h/7d/90d SLA) — do not open a public issue.
+  - name: Questions & discussions
+    url: https://github.com/hafgit99/aegis-vault-v7/discussions
+    about: Ask questions or propose features in Discussions before filing an issue.
