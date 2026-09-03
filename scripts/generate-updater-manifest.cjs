@@ -45,7 +45,7 @@ function generateManifest() {
 
   // Scan release-local directories for platform packages & signatures
   const platformMap = {
-    windows: ['windows-x86_64', 'x86_64-pc-windows-msvc'],
+    windows: ['windows-x86_64-nsis', 'windows-x86_64', 'x86_64-pc-windows-msvc'],
     macos: ['darwin-x86_64', 'darwin-aarch64', 'universal-apple-darwin'],
     linux: ['linux-x86_64', 'x86_64-unknown-linux-gnu'],
   };
@@ -56,21 +56,65 @@ function generateManifest() {
 
     const files = fs.readdirSync(platformDir);
     for (const file of files) {
-      if (file.endsWith('.sig')) {
-        const bundleFileName = file.replace(/\.sig$/, '');
-        const bundleFilePath = path.join(platformDir, bundleFileName);
-        const sigFilePath = path.join(platformDir, file);
+      if (!file.endsWith('.sig')) continue;
 
-        if (fs.existsSync(bundleFilePath)) {
-          const signature = fs.readFileSync(sigFilePath, 'utf8').trim();
-          const downloadUrl = `${downloadBaseUrl}/${encodeURIComponent(bundleFileName)}`;
+      const sigFilePath = path.join(platformDir, file);
+      let signature;
+      try {
+        signature = fs.readFileSync(sigFilePath, 'utf8').trim();
+      } catch (_) {
+        continue;
+      }
 
-          for (const targetKey of targetKeys) {
-            manifest.platforms[targetKey] = {
-              signature: signature,
-              url: downloadUrl,
-            };
+      // We only consume genuine Tauri minisign signatures for the auto-updater
+      if (!signature.includes('untrusted comment: signature from tauri secret key')) {
+        continue;
+      }
+
+      let bundleFileName = file.replace(/\.sig$/, '');
+      let bundleFilePath = path.join(platformDir, bundleFileName);
+
+      // If the direct un-.sig filename doesn't exist, search for matching installer
+      if (!fs.existsSync(bundleFilePath)) {
+        if (platformName === 'windows') {
+          const winInstaller = files.find(f =>
+            !f.endsWith('.sig') && !f.endsWith('.pem') && !f.endsWith('.txt') &&
+            (f.toLowerCase().includes('setup.exe') || f.toLowerCase().endsWith('.msi') || f.toLowerCase().endsWith('.nsis.zip')) &&
+            !f.toLowerCase().includes('portable')
+          );
+          if (winInstaller) {
+            bundleFileName = winInstaller;
+            bundleFilePath = path.join(platformDir, bundleFileName);
           }
+        } else if (platformName === 'linux') {
+          const linuxInstaller = files.find(f =>
+            !f.endsWith('.sig') && !f.endsWith('.pem') &&
+            (f.toLowerCase().endsWith('.appimage') || f.toLowerCase().endsWith('.deb'))
+          );
+          if (linuxInstaller) {
+            bundleFileName = linuxInstaller;
+            bundleFilePath = path.join(platformDir, bundleFileName);
+          }
+        } else if (platformName === 'macos') {
+          const macInstaller = files.find(f =>
+            !f.endsWith('.sig') && !f.endsWith('.pem') &&
+            (f.toLowerCase().endsWith('.tar.gz') || f.toLowerCase().endsWith('.dmg'))
+          );
+          if (macInstaller) {
+            bundleFileName = macInstaller;
+            bundleFilePath = path.join(platformDir, bundleFileName);
+          }
+        }
+      }
+
+      if (fs.existsSync(bundleFilePath)) {
+        const downloadUrl = `${downloadBaseUrl}/${encodeURIComponent(bundleFileName)}`;
+
+        for (const targetKey of targetKeys) {
+          manifest.platforms[targetKey] = {
+            signature: signature,
+            url: downloadUrl,
+          };
         }
       }
     }
