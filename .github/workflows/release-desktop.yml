@@ -577,13 +577,18 @@ jobs:
           # A previously failed publish may have left a release (with assets) for this
           # tag. Upload-then-fail then races with asset delete/re-upload on the next
           # run ("already_exists"). Start every publish from a clean slate.
-          id=$(gh api "repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}" --jq .id 2>/dev/null || true)
-          if [ -n "$id" ]; then
-            echo "Deleting pre-existing release $id for tag ${{ github.ref_name }}"
-            gh api -X DELETE "repos/${{ github.repository }}/releases/$id"
-          else
-            echo "No pre-existing release for tag ${{ github.ref_name }} — clean."
-          fi
+          # Note: gh prints HTTP error bodies (e.g. 404) to stdout too, so only trust
+          # a purely numeric id.
+          id=$(gh api "repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}" --jq '.id // empty' 2>/dev/null | tr -d '[:space:]' || true)
+          case "$id" in
+            ''|*[!0-9]*)
+              echo "No pre-existing release for tag ${{ github.ref_name }} — clean."
+              ;;
+            *)
+              echo "Deleting pre-existing release $id for tag ${{ github.ref_name }}"
+              gh api -X DELETE "repos/${{ github.repository }}/releases/$id"
+              ;;
+          esac
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@5be0e66d93ac7ed76da52eca8bb058f665c3a5fe # v2.4.2 (SHA-pinned)
