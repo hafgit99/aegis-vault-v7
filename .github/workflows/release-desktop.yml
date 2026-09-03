@@ -570,6 +570,21 @@ jobs:
           echo "Signed ${signed} artifact(s) with Sigstore keyless."
           [ "$signed" -gt 0 ] || { echo "::error::No artifacts were signed"; exit 1; }
 
+      - name: Remove pre-existing release for tag (idempotent publish)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # A previously failed publish may have left a release (with assets) for this
+          # tag. Upload-then-fail then races with asset delete/re-upload on the next
+          # run ("already_exists"). Start every publish from a clean slate.
+          id=$(gh api "repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}" --jq .id 2>/dev/null || true)
+          if [ -n "$id" ]; then
+            echo "Deleting pre-existing release $id for tag ${{ github.ref_name }}"
+            gh api -X DELETE "repos/${{ github.repository }}/releases/$id"
+          else
+            echo "No pre-existing release for tag ${{ github.ref_name }} — clean."
+          fi
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@5be0e66d93ac7ed76da52eca8bb058f665c3a5fe # v2.4.2 (SHA-pinned)
         with:
