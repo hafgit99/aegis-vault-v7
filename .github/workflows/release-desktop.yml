@@ -575,20 +575,29 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           # A previously failed publish may have left a release (with assets) for this
-          # tag. Upload-then-fail then races with asset delete/re-upload on the next
-          # run ("already_exists"). Start every publish from a clean slate.
-          # Note: gh prints HTTP error bodies (e.g. 404) to stdout too, so only trust
-          # a purely numeric id.
-          id=$(gh api "repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}" --jq '.id // empty' 2>/dev/null | tr -d '[:space:]' || true)
-          case "$id" in
-            ''|*[!0-9]*)
-              echo "No pre-existing release for tag ${{ github.ref_name }} — clean."
-              ;;
-            *)
-              echo "Deleting pre-existing release $id for tag ${{ github.ref_name }}"
-              gh api -X DELETE "repos/${{ github.repository }}/releases/$id"
-              ;;
-          esac
+          # tag — including a DRAFT. Drafts are invisible to /releases/tags (that
+          # endpoint only returns published releases), which is exactly how a stale
+          # draft survived and raced with action-gh-release's asset delete/re-upload
+          # ("already_exists" / "delete-a-release-asset: Not Found"). List ALL releases
+          # (drafts included, repo token) and delete every one whose tag matches ours.
+          # gh prints HTTP error bodies to stdout too, so only trust purely numeric ids.
+          TAG="${{ github.ref_name }}"
+          ids=$(gh api --paginate "repos/${{ github.repository }}/releases?per_page=100" \
+            --jq ".[] | select(.tag_name == \"$TAG\") | .id" 2>/dev/null || true)
+          deleted=0
+          for id in $ids; do
+            case "$id" in
+              ''|*[!0-9]*) echo "Ignoring non-numeric API output: $id"; continue ;;
+            esac
+            echo "Deleting pre-existing release $id for tag $TAG (drafts included)"
+            gh api -X DELETE "repos/${{ github.repository }}/releases/$id"
+            deleted=$((deleted+1))
+          done
+          if [ "$deleted" -gt 0 ]; then
+            echo "Deleted $deleted pre-existing release(s)."
+          else
+            echo "No pre-existing release for tag $TAG — clean."
+          fi
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@5be0e66d93ac7ed76da52eca8bb058f665c3a5fe # v2.4.2 (SHA-pinned)
