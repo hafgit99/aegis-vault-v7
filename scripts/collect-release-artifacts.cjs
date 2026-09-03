@@ -138,10 +138,20 @@ function collectWindows() {
     artifacts.push(copyFile(releaseExe, normalizeName('x64-portable', '.exe')));
   }
   if (msi) {
-    artifacts.push(copyFile(msi, normalizeName('x64', '.msi')));
+    const destName = normalizeName('x64', '.msi');
+    artifacts.push(copyFile(msi, destName));
+    const msiSig = `${msi}.sig`;
+    if (fs.existsSync(msiSig)) {
+      artifacts.push(copyFile(msiSig, `${destName}.sig`));
+    }
   }
   if (setup) {
-    artifacts.push(copyFile(setup, normalizeName('x64-setup', '.exe')));
+    const destName = normalizeName('x64-setup', '.exe');
+    artifacts.push(copyFile(setup, destName));
+    const setupSig = `${setup}.sig`;
+    if (fs.existsSync(setupSig)) {
+      artifacts.push(copyFile(setupSig, `${destName}.sig`));
+    }
   }
 
   return artifacts;
@@ -153,10 +163,20 @@ function collectLinux() {
   const appImages = allMatches(file => file.includes(`${path.sep}release${path.sep}bundle${path.sep}appimage${path.sep}`) && file.toLowerCase().endsWith('.appimage'));
 
   for (const deb of debs) {
-    artifacts.push(copyFile(deb, normalizeName('amd64', '.deb')));
+    const destName = normalizeName('amd64', '.deb');
+    artifacts.push(copyFile(deb, destName));
+    const debSig = `${deb}.sig`;
+    if (fs.existsSync(debSig)) {
+      artifacts.push(copyFile(debSig, `${destName}.sig`));
+    }
   }
   for (const appImage of appImages) {
-    artifacts.push(copyFile(appImage, normalizeName('x64', '.AppImage')));
+    const destName = normalizeName('x64', '.AppImage');
+    artifacts.push(copyFile(appImage, destName));
+    const appImageSig = `${appImage}.sig`;
+    if (fs.existsSync(appImageSig)) {
+      artifacts.push(copyFile(appImageSig, `${destName}.sig`));
+    }
   }
 
   return artifacts;
@@ -168,7 +188,12 @@ function collectMacos() {
   const apps = allMatches(file => file.includes(`${path.sep}release${path.sep}bundle${path.sep}macos${path.sep}`) && file.toLowerCase().endsWith('.app'));
 
   for (const dmg of dmgs) {
-    artifacts.push(copyFile(dmg, normalizeName('universal', '.dmg')));
+    const destName = normalizeName('universal', '.dmg');
+    artifacts.push(copyFile(dmg, destName));
+    const dmgSig = `${dmg}.sig`;
+    if (fs.existsSync(dmgSig)) {
+      artifacts.push(copyFile(dmgSig, `${destName}.sig`));
+    }
   }
   for (const app of apps) {
     artifacts.push(copyDirectory(app, normalizeName('universal', '.app')));
