@@ -54,6 +54,18 @@ async function build() {
   fs.copyFileSync(path.join(srcDir, 'styles.css'), path.join(outDir, 'styles.css'));
   fs.copyFileSync(path.join(srcDir, 'manifest.json'), path.join(outDir, 'manifest.json'));
 
+  // EXT-V1: Version injection — package.json is the single source of truth.
+  // The built manifests must always carry the release version: AMO rejects
+  // uploads whose manifest version was already signed, and updater/store
+  // metadata keys off this value. Source tree (src-extension/) is only a
+  // template; dist copies always get the authoritative version stamped in.
+  const packageVersion = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8')).version;
+  const distManifestPath = path.join(outDir, 'manifest.json');
+  const distManifest = JSON.parse(fs.readFileSync(distManifestPath, 'utf8'));
+  distManifest.version = packageVersion;
+  fs.writeFileSync(distManifestPath, JSON.stringify(distManifest, null, 2));
+  console.log('Manifest version stamped from package.json: ' + packageVersion);
+
   // Copy icons folder to dist (source lives in src-extension/icons, tracked in git)
   const distIconsDir = path.join(outDir, 'icons');
   if (!fs.existsSync(distIconsDir)) {
