@@ -111,7 +111,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/api": "^2.11.0",
     "@tauri-apps/plugin-biometric": "^2.3.2",
-    "@tauri-apps/plugin-updater": "^2.10.1",
+    "@tauri-apps/plugin-updater": "^2.11.0",
     "@zxcvbn-ts/core": "^4.1.2",
     "@zxcvbn-ts/language-common": "^4.1.2",
     "@zxcvbn-ts/language-tr": "^4.1.1",
