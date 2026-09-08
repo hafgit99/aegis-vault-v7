@@ -146,7 +146,7 @@
     "eslint": "^10.8.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "fake-indexeddb": "^6.2.5",
-    "fast-check": "^4.8.0",
+    "fast-check": "^4.9.0",
     "globals": "^17.11.0",
     "jsdom": "^30.0.1",
     "tailwindcss": "^4.3.3",
