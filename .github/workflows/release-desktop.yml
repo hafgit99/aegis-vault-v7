@@ -518,7 +518,11 @@ jobs:
           # 1) Remove internal/evidence/build-intermediate files that must not be
           #    published as release assets (per-platform copies also collide on
           #    identical basenames and break action-gh-release asset uploads).
-          prune_names='README.md DESKTOP_MANUAL_SMOKE_CHECKLIST.md metadata.json Info.plist CodeResources icon.icns aegis-vault-v7 control.tar.gz data.tar.gz manifest.json'
+          #    SHA256SUMS.txt: the per-platform checksum manifests (e.g. the Android
+          #    evidence copy) are superseded by the single global manifest generated
+          #    in the next step — keeping them causes a basename collision with
+          #    release-local/SHA256SUMS.txt ("update-a-release-asset: Not Found").
+          prune_names='README.md DESKTOP_MANUAL_SMOKE_CHECKLIST.md metadata.json Info.plist CodeResources icon.icns aegis-vault-v7 control.tar.gz data.tar.gz manifest.json SHA256SUMS.txt'
           for name in $prune_names; do
             find linux macos windows android extensions sbom updater -type f \( \
               -name "$name" -o -name "$name.sig" -o -name "$name.pem" \) -delete 2>/dev/null || true
@@ -569,7 +573,7 @@ jobs:
               --output-certificate "${f}.pem" \
               "$f"
             signed=$((signed + 1))
-          done < <(find release-local/linux release-local/macos release-local/windows release-local/android release-local/extensions release-local/sbom release-local/updater -type f ! -name '*.sig' ! -name '*.pem' -print0)
+          done < <(find release-local/linux release-local/macos release-local/windows release-local/android release-local/extensions release-local/sbom release-local/updater release-local/SHA256SUMS.txt -type f ! -name '*.sig' ! -name '*.pem' -print0)
           echo "Signed ${signed} artifact(s) with Sigstore keyless."
           [ "$signed" -gt 0 ] || { echo "::error::No artifacts were signed"; exit 1; }
 
