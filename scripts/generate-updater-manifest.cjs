@@ -15,7 +15,13 @@ const packageJson = require(path.join(rootDir, 'package.json'));
 const releaseLocalDir = path.join(rootDir, 'release-local');
 const updaterOutputDir = path.join(releaseLocalDir, 'updater');
 
-const version = packageJson.version; // full numeric version, e.g. 7.0.5.0
+const version = packageJson.version; // full numeric version, e.g. 7.0.5.0 (tag + artifact names)
+// Tauri updater manifest must carry a valid 3-part semver (the parser rejects
+// a 4th numeric part: "unexpected character '.' after patch version number").
+// The app's own runtime version comes from tauri.conf.json (e.g. 7.0.5), so
+// the manifest version MUST match it exactly for the update comparison.
+const tauriConf = JSON.parse(fs.readFileSync(path.join(rootDir, 'src-tauri', 'tauri.conf.json'), 'utf8'));
+const updaterVersion = tauriConf.version || version.split('.').slice(0, 3).join('.');
 const repoUrl = packageJson.repository ? packageJson.repository.replace(/\.git$/, '') : 'https://github.com/hafgit99/aegis-vault-v7';
 const releaseTag = `v${version}`;
 const downloadBaseUrl = `${repoUrl}/releases/download/${releaseTag}`;
@@ -77,7 +83,7 @@ function updaterKeysForArtifact(platformName, fileName) {
 }
 
 function generateManifest() {
-  console.log(`\n📦 Generating Tauri v2 Auto-Updater Manifest (latest.json) for v${version}...`);
+  console.log(`\n📦 Generating Tauri v2 Auto-Updater Manifest (latest.json) for v${version} (updater semver: ${updaterVersion})...`);
 
   if (!fs.existsSync(updaterOutputDir)) {
     fs.mkdirSync(updaterOutputDir, { recursive: true });
@@ -93,7 +99,7 @@ function generateManifest() {
   }
 
   const manifest = {
-    version: version,
+    version: updaterVersion,
     notes: releaseNotes,
     pub_date: new Date().toISOString(),
     platforms: {},
