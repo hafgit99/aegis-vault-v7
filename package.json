@@ -131,7 +131,7 @@
     "@stryker-mutator/typescript-checker": "^10.0.0",
     "@stryker-mutator/vitest-runner": "^10.0.0",
     "@tauri-apps/cli": "^2.11.2",
-    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.2.0",
     "@testing-library/user-event": "^14.6.6",
     "@types/chrome": "^0.2.7",
