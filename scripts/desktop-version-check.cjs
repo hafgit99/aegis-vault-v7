@@ -16,7 +16,7 @@ function readCargoPackageVersion(file) {
 }
 
 function readCargoLockPackageVersion(file, packageName) {
-  const contents = fs.readFileSync(file, 'utf8');
+  const contents = fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
   const packageSections = contents.split(/\n\[\[package\]\]\n/g);
   for (const section of packageSections) {
     const name = section.match(/(?:^|\n)name\s*=\s*"([^"]+)"/)?.[1];
