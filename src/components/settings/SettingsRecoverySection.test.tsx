@@ -189,7 +189,7 @@ describe('SettingsRecoverySection', () => {
 
     const clearButton = screen
       .getAllByRole('button')
-      .find((button) => button.querySelector('.lucide-trash-2'));
+      .find((button) => button.querySelector('.lucide-trash'));
     expect(clearButton).toBeTruthy();
 
     fireEvent.click(clearButton!);
