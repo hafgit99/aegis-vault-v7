@@ -75,3 +75,6 @@ scratch/
 
 # Website (kept local, excluded from GitHub remote)
 aegisvault-website/
+
+# Self-hosted backup infra (kept local, excluded from GitHub remote)
+deploy/
