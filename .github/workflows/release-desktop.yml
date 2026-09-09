@@ -474,37 +474,37 @@ jobs:
           echo "Releasing version ${PKG_VERSION} (tag ${GITHUB_REF_NAME})"
 
       - name: Download Linux artifacts
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0 (SHA-pinned)
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v6.0.0 (SHA-pinned)
         with:
           name: aegis-vault-v7-linux
           path: release-local/linux
 
       - name: Download macOS artifacts
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0 (SHA-pinned)
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v6.0.0 (SHA-pinned)
         with:
           name: aegis-vault-v7-macos
           path: release-local/macos
 
       - name: Download Windows artifacts
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0 (SHA-pinned)
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v6.0.0 (SHA-pinned)
         with:
           name: aegis-vault-v7-windows
           path: release-local/windows
 
       - name: Download Android artifacts
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0 (SHA-pinned)
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v6.0.0 (SHA-pinned)
         with:
           name: aegis-vault-v7-android
           path: release-local/android
 
       - name: Download extension artifacts
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0 (SHA-pinned)
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v6.0.0 (SHA-pinned)
         with:
           name: aegis-vault-v7-extensions
           path: release-local/extensions
 
       - name: Download SBOM artifacts
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0 (SHA-pinned)
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v6.0.0 (SHA-pinned)
         with:
           name: aegis-vault-v7-sbom
           path: release-local/sbom
