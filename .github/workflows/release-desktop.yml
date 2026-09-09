@@ -620,3 +620,35 @@ jobs:
             release-local/sbom/**
             release-local/updater/latest.json
             release-local/SHA256SUMS.txt
+
+      - name: Publish updater manifest to backup endpoint (update.aegisvault.xyz)
+        env:
+          UPDATE_HOST: ${{ secrets.UPDATE_ENDPOINT_HOST }}        # e.g. forgejo-update@vps.example.com (sftp-only chroot user)
+          UPDATE_SSH_KEY: ${{ secrets.UPDATE_ENDPOINT_SSH_KEY }}  # private key paired with the VPS deploy user
+          UPDATE_KNOWN_HOSTS: ${{ secrets.UPDATE_ENDPOINT_KNOWN_HOSTS }} # output of: ssh-keyscan -H update.aegisvault.xyz
+        run: |
+          set -e
+          if [ -z "${UPDATE_HOST:-}" ] || [ -z "${UPDATE_SSH_KEY:-}" ]; then
+            echo "::notice::UPDATE_ENDPOINT_HOST / UPDATE_ENDPOINT_SSH_KEY not set — skipping backup endpoint publish."
+            exit 0
+          fi
+          mkdir -p ~/.ssh
+          if [ -n "${UPDATE_KNOWN_HOSTS:-}" ]; then
+            printf '%s\n' "$UPDATE_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            echo "::warning::UPDATE_ENDPOINT_KNOWN_HOSTS not set — falling back to accept-new (TOFU)."
+            ssh-keyscan -H update.aegisvault.xyz >> ~/.ssh/known_hosts 2>/dev/null
+          fi
+          printf '%s\n' "$UPDATE_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          # Remote path is chroot-relative: the deploy user only sees /pub inside
+          # /opt/forgejo/update-files. Modern scp uses the SFTP protocol, which is
+          # the only channel this user has (ForceCommand internal-sftp, no shell).
+          scp -o BatchMode=yes \
+            release-local/updater/latest.json \
+            release-local/updater/latest.json.sig \
+            release-local/SHA256SUMS.txt \
+            release-local/SHA256SUMS.txt.sig \
+            "$UPDATE_HOST:pub/"
+          echo "Updater manifest published to backup endpoint."
+
