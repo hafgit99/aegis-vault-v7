@@ -5,7 +5,7 @@
  * @license Apache-2.0
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import {
   ArrowUpCircle,
@@ -18,9 +18,11 @@ import {
   Info,
 } from 'lucide-react';
 import { useAppUpdater } from '../../hooks/useAppUpdater';
+import { getAppVersion } from '../../lib/updater';
 
 export function SettingsUpdateCard() {
   const { t } = useLanguage();
+  const [currentVersion, setCurrentVersion] = useState<string | null>(null);
   const {
     status,
     supported,
@@ -34,6 +36,16 @@ export function SettingsUpdateCard() {
   } = useAppUpdater();
 
   const displayErrorMessage = errorKey ? t(errorKey as Parameters<typeof t>[0]) : errorMessage;
+
+  useEffect(() => {
+    let mounted = true;
+    getAppVersion().then((version) => {
+      if (mounted && version) setCurrentVersion(version);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <div
@@ -58,7 +70,8 @@ export function SettingsUpdateCard() {
               className="px-2.5 py-1 rounded-full border border-white/10 bg-surface text-on-surface-variant flex items-center gap-1.5"
             >
               <Info className="w-3 h-3 text-on-surface-variant/70" />
-              <span>{t('settings.updates.currentVersion')}: v7.0.2</span>
+              <span data-testid="current-version-label">{t('settings.updates.currentVersion')}</span>
+              {currentVersion && <span>: v{currentVersion}</span>}
             </span>
 
             {!supported && (
