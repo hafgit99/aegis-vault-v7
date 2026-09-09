@@ -34,12 +34,26 @@ describe('SettingsUpdateCard', () => {
     cleanup();
   });
 
-  it('renders SettingsUpdateCard with current version and check button', () => {
+  it('renders SettingsUpdateCard with current version and check button', async () => {
+    vi.spyOn(updaterLib, 'getAppVersion').mockResolvedValue('7.0.5');
+
     render(<SettingsUpdateCard />);
 
     expect(screen.getByTestId('app-updates-card')).toBeDefined();
-    expect(screen.getByTestId('current-version-badge').textContent).toContain('v7.0.2');
+    await screen.findByText(': v7.0.5');
+    expect(screen.getByTestId('current-version-badge').textContent).toContain('v7.0.5');
     expect(screen.getByTestId('check-updates-button')).toBeDefined();
+  });
+
+  it('omits the version suffix when the runtime version is unavailable', () => {
+    vi.spyOn(updaterLib, 'getAppVersion').mockResolvedValue('');
+
+    render(<SettingsUpdateCard />);
+
+    expect(screen.getByTestId('current-version-label').textContent).toContain(
+      'settings.updates.currentVersion'
+    );
+    expect(screen.getByTestId('current-version-badge').textContent).not.toContain('v7.');
   });
 
   it('handles update check when app is up to date', async () => {

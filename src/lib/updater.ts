@@ -7,8 +7,9 @@
  */
 
 import { check, type Update, type DownloadEvent } from '@tauri-apps/plugin-updater';
+import { getVersion } from '@tauri-apps/api/app';
 import { invoke } from '@tauri-apps/api/core';
-import { isDesktopAppUpdaterSupported } from './environment';
+import { isDesktopAppUpdaterSupported, isDesktopRuntime } from './environment';
 
 export interface AppUpdateInfo {
   currentVersion: string;
@@ -31,6 +32,20 @@ export interface CheckAppUpdateResult {
   updateInfo?: AppUpdateInfo;
   error?: string;
   errorKey?: string;
+}
+
+/**
+ * Returns the running application version at runtime (from the Tauri runtime metadata),
+ * or an empty string when the version is unavailable (web/mobile fallback, or the
+ * runtime query fails). Never throws — callers can safely render the result.
+ */
+export async function getAppVersion(): Promise<string> {
+  if (typeof window === 'undefined' || !isDesktopRuntime()) return '';
+  try {
+    return (await getVersion()) || '';
+  } catch {
+    return '';
+  }
 }
 
 /**
