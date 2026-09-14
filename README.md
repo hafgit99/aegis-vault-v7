@@ -6,6 +6,12 @@
 
 *Enterprise-grade local cryptographic security for Desktop (Windows, Linux, macOS), Android, and WebExtensions.*
 
+<br />
+
+<img src="docs/assets/app-screenshot.png" alt="Aegis Vault 7 — Main Application Interface" width="820" />
+
+<br />
+
 ![Security Score](https://img.shields.io/badge/Security_Audit-92%2F100_(A%2B)-brightgreen?style=flat-square&logo=shield)
 ![Tests](https://img.shields.io/badge/Unit_Tests-1800_Passed-success?style=flat-square&logo=vitest)
 ![Fuzz Tests](https://img.shields.io/badge/Fuzz_Tests-36_Passed-success?style=flat-square&logo=vitest)
