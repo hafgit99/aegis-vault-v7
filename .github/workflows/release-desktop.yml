@@ -420,7 +420,7 @@ jobs:
         run: npm ci
 
       - name: Install cargo-cyclonedx
-        uses: taiki-e/install-action@899b013517f9e7774591216672bf75a46bb9a481 # v2.9.4 (SHA-pinned)
+        uses: taiki-e/install-action@3f74d7c16a4242f1c95561e98edc25d36adb4375 # v2.9.4 (SHA-pinned)
         with:
           tool: cargo-cyclonedx
 
