@@ -35,13 +35,13 @@ describe('SettingsUpdateCard', () => {
   });
 
   it('renders SettingsUpdateCard with current version and check button', async () => {
-    vi.spyOn(updaterLib, 'getAppVersion').mockResolvedValue('7.0.5');
+    vi.spyOn(updaterLib, 'getAppVersion').mockResolvedValue('7.0.6');
 
     render(<SettingsUpdateCard />);
 
     expect(screen.getByTestId('app-updates-card')).toBeDefined();
-    await screen.findByText(': v7.0.5');
-    expect(screen.getByTestId('current-version-badge').textContent).toContain('v7.0.5');
+    await screen.findByText(': v7.0.6');
+    expect(screen.getByTestId('current-version-badge').textContent).toContain('v7.0.6');
     expect(screen.getByTestId('check-updates-button')).toBeDefined();
   });
 

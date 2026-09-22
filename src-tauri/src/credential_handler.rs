@@ -122,11 +122,7 @@ pub fn open_rust_session(
     kdf_params: Option<RustArgon2idOptions>,
     mut secret_key: Option<String>,
 ) -> Result<Vec<u8>, String> {
-    use argon2::{
-        password_hash::phc::PasswordHash,
-        password_hash::PasswordVerifier,
-        Argon2,
-    };
+    use argon2::{password_hash::phc::PasswordHash, password_hash::PasswordVerifier, Argon2};
 
     let parsed_hash =
         PasswordHash::new(&argon_hash).map_err(|e| format!("invalid password hash format: {e}"))?;
@@ -183,11 +179,10 @@ pub fn setup_rust_session(
     let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
 
     let mut rng_bytes = [0u8; 16];
-    getrandom::fill(&mut rng_bytes)
-        .map_err(|e| {
-            password.zeroize();
-            format!("CSPRNG failure: {e}")
-        })?;
+    getrandom::fill(&mut rng_bytes).map_err(|e| {
+        password.zeroize();
+        format!("CSPRNG failure: {e}")
+    })?;
 
     let argon_hash = argon2
         .hash_password_with_salt(password.as_bytes(), &rng_bytes)
@@ -260,12 +255,11 @@ pub fn rotate_rust_session(
     let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
 
     let mut rng_bytes = [0u8; 16];
-    getrandom::fill(&mut rng_bytes)
-        .map_err(|e| {
-            old_password.zeroize();
-            new_password.zeroize();
-            format!("CSPRNG failure: {e}")
-        })?;
+    getrandom::fill(&mut rng_bytes).map_err(|e| {
+        old_password.zeroize();
+        new_password.zeroize();
+        format!("CSPRNG failure: {e}")
+    })?;
 
     let new_argon_hash = argon2
         .hash_password_with_salt(new_password.as_bytes(), &rng_bytes)
@@ -362,8 +356,6 @@ mod tests {
             .verify_password(b"aegis-golden-password", &parsed)
             .is_ok());
         // Wrong password rejects.
-        assert!(argon2
-            .verify_password(b"wrong-password", &parsed)
-            .is_err());
+        assert!(argon2.verify_password(b"wrong-password", &parsed).is_err());
     }
 }

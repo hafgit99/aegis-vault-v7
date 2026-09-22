@@ -126,4 +126,20 @@ describe('VaultItemDetailHeader', () => {
 
     expect(container.querySelector('.text-brand-tertiary')).toBeTruthy();
   });
+
+  it('renders HTTP insecurity badge when URL uses plain http', () => {
+    render(
+      <VaultItemDetailHeader
+        item={{ ...item, url: 'http://insecure-site.org' }}
+        copiedField={null}
+        onToggleFavorite={vi.fn()}
+        onEdit={vi.fn()}
+        onCopyText={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('header-http-insecure-badge')).toBeTruthy();
+    expect(screen.getByText('Güvensiz Bağlantı (HTTP)')).toBeTruthy();
+  });
 });

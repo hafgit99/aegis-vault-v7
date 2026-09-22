@@ -44,6 +44,10 @@ import { useExtensionCredentialSync } from './hooks/useExtensionCredentialSync';
 import { useExtensionCredentialListener } from './hooks/useExtensionCredentialListener';
 import { useKeyboardShortcuts, dispatchFocusSearchShortcut } from './hooks/useKeyboardShortcuts';
 import { useVaultOrganisation } from './hooks/useVaultOrganisation';
+import { useAutoUpdateCheck } from './hooks/useAutoUpdateCheck';
+import UpdateNotificationBanner from './components/UpdateNotificationBanner';
+import { useOnboardingTour } from './hooks/useOnboardingTour';
+import OnboardingTour from './components/OnboardingTour';
 import { useLanguage } from './i18n/LanguageContext';
 import type { VaultItem } from './types';
 
@@ -254,6 +258,9 @@ export default function UnlockedApp({
     onRefresh: refreshDatabase,
   });
 
+  const autoUpdate = useAutoUpdateCheck(unlocked);
+  const onboardingTour = useOnboardingTour(items);
+
   const {
     tags,
     createTag,
@@ -397,6 +404,16 @@ export default function UnlockedApp({
             onClearRecentSearches={clearRecent}
             onCommitSearch={commitSearch}
           />
+
+          <UpdateNotificationBanner autoUpdate={autoUpdate} />
+
+          {activeTab === 'vault' && (
+            <OnboardingTour
+              tour={onboardingTour}
+              onNewItem={handleTriggerNew}
+              onNavigate={(tab) => handleTabChange(tab)}
+            />
+          )}
 
           <MainContent
             activeTab={activeTab}

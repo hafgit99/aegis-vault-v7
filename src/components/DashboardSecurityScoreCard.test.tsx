@@ -93,4 +93,26 @@ describe('DashboardSecurityScoreCard', () => {
     expect(screen.getByText('您的保险库完全安全')).toBeTruthy();
     expect(screen.getByText('已保存项目')).toBeTruthy();
   });
+
+  it('renders old passwords and missing 2FA counts in the metric grid', () => {
+    render(
+      <DashboardSecurityScoreCard
+        activeItemCount={6}
+        auditReport={{
+          score: 75,
+          weakCount: 1,
+          reusedCount: 0,
+          secureCount: 5,
+          totalCount: 6,
+          oldPasswordCount: 3,
+          missingTotpCount: 2,
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Eski Şifreler')).toBeTruthy();
+    expect(screen.getByText('Eksik 2FA')).toBeTruthy();
+    expect(screen.getByText('3')).toBeTruthy();
+    expect(screen.getByText('2')).toBeTruthy();
+  });
 });

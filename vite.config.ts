@@ -3,13 +3,37 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import { defineConfig } from 'vite';
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
   const tauriHost = process.env.TAURI_DEV_HOST;
   const tauriDebug = process.env.TAURI_ENV_DEBUG === 'true' || process.env.TAURI_ENV_DEBUG === '1';
   const isDebugBuild = mode !== 'production' || tauriDebug;
 
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      // ── DEV-ONLY CSP RELAX (screenshots/dev workflow) ──
+      // index.html'deki meta CSP `style-src 'self'` Vite'ın dev <style>
+      // enjeksiyonlarını bloklar. Bu hook YALNIZCA `tauri dev`/`vite dev`
+      // sırasında (command === 'serve') etkindir; `vite build` çıktısına
+      // (production) hiçbir şekilde dokunmaz.
+      ...(command === 'serve'
+        ? [
+            {
+              name: 'dev-csp-relax',
+              transformIndexHtml: {
+                order: 'pre' as const,
+                handler(html: string): string {
+                  return html.replace(
+                    "style-src 'self'",
+                    "style-src 'self' 'unsafe-inline'"
+                  );
+                },
+              },
+            },
+          ]
+        : []),
+    ],
     clearScreen: false,
     cacheDir: process.env.VITE_CACHE_DIR || path.resolve(import.meta.dirname, '.vite'),
     envPrefix: ['VITE_', 'TAURI_ENV_*'],

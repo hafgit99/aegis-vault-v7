@@ -70,21 +70,33 @@ export default function DashboardSecurityScoreCard({ auditReport, activeItemCoun
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 pt-4 border-t border-outline-variant/10 text-center">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-4 border-t border-outline-variant/10 text-center">
         <div className="space-y-0.5">
-          <p className="text-[10px] text-on-surface-variant">{t('dashboard.score.savedItems')}</p>
+          <p className="text-[10px] text-on-surface-variant truncate">{t('dashboard.score.savedItems')}</p>
           <p className="text-sm font-bold text-on-surface font-mono">{activeItemCount}</p>
         </div>
-        <div className="space-y-0.5 border-x border-outline-variant/10">
-          <p className="text-[10px] text-on-surface-variant">{t('dashboard.score.weakPasswords')}</p>
+        <div className="space-y-0.5 border-l border-outline-variant/10">
+          <p className="text-[10px] text-on-surface-variant truncate">{t('dashboard.score.weakPasswords')}</p>
           <p className={`text-sm font-bold font-mono ${auditReport.weakCount > 0 ? 'text-red-400' : 'text-brand-tertiary'}`}>
             {auditReport.weakCount}
           </p>
         </div>
-        <div className="space-y-0.5 font-mono">
-          <p className="text-[10px] text-on-surface-variant font-sans">{t('dashboard.score.reusedPasswords')}</p>
+        <div className="space-y-0.5 border-l border-outline-variant/10 font-mono">
+          <p className="text-[10px] text-on-surface-variant font-sans truncate">{t('dashboard.score.reusedPasswords')}</p>
           <p className={`text-sm font-bold ${auditReport.reusedCount > 0 ? 'text-amber-300' : 'text-brand-tertiary'}`}>
             {auditReport.reusedCount}
+          </p>
+        </div>
+        <div className="space-y-0.5 border-l border-outline-variant/10 font-mono">
+          <p className="text-[10px] text-on-surface-variant font-sans truncate">{t('dashboard.score.oldPasswords')}</p>
+          <p className={`text-sm font-bold ${(auditReport.oldPasswordCount ?? 0) > 0 ? 'text-amber-300' : 'text-brand-tertiary'}`}>
+            {auditReport.oldPasswordCount ?? 0}
+          </p>
+        </div>
+        <div className="space-y-0.5 border-l border-outline-variant/10 font-mono col-span-2 sm:col-span-1">
+          <p className="text-[10px] text-on-surface-variant font-sans truncate">{t('dashboard.score.missingTotp')}</p>
+          <p className={`text-sm font-bold ${(auditReport.missingTotpCount ?? 0) > 0 ? 'text-amber-300' : 'text-brand-tertiary'}`}>
+            {auditReport.missingTotpCount ?? 0}
           </p>
         </div>
       </div>

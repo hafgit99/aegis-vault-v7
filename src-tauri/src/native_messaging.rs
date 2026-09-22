@@ -108,8 +108,8 @@ pub fn decrypt_message_frame(key: &[u8; 32], frame: &[u8]) -> io::Result<Vec<u8>
         ));
     }
 
-    let nonce = XNonce::try_from(&frame[4 + 1..4 + 1 + IPC_AEAD_NONCE_LEN])
-        .expect("24-byte AEAD nonce");
+    let nonce =
+        XNonce::try_from(&frame[4 + 1..4 + 1 + IPC_AEAD_NONCE_LEN]).expect("24-byte AEAD nonce");
     let ciphertext = &frame[IPC_FRAME_HEADER_LEN..];
     let cipher = XChaCha20Poly1305::new_from_slice(key).expect("AEAD can take a 32-byte key");
     cipher.decrypt(&nonce, ciphertext).map_err(|_| {

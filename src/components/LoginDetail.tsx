@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Check, Copy, Eye, EyeOff } from 'lucide-react';
+import { Check, Copy, Eye, EyeOff, ShieldAlert } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { generateTOTP, getTotpPeriod, TOTPValidationError } from '../lib/otp';
+import { supportsTwoFactor } from '../lib/security';
 import type { VaultItem } from '../types';
 import { TotpCountdownRing } from './totp/TotpCountdownRing';
 
@@ -15,6 +16,7 @@ interface LoginDetailProps {
   totpCountdown: number;
   onTogglePasswordReveal?: () => void;
   onCopyText: (text: string, field: string) => void;
+  onEdit?: () => void;
 }
 
 export default function LoginDetail({
@@ -24,6 +26,7 @@ export default function LoginDetail({
   totpCountdown,
   onTogglePasswordReveal: propOnTogglePasswordReveal,
   onCopyText,
+  onEdit,
 }: LoginDetailProps) {
   const { t } = useLanguage();
   const revealCtx = useSensitiveRevealContext();
@@ -164,6 +167,31 @@ export default function LoginDetail({
                 </div>
               </>
             )
+          ) : supportsTwoFactor(item.url) ? (
+            <div
+              data-testid="login-missing-2fa-alert"
+              className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/25 text-left"
+            >
+              <div className="space-y-0.5">
+                <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                  <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  {t('loginDetail.twoFactorMissing')}
+                </span>
+                <p className="text-[11px] text-amber-200/80 leading-normal">
+                  {t('loginDetail.twoFactorMissingDesc')}
+                </p>
+              </div>
+              {onEdit && (
+                <button
+                  type="button"
+                  data-testid="login-add-totp-button"
+                  onClick={onEdit}
+                  className="px-2.5 py-1 text-xs font-semibold rounded-md bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 transition-all shrink-0 self-start sm:self-auto cursor-pointer"
+                >
+                  {t('loginDetail.addTotpAction')}
+                </button>
+              )}
+            </div>
           ) : (
             <div className="text-xs text-on-surface-variant/40 italic py-1 text-left">
               {t('loginDetail.noTotp')}
