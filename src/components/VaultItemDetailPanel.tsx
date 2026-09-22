@@ -8,6 +8,7 @@ import type { VaultItem } from '../types';
 import CardDetail from './CardDetail';
 import IdentityDetail from './IdentityDetail';
 import LoginDetail from './LoginDetail';
+import PasswordHistoryPanel from './PasswordHistoryPanel';
 import PasskeyDetail from './PasskeyDetail';
 import SecureNoteDetail from './SecureNoteDetail';
 import VaultItemAttachmentCard from './VaultItemAttachmentCard';
@@ -173,7 +174,10 @@ export default function VaultItemDetailPanel({
             totpCountdown={totpCountdown}
             onTogglePasswordReveal={() => onToggleReveal('password')}
             onCopyText={onCopyText}
+            onEdit={onEdit}
           />
+
+          <PasswordHistoryPanel item={item} onCopyText={onCopyText} />
 
           <CardDetail
             item={item}

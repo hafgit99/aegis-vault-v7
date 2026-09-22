@@ -73,4 +73,27 @@ describe('VaultItemSideInfo', () => {
     expect(screen.getByText('Private Notes')).toBeTruthy();
     expect(screen.getByText('No private recovery or backup-code note has been added.')).toBeTruthy();
   });
+
+  it('renders password age warning badge when item is older than 90 days', () => {
+    const hundredDaysAgo = new Date(Date.now() - 100 * 24 * 60 * 60 * 1000).toISOString();
+    render(<VaultItemSideInfo item={{ ...baseItem, updatedAt: hundredDaysAgo }} />);
+
+    expect(screen.getByTestId('sideinfo-password-age-badge')).toBeTruthy();
+    expect(screen.getByText('90+ günlük')).toBeTruthy();
+  });
+
+  it('renders critical password age warning badge when item is older than 180 days', () => {
+    const twoHundredDaysAgo = new Date(Date.now() - 200 * 24 * 60 * 60 * 1000).toISOString();
+    render(<VaultItemSideInfo item={{ ...baseItem, updatedAt: twoHundredDaysAgo }} />);
+
+    expect(screen.getByTestId('sideinfo-password-age-badge')).toBeTruthy();
+    expect(screen.getByText('180+ günlük (Kritik)')).toBeTruthy();
+  });
+
+  it('renders HTTP insecurity warning when URL uses plain http', () => {
+    render(<VaultItemSideInfo item={{ ...baseItem, url: 'http://example.com/login' }} />);
+
+    expect(screen.getByTestId('sideinfo-http-warning')).toBeTruthy();
+    expect(screen.getByText('Güvensiz Bağlantı (HTTP)')).toBeTruthy();
+  });
 });

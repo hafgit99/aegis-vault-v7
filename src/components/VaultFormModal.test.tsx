@@ -235,6 +235,36 @@ describe('VaultFormModal', () => {
     expect(screen.getByDisplayValue('Recovery codes are stored offline.')).toBeTruthy();
   });
 
+  it('records previous password into passwordHistory when editing with a changed password', async () => {
+    const onSave = vi.fn();
+    render(
+      <VaultFormModal
+        isOpen={true}
+        editingItem={editingItem}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />,
+    );
+
+    const passwordInput = screen.getByDisplayValue('secret-password');
+    fireEvent.change(passwordInput, { target: { value: 'brand-new-password' } });
+
+    fireEvent.click(screen.getByText('Güvenle Kaydet'));
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          password: 'brand-new-password',
+          passwordHistory: [
+            expect.objectContaining({
+              password: 'secret-password',
+            }),
+          ],
+        }),
+      );
+    });
+  });
+
   it('falls back safely when editing a legacy item with missing fields and attachment metadata', async () => {
     const onSave = vi.fn();
     const legacyItem = {

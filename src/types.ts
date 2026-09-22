@@ -185,6 +185,14 @@ export interface VaultItem {
   // (see src/lib/folders.ts). Items with no folder live in the
   // implicit "root" pseudo-folder.
   folderId?: string;
+
+  /** Historical passwords saved when the password is changed (capped at 3 on free tier). */
+  passwordHistory?: PasswordHistoryEntry[];
+}
+
+export interface PasswordHistoryEntry {
+  password: string;
+  changedAt: string;
 }
 
 export interface GeneratorOptions {

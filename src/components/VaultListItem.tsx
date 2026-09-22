@@ -1,10 +1,10 @@
-import { Heart, Sparkles } from 'lucide-react';
+import { Clock, Heart, Sparkles } from 'lucide-react';
 import { memo, useState } from 'react';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { getLogoForPlatform } from '../lib/display';
-import { getStrengthLabel } from '../lib/security';
+import { getPasswordAgeInDays, getStrengthLabel } from '../lib/security';
 import type { FuzzyScore } from '../lib/fuzzySearch';
 import type { VaultItem } from '../types';
 import { resolveTagColor, TAG_PALETTE } from '../lib/tags';
@@ -54,6 +54,9 @@ function VaultListItemContent({
   const highlightQuery = match && match.score > 0 ? t('top.search.placeholderActive') : undefined;
 
   const isCompact = density === 'compact';
+  const passwordAge = (item.category === 'login' || Boolean(item.password))
+    ? getPasswordAgeInDays(item.updatedAt || item.createdAt)
+    : 0;
 
   return (
     <div
@@ -194,6 +197,20 @@ function VaultListItemContent({
           </span>
         )}
         {item.favorite && <Heart className="w-3 h-3 fill-red-500 text-red-500 shrink-0" />}
+        {passwordAge >= 90 && (
+          <span
+            data-testid="item-old-password-indicator"
+            title={passwordAge >= 180 ? t('passwordAge.warning180') : t('passwordAge.warning90')}
+            className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[8px] font-bold ${
+              passwordAge >= 180
+                ? 'text-red-400 bg-red-400/10 border border-red-500/20'
+                : 'text-amber-400 bg-amber-400/10 border border-amber-500/20'
+            }`}
+          >
+            <Clock className="w-2.5 h-2.5" />
+            {!isCompact && <span>{passwordAge >= 180 ? '180d+' : '90d+'}</span>}
+          </span>
+        )}
         <span
           className={`px-1.5 py-0.5 rounded-full text-[8px] sm:text-[9px] font-bold tracking-wider ${itemStrength.colorClass}`}
         >
@@ -213,6 +230,8 @@ export default memo(VaultListItemContent, (prevProps, nextProps) => {
     prevProps.item.username === nextProps.item.username &&
     prevProps.item.favorite === nextProps.item.favorite &&
     prevProps.item.password === nextProps.item.password &&
+    prevProps.item.updatedAt === nextProps.item.updatedAt &&
+    prevProps.item.createdAt === nextProps.item.createdAt &&
     prevProps.item.folderId === nextProps.item.folderId &&
     JSON.stringify(prevProps.item.tags) === JSON.stringify(nextProps.item.tags) &&
     prevProps.isSelected === nextProps.isSelected &&

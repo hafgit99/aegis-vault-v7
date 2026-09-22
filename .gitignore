@@ -66,6 +66,7 @@ docs/Siber_Guvenlik_Degerlendirmesi_2026.md
 docs/KAPSAMLI_KOD_ANALIZ_RAPORU.md
 docs/KOD_VE_GUVENLIK_ANALIZ_RAPORU_*.md
 docs/KOD_VE_GUVENLIK_ANALIZ_RAPORU_2026-08-27.md
+docs/PREMIUM_STRATEJISI_VE_YOL_HARITASI.md
 KOD_GUVENLIK_ANALIZ_RAPORU_TR.md
 GUVENLIK_VE_MIMARI_RAPORU.md
 session-*.md
@@ -78,3 +79,7 @@ aegisvault-website/
 
 # Self-hosted backup infra (kept local, excluded from GitHub remote)
 deploy/
+
+# Local testing and debug configs
+args/
+src-tauri/tauri.dev.conf.json

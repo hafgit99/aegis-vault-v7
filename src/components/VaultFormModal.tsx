@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import type { AppNotification, TagDefinition, VaultFolder, VaultItem } from '../types';
 import { generatePassword } from '../lib/security';
+import { recordPasswordHistory } from '../lib/passwordHistory';
 import { saveAttachment, getAttachmentBlob } from '../lib/attachments';
 import { secureRandomIndex, secureRandomToken } from '../lib/random';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -354,6 +355,9 @@ export default function VaultFormModal({
       updatedAt: new Date().toISOString().split('T')[0] ?? '',
       category,
       favorite: editingItem?.favorite || false,
+      passwordHistory: editingItem
+        ? recordPasswordHistory(editingItem.passwordHistory, editingItem.password, password)
+        : undefined,
 
       // Card Fields
       cardholderName: cardholderName.trim(),

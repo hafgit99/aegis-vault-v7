@@ -1,7 +1,8 @@
-import { Calendar } from 'lucide-react';
+import { AlertTriangle, Calendar, Clock } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
+import { getPasswordAgeInDays, isUnsecureHttpUrl } from '../lib/security';
 import type { VaultItem } from '../types';
 
 interface VaultItemSideInfoProps {
@@ -27,6 +28,11 @@ function getCategoryLabelKey(category: VaultItem['category']): TranslationKey {
 export default function VaultItemSideInfo({ item }: VaultItemSideInfoProps) {
   const { t } = useLanguage();
 
+  const passwordAge = (item.category === 'login' || Boolean(item.password))
+    ? getPasswordAgeInDays(item.updatedAt || item.createdAt)
+    : 0;
+  const isHttp = isUnsecureHttpUrl(item.url);
+
   return (
     <div className="space-y-3 sm:space-y-4 text-left">
       <div className="glass-panel p-4 sm:p-5 rounded-xl space-y-3">
@@ -47,10 +53,40 @@ export default function VaultItemSideInfo({ item }: VaultItemSideInfoProps) {
             <span>{item.updatedAt}</span>
           </span>
         </div>
+        {passwordAge >= 90 && (
+          <div className="flex justify-between items-center text-xs border-t border-outline-variant/10 pt-2.5">
+            <span className="text-on-surface-variant flex items-center gap-1">
+              <Clock className="w-3 h-3 text-amber-400" />
+              <span>{t('vault.item.oldPasswordNotice')}</span>
+            </span>
+            <span
+              data-testid="sideinfo-password-age-badge"
+              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                passwordAge >= 180
+                  ? 'bg-red-500/15 text-red-400 border border-red-500/20'
+                  : 'bg-amber-500/15 text-amber-300 border border-amber-500/20'
+              }`}
+            >
+              {passwordAge >= 180 ? t('passwordAge.warning180') : t('passwordAge.warning90')}
+            </span>
+          </div>
+        )}
         <div className="flex justify-between items-center text-xs border-t border-outline-variant/10 pt-2.5">
           <span className="text-on-surface-variant">{t('detail.side.category')}</span>
           <span className="text-brand-secondary font-bold md:text-[11px]">{t(getCategoryLabelKey(item.category))}</span>
         </div>
+        {isHttp && (
+          <div
+            data-testid="sideinfo-http-warning"
+            className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs border-t mt-1"
+          >
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+            <div className="space-y-0.5">
+              <p className="font-semibold text-[11px]">{t('security.httpWarning')}</p>
+              <p className="text-[10px] text-amber-200/80 leading-normal">{t('security.httpWarningDesc')}</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {item.category !== 'secure_note' && (

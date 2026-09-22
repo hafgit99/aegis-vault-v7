@@ -1,7 +1,8 @@
-import { Check, Edit, ExternalLink, Heart, Share2, Trash2, QrCode } from 'lucide-react';
+import { AlertTriangle, Check, Edit, ExternalLink, Heart, Share2, Trash2, QrCode } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import { getLogoForPlatform } from '../lib/display';
+import { isUnsecureHttpUrl } from '../lib/security';
 import type { VaultItem } from '../types';
 
 interface VaultItemDetailHeaderProps {
@@ -49,15 +50,27 @@ export default function VaultItemDetailHeader({
             {item.favorite && <Heart className="w-5 h-5 fill-red-500 text-red-500 shrink-0" />}
           </h1>
           {item.url && (
-            <a
-              className="text-brand-primary hover:underline text-xs flex items-center gap-1 mt-1.5 font-semibold min-w-0"
-              href={/^https?:\/\//i.test(item.url) ? item.url : `https://${item.url}`}
-              target="_blank"
-              rel="noreferrer noopener"
-            >
-              <span className="truncate">{item.url}</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
+            <div className="flex flex-col gap-1 mt-1.5 min-w-0">
+              <a
+                className="text-brand-primary hover:underline text-xs flex items-center gap-1 font-semibold min-w-0"
+                href={/^https?:\/\//i.test(item.url) ? item.url : `https://${item.url}`}
+                target="_blank"
+                rel="noreferrer noopener"
+              >
+                <span className="truncate">{item.url}</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+              {isUnsecureHttpUrl(item.url) && (
+                <span
+                  data-testid="header-http-insecure-badge"
+                  className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md w-fit"
+                  title={t('security.httpWarningDesc')}
+                >
+                  <AlertTriangle className="w-3 h-3 text-amber-400" />
+                  <span>{t('security.httpWarning')}</span>
+                </span>
+              )}
+            </div>
           )}
         </div>
       </div>

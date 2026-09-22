@@ -672,9 +672,7 @@ fn create_argon2id_hash(
 
 #[tauri::command]
 fn verify_argon2id_hash(mut password: String, encoded_hash: String) -> Result<bool, String> {
-    use argon2::{
-        password_hash::phc::PasswordHash, password_hash::PasswordVerifier, Argon2,
-    };
+    use argon2::{password_hash::phc::PasswordHash, password_hash::PasswordVerifier, Argon2};
 
     // SEC-B3: zeroize the master password on every exit path.
     let parsed_hash = PasswordHash::new(&encoded_hash).map_err(|e| {

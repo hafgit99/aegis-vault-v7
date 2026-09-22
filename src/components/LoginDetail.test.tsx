@@ -203,4 +203,26 @@ describe('LoginDetail', () => {
     expect(screen.getAllByTitle('Copy').length).toBeGreaterThan(0);
     expect(screen.getByText(/OTP is not active/)).toBeTruthy();
   });
+
+  it('renders missing 2FA warning and calls onEdit when service supports 2FA', () => {
+    const onEdit = vi.fn();
+    render(
+      <LoginDetail
+        item={{ ...loginItem, url: 'https://github.com', totpSecret: '' }}
+        copiedField={null}
+        isPasswordRevealed={false}
+        totpCountdown={30}
+        onTogglePasswordReveal={vi.fn()}
+        onCopyText={vi.fn()}
+        onEdit={onEdit}
+      />,
+    );
+
+    expect(screen.getByTestId('login-missing-2fa-alert')).toBeTruthy();
+    expect(screen.getByText('2FA Desteği Mevcut')).toBeTruthy();
+
+    const addTotpBtn = screen.getByTestId('login-add-totp-button');
+    fireEvent.click(addTotpBtn);
+    expect(onEdit).toHaveBeenCalledTimes(1);
+  });
 });
