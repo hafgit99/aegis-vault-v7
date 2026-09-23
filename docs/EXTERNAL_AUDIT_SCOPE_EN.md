@@ -1,6 +1,6 @@
 # Aegis Vault 7 — Independent Security Audit Scope and Preparation Document
 
-**Document Version:** 2.0.0 · **Date:** September 2026 · **Target Version:** Aegis Vault 7.0.4+
+**Document Version:** 2.1.0 · **Date:** September 23, 2026 · **Target Version:** Aegis Vault 7.0.6.0
 
 ---
 
@@ -16,7 +16,7 @@ Aegis Vault 7 is a modern password manager with a local-first and zero-knowledge
 
 ### Layer 1: Cryptographic Core (`src/lib/`)
 * **Key Derivation (KDF):**
-  * `argon2id.ts`: RFC 9106 compliant parameters (32–64 MiB RAM, 3–4 iterations). WASM memory management and degradation protection.
+  * `argon2id.ts`: runtime-specific defaults: Tauri native desktop/Android uses 64 MiB / 4 iterations / 2 lanes; Web/WASM uses 32 MiB / 3 iterations / 1 lane. KDF parameters are stored with vault metadata; existing vaults retain their recorded parameters. Includes WASM memory management and degradation protection.
   * `secretKey.ts`: 160-bit A3-format two-factor account secret key derivation and normalization.
 * **Encryption Primitives:**
   * `webcrypto.ts`: AES-256-GCM (12-byte CSPRNG IV, 128-bit auth tag), HKDF-SHA256 per-item key isolation (`derivePerItemKey`), non-extractable CryptoKey caching with LFU eviction.
@@ -57,7 +57,7 @@ Aegis Vault 7 is a modern password manager with a local-first and zero-knowledge
 
 | Threat | Expected Defense |
 |---|---|
-| **Stolen/leaked database (offline attack)** | 32–64 MiB Argon2id + 160-bit secret key combination (infeasible to attack even with a weak user password). |
+| **Stolen/leaked database (offline attack)** | Argon2id increases the cost of offline password guessing; practical resistance depends on master-password strength and the KDF parameters recorded with the vault. This control does not make cracking impossible. |
 | **Malicious webpage / phishing** | Extension-side full-PSL eTLD+1 matching, mandatory domain-mismatch user confirmation, Shadow DOM isolation, textContent-only rendering. |
 | **Malicious process on the same device (local IPC)** | Hardened 0o600 / Windows ACL token file, fail-closed validation, one-shot dynamic port binding. |
 | **Supply chain / malicious update** | Minisign-signed updater packages (Tauri), cosign Sigstore keyless-signed release artifacts, SRI asset manifest, SHA-pinned CI. |

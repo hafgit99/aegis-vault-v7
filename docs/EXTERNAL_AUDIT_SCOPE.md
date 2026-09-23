@@ -1,6 +1,6 @@
 # Aegis Vault 7 — Bağımsız Dış Güvenlik Denetimi Kapsam ve Hazırlık Dokümanı
 
-**Doküman Sürümü:** 2.0.0 · **Tarih:** Eylül 2026 · **Hedef Sürüm:** Aegis Vault 7.0.4+
+**Doküman Sürümü:** 2.1.0 · **Tarih:** 23 Eylül 2026 · **Hedef Sürüm:** Aegis Vault 7.0.6.0
 
 ---
 
@@ -16,7 +16,7 @@ Aegis Vault 7, yerel-öncelikli (local-first) ve sıfır-bilgi (zero-knowledge) 
 
 ### Katman 1: Kriptografik Çekirdek (`src/lib/`)
 * **Anahtar Türetme (KDF):**
-  * `argon2id.ts`: RFC 9106 uyumlu parametreler (32-64 MiB RAM, 3-4 iterasyon). WASM bellek yönetimi ve degradasyon koruması.
+  * `argon2id.ts`: çalışma ortamına göre varsayılan profiller: Tauri yerel (masaüstü/Android) 64 MiB / 4 iterasyon / 2 lane; Web/WASM 32 MiB / 3 iterasyon / 1 lane. KDF parametreleri kasa metaverisinde saklanır; mevcut kasalar kayıtlı parametrelerini kullanmaya devam eder. WASM bellek yönetimi ve degradasyon koruması.
   * `secretKey.ts`: 160-bit A3 formatlı iki faktörlü hesap anahtarı türetimi ve normalizasyonu.
 * **Şifreleme İlkemleri:**
   * `webcrypto.ts`: AES-256-GCM (12-byte CSPRNG IV, 128-bit kimlik doğrulama etiketi), HKDF-SHA256 öğe-başı anahtar izolasyonu (`derivePerItemKey`), non-extractable CryptoKey önbellekleme ve LFU tahliye stratejisi.
@@ -57,7 +57,7 @@ Aegis Vault 7, yerel-öncelikli (local-first) ve sıfır-bilgi (zero-knowledge) 
 
 | Tehdit | Beklenen Savunma Mekanizması |
 |---|---|
-| **Kayıp/Çalınan Veritabanı (Offline Saldırı)** | 32-64 MiB Argon2id + 160-bit Secret Key birleşimi (kullanıcı parolası zayıf olsa bile kırılması hesaplama açısından imkansız). |
+| **Kayıp/Çalınan Veritabanı (Offline Saldırı)** | Argon2id çevrimdışı parola tahminlerinin maliyetini artırır; gerçek direnç ana parola gücüne ve kasada kayıtlı KDF parametrelerine bağlıdır. Bu katman tek başına kırılmayı imkânsız kılmaz. |
 | **Zararlı Web Sayfası / Phishing** | Eklenti tarafında tam-PSL eTLD+1 eşleşmesi, zorunlu domain-mismatch kullanıcı onayı, Shadow DOM izolasyonu, textContent-only rendering. |
 | **Aynı Cihazdaki Kötü Amaçlı Süreç (Local IPC)** | Sıkılaştırılmış 0o600 / Windows kısıtlı ACL token dosyası, fail-closed denetimi, tek seferlik dinamik port eşleme. |
 | **Tedarik Zinciri / Zararlı Güncelleme** | Minisign imzalı güncelleme paketleri (Tauri), cosign Sigstore keyless imzalı release artifact'leri, SRI asset manifesti, SHA-pinned CI. |
