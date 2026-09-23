@@ -26,7 +26,7 @@
 [![CodeQL](https://github.com/hafgit99/aegis-vault-v7/actions/workflows/codeql.yml/badge.svg)](https://github.com/hafgit99/aegis-vault-v7/actions/workflows/codeql.yml)
 [![CI](https://github.com/hafgit99/aegis-vault-v7/actions/workflows/ci.yml/badge.svg)](https://github.com/hafgit99/aegis-vault-v7/actions/workflows/ci.yml)
 
-[Features](#-key-features) • [Security Architecture](#-security-architecture) • [Security Audit](#-2026-security-audit-report) • [Platforms](#-platform-matrix) • [Build & Verification](#-build--verification) • [Documentation](#-documentation)
+[Features](#-key-features) • [Security Architecture](#-security-architecture) • [Security Review Status](#-security-review-and-external-audit-status) • [Platforms](#-platform-matrix) • [Build & Verification](#-build--verification) • [Documentation](#-documentation)
 
 </div>
 
@@ -40,18 +40,11 @@ Unlike cloud-dependent password managers vulnerable to server breaches and key-e
 
 ---
 
-## 🛡️ 2026 Security Audit Report
+## 🛡️ Security Review and External Audit Status
 
-Aegis Vault 7 underwent a comprehensive deep-dive security audit evaluating its cryptographic primitives, IPC mechanics, memory safety, and cross-platform transport layer.
+Aegis Vault publishes its threat model, security notes, quality gates, and a scope document prepared for a future independent assessment. **As of September 23, 2026, this repository does not publish a completed independent third-party security audit report.** The scope document is preparation material, not an audit result.
 
-| Category | Score | Grade | Status | Key Mitigations |
-|---|---|---|---|---|
-| **Architecture Quality** | **92 / 100** | **A+** | ✅ Excellent | Concern-driven module organization, multi-ABI Android splits, wa-sqlite OPFS VFS |
-| **Security Primitives** | **90 / 100** | **A+** | ✅ Excellent | Argon2id KDF (32 MiB / 3 iter), WebCrypto AES-256-GCM, **WebCrypto HKDF-SHA256 Per-Item Keys** |
-| **IPC & Native Bridge** | **92 / 100** | **A+** | ✅ Excellent | **Dynamic TCP Port Probe (49155–49165 + OS Ephemeral)**, `aegis_ipc_port.txt` discovery, 256-bit pairing token, **per-frame XChaCha20-Poly1305 AEAD encryption**, session revocation |
-| **Domain & Anti-Phishing** | **92 / 100** | **A+** | ✅ Excellent | **Full Public Suffix List** (10k+ rules, wildcard + exception semantics), AI heuristic typosquat/confusable engine |
-| **Memory & Storage Safety** | **88 / 100** | **A** | ✅ High | Uint8Array secret buffers, WASM zeroizer, Rust `ZeroizeOnDrop`, 5-min decrypted items cache TTL, vault-database HMAC integrity + rollback counter |
-| **Overall Weighted Score** | **92 / 100** | **A+** | 🏆 **Category Leader** | **100% of P0 & P1 Critical Audit Issues Resolved** |
+Earlier numerical scores and closure counts were maintainer assessments of older code snapshots. They are not independent ratings, certifications, or a current assessment of release `v7.0.6.0`; they are not presented here as evidence of external assurance. See [Security Review Status](docs/SECURITY_REVIEW_STATUS_2026.md) and the [External Audit Scope](docs/EXTERNAL_AUDIT_SCOPE_EN.md).
 
 ---
 
@@ -59,7 +52,7 @@ Aegis Vault 7 underwent a comprehensive deep-dive security audit evaluating its 
 
 ### 🔐 Zero-Knowledge Cryptography & Storage
 - **Per-Item Key Isolation**: Every vault record (logins, payment cards, identities, secure notes, passkeys, attachments) is encrypted using a unique 256-bit AES-GCM key derived via WebCrypto HKDF-SHA256 (`salt = itemId`).
-- **Argon2id KDF**: Master Key derivation uses high-memory Argon2id (32 MiB, 3 iterations, 1 parallelism) with native Rust acceleration and WebCrypto WASM fallback parity.
+- **Argon2id KDF**: New vaults use runtime-specific profiles: Tauri native (desktop/Android) uses 64 MiB memory, 4 iterations, and 2 lanes; Web/WASM uses 32 MiB, 3 iterations, and 1 lane. KDF parameters are stored with vault metadata; existing vaults retain their recorded parameters.
 - **At-Rest Field Masking**: Database rows in SQLite mask sensitive columns (`title`, `username_db`, `password_db`, `notes_db`) with static tokens (`[encrypted: aes-256-gcm]`). Metadata exists only within AES-256-GCM payloads.
 - **Zero-Knowledge Emergency Recovery**: 24-word BIP-39 Recovery Key generation with offline recovery kit export.
 
