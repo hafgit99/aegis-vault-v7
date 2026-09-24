@@ -256,6 +256,14 @@ export default function SettingsPanel({
 
       {/* Backup, Encryption, and Import Rows */}
       <SettingsBackupSection
+        onDatabaseChanged={onDatabaseChanged}
+        onNotify={(msg, kind) =>
+          onNotify?.({
+            title: 'Aegis Vault',
+            message: msg,
+            type: kind === 'error' ? 'danger' : (kind || 'info'),
+          })
+        }
         useMasterForBackup={useMasterForBackup}
         setUseMasterForBackup={setUseMasterForBackup}
         customBackupPassword={customBackupPassword}

@@ -34,7 +34,7 @@ describe('useAutoUpdateCheck', () => {
       supported: true,
       hasUpdate: true,
       updateInfo: {
-        currentVersion: '7.0.6.0',
+        currentVersion: '7.0.7.0',
         version: '7.1.0.0',
       },
     });
@@ -58,7 +58,7 @@ describe('useAutoUpdateCheck', () => {
       supported: true,
       hasUpdate: true,
       updateInfo: {
-        currentVersion: '7.0.6.0',
+        currentVersion: '7.0.7.0',
         version: '7.1.0.0',
       },
     });

@@ -11,7 +11,7 @@ import type { UseAutoUpdateCheckResult } from '../hooks/useAutoUpdateCheck';
 
 const mockAutoUpdate: UseAutoUpdateCheckResult = {
   updateInfo: {
-    currentVersion: '7.0.6.0',
+    currentVersion: '7.0.7.0',
     version: '7.1.0.0',
     body: 'Security updates and improvements',
     date: '2026-09-22',
