@@ -1,6 +1,6 @@
 # Aegis Vault 7 — Bağımsız Dış Güvenlik Denetimi Kapsam ve Hazırlık Dokümanı
 
-**Doküman Sürümü:** 2.1.0 · **Tarih:** 23 Eylül 2026 · **Hedef Sürüm:** Aegis Vault 7.0.6.0
+**Doküman Sürümü:** 2.1.0 · **Tarih:** 23 Eylül 2026 · **Hedef Sürüm:** Aegis Vault 7.0.7.0
 
 ---
 

@@ -8,8 +8,11 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { Lock, Unlock, Download, Upload, ShieldAlert, AlertCircle } from 'lucide-react';
 import { progressWidthClass } from '../../lib/progressWidth';
 import type { TranslationKey } from '../../i18n/translations';
+import { SettingsSnapshotHistoryCard } from './SettingsSnapshotHistoryCard';
 
 interface SettingsBackupSectionProps {
+  onDatabaseChanged?: () => void | Promise<void>;
+  onNotify?: (message: string, kind?: 'info' | 'error' | 'success') => void;
   useMasterForBackup: boolean;
   setUseMasterForBackup: (val: boolean) => void;
   customBackupPassword: string;
@@ -45,6 +48,8 @@ interface SettingsBackupSectionProps {
 }
 
 export function SettingsBackupSection({
+  onDatabaseChanged,
+  onNotify,
   useMasterForBackup,
   setUseMasterForBackup,
   customBackupPassword,
@@ -358,6 +363,14 @@ export function SettingsBackupSection({
             </div>
           )}
         </div>
+      </div>
+    
+      {/* Vault Snapshot History (Sürümlü Şifreli Yedekler) */}
+      <div className="md:col-span-2">
+        <SettingsSnapshotHistoryCard
+          onDatabaseChanged={onDatabaseChanged}
+          onNotify={onNotify}
+        />
       </div>
     </div>
   );

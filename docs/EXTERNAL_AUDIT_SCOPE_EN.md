@@ -1,6 +1,6 @@
 # Aegis Vault 7 — Independent Security Audit Scope and Preparation Document
 
-**Document Version:** 2.1.0 · **Date:** September 23, 2026 · **Target Version:** Aegis Vault 7.0.6.0
+**Document Version:** 2.1.0 · **Date:** September 23, 2026 · **Target Version:** Aegis Vault 7.0.7.0
 
 ---
 
