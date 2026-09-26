@@ -340,6 +340,17 @@ fn write_vault_database_file(
     database_path: &std::path::Path,
     contents: &str,
 ) -> Result<(), String> {
+    // Y-17: the write path had no size ceiling while the read path refused
+    // files above MAX_VAULT_FILE_BYTES — an oversized write made the vault
+    // permanently unreadable. Enforce the same limit on both sides.
+    if (contents.len() as u64) > MAX_VAULT_FILE_BYTES {
+        return Err(format!(
+            "vault database payload ({} MB) exceeds the maximum allowed limit of {} MB",
+            contents.len() / (1024 * 1024),
+            MAX_VAULT_FILE_BYTES / (1024 * 1024)
+        ));
+    }
+
     let tmp_path = database_path.with_extension(format!("tmp-{}", std::process::id()));
 
     {

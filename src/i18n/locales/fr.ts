@@ -221,6 +221,7 @@ export const fr = {
   'vaultForm.field.url': 'URL SÉCURISÉE',
   'vaultForm.placeholder.url': 'par ex. github.com',
   'vaultForm.validation.titleRequired': 'Veuillez saisir un titre descriptif pour cet enregistrement.',
+  "vaultForm.saveFailed": "Échec de l'enregistrement de l'élément. Veuillez réessayer.",
   'vaultForm.attachment.fallbackName': 'Fichier joint',
   'vaultForm.footer.cancel': 'Annuler',
   'vaultForm.footer.processing': 'Traitement...',

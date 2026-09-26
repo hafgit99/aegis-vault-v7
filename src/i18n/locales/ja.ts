@@ -221,6 +221,7 @@ export const ja = {
   'vaultForm.field.url': '安全な URL',
   'vaultForm.placeholder.url': '例えばgithub.com',
   'vaultForm.validation.titleRequired': 'このレコードのわかりやすいタイトルを入力してください。',
+  'vaultForm.saveFailed': 'アイテムを保存できませんでした。もう一度お試しください。',
   'vaultForm.attachment.fallbackName': '添付ファイル',
   'vaultForm.footer.cancel': 'キャンセル',
   'vaultForm.footer.processing': '処理...',

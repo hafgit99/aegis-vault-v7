@@ -122,7 +122,7 @@ fn check_pipewire_recording() -> bool {
 fn check_dbus_screencast_sessions() -> bool {
     use std::process::Command;
     if let Ok(output) = Command::new("busctl")
-        .args(&["--user", "tree", "org.freedesktop.portal.Desktop"])
+        .args(["--user", "tree", "org.freedesktop.portal.Desktop"])
         .output()
     {
         if output.status.success() {
@@ -134,7 +134,7 @@ fn check_dbus_screencast_sessions() -> bool {
         }
     }
     if let Ok(output) = Command::new("busctl")
-        .args(&["--user", "tree", "org.freedesktop.portal.ScreenCast"])
+        .args(["--user", "tree", "org.freedesktop.portal.ScreenCast"])
         .output()
     {
         if output.status.success() {
@@ -148,7 +148,7 @@ fn check_dbus_screencast_sessions() -> bool {
         }
     }
     if let Ok(output) = Command::new("dbus-send")
-        .args(&[
+        .args([
             "--session",
             "--dest=org.freedesktop.portal.Desktop",
             "--type=method_call",

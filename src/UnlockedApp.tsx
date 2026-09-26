@@ -156,13 +156,17 @@ export default function UnlockedApp({
     showNotification,
   });
 
+  // Y-23: stable identity — the runtime-security effects bind native
+  // listeners once; a fresh callback here would tear them down every render.
+  const handleSensitiveStateClear = useCallback(() => {
+    resetReveals();
+    clearCopiedField();
+  }, [resetReveals, clearCopiedField]);
+
   const { privacyShieldVisible, screenRecordingDetected } = useRuntimeSecurity({
     unlocked,
     onLock: handleLock,
-    onSensitiveStateClear: () => {
-      resetReveals();
-      clearCopiedField();
-    },
+    onSensitiveStateClear: handleSensitiveStateClear,
     backgroundLockDelayMs,
     isAutofillMode: Boolean(pendingAutofillRequest),
   });

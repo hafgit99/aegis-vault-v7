@@ -221,6 +221,7 @@ export const ru = {
   'vaultForm.field.url': 'БЕЗОПАСНЫЙ URL-адрес',
   'vaultForm.placeholder.url': 'например github.com',
   'vaultForm.validation.titleRequired': 'Введите описательное название для этой записи.',
+  'vaultForm.saveFailed': 'Не удалось сохранить элемент. Попробуйте снова.',
   'vaultForm.attachment.fallbackName': 'Прикрепленный файл',
   'vaultForm.footer.cancel': 'Отмена',
   'vaultForm.footer.processing': 'Обработка...',

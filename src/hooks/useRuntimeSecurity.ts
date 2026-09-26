@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
 
 import { enableNativeScreenCaptureProtection } from '../lib/nativeSecurity';
@@ -21,11 +21,23 @@ export function useRuntimeSecurity({
   const [privacyShieldVisible, setPrivacyShieldVisible] = useState(false);
   const [screenRecordingDetected, setScreenRecordingDetected] = useState(false);
 
+  // Y-23: keep the latest callbacks in refs so the native listener and the
+  // visibility/lock-timer effects bind ONCE. Unstable callback identities
+  // (UnlockedApp re-renders at 1 Hz) used to re-run these effects every
+  // render, leaking Tauri listeners and cancelling pending background locks.
+  const onLockRef = useRef(onLock);
+  const onSensitiveStateClearRef = useRef(onSensitiveStateClear);
+  useEffect(() => {
+    onLockRef.current = onLock;
+    onSensitiveStateClearRef.current = onSensitiveStateClear;
+  });
+
   useEffect(() => {
     void enableNativeScreenCaptureProtection();
   }, []);
 
   useEffect(() => {
+    let disposed = false;
     let unlistenFn: (() => void) | null = null;
 
     if (typeof window !== 'undefined' && window.__TAURI_INTERNALS__) {
@@ -33,22 +45,26 @@ export function useRuntimeSecurity({
         const isRecording = event.payload;
         setScreenRecordingDetected(isRecording);
         if (isRecording) {
-          onSensitiveStateClear();
-          onLock();
+          onSensitiveStateClearRef.current();
+          onLockRef.current();
         }
       }).then((unlisten) => {
-        unlistenFn = unlisten;
+        // Y-23: the IPC round-trip resolves after cleanup on fast unmounts —
+        // unlisten immediately instead of dropping it into a dead ref.
+        if (disposed) unlisten();
+        else unlistenFn = unlisten;
       }).catch(err => {
         console.error('Failed to listen to screen-capture-status-changed:', err);
       });
     }
 
     return () => {
+      disposed = true;
       if (unlistenFn) {
         unlistenFn();
       }
     };
-  }, [onLock, onSensitiveStateClear]);
+  }, []);
 
   useEffect(() => {
     if (!unlocked) {
@@ -63,6 +79,7 @@ export function useRuntimeSecurity({
     }
 
     let lockTimer: ReturnType<typeof setTimeout> | null = null;
+    let backgroundDeadline = 0;
 
     const clearLockTimer = () => {
       if (lockTimer) {
@@ -77,10 +94,11 @@ export function useRuntimeSecurity({
       // timer so the user does not see a black screen.
       if (isAutofillMode) return;
       setPrivacyShieldVisible(true);
-      onSensitiveStateClear();
+      onSensitiveStateClearRef.current();
       clearLockTimer();
+      backgroundDeadline = Date.now() + backgroundLockDelayMs;
       lockTimer = setTimeout(() => {
-        onLock();
+        onLockRef.current();
       }, backgroundLockDelayMs);
     };
 
@@ -88,7 +106,15 @@ export function useRuntimeSecurity({
       if (document.hidden) {
         shieldAndScheduleLock();
       } else {
+        // Y-6: browsers throttle or suspend timers while hidden — returning
+        // to the window must honour the deadline instead of unconditionally
+        // cancelling the pending lock.
+        const deadlinePassed = Date.now() >= backgroundDeadline;
         clearLockTimer();
+        if (deadlinePassed) {
+          onLockRef.current();
+          return;
+        }
         setPrivacyShieldVisible(false);
       }
     };
@@ -98,7 +124,7 @@ export function useRuntimeSecurity({
       // autofill intent briefly steals focus from the WebView.
       if (isAutofillMode) return;
       setPrivacyShieldVisible(true);
-      onSensitiveStateClear();
+      onSensitiveStateClearRef.current();
     };
 
     const handleFocus = () => {
@@ -117,7 +143,7 @@ export function useRuntimeSecurity({
       window.removeEventListener('blur', handleBlur);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [backgroundLockDelayMs, isAutofillMode, onLock, onSensitiveStateClear, unlocked]);
+  }, [backgroundLockDelayMs, isAutofillMode, unlocked]);
 
   return {
     privacyShieldVisible: privacyShieldVisible || screenRecordingDetected,

@@ -26,6 +26,7 @@ export const securityEventCodes = {
   androidAutofillFailed: 'android.autofill.failed',
   androidRuntimeRiskDetected: 'android.runtime.riskDetected',
   assetIntegrityFailed: 'application.assetIntegrity.failed',
+  appBundleLoadFailed: 'application.bundle.loadFailed',
   securityLegacyCryptoWarning: 'security.legacyCryptoWarning',
   cspViolation: 'security.cspViolation',
 } as const;

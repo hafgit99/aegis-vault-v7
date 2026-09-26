@@ -221,6 +221,7 @@ export const ar = {
   'vaultForm.field.url': 'عنوان URL آمن',
   'vaultForm.placeholder.url': 'على سبيل المثال github.com',
   'vaultForm.validation.titleRequired': 'الرجاء إدخال عنوان وصفي لهذا السجل.',
+  'vaultForm.saveFailed': 'العنصر لم يتم حفظه. حاول مرة أخرى.',
   'vaultForm.attachment.fallbackName': 'الملف المرفق',
   'vaultForm.footer.cancel': 'يلغي',
   'vaultForm.footer.processing': 'يعالج...',

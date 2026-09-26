@@ -222,6 +222,7 @@ export const tr = {
     'vaultForm.field.url': 'GÜVENLİ BAĞLANTI (URL)',
     'vaultForm.placeholder.url': 'örn. github.com',
     'vaultForm.validation.titleRequired': 'Lütfen kayıt için açıklayıcı bir başlık belirleyin.',
+    'vaultForm.saveFailed': 'Öğe kaydedilemedi. Lütfen tekrar deneyin.',
     'vaultForm.attachment.fallbackName': 'Ekli Dosya',
     'vaultForm.footer.cancel': 'İptal',
     'vaultForm.footer.processing': 'İşleniyor...',

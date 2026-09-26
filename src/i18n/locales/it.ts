@@ -221,6 +221,7 @@ export const it = {
   'vaultForm.field.url': 'URL SICURO',
   'vaultForm.placeholder.url': 'per esempio. github.com',
   'vaultForm.validation.titleRequired': 'Inserisci un titolo descrittivo per questo record.',
+  "vaultForm.saveFailed": "Salvataggio dell'elemento non riuscito. Riprova.",
   'vaultForm.attachment.fallbackName': 'File allegato',
   'vaultForm.footer.cancel': 'Cancellare',
   'vaultForm.footer.processing': 'Elaborazione...',

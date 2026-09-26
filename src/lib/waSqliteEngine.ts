@@ -99,6 +99,7 @@ export interface WaSqliteEngine {
 
 export const WA_SQLITE_BOOTSTRAP_SCHEMA = `
 PRAGMA foreign_keys = ON;
+PRAGMA busy_timeout = 5000;
 CREATE TABLE IF NOT EXISTS storage_metadata (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
@@ -252,6 +253,16 @@ export function createWaSqliteEngine(options: WaSqliteEngineOptions = {}): WaSql
   let db: number | null = null;
   let registeredVfs: WaSqliteRegisteredVfs | null = null;
 
+  // K-6: serialize ALL engine access on the single shared handle. Two
+  // overlapping transactions previously aborted each other (BEGIN inside
+  // BEGIN → ROLLBACK of the first transaction's uncommitted work).
+  let accessQueue: Promise<unknown> = Promise.resolve();
+  function enqueue<T>(fn: () => Promise<T>): Promise<T> {
+    const run = accessQueue.then(fn, fn);
+    accessQueue = run.catch(() => {});
+    return run;
+  }
+
   async function ensureOpen(): Promise<{ sqlite3: WaSqliteApi; db: number }> {
     if (!runtime) {
       runtime = await loadRuntime();
@@ -273,63 +284,69 @@ export function createWaSqliteEngine(options: WaSqliteEngineOptions = {}): WaSql
     };
   }
 
-  return {
-    async initialize(): Promise<WaSqliteEngineHealth> {
-      const opened = await ensureOpen();
-      await opened.sqlite3.exec(opened.db, WA_SQLITE_BOOTSTRAP_SCHEMA);
-      const tableResult = await this.execute(
-        "SELECT COUNT(*) AS table_count FROM sqlite_master WHERE type = 'table';",
-      );
-      const tableCount = Number(tableResult.rows[0]?.[0] ?? 0);
+  async function executeInternal(sql: string, params?: SqlParams): Promise<VaultStorageQueryResult> {
+    const opened = await ensureOpen();
+    const rows: unknown[][] = [];
+    let columns: string[] = [];
 
-      return {
-        initialized: true,
-        databaseName,
-        tableCount,
-        persistenceProfile,
-      };
-    },
-
-    async execute(sql: string, params?: SqlParams): Promise<VaultStorageQueryResult> {
-      const opened = await ensureOpen();
-      const rows: unknown[][] = [];
-      let columns: string[] = [];
-
-      try {
-        const boundSql = bindSqlParams(sql, params);
-        await opened.sqlite3.exec(opened.db, boundSql, (row, rowColumns) => {
-          columns = rowColumns;
-          rows.push(row.map(normalizeWaSqliteValue));
-        });
-      } catch (error) {
-        return {
-          columns,
-          rows,
-          error: error instanceof Error ? error.message : 'wa-sqlite-execute-failed',
-        };
-      }
-
+    try {
+      const boundSql = bindSqlParams(sql, params);
+      await opened.sqlite3.exec(opened.db, boundSql, (row, rowColumns) => {
+        columns = rowColumns;
+        rows.push(row.map(normalizeWaSqliteValue));
+      });
+    } catch (error) {
       return {
         columns,
         rows,
+        error: error instanceof Error ? error.message : 'wa-sqlite-execute-failed',
       };
-    },
+    }
 
-    async executeReadOnly(sql: string, params?: SqlParams): Promise<VaultStorageQueryResult> {
-      const boundSql = bindSqlParams(sql, params);
-      if (!isReadOnlySelect(boundSql)) {
+    return {
+      columns,
+      rows,
+    };
+  }
+
+  async function executeReadOnlyInternal(sql: string, params?: SqlParams): Promise<VaultStorageQueryResult> {
+    const boundSql = bindSqlParams(sql, params);
+    if (!isReadOnlySelect(boundSql)) {
+      return {
+        columns: [],
+        rows: [],
+        error: 'wa-sqlite-read-only-query-required',
+      };
+    }
+
+    return executeInternal(boundSql);
+  }
+
+  return {
+    async initialize(): Promise<WaSqliteEngineHealth> {
+      return enqueue(async () => {
+        const opened = await ensureOpen();
+        await opened.sqlite3.exec(opened.db, WA_SQLITE_BOOTSTRAP_SCHEMA);
+        const tableResult = await executeInternal(
+          "SELECT COUNT(*) AS table_count FROM sqlite_master WHERE type = 'table';",
+        );
+        const tableCount = Number(tableResult.rows[0]?.[0] ?? 0);
+
         return {
-          columns: [],
-          rows: [],
-          error: 'wa-sqlite-read-only-query-required',
+          initialized: true,
+          databaseName,
+          tableCount,
+          persistenceProfile,
         };
-      }
-
-      return this.execute(boundSql);
+      });
     },
+
+    execute: (sql: string, params?: SqlParams) => enqueue(() => executeInternal(sql, params)),
+
+    executeReadOnly: (sql: string, params?: SqlParams) => enqueue(() => executeReadOnlyInternal(sql, params)),
 
     async selectObjects(sql: string, params?: SqlParams): Promise<Array<Record<string, unknown>>> {
-      const result = await this.executeReadOnly(sql, params);
+      const result = await enqueue(() => executeReadOnlyInternal(sql, params));
       if (result.error) {
         throw new Error(result.error);
       }
@@ -338,17 +355,19 @@ export function createWaSqliteEngine(options: WaSqliteEngineOptions = {}): WaSql
     },
 
     async close(): Promise<void> {
-      if (runtime && db !== null) {
-        const closingDb = db;
-        db = null;
-        await runtime.sqlite3.close(closingDb);
-      }
+      return enqueue(async () => {
+        if (runtime && db !== null) {
+          const closingDb = db;
+          db = null;
+          await runtime.sqlite3.close(closingDb);
+        }
 
-      if (registeredVfs) {
-        const closingVfs = registeredVfs;
-        registeredVfs = null;
-        await closingVfs.close?.();
-      }
+        if (registeredVfs) {
+          const closingVfs = registeredVfs;
+          registeredVfs = null;
+          await closingVfs.close?.();
+        }
+      });
     },
   };
 }

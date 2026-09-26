@@ -160,8 +160,19 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
 
   const handleBiometricUnlock = useCallback(async () => {
     if (isBiometricPendingRef.current) return;
+
+    // Y-1: the biometric path previously bypassed brute-force lockout —
+    // authenticators rate-limit nothing, so the password path's gates apply
+    // here too, before any key material is unwrapped.
+    const lockoutMs = getLockoutRemainingMs();
+    if (lockoutMs > 0) {
+      setLockoutRemainingMs(lockoutMs);
+      setBiometricError(getRateLimitMessage(Math.ceil(lockoutMs / 1000)));
+      return;
+    }
+
     isBiometricPendingRef.current = true;
-    
+
     setBiometricError(null);
     setError(null);
     setBiometricLoading(true);
@@ -174,9 +185,15 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
       const currentRemembered = getRememberedAccountSecretKey();
       const effectiveSecretKey = bioSecretKey || currentRemembered;
       if (await verifyMasterPassword(decryptedMaster, effectiveSecretKey)) {
+        clearLockoutState();
+        setLockoutRemainingMs(0);
         onUnlock();
       } else {
         triggerShake();
+        // Y-1: a failed biometric verification feeds the same brute-force
+        // lockout as a failed password attempt.
+        const lockout = recordFailedUnlockAttempt();
+        setLockoutRemainingMs(Math.max(0, lockout.lockedUntil - Date.now()));
         throw new Error(t('lock.error.biometricIntegrity'));
       }
     } catch (err: unknown) {
@@ -187,16 +204,17 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
     }
   }, [onUnlock, t]);
 
-  // Auto trigger biometric prompt on lock screen if enabled
+  // Auto trigger biometric prompt on lock screen if enabled. Y-1: never
+  // auto-prompt while a brute-force lockout is active.
   useEffect(() => {
-    if (isSetup && isBioEnabled && !hasAutoTriggeredRef.current) {
+    if (isSetup && isBioEnabled && !isLockedOut && !hasAutoTriggeredRef.current) {
       hasAutoTriggeredRef.current = true;
       const timer = setTimeout(() => {
         handleBiometricUnlock();
       }, 800);
       return () => clearTimeout(timer);
     }
-  }, [handleBiometricUnlock, isBioEnabled, isSetup]);
+  }, [handleBiometricUnlock, isBioEnabled, isSetup, isLockedOut]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

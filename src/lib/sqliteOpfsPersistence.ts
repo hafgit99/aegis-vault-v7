@@ -160,9 +160,15 @@ export async function loadPersistedVaultDatabase(): Promise<PersistedLoadResult>
 /**
  * Writes the payload string to the sandboxed OPFS file standard in the background.
  * Uses Promise.race to enforce a timeout in case file locks are held by old sessions (hot-reloads).
+ *
+ * K-5: throws on every real failure (unsupported createWritable, write error,
+ * timeout) instead of logging-and-resolving — callers decide what "nothing
+ * was written" means for their persistence path.
  */
 async function writeToOPFSWithTimeout(payloadStr: string, timeoutMs: number): Promise<void> {
   if (typeof navigator === 'undefined' || !navigator.storage || !navigator.storage.getDirectory) {
+    // No OPFS API at all: treated as a benign skip (desktop/test environments
+    // where another persistence path is authoritative).
     return;
   }
 
@@ -170,27 +176,45 @@ async function writeToOPFSWithTimeout(payloadStr: string, timeoutMs: number): Pr
     const root = await navigator.storage.getDirectory();
     const fileHandle = await root.getFileHandle(DB_FILENAME, { create: true });
 
-    // Use createWritable if supported (standard), or fallback to alternative file APIs
-    if ('createWritable' in fileHandle) {
-      const writable = await (fileHandle as FileSystemFileHandle & { createWritable(): Promise<FileSystemWritableFileStream> }).createWritable();
+    // K-5: a missing createWritable must fail loudly — silently resolving
+    // here made every save a no-op that still reported success.
+    if (!('createWritable' in fileHandle)) {
+      throw new Error('OPFS createWritable is not supported in this environment');
+    }
+    const writable = await (fileHandle as FileSystemFileHandle & { createWritable(): Promise<FileSystemWritableFileStream> }).createWritable();
+    try {
       await writable.write(payloadStr);
       await writable.close();
+    } catch (err) {
+      // O-23: abort on failure so the exclusive lock does not leak and
+      // poison every subsequent createWritable() for this page.
+      try {
+        await writable.abort();
+      } catch {
+        /* best effort — the original failure is what matters */
+      }
+      throw err;
     }
   })();
 
+  let timeoutTimer: ReturnType<typeof setTimeout> | null = null;
   const timeoutPromise = new Promise<void>((_, reject) => {
-    setTimeout(() => reject(new Error('OPFS write timed out (lock leak suspected)')), timeoutMs);
+    timeoutTimer = setTimeout(() => reject(new Error('OPFS write timed out (lock leak suspected)')), timeoutMs);
   });
 
   try {
     await Promise.race([opfsWritePromise, timeoutPromise]);
   } catch (err) {
+    clearTimeout(timeoutTimer ?? undefined);
     logSecurityEvent(
       securityEventCodes.storageDesktopWriteFailed,
       'OPFS mirror write failed or timed out.',
       'critical',
       { error: err instanceof Error ? err.message : String(err) },
     );
+    throw err;
+  } finally {
+    clearTimeout(timeoutTimer ?? undefined);
   }
 }
 
@@ -218,10 +242,19 @@ export async function persistVaultDatabase(state: VersionedVaultDatabaseState): 
     writeLocalFallbackMirror(state, payloadStr, savedToDesktop);
 
     if (isTestEnv || !savedToDesktop) {
-      await writeToOPFSWithTimeout(payloadStr, 1000);
+      // K-5: when OPFS is the primary persistence path (web builds, tests),
+      // its failure is fatal — returning `true` here used to laundisempty
+      // or failed writes as success.
+      try {
+        await writeToOPFSWithTimeout(payloadStr, 1000);
+      } catch {
+        return false;
+      }
     } else {
-      // Native app-data writes are already durable; OPFS is only a secondary mirror there.
-      void writeToOPFSWithTimeout(payloadStr, 1000);
+      // Native app-data writes are already durable; OPFS is only a secondary
+      // mirror there — failures are logged inside and must not crash the
+      // fire-and-forget chain.
+      void writeToOPFSWithTimeout(payloadStr, 1000).catch(() => {});
     }
     return true;
   } catch (err) {

@@ -8,6 +8,7 @@
 import { Download, RefreshCw, Sparkles, X } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
+import { ProgressFill } from './ui/ProgressFill';
 import type { UseAutoUpdateCheckResult } from '../hooks/useAutoUpdateCheck';
 
 interface UpdateNotificationBannerProps {
@@ -72,9 +73,9 @@ export default function UpdateNotificationBanner({ autoUpdate }: UpdateNotificat
 
           {isDownloading && (
             <div className="w-full sm:w-48 h-1.5 bg-surface-low rounded-full overflow-hidden mt-1.5 border border-outline-variant/20">
-              <div
+              <ProgressFill
                 className="h-full bg-brand-primary transition-all duration-300"
-                style={{ width: `${downloadProgress}%` }}
+                percent={downloadProgress}
               />
             </div>
           )}

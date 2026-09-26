@@ -6,6 +6,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import fc from 'fast-check';
 
 import type { VaultItem } from '../types';
+
+// K-2: real Argon2id WASM crashes the jsdom test fork ("Failed to parse URL
+// from //argon2.wasm" -> abort). Deterministic stand-in keeps round-trip
+// properties meaningful without spawning the WASM runtime.
+vi.mock('./argon2id', () => ({
+  deriveArgon2idKey: vi.fn(async (password: string, salt: string) => {
+    const data = new TextEncoder().encode(`${password}:${salt}`);
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    return new Uint8Array(digest);
+  }),
+}));
 import {
   base64urlDecode,
   base64urlEncode,
@@ -32,8 +43,8 @@ const arbitraryVaultItem = fc.record({
   favorite: fc.boolean(),
 }) as fc.Arbitrary<VaultItem>;
 
-// Generate passwords that meet the minimum length requirement (>= 4 chars)
-const sharePassword = fc.string({ minLength: 4, maxLength: 64 });
+// K-2: generateShareUrl rejects passwords below the 12-char minimum
+const sharePassword = fc.string({ minLength: 12, maxLength: 64 });
 
 describe('share URL fuzz tests', () => {
   beforeEach(() => {
@@ -110,7 +121,7 @@ describe('share URL fuzz tests', () => {
       fc.asyncProperty(
         arbitraryVaultItem,
         sharePassword,
-        sharePassword.filter((p) => p.length >= 4),
+        sharePassword.filter((p) => p.length >= 12),
         async (item, correctPassword, wrongPassword) => {
           // Ensure passwords are different
           if (correctPassword === wrongPassword) return;

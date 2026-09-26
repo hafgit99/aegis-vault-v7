@@ -221,6 +221,7 @@ export const pt = {
   'vaultForm.field.url': 'URL SEGURO',
   'vaultForm.placeholder.url': 'por exemplo github.com',
   'vaultForm.validation.titleRequired': 'Insira um título descritivo para este registro.',
+  'vaultForm.saveFailed': 'Falha ao salvar o item. Tente novamente.',
   'vaultForm.attachment.fallbackName': 'Arquivo anexado',
   'vaultForm.footer.cancel': 'Cancelar',
   'vaultForm.footer.processing': 'Processamento...',
