@@ -48,7 +48,12 @@ beforeEach(() => {
 });
 
 describe('argon2id adapter', () => {
-  it('derives a key with Argon2id parameters', async () => {
+  it('derives a key with Argon2id parameters, raising weak ones to the floor', async () => {
+    // O-6: this test previously asserted a 16-byte output, which meant the JS
+    // path passed a short hash length straight through while the Rust IPC
+    // boundary raised it to 32. The two ends of the same request disagreed.
+    // A short output is a weakness rather than an attack, so it keeps the
+    // original "raise to the floor" behaviour — only the ceiling is new.
     const key = await deriveArgon2idKey('password', 'salt', {
       memoryKiB: 1024,
       iterations: 2,
@@ -56,13 +61,13 @@ describe('argon2id adapter', () => {
       hashLength: 16,
     });
 
-    expect(key).toHaveLength(16);
+    expect(key).toHaveLength(32);
     expect(hash).toHaveBeenCalledWith(
       expect.objectContaining({
         pass: 'password',
         salt: 'salt',
         type: 2,
-        hashLen: 16,
+        hashLen: 32,
         time: 3,
         mem: 8192,
         parallelism: 1,

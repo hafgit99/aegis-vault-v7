@@ -72,6 +72,54 @@ import {
  */
 export type SQLiteRow = VaultDatabaseRow;
 
+/** O-8: how a sealed vault with no integrity ledger is reported. */
+export interface LostLedgerReport {
+  /** True when the vault carries a seal but the durable high-water mark is gone. */
+  detected: boolean;
+  /** The version the vault itself claims to have been sealed at, when readable. */
+  vaultSealedAtVersion: number | null;
+}
+
+/**
+ * O-8: detects that the durable high-water mark has been lost.
+ *
+ * ## Why this reports instead of refusing
+ *
+ * The ledger lives in origin-scoped client storage (IndexedDB with a
+ * localStorage mirror and an in-memory cache). It is therefore lost *exactly*
+ * when the user clears site data or restores storage from a backup — which is
+ * also the moment an attacker replaying an old vault file would want. No
+ * client-side mark survives that; anything claiming otherwise is either stored
+ * in the vault file (where editing the file is enough again) or unachievable
+ * without a server or a platform keychain.
+ *
+ * Failing closed here was considered and rejected. A user who deliberately
+ * clears site data and then restores their own encrypted backup would be locked
+ * out of their password manager — bricking the vault to defend against a case
+ * they cannot be expected to control, and that they may well have caused
+ * themselves. Turning a working vault into an unusable one is a worse harm than
+ * a lost detection signal.
+ *
+ * So the condition is made **visible** instead: a sealed vault whose ledger has
+ * vanished is reported as a security event, which is the point at which a
+ * maintainer can decide the residual risk is unacceptable and fund a real
+ * solution (platform keychain, or server-held attestation) rather than a
+ * heuristic that silently locks people out.
+ */
+export function detectLostIntegrityLedger(
+  state: { integrityHmac?: string; sealedAtVersionCounter?: number } | null,
+): LostLedgerReport {
+  if (!state || !state.integrityHmac) {
+    // No seal: either a fresh vault or one predating the ledger. Not a signal.
+    return { detected: false, vaultSealedAtVersion: null };
+  }
+  if (readVaultIntegrityLedger() !== null) {
+    return { detected: false, vaultSealedAtVersion: state.sealedAtVersionCounter ?? null };
+  }
+
+  return { detected: true, vaultSealedAtVersion: state.sealedAtVersionCounter ?? null };
+}
+
 /**
  * Y-5: merges the on-disk ledger with the in-session high-water mark.
  *
@@ -259,6 +307,23 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
       // K-3: remember the stored bytes so a later write can ask "was this
       // state verified?" before it re-signs anything.
       this.loadedStateSnapshot = this.cloneState();
+
+      // O-8: a sealed vault whose durable high-water mark has vanished means the
+      // rollback signal is gone. Reported, not refused — see
+      // `detectLostIntegrityLedger` for why refusing would be the wrong trade.
+      const lostLedger = detectLostIntegrityLedger(result.state);
+      if (lostLedger.detected) {
+        logSecurityEvent(
+          securityEventCodes.storageLegacyMigrationFailed,
+          'Vault integrity ledger is missing for a sealed vault: the durable high-water ' +
+            'mark was lost, so a replayed older vault file can no longer be detected. ' +
+            'The vault is NOT locked — refusing here would deny a user who legitimately ' +
+            'cleared site data and restored their own backup.',
+          'warning',
+          { vaultSealedAtVersion: lostLedger.vaultSealedAtVersion },
+        );
+      }
+
       this.logQuery(result.logLabel, 'SUCCESS', 1);
       if (result.resaveAfterLoad) {
         await this.saveToPersistentStorage();

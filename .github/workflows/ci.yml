@@ -161,6 +161,13 @@ jobs:
       - name: 'Security: release signing gate (Y-19)'
         run: npm run security:release-signing
 
+      # Y-16 / O-6: the Rust IPC boundary and the TypeScript Argon2id layer are
+      # two implementations of one policy. If they drift, a parameter the desktop
+      # side refuses could still be honoured by the WASM path, and nothing else
+      # would notice.
+      - name: 'Security: Argon2id bound parity (Y-16 / O-6)'
+        run: npm run security:argon2-bounds
+
       # N-2 / #26: the i18n audit was never wired into CI, which is why a
       # two-language key regression (double-quoted keys are invisible to the
       # audit's single-quote key regex) stayed invisible until it was found

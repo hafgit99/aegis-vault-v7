@@ -1575,6 +1575,63 @@ Lease'ın whitelist'e eklemesi, son lease bırakılınca geri alması, **eşzama
 
 ---
 
+## 1.15 O-6/O-7 ve O-8 Çalışma Raporu (Güncelleme: 27.09.2026, 00:10)
+
+---
+
+### O-6/O-7 — Argon2id Üst Sınırları (JS tarafı)
+
+Y-16'da Rust IPC sınırına taban **ve** tavan konmuştu; JS/WASM yolunda yalnızca taban vardı. Yani bir ithal yedekten veya hazırlanmış bir kasa dosyasından gelen KDF parametreleri sınırsız bellek veya iterasyon isteyebiliyordu.
+
+**Kapatma.** `argon2id.ts` artık aynı tavanları kullanıyor ve **reddediyor**. Reddetme, Rust tarafıyla aynı gerekçeyle: dört milyar iterasyon isteğini sessizce yiritize indirip "başarılı" demek, çağırana istediği parametrelerle değil başkasıyla türetilmiş bir anahtar vermek demektir.
+
+**Önemli ayrım — taban mı tavan mı?** Zayıf bir parametre *saldırı değil, hata*dır. `hashLength: 16` isteyen bir çağıran sessizce 32'ye yükseltilmeye devam ediyor; yalnızca **tavanı aşan** değerler reddediliyor. Bu ayrım testlerde açıkça sabitlendi.
+
+#### Bu turda bulunan iki uç uyumsuzluğu
+
+1. **JS'te `hashLength: 16` doğrudan geçiriliyordu**, Rust ise 32'ye yükseltiyordu. Aynı isteğin iki ucu farklı sonuç veriyordu — ve bunu sabitleyen mevcut bir test vardı. Test, JS'in eski davranışını doğruluyordu; Rust ile hizalanacak şekilde güncellendi.
+2. **`MIN_ARGON2ID_PARALLELISM` ve `MIN_ARGON2ID_HASH_LENGTH` hiç tanımlı değildi** — tabanlar gömülü sayılardan geliyordu. Bu, politikayı iki yerde ayrı ayrı yazmak demek; ikisi de adlandırılmış sabit yapıldı.
+
+#### Yeni Statik Kapı — `security:argon2-bounds`
+
+İki uç **aynı politikanın iki uygulaması**. Ayrışırlar masaüstü tarafının reddettiği bir parametreyi WASM yolu yine de uygulayabilir — Y-16'nın durdurduğu DoS sessizce geri döner. Test paketinin hiçbir yeri bunu yakalamazdı.
+
+Kapı 8 sınır sabitini, hata ön ekini ve iki sevk edilen profili karşılaştırıyor. Mutasyonla doğrulandı: JS tarafındaki `MAX_ARGON2ID_ITERATIONS` 20 → 2000 yapıldığında kapı doğru şekilde ayrışmayı bildirdi.
+
+---
+
+### O-8 — Yüksek Su İşaretinin Cihaz Kaybında Korunması
+
+**Bu bulgu koda dönüştürülmedi, ve bu bilinçli bir karar.** Gerekçeyi kayda geçirmek, sahte bir düzeltmeyi tercih etmekten daha doğru.
+
+Ledger origin kapsamlı istemci depolamasında yaşıyor (`getIndexedDbItemSync` → localStorage + bellek önbelleği). Yani **kullanıcı site verisini sildiğinde tam olarak o an kayboluyor** — ki bu, saldırganın eski bir kasa dosyasını geri oynatmak isteyeceği an da. İstemci tarafında hiçbir işaret bunu atlatamaz; atlatacağını iddia eden ya kasası dosyasının içindedir (dosyayı düzenlemek yeniden yeterli olur) ya da sunucu/platform anahtar deposu gerektirir.
+
+**Fail-closed burada düşünüldü ve reddedildi.** Site verisini bilerek temizleyip kendi şifreli yedeğini geri yükleyen bir kullanıcı, **parola yöneticisinden kilitlenirdi**. Çalışan bir kasayı kullanılamaz hale getirmek, kontrol edemeyeceği (ve kendisinin de neden olmuş olabileceği) bir senaryoya karşı savunmak için ödediğimiz zarardan daha ağırdır.
+
+**Bunun yerine durum görünür kılındı.** `detectLostIntegrityLedger` mühürlü bir kasanın ledger'ının kaybolduğunu saptar ve yükleme anında `warning` seviyesinde bir güvenlik olayı kaydeder. Gerekçe kodun içinde yazılıdır; bu, "sinyal kaybı" noktasının bakımcıya görünür olması ve gerçek bir çözümün (platform anahtar deposu veya sunucu tarafı attestation) bütçelenmesi için karar noktası oluşturur.
+
+Testler "kasayı kilitlememeyi" de bir özellik olarak sabitliyor: tespit bilgilendirici, fırlatmıyor ve hiçbir şeyi geri tutmuyor.
+
+#### Testler (7 adet)
+
+Mühürsüz kasa (sinyal değil), ledger sağlam, ledger kayıp, ledger **bozuk** (okunamayan ledger da aynı risk), sürüm bilgisi yok, ve "bilerek bloklamıyor" davranışı.
+
+---
+
+### Doğrulama
+
+| Kontrol | Sonuç |
+|---|---|
+| `npm run typecheck` | ✅ |
+| `npm run lint` | ✅ **0 hata, 23 uyarı** (taban korundu) |
+| `npm run test:unit` | ✅ **2121 / 2121** (2100 → 2121, **+21**, 242 → 243 dosya) |
+| `npm run build` | ✅ |
+| `npm run test:fuzz` | ✅ 37 |
+| `cargo test --lib` | ✅ 57 / 57 |
+| 8 güvenlik kapısı | ✅ hepsi PASS (`security:argon2-bounds` **yeni**) |
+
+---
+
 ## 2. Mimari Özeti
 
 ```
@@ -2426,7 +2483,7 @@ Bu hook'ta **hiç `useEffect` yok** (grep: sıfır eşleşme). Hiçbir zamanlay�
 | 47 | Anlık görüntü geri yükleme işlemini atomik yapın; boyut bütçesi + sağlama doğrulaması; `pruneSnapshotsRetention(settings.maxSnapshots)`; yanlış olay kodunu düzeltin. **Kilit ekranından tek tıkla yeniden kurulum ✅ KAPANDI** (bkz. §1.5); geri yükleme işleminin kendisi hâlâ atomik değil → O-16/O-17. || 48 | ? **KAPANDI** (bkz. §1.6) — WebAuthn assertion imzası artık saklanan public key ile doğrulanıyor: challenge, origin, crossOrigin, rpIdHash, UP bayrağı, userHandle ve `signCount` klon sinyali dahil 9 kontrol. `signCount` artık yerel `+1` değil, doğrulanmış sayaç. |
 | 49 | CodeQL'e `rust` ve `java` ekleyin; Gradle `distributionSha256Sum` + `verification-metadata.xml` + dependabot `gradle` ekleyin. |
 | 50 | `UnlockedApp.test.tsx` yazın + dosya bazlı kapsam eşikleri koyun (O-34). |
-| 51 | Güvenilmeyen KDF parametrelerine üst sınır koyun, tabanı gerçek profile eşitleyin (O-6, O-7). |
+| 51 | ✅ **KAPANDI (bkz. §1.15)** — Güvenilmeyen KDF parametrelerine üst sınır kondu (O-6/O-7). Rust ve TypeScript sınırlarının ayrışmasını `security:argon2-bounds` kapısı engelliyor. |
 | 52 | `-keep` kuralını daraltın, Android imzalamayı Gradle'da zorunlu kılın, `apksigner` parmak izi doğrulaması ekleyin. |
 | 53 | Sürüm yayınlamayı taslak→yayın akışına çevirin; `latest.json` platform bütünlüğü iddiası ekleyin. |
 
