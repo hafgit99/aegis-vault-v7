@@ -262,7 +262,7 @@ pub fn write_pairing_token_file(path: &PathBuf, token: &str) -> io::Result<()> {
             .open(path)?;
         file.write_all(token.as_bytes())?;
         file.flush()?;
-        return Ok(());
+        Ok(())
     }
 
     #[cfg(windows)]
@@ -717,7 +717,7 @@ fn handle_client(
                     }
 
                     // Sort by score descending (highest score first)
-                    scored_credentials.sort_by(|a, b| b.0.cmp(&a.0));
+                    scored_credentials.sort_by_key(|(score, _)| std::cmp::Reverse(*score));
 
                     let matching: Vec<ExtensionCredential> = scored_credentials
                         .into_iter()
@@ -751,7 +751,7 @@ fn handle_client(
                                 scored_credentials.push((score, item.clone()));
                             }
                         }
-                        scored_credentials.sort_by(|a, b| b.0.cmp(&a.0));
+                        scored_credentials.sort_by_key(|(score, _)| std::cmp::Reverse(*score));
                         let matching: Vec<ExtensionCredential> = scored_credentials
                             .into_iter()
                             .map(|(_, cred)| cred)
