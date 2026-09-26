@@ -1,0 +1,12 @@
+# cargo-deny configuration — https://embarkstudios.github.io/cargo-deny/
+# Checked in CI: `cargo deny check advisories` (RustSec advisory gate).
+
+[advisories]
+version = 2
+ignore = [
+    # proc-macro-error is unmaintained (RUSTSEC-2024-0370). Transitive via
+    # tauri 2.11 -> gtk 0.18 -> glib-macros; upstream has no safe upgrade
+    # ("No safe upgrade is available!"). Revisit when the gtk-rs 0.19 /
+    # tauri stack migrates away from proc-macro-error.
+    "RUSTSEC-2024-0370",
+]
