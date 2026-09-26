@@ -95,6 +95,11 @@ jobs:
             -exec cp {} release-local/linux/ \;
           ls -la release-local/linux/
 
+      - name: 'Signing report gate — block unsigned releases (Y-19)'
+        run: npm run desktop:release:signing:report -- --platform linux --dir release-local/linux --require-signed
+
+      - name: Desktop release gate
+        run: npm run desktop:release:gate -- --platform linux
       - name: Upload Linux release artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
         with:
@@ -167,6 +172,11 @@ jobs:
           done
           ls -la release-local/macos/
 
+      - name: 'Signing report gate — block unsigned releases (Y-19)'
+        run: npm run desktop:release:signing:report -- --platform macos --dir release-local/macos --require-signed
+
+      - name: Desktop release gate
+        run: npm run desktop:release:gate -- --platform macos
       - name: Upload macOS release artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
         with:
@@ -231,6 +241,11 @@ jobs:
             Copy-Item -Destination release-local/windows
           Get-ChildItem release-local/windows | Select-Object -ExpandProperty Name
 
+      - name: 'Signing report gate — block unsigned releases (Y-19)'
+        run: npm run desktop:release:signing:report -- --platform windows --dir release-local/windows --require-signed
+
+      - name: Desktop release gate
+        run: npm run desktop:release:gate -- --platform windows
       - name: Upload Windows release artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
         with:
