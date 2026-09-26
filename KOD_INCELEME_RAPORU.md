@@ -1714,6 +1714,45 @@ Tek başlatma, eşzamanlı çağıranların paylaşımı, **başarısızlığın
 
 ---
 
+### O-14 — Okuma Filtresi ve Sınırlı Eşzamanlılık (KAPANDI)
+
+Bulgu iki ayrı şeyi birleştiriyordu: "`readVaultItemRows` filtresi, toplu şifreleme". İkisi de aynı dosyada ama farklı türden.
+
+#### 1. Filtre JavaScript'te değil SQLite'ta olmalı
+
+Satır geçerliliği kontrolü (`typeof id === 'string' && id.length > 0`) bir JS `.filter` idi. Bu, **bozuk satırların tam olarak reddetmek için önce köprüyü geçmesi** demek: her biri seçilip çözülüyor, sonra atılıyor. Yüksek seviyede şifreli sütunlar da taşınıyor.
+
+Tahmin: boş `id`'li satırlar nadirdir, kazanç sınırlı. Yanlış — `enc_metadata` her satırda **şifreli JSON**; bir 5.000 öğelik kasada bozuk satırların taşıdığı şey sayı değil, tam metin. Filtre `typeof(id) = 'text' AND length(id) > 0` olarak SQL'e itildi, **JS guard'ı da bırakıldı** (motor `WHERE`'i yok sayan bir stub veya alternatif implementasyon için emniyet). `typeof` koşulu önemli: sadece `length(id) > 0` yeterli olmazdı, çünkü sayısal `id` 0 değilse `length`'a girer.
+
+#### 2. Toplu şifreleme sıralıydı — ama `Promise.all` da doğru cevap değildi
+
+Dosyanın **kendisi tutarsızdı.** `reseedDemo` (§439) ve iki rekey yolu (§204, §263) `Promise.all` kullanıyordu; okuma yolu (§298) ve `saveVaultItemsWithKey` (§351) ise satır başına `await` eden sıralı döngülerdi. 5.000 öğeli bir kasada 5.000 tur bekleniyor.
+
+Ama `Promise.all` ile değiştirmek **kendimize DoS** olurdu. Bunu O-17 ile birleştirdiğimde fark ettim: snapshot geri yükleme 50.000 öğe kabul ediyor, dolayısıyla 50.000 eşzamanlı canlı öğe anahtarı + şifre metni = sekme büyüklüğünde bir tahsis. Hangi hesap yapılırsa yapılsın, uygulanacak olan zaman kazanımı ile hafıza patlaması arasındaki seçimdi.
+
+Çözüm: `mapWithConcurrency`, sınır **16**. WebCrypto işini zaten ana iş parçacığı dışında yürütüyor, dolayısıyla birkaç eşzamanlı istek bedava duvar-saati kazancı. Sınır, tüm WebCrypto yuvalarını meşgul tutarken büyük ama meşru bir içe aktarımı bellek patlamasına çevirmiyor. Sıra korunuyor.
+
+Bu kararın gerekçesini **kodun içine** yazdım, çünkü sınır belki de bugünün en büyük performans sorunu değil ve altı ay sonra "neden 16?" sorusu gelecek.
+
+**`onProgress` kasıtlı olarak yerinde bırakıldı.** Şifreleme fazına da sayaç eklemeyi denedim — bu, her öğe için iki kez sayma anlamına geliyordu ve ilerleme çubuğu gerçek işin ötesine geçecekti. `onProgress` kalıcı yazımları bildiriyor, öyle kalmalı.
+
+#### Testler (5) ve mutasyon
+
+Mutasyonlarla doğrulandı, üçü de doğru testi kırdı:
+
+| Mutasyon | Kırılan test |
+|---|---|
+| Sınırı `MAX_SAFE_INTEGER` yap | eşzamanlılık testi ✅ |
+| Çıktı sırasını ters çevir | sıra testi (2 test) ✅ |
+| SQL guard'ını sil | SQL filtresi testi ✅ |
+
+Test yazarken **iki tuzak vardı:**
+
+- **Boş `enc_metadata` hiç decrypt çağırmıyor.** İlk denemem elle yazılmış satırlarla ölçüm yapıyordu; decrypt yoluna hiç girmiyordu, tepe eşzamanlılığı 0 çıkıyordu ve test **anlamsız biçimde geçiyordu.** Gerçek şifreleme yolundan geçerek tohumladım.
+- **Testler birbirini zehirledi.** `vi.clearAllMocks()` yalnızca çağrı geçmişini siler, **implementasyonları silmez.** Kendi şifreleme implementasyonumu kuran testim, sonraki altı alakasız round-trip testini kırmızıya döndürdü. `beforeEach` içindeki `clearAllMocks` → `resetAllMocks` (Vitest 4 fabrika implementasyonunu geri yükler) düzeltmesi bir kusur düzeltmesi değil, **dosyada zaten var olan bir tuzağı kapatıyordu.**
+
+---
+
 ### Doğrulama
 
 | Kontrol | Sonuç |
@@ -1724,7 +1763,7 @@ Tek başlatma, eşzamanlı çağıranların paylaşımı, **başarısızlığın
 | `cargo test --lib` | ✅ 57 / 57 |
 | `npm run typecheck` | ✅ |
 | `npm run lint` | ✅ **0 hata, 23 uyarı** (taban korundu) |
-| `npm run test:unit` | ✅ **2133 / 2133** (2121 → 2133, **+12**) |
+| `npm run test:unit` | ✅ **2138 / 2138** (2121 → 2138, **+17**) |
 | `npm run build` | ✅ |
 | `npm run test:fuzz` | ✅ 37 |
 | 8 güvenlik kapısı | ✅ hepsi PASS (K-1 kapısı 18 → **20** kontrol) |
@@ -2570,7 +2609,7 @@ Bu hook'ta **hiç `useEffect` yok** (grep: sıfır eşleşme). Hiçbir zamanlay�
 | 35 | ? **KAPANDI** (bkz. §1.4) — `useAutoSnapshotScheduler` `UnlockedApp`e bağlandı (60 sn yoklama + açılışta anında + ön plana dönüşte). |
 | 36 | `share.ts`'e zxcvbn güç skoru ekleyin (K-2 kalan). |
 | 37 | ✅ **KAPANDI (bkz. §1.11 ve §1.12)** — sekmeler arası koordinasyon: yazma serileştirmesi (`navigator.locks`), taban tazelik kontrolü, commit duyuruları, çakışma UI'ı + kalıcı "yenile" banner'ı, `subscribeVaultCommits` tüketicisi, ve `moveToTrash`/`restoreFromTrash` için tek satır hedefli `setItemTrashedWithKey`. Yükleme yolundaki rollback tespiti kalıcı ledger'ı kullanıyor, `useVaultRollbackAlert` artık üretimde çalışıyor. 49 test, 2 mutasyonla doğrulandı. |
-| 38 | ✅ **KISMEN KAPANDI (bkz. §1.16)** — wa-sqlite `hydrate` artık memoize (uçuş promise'i, başarısızlık önbelleğe alınmıyor), 4 test. **Kalan:** `readVaultItemRows` okuma filtreleri ve toplu şifreleme (O-14). |
+| 38 | ✅ **KAPANDI (bkz. §1.16)** — wa-sqlite `hydrate` memoize (uçuş promise'i, başarısızlık önbelleğe alınmıyor, 4 test); `readVaultItemRows` filtresi **SQL'e itildi** (`typeof(id)='text' AND length(id)>0`); satır bazlı kripto **sınırlı eşzamanlılığa** (16) alındı, sıra korunuyor. 5 test, 3 mutasyonla doğrulandı. |
 | 39 | ✅ **KISMEN KAPANDI (bkz. §1.8)** — wa-sqlite terfi anahtarı hatası düzeltildi: terfi sonrası oturum anahtarı artık **her zaman** yeni aktif depodan türetiliyor, `existingKey` kısayolu kaldırıldı (Y-12), 5 regresyon testi. **Kalan:** `ensureOpen`'ta kalıcı olmayan VFS'ye sessiz düşüşü fail-closed yapın (O-15). |
 | 40 | ✅ **KAPANDI (bkz. §1.3 ve §1.16)** — Android: autofill istekleri süreç registry'sine taşındı, `MainActivity` `exported="false"` yapıldı, LAUNCHER `LauncherActivity` trampoline'ine taşındı, düz metin şifre yolu silindi, `security:android-autofill-boundary` kapısı CI'a eklendi. |
 | 41 | Android: `SecureStorageKeyStore`'a auth binding zorunlu kılın, `RUST-O5` rotasyonunu açılışta yapın (Y-8). |

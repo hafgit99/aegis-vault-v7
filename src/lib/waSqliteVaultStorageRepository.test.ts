@@ -8,6 +8,7 @@ import type { VaultItem } from '../types';
 import type { VaultStorageQueryResult } from './vaultStorageRepository';
 import { createWaSqlitePersistenceProfile } from './waSqlitePersistence';
 import { bindSqlParams, type WaSqliteEngine } from './waSqliteEngine';
+import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt } from './webcrypto';
 import {
   createWaSqliteVaultStorageRepository,
   WA_SQLITE_INVALID_MASTER_PASSWORD_ERROR,
@@ -283,7 +284,12 @@ describe('wa-sqlite vault storage repository', () => {
   beforeEach(() => {
     mockState.randomByteFill = 17;
     mockState.encryptionCounter = 0;
-    vi.clearAllMocks();
+    // `resetAllMocks`, not `clearAllMocks`. Clearing only wipes call history, so
+    // a test that installs its own crypto implementation leaks it into every
+    // later test in the file. The O-14 tests did exactly that and turned six
+    // unrelated round-trip tests red for reasons that had nothing to do with
+    // them. Vitest 4 restores the factory implementation on reset.
+    vi.resetAllMocks();
   });
 
   it('hydrates the engine and supports log subscriptions', async () => {
@@ -495,6 +501,113 @@ describe('wa-sqlite vault storage repository', () => {
       rows: [],
       error: WA_SQLITE_WRITE_NOT_READY_ERROR,
     });
+  });
+
+  // ─── O-14: read filter and bounded-concurrency crypto ─────────────────────
+
+  it('O-14: pushes the row-id guard into SQL so garbage never crosses the bridge', async () => {
+    const engine = createEngineStub();
+    const repository = createWaSqliteVaultStorageRepository({ engine });
+
+    await repository.getVaultItemsWithKey(new Uint8Array(32).fill(9));
+
+    const select = vi.mocked(engine.selectObjects).mock.calls[0]?.[0];
+    // The predicate is the point: filtering in JS after the fact still pays to
+    // marshal and decode every corrupt row.
+    expect(select).toMatch(/WHERE\s+typeof\(id\)\s*=\s*'text'\s+AND\s+length\(id\)\s*>\s*0/i);
+  });
+
+  it('O-14: still drops rows whose id is not a non-empty string', async () => {
+    const engine = createEngineStub();
+    engine.vaultRows.push(
+      { id: 'good', title: 'A', category: 'login', enc_metadata: '', enc_kdf: 'argon2-browser' },
+      { id: '', title: 'B', category: 'login', enc_metadata: '', enc_kdf: 'argon2-browser' },
+      { id: 12345, title: 'C', category: 'login', enc_metadata: '', enc_kdf: 'argon2-browser' },
+      { id: null, title: 'D', category: 'login', enc_metadata: '', enc_kdf: 'argon2-browser' },
+    );
+    const repository = createWaSqliteVaultStorageRepository({ engine });
+
+    const items = await repository.getVaultItemsWithKey(new Uint8Array(32).fill(9));
+
+    // SQL filters first, the JS guard is the belt-and-braces for a stub (and for
+    // any engine that ignores the WHERE clause).
+    expect(items.map((item) => item.id)).toEqual(['good']);
+  });
+
+  it('O-14: decrypts rows concurrently but returns them in row order', async () => {
+    const engine = createEngineStub();
+    const repository = createWaSqliteVaultStorageRepository({ engine });
+    const key = new Uint8Array(32).fill(9);
+    const ids = Array.from({ length: 40 }, (_, index) => `item-${index}`);
+
+    // Seed through the real encrypt path first. Hand-written rows with an empty
+    // enc_metadata never reach the decrypt call at all, so they cannot observe
+    // concurrency - they would report a peak of zero and pass vacuously.
+    await repository.saveVaultItemsWithKey!(
+      ids.map((id) => ({ id, title: 'A', category: 'login' } as VaultItem)),
+      key,
+    );
+
+    let inFlight = 0;
+    let peak = 0;
+    vi.mocked(webCryptoAesGcmDecrypt).mockImplementation(async (payload) => {
+      inFlight++;
+      peak = Math.max(peak, inFlight);
+      // Staggered by payload length: a serial loop peaks at 1, an unbounded
+      // Promise.all peaks at 40, and only the bound lands in between.
+      await new Promise((resolve) => setTimeout(resolve, payload.ciphertext.length % 3));
+      inFlight--;
+      return Buffer.from(payload.ciphertext.split(':').slice(2).join(':'), 'base64').toString('utf8');
+    });
+
+    const items = await repository.getVaultItemsWithKey(key);
+
+    // Order is the property that matters. Concurrency must not reshuffle the
+    // vault, or a restore would silently permute the user's records.
+    expect(items.map((item) => item.id)).toEqual(ids);
+    expect(peak).toBeGreaterThan(1);
+    expect(peak).toBeLessThanOrEqual(16);
+  });
+
+  it('O-14: encrypts a batch in order so progress and the write log stay aligned', async () => {
+    const engine = createEngineStub();
+    const repository = createWaSqliteVaultStorageRepository({ engine });
+    const items: VaultItem[] = Array.from({ length: 25 }, (_, index) => ({
+      id: `b-${index}`,
+      title: `T${index}`,
+      category: 'login',
+    } as VaultItem));
+
+    const saved = await repository.saveVaultItemsWithKey!(items, new Uint8Array(32).fill(9));
+
+    expect(saved.map((item) => item.id)).toEqual(items.map((item) => item.id));
+  });
+
+  it('O-14: a mid-batch crypto failure aborts before the transaction opens', async () => {
+    // The vault must be untouched if encryption fails, and a partially ordered
+    // promise batch must not leak the first rejection as an unhandled one.
+    const engine = createEngineStub();
+    const repository = createWaSqliteVaultStorageRepository({ engine });
+    const items: VaultItem[] = Array.from({ length: 30 }, (_, index) => ({
+      id: `f-${index}`,
+      title: `T${index}`,
+      category: 'login',
+    } as VaultItem));
+
+    vi.mocked(webCryptoAesGcmEncrypt).mockImplementation(async (plaintext: string) => {
+      if (plaintext.includes('"id":"f-20"')) {
+        throw new Error('cipher failure');
+      }
+      return {
+        iv: '010101010101010101010101',
+        tag: '02020202020202020202020202020202',
+        ciphertext: `sealed:9:${Buffer.from(plaintext, 'utf8').toString('base64')}`,
+      };
+    });
+
+    await expect(repository.saveVaultItemsWithKey!(items, new Uint8Array(32).fill(9))).rejects.toThrow('cipher failure');
+    // No transaction means no partial write, and the engine never saw a BEGIN.
+    expect(engine.vaultRows).toHaveLength(0);
   });
 
   // ─── O-13: hydration must be memoized ─────────────────────────────────────
