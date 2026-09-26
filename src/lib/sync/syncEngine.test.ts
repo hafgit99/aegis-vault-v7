@@ -5,7 +5,8 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { resolveLWWConflicts, buildSyncEnvelope, parseSyncEnvelope, performSync } from './syncEngine';
-import type { SyncProvider, SyncMetadata} from './syncTypes';
+import type { SyncProvider, SyncRemoteMetadata } from './syncTypes';
+import { SyncError, syncErrorCodes } from './syncTypes';
 import type { VaultItem } from '../../types';
 
 // Mock argon2id so tests don't need WASM
@@ -151,7 +152,7 @@ describe('performSync', () => {
   const makeProvider = (overrides: Partial<SyncProvider> = {}): SyncProvider => ({
     uploadVault: vi.fn().mockResolvedValue(undefined),
     downloadVault: vi.fn().mockResolvedValue(null),
-    getRemoteMetadata: vi.fn().mockResolvedValue(null),
+    getRemoteMetadata: vi.fn().mockResolvedValue({ kind: 'absent' } as SyncRemoteMetadata),
     testConnection: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   });
@@ -170,7 +171,7 @@ describe('performSync', () => {
     const { encryptedBlob, metadata } = await buildSyncEnvelope([remoteItem], MASTER_PW);
 
     const provider = makeProvider({
-      getRemoteMetadata: vi.fn().mockResolvedValue(metadata),
+      getRemoteMetadata: vi.fn().mockResolvedValue({ kind: 'ok', metadata } as SyncRemoteMetadata),
       downloadVault: vi.fn().mockResolvedValue(encryptedBlob),
     });
 
@@ -194,12 +195,15 @@ describe('performSync', () => {
   it('returns error status on download failure', async () => {
     const provider = makeProvider({
       getRemoteMetadata: vi.fn().mockResolvedValue({
-        updatedAt: '2099-01-01T00:00:00Z', // future — triggers download
-        deviceId: 'remote-device',
-        vaultVersion: '7.0',
-        checksum: 'a'.repeat(64),
-        itemCount: 1,
-      } as SyncMetadata),
+        kind: 'ok',
+        metadata: {
+          updatedAt: '2099-01-01T00:00:00Z', // future — triggers download
+          deviceId: 'remote-device',
+          vaultVersion: '7.0',
+          checksum: 'a'.repeat(64),
+          itemCount: 1,
+        },
+      } as SyncRemoteMetadata),
       downloadVault: vi.fn().mockRejectedValue(new Error('Network error')),
     });
     const result = await performSync(provider, [], MASTER_PW);
@@ -217,7 +221,7 @@ describe('performSync', () => {
 
     const { encryptedBlob, metadata } = await buildSyncEnvelope(remoteItems, MASTER_PW);
     const provider = makeProvider({
-      getRemoteMetadata: vi.fn().mockResolvedValue(metadata),
+      getRemoteMetadata: vi.fn().mockResolvedValue({ kind: 'ok', metadata } as SyncRemoteMetadata),
       downloadVault: vi.fn().mockResolvedValue(encryptedBlob),
     });
 
@@ -230,12 +234,15 @@ describe('performSync', () => {
     // 1. Corrupted remote envelope (triggers parseSyncEnvelope generic error)
     const provider = makeProvider({
       getRemoteMetadata: vi.fn().mockResolvedValue({
-        updatedAt: '2099-01-01T00:00:00Z',
-        deviceId: 'remote-device',
-        vaultVersion: '7.0',
-        checksum: 'a'.repeat(64),
-        itemCount: 1,
-      } as SyncMetadata),
+        kind: 'ok',
+        metadata: {
+          updatedAt: '2099-01-01T00:00:00Z',
+          deviceId: 'remote-device',
+          vaultVersion: '7.0',
+          checksum: 'a'.repeat(64),
+          itemCount: 1,
+        },
+      } as SyncRemoteMetadata),
       downloadVault: vi.fn().mockResolvedValue('invalid-envelope-not-json'),
     });
 
@@ -248,5 +255,127 @@ describe('performSync', () => {
 
     const result = await performSync(provider, [localItemWithoutUpdatedAt], MASTER_PW);
     expect(result.status).toBe('error');
+  });
+});
+
+// ─── Y-11: Never Overwrite An Unknown Remote ─────────────────────────────────
+
+describe('Y-11 remote overwrite protection', () => {
+  const makeProvider = (overrides: Partial<SyncProvider> = {}): SyncProvider => ({
+    uploadVault: vi.fn().mockResolvedValue(undefined),
+    downloadVault: vi.fn().mockResolvedValue(null),
+    getRemoteMetadata: vi.fn().mockResolvedValue({ kind: 'absent' } as SyncRemoteMetadata),
+    testConnection: vi.fn().mockResolvedValue(undefined),
+    ...overrides,
+  });
+
+  const unreadable = (): SyncRemoteMetadata => ({
+    kind: 'unreadable',
+    detail: 'metadata.json is present but not parsable: Unexpected token',
+  });
+
+  it('refuses to upload when remote metadata is unreadable', async () => {
+    // The core Y-11 regression. A failed metadata PUT leaves an intact vault
+    // blob with no readable descriptor. Reporting that as "no remote" and then
+    // uploading destroyed the user's only off-device backup while reporting
+    // success.
+    const provider = makeProvider({ getRemoteMetadata: vi.fn().mockResolvedValue(unreadable()) });
+    const localItems = [makeItem('local', '2024-06-01T12:00:00Z')];
+
+    const result = await performSync(provider, localItems, MASTER_PW);
+
+    expect(result.status).toBe('error');
+    expect(result.error?.code).toBe(syncErrorCodes.remoteStateUnknown);
+    // The critical assertion: nothing was written.
+    expect(provider.uploadVault).not.toHaveBeenCalled();
+    expect(result.mergedItems).toEqual(localItems);
+  });
+
+  it('does not download the remote blob when metadata is unreadable', async () => {
+    // The blob may well be intact; downloading it blind would be an option,
+    // but uploading over it is not.
+    const provider = makeProvider({ getRemoteMetadata: vi.fn().mockResolvedValue(unreadable()) });
+
+    await performSync(provider, [makeItem('a', '2024-06-01T12:00:00Z')], MASTER_PW);
+
+    expect(provider.downloadVault).not.toHaveBeenCalled();
+  });
+
+  it('uploads on a genuine first sync (remote absent)', async () => {
+    const provider = makeProvider({ getRemoteMetadata: vi.fn().mockResolvedValue({ kind: 'absent' } as SyncRemoteMetadata) });
+
+    const result = await performSync(provider, [makeItem('a', '2024-06-01T12:00:00Z')], MASTER_PW);
+
+    expect(result.status).toBe('success');
+    expect(provider.uploadVault).toHaveBeenCalledOnce();
+  });
+
+  it('replays the observed ETag as a write precondition', async () => {
+    const remoteItem = makeItem('b', '2024-06-01T12:00:00Z');
+    const { encryptedBlob, metadata } = await buildSyncEnvelope([remoteItem], MASTER_PW);
+    const provider = makeProvider({
+      getRemoteMetadata: vi.fn().mockResolvedValue({ kind: 'ok', metadata, etag: '"v1"' } as SyncRemoteMetadata),
+      downloadVault: vi.fn().mockResolvedValue(encryptedBlob),
+    });
+
+    await performSync(provider, [makeItem('a', '2024-01-01T00:00:00Z')], MASTER_PW);
+
+    expect(provider.uploadVault).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(Object),
+      { ifMatch: '"v1"' },
+    );
+  });
+
+  it('sends no precondition on first sync, so a fresh remote is not rejected', async () => {
+    const provider = makeProvider({ getRemoteMetadata: vi.fn().mockResolvedValue({ kind: 'absent' } as SyncRemoteMetadata) });
+
+    await performSync(provider, [makeItem('a', '2024-06-01T12:00:00Z')], MASTER_PW);
+
+    const call = (provider.uploadVault as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(call[2]?.ifMatch).toBeUndefined();
+  });
+
+  it('surfaces a rejected conditional write without reporting success', async () => {
+    const { metadata } = await buildSyncEnvelope([makeItem('b', '2024-06-01T12:00:00Z')], MASTER_PW);
+    const provider = makeProvider({
+      getRemoteMetadata: vi.fn().mockResolvedValue({ kind: 'ok', metadata, etag: '"v1"' } as SyncRemoteMetadata),
+      downloadVault: vi.fn().mockResolvedValue(null),
+      uploadVault: vi.fn().mockRejectedValue(
+        new SyncError(syncErrorCodes.remoteModified, 'Remote vault changed during sync'),
+      ),
+    });
+
+    const result = await performSync(provider, [makeItem('a', '2024-06-01T13:00:00Z')], MASTER_PW);
+
+    expect(result.status).toBe('error');
+    expect(result.error?.code).toBe(syncErrorCodes.remoteModified);
+  });
+
+  it('reports the post-upload ETag, not the stale pre-upload one', async () => {
+    const { metadata } = await buildSyncEnvelope([makeItem('b', '2024-06-01T12:00:00Z')], MASTER_PW);
+    const provider = makeProvider({
+      getRemoteMetadata: vi.fn().mockResolvedValue({ kind: 'ok', metadata, etag: '"v1"' } as SyncRemoteMetadata),
+      downloadVault: vi.fn().mockResolvedValue(null),
+      getVaultETag: vi.fn().mockResolvedValue('"v2"'),
+    });
+
+    const result = await performSync(provider, [makeItem('a', '2024-06-01T13:00:00Z')], MASTER_PW);
+
+    expect(result.uploadedETag).toBe('"v2"');
+  });
+
+  it('still succeeds when the provider cannot report an ETag', async () => {
+    const { metadata } = await buildSyncEnvelope([makeItem('b', '2024-06-01T12:00:00Z')], MASTER_PW);
+    const provider = makeProvider({
+      getRemoteMetadata: vi.fn().mockResolvedValue({ kind: 'ok', metadata, etag: '"v1"' } as SyncRemoteMetadata),
+      downloadVault: vi.fn().mockResolvedValue(null),
+      getVaultETag: vi.fn().mockRejectedValue(new Error('HEAD not allowed')),
+    });
+
+    const result = await performSync(provider, [makeItem('a', '2024-06-01T13:00:00Z')], MASTER_PW);
+
+    expect(result.status).toBe('success');
+    expect(result.uploadedETag).toBeUndefined();
   });
 });

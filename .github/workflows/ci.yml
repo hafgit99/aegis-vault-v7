@@ -106,8 +106,12 @@ jobs:
           sudo install -m 755 "/tmp/cargo-deny-${CD_VERSION}-x86_64-unknown-linux-musl/cargo-deny" /usr/local/bin/cargo-deny
           cargo-deny --version
 
-      - name: Cargo deny (RustSec advisory check)
-        run: cargo deny check advisories
+      - name: Cargo deny (RustSec advisories, bans, licences, sources)
+        # All four gates are release blockers. `cargo deny check advisories`
+        # alone left the licence and source policies in src-tauri/deny.toml
+        # unenforced, so a copyleft or unknown-origin dependency could ship
+        # without any signal.
+        run: cargo deny check advisories bans licenses sources
 
   security:
     name: Security gates
@@ -140,8 +144,30 @@ jobs:
       - name: 'Security: no JS master password string'
         run: npm run security:no-js-master-string
 
+      # K-1 regression gate. The credential-handling Activity must stay
+      # android:exported="false" and must keep resolving Autofill requests
+      # through the in-process registry instead of Intent extras, which is what
+      # closed the forged-intent credential exfiltration.
+      - name: 'Security: Android Autofill trust boundary (K-1)'
+        run: npm run security:android-autofill-boundary
+
       - name: 'Security: session callback authorization gate'
         run: npm run security:session-gates
+
+      # Y-19: the release workflow must keep its blocking signing gates and
+      # must keep the signing steps secret-driven and correctly ordered. This
+      # catches a deleted, reordered or mis-wired signing step in ordinary CI,
+      # rather than on release day.
+      - name: 'Security: release signing gate (Y-19)'
+        run: npm run security:release-signing
+
+      # N-2 / #26: the i18n audit was never wired into CI, which is why a
+      # two-language key regression (double-quoted keys are invisible to the
+      # audit's single-quote key regex) stayed invisible until it was found
+      # locally. Parity is a release-quality gate, not a nicety: a missing key
+      # ships as a raw key string in the UI of a password manager.
+      - name: 'i18n key parity audit (12 locales)'
+        run: npm run i18n:audit
 
       - name: Fuzz tests
         run: npm run test:fuzz

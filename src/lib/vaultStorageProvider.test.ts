@@ -233,7 +233,7 @@ describe('vault storage provider', () => {
     });
 
     try {
-      expect(restored).toBe(true);
+      expect(restored).toEqual({ status: 'restored' });
       expect(repository.hydrate).toHaveBeenCalledTimes(1);
       expect(getVaultStorageRepository()).toBe(repository);
       expect(getActiveVaultStorageBackendSelection()).toEqual({
@@ -323,6 +323,81 @@ describe('vault storage provider', () => {
     expect(readPersistedActiveVaultStorageBackend()).toBeNull();
   });
 
+  // ─── Y-13: a persisted vault must never be replaced by an empty one ────────
+
+  /** Persists a valid promotion marker for a wa-sqlite database that exists. */
+  function persistPromotedMarker(): void {
+    persistWaSqliteActiveBackendPromotion({
+      selection: { active: 'wa-sqlite', target: null, mode: 'active' },
+      persistenceProfile: markWaSqlitePersistenceReadyForActiveBackend(
+        createWaSqlitePersistenceProfile('desktop-app-data', true),
+      ),
+      readinessReport: { status: 'ready', issues: [] },
+    });
+  }
+
+  it('Y-13: reports unavailable instead of activating an empty replacement vault', async () => {
+    // The user's vault lives in this wa-sqlite database. It just would not open
+    // this time. The old code cleared the marker, found no legacy OPFS data,
+    // then created a BRAND NEW EMPTY database and returned
+    // `activated-wa-sqlite-default` — permanent silent data loss.
+    const failing = createRepositoryStub();
+    vi.mocked(failing.hydrate).mockRejectedValueOnce(new Error('QuotaExceededError'));
+    persistPromotedMarker();
+
+    const replacement = createRepositoryStub();
+    const status = await restoreOrActivateDefaultVaultStorageBackend({
+      hasLegacyOpfsVaultData: () => false,
+      createPersistenceProfile: () => createWaSqlitePersistenceProfile('desktop-app-data', true),
+      createRepository: (profile) => {
+        // The only repository that should be built is the one for the
+        // persisted database; a replacement must never be constructed.
+        return profile === undefined ? replacement : failing;
+      },
+    });
+
+    expect(status).toBe('wa-sqlite-unavailable');
+    // No fresh database was built and no fresh promotion was persisted.
+    expect(replacement.hydrate).not.toHaveBeenCalled();
+    // The marker still points at the real vault.
+    expect(readPersistedActiveVaultStorageBackend()).not.toBeNull();
+    // The active backend is untouched, so nothing claims to be the vault.
+    expect(getActiveVaultStorageBackendSelection()).toEqual({
+      active: 'opfs',
+      target: null,
+      mode: 'active',
+    });
+  });
+
+  it('Y-13: does not clear the marker when the persisted database is unavailable', async () => {
+    const failing = createRepositoryStub();
+    vi.mocked(failing.hydrate).mockRejectedValueOnce(new Error('QuotaExceededError'));
+    persistPromotedMarker();
+
+    await restoreOrActivateDefaultVaultStorageBackend({
+      hasLegacyOpfsVaultData: () => false,
+      createRepository: () => failing,
+    });
+
+    expect(localStorage.getItem(ACTIVE_VAULT_STORAGE_BACKEND_KEY)).not.toBeNull();
+  });
+
+  it('Y-13: still creates a default wa-sqlite vault for a genuine first run', async () => {
+    // Guards against over-correction: with no marker, the first-run path must be
+    // unchanged.
+    const repository = createRepositoryStub();
+
+    const status = await restoreOrActivateDefaultVaultStorageBackend({
+      hasLegacyOpfsVaultData: () => false,
+      createPersistenceProfile: () => createWaSqlitePersistenceProfile('desktop-app-data', true),
+      createRepository: () => repository,
+    });
+
+    expect(status).toBe('activated-wa-sqlite-default');
+    expect(repository.hydrate).toHaveBeenCalledTimes(1);
+    expect(readPersistedActiveVaultStorageBackend()).not.toBeNull();
+  });
+
   it('clears forged active backend markers with unsupported scopes or missing VFS names', () => {
     const validProfile = markWaSqlitePersistenceReadyForActiveBackend(
       createWaSqlitePersistenceProfile('desktop-app-data', true),
@@ -390,13 +465,14 @@ describe('vault storage provider', () => {
     }));
     const previousRepository = getVaultStorageRepository();
 
-    await expect(restorePersistedActiveVaultStorageBackend()).resolves.toBe(false);
+    // An incompatible marker is still discarded — by the reader, on read.
+    await expect(restorePersistedActiveVaultStorageBackend()).resolves.toEqual({ status: 'absent' });
 
     expect(localStorage.getItem(ACTIVE_VAULT_STORAGE_BACKEND_KEY)).toBeNull();
     expect(getVaultStorageRepository()).toBe(previousRepository);
   });
 
-  it('clears the persisted marker and keeps the previous repository when persisted restore hydration fails', async () => {
+  it('Y-13: PRESERVES the persisted marker when persisted restore hydration fails', async () => {
     const repository = createRepositoryStub();
     vi.mocked(repository.hydrate).mockRejectedValueOnce(new Error('hydrate failed'));
     const persistenceProfile = markWaSqlitePersistenceReadyForActiveBackend(
@@ -416,17 +492,55 @@ describe('vault storage provider', () => {
     });
     const previousRepository = getVaultStorageRepository();
 
-    await expect(restorePersistedActiveVaultStorageBackend({
+    const outcome = await restorePersistedActiveVaultStorageBackend({
       createRepository: () => repository,
-    })).resolves.toBe(false);
+    });
 
-    expect(localStorage.getItem(ACTIVE_VAULT_STORAGE_BACKEND_KEY)).toBeNull();
+    // Regression: the marker used to be deleted here, orphaning the only
+    // remaining reference to the user's wa-sqlite database.
+    expect(outcome.status).toBe('unavailable');
+    expect(outcome.status === 'unavailable' && outcome.reason).toContain('hydrate failed');
+    expect(localStorage.getItem(ACTIVE_VAULT_STORAGE_BACKEND_KEY)).not.toBeNull();
     expect(getVaultStorageRepository()).toBe(previousRepository);
     expect(getActiveVaultStorageBackendSelection()).toEqual({
       active: 'opfs',
       target: null,
       mode: 'active',
     });
+  });
+
+  it('Y-13: keeps a valid marker readable so a later attempt can retry', async () => {
+    // A retry must be able to find the vault again. This is the property that
+    // matters: recovery depends entirely on the marker surviving.
+    const repository = createRepositoryStub();
+    vi.mocked(repository.hydrate).mockRejectedValueOnce(new Error('QuotaExceededError'));
+    const persistenceProfile = markWaSqlitePersistenceReadyForActiveBackend(
+      createWaSqlitePersistenceProfile('desktop-app-data', true),
+    );
+    persistWaSqliteActiveBackendPromotion({
+      selection: {
+        active: 'wa-sqlite',
+        target: null,
+        mode: 'active',
+      },
+      persistenceProfile,
+      readinessReport: {
+        status: 'ready',
+        issues: [],
+      },
+    });
+
+    const first = await restorePersistedActiveVaultStorageBackend({
+      createRepository: () => repository,
+    });
+    expect(first.status).toBe('unavailable');
+
+    // Second attempt: the marker is still there and the vault is reachable.
+    vi.mocked(repository.hydrate).mockResolvedValueOnce(undefined);
+    const second = await restorePersistedActiveVaultStorageBackend({
+      createRepository: () => repository,
+    });
+    expect(second).toEqual({ status: 'restored' });
   });
 
   it('promotes the active repository from a verified wa-sqlite plan and can restore the previous repository', () => {

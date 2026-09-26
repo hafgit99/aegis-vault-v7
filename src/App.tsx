@@ -10,7 +10,8 @@ import { useVaultLock } from './hooks/useVaultLock';
 import { useSensitiveReveal } from './hooks/useSensitiveReveal';
 import { useClipboardFeedback } from './hooks/useClipboardFeedback';
 import { AppSplashLoader } from './components/AppSplashLoader';
-import { initializeStorage } from './lib/storage';
+import { useLanguage } from './i18n/LanguageContext';
+import { initializeStorage, isVaultStorageUnavailableError } from './lib/storage';
 
 const UnlockedApp = React.lazy(() => import('./UnlockedApp'));
 
@@ -25,11 +26,28 @@ function backgroundLockDelayFromAutoLock(autoLockDurationSeconds: number): numbe
 
 export default function App() {
   const [isStorageReady, setIsStorageReady] = useState(false);
+  /**
+   * Y-13: a persisted wa-sqlite vault exists but could not be opened on this
+   * attempt. The promotion marker is deliberately preserved, so the vault is
+   * intact and a retry can reach it.
+   *
+   * This must be surfaced. Falling through to the normal lock screen would put
+   * the user in front of a password field that cannot succeed, and would read
+   * as "wrong password" for a storage problem.
+   */
+  const [isVaultStorageUnavailable, setIsVaultStorageUnavailable] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     let isMounted = true;
     initializeStorage()
-      .catch((err) => console.error('Storage init failed:', err))
+      .catch((err) => {
+        if (isVaultStorageUnavailableError(err)) {
+          if (isMounted) setIsVaultStorageUnavailable(true);
+          return;
+        }
+        console.error('Storage init failed:', err);
+      })
       .finally(() => {
         if (isMounted) {
           setIsStorageReady(true);
@@ -57,18 +75,39 @@ export default function App() {
     clearCopiedField,
   });
 
-  // 1. If locked, render LockScreen IMMEDIATELY (0.3s cold start).
+  // 1. Y-13: the vault exists but storage is temporarily unavailable. Show a
+  // dedicated retry screen — never a password prompt that cannot succeed, and
+  // never a path that would set up a new vault over this one.
+  if (isVaultStorageUnavailable) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-100 p-6">
+        <div className="max-w-md w-full text-center space-y-4">
+          <h1 className="text-lg font-semibold">{t('lock.error.vaultStorageUnavailableTitle')}</h1>
+          <p className="text-sm text-slate-300">{t('lock.error.vaultStorageUnavailable')}</p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium"
+          >
+            {t('lock.error.vaultStorageRetry')}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. If locked, render LockScreen IMMEDIATELY (0.3s cold start).
   // Storage hydration continues in the background while user sees master password prompt.
   if (!unlocked) {
     return <LockScreen />;
   }
 
-  // 2. While storage is still hydrating in background AND user is unlocked, show splash.
+  // 3. While storage is still hydrating in background AND user is unlocked, show splash.
   if (!isStorageReady) {
     return <AppSplashLoader />;
   }
 
-  // 3. When unlocked and storage is ready, render UnlockedApp lazily.
+  // 4. When unlocked and storage is ready, render UnlockedApp lazily.
   return (
     <React.Suspense fallback={<AppSplashLoader />}>
       <UnlockedApp

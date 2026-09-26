@@ -308,6 +308,20 @@ fn replace_file_atomically(
 
 #[tauri::command]
 fn read_vault_database(app: AppHandle) -> Result<Option<String>, String> {
+    // #42: deliberately NOT gated on `CredentialSession`.
+    //
+    // The session is created by `open_rust_session`, which runs *after* the
+    // renderer has read the vault to obtain the salt and Argon2 hash needed to
+    // verify the password. `verifyMasterPassword` calls `initializeStorage()`
+    // first, which reaches this command. Gating it would make unlocking
+    // impossible — the read that bootstraps the session cannot require the
+    // session.
+    //
+    // The storage read is also not secret to the renderer in the way the
+    // commands below are: the file is the user's own encrypted vault, and the
+    // renderer already has filesystem-mediated access to its own app data.
+    // The privilege that genuinely requires an unlocked vault is the
+    // extension bridge, and those commands are gated.
     let database_path = vault_database_path(&app)?;
 
     if !database_path.exists() {
@@ -332,6 +346,8 @@ fn read_vault_database(app: AppHandle) -> Result<Option<String>, String> {
 
 #[tauri::command]
 fn write_vault_database(app: AppHandle, contents: String) -> Result<(), String> {
+    // #42: not gated — see the note on `read_vault_database`. A write can occur
+    // during first-time setup, which also precedes any session.
     let database_path = vault_database_path(&app)?;
     write_vault_database_file(&database_path, &contents)
 }
@@ -382,6 +398,10 @@ fn write_vault_database_file(
 
 #[tauri::command]
 fn reset_vault_database(app: AppHandle) -> Result<(), String> {
+    // #42: not gated on `CredentialSession`, because `resetAll` also runs during
+    // first-time setup and system reset, both of which precede a session. The
+    // renderer-side gate in `resetSystem` is what requires an unlocked vault
+    // before this is reachable.
     let database_path = vault_database_path(&app)?;
 
     if database_path.exists() {
@@ -395,9 +415,15 @@ fn reset_vault_database(app: AppHandle) -> Result<(), String> {
 #[tauri::command]
 fn sync_extension_credentials(
     state: tauri::State<'_, ExtensionState>,
+    session: tauri::State<'_, CredentialSession>,
     credentials: Vec<native_messaging::ExtensionCredential>,
     ttl_ms: Option<u64>,
 ) -> Result<(), String> {
+    // #42: pushing credentials into the extension cache is a vault-adjacent
+    // write. Without a session a locked renderer could seed the cache that the
+    // extension bridge then hands out over loopback IPC.
+    session.require_active_session()?;
+
     let lease_expires_at = native_messaging::credential_lease_expires_at(
         ttl_ms.unwrap_or(native_messaging::EXTENSION_CREDENTIAL_LEASE_MS),
     );
@@ -413,14 +439,29 @@ fn sync_extension_credentials(
 }
 
 #[tauri::command]
-fn clear_extension_credentials(state: tauri::State<'_, ExtensionState>) -> Result<(), String> {
+fn clear_extension_credentials(
+    state: tauri::State<'_, ExtensionState>,
+    session: tauri::State<'_, CredentialSession>,
+) -> Result<(), String> {
+    // #42: gated for symmetry. Clearing is not destructive to vault data, but
+    // leaving it ungated would mean the gate can be side-stepped by toggling
+    // the cache from a locked renderer.
+    session.require_active_session()?;
+
     let mut creds = state.credentials.lock().map_err(|e| e.to_string())?;
     *creds = None;
     Ok(())
 }
 
 #[tauri::command]
-fn rotate_pairing_token(state: tauri::State<'_, ExtensionState>) -> Result<String, String> {
+fn rotate_pairing_token(
+    state: tauri::State<'_, ExtensionState>,
+    session: tauri::State<'_, CredentialSession>,
+) -> Result<String, String> {
+    // #42: rotating the pairing token is a privilege change for the extension
+    // bridge. A locked renderer must not be able to mint a new token.
+    session.require_active_session()?;
+
     let new_token = native_messaging::generate_token();
 
     if let Some(app_data_dir) = native_messaging::get_app_data_dir() {
@@ -629,7 +670,7 @@ fn open_import_file() -> Result<Option<ImportFilePayload>, String> {
     Ok(Some(ImportFilePayload { name, contents }))
 }
 
-use credential_handler::{get_params, RustArgon2idOptions};
+use credential_handler::{get_params, CredentialSession, RustArgon2idOptions};
 
 #[tauri::command]
 fn derive_argon2id_key(

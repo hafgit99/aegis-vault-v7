@@ -22,6 +22,40 @@ export interface SyncMetadata {
   itemCount: number;
 }
 
+/**
+ * Y-11: what is actually on the remote, as opposed to "we managed to read the
+ * metadata file".
+ *
+ * The previous contract returned `SyncMetadata | null`, and `null` meant both
+ * "there is no remote yet" AND "the metadata file exists but could not be
+ * parsed". `performSync` treated both as "remote absent" and then uploaded the
+ * local vault unconditionally — destroying an intact remote backup whose
+ * metadata write had merely failed, and reporting `status: 'success'`.
+ *
+ * A sync provider that cannot establish what is on the remote must say so.
+ */
+export type SyncRemoteMetadata =
+  /** Genuinely no remote snapshot yet (HTTP 404). First sync. */
+  | { kind: 'absent' }
+  /**
+   * A remote file exists but its metadata could not be read or parsed.
+   *
+   * This is the dangerous case: the vault blob may be perfectly intact and
+   * newer than local. Callers MUST NOT upload over it.
+   */
+  | { kind: 'unreadable'; detail: string }
+  /** Metadata read successfully. `etag` is the provider's version token, if any. */
+  | { kind: 'ok'; metadata: SyncMetadata; etag?: string };
+
+/** Preconditions for an upload, so a concurrent write is detected rather than clobbered. */
+export interface SyncUploadPreconditions {
+  /**
+   * ETag observed when the remote state was last read. The provider must make
+   * the write conditional on it being unchanged.
+   */
+  ifMatch?: string;
+}
+
 /** Configuration for a WebDAV sync provider */
 export interface WebDavSyncConfig {
   type: 'webdav';
@@ -60,10 +94,16 @@ export type SyncConfig = WebDavSyncConfig | S3SyncConfig | { type: 'disabled' };
 export interface SyncProvider {
   /**
    * Upload the encrypted vault blob to the remote store.
-   * @param encryptedBlob — stringified Aegis secure backup envelope
-   * @param metadata — machine-readable snapshot descriptor
+   *
+   * Y-11: `preconditions.ifMatch` must make the write conditional. When the
+   * provider can enforce it, a concurrent modification must surface as
+   * `syncErrorCodes.remoteModified` rather than silently overwriting.
    */
-  uploadVault(encryptedBlob: string, metadata: SyncMetadata): Promise<void>;
+  uploadVault(
+    encryptedBlob: string,
+    metadata: SyncMetadata,
+    preconditions?: SyncUploadPreconditions,
+  ): Promise<void>;
 
   /**
    * Download the remote encrypted vault blob.
@@ -72,10 +112,19 @@ export interface SyncProvider {
   downloadVault(): Promise<string | null>;
 
   /**
-   * Fetch only the remote metadata JSON (lightweight, avoids full blob download).
-   * Returns null when no metadata file exists yet.
+   * Report what is on the remote.
+   *
+   * Y-11: must distinguish "absent" from "present but unreadable". Returning
+   * `null` for both is what allowed an unreadable remote to be overwritten.
    */
-  getRemoteMetadata(): Promise<SyncMetadata | null>;
+  getRemoteMetadata(): Promise<SyncRemoteMetadata>;
+
+  /**
+   * Y-11: the ETag/version token for the vault blob as of the last read, when
+   * the provider can supply one. Optional: a provider without server-side
+   * conditional writes still benefits from parts (a) and (c) of the fix.
+   */
+  getVaultETag?(): Promise<string | null>;
 
   /**
    * Verify provider connectivity and credentials.
@@ -98,6 +147,17 @@ export const syncErrorCodes = {
   invalidEnvelope: 'sync.invalidEnvelope',
   noProvider: 'sync.noProvider',
   masterPasswordRequired: 'sync.masterPasswordRequired',
+  /**
+   * Y-11: the remote snapshot exists but its metadata could not be read, so it
+   * is unknown whether the local vault is newer. Uploading would destroy a
+   * possibly-intact off-device backup, so sync refuses instead.
+   */
+  remoteStateUnknown: 'sync.remoteStateUnknown',
+  /**
+   * Y-11: the remote changed between the read and the write. The upload was
+   * rejected by the precondition, so nothing was overwritten.
+   */
+  remoteModified: 'sync.remoteModified',
 } as const;
 
 export type SyncErrorCode = (typeof syncErrorCodes)[keyof typeof syncErrorCodes];
@@ -128,4 +188,10 @@ export interface SyncResult {
   /** Items that could not be auto-resolved */
   conflicts?: SyncConflictItem[];
   error?: SyncError;
+  /**
+   * Y-11: the ETag of the remote vault this client successfully uploaded.
+   * Recorded so the next sync can tell "still my snapshot" from "someone else
+   * replaced it".
+   */
+  uploadedETag?: string;
 }

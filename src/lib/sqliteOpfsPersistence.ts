@@ -25,6 +25,7 @@ import { logSecurityEvent, securityEventCodes } from './securityEvents';
 import { parseVaultDatabaseState, type VersionedVaultDatabaseState } from './vaultDatabaseFormat';
 import { isTestEnv } from './environment';
 import { isArgon2WriteBlocked } from './argon2id';
+import { readVaultIntegrityLedger } from './vaultIntegrityLedger';
 
 export const DB_FILENAME = 'aegis_sqlite.db';
 export const LOCAL_FALLBACK_KEY = 'aegis_sqlite_fallback';
@@ -60,7 +61,35 @@ export type PersistedLoadResult =
   /** Empty OPFS file existed — nothing to load, nothing to migrate. */
   | { kind: 'empty' }
   /** Neither desktop storage nor OPFS is available — caller should run legacy migration. */
-  | { kind: 'unavailable' };
+  | { kind: 'unavailable' }
+  /**
+   * K-4: a vault file EXISTS but could not be decoded — oversized, truncated,
+   * not valid UTF-8, or not valid JSON.
+   *
+   * This is deliberately distinct from `unavailable`. `unavailable` means "this
+   * storage path does not exist here", and the correct response is to fall back
+   * to the IndexedDB mirror. `unreadable` means "the authoritative vault is
+   * present and damaged", and falling back would hand the user a STALE mirror
+   * that then overwrites the real vault on their next save — silent,
+   * irreversible data loss. The caller must treat it as a hard startup error
+   * and offer snapshot restore instead.
+   */
+  | { kind: 'unreadable'; reason: UnreadableVaultReason; detail: string };
+
+/** Why an existing vault file could not be decoded. */
+export type UnreadableVaultReason =
+  /** File exceeds the maximum accepted vault size. */
+  | 'too-large'
+  /** `read_to_string` rejected the bytes (invalid UTF-8). */
+  | 'invalid-encoding'
+  /** The file was empty or whitespace-only where content was expected. */
+  | 'empty'
+  /** The bytes are not valid JSON. */
+  | 'invalid-json'
+  /** JSON parsed but is not a usable vault state. */
+  | 'invalid-shape'
+  /** The file handle or read operation failed outright. */
+  | 'read-failed';
 
 let lastObservedVersionCounter = 0;
 
@@ -81,26 +110,127 @@ export function consumeVaultRollbackDetected(): boolean {
   return detected;
 }
 
+/**
+ * Y-15: the durable high-water mark for the vault `versionCounter`.
+ *
+ * Y-5 put a persistent `highestVersionCounter` in `vaultIntegrityLedger`, and the
+ * *write* path already merged it with the in-session counter
+ * (`readIntegrityExpectations` in `sqlite_opfs.ts`). The *load* path did not: it
+ * consulted only the module-global `lastObservedVersionCounter`, which is `0` on
+ * a fresh page load. Its `lastObservedVersionCounter > 0` guard therefore never
+ * fired outside a test, so:
+ *
+ *   - `vaultRollbackDetected` was never set in production, which made
+ *     `useVaultRollbackAlert` dead code — the user was never told;
+ *   - the only symptom of a rolled-back vault was an opaque
+ *     `vault-database-integrity-rolled-back` throw on the user's next save.
+ *
+ * Both the detection and the write gate must reason about the same mark, or the
+ * alert can never agree with the gate.
+ */
+function readDurableHighWaterMark(): number {
+  const ledgerMark = readVaultIntegrityLedger()?.highestVersionCounter ?? 0;
+  return Math.max(ledgerMark, lastObservedVersionCounter);
+}
+
 function processLoadedStateIntegrity(state: VersionedVaultDatabaseState): boolean {
   if (typeof state.versionCounter === 'number') {
-    if (lastObservedVersionCounter > 0 && state.versionCounter < lastObservedVersionCounter) {
+    const highWaterMark = readDurableHighWaterMark();
+    if (highWaterMark > 0 && state.versionCounter < highWaterMark) {
       vaultRollbackDetected = true;
       logSecurityEvent(
         securityEventCodes.storageLegacyMigrationFailed,
-        `Vault database rollback detected! Loaded versionCounter (${state.versionCounter}) is lower than last observed (${lastObservedVersionCounter}).`,
+        `Vault database rollback detected! Loaded versionCounter (${state.versionCounter}) is lower than last observed (${highWaterMark}).`,
         'critical',
-        { loadedVersion: state.versionCounter, expectedMinVersion: lastObservedVersionCounter },
+        { loadedVersion: state.versionCounter, expectedMinVersion: highWaterMark },
       );
       return true;
     }
-    lastObservedVersionCounter = Math.max(lastObservedVersionCounter, state.versionCounter);
+    lastObservedVersionCounter = Math.max(highWaterMark, state.versionCounter);
   }
   return false;
 }
 
 /**
+ * Largest vault payload this module will attempt to decode.
+ *
+ * Mirrors the native-side `MAX_VAULT_FILE_BYTES` limit that
+ * `write_vault_database_file` / `read_vault_database_file` enforce in Rust
+ * (`src-tauri/src/lib.rs`). Keeping both ends identical is what turns "the file
+ * exists but is over the limit" into a reportable condition instead of an
+ * opaque read error that used to be indistinguishable from "no file".
+ */
+export const MAX_VAULT_PAYLOAD_BYTES = 25 * 1024 * 1024;
+
+/**
+ * Result of decoding a serialized vault payload, before the caller attaches the
+ * source-specific log label.
+ */
+export type PayloadDecodeResult =
+  | { kind: 'state'; state: VersionedVaultDatabaseState }
+  | { kind: 'unreadable'; reason: UnreadableVaultReason; detail: string };
+
+/**
+ * Decodes a serialized vault payload, classifying every failure mode instead of
+ * letting `JSON.parse` throw an anonymous `SyntaxError` that callers cannot act
+ * on. K-4: the previous bare `JSON.parse` meant a corrupted file was
+ * indistinguishable from an absent one at the call site.
+ */
+export function decodePersistedVaultPayload(
+  payload: string,
+  byteLength: number,
+): PayloadDecodeResult {
+  if (byteLength > MAX_VAULT_PAYLOAD_BYTES) {
+    return {
+      kind: 'unreadable',
+      reason: 'too-large',
+      detail: `${byteLength} bytes exceeds the ${MAX_VAULT_PAYLOAD_BYTES} byte limit`,
+    };
+  }
+
+  if (!payload.trim()) {
+    return { kind: 'unreadable', reason: 'empty', detail: 'vault payload contained no data' };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(payload);
+  } catch (err) {
+    return {
+      kind: 'unreadable',
+      reason: 'invalid-json',
+      detail: err instanceof Error ? err.message : String(err),
+    };
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return {
+      kind: 'unreadable',
+      reason: 'invalid-shape',
+      detail: `expected a JSON object, received ${Array.isArray(parsed) ? 'array' : typeof parsed}`,
+    };
+  }
+
+  return { kind: 'state', state: parseVaultDatabaseState(payload) };
+}
+
+function logUnreadableVault(reason: UnreadableVaultReason, detail: string): void {
+  logSecurityEvent(
+    securityEventCodes.storageDesktopReadFailed,
+    `Vault database file is present but unreadable (${reason}). Refusing to fall back to the stale IndexedDB mirror.`,
+    'critical',
+    { reason, detail },
+  );
+}
+
+/**
  * Reads the vault database from desktop app-data or the OPFS mirror.
- * Never throws — unexpected shapes are surfaced through `parseVaultDatabaseState`.
+ *
+ * K-4: no longer throws and no longer collapses "damaged" into "absent". A
+ * damaged authoritative file returns `{ kind: 'unreadable' }` so the caller can
+ * block startup and offer snapshot restore; only a genuinely absent storage
+ * path returns `unavailable`, which is the case where the mirror fallback is
+ * safe.
  */
 export async function loadPersistedVaultDatabase(): Promise<PersistedLoadResult> {
   let desktopPayload: string | null = null;
@@ -117,19 +247,39 @@ export async function loadPersistedVaultDatabase(): Promise<PersistedLoadResult>
   }
 
   if (desktopPayload) {
-    const state = parseVaultDatabaseState(desktopPayload);
-    processLoadedStateIntegrity(state);
-    setIndexedDbItemSync(LOCAL_FALLBACK_KEY, createDesktopManagedSetupMarker(state));
-    return {
-      kind: 'state',
-      state,
-      logLabel: `sqlite3_open("${getNativeVaultStorageScope()}:///${DB_FILENAME}")`,
-      resaveAfterLoad: false,
-    };
+    const decoded = decodePersistedVaultPayload(
+      desktopPayload,
+      new TextEncoder().encode(desktopPayload).byteLength,
+    );
+    if (decoded.kind === 'state') {
+      const state = decoded.state;
+      processLoadedStateIntegrity(state);
+      setIndexedDbItemSync(LOCAL_FALLBACK_KEY, createDesktopManagedSetupMarker(state));
+      return {
+        kind: 'state',
+        state,
+        logLabel: `sqlite3_open("${getNativeVaultStorageScope()}:///${DB_FILENAME}")`,
+        resaveAfterLoad: false,
+      };
+    }
+    logUnreadableVault(decoded.reason, decoded.detail);
+    return { kind: 'unreadable', reason: decoded.reason, detail: decoded.detail };
   }
 
   if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.getDirectory) {
-    const root = await navigator.storage.getDirectory();
+    let root: FileSystemDirectoryHandle;
+    try {
+      root = await navigator.storage.getDirectory();
+    } catch (err) {
+      logSecurityEvent(
+        securityEventCodes.storageDesktopReadFailed,
+        'OPFS root directory is not accessible; trying local fallback.',
+        'warning',
+        { error: err instanceof Error ? err.message : String(err) },
+      );
+      return { kind: 'unavailable' };
+    }
+
     let fileHandle: FileSystemFileHandle;
     try {
       fileHandle = await root.getFileHandle(DB_FILENAME);
@@ -138,10 +288,35 @@ export async function loadPersistedVaultDatabase(): Promise<PersistedLoadResult>
       return { kind: 'missing' };
     }
 
-    const file = await fileHandle.getFile();
-    const content = await file.text();
-    if (content) {
-      const state = parseVaultDatabaseState(content);
+    let file: File;
+    let content: string;
+    try {
+      file = await fileHandle.getFile();
+      content = await file.text();
+    } catch (err) {
+      // K-4: the file exists but cannot be read at all (I/O error, revoked
+      // handle, undecodable bytes). Falling back to the mirror here is what
+      // let a later save overwrite the real vault.
+      const detail = err instanceof Error ? err.message : String(err);
+      logUnreadableVault('read-failed', detail);
+      return { kind: 'unreadable', reason: 'read-failed', detail };
+    }
+
+    if (!content) {
+      // A genuinely empty file is the "fresh install" case, not corruption:
+      // `createWritable` truncates before the first payload lands, so an
+      // interrupted very first write can legitimately leave 0 bytes. A missing
+      // or non-numeric `size` is treated the same way rather than being
+      // escalated to corruption on the strength of an absent property.
+      const reportedSize = typeof file.size === 'number' && Number.isFinite(file.size) ? file.size : 0;
+      return reportedSize === 0
+        ? { kind: 'empty' }
+        : { kind: 'unreadable', reason: 'empty', detail: 'vault file exists but holds no decodable content' };
+    }
+
+    const decoded = decodePersistedVaultPayload(content, file.size);
+    if (decoded.kind === 'state') {
+      const state = decoded.state;
       processLoadedStateIntegrity(state);
       return {
         kind: 'state',
@@ -150,7 +325,9 @@ export async function loadPersistedVaultDatabase(): Promise<PersistedLoadResult>
         resaveAfterLoad: true,
       };
     }
-    return { kind: 'empty' };
+
+    logUnreadableVault(decoded.reason, decoded.detail);
+    return { kind: 'unreadable', reason: decoded.reason, detail: decoded.detail };
   }
 
   // Fallback to standard sandbox-compliant simulated OPFS persistence.

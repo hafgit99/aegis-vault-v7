@@ -107,6 +107,10 @@ describe('Vault Snapshot History (snapshots.ts)', () => {
     vi.clearAllMocks();
 
     vi.spyOn(storage, 'getVaultItems').mockResolvedValue(sampleItems);
+    // Y-14: creating a snapshot must never purge the trash. Snapshot creation
+    // used to reach `getVaultItems`, which silently and irreversibly deleted
+    // every trashed item past the 15-day retention window.
+    vi.spyOn(storage, 'purgeExpiredTrashItems');
     vi.spyOn(storage, 'saveVaultItems').mockResolvedValue(sampleItems);
     vi.spyOn(storage, 'deleteVaultItem').mockResolvedValue([]);
     vi.spyOn(attachments, 'exportAllAttachments').mockResolvedValue([]);
@@ -293,5 +297,28 @@ describe('Vault Snapshot History (snapshots.ts)', () => {
     // Second immediate lock should be ignored due to burst limit
     const secondTry = await snapshotsLib.checkAndTriggerAutoSnapshot('lock');
     expect(secondTry).toBeNull();
+  });
+
+  // ─── Y-14: backup paths must not destroy the trash ────────────────────────
+
+  it('Y-14: creating a snapshot does not purge expired trash', async () => {
+    await vaultSession.openVaultSession('correct-master-password', 'correct-master-password', new Uint8Array(32));
+
+    await snapshotsLib.createVaultSnapshot('manual', 'must not purge');
+
+    // The regression: snapshot creation reached `getVaultItems`, which deleted
+    // every trashed item past 15 days as a side effect of reading.
+    expect(storage.purgeExpiredTrashItems).not.toHaveBeenCalled();
+  });
+
+  it('Y-14: the automatic snapshot path does not purge expired trash', async () => {
+    await vaultSession.openVaultSession('correct-master-password', 'correct-master-password', new Uint8Array(32));
+
+    // The record itself is irrelevant here — auto-snapshot is throttled, so it
+    // may legitimately decline to write. What matters is that no trash purge
+    // can be reached from this path.
+    await snapshotsLib.checkAndTriggerAutoSnapshot('lock');
+
+    expect(storage.purgeExpiredTrashItems).not.toHaveBeenCalled();
   });
 });

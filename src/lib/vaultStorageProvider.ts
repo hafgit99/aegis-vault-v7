@@ -91,7 +91,89 @@ export interface RestorePersistedVaultStorageBackendOptions {
   createRepository?: (profile: WaSqlitePersistenceProfile) => VaultStorageRepository;
 }
 
-export type VaultStorageStartupBackendStatus = 'restored-wa-sqlite' | 'activated-wa-sqlite-default' | 'kept-legacy-opfs' | 'kept-opfs-fallback';
+/**
+ * Y-13: the outcome of restoring a persisted wa-sqlite backend.
+ *
+ * The old contract was a bare `boolean`, which forced every failure into one
+ * indistinguishable bucket and, worse, into a single `catch` that always
+ * deleted the promotion marker. That is what made a recoverable failure
+ * irreversible.
+ */
+export type VaultStorageRestoreOutcome =
+  /** The persisted wa-sqlite backend was reopened and made active. */
+  | { status: 'restored' }
+  /** No promotion marker exists. A fresh backend may legitimately be created. */
+  | { status: 'absent' }
+  /**
+   * A promotion marker exists but the database could not be opened *right now*.
+   *
+   * The wa-sqlite database is still intact and is still referenced by the
+   * marker. Clearing the marker here would orphan the user's only vault, so
+   * callers must treat this as a retryable "storage unavailable" state and must
+   * NOT create a replacement vault.
+   */
+  | { status: 'unavailable'; reason: string; error: unknown };
+
+function vaultStorageRestoreReason(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error ?? '');
+  return raw.replace(/[\r\n\t]+/g, ' ').trim() || 'vault-storage-backend-unavailable';
+}
+
+export async function restorePersistedActiveVaultStorageBackend(
+  options: RestorePersistedVaultStorageBackendOptions = {},
+): Promise<VaultStorageRestoreOutcome> {
+  const marker = readPersistedActiveVaultStorageBackend();
+  if (!marker) return { status: 'absent' };
+
+  try {
+    assertWaSqlitePersistenceReadyForActiveBackend(marker.persistenceProfile);
+    const repository = (options.createRepository ?? createActiveWaSqliteRepository)(marker.persistenceProfile);
+    await repository.hydrate();
+    replaceActiveVaultStorageRepository(repository, {
+      active: 'wa-sqlite',
+      target: null,
+      mode: 'active',
+    });
+    return { status: 'restored' };
+  } catch (error) {
+    // Y-13: the marker is deliberately PRESERVED.
+    //
+    // Reaching this point means the marker already passed
+    // `isPersistedActiveVaultStorageBackend`, which is the one place a
+    // genuinely incompatible marker (wrong version, wrong VFS name, unsupported
+    // storage scope) is legitimately discarded — it does that itself, on read,
+    // and returns null. So there is no remaining case here where deleting the
+    // marker is the right move:
+    //
+    //  - `assertWaSqlitePersistenceReadyForActiveBackend` throws only when
+    //    IndexedDB is currently unavailable. The marker is still valid; the
+    //    environment is broken. Transient.
+    //  - `hydrate()` throws for a transient reason: a WASM/indexedDB fetch 500,
+    //    `QuotaExceededError` when snapshots have filled the origin quota, or a
+    //    tab-restore race.
+    //
+    // Previously both paths fell into one `catch` that called
+    // `clearPersistedActiveVaultStorageBackend()`. The wa-sqlite database then
+    // had no remaining reference anywhere in the app, and
+    // `restoreOrActivateDefaultVaultStorageBackend` went on to create a brand
+    // new *empty* database and return `activated-wa-sqlite-default`. The user's
+    // vault silently vanished with no error shown.
+    return { status: 'unavailable', reason: vaultStorageRestoreReason(error), error };
+  }
+}
+
+/**
+ * Y-13: `wa-sqlite-unavailable` means a promotion marker exists but its database
+ * could not be opened on this attempt. The caller must surface this as a
+ * retryable failure — it must NOT be treated as "no vault exists" and must NOT
+ * be allowed to create a replacement vault.
+ */
+export type VaultStorageStartupBackendStatus =
+  | 'restored-wa-sqlite'
+  | 'activated-wa-sqlite-default'
+  | 'kept-legacy-opfs'
+  | 'kept-opfs-fallback'
+  | 'wa-sqlite-unavailable';
 
 export interface RestoreOrActivateDefaultVaultStorageBackendOptions extends RestorePersistedVaultStorageBackendOptions {
   hasLegacyOpfsVaultData?: () => boolean;
@@ -101,8 +183,19 @@ export interface RestoreOrActivateDefaultVaultStorageBackendOptions extends Rest
 export async function restoreOrActivateDefaultVaultStorageBackend(
   options: RestoreOrActivateDefaultVaultStorageBackendOptions = {},
 ): Promise<VaultStorageStartupBackendStatus> {
-  if (await restorePersistedActiveVaultStorageBackend(options)) {
+  const restored = await restorePersistedActiveVaultStorageBackend(options);
+  if (restored.status === 'restored') {
     return 'restored-wa-sqlite';
+  }
+
+  // Y-13: fail closed. A promotion marker exists, so the user's vault lives in
+  // a wa-sqlite database. It failed to open this time, but it is still there.
+  // Falling through to the activation branch below would create a brand new,
+  // empty database, overwrite the marker with a fresh promotion record, and
+  // present that empty vault as `activated-wa-sqlite-default` — permanent,
+  // silent data loss.
+  if (restored.status === 'unavailable') {
+    return 'wa-sqlite-unavailable';
   }
 
   const hasLegacyData = (options.hasLegacyOpfsVaultData ?? hasLegacyOpfsVaultData)();
@@ -155,28 +248,6 @@ function hasLegacyOpfsVaultData(): boolean {
     return Array.isArray(parsed.user_secrets) && parsed.user_secrets.length > 0;
   } catch {
     return true;
-  }
-}
-
-export async function restorePersistedActiveVaultStorageBackend(
-  options: RestorePersistedVaultStorageBackendOptions = {},
-): Promise<boolean> {
-  const marker = readPersistedActiveVaultStorageBackend();
-  if (!marker) return false;
-
-  try {
-    assertWaSqlitePersistenceReadyForActiveBackend(marker.persistenceProfile);
-    const repository = (options.createRepository ?? createActiveWaSqliteRepository)(marker.persistenceProfile);
-    await repository.hydrate();
-    replaceActiveVaultStorageRepository(repository, {
-      active: 'wa-sqlite',
-      target: null,
-      mode: 'active',
-    });
-    return true;
-  } catch {
-    clearPersistedActiveVaultStorageBackend();
-    return false;
   }
 }
 

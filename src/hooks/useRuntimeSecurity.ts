@@ -79,7 +79,14 @@ export function useRuntimeSecurity({
     }
 
     let lockTimer: ReturnType<typeof setTimeout> | null = null;
-    let backgroundDeadline = 0;
+    // N-1: nullable, NOT 0. `0` is indistinguishable from "epoch reached", so
+    // an unarmed deadline compared with `Date.now() >= backgroundDeadline`
+    // evaluated true on every foreground transition. That locked the vault
+    // immediately after every Android Autofill flow, because
+    // shieldAndScheduleLock() returns early in autofill mode and therefore
+    // never armed a deadline in the first place. `null` means "no background
+    // lock is pending", which must never be treated as "the deadline passed".
+    let backgroundDeadline: number | null = null;
 
     const clearLockTimer = () => {
       if (lockTimer) {
@@ -91,13 +98,15 @@ export function useRuntimeSecurity({
     const shieldAndScheduleLock = () => {
       // During autofill flow, the Activity is temporarily re-launched which
       // causes blur/visibility-change events. Suppress the shield and lock
-      // timer so the user does not see a black screen.
+      // timer so the user does not see a black screen. The deadline stays
+      // null so the matching foreground transition cannot lock the vault.
       if (isAutofillMode) return;
       setPrivacyShieldVisible(true);
       onSensitiveStateClearRef.current();
       clearLockTimer();
       backgroundDeadline = Date.now() + backgroundLockDelayMs;
       lockTimer = setTimeout(() => {
+        backgroundDeadline = null;
         onLockRef.current();
       }, backgroundLockDelayMs);
     };
@@ -109,7 +118,12 @@ export function useRuntimeSecurity({
         // Y-6: browsers throttle or suspend timers while hidden — returning
         // to the window must honour the deadline instead of unconditionally
         // cancelling the pending lock.
-        const deadlinePassed = Date.now() >= backgroundDeadline;
+        //
+        // N-1: only a real, armed deadline can trigger the lock. A null
+        // deadline (autofill suppression, or never backgrounded) is not an
+        // elapsed deadline.
+        const deadlinePassed = backgroundDeadline !== null && Date.now() >= backgroundDeadline;
+        backgroundDeadline = null;
         clearLockTimer();
         if (deadlinePassed) {
           onLockRef.current();

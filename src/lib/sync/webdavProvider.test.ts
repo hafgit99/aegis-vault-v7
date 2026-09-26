@@ -30,10 +30,10 @@ function makeResponse(status: number, body = ''): Response {
   return new Response(body, { status: safeStatus });
 }
 
-function makeJsonResponse(status: number, data: unknown): Response {
+function makeJsonResponse(status: number, data: unknown, extraHeaders: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', ...extraHeaders },
   });
 }
 
@@ -136,6 +136,111 @@ describe('WebDavSyncProvider.uploadVault', () => {
     const metadata = { updatedAt: '', deviceId: '', vaultVersion: '', checksum: '', itemCount: 0 };
     await expect(buildProvider().uploadVault('blob', metadata)).rejects.toMatchObject({ code: syncErrorCodes.uploadFailed });
   });
+
+  // ─── Y-11: conditional write ──────────────────────────────────────────────
+
+  it('sends If-Match with the observed ETag on the vault PUT', async () => {
+    const seen: Array<Record<string, string>> = [];
+    mockFetch((url, opts) => {
+      const method = (opts?.method ?? 'GET').toUpperCase();
+      if (method === 'PUT' && String(url).endsWith('vault.aegis')) {
+        seen.push(opts?.headers as Record<string, string>);
+      }
+      return makeResponse(200);
+    });
+
+    const metadata = { updatedAt: '', deviceId: '', vaultVersion: '', checksum: '', itemCount: 0 };
+    await buildProvider().uploadVault('blob', metadata, { ifMatch: '"v1"' });
+
+    expect(seen).toHaveLength(1);
+    expect(seen[0]!['If-Match']).toBe('"v1"');
+  });
+
+  it('sends no If-Match when no precondition is supplied', async () => {
+    const seen: Array<Record<string, string>> = [];
+    mockFetch((url, opts) => {
+      const method = (opts?.method ?? 'GET').toUpperCase();
+      if (method === 'PUT' && String(url).endsWith('vault.aegis')) {
+        seen.push(opts?.headers as Record<string, string>);
+      }
+      return makeResponse(200);
+    });
+
+    const metadata = { updatedAt: '', deviceId: '', vaultVersion: '', checksum: '', itemCount: 0 };
+    await buildProvider().uploadVault('blob', metadata);
+
+    expect(seen[0]!['If-Match']).toBeUndefined();
+  });
+
+  it.each([412, 409])('reports remoteModified on HTTP %i, not a silent overwrite', async (status) => {
+    const vaultPuts: number[] = [];
+    let vaultPutIndex = 0;
+    mockFetch((url, opts) => {
+      const method = (opts?.method ?? 'GET').toUpperCase();
+      if (method === 'PUT' && String(url).endsWith('vault.aegis')) {
+        vaultPuts.push(status);
+        vaultPutIndex++;
+      }
+      return makeResponse(method === 'PUT' && vaultPutIndex === 1 ? status : 200);
+    });
+
+    const metadata = { updatedAt: '', deviceId: '', vaultVersion: '', checksum: '', itemCount: 0 };
+    await expect(
+      buildProvider().uploadVault('blob', metadata, { ifMatch: '"v1"' }),
+    ).rejects.toMatchObject({ code: syncErrorCodes.remoteModified });
+
+    // The metadata PUT must not run after a rejected vault write.
+    expect(vaultPuts).toHaveLength(1);
+  });
+
+  it('keeps the auth header alongside If-Match', async () => {
+    const seen: Array<Record<string, string>> = [];
+    mockFetch((url, opts) => {
+      const method = (opts?.method ?? 'GET').toUpperCase();
+      if (method === 'PUT' && String(url).endsWith('vault.aegis')) {
+        seen.push(opts?.headers as Record<string, string>);
+      }
+      return makeResponse(200);
+    });
+
+    const metadata = { updatedAt: '', deviceId: '', vaultVersion: '', checksum: '', itemCount: 0 };
+    await buildProvider().uploadVault('blob', metadata, { ifMatch: '"v1"' });
+
+    expect(seen[0]!['Authorization']).toMatch(/^Basic /);
+    expect(seen[0]!['Content-Type']).toBe('application/octet-stream');
+  });
+
+  it('warns that the remote is unlabelled when the metadata write fails', async () => {
+    mockFetch((url, opts) => {
+      const method = (opts?.method ?? 'GET').toUpperCase();
+      if (method === 'PUT' && String(url).endsWith('metadata.json')) return makeResponse(500);
+      return makeResponse(200);
+    });
+
+    const metadata = { updatedAt: '', deviceId: '', vaultVersion: '', checksum: '', itemCount: 0 };
+    await expect(buildProvider().uploadVault('blob', metadata)).rejects.toThrow(/unlabelled/);
+  });
+});
+
+// ─── getVaultETag Tests ───────────────────────────────────────────────────────
+
+describe('WebDavSyncProvider.getVaultETag', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('returns the vault ETag', async () => {
+    mockFetch(() => new Response(null, { status: 200, headers: { etag: '"v7"' } }));
+    expect(await buildProvider().getVaultETag()).toBe('"v7"');
+  });
+
+  it('returns null on 404', async () => {
+    mockFetch(() => makeResponse(404));
+    expect(await buildProvider().getVaultETag()).toBeNull();
+  });
+
+  it('returns null on network error rather than throwing', async () => {
+    mockFetch(() => { throw new TypeError('offline'); });
+    expect(await buildProvider().getVaultETag()).toBeNull();
+  });
 });
 
 // ─── downloadVault Tests ──────────────────────────────────────────────────────
@@ -166,13 +271,14 @@ describe('WebDavSyncProvider.downloadVault', () => {
 describe('WebDavSyncProvider.getRemoteMetadata', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it('returns null on 404', async () => {
+  it('reports absent on 404', async () => {
     mockFetch(() => makeResponse(404));
     const result = await buildProvider().getRemoteMetadata();
-    expect(result).toBeNull();
+    // Y-11: 404 is a genuine "no remote snapshot yet", distinct from unreadable.
+    expect(result).toEqual({ kind: 'absent' });
   });
 
-  it('parses valid metadata JSON', async () => {
+  it('parses valid metadata JSON and surfaces the ETag', async () => {
     const metadata = {
       updatedAt: '2024-01-01T00:00:00Z',
       deviceId: 'dev1',
@@ -180,16 +286,22 @@ describe('WebDavSyncProvider.getRemoteMetadata', () => {
       checksum: 'abc123',
       itemCount: 5,
     };
-    mockFetch(() => makeJsonResponse(200, metadata));
+    mockFetch(() => makeJsonResponse(200, metadata, { etag: '"v1"' }));
     const result = await buildProvider().getRemoteMetadata();
-    expect(result?.deviceId).toBe('dev1');
-    expect(result?.itemCount).toBe(5);
+    expect(result.kind).toBe('ok');
+    if (result.kind !== 'ok') throw new Error('unreachable');
+    expect(result.metadata.deviceId).toBe('dev1');
+    expect(result.metadata.itemCount).toBe(5);
+    expect(result.etag).toBe('"v1"');
   });
 
-  it('returns null on corrupt JSON', async () => {
+  it('Y-11: reports unreadable, NOT absent, on corrupt JSON', async () => {
     mockFetch(() => makeResponse(200, '{bad json'));
     const result = await buildProvider().getRemoteMetadata();
-    expect(result).toBeNull();
+    // Regression: this used to return null, which performSync read as "no
+    // remote" and then overwrote an intact remote vault.
+    expect(result.kind).toBe('unreadable');
+    expect(result.kind === 'unreadable' && result.detail).toBeTruthy();
   });
 
   it('throws downloadFailed on network error and HTTP 500 in getRemoteMetadata', async () => {

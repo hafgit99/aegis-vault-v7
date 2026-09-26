@@ -89,6 +89,74 @@ afterEach(() => {
 });
 
 describe('SQLite OPFS persistence engine', () => {
+  // ─── Y-15: targeted trash updates ─────────────────────────────────────────
+
+  it('Y-15: flags one item as trashed without touching any other row', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    await sqlite.saveVaultItem(sampleItem({ id: 'keep-1', title: 'Keep One' }), 'master-pass');
+    await sqlite.saveVaultItem(sampleItem({ id: 'target', title: 'Target' }), 'master-pass');
+    await sqlite.saveVaultItem(sampleItem({ id: 'keep-2', title: 'Keep Two' }), 'master-pass');
+
+    const key = await sqlite.deriveEncryptionKey('master-pass');
+    await sqlite.setItemTrashedWithKey('target', true, key);
+
+    const items = await sqlite.getVaultItemsWithKey(key);
+    const target = items.find((i) => i.id === 'target');
+    expect(target?.deleted).toBe(true);
+    expect(target?.deletedAt).toEqual(expect.any(String));
+
+    // The regression: the old path wrote back an item object built from a full
+    // vault read, so untouched rows could be altered as a side effect.
+    for (const id of ['keep-1', 'keep-2']) {
+      const untouched = items.find((i) => i.id === id);
+      expect(untouched?.deleted).toBeFalsy();
+      expect(untouched?.title).toBe(id === 'keep-1' ? 'Keep One' : 'Keep Two');
+    }
+  });
+
+  it('Y-15: preserves other fields of the targeted item', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    const original = sampleItem({ id: 'target', title: 'Original Title', notes: 'keep these notes' });
+    await sqlite.saveVaultItem(original, 'master-pass');
+
+    const key = await sqlite.deriveEncryptionKey('master-pass');
+    await sqlite.setItemTrashedWithKey('target', true, key);
+
+    const updated = (await sqlite.getVaultItemsWithKey(key)).find((i) => i.id === 'target');
+    expect(updated?.title).toBe('Original Title');
+    expect(updated?.notes).toBe('keep these notes');
+  });
+
+  it('Y-15: restoring clears both trash fields', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    await sqlite.saveVaultItem(sampleItem({ id: 'target' }), 'master-pass');
+
+    const key = await sqlite.deriveEncryptionKey('master-pass');
+    await sqlite.setItemTrashedWithKey('target', true, key);
+    await sqlite.setItemTrashedWithKey('target', false, key);
+
+    const restored = (await sqlite.getVaultItemsWithKey(key)).find((i) => i.id === 'target');
+    expect(restored?.deleted).toBeFalsy();
+    expect(restored?.deletedAt).toBeUndefined();
+  });
+
+  it('Y-15: does not write when the target item does not exist', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    await sqlite.saveVaultItem(sampleItem({ id: 'existing' }), 'master-pass');
+
+    const key = await sqlite.deriveEncryptionKey('master-pass');
+    const before = (await sqlite.getVaultItemsWithKey(key)).length;
+    const versionBefore = (await sqlite.getVaultItemsWithKey(key)).length;
+
+    await expect(sqlite.setItemTrashedWithKey('missing', true, key)).resolves.toHaveLength(before);
+    // A no-op must not bump the version counter, or it would look like a commit.
+    expect((await sqlite.getVaultItemsWithKey(key)).length).toBe(versionBefore);
+  });
+
   it('sets up a master password, stores encrypted rows, and exposes read-only SQL results', async () => {
     const sqlite = await freshSqliteInstance();
     let notifications = 0;
@@ -437,7 +505,18 @@ describe('SQLite OPFS persistence engine', () => {
 
     const persisted = JSON.parse(localStorage.getItem('aegis_sqlite_fallback') ?? '{}');
     delete persisted.encryption_salt;
+    // K-3: a genuine pre-v2 database cannot carry a v2 tag. Leaving
+    // `integrityHmac` in place while deleting a signed field is exactly the
+    // tampering shape the re-seal gate now rejects, so the legacy fixture has
+    // to drop the tag too.
+    delete persisted.integrityHmac;
+    delete persisted.sealedAtVersionCounter;
     localStorage.setItem('aegis_sqlite_fallback', JSON.stringify(persisted));
+    // Y-5: a genuine legacy vault also predates the integrity ledger. Without
+    // clearing it, the ledger still says "this vault has been sealed", and a
+    // missing tag is then (correctly) treated as tag blanking rather than as an
+    // unsealed vault — which is precisely the protection under test elsewhere.
+    localStorage.removeItem('aegis_vault_integrity_ledger');
 
     const legacyStaticSaltSqlite = await freshSqliteInstance();
 

@@ -139,6 +139,99 @@ describe('useRuntimeSecurity', () => {
     expect(onLock).not.toHaveBeenCalled();
   });
 
+  it('REGRESSION (N-1): does not lock on foreground return when no background deadline was armed', () => {
+    // The Autofill flow re-launches the Activity, which fires
+    // visibilitychange with document.hidden = true. shieldAndScheduleLock()
+    // intentionally returns early in autofill mode so the user does not see a
+    // black screen — which means no deadline is ever armed. When the flow
+    // completes the app returns to the foreground; that transition must not be
+    // mistaken for "the background deadline elapsed".
+    const onLock = vi.fn();
+    const { result, rerender } = renderHook(
+      ({ isAutofillMode }: { isAutofillMode: boolean }) =>
+        useRuntimeSecurity({
+          unlocked: true,
+          onLock,
+          onSensitiveStateClear: vi.fn(),
+          backgroundLockDelayMs: 5_000,
+          isAutofillMode,
+        }),
+      { initialProps: { isAutofillMode: true } },
+    );
+
+    // Backgrounded mid-autofill: shield suppressed, no lock timer armed.
+    act(() => {
+      setDocumentHidden(true);
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    expect(result.current.privacyShieldVisible).toBe(false);
+    expect(onLock).not.toHaveBeenCalled();
+
+    // Autofill completes; the app is foregrounded again.
+    act(() => {
+      rerender({ isAutofillMode: false });
+      setDocumentHidden(false);
+      document.dispatchEvent(new Event('visibilitychange'));
+      vi.advanceTimersByTime(60_000);
+    });
+
+    expect(onLock).not.toHaveBeenCalled();
+  });
+
+  it('REGRESSION (N-1): still locks when a real background deadline elapsed while hidden', () => {
+    // Counterpart to the case above: the deadline WAS armed, the browser
+    // throttled the timer while hidden, and the user returns after it elapsed.
+    // The vault must lock — that is the Y-6 behaviour being protected.
+    const onLock = vi.fn();
+    renderHook(() =>
+      useRuntimeSecurity({
+        unlocked: true,
+        onLock,
+        onSensitiveStateClear: vi.fn(),
+        backgroundLockDelayMs: 5_000,
+      }),
+    );
+
+    act(() => {
+      setDocumentHidden(true);
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    // Hidden for longer than the configured delay. setSystemTime moves the
+    // wall clock WITHOUT firing pending timers, which is exactly how a
+    // throttled/suspended background timer behaves in a real browser.
+    act(() => {
+      vi.setSystemTime(Date.now() + 6_000);
+    });
+
+    act(() => {
+      setDocumentHidden(false);
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    expect(onLock).toHaveBeenCalledTimes(1);
+  });
+
+  it('REGRESSION (N-1): a foreground transition without a prior hide does not lock', () => {
+    const onLock = vi.fn();
+    renderHook(() =>
+      useRuntimeSecurity({
+        unlocked: true,
+        onLock,
+        onSensitiveStateClear: vi.fn(),
+        backgroundLockDelayMs: 5_000,
+      }),
+    );
+
+    act(() => {
+      setDocumentHidden(false);
+      document.dispatchEvent(new Event('visibilitychange'));
+      vi.advanceTimersByTime(60_000);
+    });
+
+    expect(onLock).not.toHaveBeenCalled();
+  });
+
   it('shields and clears sensitive state on window blur', () => {
     const onSensitiveStateClear = vi.fn();
     const { result } = renderHook(() =>

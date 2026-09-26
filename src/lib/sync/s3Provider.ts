@@ -4,7 +4,13 @@
  */
 
 import { addSyncAllowedOrigin, isPrivateOrLoopbackHostname, removeSyncAllowedOrigin } from '../airgapNetworkPolicy';
-import type { SyncProvider, SyncMetadata, S3SyncConfig } from './syncTypes';
+import type {
+  SyncProvider,
+  SyncMetadata,
+  SyncRemoteMetadata,
+  SyncUploadPreconditions,
+  S3SyncConfig,
+} from './syncTypes';
 import { SyncError, syncErrorCodes } from './syncTypes';
 
 const VAULT_FILE = 'vault.aegis';
@@ -199,13 +205,26 @@ export class S3SyncProvider implements SyncProvider {
     }
   }
 
-  async uploadVault(encryptedBlob: string, metadata: SyncMetadata): Promise<void> {
+  async uploadVault(
+    encryptedBlob: string,
+    metadata: SyncMetadata,
+    preconditions?: SyncUploadPreconditions,
+  ): Promise<void> {
     // 1. Upload vault blob
     const vaultPath = this.buildKeyPath(VAULT_FILE);
     const vaultUrl = this.buildObjectUrl(vaultPath);
-    const vaultHeaders = await this.createSignedHeaders('PUT', vaultUrl, encryptedBlob, {
+    const extraVaultHeaders: Record<string, string> = {
       'content-type': 'application/octet-stream',
-    });
+    };
+    // Y-11: the ETag must be part of the signed request so the server can
+    // enforce it. S3-compatible stores support `If-Match` on PutObject, but not
+    // every compatible implementation does, so the caller-visible behaviour is
+    // covered by the "unreadable remote" refusal as well — the two mechanisms
+    // fail safe independently.
+    if (preconditions?.ifMatch) {
+      extraVaultHeaders['if-match'] = preconditions.ifMatch;
+    }
+    const vaultHeaders = await this.createSignedHeaders('PUT', vaultUrl, encryptedBlob, extraVaultHeaders);
 
     let vaultRes: Response;
     try {
@@ -218,6 +237,12 @@ export class S3SyncProvider implements SyncProvider {
       throw new SyncError(syncErrorCodes.uploadFailed, `Network error uploading vault to S3: ${String(err)}`);
     }
 
+    if (vaultRes.status === 412 || vaultRes.status === 409) {
+      throw new SyncError(
+        syncErrorCodes.remoteModified,
+        'Remote vault changed during sync — upload rejected, nothing was overwritten. Run sync again.',
+      );
+    }
     if (!vaultRes.ok) {
       throw new SyncError(syncErrorCodes.uploadFailed, `Failed to upload vault to S3: HTTP ${vaultRes.status}`);
     }
@@ -242,7 +267,13 @@ export class S3SyncProvider implements SyncProvider {
     }
 
     if (!metaRes.ok) {
-      throw new SyncError(syncErrorCodes.uploadFailed, `Vault uploaded but metadata write failed on S3: HTTP ${metaRes.status}`);
+      // Y-11: see the WebDAV provider — the blob landed but its descriptor did
+      // not, and the next sync will refuse to overwrite because of it.
+      throw new SyncError(
+        syncErrorCodes.uploadFailed,
+        `Vault uploaded but metadata write failed on S3: HTTP ${metaRes.status}. ` +
+        'The remote vault is intact but unlabelled; the next sync will refuse to overwrite it.',
+      );
     }
   }
 
@@ -266,7 +297,7 @@ export class S3SyncProvider implements SyncProvider {
     return res.text();
   }
 
-  async getRemoteMetadata(): Promise<SyncMetadata | null> {
+  async getRemoteMetadata(): Promise<SyncRemoteMetadata> {
     const metaPath = this.buildKeyPath(METADATA_FILE);
     const metaUrl = this.buildObjectUrl(metaPath);
     const headers = await this.createSignedHeaders('GET', metaUrl);
@@ -278,13 +309,36 @@ export class S3SyncProvider implements SyncProvider {
       throw new SyncError(syncErrorCodes.downloadFailed, `Network error fetching metadata from S3: ${String(err)}`);
     }
 
-    if (res.status === 404) return null;
+    // Y-11: 404 is a genuine "no remote snapshot yet". Anything else that
+    // fails to parse is 'unreadable', never 'absent'.
+    if (res.status === 404) return { kind: 'absent' };
     if (!res.ok) {
       throw new SyncError(syncErrorCodes.downloadFailed, `Failed to fetch metadata from S3: HTTP ${res.status}`);
     }
 
     try {
-      return (await res.json()) as SyncMetadata;
+      const metadata = (await res.json()) as SyncMetadata;
+      return { kind: 'ok', metadata, etag: res.headers?.get?.('etag') ?? undefined };
+    } catch (err) {
+      return {
+        kind: 'unreadable',
+        detail: `metadata.json is present but not parsable: ${err instanceof Error ? err.message : String(err)}`,
+      };
+    }
+  }
+
+  async getVaultETag(): Promise<string | null> {
+    const vaultUrl = this.buildObjectUrl(this.buildKeyPath(VAULT_FILE));
+    let headers: Record<string, string>;
+    try {
+      headers = await this.createSignedHeaders('HEAD', vaultUrl);
+    } catch {
+      return null;
+    }
+    try {
+      const res = await fetch(vaultUrl, { method: 'HEAD', headers });
+      if (!res.ok) return null;
+      return res.headers?.get?.('etag') ?? null;
     } catch {
       return null;
     }

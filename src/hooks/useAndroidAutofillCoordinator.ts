@@ -5,6 +5,7 @@ import type {
   AndroidAutofillRequest,
   AndroidAutofillSaveCandidate} from '../lib/androidAutofill';
 import {
+  ANDROID_AUTOFILL_REQUEST_MAX_AGE_MS,
   clearPendingAndroidAutofillRequest,
   clearPendingAndroidAutofillSaveCandidate,
   completePendingAndroidAutofillRequest,
@@ -91,6 +92,43 @@ export function useAndroidAutofillCoordinator({
       type: 'info',
     });
   }, [pendingAutofillRequest, rejectStaleAutofillRequest, setActiveTab, showNotification, t, unlocked]);
+
+  // N-8: expire the pending request on a timer, not only on the next event.
+  //
+  // `rejectStaleAutofillRequest` is the only thing that clears a request that
+  // the user never acts on, and it is invoked from the subscribe callback, the
+  // notification effect and `approveAutofillRequest` — all of which require a
+  // NEW event. A request that arrives and is then ignored therefore stayed in
+  // state indefinitely, even though `isAndroidAutofillRequestFresh` would have
+  // rejected it after ANDROID_AUTOFILL_REQUEST_MAX_AGE_MS.
+  //
+  // That matters for security, not just tidiness: `pendingAutofillRequest`
+  // being non-null is what drives `isAutofillMode`, and `isAutofillMode`
+  // makes `useRuntimeSecurity` skip arming the background auto-lock entirely
+  // (by design, so the Autofill Activity re-launch does not black out the
+  // screen or lock the vault mid-flow). An ignored request could therefore
+  // suppress background auto-lock indefinitely — the very fail-open that
+  // Aşama 1 #20 / N-1 was written to close, re-introduced through a different
+  // door. Expiring on a timer bounds the suppression to the request's own
+  // freshness window.
+  useEffect(() => {
+    if (!pendingAutofillRequest) return;
+
+    const remainingMs = pendingAutofillRequest.createdAt
+      + ANDROID_AUTOFILL_REQUEST_MAX_AGE_MS
+      - Date.now();
+    // Fail closed: an already-expired request, or one whose age cannot be
+    // computed at all, is rejected on the next tick (delay 0) rather than
+    // being kept alive. Rejecting through the timer instead of inline keeps
+    // this effect free of synchronous setState, which would cascade renders.
+    const delayMs = Number.isFinite(remainingMs) ? Math.max(remainingMs, 0) : 0;
+
+    const timer = setTimeout(() => {
+      rejectStaleAutofillRequest(pendingAutofillRequest);
+    }, delayMs);
+
+    return () => clearTimeout(timer);
+  }, [pendingAutofillRequest, rejectStaleAutofillRequest]);
 
   useEffect(() => {
     if (!unlocked || !pendingAutofillSaveCandidate) return;

@@ -19,7 +19,11 @@ import android.app.assist.AssistStructure
 import android.widget.RemoteViews
 import androidx.annotation.RequiresApi
 import androidx.core.content.FileProvider
+import com.hafgit99.aegisvault7.model.AutofillLaunchRequest
+import com.hafgit99.aegisvault7.model.AutofillSaveCandidate
+import com.hafgit99.aegisvault7.security.AutofillRequestRegistry
 import com.hafgit99.aegisvault7.security.SecureTempFileStorage
+import java.util.UUID
 import org.json.JSONObject
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -75,7 +79,7 @@ class AegisAutofillService : AutofillService() {
     }
 
     val createdAt = System.currentTimeMillis()
-    val requestId = "android-autofill-save-$createdAt"
+    val requestId = newAutofillRequestId(SAVE_REQUEST_PREFIX)
 
     try {
       val (payloadUri, token) = stashEncryptedPayload(requestId, candidate)
@@ -85,29 +89,39 @@ class AegisAutofillService : AutofillService() {
           return
         }
 
+      // K-1: the candidate is registered in our own address space and the
+      // Intent carries nothing but the opaque id. Title, username, url,
+      // appPackage, webDomain and the encrypted payload reference all stay
+      // inside the process, so a forged ACTION_AUTOFILL_SAVE can no longer
+      // poison the vault with attacker-chosen values.
+      val saveCandidate = AutofillSaveCandidate(
+        requestId = requestId,
+        createdAt = createdAt,
+        title = candidate.title(),
+        username = candidate.username,
+        password = "",
+        url = candidate.url().takeIf { it.isNotBlank() },
+        appPackage = candidate.appPackage,
+        webDomain = candidate.webDomain,
+        payloadUri = payloadUri.toString(),
+        payloadToken = token,
+      )
+      AutofillRequestRegistry.registerSaveCandidate(saveCandidate)
+
       val intent = Intent(this, MainActivity::class.java).apply {
         action = ACTION_AUTOFILL_SAVE
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        // The Intent now carries only non-sensitive metadata. The password
-        // travels through the FileProvider URI + decryption token and never
-        // touches the Binder transaction buffer.
-        putExtra(EXTRA_AUTOFILL_SAVE_REQUEST_ID, requestId)
-        putExtra(EXTRA_AUTOFILL_SAVE_CREATED_AT, createdAt)
-        putExtra(EXTRA_AUTOFILL_SAVE_TITLE, candidate.title())
-        putExtra(EXTRA_AUTOFILL_SAVE_USERNAME, candidate.username)
-        putExtra(EXTRA_AUTOFILL_SAVE_PAYLOAD_URI, payloadUri.toString())
-        putExtra(EXTRA_AUTOFILL_SAVE_PAYLOAD_TOKEN, token)
-        putExtra(EXTRA_AUTOFILL_SAVE_URL, candidate.url())
-        putExtra(EXTRA_AUTOFILL_APP_PACKAGE, candidate.appPackage)
-        putExtra(EXTRA_AUTOFILL_WEB_DOMAIN, candidate.webDomain)
+        putExtra(EXTRA_REQUEST_ID, requestId)
+        putExtra(EXTRA_REQUEST_CREATED_AT, createdAt)
       }
       startActivity(intent)
       Log.i(
         AUTOFILL_LOG_TAG,
         "SaveRequest forwarded to Aegis package=${candidate.appPackage ?: "unknown"} " +
-          "domain=${candidate.webDomain ?: "unknown"} payload=encrypted",
+          "domain=${candidate.webDomain ?: "unknown"} payload=encrypted requestId=$requestId",
       )
     } catch (error: Exception) {
+      AutofillRequestRegistry.consumeSaveCandidate(requestId)
       Log.w(AUTOFILL_LOG_TAG, "SaveRequest could not launch Aegis: ${error.message ?: "unknown"}")
     }
 
@@ -304,21 +318,43 @@ class AegisAutofillService : AutofillService() {
 
   private fun createAuthenticationIntent(loginFields: LoginFields): PendingIntent {
     val createdAt = System.currentTimeMillis()
-    val requestId = "android-autofill-$createdAt"
+    val requestId = newAutofillRequestId(FILL_REQUEST_PREFIX)
+
+    // K-1: the request is registered in our own address space, and the Intent
+    // carries ONLY the opaque id. `appPackage` and `webDomain` come from the
+    // AssistStructure the system handed us, so they can no longer be chosen by
+    // whoever launched the Activity — which is what made the forged-intent
+    // phishing UI (and the credential handed back through setResult) possible.
+    AutofillRequestRegistry.registerFillRequest(
+      AutofillLaunchRequest(
+        requestId = requestId,
+        createdAt = createdAt,
+        appPackage = loginFields.appPackage,
+        webDomain = loginFields.webDomain,
+        usernameIds = ArrayList(loginFields.usernameIds),
+        passwordIds = ArrayList(loginFields.passwordIds),
+      ),
+    )
+
     val intent = Intent(this, MainActivity::class.java).apply {
       action = ACTION_AUTOFILL_AUTHENTICATE
-      putExtra(EXTRA_AUTOFILL_REQUEST_ID, requestId)
-      putExtra(EXTRA_AUTOFILL_CREATED_AT, createdAt)
-      putExtra(EXTRA_AUTOFILL_APP_PACKAGE, loginFields.appPackage)
-      putExtra(EXTRA_AUTOFILL_WEB_DOMAIN, loginFields.webDomain)
-      putParcelableArrayListExtra(EXTRA_AUTOFILL_USERNAME_IDS, ArrayList(loginFields.usernameIds))
-      putParcelableArrayListExtra(EXTRA_AUTOFILL_PASSWORD_IDS, ArrayList(loginFields.passwordIds))
+      putExtra(EXTRA_REQUEST_ID, requestId)
+      putExtra(EXTRA_REQUEST_CREATED_AT, createdAt)
     }
 
     val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
     val requestCode = requestCodeCounter.incrementAndGet()
     return PendingIntent.getActivity(this, requestCode, intent, flags)
   }
+
+  /**
+   * K-1: request ids must not be guessable. The previous scheme was
+   * `"android-autofill-$createdAt"`, i.e. a millisecond timestamp that any app
+   * could predict; the registry is the real boundary now, but an unpredictable
+   * id means a leaked or logged id is not enough to ride a genuine request.
+   */
+  private fun newAutofillRequestId(prefix: String): String =
+    "$prefix-${UUID.randomUUID()}"
 
   private fun createSaveInfo(loginFields: LoginFields): SaveInfo {
     val requiredIds = loginFields.passwordIds.distinct().toTypedArray()
@@ -358,27 +394,38 @@ class AegisAutofillService : AutofillService() {
   companion object {
     private const val AUTOFILL_LOG_TAG = "AegisAutofill"
     private const val MAX_TRAVERSAL_DEPTH = 50
+    private const val FILL_REQUEST_PREFIX = "android-autofill"
+    private const val SAVE_REQUEST_PREFIX = "android-autofill-save"
+
+    /**
+     * K-1: these two actions are now only a ROUTING HINT that tells
+     * `MainActivity` which registry to consult. They are deliberately not a
+     * capability — every request is still resolved through
+     * `AutofillRequestRegistry`, and an id that is not registered is rejected.
+     *
+     * They are kept (rather than removed) because `MainActivity` still needs
+     * to know whether it was launched for a fill or a save; the Activity is
+     * `android:exported="false"`, so only the system — executing a
+     * `PendingIntent` this service created — can deliver them.
+     */
     const val ACTION_AUTOFILL_AUTHENTICATE = "com.hafgit99.aegisvault7.action.AUTOFILL_AUTHENTICATE"
     const val ACTION_AUTOFILL_SAVE = "com.hafgit99.aegisvault7.action.AUTOFILL_SAVE"
-    const val EXTRA_AUTOFILL_REQUEST_ID = "com.hafgit99.aegisvault7.extra.AUTOFILL_REQUEST_ID"
-    const val EXTRA_AUTOFILL_CREATED_AT = "com.hafgit99.aegisvault7.extra.AUTOFILL_CREATED_AT"
-    const val EXTRA_AUTOFILL_APP_PACKAGE = "com.hafgit99.aegisvault7.extra.AUTOFILL_APP_PACKAGE"
-    const val EXTRA_AUTOFILL_WEB_DOMAIN = "com.hafgit99.aegisvault7.extra.AUTOFILL_WEB_DOMAIN"
-    const val EXTRA_AUTOFILL_USERNAME_IDS = "com.hafgit99.aegisvault7.extra.AUTOFILL_USERNAME_IDS"
-    const val EXTRA_AUTOFILL_PASSWORD_IDS = "com.hafgit99.aegisvault7.extra.AUTOFILL_PASSWORD_IDS"
-    const val EXTRA_AUTOFILL_SAVE_REQUEST_ID = "com.hafgit99.aegisvault7.extra.AUTOFILL_SAVE_REQUEST_ID"
-    const val EXTRA_AUTOFILL_SAVE_CREATED_AT = "com.hafgit99.aegisvault7.extra.AUTOFILL_SAVE_CREATED_AT"
-    const val EXTRA_AUTOFILL_SAVE_TITLE = "com.hafgit99.aegisvault7.extra.AUTOFILL_SAVE_TITLE"
-    const val EXTRA_AUTOFILL_SAVE_USERNAME = "com.hafgit99.aegisvault7.extra.AUTOFILL_SAVE_USERNAME"
+
     /**
-     * Deprecated. Older autofill builds wrote the plaintext password to the
-     * intent extras under this key. Newer builds must use
-     * [EXTRA_AUTOFILL_SAVE_PAYLOAD_URI] + [EXTRA_AUTOFILL_SAVE_PAYLOAD_TOKEN]
-     * so the password never leaves the FileProvider-controlled cache file.
+     * The ONLY extras the Autofill Intents carry. Both are routing metadata:
+     * the id is an opaque 128-bit registry key and the timestamp is for audit
+     * logging.
+     *
+     * K-1 removed the previous extras entirely, including the deprecated
+     * `EXTRA_AUTOFILL_SAVE_PASSWORD` plaintext-password path, the
+     * `AutofillId` parcelable lists, and the attacker-controllable
+     * `EXTRA_AUTOFILL_APP_PACKAGE` / `EXTRA_AUTOFILL_WEB_DOMAIN` /
+     * `EXTRA_AUTOFILL_SAVE_TITLE` / `EXTRA_AUTOFILL_SAVE_USERNAME` /
+     * `EXTRA_AUTOFILL_SAVE_URL` values. A live code path that accepts a
+     * plaintext password from an Intent is an attack surface, not a
+     * compatibility feature.
      */
-    const val EXTRA_AUTOFILL_SAVE_PASSWORD = "com.hafgit99.aegisvault7.extra.AUTOFILL_SAVE_PASSWORD"
-    const val EXTRA_AUTOFILL_SAVE_PAYLOAD_URI = "com.hafgit99.aegisvault7.extra.AUTOFILL_SAVE_PAYLOAD_URI"
-    const val EXTRA_AUTOFILL_SAVE_PAYLOAD_TOKEN = "com.hafgit99.aegisvault7.extra.AUTOFILL_SAVE_PAYLOAD_TOKEN"
-    const val EXTRA_AUTOFILL_SAVE_URL = "com.hafgit99.aegisvault7.extra.AUTOFILL_SAVE_URL"
+    const val EXTRA_REQUEST_ID = "com.hafgit99.aegisvault7.extra.AUTOFILL_REQUEST_ID"
+    const val EXTRA_REQUEST_CREATED_AT = "com.hafgit99.aegisvault7.extra.AUTOFILL_CREATED_AT"
   }
 }

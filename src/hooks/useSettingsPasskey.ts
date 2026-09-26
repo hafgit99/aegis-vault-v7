@@ -44,6 +44,24 @@ function passkeyErrorToStatusKey(error: unknown): TranslationKey {
   return 'passkey.create.failed';
 }
 
+/**
+ * O-4: separate copy for a failed VERIFICATION.
+ *
+ * A signature that does not check out is a different event from "the
+ * authenticator prompt failed". Collapsing them into one generic message would
+ * hide the fact that something was cryptographically wrong, which is the one
+ * detail a user needs in order to decide what to do next.
+ */
+function passkeyAuthErrorToStatusKey(error: unknown): TranslationKey {
+  if (error instanceof PasskeyError) {
+    if (error.code === passkeyErrorCodes.createCancelled) return 'passkey.authenticate.cancelled';
+    if (error.code === passkeyErrorCodes.assertionInvalid) return 'passkey.authenticate.signatureInvalid';
+    if (error.code === passkeyErrorCodes.assertionUnverifiable) return 'passkey.authenticate.unverifiable';
+    if (error.code === passkeyErrorCodes.unsupportedAlgorithm) return 'passkey.authenticate.unsupportedAlgorithm';
+  }
+  return 'passkey.authenticate.failed';
+}
+
 export function useSettingsPasskey({
   items,
   setItems,
@@ -89,6 +107,9 @@ export function useSettingsPasskey({
     setPasskeyBusy(true);
     setPasskeyStatusKey(null);
     try {
+      // O-4: `authenticateAndIncrementPasskey` now verifies the signature
+      // cryptographically and throws if it does not check out, so reaching the
+      // success branch means the assertion was actually valid.
       const { updatedRecord } = await authenticateAndIncrementPasskey(record);
       const latestItems = await getVaultItems();
       const now = updatedRecord.lastUsedAt || new Date().toISOString();
@@ -107,9 +128,7 @@ export function useSettingsPasskey({
       setPasskeyStatusKey('passkey.authenticate.success');
       setPasskeyStatusKind('success');
     } catch (error) {
-      setPasskeyStatusKey(error instanceof PasskeyError && error.code === passkeyErrorCodes.createCancelled
-        ? 'passkey.authenticate.cancelled'
-        : 'passkey.authenticate.failed');
+      setPasskeyStatusKey(passkeyAuthErrorToStatusKey(error));
       setPasskeyStatusKind('error');
     } finally {
       setPasskeyBusy(false);

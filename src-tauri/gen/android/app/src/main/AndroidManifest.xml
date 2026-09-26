@@ -13,12 +13,37 @@
         android:label="@string/app_name"
         android:theme="@style/Theme.aegis_vault_v7"
         android:usesCleartextTraffic="${usesCleartextTraffic}">
+        <!--
+            K-1: MainActivity is NOT exported.
+
+            It used to carry the MAIN/LAUNCHER filter, which forces
+            android:exported="true". Because it also built its Autofill state
+            from Intent extras, any app on the device could forge
+            ACTION_AUTOFILL_AUTHENTICATE with an attacker-chosen webDomain and
+            read the approved credential back from its own onActivityResult.
+            The LAUNCHER filter now lives on the LauncherActivity trampoline
+            below, so this Activity is reachable only by this app (and by the
+            system executing the PendingIntent AegisAutofillService creates).
+
+            Do not add an intent-filter here, and do not set exported="true":
+            `npm run security:android-autofill-boundary` fails the build if
+            either happens.
+        -->
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
             android:label="@string/main_activity_title"
             android:name=".MainActivity"
             android:launchMode="singleTask"
-            android:exported="true">
+            android:exported="false" />
+
+        <!-- The single exported surface. Forwards nothing. -->
+        <activity
+            android:name=".LauncherActivity"
+            android:label="@string/main_activity_title"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@style/Theme.aegis_vault_v7">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

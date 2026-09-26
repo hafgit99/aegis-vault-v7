@@ -58,11 +58,10 @@ class AndroidAutofillBridge(
 
     @JavascriptInterface
     fun getPendingRequest(): String? {
+        // K-1: freshness is enforced by AutofillRequestRegistry, which also
+        // evicts the stale entry. The bridge never synthesises a request and
+        // never falls back to anything the Intent claimed.
         val current = getPendingAutofillRequest() ?: return null
-        if (!current.isFresh()) {
-            setPendingAutofillRequest(null)
-            return null
-        }
         return current.toJson().toString()
     }
 
@@ -145,12 +144,18 @@ class AndroidAutofillBridge(
     fun completePendingRequest(requestId: String, username: String, password: String, label: String): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
 
-        val current = getPendingAutofillRequest() ?: return false
-        if (current.requestId != requestId) return false
-        if (!current.isFresh()) {
-            setPendingAutofillRequest(null)
+        // K-1: `requestId` must resolve through the registry. A JS caller (or a
+        // forged Intent that somehow reached us) cannot name a request that
+        // AegisAutofillService never registered, so there is no FillResponse
+        // to hand back to an arbitrary caller.
+        val current = getPendingAutofillRequest() ?: run {
+            Log.w(
+                AUTOFILL_LOG_TAG,
+                "Autofill audit event [REJECTED]: completePendingRequest for unregistered requestId=$requestId"
+            )
             return false
         }
+        if (current.requestId != requestId) return false
         if (current.passwordIds.isEmpty()) return false
 
         return try {

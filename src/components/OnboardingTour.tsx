@@ -68,7 +68,7 @@ export default function OnboardingTour({ tour, onNewItem, onNavigate }: Onboardi
           {/* Progress bar */}
           <div className="w-28 sm:w-36 h-2 bg-surface-low rounded-full overflow-hidden border border-outline-variant/20">
             <ProgressFill
-              data-testid="tour-progress-bar"
+              testId="tour-progress-bar"
               className="h-full bg-brand-tertiary transition-all duration-500 rounded-full"
               percent={progressPercent}
             />

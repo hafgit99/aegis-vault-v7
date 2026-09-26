@@ -80,6 +80,7 @@ vi.mock('./argon2id', () => ({
 }));
 
 import { logSecurityEvent, securityEventCodes } from './securityEvents';
+import { recordVaultSeal } from './vaultIntegrityLedger';
 
 beforeEach(() => {
   localStorage.clear();
@@ -394,6 +395,83 @@ describe('loadPersistedVaultDatabase', () => {
 
     await loadPersistedVaultDatabase();
     expect(consumeVaultRollbackDetected()).toBe(false);
+  });
+
+  // ─── Y-15: rollback detection must survive a page reload ───────────────────
+  //
+  // The two tests above both set the in-session counter explicitly. On a real
+  // page load that counter is 0, so its `> 0` guard never fired and
+  // `useVaultRollbackAlert` was dead code in production. These tests use the
+  // durable ledger instead — the only thing that survives a reload.
+
+  it('Y-15: detects rollback from the durable ledger with no in-session counter', async () => {
+    // Simulates a fresh page load: nothing observed in this session yet.
+    setLastObservedVersionCounter(0);
+    // A previous session sealed the vault at version 20.
+    recordVaultSeal(20);
+
+    const rolledBackState = {
+      ...createEmptyVaultDatabaseState(),
+      versionCounter: 4,
+    };
+    readDesktopVaultDatabase.mockResolvedValueOnce(JSON.stringify(rolledBackState));
+
+    const result = await loadPersistedVaultDatabase();
+
+    expect(result.kind).toBe('state');
+    expect(logSecurityEvent).toHaveBeenCalledWith(
+      securityEventCodes.storageLegacyMigrationFailed,
+      expect.stringContaining('Vault database rollback detected'),
+      'critical',
+      expect.objectContaining({ loadedVersion: 4, expectedMinVersion: 20 }),
+    );
+    // The UI alert can finally fire in production.
+    expect(consumeVaultRollbackDetected()).toBe(true);
+  });
+
+  it('Y-15: does not flag rollback when the file matches the durable mark', async () => {
+    setLastObservedVersionCounter(0);
+    recordVaultSeal(20);
+
+    const currentState = {
+      ...createEmptyVaultDatabaseState(),
+      versionCounter: 20,
+    };
+    readDesktopVaultDatabase.mockResolvedValueOnce(JSON.stringify(currentState));
+
+    await loadPersistedVaultDatabase();
+
+    expect(consumeVaultRollbackDetected()).toBe(false);
+  });
+
+  it('Y-15: does not flag rollback for a vault newer than the durable mark', async () => {
+    setLastObservedVersionCounter(0);
+    recordVaultSeal(20);
+
+    const newerState = {
+      ...createEmptyVaultDatabaseState(),
+      versionCounter: 21,
+    };
+    readDesktopVaultDatabase.mockResolvedValueOnce(JSON.stringify(newerState));
+
+    await loadPersistedVaultDatabase();
+
+    expect(consumeVaultRollbackDetected()).toBe(false);
+  });
+
+  it('Y-15: uses the higher of the in-session counter and the durable mark', async () => {
+    setLastObservedVersionCounter(30);
+    recordVaultSeal(10);
+
+    const rolledBackState = {
+      ...createEmptyVaultDatabaseState(),
+      versionCounter: 12,
+    };
+    readDesktopVaultDatabase.mockResolvedValueOnce(JSON.stringify(rolledBackState));
+
+    await loadPersistedVaultDatabase();
+
+    expect(consumeVaultRollbackDetected()).toBe(true);
   });
 });
 

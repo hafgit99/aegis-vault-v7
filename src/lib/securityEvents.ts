@@ -14,6 +14,11 @@ export const securityEventCodes = {
   storageLegacyMigrationFailed: 'storage.legacyMigration.failed',
   storageLegacyMigrationSuccess: 'storage.legacyMigration.success',
   storageLegacyDataPurged: 'storage.legacyData.purged',
+  /**
+   * Y-14: trash items past the 15-day retention were permanently deleted.
+   * Recorded so an irreversible multi-row delete is never silent.
+   */
+  storageTrashRetentionPurged: 'storage.trashRetention.purged',
   attachmentLegacyMigrationFailed: 'attachment.legacyMigration.failed',
   networkBlocked: 'network.blocked',
   passkeyCreateFailed: 'passkey.create.failed',

@@ -12,7 +12,6 @@ import android.provider.OpenableColumns
 import android.util.Base64
 import android.util.Log
 import android.view.WindowManager
-import android.view.autofill.AutofillId
 import android.webkit.WebView
 import androidx.activity.enableEdgeToEdge
 import com.hafgit99.aegisvault7.bridges.AndroidAutofillBridge
@@ -25,6 +24,8 @@ import com.hafgit99.aegisvault7.model.AndroidImportFile
 import com.hafgit99.aegisvault7.model.AutofillLaunchRequest
 import com.hafgit99.aegisvault7.model.AutofillSaveCandidate
 import com.hafgit99.aegisvault7.model.PendingSave
+import com.hafgit99.aegisvault7.security.AutofillRequestRegistry
+import com.hafgit99.aegisvault7.security.AutofillSecurityLog
 import com.hafgit99.aegisvault7.security.RuntimeSecurityPosture
 import org.json.JSONObject
 
@@ -32,8 +33,15 @@ class MainActivity : TauriActivity() {
   private var webViewRef: WebView? = null
   private var pendingSave: PendingSave? = null
   private var pendingOpenRequestId: String? = null
-  private var pendingAutofillRequest: AutofillLaunchRequest? = null
-  private var pendingAutofillSaveCandidate: AutofillSaveCandidate? = null
+
+  /**
+   * K-1: opaque registry keys handed over by `AegisAutofillService`, NOT
+   * Autofill request objects. The objects themselves stay in
+   * [AutofillRequestRegistry] so nothing about the requesting app can be
+   * substituted at the Intent boundary.
+   */
+  private var pendingAutofillRequestId: String? = null
+  private var pendingAutofillSaveCandidateId: String? = null
 
   private lateinit var secureKeyStore: SecureStorageKeyStore
   private lateinit var runtimePosture: RuntimeSecurityPosture
@@ -96,10 +104,41 @@ class MainActivity : TauriActivity() {
 
     val autofillBridge = AndroidAutofillBridge(
       activity = this,
-      getPendingAutofillRequest = { pendingAutofillRequest },
-      setPendingAutofillRequest = { pendingAutofillRequest = it },
-      getPendingAutofillSaveCandidate = { pendingAutofillSaveCandidate },
-      setPendingAutofillSaveCandidate = { pendingAutofillSaveCandidate = it }
+      getPendingAutofillRequest = { currentAutofillRequest() },
+      setPendingAutofillRequest = { request ->
+        // K-1: the bridge may only ever hand back a request that came from the
+        // registry. Accepting a foreign object here would reintroduce the very
+        // injection point the registry removes.
+        val currentId = pendingAutofillRequestId
+        when {
+          request == null -> {
+            pendingAutofillRequestId = null
+            AutofillRequestRegistry.consumeFillRequest(currentId)
+          }
+          request.requestId == currentId -> AutofillRequestRegistry.replaceFillRequest(request)
+          else -> Log.w(
+            AUTOFILL_LOG_TAG,
+            "Rejected autofill request substitution: pendingRequestId=$currentId " +
+              "offeredRequestId=${request.requestId}"
+          )
+        }
+      },
+      getPendingAutofillSaveCandidate = { currentAutofillSaveCandidate() },
+      setPendingAutofillSaveCandidate = { candidate ->
+        val currentId = pendingAutofillSaveCandidateId
+        when {
+          candidate == null -> {
+            pendingAutofillSaveCandidateId = null
+            AutofillRequestRegistry.consumeSaveCandidate(currentId)
+          }
+          candidate.requestId == currentId -> AutofillRequestRegistry.replaceSaveCandidate(candidate)
+          else -> Log.w(
+            AUTOFILL_LOG_TAG,
+            "Rejected autofill save candidate substitution: pendingRequestId=$currentId " +
+              "offeredRequestId=${candidate.requestId}"
+          )
+        }
+      }
     )
 
     val securityBridge = AndroidRuntimeSecurityBridge(runtimePosture)
@@ -260,76 +299,82 @@ class MainActivity : TauriActivity() {
     }
   }
 
+  /**
+   * K-1: the Autofill Intent is now only a routing hint. Everything that
+   * matters — `appPackage`, `webDomain`, the `AutofillId` lists, the save
+   * candidate and its encrypted payload reference — is read from
+   * [AutofillRequestRegistry], which only `AegisAutofillService` can write.
+   *
+   * The previous implementation built `AutofillLaunchRequest` /
+   * `AutofillSaveCandidate` straight from Intent extras. `MainActivity` used to
+   * be `android:exported="true"` (it carried the LAUNCHER intent-filter), so
+   * any app on the device could forge `ACTION_AUTOFILL_AUTHENTICATE` with a
+   * `webDomain` of its choosing, wait for the user to approve the resulting
+   * fill UI, and read the selected credential out of its own
+   * `onActivityResult`. The same root cause allowed forged save intents to
+   * poison the vault and — because this Activity is `singleTask` — to replace
+   * a genuine in-flight request.
+   *
+   * Both are now closed: this Activity is `android:exported="false"` (the
+   * LAUNCHER filter moved to `LauncherActivity`), and even a delivered intent
+   * cannot invent a request because an unregistered id is rejected.
+   */
   private fun captureAutofillIntent(intent: Intent?) {
-    if (intent?.action == AegisAutofillService.ACTION_AUTOFILL_SAVE) {
-      val requestId = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_REQUEST_ID)
-        ?: "android-autofill-save-${System.currentTimeMillis()}"
-      val createdAt = intent.getLongExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_CREATED_AT, System.currentTimeMillis())
-      val payloadUri = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_PAYLOAD_URI)
-      val payloadToken = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_PAYLOAD_TOKEN)
+    val action = intent?.action ?: return
+    val requestId = intent.getStringExtra(AegisAutofillService.EXTRA_REQUEST_ID)
 
-      if (payloadUri != null && payloadToken != null) {
-        pendingAutofillSaveCandidate = AutofillSaveCandidate(
-          requestId = requestId,
-          createdAt = createdAt,
-          title = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_TITLE).orEmpty(),
-          username = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_USERNAME).orEmpty(),
-          password = "",
-          url = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_URL)?.takeIf { it.isNotBlank() },
-          appPackage = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_APP_PACKAGE)?.takeIf { it.isNotBlank() },
-          webDomain = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_WEB_DOMAIN)?.takeIf { it.isNotBlank() },
-          payloadUri = payloadUri,
-          payloadToken = payloadToken,
-        )
-      } else {
-        @Suppress("DEPRECATION")
-        pendingAutofillSaveCandidate = AutofillSaveCandidate(
-          requestId = requestId,
-          createdAt = createdAt,
-          title = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_TITLE).orEmpty(),
-          username = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_USERNAME).orEmpty(),
-          password = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_PASSWORD).orEmpty(),
-          url = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_SAVE_URL)?.takeIf { it.isNotBlank() },
-          appPackage = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_APP_PACKAGE)?.takeIf { it.isNotBlank() },
-          webDomain = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_WEB_DOMAIN)?.takeIf { it.isNotBlank() },
-        )
+    when (action) {
+      AegisAutofillService.ACTION_AUTOFILL_AUTHENTICATE -> {
+        if (AutofillRequestRegistry.findFillRequest(requestId) == null) {
+          // Unknown or expired id: drop the launch and tell JS there is no
+          // request, instead of synthesising one from untrusted extras.
+          AutofillSecurityLog.unroutableIntent(action, requestId)
+          pendingAutofillRequestId = null
+          return
+        }
+        pendingAutofillRequestId = requestId
       }
-      return
+
+      AegisAutofillService.ACTION_AUTOFILL_SAVE -> {
+        if (AutofillRequestRegistry.findSaveCandidate(requestId) == null) {
+          AutofillSecurityLog.unroutableIntent(action, requestId)
+          pendingAutofillSaveCandidateId = null
+          return
+        }
+        pendingAutofillSaveCandidateId = requestId
+      }
+
+      else -> return
     }
-
-    if (intent?.action != AegisAutofillService.ACTION_AUTOFILL_AUTHENTICATE) return
-
-    val requestId = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_REQUEST_ID)
-      ?: "android-autofill-${System.currentTimeMillis()}"
-    val createdAt = intent.getLongExtra(AegisAutofillService.EXTRA_AUTOFILL_CREATED_AT, System.currentTimeMillis())
-    pendingAutofillRequest = AutofillLaunchRequest(
-      requestId = requestId,
-      createdAt = createdAt,
-      appPackage = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_APP_PACKAGE)?.takeIf { it.isNotBlank() },
-      webDomain = intent.getStringExtra(AegisAutofillService.EXTRA_AUTOFILL_WEB_DOMAIN)?.takeIf { it.isNotBlank() },
-      usernameIds = intent.autofillIdsExtra(AegisAutofillService.EXTRA_AUTOFILL_USERNAME_IDS),
-      passwordIds = intent.autofillIdsExtra(AegisAutofillService.EXTRA_AUTOFILL_PASSWORD_IDS),
-    )
   }
 
+  private fun currentAutofillRequest(): AutofillLaunchRequest? =
+    AutofillRequestRegistry.findFillRequest(pendingAutofillRequestId)
+
+  private fun currentAutofillSaveCandidate(): AutofillSaveCandidate? =
+    AutofillRequestRegistry.findSaveCandidate(pendingAutofillSaveCandidateId)
+
   private fun purgeStaleAutofillRequests() {
-    pendingAutofillRequest?.let { req ->
-      if (!req.isFresh()) {
-        Log.i(AUTOFILL_LOG_TAG, "Purging stale autofill request requestId=${req.requestId}")
-        pendingAutofillRequest = null
-      }
+    // Reading through the registry is already freshness-gated: an expired id
+    // resolves to null and is evicted there, so there is nothing to mirror
+    // here any more.
+    if (pendingAutofillRequestId != null && currentAutofillRequest() == null) {
+      pendingAutofillRequestId = null
+    }
+    if (pendingAutofillSaveCandidateId != null && currentAutofillSaveCandidate() == null) {
+      pendingAutofillSaveCandidateId = null
     }
   }
 
   private fun notifyAutofillIntent() {
     purgeStaleAutofillRequests()
-    val payload = pendingAutofillRequest?.toJson()?.toString() ?: "null"
+    val payload = currentAutofillRequest()?.toJson()?.toString() ?: "null"
     val script = "window.__aegisAndroidAutofill && window.__aegisAndroidAutofill.onRequest($payload)"
     evaluateOnWebView(script)
   }
 
   private fun notifyAutofillSaveCandidate() {
-    val payload = pendingAutofillSaveCandidate?.toJson()?.toString() ?: "null"
+    val payload = currentAutofillSaveCandidate()?.toJson()?.toString() ?: "null"
     val script = "window.__aegisAndroidAutofill && window.__aegisAndroidAutofill.onSave($payload)"
     evaluateOnWebView(script)
   }
@@ -354,17 +399,6 @@ class MainActivity : TauriActivity() {
         """.trimIndent(),
         null
       )
-    }
-  }
-
-  private fun Intent.autofillIdsExtra(name: String): ArrayList<AutofillId> {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return arrayListOf()
-
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-      getParcelableArrayListExtra(name, AutofillId::class.java) ?: arrayListOf()
-    } else {
-      @Suppress("DEPRECATION")
-      getParcelableArrayListExtra(name) ?: arrayListOf()
     }
   }
 

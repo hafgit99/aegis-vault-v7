@@ -15,7 +15,7 @@ use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use subtle::ConstantTimeEq;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
@@ -328,6 +328,102 @@ fn bind_dynamic_tcp_listener() -> io::Result<(TcpListener, u16)> {
     Ok((listener, bound_port))
 }
 
+/// Y-18: idle read/write budget for a single IPC connection.
+///
+/// A connection that sends nothing must not pin a worker for ever. This bounds
+/// how long any single socket read or write may block before it is treated as
+/// dead.
+pub const IPC_READ_TIMEOUT: Duration = Duration::from_secs(30);
+pub const IPC_WRITE_TIMEOUT: Duration = Duration::from_secs(15);
+
+/// Y-18: maximum number of connections handled concurrently.
+///
+/// The rate limiter bounds *new connections per second* but never the number
+/// alive at once. A process running as the same user — or a local page that
+/// loopback-SSRFs this port, or a hostile extension — could open connections
+/// faster than they close and pin a blocked thread each. On a 64-bit Rust
+/// default that is 2 MiB of reserved stack per thread, and with
+/// `panic = "abort"` in the release profile there is no graceful degradation
+/// either.
+pub const MAX_CONCURRENT_IPC_CONNECTIONS: usize = 32;
+
+/// Y-18: response sent when the connection budget is exhausted.
+pub const SERVER_BUSY_RESPONSE: &[u8] = b"SERVER_BUSY";
+
+/// A non-blocking, bounded-concurrency gate.
+///
+/// Deliberately **not** a blocking semaphore: when the budget is exhausted the
+/// caller rejects the connection immediately. Blocking here would hand a single
+/// attacker the ability to stall the accept loop for every other client, which
+/// is the same denial of service the limit exists to prevent.
+#[derive(Debug)]
+pub struct ConnectionGate {
+    active: Arc<Mutex<usize>>,
+    capacity: usize,
+}
+
+impl ConnectionGate {
+    pub fn new(capacity: usize) -> Self {
+        Self {
+            active: Arc::new(Mutex::new(0)),
+            capacity: capacity.max(1),
+        }
+    }
+
+    /// Takes a slot if one is free. `None` means the budget is exhausted.
+    ///
+    /// The slot shares the counter rather than borrowing the gate, so it can be
+    /// moved into a worker thread without keeping the gate alive.
+    pub fn try_acquire(&self) -> Option<ConnectionSlot> {
+        let mut active = match self.active.lock() {
+            Ok(guard) => guard,
+            // A poisoned lock means another handler panicked. Refusing is the
+            // fail-closed choice: the true in-flight count is unknown.
+            Err(_) => return None,
+        };
+        if *active >= self.capacity {
+            return None;
+        }
+        *active += 1;
+        Some(ConnectionSlot {
+            active: Arc::clone(&self.active),
+        })
+    }
+
+    /// Connections currently being handled.
+    pub fn in_flight(&self) -> usize {
+        self.active.lock().map(|guard| *guard).unwrap_or(0)
+    }
+
+    pub fn capacity(&self) -> usize {
+        self.capacity
+    }
+}
+
+/// Releases its slot back to the gate when dropped, including on panic paths.
+pub struct ConnectionSlot {
+    active: Arc<Mutex<usize>>,
+}
+
+impl Drop for ConnectionSlot {
+    fn drop(&mut self) {
+        if let Ok(mut active) = self.active.lock() {
+            // Saturating: never let the count wrap below zero if a double
+            // release ever happened.
+            *active = active.saturating_sub(1);
+        }
+    }
+}
+
+/// Y-18: applies the idle budget to a freshly accepted socket.
+///
+/// Returns `false` when the platform refused to set a timeout, so the caller can
+/// refuse the connection rather than silently serving it with no bound at all.
+fn apply_connection_timeouts(stream: &TcpStream) -> bool {
+    stream.set_read_timeout(Some(IPC_READ_TIMEOUT)).is_ok()
+        && stream.set_write_timeout(Some(IPC_WRITE_TIMEOUT)).is_ok()
+}
+
 pub fn start_tcp_server(
     app_handle: tauri::AppHandle,
     pairing_token: Arc<Mutex<String>>,
@@ -350,6 +446,7 @@ pub fn start_tcp_server(
         log::info!("TCP IPC server bound dynamically to port {}", bound_port);
 
         let limiter = Arc::new(ConnectionRateLimiter::new());
+        let gate = Arc::new(ConnectionGate::new(MAX_CONCURRENT_IPC_CONNECTIONS));
 
         for stream in listener.incoming() {
             match stream {
@@ -360,10 +457,42 @@ pub fn start_tcp_server(
                         let _ = stream.flush();
                         continue;
                     }
+
+                    // Y-18: bound the idle time on the socket before anything can
+                    // block on it.
+                    if !apply_connection_timeouts(&stream) {
+                        log::warn!(
+                            "Failed to apply IPC socket timeouts; refusing connection. \
+                             Serving it unbounded would allow a permanent resource hold."
+                        );
+                        let _ = stream.write_all(SERVER_BUSY_RESPONSE);
+                        let _ = stream.flush();
+                        continue;
+                    }
+
+                    // Y-18: bound how many connections are alive at once. Taken
+                    // before the spawn and released when the handler returns, so
+                    // a handler blocked on a read still holds its slot — which is
+                    // exactly the case the limit exists for.
+                    let slot = match gate.try_acquire() {
+                        Some(slot) => slot,
+                        None => {
+                            log::warn!(
+                                "Concurrent IPC connection limit ({}) reached. Rejecting connection.",
+                                MAX_CONCURRENT_IPC_CONNECTIONS
+                            );
+                            let _ = stream.write_all(SERVER_BUSY_RESPONSE);
+                            let _ = stream.flush();
+                            continue;
+                        }
+                    };
+
                     let credentials_clone = credentials.clone();
                     let token_arc = pairing_token.clone();
                     let app_clone = app_handle.clone();
                     thread::spawn(move || {
+                        // `slot` lives for exactly the handler's lifetime.
+                        let _slot = slot;
                         if let Err(e) =
                             handle_client(app_clone, &mut stream, token_arc, credentials_clone)
                         {
@@ -967,6 +1096,204 @@ pub fn run_host() {
 #[cfg(test)]
 mod tests {
     use super::extract_etld_plus_one;
+
+    // ─── Y-18: bounded connection concurrency ───────────────────────────────
+    //
+    // The rate limiter bounds new connections per second but never the number
+    // alive at once, so connections that send nothing could pin a blocked
+    // thread each with no ceiling.
+
+    #[test]
+    fn y18_gate_allows_up_to_capacity() {
+        let gate = super::ConnectionGate::new(3);
+        assert_eq!(gate.capacity(), 3);
+
+        let a = gate.try_acquire().expect("slot 1");
+        let b = gate.try_acquire().expect("slot 2");
+        let c = gate.try_acquire().expect("slot 3");
+        assert_eq!(gate.in_flight(), 3);
+
+        drop((a, b, c));
+        assert_eq!(gate.in_flight(), 0);
+    }
+
+    #[test]
+    fn y18_gate_rejects_once_full_instead_of_blocking() {
+        // Blocking would let one attacker stall the accept loop for everyone —
+        // the same DoS the limit exists to prevent.
+        let gate = super::ConnectionGate::new(1);
+        let _held = gate.try_acquire().expect("first slot");
+
+        assert!(
+            gate.try_acquire().is_none(),
+            "must refuse rather than wait when the budget is spent"
+        );
+        assert_eq!(gate.in_flight(), 1);
+    }
+
+    #[test]
+    fn y18_gate_frees_capacity_when_a_handler_returns() {
+        let gate = super::ConnectionGate::new(1);
+        {
+            let _first = gate.try_acquire().expect("slot");
+            assert!(gate.try_acquire().is_none());
+        }
+        // A finished connection must not permanently consume budget.
+        assert!(gate.try_acquire().is_some(), "slot must be reusable");
+    }
+
+    #[test]
+    fn y18_gate_releases_the_slot_when_a_handler_panics() {
+        let gate = std::sync::Arc::new(super::ConnectionGate::new(1));
+
+        let worker_gate = std::sync::Arc::clone(&gate);
+        let result = std::panic::catch_unwind(move || {
+            let _slot = worker_gate.try_acquire().expect("slot");
+            panic!("simulated handler panic");
+        });
+
+        assert!(
+            result.is_err(),
+            "the panic must propagate, not be swallowed"
+        );
+        assert_eq!(
+            gate.in_flight(),
+            0,
+            "a panicking handler must not leak its slot"
+        );
+    }
+
+    #[test]
+    fn y18_gate_enforces_a_ceiling_under_concurrent_acquisition() {
+        // The actual attack: many threads racing to pin resources.
+        //
+        // Note what is being asserted: **peak concurrency**, not the total
+        // number of grants. Slots are returned as handlers finish, so a
+        // long-running test legitimately grants far more than `capacity` in
+        // total. Asserting on the total made this test fail intermittently
+        // depending on thread scheduling, and it was measuring the wrong thing.
+        let gate = std::sync::Arc::new(super::ConnectionGate::new(4));
+        let peak = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let mut handles = Vec::new();
+
+        for _ in 0..64 {
+            let gate = std::sync::Arc::clone(&gate);
+            let peak = std::sync::Arc::clone(&peak);
+            handles.push(std::thread::spawn(move || {
+                let held = gate.try_acquire();
+                if let Some(slot) = held {
+                    // Sample the in-flight count while this slot is held; the
+                    // gate is the single source of truth for it.
+                    let current = gate.in_flight();
+                    peak.fetch_max(current, std::sync::atomic::Ordering::SeqCst);
+                    std::thread::sleep(std::time::Duration::from_millis(2));
+                    drop(slot);
+                }
+            }));
+        }
+
+        for handle in handles {
+            handle.join().expect("worker must not panic");
+        }
+
+        let observed_peak = peak.load(std::sync::atomic::Ordering::SeqCst);
+        assert!(
+            observed_peak <= 4,
+            "peak concurrency reached {observed_peak} for a capacity of 4 — the limit was exceeded"
+        );
+        assert_eq!(gate.in_flight(), 0, "every slot must be released");
+    }
+
+    #[test]
+    fn y18_gate_never_exceeds_capacity_for_one_slot_per_connection() {
+        // 32 is the shipped budget. Holding all of them must block the next.
+        let gate = super::ConnectionGate::new(super::MAX_CONCURRENT_IPC_CONNECTIONS);
+        let slots: Vec<_> = (0..super::MAX_CONCURRENT_IPC_CONNECTIONS)
+            .map(|_| gate.try_acquire().expect("within capacity"))
+            .collect();
+
+        assert_eq!(gate.in_flight(), super::MAX_CONCURRENT_IPC_CONNECTIONS);
+        assert!(gate.try_acquire().is_none());
+
+        drop(slots);
+        assert_eq!(gate.in_flight(), 0);
+    }
+
+    #[test]
+    fn y18_gate_capacity_is_at_least_one() {
+        // A misconfigured capacity of 0 would reject every client forever.
+        let gate = super::ConnectionGate::new(0);
+        assert!(gate.capacity() >= 1);
+        assert!(gate.try_acquire().is_some());
+    }
+
+    #[test]
+    fn y18_timeouts_are_bounded() {
+        // An unbounded or absent timeout is the original defect.
+        assert!(super::IPC_READ_TIMEOUT > Duration::from_secs(0));
+        assert!(super::IPC_WRITE_TIMEOUT > Duration::from_secs(0));
+        assert!(super::IPC_READ_TIMEOUT <= Duration::from_secs(120));
+    }
+
+    #[test]
+    fn y18_socket_timeouts_are_actually_applied() {
+        use std::net::{TcpListener, TcpStream};
+
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind loopback");
+        let port = listener.local_addr().expect("addr").port();
+        let client = TcpStream::connect(("127.0.0.1", port)).expect("connect");
+        let (server, _) = listener.accept().expect("accept");
+
+        assert!(
+            super::apply_connection_timeouts(&server),
+            "timeouts must be settable on a real socket"
+        );
+        assert_eq!(
+            server.read_timeout().expect("read timeout readable"),
+            Some(super::IPC_READ_TIMEOUT)
+        );
+        assert_eq!(
+            server.write_timeout().expect("write timeout readable"),
+            Some(super::IPC_WRITE_TIMEOUT)
+        );
+
+        drop(client);
+    }
+
+    #[test]
+    fn y18_an_idle_connection_is_dropped_after_the_read_timeout() {
+        // The end-to-end shape of the resource hold: a client that connects and
+        // then sends nothing must not keep the connection alive.
+        use std::io::Read;
+        use std::net::{TcpListener, TcpStream};
+
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind loopback");
+        let port = listener.local_addr().expect("addr").port();
+        let _idle_client = TcpStream::connect(("127.0.0.1", port)).expect("connect");
+        let (mut server, _) = listener.accept().expect("accept");
+
+        assert!(super::apply_connection_timeouts(&server));
+        server
+            .set_read_timeout(Some(Duration::from_millis(150)))
+            .expect("shorten for the test");
+
+        // The client never writes, so this must fail rather than block for ever.
+        let mut buf = [0u8; 4];
+        let result = server.read_exact(&mut buf);
+        assert!(
+            result.is_err(),
+            "an idle peer must not hold the read open indefinitely"
+        );
+    }
+
+    #[test]
+    fn y18_busy_response_is_distinct_from_rate_limit() {
+        // The client must be able to tell "come back later" from "slow down",
+        // and neither may be confused with a successful handshake.
+        assert_ne!(super::SERVER_BUSY_RESPONSE, b"RATE_LIMIT_EXCEEDED");
+        assert_ne!(super::SERVER_BUSY_RESPONSE, b"OK");
+        assert_ne!(super::SERVER_BUSY_RESPONSE, b"UNAUTHORIZED");
+    }
 
     #[test]
     fn etld_plus_one_matches_psl_spec_vectors() {

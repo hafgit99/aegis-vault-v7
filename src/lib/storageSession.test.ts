@@ -21,6 +21,7 @@ const sqliteOPFSInstance = vi.hoisted(() => ({
   changeMasterPassword: vi.fn(async (..._args: any[]): Promise<void> => undefined),
   saveVaultItem: vi.fn(async (..._args: any[]): Promise<VaultItem[]> => []),
   saveVaultItemWithKey: vi.fn(async (..._args: any[]): Promise<VaultItem[]> => []),
+  setItemTrashedWithKey: vi.fn(async (..._args: any[]): Promise<VaultItem[]> => []),
   saveVaultItems: vi.fn(async (..._args: any[]): Promise<VaultItem[]> => []),
   saveVaultItemsWithKey: vi.fn(async (..._args: any[]): Promise<VaultItem[]> => []),
   setupMaster: vi.fn(async (..._args: any[]): Promise<void> => undefined),
@@ -85,6 +86,7 @@ import {
   isAccountSecretKeyRequired,
   isMasterPasswordSet,
   moveToTrash,
+  purgeExpiredTrashItems,
   reseedDemoData,
   resetSystem,
   restoreFromTrash,
@@ -95,11 +97,13 @@ import {
   setupMasterPasswordWithSecretKey,
   verifyMasterPassword,
   initializeStorage,
+  isVaultStorageUnreadableError,
+  isVaultStorageUnavailableError,
   migrateActiveVaultStorageToWaSqlite,
   rememberAccountSecretKey,
   forgetRememberedAccountSecretKey,
 } from './storage';
-import { closeVaultSession, hasActiveBackupPassword, hasActiveMasterPassword, openVaultSession } from './vaultSession';
+import { closeVaultSession, hasActiveBackupPassword, hasActiveMasterPassword, openVaultSession, withActiveVaultEncryptionKey } from './vaultSession';
 import type { VaultItem } from '../types';
 
 function sampleItem(overrides: Partial<VaultItem> = {}): VaultItem {
@@ -512,6 +516,121 @@ describe('vault session storage', () => {
     expect(localStorage.getItem('aegis_is_setup')).toBe('true');
   });
 
+  // ─── Y-12: promotion must not leave the pre-migration key in the session ───
+  //
+  // `runVaultStorageMigration` calls `targetRepository.setupMaster(...)`, which
+  // mints a brand new random salt, and then writes every migrated row under
+  // `Argon2id(credential, newSalt)`. The pre-migration session key is
+  // `Argon2id(credential, oldOpfsSalt)`. Reusing it made the very first
+  // `changeMasterPassword` after promotion fail with
+  // `WA_SQLITE_ROW_DECRYPT_ERROR` on the first row.
+
+  /** The key the promoted (wa-sqlite) repository derives under its NEW salt. */
+  const PROMOTED_KEY_BYTE = 0x5a;
+  /** The key the OPFS repository derived under its OLD salt. */
+  const preMigrationVaultKey = new Uint8Array(32).fill(0x11);
+
+  /** Built fresh: production code zeroizes the array it derived. */
+  const expectedPromotedKey = () => new Uint8Array(32).fill(PROMOTED_KEY_BYTE);
+
+  function readSessionKey(): Uint8Array | null {
+    return withActiveVaultEncryptionKey((key) => new Uint8Array(key)) ?? null;
+  }
+
+  function mockPromotedMigration() {
+    runWaSqliteActiveBackendMigration.mockResolvedValueOnce({
+      status: 'promoted',
+      issues: [],
+      readinessReport: { status: 'ready', issues: [] },
+      smokeResult: {
+        status: 'passed',
+        databaseName: '/aegis-wa-sqlite.desktop.db',
+        vfsName: 'aegis-wa-sqlite-desktop-idb',
+      },
+      dryRunResult: null,
+      persistentMigrationCandidateResult: null,
+      promotionResult: null,
+    });
+  }
+
+  it('Y-12: replaces the pre-migration session key with the promoted repository key', async () => {
+    mockPromotedMigration();
+    sqliteOPFSInstance.deriveEncryptionKey.mockResolvedValueOnce(expectedPromotedKey());
+    localStorage.removeItem('aegis_is_setup');
+    // The session still holds the OLD OP's key at promotion time.
+    openVaultSession('master-pass', 'master-pass', preMigrationVaultKey);
+
+    await migrateActiveVaultStorageToWaSqlite();
+
+    const sessionKey = readSessionKey();
+    expect(sessionKey).toEqual(expectedPromotedKey());
+    // Regression: the pre-migration key must not survive promotion.
+    expect(sessionKey).not.toEqual(preMigrationVaultKey);
+  });
+
+  it('Y-12: derives from the promoted repository even when a session key is already held', async () => {
+    mockPromotedMigration();
+    sqliteOPFSInstance.deriveEncryptionKey.mockResolvedValueOnce(expectedPromotedKey());
+    localStorage.removeItem('aegis_is_setup');
+    openVaultSession('master-pass', 'master-pass', preMigrationVaultKey);
+
+    await migrateActiveVaultStorageToWaSqlite();
+
+    // The old `if (existingKey)` shortcut skipped this call entirely.
+    expect(sqliteOPFSInstance.deriveEncryptionKey).toHaveBeenCalledWith('master-pass');
+  });
+
+  it('Y-12: does not re-derive when the migration is blocked', async () => {
+    runWaSqliteActiveBackendMigration.mockResolvedValueOnce({
+      status: 'blocked',
+      issues: ['wa-sqlite-promotion-blocked'],
+      readinessReport: { status: 'blocked', issues: ['wa-sqlite-promotion-blocked'] },
+      smokeResult: { status: 'passed', databaseName: '/aegis-wa-sqlite.desktop.db', vfsName: 'aegis-wa-sqlite-desktop-idb' },
+      dryRunResult: null,
+      persistentMigrationCandidateResult: null,
+      promotionResult: null,
+    });
+    sqliteOPFSInstance.deriveEncryptionKey.mockClear();
+    localStorage.removeItem('aegis_is_setup');
+    openVaultSession('master-pass', 'master-pass', preMigrationVaultKey);
+
+    await migrateActiveVaultStorageToWaSqlite();
+
+    // Nothing was promoted, so the existing key is still correct.
+    expect(sqliteOPFSInstance.deriveEncryptionKey).not.toHaveBeenCalled();
+    expect(readSessionKey()).toEqual(preMigrationVaultKey);
+  });
+
+  it('Y-12: propagates a derivation failure instead of silently keeping a stale key', async () => {
+    mockPromotedMigration();
+    sqliteOPFSInstance.deriveEncryptionKey.mockRejectedValueOnce(
+      new Error('derive-from-promoted-repository-failed'),
+    );
+    localStorage.removeItem('aegis_is_setup');
+    openVaultSession('master-pass', 'master-pass', preMigrationVaultKey);
+
+    // Failing loudly matters: silently retaining the pre-migration key is
+    // exactly the bug — it would break password rotation on first use.
+    await expect(migrateActiveVaultStorageToWaSqlite()).rejects.toThrow(
+      'derive-from-promoted-repository-failed',
+    );
+  });
+
+  it('Y-12: zeroizes the derived key copy it hands to the session', async () => {
+    mockPromotedMigration();
+    const derived = expectedPromotedKey();
+    sqliteOPFSInstance.deriveEncryptionKey.mockResolvedValueOnce(derived);
+    localStorage.removeItem('aegis_is_setup');
+    openVaultSession('master-pass', 'master-pass', preMigrationVaultKey);
+
+    await migrateActiveVaultStorageToWaSqlite();
+
+    // The local copy is wiped after being handed off, but the session keeps a
+    // working copy.
+    expect(derived.every((byte) => byte === 0)).toBe(true);
+    expect(readSessionKey()).toEqual(expectedPromotedKey());
+  });
+
   it('preserves secret-key combined credentials during wa-sqlite active backend migration', async () => {
     const combinedCredential = 'aegis-vault-v7:master-pass\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567';
     runWaSqliteActiveBackendMigration.mockResolvedValueOnce({
@@ -540,6 +659,34 @@ describe('vault session storage', () => {
 
     expect(runWaSqliteActiveBackendMigration).toHaveBeenCalledWith(combinedCredential);
     expect(localStorage.getItem('aegis_is_setup')).toBeNull();
+  });
+
+  it('Y-13: surfaces an unavailable wa-sqlite backend instead of continuing with an empty vault', async () => {
+    // Regression: `initializeStorage` discarded the startup backend status, so a
+    // persisted-but-unopenable wa-sqlite vault silently became an empty one.
+    restoreOrActivateDefaultVaultStorageBackend.mockResolvedValueOnce('wa-sqlite-unavailable');
+
+    await expect(initializeStorage()).rejects.toThrow('vault-storage-unavailable');
+
+    // Nothing was read from, or written to, any repository.
+    expect(sqliteOPFSInstance.getVaultItems).not.toHaveBeenCalled();
+  });
+
+  it('Y-13: marks the unavailable backend as a distinct error type, not unreadable', async () => {
+    // The database is intact. The UI must offer "retry", not "restore a
+    // snapshot", and must not count it as a wrong password.
+    restoreOrActivateDefaultVaultStorageBackend.mockResolvedValueOnce('wa-sqlite-unavailable');
+
+    const error = await initializeStorage().then(() => null, (e: unknown) => e);
+
+    expect(isVaultStorageUnavailableError(error)).toBe(true);
+    expect(isVaultStorageUnreadableError(error)).toBe(false);
+  });
+
+  it('Y-13: does not throw when the backend is available', async () => {
+    restoreOrActivateDefaultVaultStorageBackend.mockResolvedValueOnce('restored-wa-sqlite');
+
+    await expect(initializeStorage()).resolves.toBeUndefined();
   });
 
   it('handles reencryptAttachments error during changeMasterPassword', async () => {
@@ -653,50 +800,105 @@ describe('vault session storage', () => {
     ]));
   });
 
-  it('moves items to trash and restores them through saveVaultItem', async () => {
+  it('moves items to trash and restores them through the targeted update', async () => {
     const activeItem = sampleItem();
-    sqliteOPFSInstance.getVaultItems.mockResolvedValue([activeItem]);
-    sqliteOPFSInstance.saveVaultItem.mockResolvedValue([activeItem]);
+    sqliteOPFSInstance.setItemTrashedWithKey.mockResolvedValue([activeItem]);
     openVaultSession('master-pass', 'master-pass', testVaultKey);
 
     await moveToTrash('item-1');
 
-    expect(sqliteOPFSInstance.saveVaultItemWithKey).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: 'item-1',
-        deleted: true,
-        deletedAt: expect.any(String),
-      }),
+    expect(sqliteOPFSInstance.setItemTrashedWithKey).toHaveBeenCalledWith(
+      'item-1',
+      true,
       expect.any(Uint8Array),
     );
-
-    const trashedItem = sampleItem({ deleted: true, deletedAt: '2026-01-10T00:00:00.000Z' });
-    sqliteOPFSInstance.getVaultItems.mockResolvedValue([trashedItem]);
 
     await restoreFromTrash('item-1');
 
-    expect(sqliteOPFSInstance.saveVaultItemWithKey).toHaveBeenLastCalledWith(
-      expect.not.objectContaining({ deletedAt: expect.anything() }),
-      expect.any(Uint8Array),
-    );
-    expect(sqliteOPFSInstance.saveVaultItemWithKey).toHaveBeenLastCalledWith(
-      expect.objectContaining({ id: 'item-1', deleted: false }),
+    expect(sqliteOPFSInstance.setItemTrashedWithKey).toHaveBeenLastCalledWith(
+      'item-1',
+      false,
       expect.any(Uint8Array),
     );
   });
 
-  it('leaves trash wrappers as read-only when the target item is missing', async () => {
-    sqliteOPFSInstance.getVaultItems.mockResolvedValue([sampleItem({ id: 'other-item' })]);
+  it('does not rewrite the item when flagging it', async () => {
+    // Y-15 regression: the old path wrote the whole item back, which reverted
+    // any field that changed between the read and the write.
+    const activeItem = sampleItem();
+    sqliteOPFSInstance.setItemTrashedWithKey.mockResolvedValue([activeItem]);
+    openVaultSession('master-pass', 'master-pass', testVaultKey);
+
+    await moveToTrash('item-1');
+
+    expect(sqliteOPFSInstance.saveVaultItemWithKey).not.toHaveBeenCalled();
+    expect(sqliteOPFSInstance.saveVaultItemsWithKey).not.toHaveBeenCalled();
+  });
+
+  it('delegates missing-item handling to the repository', async () => {
+    // Whether the row exists is now the repository's decision, so this layer
+    // only asserts that it forwards the request rather than reading the vault.
+    sqliteOPFSInstance.setItemTrashedWithKey.mockResolvedValue([]);
     openVaultSession('master-pass', 'master-pass', testVaultKey);
 
     await moveToTrash('missing-item');
     await restoreFromTrash('missing-item');
 
-    expect(sqliteOPFSInstance.saveVaultItem).not.toHaveBeenCalled();
-    expect(sqliteOPFSInstance.getVaultItems).toHaveBeenCalledTimes(4);
+    expect(sqliteOPFSInstance.getVaultItems).not.toHaveBeenCalled();
+    expect(sqliteOPFSInstance.saveVaultItemWithKey).not.toHaveBeenCalled();
   });
 
-  it('permanently removes expired trash entries during reads', async () => {
+  // ─── Y-14: reading the vault must never destroy data ──────────────────────
+  //
+  // `getVaultItems` used to permanently delete every trashed item past the
+  // 15-day retention window as a side effect of reading. It had 11 call sites,
+  // including `createVaultSnapshot`, `restoreVaultSnapshot`, `useSettingsSync`
+  // and `useSettingsPasskey` — so taking a backup, restoring one, or syncing to
+  // WebDAV/S3 all silently destroyed trashed items.
+
+  it('Y-14: getVaultItems does NOT delete expired trash', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-02-01T00:00:00.000Z'));
+    const activeItem = sampleItem({ id: 'active-item' });
+    const recentTrash = sampleItem({
+      id: 'recent-trash',
+      deleted: true,
+      deletedAt: '2026-01-25T00:00:00.000Z',
+    });
+    const expiredTrash = sampleItem({
+      id: 'expired-trash',
+      deleted: true,
+      deletedAt: '2026-01-01T00:00:00.000Z',
+    });
+    sqliteOPFSInstance.getVaultItems.mockResolvedValueOnce([activeItem, recentTrash, expiredTrash]);
+    openVaultSession('master-pass', 'master-pass', testVaultKey);
+
+    // The core regression: a read is pure and returns everything.
+    await expect(getVaultItems()).resolves.toEqual([activeItem, recentTrash, expiredTrash]);
+
+    expect(sqliteOPFSInstance.deletePermanentlyBatchWithKey).not.toHaveBeenCalled();
+    expect(sqliteOPFSInstance.deletePermanentlyBatch).not.toHaveBeenCalled();
+  });
+
+  it('Y-14: getVaultItems is a pure read with no write calls at all', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-02-01T00:00:00.000Z'));
+    // An expired trashed item is exactly the input that used to trigger the
+    // destructive write, so this must not be a "no expired items" trivial case.
+    sqliteOPFSInstance.getVaultItems.mockResolvedValueOnce([
+      sampleItem({ id: 'expired-trash', deleted: true, deletedAt: '2026-01-01T00:00:00.000Z' }),
+    ]);
+    openVaultSession('master-pass', 'master-pass', testVaultKey);
+
+    await getVaultItems();
+
+    expect(sqliteOPFSInstance.saveVaultItemWithKey).not.toHaveBeenCalled();
+    expect(sqliteOPFSInstance.saveVaultItemsWithKey).not.toHaveBeenCalled();
+    expect(sqliteOPFSInstance.deletePermanentlyWithKey).not.toHaveBeenCalled();
+    expect(sqliteOPFSInstance.deletePermanentlyBatchWithKey).not.toHaveBeenCalled();
+  });
+
+  it('Y-14: purgeExpiredTrashItems deletes only items past the retention window', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-02-01T00:00:00.000Z'));
     const activeItem = sampleItem({ id: 'active-item' });
@@ -714,11 +916,42 @@ describe('vault session storage', () => {
     sqliteOPFSInstance.deletePermanentlyBatch.mockResolvedValueOnce([activeItem, recentTrash]);
     openVaultSession('master-pass', 'master-pass', testVaultKey);
 
-    await expect(getVaultItems()).resolves.toEqual([activeItem, recentTrash]);
+    const result = await purgeExpiredTrashItems();
 
+    expect(result.purgedCount).toBe(1);
+    expect(result.items).toEqual([activeItem, recentTrash]);
     expect(sqliteOPFSInstance.deletePermanentlyBatchWithKey).toHaveBeenCalledWith(['expired-trash'], expect.any(Uint8Array));
-    expect(sqliteOPFSInstance.getVaultItems).toHaveBeenCalledTimes(1);
   });
+
+  it('Y-14: purgeExpiredTrashItems writes nothing when nothing has expired', async () => {
+    sqliteOPFSInstance.getVaultItems.mockResolvedValueOnce([sampleItem({ id: 'active-item' })]);
+    openVaultSession('master-pass', 'master-pass', testVaultKey);
+
+    const result = await purgeExpiredTrashItems();
+
+    expect(result.purgedCount).toBe(0);
+    expect(sqliteOPFSInstance.deletePermanentlyBatchWithKey).not.toHaveBeenCalled();
+  });
+
+  it('Y-14: purgeExpiredTrashItems ignores items with an unparsable deletedAt', async () => {
+    const corrupt = sampleItem({ id: 'corrupt', deleted: true, deletedAt: 'not-a-date' });
+    sqliteOPFSInstance.getVaultItems.mockResolvedValueOnce([corrupt]);
+    openVaultSession('master-pass', 'master-pass', testVaultKey);
+
+    const result = await purgeExpiredTrashItems();
+
+    // A NaN comparison would otherwise silently expire or retain unpredictably.
+    expect(result.purgedCount).toBe(0);
+    expect(sqliteOPFSInstance.deletePermanentlyBatchWithKey).not.toHaveBeenCalled();
+  });
+
+  it('Y-14: purgeExpiredTrashItems is a no-op without an active session', async () => {
+    const result = await purgeExpiredTrashItems();
+
+    expect(result).toEqual({ items: [], purgedCount: 0 });
+    expect(sqliteOPFSInstance.deletePermanentlyBatchWithKey).not.toHaveBeenCalled();
+  });
+
 
   it('empties only deleted items from trash', async () => {
     sqliteOPFSInstance.getVaultItems.mockResolvedValueOnce([
@@ -932,8 +1165,10 @@ describe('vault session storage', () => {
     sqliteOPFSInstance.deletePermanentlyBatch.mockResolvedValueOnce([]);
     openVaultSession('master-pass', 'master-pass', testVaultKey);
 
-    await expect(getVaultItems()).resolves.toEqual([]);
+    // Y-14: the boundary is now enforced by the explicit purge, not by reading.
+    const result = await purgeExpiredTrashItems();
 
+    expect(result.purgedCount).toBe(1);
     expect(sqliteOPFSInstance.deletePermanentlyBatchWithKey).toHaveBeenCalledWith(['boundary-trash'], expect.any(Uint8Array));
   });
 
@@ -943,14 +1178,68 @@ describe('vault session storage', () => {
     const recentTrash = sampleItem({
       id: 'recent-trash',
       deleted: true,
-      deletedAt: '2026-01-17T00:01:00.000Z',
+      deletedAt: '2026-01-17T00:00:01.000Z',
     });
-    sqliteOPFSInstance.getVaultItems.mockResolvedValueOnce([recentTrash]);
+    // Both the read and the explicit purge observe the same vault contents.
+    sqliteOPFSInstance.getVaultItems
+      .mockResolvedValueOnce([recentTrash])
+      .mockResolvedValueOnce([recentTrash]);
     openVaultSession('master-pass', 'master-pass', testVaultKey);
 
     await expect(getVaultItems()).resolves.toEqual([recentTrash]);
+    await expect(purgeExpiredTrashItems()).resolves.toEqual({ items: [recentTrash], purgedCount: 0 });
 
     expect(sqliteOPFSInstance.deletePermanentlyBatch).not.toHaveBeenCalled();
+  });
+
+  // ─── Y-15: targeted trash updates ─────────────────────────────────────────
+
+  it('Y-15: moveToTrash uses the targeted flag update, not a full rewrite', async () => {
+    sqliteOPFSInstance.setItemTrashedWithKey.mockResolvedValueOnce([sampleItem({ id: 'trash-me', deleted: true })]);
+    openVaultSession('master-pass', 'master-pass', testVaultKey);
+
+    await moveToTrash('trash-me');
+
+    expect(sqliteOPFSInstance.setItemTrashedWithKey).toHaveBeenCalledWith(
+      'trash-me',
+      true,
+      expect.any(Uint8Array),
+    );
+    // The regression: the whole vault was read, mutated and written back.
+    expect(sqliteOPFSInstance.getVaultItems).not.toHaveBeenCalled();
+    expect(sqliteOPFSInstance.saveVaultItemWithKey).not.toHaveBeenCalled();
+  });
+
+  it('Y-15: restoreFromTrash uses the targeted flag update', async () => {
+    sqliteOPFSInstance.setItemTrashedWithKey.mockResolvedValueOnce([sampleItem({ id: 'back' })]);
+    openVaultSession('master-pass', 'master-pass', testVaultKey);
+
+    await restoreFromTrash('back');
+
+    expect(sqliteOPFSInstance.setItemTrashedWithKey).toHaveBeenCalledWith(
+      'back',
+      false,
+      expect.any(Uint8Array),
+    );
+    expect(sqliteOPFSInstance.saveVaultItemWithKey).not.toHaveBeenCalled();
+  });
+
+  it('Y-15: falls back to read-modify-write when the repository has no targeted update', async () => {
+    // Optional interface method: a repository that does not implement it must
+    // still work, so the old path is kept as a fallback.
+    const repository = { ...sqliteOPFSInstance };
+    delete (repository as Partial<typeof sqliteOPFSInstance>).setItemTrashedWithKey;
+    getVaultStorageRepository.mockReturnValue(repository);
+    sqliteOPFSInstance.getVaultItems.mockResolvedValueOnce([sampleItem({ id: 'trash-me' })]);
+    sqliteOPFSInstance.saveVaultItemWithKey.mockResolvedValueOnce([]);
+    openVaultSession('master-pass', 'master-pass', testVaultKey);
+
+    await moveToTrash('trash-me');
+
+    expect(sqliteOPFSInstance.saveVaultItemWithKey).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'trash-me', deleted: true }),
+      expect.any(Uint8Array),
+    );
   });
 
   it('passes progress callbacks through the bulk save wrapper', async () => {

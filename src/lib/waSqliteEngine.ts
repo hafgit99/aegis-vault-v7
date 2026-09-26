@@ -97,6 +97,25 @@ export interface WaSqliteEngine {
   close(): Promise<void>;
 }
 
+// N-6: `PRAGMA journal_mode = WAL` is deliberately NOT set here.
+//
+// WAL requires a host VFS that implements shared memory (`xShmMap`) between
+// connections. The `wa-sqlite` VFS used by this repository is `IDBMinimalVFS`
+// (see `createWaSqliteEngine`), which is a single-connection IndexedDB-backed
+// VFS with no shared-memory support, so `PRAGMA journal_mode = WAL` silently
+// degrades to the existing journal mode instead of failing. Adding it would
+// look like a durability/concurrency improvement while changing nothing, which
+// is worse than not having it.
+//
+// Concurrency is instead handled by two mechanisms that are verifiable here:
+//   1. `PRAGMA busy_timeout = 5000` below, so a second connection waits instead
+//      of failing immediately with SQLITE_BUSY.
+//   2. The `enqueue()` serialization in this file, so overlapping operations
+//      inside one JS context can never interleave BEGIN/COMMIT.
+//
+// If the VFS is ever swapped for one with real shared-memory support, WAL is
+// the correct upgrade — but it must be verified with `PRAGMA journal_mode`
+// returning `wal`, not assumed from the absence of an error.
 export const WA_SQLITE_BOOTSTRAP_SCHEMA = `
 PRAGMA foreign_keys = ON;
 PRAGMA busy_timeout = 5000;

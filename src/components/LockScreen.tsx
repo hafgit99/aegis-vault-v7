@@ -30,6 +30,7 @@ import {
   resetSystem,
   setupMasterPasswordWithSecretKey,
   verifyMasterPassword,
+  isVaultStorageUnreadableError,
 } from '../lib/storage';
 import {
   authenticateBiometricCredentials,
@@ -52,6 +53,7 @@ import { LockScreenSecretKeySection } from './lock/LockScreenSecretKeySection';
 import { LockScreenBiometricSection } from './lock/LockScreenBiometricSection';
 import { LockScreenResetModal } from './lock/LockScreenResetModal';
 import { LockScreenRecoveryModal } from './lock/LockScreenRecoveryModal';
+import { LockScreenVaultRecovery } from './lock/LockScreenVaultRecovery';
 import type { LegalTermsTab } from './lock/LegalTermsModal';
 import { LegalTermsModal } from './lock/LegalTermsModal';
 import { PasswordStrengthMeter } from './common/PasswordStrengthMeter';
@@ -122,6 +124,12 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
   const hasAutoTriggeredRef = useRef(false);
 
   const [showRecoveryModal, setShowRecoveryModal] = useState(false);
+  /**
+   * K-4: set when the vault file itself is present but unreadable. The vault is
+   * NOT openable in that state, so the ordinary unlock affordances are the wrong
+   * answer — the user needs a restore path, not another password attempt.
+   */
+  const [showVaultRecovery, setShowVaultRecovery] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showLegalModal, setShowLegalModal] = useState(false);
   const [legalModalTab, setLegalModalTab] = useState<LegalTermsTab>('terms');
@@ -157,6 +165,20 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
 
   const getRateLimitMessage = (remainingSeconds: number) =>
     `${t('lock.error.rateLimitedPrefix')} ${remainingSeconds} ${t('lock.error.rateLimitedSuffix')}`;
+
+  /**
+   * K-4: the vault file exists but could not be decoded. This is a storage
+   * failure, not a wrong password, so it must not shake the form, must not
+   * consume a brute-force attempt, and must not invite the user to "try again"
+   * — the fix is to restore a snapshot.
+   */
+  const isUnreadableVault = (err: unknown): boolean => isVaultStorageUnreadableError(err);
+
+  /** K-4: open the restore panel instead of leaving the user on a dead form. */
+  const openVaultRecovery = useCallback(() => {
+    setError(t('lock.error.vaultUnreadable'));
+    setShowVaultRecovery(true);
+  }, [t]);
 
   const handleBiometricUnlock = useCallback(async () => {
     if (isBiometricPendingRef.current) return;
@@ -197,6 +219,11 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
         throw new Error(t('lock.error.biometricIntegrity'));
       }
     } catch (err: unknown) {
+      if (isUnreadableVault(err)) {
+        // K-4: not a credential problem, so no shake and no lockout counter.
+        openVaultRecovery();
+        return;
+      }
       setBiometricError(getBiometricUnlockErrorMessage(err, t));
     } finally {
       setBiometricLoading(false);
@@ -281,6 +308,14 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
         }
       }
     } catch (err) {
+      if (isUnreadableVault(err)) {
+        // K-4: a damaged vault file is not a wrong password. Shaking the form
+        // and appending a technical message would push the user to retype a
+        // correct password forever; the actionable answer is snapshot restore.
+        console.error('[AegisVault] Vault file unreadable:', err);
+        openVaultRecovery();
+        return;
+      }
       triggerShake();
       console.error('[AegisVault] Unlock/setup error:', err);
       const message = err instanceof Error ? err.message : String(err);
@@ -751,6 +786,22 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
           onConfirmReset={handleConfirmReset}
           resetLoading={resetLoading}
         />
+
+        {/* K-4: restore-from-snapshot for an unreadable vault file */}
+        {showVaultRecovery && (
+          <LockScreenVaultRecovery
+            masterPassword={password}
+            onRestored={() => {
+              setShowVaultRecovery(false);
+              onUnlock();
+            }}
+            onDismiss={() => setShowVaultRecovery(false)}
+            onResetVault={() => {
+              setShowVaultRecovery(false);
+              setShowResetConfirm(true);
+            }}
+          />
+        )}
 
         {/* Password Recovery Center Modal */}
         <LockScreenRecoveryModal

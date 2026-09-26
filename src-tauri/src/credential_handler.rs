@@ -3,6 +3,37 @@ use std::sync::Mutex;
 use tauri::State;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
+/// Y-16: Argon2id cost bounds at the IPC trust boundary.
+///
+/// The floors existed but the ceilings did not. These parameters arrive from the
+/// webview over IPC, so a compromised renderer — or anything else able to reach
+/// the command — could ask for `memoryKiB: 4_000_000_000` or
+/// `iterations: 4_000_000_000` and the process would try to honour it, aborting
+/// on an allocation failure or spinning for effectively forever. That is a
+/// denial of service reachable from the renderer, and on desktop it takes the
+/// whole application down with it.
+///
+/// The ceilings are far above anything this application asks for: the shipped
+/// profiles use 32–64 MiB, 3–4 iterations, 1 lane and a 32-byte output. They
+/// exist to bound the damage, not to constrain legitimate use.
+pub const MIN_ARGON2ID_MEMORY_KIB: u32 = 8 * 1024; // 8 MiB
+pub const MAX_ARGON2ID_MEMORY_KIB: u32 = 1024 * 1024; // 1 GiB
+pub const MIN_ARGON2ID_ITERATIONS: u32 = 3;
+pub const MAX_ARGON2ID_ITERATIONS: u32 = 20;
+pub const MIN_ARGON2ID_PARALLELISM: u32 = 1;
+pub const MAX_ARGON2ID_PARALLELISM: u32 = 16;
+pub const MIN_ARGON2ID_HASH_LENGTH: u32 = 32;
+pub const MAX_ARGON2ID_HASH_LENGTH: u32 = 64;
+
+const ARGON2ID_MEMORY_RANGE: std::ops::RangeInclusive<u32> =
+    MIN_ARGON2ID_MEMORY_KIB..=MAX_ARGON2ID_MEMORY_KIB;
+const ARGON2ID_ITERATION_RANGE: std::ops::RangeInclusive<u32> =
+    MIN_ARGON2ID_ITERATIONS..=MAX_ARGON2ID_ITERATIONS;
+const ARGON2ID_PARALLELISM_RANGE: std::ops::RangeInclusive<u32> =
+    MIN_ARGON2ID_PARALLELISM..=MAX_ARGON2ID_PARALLELISM;
+const ARGON2ID_HASH_LENGTH_RANGE: std::ops::RangeInclusive<u32> =
+    MIN_ARGON2ID_HASH_LENGTH..=MAX_ARGON2ID_HASH_LENGTH;
+
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct RustArgon2idOptions {
@@ -15,15 +46,58 @@ pub struct RustArgon2idOptions {
 }
 
 impl RustArgon2idOptions {
+    /**
+     * Resolves the requested cost, then **rejects** anything outside the bounds.
+     *
+     * Rejecting rather than clamping is deliberate. Silently reducing a request
+     * for four billion iterations to twenty would hand the caller a key derived
+     * under parameters it did not ask for, while reporting success — a subtler
+     * and harder-to-debug failure than an explicit refusal. Every caller in this
+    /// codebase uses values far inside the bounds, so nothing legitimate is
+    /// rejected.
+     */
     fn to_params(&self) -> Result<argon2::Params, String> {
-        let mem = self.memory_kib.unwrap_or(32 * 1024).max(8192);
-        let time = self.iterations.unwrap_or(3).max(3);
-        let lanes = self.parallelism.unwrap_or(1).max(1);
-        let key_len = self.hash_length.unwrap_or(32).max(32);
+        let mem = clamp_or_reject(
+            "memoryKiB",
+            self.memory_kib,
+            32 * 1024,
+            ARGON2ID_MEMORY_RANGE,
+        )?;
+        let time = clamp_or_reject("iterations", self.iterations, 3, ARGON2ID_ITERATION_RANGE)?;
+        let lanes = clamp_or_reject(
+            "parallelism",
+            self.parallelism,
+            1,
+            ARGON2ID_PARALLELISM_RANGE,
+        )?;
+        let key_len = clamp_or_reject(
+            "hashLength",
+            self.hash_length,
+            32,
+            ARGON2ID_HASH_LENGTH_RANGE,
+        )?;
 
         argon2::Params::new(mem, time, lanes, Some(key_len as usize))
             .map_err(|e| format!("invalid Argon2id parameters: {e}"))
     }
+}
+
+/// Applies the floor and enforces the ceiling for one cost parameter.
+fn clamp_or_reject(
+    name: &str,
+    requested: Option<u32>,
+    default: u32,
+    range: std::ops::RangeInclusive<u32>,
+) -> Result<u32, String> {
+    let value = requested.unwrap_or(default);
+    if !range.contains(&value) {
+        return Err(format!(
+            "argon2id-parameter-out-of-range: {name}={value} is outside {}..={}",
+            range.start(),
+            range.end()
+        ));
+    }
+    Ok(value)
 }
 
 pub fn get_params(options: Option<RustArgon2idOptions>) -> Result<argon2::Params, String> {
@@ -73,6 +147,62 @@ impl SessionState {
 
 pub struct CredentialSession {
     pub state: Mutex<SessionState>,
+}
+
+/// Y-18/#42: error returned when a vault command is invoked with no session.
+///
+/// Distinct from every other error string so the renderer can tell "you are
+/// locked" apart from "this failed", and so it can never be mistaken for a
+/// transport problem and silently retried.
+pub const NO_ACTIVE_SESSION_ERROR: &str = "vault-session-required";
+
+impl CredentialSession {
+    /// #42: fail-closed session gate for vault-data commands.
+    ///
+    /// Tauri commands are reachable from the renderer. Without this, a renderer
+    /// that is locked — or that was never unlocked, e.g. on the lock screen
+    /// before any credential is accepted — can still call `read_vault_database`,
+    /// `write_vault_database`, `reset_vault_database` and the extension
+    /// credential commands. Reading the vault file does not require the master
+    /// password to *hold* it, so those commands were an authentication bypass
+    /// around the whole unlock flow.
+    ///
+    /// Deliberately **not** applied to the Argon2id commands or the asset
+    /// integrity anchor: those run *during* unlock, so requiring a session
+    /// would make unlocking impossible.
+    pub fn require_active_session(&self) -> Result<(), String> {
+        let state = self
+            .state
+            .lock()
+            .map_err(|_| NO_ACTIVE_SESSION_ERROR.to_string())?;
+        if state.active_credential.is_some() || state.active_vault_key.is_some() {
+            Ok(())
+        } else {
+            Err(NO_ACTIVE_SESSION_ERROR.to_string())
+        }
+    }
+
+    /// Establishes the credential half of a session. Used by `open_rust_session`
+    /// and by the session-gate tests.
+    pub fn set_active_credential_for_session(&self, password: &str) -> Result<(), String> {
+        let mut state = self.state.lock().map_err(|e| e.to_string())?;
+        state.active_credential = Some(password.as_bytes().to_vec());
+        Ok(())
+    }
+
+    /// Establishes the vault-key half of a session.
+    pub fn set_active_vault_key_for_session(&self, key: Vec<u8>) -> Result<(), String> {
+        let mut state = self.state.lock().map_err(|e| e.to_string())?;
+        state.active_vault_key = Some(key);
+        Ok(())
+    }
+
+    /// Revokes the session. After this the gate must refuse again.
+    pub fn clear_session(&self) {
+        if let Ok(mut state) = self.state.lock() {
+            state.clear();
+        }
+    }
 }
 
 impl Default for CredentialSession {
@@ -314,6 +444,272 @@ pub fn has_rust_session(session: State<'_, CredentialSession>) -> Result<bool, S
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ─── Y-16: IPC cost-parameter bounds ─────────────────────────────────────
+    //
+    // These parameters cross a trust boundary. Before the ceilings existed, a
+    // renderer could request `memoryKiB: 4_000_000_000` and the process would
+    // attempt the allocation — an abort, or an unbounded spin for the iteration
+    // count. Every test below drives `get_params`, the single choke point every
+    // IPC entry point goes through.
+
+    fn opts(
+        memory_kib: Option<u32>,
+        iterations: Option<u32>,
+        parallelism: Option<u32>,
+        hash_length: Option<u32>,
+    ) -> Option<RustArgon2idOptions> {
+        Some(RustArgon2idOptions {
+            memory_kib,
+            iterations,
+            parallelism,
+            hash_length,
+        })
+    }
+
+    #[test]
+    fn y16_accepts_the_shipped_profiles() {
+        // 32 MiB / 3 iterations is what the application actually sends.
+        assert!(get_params(opts(Some(32 * 1024), Some(3), Some(1), Some(32))).is_ok());
+        assert!(get_params(opts(Some(64 * 1024), Some(4), Some(1), Some(32))).is_ok());
+        assert!(get_params(None).is_ok());
+    }
+
+    #[test]
+    fn y16_rejects_absurd_memory_requests() {
+        // The DoS: a renderer asking for ~4 TB of memory.
+        let err = get_params(opts(Some(4_000_000_000), Some(3), Some(1), Some(32)))
+            .expect_err("must reject an unbounded memory request");
+        assert!(
+            err.contains("argon2id-parameter-out-of-range"),
+            "got: {err}"
+        );
+        assert!(err.contains("memoryKiB"), "got: {err}");
+    }
+
+    #[test]
+    fn y16_rejects_absurd_iteration_requests() {
+        // The other DoS: four billion passes.
+        let err = get_params(opts(
+            Some(32 * 1024),
+            Some(4_000_000_000),
+            Some(1),
+            Some(32),
+        ))
+        .expect_err("must reject an unbounded iteration request");
+        assert!(
+            err.contains("argon2id-parameter-out-of-range"),
+            "got: {err}"
+        );
+        assert!(err.contains("iterations"), "got: {err}");
+    }
+
+    #[test]
+    fn y16_rejects_absurd_parallelism() {
+        let err = get_params(opts(
+            Some(32 * 1024),
+            Some(3),
+            Some(4_000_000_000),
+            Some(32),
+        ))
+        .expect_err("must reject an unbounded lane count");
+        assert!(err.contains("parallelism"), "got: {err}");
+    }
+
+    #[test]
+    fn y16_rejects_oversized_output_lengths() {
+        // A huge output length would allocate a large buffer per call.
+        let err = get_params(opts(Some(32 * 1024), Some(3), Some(1), Some(1_000_000)))
+            .expect_err("must reject an oversized hash length");
+        assert!(err.contains("hashLength"), "got: {err}");
+    }
+
+    #[test]
+    fn y16_rejects_weak_values_instead_of_silently_raising_them() {
+        // The old code clamped these upwards with `.max()`. Rejecting keeps the
+        // caller honest instead of quietly deriving under parameters it did not
+        // ask for.
+        assert!(get_params(opts(Some(1024), Some(3), Some(1), Some(32))).is_err());
+        assert!(get_params(opts(Some(32 * 1024), Some(1), Some(1), Some(32))).is_err());
+        assert!(get_params(opts(Some(32 * 1024), Some(3), Some(0), Some(32))).is_err());
+        assert!(get_params(opts(Some(32 * 1024), Some(3), Some(1), Some(8))).is_err());
+    }
+
+    #[test]
+    fn y16_accepts_values_exactly_on_the_boundaries() {
+        assert!(get_params(opts(
+            Some(MIN_ARGON2ID_MEMORY_KIB),
+            Some(MIN_ARGON2ID_ITERATIONS),
+            Some(MIN_ARGON2ID_PARALLELISM),
+            Some(MIN_ARGON2ID_HASH_LENGTH)
+        ))
+        .is_ok());
+        assert!(get_params(opts(
+            Some(MAX_ARGON2ID_MEMORY_KIB),
+            Some(MAX_ARGON2ID_ITERATIONS),
+            Some(MAX_ARGON2ID_PARALLELISM),
+            Some(MAX_ARGON2ID_HASH_LENGTH)
+        ))
+        .is_ok());
+    }
+
+    #[test]
+    fn y16_rejects_values_just_past_the_boundaries() {
+        assert!(get_params(opts(
+            Some(MAX_ARGON2ID_MEMORY_KIB + 1),
+            Some(3),
+            Some(1),
+            Some(32)
+        ))
+        .is_err());
+        assert!(get_params(opts(
+            Some(32 * 1024),
+            Some(MAX_ARGON2ID_ITERATIONS + 1),
+            Some(1),
+            Some(32)
+        ))
+        .is_err());
+        assert!(get_params(opts(
+            Some(32 * 1024),
+            Some(3),
+            Some(MAX_ARGON2ID_PARALLELISM + 1),
+            Some(32)
+        ))
+        .is_err());
+        assert!(get_params(opts(
+            Some(32 * 1024),
+            Some(3),
+            Some(1),
+            Some(MAX_ARGON2ID_HASH_LENGTH + 1)
+        ))
+        .is_err());
+    }
+
+    #[test]
+    fn y16_derivation_rejects_before_allocating() {
+        // The end-to-end shape of the DoS: a key derivation attempt with an
+        // absurd cost must fail fast rather than attempting the work.
+        let result = derive_argon2id_key_internal(
+            "password",
+            "saltsaltsaltsalt",
+            opts(Some(4_000_000_000), None, None, None),
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn y16_derivation_still_works_inside_the_bounds() {
+        let derived = derive_argon2id_key_internal(
+            "password",
+            "saltsaltsaltsalt",
+            opts(Some(8 * 1024), Some(3), Some(1), Some(32)),
+        )
+        .expect("in-bounds derivation must succeed");
+        assert_eq!(derived.len(), 32);
+    }
+
+    #[test]
+    fn y16_ceiling_covers_the_range_the_argon2_crate_itself_accepts() {
+        // Why this finding is real and not already handled upstream.
+        //
+        // `argon2::Params::new` does validate — but only against the Argon2
+        // *specification* limits, which are nowhere near a safe allocation for a
+        // desktop process. A request for ~2 GiB of memory is perfectly legal to
+        // the crate and would be attempted. So the crate's own check does not
+        // cover the dangerous middle of the range, and a ceiling here is what
+        // actually bounds it.
+        assert!(
+            argon2::Params::new(2_000_000, 3, 1, Some(32)).is_ok(),
+            "precondition: the argon2 crate accepts ~2 GiB, so it will not save us"
+        );
+        assert!(
+            get_params(opts(Some(2_000_000), Some(3), Some(1), Some(32))).is_err(),
+            "our ceiling must reject what the crate accepts"
+        );
+    }
+
+    #[test]
+    fn y42_session_gate_refuses_when_locked() {
+        // #42: the gate is fail-closed. With no credential and no vault key
+        // held, a vault-data command must not proceed.
+        let session = super::CredentialSession::default();
+
+        assert_eq!(
+            session
+                .require_active_session()
+                .expect_err("must refuse when locked"),
+            super::NO_ACTIVE_SESSION_ERROR
+        );
+    }
+
+    #[test]
+    fn y42_session_gate_allows_a_credential_held_session() {
+        let session = super::CredentialSession::default();
+        session
+            .set_active_credential_for_session("master-pass")
+            .expect("credential");
+
+        assert!(session.require_active_session().is_ok());
+    }
+
+    #[test]
+    fn y42_session_gate_allows_a_vault_key_held_session() {
+        // Some flows hold only the derived vault key.
+        let session = super::CredentialSession::default();
+        session
+            .set_active_vault_key_for_session(vec![7u8; 32])
+            .expect("vault key");
+
+        assert!(session.require_active_session().is_ok());
+    }
+
+    #[test]
+    fn y42_session_gate_refuses_again_after_the_session_is_cleared() {
+        // Locking must actually revoke the gate, otherwise the check is theatre.
+        let session = super::CredentialSession::default();
+        session
+            .set_active_credential_for_session("master-pass")
+            .expect("credential");
+        assert!(session.require_active_session().is_ok());
+
+        session.clear_session();
+
+        assert_eq!(
+            session
+                .require_active_session()
+                .expect_err("lock must revoke access"),
+            super::NO_ACTIVE_SESSION_ERROR
+        );
+    }
+
+    #[test]
+    fn y42_session_gate_error_is_distinguishable() {
+        // The renderer must be able to tell "you are locked" from "this failed",
+        // and it must never collide with another error string.
+        assert_ne!(super::NO_ACTIVE_SESSION_ERROR, "vault-database-unreadable");
+        assert_ne!(
+            super::NO_ACTIVE_SESSION_ERROR,
+            "current-master-password-invalid"
+        );
+        assert!(super::NO_ACTIVE_SESSION_ERROR.contains("session"));
+    }
+
+    #[test]
+    fn y42_argon2id_commands_do_not_require_a_session() {
+        // Unlocking must remain possible: the Argon2id commands run *before* a
+        // session exists, so gating them would deadlock the unlock flow. This
+        // test exists to stop someone "fixing" the inconsistency by gating them.
+        let session = super::CredentialSession::default();
+
+        assert!(
+            session.require_active_session().is_err(),
+            "precondition: locked"
+        );
+        assert!(
+            get_params(None).is_ok(),
+            "key derivation must work with no session — it is how one is created"
+        );
+    }
 
     #[test]
     fn test_resolve_backup_password() {

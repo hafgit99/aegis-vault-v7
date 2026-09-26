@@ -22,6 +22,7 @@ const autofillState = vi.hoisted(() => ({
 }));
 
 const androidAutofillMock = vi.hoisted(() => ({
+  ANDROID_AUTOFILL_REQUEST_MAX_AGE_MS: 5 * 60 * 1000,
   clearPendingAndroidAutofillRequest: vi.fn((requestId?: string) => {
     if (!requestId || autofillState.pendingRequest?.requestId === requestId) {
       autofillState.pendingRequest = null;
@@ -274,6 +275,41 @@ describe('useAndroidAutofillCoordinator', () => {
     expect(result.current.pendingAutofillRequest).toMatchObject({ requestId: 'live-request' });
     expect(setActiveTab).toHaveBeenCalledWith('vault');
     expect(securityMock.logAndroidAutofillSecurityEvent).toHaveBeenCalledWith('requested', liveRequest);
+  });
+
+  it('REGRESSION (N-8): expires an ignored autofill request instead of leaving it pending forever', () => {
+    // A request the user neither approves nor cancels used to stay in state
+    // indefinitely, because the staleness check only ran on the next event.
+    // `isAutofillMode` is derived from that state, and it is what makes
+    // `useRuntimeSecurity` skip arming the background auto-lock — so an
+    // ignored request could suppress background locking without bound.
+    vi.useFakeTimers();
+    try {
+      const { result } = renderCoordinator(true);
+      const liveRequest = request({ requestId: 'ignored-request' });
+
+      act(() => {
+        autofillState.pendingRequest = liveRequest;
+        autofillState.requestListeners[0]!(liveRequest);
+      });
+      expect(result.current.pendingAutofillRequest).toMatchObject({ requestId: 'ignored-request' });
+
+      // Past ANDROID_AUTOFILL_REQUEST_MAX_AGE_MS the request is genuinely
+      // stale; the timer must be the thing that notices.
+      act(() => {
+        autofillState.fresh = false;
+        vi.advanceTimersByTime(5 * 60 * 1000 + 1);
+      });
+
+      expect(result.current.pendingAutofillRequest).toBeNull();
+      expect(androidAutofillMock.clearPendingAndroidAutofillRequest).toHaveBeenCalledWith('ignored-request');
+      expect(securityMock.logAndroidAutofillSecurityEvent).toHaveBeenCalledWith(
+        'failed',
+        expect.objectContaining({ requestId: 'ignored-request' }),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('waits until unlock before announcing a pending request', () => {
