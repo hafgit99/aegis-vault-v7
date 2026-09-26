@@ -1,8 +1,9 @@
 ﻿# AegisVault v7 — Derinlemesine Kod İnceleme Raporu
 
-**Tarih:** 26 Eylül 2026
-**Kapsam:** `v7.0.7.0` (`a995bde`) — inceleme; `fb33981` — Aşama 0–1; `5c9752e` + çalışma ağacı — Aşama 0.5, K-1, K-3/K-4/K-7, Y-5, K-4 UI, O-4
-**Durum:** 🟢 **Aşama 0, 1, 0.5, 1.5 uygulandı; K-1, K-3, K-4, K-7, Y-5 ve O-4 kapatıldı.** 7 kritik bulgunun **6'sı kapandı**, 1'i kısmen. **Veri kaybı sınıfındaki üçlü kapandı**; sömürülebilir tek kritik bulgu (K-1) kapandı ve Android Autofill sınırı CI'da 18 kontrollük statik kapıyla kilitlendi; bütünlük etiketi dosya dışı bir defterle zorunlu kılındı; kilit ekranından tek tıkla kurtarma var; ve **passkey assertion imzası artık gerçekten doğrulanıyor**. Toplam **1968 test** yeşil, 6 güvenlik kapısı PASS. Güncel durum için **§1.2 – §1.6** ve **§8** okunmalı.
+**Tarih:** 27 Eylül 2026
+**Kapsam:** `v7.0.7.0` (`a995bde`) — inceleme; `fb33981` — Aşama 0–1; `5c9752e` + çalışma ağacı — Aşama 0.5, K-1, K-3/K-4/K-7, Y-5, K-4 UI, O-4; `4ecf34c`/`b983354`/`85e5172`/`fb5ea7f`/`54552d6` — Aşama 2
+**Durum:** 🟢 **Aşama 0, 1, 0.5, 1.5, 2 uygulandı; K-1, K-3, K-4, K-7, Y-5, O-4, O-13, O-14, O-16, O-17 ve O-20/O-21 kapatıldı.** 7 kritik bulgunun **6'sı kapandı**, 1'i kısmen. **Veri kaybı sınıfındaki üçlü kapandı**; sömürülebilir tek kritik bulgu (K-1) kapandı ve Android Autofill sınırı CI'da **20** kontrollük statik kapıyla kilitlendi; bütünlük etiketi dosya dışı bir defterle zorunlu kılındı; kilit ekranından tek tıkla kurtarma var; **K-1'in Kotlin derleme borcu gerçek derlemeyle kapandı ve Android lint CI'a bağlandı**; snapshot geri yükleme atomik ve bütçeli; ve **passkey assertion imzası artık gerçekten doğrulanıyor**. Toplam **2138 test** yeşil, **8 güvenlik kapısı** PASS. Güncel durum için **§1.2 – §1.6**, **§1.16** ve **§8** okunmalı.
+**Kalan açık iş:** tek kalem operasyonel — Y-19 imzalama sertifikaları (#32). Kodla değil secret yönetimiyle çözülür ve o zamana kadar imzasız yayın bilerek bloke kalır.
 **İnceleme Alanı:** Tüm depo — TypeScript/React 19 frontend, Rust/Tauri 2 masaüstü katmanı, Kotlin/Android katmanı, Chrome/Firefox/Safari eklenti katmanı, `wa-sqlite` depolama, CI/CD ve build scriptleri
 **Yöntem:** 5 paralel derin inceleme oturumu (kriptografi, depolama, import/sync, React, native/CI) + tüm otomatik kontrollerin çalıştırılması + kritik bulguların manuel doğrulanması
 
@@ -1456,7 +1457,7 @@ Bu kapı ilk çalıştırmasında **iki gerçek bulgu** verdi: `TAURI_SIGNING_PR
 | **Windows'ta taşınabilir imzalama** | İlk sürüm Windows Authenticode, sonraki sürümler için de geçerli. Yeniden imzalama (dual-sign) kapsam dışı |
 | **`open_import_file` boyut kontrolü** | #42'nin son kalemi hâlâ açık: içe aktarma dosyası boyut sınırı yok |
 | **JS tarafında Argon2id tavanı** | Rust tarafı IPC üzerinden zorluyor; saf WASM yolunda üst sınır yok → Aşama 2 #51 |
-| **K-1 derleme borcu** | Kotlin derlemesi alınamadı → yayın öncesi `npm run android:build:apk` |
+| **K-1 derleme borcu** | ✅ **Kapandı** — `compileArmDebugKotlin`, `compileUniversalDebugKotlin` ve `lintArmDebug` BUILD SUCCESSFUL; lint artık CI'da (bkz. §1.16) |
 
 ---
 
@@ -2664,7 +2665,7 @@ En kritik veri kaybı senaryoları kapatıldı:
 
 **Uygulama kalitesi yüksek:** düzeltmeler üstü kapalı değil, kök nedeni hedefliyor; gerekçeler kodda belgelenmiş; bonus düzeltmeler getirilmiş (OPFS kilit sızıntısı, paylaşım deneme sayacı); iki güvenlik kapısı gevşetilmek yerine **sıkılaştırılmış**.
 
-**Kalan en acil konu N-1** — Y-6'nın uç durum analizi yapılmadan uygulanması, Android autofill sonrası anında kilitleme getiriyor. Bu, düzeltilen bir güvenlik açığının (arka plan kilidi uygulanmıyor) yerine geçen bir işlevsel regresyon ve **kullanıcıya neden açıklanamayan bir kilitlenme** olarak görünecek. Bir satırlık düzeltme + bir regresyon testiyle kapanır. Ardından N-2 (`i18n:audit` BLOCKED) geliyor.
+**O sıradaki en acil konu N-1'ydı** — Y-6'nın uç durum analizi yapılmadan uygulanması, Android autofill sonrası anında kilitleme getiriyordu. Bu, düzeltilen bir güvenlik açığının (arka plan kilidi uygulanmıyor) yerine geçen bir işlevsel regresyon ve **kullanıcıya neden açıklanamayan bir kilitlenme** olarak görünecekti. Bir satırlık düzeltme + bir regresyon testiyle kapandı, kapatıldıktan sonra da ikinci bir kapısı (N-8) bulundu — bkz. aşağıdaki "Aşama 0.5 Sonrası Güncel Durum" ve §1.2.
 
 ### Aşama 0.5 Sonrası Güncel Durum
 
