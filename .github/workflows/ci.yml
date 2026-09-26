@@ -98,10 +98,13 @@ jobs:
       - name: Cargo clippy
         run: cargo clippy --all-targets -- -D warnings
 
-      - name: Install cargo-deny
-        uses: taiki-e/install-action@899b013517f9e7774591216672bf75a46bb9a481 # v2.9.4 (SHA-pinned)
-        with:
-          tool: cargo-deny@0.20.2
+      - name: Install cargo-deny (official release binary)
+        run: |
+          CD_VERSION=0.20.2
+          curl -sSfL "https://github.com/EmbarkStudios/cargo-deny/releases/download/${CD_VERSION}/cargo-deny-${CD_VERSION}-x86_64-unknown-linux-musl.tar.gz" -o /tmp/cargo-deny.tar.gz
+          tar -xzf /tmp/cargo-deny.tar.gz -C /tmp
+          sudo install -m 755 "/tmp/cargo-deny-${CD_VERSION}-x86_64-unknown-linux-musl/cargo-deny" /usr/local/bin/cargo-deny
+          cargo-deny --version
 
       - name: Cargo deny (RustSec advisory check)
         run: cargo deny check advisories
