@@ -56,6 +56,73 @@ export function removeSyncAllowedOrigin(origin: string): void {
   } catch { /* ignore */ }
 }
 
+/**
+ * O-21: how many live leases each whitelisted origin has.
+ *
+ * `syncAllowedOrigins` is a `Set`, so a bare add/remove cannot tell "this origin
+ * is still in use" from "this origin was added and never taken back out". The
+ * concrete leak: `handleSyncTest` constructs a provider — which whitelists its
+ * origin — and never called `dispose()`. Every click therefore added a permanent
+ * network exemption, and removing the sync configuration did not revoke it. A
+ * user could "test" twenty servers and keep twenty origins able to reach the
+ * network for the rest of the session.
+ *
+ * Reference counting makes the lifecycle explicit: a lease is taken when a
+ * provider is constructed and released by `dispose()`, and the origin leaves the
+ * whitelist only when the last lease is gone.
+ */
+const syncOriginLeases = new Map<string, number>();
+
+/**
+ * Registers a lease for `origin`, whitelisting it on the first one.
+ *
+ * @returns a release function that is safe to call more than once.
+ */
+export function acquireSyncOriginLease(origin: string): () => void {
+  let key: string;
+  try {
+    key = new URL(origin).origin;
+  } catch {
+    // A malformed origin is never whitelisted, so there is nothing to release.
+    return () => undefined;
+  }
+
+  const held = (syncOriginLeases.get(key) ?? 0) + 1;
+  syncOriginLeases.set(key, held);
+  // Whitelist unconditionally: `addSyncAllowedOrigin` re-validates the scheme,
+  // and the Set is idempotent.
+  addSyncAllowedOrigin(key);
+
+  let released = false;
+  return () => {
+    // Idempotent: a double dispose must not decrement someone else's lease.
+    if (released) return;
+    released = true;
+
+    const remaining = (syncOriginLeases.get(key) ?? 1) - 1;
+    if (remaining > 0) {
+      syncOriginLeases.set(key, remaining);
+      return;
+    }
+    syncOriginLeases.delete(key);
+    removeSyncAllowedOrigin(key);
+  };
+}
+
+/** Number of live leases for `origin`. Exposed for tests and diagnostics. */
+export function getSyncOriginLeaseCount(origin: string): number {
+  try {
+    return syncOriginLeases.get(new URL(origin).origin) ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** Total number of origins currently holding a lease. Exposed for diagnostics. */
+export function getLeasedSyncOriginCount(): number {
+  return syncOriginLeases.size;
+}
+
 /** Returns a read-only snapshot of currently whitelisted sync origins (for diagnostics). */
 export function getSyncAllowedOrigins(): ReadonlySet<string> {
   return syncAllowedOrigins;

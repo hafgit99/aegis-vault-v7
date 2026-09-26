@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -54,6 +54,154 @@ export interface SyncUploadPreconditions {
    * the write conditional on it being unchanged.
    */
   ifMatch?: string;
+}
+
+/**
+ * O-20: largest remote sync payload accepted into memory.
+ *
+ * Every other untrusted input path in this codebase is bounded
+ * (`MAX_BACKUP_FILE_SIZE` 100 MB, `MAX_ANDROID_PAYLOAD_BYTES` 25 MB,
+ * `MAX_ATTACHMENT_SIZE`), and the remote sync blob was the single exception —
+ * `res.text()` read whatever the server sent. A hostile or compromised remote
+ * (or a loopback-SSRF'd endpoint) could therefore force a multi-hundred-megabyte
+ * allocation and take the WebView down with it.
+ *
+ * A sync snapshot is an encrypted JSON envelope of the user's own vault. 32 MB
+ * is far above any realistic size and well below what would destabilise a mobile
+ * renderer.
+ */
+export const MAX_SYNC_PAYLOAD_BYTES = 32 * 1024 * 1024;
+
+/**
+ * O-21: validates a remote `metadata.json`.
+ *
+ * The remote is not trusted, and every field here steers a destructive
+ * decision. The concrete failure this closes: an `updatedAt` that does not parse
+ * becomes `NaN`, and `NaN > anything` is `false`, so `performSync` concluded the
+ * remote was *not* newer, skipped the download, and uploaded the local vault
+ * over it. A ~60-byte `metadata.json` was therefore enough to trigger a
+ * destructive overwrite of a healthy remote backup.
+ *
+ * `itemCount` is also checked for shape even though nothing compares it yet, so a
+ * future comparison cannot be fed a string.
+ *
+ * @returns the validated metadata, or a human-readable reason it is unusable.
+ */
+export function validateRemoteSyncMetadata(
+  value: unknown,
+): { ok: true; metadata: SyncMetadata } | { ok: false; reason: string } {
+  if (typeof value !== 'object' || value === null) {
+    return { ok: false, reason: 'metadata is not an object' };
+  }
+  const candidate = value as Partial<SyncMetadata>;
+
+  if (typeof candidate.updatedAt !== 'string' || candidate.updatedAt.length === 0) {
+    return { ok: false, reason: 'updatedAt must be a non-empty string' };
+  }
+  // The decisive check: an unparsable timestamp must never reach a comparison.
+  if (!Number.isFinite(new Date(candidate.updatedAt).getTime())) {
+    return { ok: false, reason: `updatedAt is not a valid timestamp: ${candidate.updatedAt}` };
+  }
+
+  if (typeof candidate.deviceId !== 'string' || candidate.deviceId.length === 0) {
+    return { ok: false, reason: 'deviceId must be a non-empty string' };
+  }
+
+  if (typeof candidate.vaultVersion !== 'string' || candidate.vaultVersion.length === 0) {
+    return { ok: false, reason: 'vaultVersion must be a non-empty string' };
+  }
+
+  // The checksum drives integrity verification of the downloaded blob.
+  if (typeof candidate.checksum !== 'string' || !/^[0-9a-f]{64}$/i.test(candidate.checksum)) {
+    return { ok: false, reason: 'checksum must be a 64-character hex string' };
+  }
+
+  if (
+    typeof candidate.itemCount !== 'number'
+    || !Number.isInteger(candidate.itemCount)
+    || candidate.itemCount < 0
+  ) {
+    return { ok: false, reason: 'itemCount must be a non-negative integer' };
+  }
+
+  return {
+    ok: true,
+    metadata: {
+      updatedAt: candidate.updatedAt,
+      deviceId: candidate.deviceId,
+      vaultVersion: candidate.vaultVersion,
+      checksum: candidate.checksum.toLowerCase(),
+      itemCount: candidate.itemCount,
+    },
+  };
+}
+
+/**
+ * O-20: reads a response body into text, refusing anything over `maxBytes`.
+ *
+ * A `Content-Length` pre-check rejects an obviously-oversized body cheaply, and
+ * the stream is bounded independently so a response that lies about (or omits)
+ * its length still cannot exhaust memory. A length-only check is a TOCTOU hole:
+ * the header is attacker-controlled.
+ *
+ * Works without `Response.body` (jsdom, older runtimes) by falling back to a
+ * post-read length check, which is still better than no bound at all.
+ */
+export async function readResponseTextBounded(
+  response: Response,
+  maxBytes: number,
+  label: string,
+): Promise<string> {
+  const declared = Number(response.headers?.get?.('content-length') ?? Number.NaN);
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    throw new SyncError(
+      syncErrorCodes.remoteTooLarge,
+      `${label} declares ${declared} bytes, above the ${maxBytes}-byte limit.`,
+    );
+  }
+
+  const body = response.body;
+  if (!body || typeof body.getReader !== 'function') {
+    // No streaming available: read once, then verify. Cannot stop mid-flight, but
+    // the declared-length check above still covers the honest case.
+    const text = await response.text();
+    if (text.length > maxBytes) {
+      throw new SyncError(syncErrorCodes.remoteTooLarge, `${label} exceeds the ${maxBytes}-byte limit.`);
+    }
+    return text;
+  }
+
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        // Stop pulling immediately; do not wait for the rest of the body.
+        await reader.cancel().catch(() => undefined);
+        throw new SyncError(
+          syncErrorCodes.remoteTooLarge,
+          `${label} exceeds the ${maxBytes}-byte limit.`,
+        );
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock?.();
+  }
+
+  const merged = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(merged);
 }
 
 /** Configuration for a WebDAV sync provider */
@@ -158,6 +306,13 @@ export const syncErrorCodes = {
    * rejected by the precondition, so nothing was overwritten.
    */
   remoteModified: 'sync.remoteModified',
+  /** O-20: a remote payload exceeded `MAX_SYNC_PAYLOAD_BYTES`. */
+  remoteTooLarge: 'sync.remoteTooLarge',
+  /**
+   * O-21: a remote `metadata.json` failed schema validation. Handled exactly
+   * like unreadable metadata: refuse to write over an unverified remote.
+   */
+  remoteMetadataInvalid: 'sync.remoteMetadataInvalid',
 } as const;
 
 export type SyncErrorCode = (typeof syncErrorCodes)[keyof typeof syncErrorCodes];

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { addSyncAllowedOrigin, isPrivateOrLoopbackHostname, removeSyncAllowedOrigin } from '../airgapNetworkPolicy';
+import { acquireSyncOriginLease, isPrivateOrLoopbackHostname } from '../airgapNetworkPolicy';
 import type {
   SyncProvider,
   SyncMetadata,
@@ -12,6 +12,11 @@ import type {
   S3SyncConfig,
 } from './syncTypes';
 import { SyncError, syncErrorCodes } from './syncTypes';
+import {
+  MAX_SYNC_PAYLOAD_BYTES,
+  readResponseTextBounded,
+  validateRemoteSyncMetadata,
+} from './syncTypes';
 
 const VAULT_FILE = 'vault.aegis';
 const METADATA_FILE = 'metadata.json';
@@ -70,6 +75,11 @@ export class S3SyncProvider implements SyncProvider {
   private readonly secretAccessKey: string;
   private readonly prefix: string;
   private readonly origin: string;
+  /**
+   * O-21: releases this provider's hold on the air-gap whitelist. Idempotent, so
+   * a double `dispose()` cannot revoke another live provider's exemption.
+   */
+  private releaseOriginLease: (() => void) | null = null;
 
   constructor(config: S3SyncConfig) {
     let parsedUrl: URL;
@@ -94,11 +104,14 @@ export class S3SyncProvider implements SyncProvider {
     this.prefix = (config.prefix?.trim() || DEFAULT_AEGIS_DIR).replace(/^\//, '').replace(/\/$/, '');
     this.origin = parsedUrl.origin;
 
-    addSyncAllowedOrigin(this.origin);
+    // O-21: take a lease rather than a bare whitelist entry, so this origin can
+    // actually be revoked when the provider goes away.
+    this.releaseOriginLease = acquireSyncOriginLease(this.origin);
   }
 
   dispose(): void {
-    removeSyncAllowedOrigin(this.origin);
+    this.releaseOriginLease?.();
+    this.releaseOriginLease = null;
   }
 
   private buildKeyPath(filename: string): string {
@@ -294,7 +307,9 @@ export class S3SyncProvider implements SyncProvider {
       throw new SyncError(syncErrorCodes.downloadFailed, `Failed to download vault from S3: HTTP ${res.status}`);
     }
 
-    return res.text();
+    // O-20: a bounded read. The remote controls the body, so it cannot be
+    // trusted to stay small.
+    return readResponseTextBounded(res, MAX_SYNC_PAYLOAD_BYTES, 'Remote vault snapshot');
   }
 
   async getRemoteMetadata(): Promise<SyncRemoteMetadata> {
@@ -317,8 +332,13 @@ export class S3SyncProvider implements SyncProvider {
     }
 
     try {
-      const metadata = (await res.json()) as SyncMetadata;
-      return { kind: 'ok', metadata, etag: res.headers?.get?.('etag') ?? undefined };
+      // O-21: the remote is untrusted, and `updatedAt` steers a destructive
+      // decision. An unparsable timestamp must never reach a comparison.
+      const validation = validateRemoteSyncMetadata(await res.json());
+      if (!validation.ok) {
+        return { kind: 'unreadable', detail: `metadata.json failed validation: ${validation.reason}` };
+      }
+      return { kind: 'ok', metadata: validation.metadata, etag: res.headers?.get?.('etag') ?? undefined };
     } catch (err) {
       return {
         kind: 'unreadable',

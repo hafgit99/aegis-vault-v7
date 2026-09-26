@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -283,7 +283,7 @@ describe('WebDavSyncProvider.getRemoteMetadata', () => {
       updatedAt: '2024-01-01T00:00:00Z',
       deviceId: 'dev1',
       vaultVersion: '7.0',
-      checksum: 'abc123',
+      checksum: 'a'.repeat(64),
       itemCount: 5,
     };
     mockFetch(() => makeJsonResponse(200, metadata, { etag: '"v1"' }));

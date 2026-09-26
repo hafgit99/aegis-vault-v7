@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { addSyncAllowedOrigin, isPrivateOrLoopbackHostname, removeSyncAllowedOrigin } from '../airgapNetworkPolicy';
+import { acquireSyncOriginLease, isPrivateOrLoopbackHostname } from '../airgapNetworkPolicy';
 import type {
   SyncProvider,
   SyncMetadata,
@@ -11,6 +11,11 @@ import type {
   SyncUploadPreconditions,
 } from './syncTypes';
 import { SyncError, syncErrorCodes } from './syncTypes';
+import {
+  MAX_SYNC_PAYLOAD_BYTES,
+  readResponseTextBounded,
+  validateRemoteSyncMetadata,
+} from './syncTypes';
 
 const VAULT_FILE = 'vault.aegis';
 const METADATA_FILE = 'metadata.json';
@@ -51,6 +56,11 @@ export class WebDavSyncProvider implements SyncProvider {
   private readonly baseUrl: string;
   private readonly authHeader: string;
   private readonly origin: string;
+  /**
+   * O-21: releases this provider's hold on the air-gap whitelist. Idempotent, so
+   * a double `dispose()` cannot revoke another live provider's exemption.
+   */
+  private releaseOriginLease: (() => void) | null = null;
 
   constructor(url: string, username: string, password: string) {
     let parsedUrl: URL;
@@ -70,13 +80,15 @@ export class WebDavSyncProvider implements SyncProvider {
     this.authHeader = buildBasicAuthHeader(username, password);
     this.origin = new URL(this.baseUrl).origin;
 
-    // Register this origin in the air-gap whitelist so our fetch calls are allowed
-    addSyncAllowedOrigin(this.origin);
+    // Take a lease rather than a bare whitelist entry, so this origin can
+    // actually be revoked when the provider goes away.
+    this.releaseOriginLease = acquireSyncOriginLease(this.origin);
   }
 
   /** Call this when the user removes the WebDAV configuration. */
   dispose(): void {
-    removeSyncAllowedOrigin(this.origin);
+    this.releaseOriginLease?.();
+    this.releaseOriginLease = null;
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -207,7 +219,9 @@ export class WebDavSyncProvider implements SyncProvider {
       throw new SyncError(syncErrorCodes.downloadFailed, `Failed to download vault: HTTP ${res.status}`);
     }
 
-    return res.text();
+    // O-20: a bounded read. The remote controls the body, so it cannot be
+    // trusted to stay small.
+    return readResponseTextBounded(res, MAX_SYNC_PAYLOAD_BYTES, 'Remote vault snapshot');
   }
 
   async getRemoteMetadata(): Promise<SyncRemoteMetadata> {
@@ -230,8 +244,13 @@ export class WebDavSyncProvider implements SyncProvider {
     }
 
     try {
-      const metadata = (await res.json()) as SyncMetadata;
-      return { kind: 'ok', metadata, etag: res.headers?.get?.('etag') ?? undefined };
+      // O-21: the remote is untrusted, and `updatedAt` steers a destructive
+      // decision. An unparsable timestamp must never reach a comparison.
+      const validation = validateRemoteSyncMetadata(await res.json());
+      if (!validation.ok) {
+        return { kind: 'unreadable', detail: `metadata.json failed validation: ${validation.reason}` };
+      }
+      return { kind: 'ok', metadata: validation.metadata, etag: res.headers?.get?.('etag') ?? undefined };
     } catch (err) {
       // Y-11: the metadata file EXISTS but could not be parsed. The vault
       // blob may be intact and newer than local, so this must be reported as

@@ -14,6 +14,7 @@ import type {
   SyncConflictItem,
 } from './syncTypes';
 import { SyncError, syncErrorCodes } from './syncTypes';
+import { validateRemoteSyncMetadata } from './syncTypes';
 
 const VAULT_VERSION = '7.0';
 
@@ -205,7 +206,24 @@ export async function performSync(
   let observedETag: string | undefined;
 
   if (remoteState.kind === 'ok') {
-    const remoteMetadata = remoteState.metadata;
+    // O-21 (defence in depth): the providers validate the remote metadata, but
+    // this is the code that actually compares timestamps and decides whether it
+    // is safe to upload. The invariant that matters must hold *here*, not merely
+    // in the callers: an unparsable `updatedAt` becomes `NaN`, and `NaN > x` is
+    // false, which would make sync skip the download and overwrite the remote.
+    const validation = validateRemoteSyncMetadata(remoteState.metadata);
+    if (!validation.ok) {
+      return {
+        status: 'error',
+        error: new SyncError(
+          syncErrorCodes.remoteMetadataInvalid,
+          `Refusing to upload: remote metadata is unusable (${validation.reason}). ` +
+            'Nothing was uploaded, so the remote vault is untouched.',
+        ),
+        mergedItems: localItems,
+      };
+    }
+    const remoteMetadata = validation.metadata;
     observedETag = remoteState.etag;
 
     // Determine whether the remote snapshot is worth downloading.

@@ -1,4 +1,4 @@
-# AegisVault v7 — Derinlemesine Kod İnceleme Raporu
+﻿# AegisVault v7 — Derinlemesine Kod İnceleme Raporu
 
 **Tarih:** 26 Eylül 2026
 **Kapsam:** `v7.0.7.0` (`a995bde`) — inceleme; `fb33981` — Aşama 0–1; `5c9752e` + çalışma ağacı — Aşama 0.5, K-1, K-3/K-4/K-7, Y-5, K-4 UI, O-4
@@ -1460,6 +1460,121 @@ Bu kapı ilk çalıştırmasında **iki gerçek bulgu** verdi: `TAURI_SIGNING_PR
 
 ---
 
+## 1.14 #42 Kalan, O-20 ve O-21 Kapatma Raporu (Güncelleme: 26.09.2026, 23:55)
+
+---
+
+### #42 Kalan — `open_import_file` Sınırsız Dosya Okuması
+
+`fs::read_to_string(path)` kullanıcı seçtiği dosyanın tamamını belleğe alıyordu; boyut kontrolü yoktu.
+
+**Kapatma.** `read_text_file_bounded` iki bağımsız sınır uygular:
+
+1. `stat` ön kontrolü — bariz büyük dosya ucuz reddedilir.
+2. **Akış sınırı** — `Read::take(max + 1)`.
+
+İkincisi şart: `stat` kontrolü tek başına bir TOCTOU deliğidir, çünkü dosya okuma arasında büyüyebilir ya da özel bir dosya küçük uzunluk bildirebilir. Tavan, kasa dosyasıyla aynı (`MAX_IMPORT_FILE_BYTES = MAX_VAULT_FILE_BYTES = 25 MB`), böylece meşru bir yedek her zaman içe aktarılabilir.
+
+#### Bu turda düzeltilen **sahte güvence**
+
+İlk yazımda TOCTOU'yu test etmeyi denedim ve test **mutasyonla kırılmadı**. Nedeni: gerçek bir dosyayla stream sınırı test edilemez, çünkü `stat` ön kontrolü büyük dosyayı zaten reddediyor — stream sınırını kaldırsanız bile tüm dosya testleri yeşil kalıyor. Test bir güvence vermiyordu, sadece yeşildi.
+
+Çözüm: stream sınırı `read_stream_bounded` olarak ayrı bir fonksiyona çıkarıldı ve **sentetik bir okuyucuyla** test edildi — uzunluğunu bildirmeyen ama sınırdan çok fazla veri üreten bir `Read`. Aynı ders: bir test yeşil olduğu için kanıtladığını sanmayın.
+
+#### Testler (7 adet, `cargo test`)
+
+Sınır içi kabul, sınır dışı reddi, **sınırda tam olarak** kabul, geçersiz UTF-8, eksik dosya, limitin kasa limitiyle eşleşmesi, ve sentetik okuyucuyla stream sınırı.
+
+#### Mutasyon Kanıtı
+
+`read_stream_bounded` içindeki sınır `if false &&` ile devre dışı bırakıldı → `stream_bound_refuses_a_reader_that_yields_more_than_the_cap` **kırıldı**.
+
+---
+
+### O-20 — Sınırsız Uzak Senkronizasyon Yükü
+
+`downloadVault()` her iki sağlayıcıda da `res.text()` ile sınırsız okuma yapıyordu. Depodaki her güvenilmeyen girdi yolunun sınırı vardı (`MAX_BACKUP_FILE_SIZE`, `MAX_ANDROID_PAYLOAD_BYTES`, `MAX_ATTACHMENT_SIZE`); uzak partinin kontrolündeki tek yolun yoktu.
+
+**Kapatma.** `readResponseTextBounded` (`MAX_SYNC_PAYLOAD_BYTES = 32 MB`):
+
+- `Content-Length` ön kontrolü,
+- **akış sınırı** — `getReader()` ile parça parça okunur, sınır aşılır okuma **hemen** durdurulur ve `reader.cancel()` çağrılır.
+
+Yine `Content-Length` kontrolü tek başına yeterli değil: **başlık saldırgan tarafından kontrol ediliyor.** Testler bunu açıkça doğruluyor — "beyan edilen uzunluk yalan söylüyor" senaryosu stream sınırı olmadan geçer.
+
+Chunk birleştirme de doğru yapıldı: parça başına ayrı `TextDecoder` kullanılsa sınırı geçen çok baytlı karakterler bozulurdu; test bunu sabitliyor.
+
+---
+
+### O-21 — Uzak Metadata Doğrulaması Yok (veri kaybı)
+
+Bu, rapordaki en keskin bulguydu ve **Y-11'in üzerine oturuyor**:
+
+- `updatedAt` ayrıştırılamazsa `NaN` olur,
+- `NaN > x` her zaman `false`'tur,
+- `performSync` "uzak daha yeni değil" sonucuna varır, **indirmeyi atlar**,
+- ve yerel kasayı uzakkinin üzerine yazar.
+
+Yani **~60 baytlık** bir `metadata.json` ile sağlam bir uzak yedek yıkıcı biçimde ezilebiliyordu. `deviceId`, `vaultVersion`, `checksum`, `itemCount` hiç doğrulanmıyordu.
+
+**Kapatma — iki katmanlı savunma.**
+
+1. `validateRemoteSyncMetadata` her iki sağlayıcıda çağrılıyor; başarısız olursa sonuç `unreadable` (Y-11'in "yazma" yasağına düşüyor).
+2. **Aynı doğrulama `syncEngine` içinde de yapılıyor.**
+
+İkinci katman bir testin sonucuyla eklendi: motor testi, sağlayıcıyı atlayıp doğrulanmamış `ok` metadata verdiğinde `uploadVault`'un çağrıldığını gösterdi. Gerekçe doğru: **`NaN`'ın oluştuğu ve yıkıcı kararın verildiği yer motordur.** Değişmez orada tutulmalı, çağıranlara bırakılmamalı.
+
+`checksum` artık 64 haneli hex olarak doğrulanıyor (bütünlük doğrulamasını besleyen alan) ve `itemCount` non-negative integer olmalı — ileride karşılaştırma yapılsa bile string beslenmesin.
+
+#### Mutasyon Kanıtı
+
+| Mutasyon | Sonuç |
+|---|---|
+| Motordaki doğrulama devre dışı | `O-21: refuses to overwrite a remote whose metadata timestamp is unparsable` **kırıldı** |
+| Stream sınırı devre dışı | **2 test kırıldı** — "beyan edilen uzunluk yalan söylüyor" ve "uzunluk bildirmiyor" |
+
+---
+
+### O-21 (ikinci yarı) — Hava Boşluğu İzin Listesi Sızıntısı
+
+`dispose()` **mevcuttu ve doğruydu** — ama hiçbir yerde çağrılmıyordu. Somut sızıntı:
+
+`handleSyncTest` ("Test connection" düğmesi) bir sağlayıcı kuruyor — kurucu origin'i izin listesine ekliyor — ve **asla dispose etmiyordu**. `handleSyncNow` da aynı şekilde.
+
+Kullanıcı 20 farklı sunucuya "bağlantıyı test et" dediğinde **20 kalıcı ağ muafiyeti** birikiyordu ve senkronizasyon yapılandırması silinse bile geri alınmıyordu. `syncAllowedOrigins` bir `Set` olduğu için çıplak add/remove "hâlâ kullanımda" ile "eklenip hiç geri alınmadık" ayrımını yapamıyor.
+
+**Kapatma — referans sayımı.** `acquireSyncOriginLease(origin)` bir lease alır ve **idempotent** bir serbest bırakma döndürür. İzin listesi yalnızca son lease bırakıldığında temizlenir. İki sağlayıcı ve `useSettingsSync`'in üç yolu buna bağlandı (`finally` bloklarında, başarı/hata/erken-dönüş yollarının hepsinde).
+
+İdempotenslik şart: çift `dispose()` başka bir canlı sağlayıcının muafiyetini sessizce kesmemeli.
+
+#### Testler (16 adet)
+
+Lease'ın whitelist'e eklemesi, son lease bırakılınca geri alması, **eşzamanlı lease'lar birbirini iptal etmemesi**, tekrar serbest bırakmanın yok sayılması, origin normalizasyonu, bozuk origin, şema denetiminin lease yolundan da geçerli olması, tekrar eden döngülerde birikme olmaması ve **"20 farklı test hedefi kalıcı olarak whitelist'te kalmaz"** uçtan uca senaryosu.
+
+`useSettingsSync.test.tsx`'e 4 test: başarılı test, **başarısız** test, "Sync now" ve senkronizasyon hatası — hepsi dispose'un çağrıldığını doğruluyor. Başarısız testin ayrıca eklenmesi önemli: sızıntı en kolay hatada gözden kaçar.
+
+#### Mutasyon Kanıtı
+
+`acquireSyncOriginLease` içindeki "son lease mı?" kontrolü `|| true` ile devre dışı bırakıldı → **6 test kırıldı**.
+
+---
+
+### Doğrulama
+
+| Kontrol | Sonuç |
+|---|---|
+| `cargo test --lib` | ✅ **57 / 57** |
+| `cargo fmt --check` | ✅ |
+| `npm run typecheck` | ✅ |
+| `npm run lint` | ✅ **0 hata, 23 uyarı** (taban korundu) |
+| `npm run test:unit` | ✅ **2100 / 2100** (2065 → 2100, **+35**, 239 → 241 dosya) |
+| `npm run build` | ✅ |
+| `npm run test:fuzz` | ✅ 37 |
+| 7 güvenlik kapısı | ✅ hepsi PASS |
+| `npm audit --audit-level=high` | ✅ 0 |
+
+---
+
 ## 2. Mimari Özeti
 
 ```
@@ -2119,8 +2234,8 @@ Bu hook'ta **hiç `useEffect` yok** (grep: sıfır eşleşme). Hiçbir zamanlay�
 | O-17 | Klasör ve akıllı klasör kitaplıkları **şifrelenmemiş** `localStorage`'da, kasa dışında, bütünlük koruması olmadan, yazma/okuma hataları yutularak saklanıyor; snapshot'a da girmiyor. Klasör adları bir şifre yöneticisinde en tanımlayıcı metad olabilir. `createFolder` `QuotaExceededError`'da "oluşturuldu" diye döndüğü halde yazmıyor. Bozuk JSON `[]` dönüyor → tüm hiyerarşi sessizce sıfırlanıyor | `folders.ts:91-103,299`, `smartFolders.ts:115-122` |
 | O-18 | **Geri dönüş/ithal geri alma, evrensel üçüncü taraf ithal yolu için tamamen no-op.** `parseUniversalImport` hiçbir kod yolunda `id` üretmiyor, dolayısıyla Bitwarden/LastPass/Chrome/1Password JSON veya CSV için `importedItemIds === []` → `newlyInsertedIds === []` → rollback `catch` bloğu boş bir dizi üzerinde çalışıyor. `importAttachments` hata verirse kullanıcı **"ithal başarısız"** görüyor ama **her ithal edilen öğe zaten kalıcılaştırılmış** durumda — hata mesajı kasa durumunu **yanlış** temsil ediyor | `useSettingsBackupImport.ts:301-305, 316-320, 421-449` |
 | O-19 | `sanitizeNoteText` **ölü kod** — `MAX_NOTE_LENGTH` sözleşmesi hiçbir yazma yolunda uygulanmıyor. 99 MB'lık bir not hücresi (yalnızca 100 MB dosya tavanıyla sınırlı) olduğu gibi saklanıyor, şifreleniyor, SQLite'e yazılıyor. `buildImportedTitle` böyle bir notun ilk satırını öğe başlığı olarak bile kullanıyor. NUL/kontrol karakterleri UI ve panoya filtrelenmeden gidiyor | `notes.ts:9-39`, `importer.ts:85-88` |
-| O-20 | Uzak senkronizasyon blob'ı **boyut sınırı olmadan** okunuyor (`res.text()`), sonra Argon2id'den geçirilip `JSON.parse` ediliyor. Depodaki her diğer güvenilmeyen girdi yolunun (`MAX_BACKUP_FILE_SIZE` 100 MB, `MAX_ANDROID_PAYLOAD_BYTES` 25 MB, `MAX_ATTACHMENT_SIZE`) sınırı var; **uzak partinin kontrolünde olan tek yolun** sınırı yok. 3–5× bellek büyütmesi mobil WebView'i öldürüyor | `webdavProvider.ts:181`, `s3Provider.ts:266`, `syncEngine.ts:83-89` |
-| O-21 | `getRemoteMetadata()` sıfır şema doğrulaması yapıyor. `updatedAt` bozuksa `NaN` → `NaN > x` `false` → indirme atlanıyor → O-20 ile birleşip **60 baytlık bir payload ile yıkıcı üzerine yazma** mümkün. `deviceId`, `vaultVersion`, `itemCount` doğrulanmıyor; `itemCount` hiç karşılaştırılmıyor | `webdavProvider.ts:201-206`, `s3Provider.ts:286-290` |
+| O-20 | ✅ **KAPANDI (bkz. §1.14)** — Uzak senkronizasyon blob'ı **boyut sınırı olmadan** okunuyor (`res.text()`), sonra Argon2id'den geçirilip `JSON.parse` ediliyor. Depodaki her diğer güvenilmeyen girdi yolunun (`MAX_BACKUP_FILE_SIZE` 100 MB, `MAX_ANDROID_PAYLOAD_BYTES` 25 MB, `MAX_ATTACHMENT_SIZE`) sınırı var; **uzak partinin kontrolünde olan tek yolun** sınırı yok. 3–5× bellek büyütmesi mobil WebView'i öldürüyor | `webdavProvider.ts:181`, `s3Provider.ts:266`, `syncEngine.ts:83-89` |
+| O-21 | ✅ **KAPANDI (bkz. §1.14)** — `getRemoteMetadata()` sıfır şema doğrulaması yapıyor. `updatedAt` bozuksa `NaN` → `NaN > x` `false` → indirme atlanıyor → O-20 ile birleşip **60 baytlık bir payload ile yıkıcı üzerine yazma** mümkün. `deviceId`, `vaultVersion`, `itemCount` doğrulanmıyor; `itemCount` hiç karşılaştırılmıyor | `webdavProvider.ts:201-206`, `s3Provider.ts:286-290` |
 | O-22 | `bindSqlParams` bir **bağlama** değil, metin ikamesi. Değer kaçışı SQLite için doğru, ama ikame leksiksel — SQL string literal'leri **içindeki** `?` placeholder olarak tüketiyor (tüm parametreleri bir kaydırıyor), `/:([a-zA-Z0-9_]+)/` string literal'leri ve `'12:30'` içinde eşleşiyor, `::` cast'leri bozuyor. Salt okunurluk koruması artık ikameciğin doğruluğuna bağlı | `waSqliteEngine.ts:59-90` |
 | O-23 | OPFS `FileSystemWritableFileStream` yazma hatasında **kapatılmıyor ve iptal edilmiyor** → dışlayan dosya kilidi sızıyor, sonraki tüm `createWritable()` çağrıları sayfa ömrü boyunca başarısız oluyor. Kod bu hata sınıfının farkında (zaman aşımı mesajı tam olarak `'OPFS write timed out (lock leak suspected)'`) ama nedeniyle hiçbir şey yapmıyor. Ayrıca OPFS yazmaları serileştirilmiyor ve `setTimeout` temizlenmiyor | `sqliteOpfsPersistence.ts:169-194` |
 | O-24 | Kuru çalışma aynası **gerçek göç hedefinden farklı** veritabanı dosyasını doğruluyor (varsayılan profil, planın profili değil), `assertWaSqlitePersistenceReadyForActiveBackend` hiç çağrılmıyor, ve seed döngüsü **işlemsiz** — 500 öğeden 400'ünde başarısız olursa üretim veritabanında 400 çöp satır kalıyor, bunlar sessizce **boş `VaultItem`** olarak okunuyor. `DELETE FROM vault_items` + N insert yapılıyor | `vaultStorageProvider.ts:304-315`, `vaultStorageWaSqliteAdapter.ts:231-254` |
@@ -2303,11 +2418,11 @@ Bu hook'ta **hiç `useEffect` yok** (grep: sıfır eşleşme). Hiçbir zamanlay�
 | 39 | ✅ **KISMEN KAPANDI (bkz. §1.8)** — wa-sqlite terfi anahtarı hatası düzeltildi: terfi sonrası oturum anahtarı artık **her zaman** yeni aktif depodan türetiliyor, `existingKey` kısayolu kaldırıldı (Y-12), 5 regresyon testi. **Kalan:** `ensureOpen`'ta kalıcı olmayan VFS'ye sessiz düşüşü fail-closed yapın (O-15). |
 | 40 | ✅ **KAPANDI (bkz. §1.3)** — Android: autofill istekleri süreç registry'sine taşındı, `MainActivity` `exported="false"` yapıldı, LAUNCHER `LauncherActivity` trampoline'ine taşındı, düz metin şifre yolu silindi, `security:android-autofill-boundary` kapısı CI'a eklendi. |
 | 41 | Android: `SecureStorageKeyStore`'a auth binding zorunlu kılın, `RUST-O5` rotasyonunu açılışta yapın (Y-8). |
-| 42 | ✅ **KISMEN KAPANDI (bkz. §1.13)** — Rust: KDF maliyet parametrelerine üst sınır kondu ve zayıf değerler artık sessizce yükseltilmiyor, reddediliyor (Y-16), 11 Rust testi. Yerel IPC'nin **yetki gerektiren** komutlarına (`sync_extension_credentials`, `clear_extension_credentials`, `rotate_pairing_token`) fail-closed oturum kapısı eklendi, 6 test. **Kalan:** `open_import_file`'a boyut kontrolü (Aşama 3 #45). |
+| 42 | ✅ **KAPANDI (bkz. §1.12, §1.13, §1.14)** — Rust: KDF maliyet parametrelerine üst sınır (Y-16). Yerel IPC'nin yetki gerektiren komutlarına fail-closed oturum kapısı (#42). `open_import_file` artık hem `stat` hem akış düzeyinde sınırlı. 24 Rust testi, 4 mutasyonla doğrulandı. |
 | 43 | ✅ **KISMEN KAPANDI (bkz. §1.13)** — Loopback IPC'ye okuma (30 sn) / yazma (15 sn) zaman aşımı ve **reddetmeli** sınırlı eşzamanlılık kapısı (tavan 32) eklendi; slot `Drop` ile serbest bırakılıyor, yani panikte sızmıyor. 11 test, mutasyonla doğrulandı. **Kalan:** `revoke` jenerasyon sayacı. |
 | 44 | `index.html`'i bütünlük manifestine alın + karşıt kontrol (Y-20). |
 | 45 | `localStorage` aynasını kaldırın; legacy ana şifre temizliğini koşullardan bağımsız yapın (O-2, O-3). |
-| 46 | ✅ **KISMEN KAPANDI (bkz. §1.7)** — koşullu yazma (`If-Match`/ETag, 412/409 → `sync.remoteModified`) ve "uzak durum bilinmiyorken üzerine yazma" yasağı (Y-11) kapandı; 17 regresyon testi. **Kalan:** meta veri şema doğrulaması, indirme boyut tavanı, `dispose()` + hava boşluğu izin listesi temizliği (O-20, O-21). |
+| 46 | ✅ **KAPANDI (bkz. §1.7 ve §1.14)** — koşullu yazma (`If-Match`/ETag, 412/409 → `sync.remoteModified`) ve "uzak durum bilinmiyorken üzerine yazma" yasağı (Y-11, 17 test); meta veri şema doğrulaması + motor seviyesinde ikinci savunma (O-21, 20 test); indirme boyut tavanı (O-20, `Content-Length` + akış sınırı); `dispose()` referans sayımı ile hava boşluğu izin listesi sızıntısı (O-21, 16 test). |
 | 47 | Anlık görüntü geri yükleme işlemini atomik yapın; boyut bütçesi + sağlama doğrulaması; `pruneSnapshotsRetention(settings.maxSnapshots)`; yanlış olay kodunu düzeltin. **Kilit ekranından tek tıkla yeniden kurulum ✅ KAPANDI** (bkz. §1.5); geri yükleme işleminin kendisi hâlâ atomik değil → O-16/O-17. || 48 | ? **KAPANDI** (bkz. §1.6) — WebAuthn assertion imzası artık saklanan public key ile doğrulanıyor: challenge, origin, crossOrigin, rpIdHash, UP bayrağı, userHandle ve `signCount` klon sinyali dahil 9 kontrol. `signCount` artık yerel `+1` değil, doğrulanmış sayaç. |
 | 49 | CodeQL'e `rust` ve `java` ekleyin; Gradle `distributionSha256Sum` + `verification-metadata.xml` + dependabot `gradle` ekleyin. |
 | 50 | `UnlockedApp.test.tsx` yazın + dosya bazlı kapsam eşikleri koyun (O-34). |
@@ -2400,6 +2515,12 @@ Bu turda iki şeyi doğrulamak özellikle değerliydi. Birincisi, **oturum kapı
 
 Y-19'un gerçek kalan kısmı imzalamanın kendisiydi. macOS ad-hoc idi, Windows'ta imzalama hiç yoktu. İkisi de secret'a bağlı gerçek imzalamaya bağlandı, **fail-closed korunarak**: secret yoksa adım atlanır ve mevcut kapı işi düşürür, yani imzasız genel yayın hâlâ imkânsız. Ayrıca `security:release-signing` adlı yeni bir statik kapı eklendi — mevcut kapı sonucu doğruluyor, yeni olanı **mekaniği** doğruluyor (imzalama adımı silinmiş, yanlış sıraya konmuş veya yanlış secret'a bağlanmış olsaydı, ancak yayın gününde kırmızı çıkardı).
 
-**Doğrulama borcu:** K-1'in Kotlin değişiklikleri bu ortamda `kotlinc` ile derlenemedi (Gradle/NDK indirmesi zaman aşımına uğradı). Statik kapı + elle inceleme ile doğrulandı; **yayın öncesi bir Android derlemesi alınmalıdır.** Rust tarafı `cargo test` (47/47) ve `cargo build` ile derlendi, bu yüzden borç yalnızca Kotlin tarafını kapsıyor.
+**Doğrulama borcu:** K-1'in Kotlin değişiklikleri bu ortamda `kotlinc` ile derlenemedi (Gradle/NDK indirmesi zaman aşımına uğradı). Statik kapı + elle inceleme ile doğrulandı; **yayın öncesi bir Android derlemesi alınmalıdır.** Rust tarafı `cargo test` (57/57) ve `cargo build` ile derlendi, bu yüzden borç yalnızca Kotlin tarafını kapsıyor.
+
+**Güvenilmeyen uzak tarafı artık sınırlı (O-20, O-21 — bkz. §1.14).** Uzak senkronizasyon yükü `res.text()` ile sınırsız okunuyordu — depodaki her güvenilmeyen girdi yolunun sınırı varken, uzak partinin kontrolündeki tek yolun yoktu. Daha keskin olanı metadata doğrulamasıydı: `updatedAt` ayrıştırılamazsa `NaN` oluyor, `NaN > x` her zaman `false` olduğu için senkronizasyon "uzak daha yeni değil" deyip **indirmeyi atlıyor** ve üzerine yazıyordu — yani ~60 baytlık bir dosya sağlam bir uzak yedeği yıkabiliyordu. Doğrulama hem sağlayıcılarda hem **motorda** yapılıyor; çünkü `NaN`'ın oluştuğu ve kararın verildiği yer motordur.
+
+Aynı bulgunun ikinci yarısı bir izin listesi sızıntısıydı: "Test connection" düğmesi her tıklamada kalıcı bir ağ muafiyeti bırakıyor, `dispose()` hiç çağrılmıyordu. Referans sayımıyla kapatıldı.
+
+**Bu turda iki test düzeltmesi yapıldı ve ikisi de aynı dersi verdi.** Biri: stream boyut sınırını gerçek bir dosyayla test etmek imkânsız, çünkü `stat` ön kontrolü zaten yakalıyor — sınırı kaldırsanız bile testler yeşil kalıyordu; sentetik okuyucuya geçirildi. İkisi: eşzamanlılık testi toplam edinimi sınırlıyordu, oysa sınır *eşzamanlı* sayıyı sınırlıyor. **Yeşil bir test, tek başına kanıt değildir.**
 
 

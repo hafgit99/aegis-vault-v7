@@ -11,6 +11,10 @@ import * as storageModule from '../lib/storage';
 import { LanguageProvider } from '../i18n/LanguageContext';
 import React from 'react';
 
+const syncMocks = vi.hoisted(() => ({
+  providerDispose: vi.fn(),
+}));
+
 vi.mock('../lib/sync', async () => {
   const actual = await vi.importActual<typeof syncModule>('../lib/sync');
   return {
@@ -25,14 +29,23 @@ vi.mock('../lib/sync', async () => {
     createSyncProvider: vi.fn(),
     performSync: vi.fn(),
     saveLastSyncTime: vi.fn(),
+    // O-21: providers hold an air-gap whitelist lease, so the mock must expose
+    // `dispose` and record whether the hook actually released it.
+    providerDispose: vi.fn(),
     WebDavSyncProvider: class {
       testConnection() {
         return Promise.resolve();
+      }
+      dispose() {
+        syncMocks.providerDispose();
       }
     },
     S3SyncProvider: class {
       testConnection() {
         return Promise.resolve();
+      }
+      dispose() {
+        syncMocks.providerDispose();
       }
     },
   };
@@ -99,6 +112,105 @@ describe('useSettingsSync', () => {
     });
 
     expect(result.current.syncTestSucceeded).toBe(true);
+  });
+
+  // ─── O-21: the air-gap whitelist lease must always be released ─────────────
+  //
+  // `handleSyncTest` used to construct a provider — which whitelists its origin
+  // — and never dispose it, so every click granted a permanent network
+  // exemption that removing the sync configuration never revoked.
+
+  it('O-21: disposes the provider after a successful connection test', async () => {
+    vi.mocked(syncModule.validateWebDavConfig).mockReturnValueOnce(null);
+    syncMocks.providerDispose.mockClear();
+
+    const { result } = renderHook(() => useSettingsSync({ onDatabaseChanged }), { wrapper });
+
+    act(() => {
+      result.current.setSyncProvider('webdav');
+      result.current.setSyncUrl('https://dav.example.com');
+      result.current.setSyncUsername('user1');
+      result.current.setSyncPassword('pass1');
+    });
+
+    await act(async () => {
+      await result.current.onSyncTest();
+    });
+
+    expect(syncMocks.providerDispose).toHaveBeenCalledTimes(1);
+  });
+
+  it('O-21: disposes the provider after a failed connection test', async () => {
+    vi.mocked(syncModule.validateS3Config).mockReturnValueOnce(null);
+    vi.spyOn(syncModule.S3SyncProvider.prototype, 'testConnection').mockRejectedValueOnce(
+      new Error('Bucket not found'),
+    );
+    syncMocks.providerDispose.mockClear();
+
+    const { result } = renderHook(() => useSettingsSync({ onDatabaseChanged }), { wrapper });
+
+    act(() => {
+      result.current.setSyncProvider('s3');
+      result.current.setS3Endpoint('https://s3.example.com');
+      result.current.setS3Region('us-east-1');
+      result.current.setS3Bucket('bucket');
+      result.current.setS3AccessKeyId('key');
+      result.current.setS3SecretAccessKey('secret');
+    });
+
+    await act(async () => {
+      await result.current.onSyncTest();
+    });
+
+    // A failed test is exactly when a leak is easiest to miss.
+    expect(syncMocks.providerDispose).toHaveBeenCalledTimes(1);
+  });
+
+  it('O-21: disposes the provider used by "Sync now"', async () => {
+    const dispose = vi.fn();
+    vi.mocked(syncModule.createSyncProvider).mockReturnValueOnce({
+      downloadVault: vi.fn().mockResolvedValue(null),
+      getRemoteMetadata: vi.fn().mockResolvedValue({ kind: 'absent' }),
+      uploadVault: vi.fn().mockResolvedValue(undefined),
+      testConnection: vi.fn().mockResolvedValue(undefined),
+      dispose,
+    } as unknown as ReturnType<typeof syncModule.createSyncProvider>);
+    vi.mocked(syncModule.performSync).mockResolvedValueOnce({
+      status: 'success',
+      syncedAt: '2026-01-01T00:00:00.000Z',
+      mergedItems: [],
+    } as unknown as Awaited<ReturnType<typeof syncModule.performSync>>);
+
+    const { result } = renderHook(() => useSettingsSync({ onDatabaseChanged }), { wrapper });
+
+    await act(async () => {
+      await result.current.onSyncNow();
+    });
+
+    expect(dispose).toHaveBeenCalledTimes(1);
+  });
+
+  it('O-21: disposes the provider even when a sync fails', async () => {
+    const dispose = vi.fn();
+    vi.mocked(syncModule.createSyncProvider).mockReturnValueOnce({
+      downloadVault: vi.fn().mockResolvedValue(null),
+      getRemoteMetadata: vi.fn().mockResolvedValue({ kind: 'absent' }),
+      uploadVault: vi.fn().mockResolvedValue(undefined),
+      testConnection: vi.fn().mockResolvedValue(undefined),
+      dispose,
+    } as unknown as ReturnType<typeof syncModule.createSyncProvider>);
+    vi.mocked(syncModule.performSync).mockResolvedValueOnce({
+      status: 'error',
+      error: { code: 'sync.authFailed', message: 'nope' },
+    } as unknown as Awaited<ReturnType<typeof syncModule.performSync>>);
+
+    const { result } = renderHook(() => useSettingsSync({ onDatabaseChanged }), { wrapper });
+
+    await act(async () => {
+      await result.current.onSyncNow();
+    });
+
+    expect(dispose).toHaveBeenCalledTimes(1);
   });
 
   it('tests S3 connection and reports failure', async () => {

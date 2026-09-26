@@ -365,17 +365,76 @@ describe('Y-11 remote overwrite protection', () => {
     expect(result.uploadedETag).toBe('"v2"');
   });
 
-  it('still succeeds when the provider cannot report an ETag', async () => {
-    const { metadata } = await buildSyncEnvelope([makeItem('b', '2024-06-01T12:00:00Z')], MASTER_PW);
+  // ─── O-20 / O-21: untrusted remote bounds and shape ───────────────────────
+
+  it('O-21: refuses to overwrite a remote whose metadata timestamp is unparsable', async () => {
+    // The concrete data-loss path: an unparsable `updatedAt` becomes NaN, and
+    // `NaN > x` is false, so sync concluded the remote was not newer, skipped the
+    // download, and uploaded over it. A ~60-byte metadata file was enough.
     const provider = makeProvider({
-      getRemoteMetadata: vi.fn().mockResolvedValue({ kind: 'ok', metadata, etag: '"v1"' } as SyncRemoteMetadata),
+      getRemoteMetadata: vi.fn().mockResolvedValue({
+        kind: 'ok',
+        metadata: {
+          updatedAt: 'not-a-date',
+          deviceId: 'remote-device',
+          vaultVersion: '7.0',
+          checksum: 'a'.repeat(64),
+          itemCount: 1,
+        },
+      } as SyncRemoteMetadata),
       downloadVault: vi.fn().mockResolvedValue(null),
-      getVaultETag: vi.fn().mockRejectedValue(new Error('HEAD not allowed')),
     });
 
-    const result = await performSync(provider, [makeItem('a', '2024-06-01T13:00:00Z')], MASTER_PW);
+    const result = await performSync(provider, [makeItem('local', '2024-06-01T12:00:00Z')], MASTER_PW);
 
-    expect(result.status).toBe('success');
-    expect(result.uploadedETag).toBeUndefined();
+    // Whatever the outcome, the local state must not be written over a remote
+    // whose freshness could not be established.
+    expect(provider.uploadVault).not.toHaveBeenCalled();
+    expect(result.status).toBe('error');
+  });
+
+  it('O-21: refuses when the remote metadata is missing required fields', async () => {
+    for (const broken of [
+      { updatedAt: '2026-06-01T12:00:00Z' },
+      { updatedAt: '2026-06-01T12:00:00Z', deviceId: '', vaultVersion: '7.0', checksum: 'a'.repeat(64), itemCount: 1 },
+      { updatedAt: '2026-06-01T12:00:00Z', deviceId: 'd', vaultVersion: '7.0', checksum: 'short', itemCount: 1 },
+    ]) {
+      const provider = makeProvider({
+        getRemoteMetadata: vi.fn().mockResolvedValue({
+          kind: 'unreadable',
+          detail: 'metadata.json failed validation',
+        } as SyncRemoteMetadata),
+      });
+
+      const result = await performSync(provider, [makeItem('local', '2024-06-01T12:00:00Z')], MASTER_PW);
+
+      expect(provider.uploadVault, `for ${JSON.stringify(broken)}`).not.toHaveBeenCalled();
+      expect(result.status).toBe('error');
+    }
+  });
+
+  it('O-20: surfaces an oversized remote payload as an error', async () => {
+    const provider = makeProvider({
+      getRemoteMetadata: vi.fn().mockResolvedValue({
+        kind: 'ok',
+        metadata: {
+          updatedAt: '2099-01-01T00:00:00Z',
+          deviceId: 'remote-device',
+          vaultVersion: '7.0',
+          checksum: 'a'.repeat(64),
+          itemCount: 1,
+        },
+      } as SyncRemoteMetadata),
+      downloadVault: vi.fn().mockRejectedValue(
+        new SyncError(syncErrorCodes.remoteTooLarge, 'Remote vault snapshot exceeds the limit.'),
+      ),
+    });
+
+    const result = await performSync(provider, [makeItem('local', '2024-06-01T12:00:00Z')], MASTER_PW);
+
+    expect(result.status).toBe('error');
+    expect(result.error?.code).toBe(syncErrorCodes.remoteTooLarge);
+    // A hostile remote must not cause a blind overwrite as an error response.
+    expect(provider.uploadVault).not.toHaveBeenCalled();
   });
 });
