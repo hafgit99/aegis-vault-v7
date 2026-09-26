@@ -89,6 +89,25 @@ export interface VaultStorageRepository {
   deletePermanentlyWithKey?(id: string, vaultEncryptionKey: Uint8Array): Promise<VaultItem[]>;
   deletePermanentlyBatch(ids: string[], passwordPlain: string): Promise<VaultItem[]>;
   deletePermanentlyBatchWithKey?(ids: string[], vaultEncryptionKey: Uint8Array): Promise<VaultItem[]>;
+  /**
+   * O-16: replaces the entire item set in a single atomic operation.
+   *
+   * Restoring a snapshot used to reconcile by looping `deletePermanently` and
+   * then `saveVaultItems`. Because the vault is a whole-blob rewrite, that meant
+   * one full persist **per deleted item** followed by another for the inserts. If
+   * any step failed — disk full, a crash, a closed tab — the vault was left
+   * half-deleted: items already gone, snapshot items not yet written.
+   *
+   * Implementations must either apply the whole replacement or none of it, and
+   * must persist exactly once.
+   *
+   * Optional: callers fall back to the incremental path when an implementation
+   * does not provide it, so adding this is backwards compatible.
+   */
+  replaceAllVaultItemsWithKey?(
+    items: VaultItem[],
+    vaultEncryptionKey: Uint8Array,
+  ): Promise<VaultItem[]>;
   reseedDemo(passwordPlain: string, demoItems: VaultItem[]): Promise<VaultItem[]>;
   reseedDemoWithKey?(vaultEncryptionKey: Uint8Array, demoItems: VaultItem[]): Promise<VaultItem[]>;
   getArgonHash?(): string | Promise<string>;

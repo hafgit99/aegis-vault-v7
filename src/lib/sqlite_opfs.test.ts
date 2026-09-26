@@ -157,6 +157,84 @@ describe('SQLite OPFS persistence engine', () => {
     expect((await sqlite.getVaultItemsWithKey(key)).length).toBe(versionBefore);
   });
 
+  // ─── O-16: atomic whole-vault replacement ────────────────────────────────
+
+  it('O-16: replaces the whole item set with a single persist', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    for (let i = 0; i < 5; i += 1) {
+      await sqlite.saveVaultItem(sampleItem({ id: `old-${i}`, title: `Old ${i}` }), 'master-pass');
+    }
+
+    const key = await sqlite.deriveEncryptionKey('master-pass');
+    const persisted = vi.spyOn(sqlite, 'saveVaultItemsWithKey');
+
+    await sqlite.replaceAllVaultItemsWithKey(
+      [sampleItem({ id: 'new-a', title: 'New A' }), sampleItem({ id: 'new-b', title: 'New B' })],
+      key,
+    );
+
+    // The whole point: restoring did not walk the old rows one at a time.
+    expect(persisted).not.toHaveBeenCalled();
+    const items = await sqlite.getVaultItemsWithKey(key);
+    expect(items.map((i) => i.id).sort()).toEqual(['new-a', 'new-b']);
+  });
+
+  it('O-16: leaves the vault untouched when the replacement produces nothing', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    await sqlite.saveVaultItem(sampleItem({ id: 'keep-me', title: 'Keep Me' }), 'master-pass');
+    const key = await sqlite.deriveEncryptionKey('master-pass');
+
+    // An empty snapshot must not silently wipe the vault. Callers validate the
+    // item count before reaching here, but the repository refuses an empty
+    // replacement as a second line of defence.
+    await expect(sqlite.replaceAllVaultItemsWithKey([], key)).rejects.toThrow();
+
+    const items = await sqlite.getVaultItemsWithKey(key);
+    expect(items.map((i) => i.id)).toEqual(['keep-me']);
+  });
+
+  it('O-16: restores every field of a replaced item', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    const key = await sqlite.deriveEncryptionKey('master-pass');
+
+    const restored = sampleItem({
+      id: 'restored',
+      title: 'Restored Title',
+      username: 'restored-user',
+      password: 'restored-secret',
+      url: 'https://restored.example.com',
+      notes: 'restored notes',
+      favorite: true,
+    });
+    await sqlite.replaceAllVaultItemsWithKey([restored], key);
+
+    const [item] = await sqlite.getVaultItemsWithKey(key);
+    expect(item).toMatchObject({
+      id: 'restored',
+      title: 'Restored Title',
+      username: 'restored-user',
+      password: 'restored-secret',
+      notes: 'restored notes',
+      favorite: true,
+    });
+  });
+
+  it('O-16: preserves trash flags on items carried across a replace', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    const key = await sqlite.deriveEncryptionKey('master-pass');
+    await sqlite.saveVaultItem(sampleItem({ id: 'survivor' }), 'master-pass');
+    await sqlite.setItemTrashedWithKey('survivor', true, key);
+
+    await sqlite.replaceAllVaultItemsWithKey([sampleItem({ id: 'survivor' })], key);
+
+    const [item] = await sqlite.getVaultItemsWithKey(key);
+    expect(item?.id).toBe('survivor');
+  });
+
   it('sets up a master password, stores encrypted rows, and exposes read-only SQL results', async () => {
     const sqlite = await freshSqliteInstance();
     let notifications = 0;

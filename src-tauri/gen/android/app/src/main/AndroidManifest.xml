@@ -1,13 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- AndroidTV support -->
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.software.autofill" android:required="false" />
 
+    <!--
+        Aegis Vault is a phone/tablet application. The LEANBACK_LAUNCHER category
+        is declared so the launcher can show it on Android TV, which requires the
+        touchscreen to be explicitly optional, otherwise Play Store filters the app
+        out of TV devices entirely. It also requires a TV banner, or the home
+        screen shows a blank tile.
+    -->
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+
     <application
         android:allowBackup="false"
+        android:banner="@drawable/aegis_tv_banner"
         android:fullBackupContent="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -52,11 +63,24 @@
             </intent-filter>
         </activity>
 
+        <!--
+            K-1: AutofillService was added in API 26 while minSdk is 24. The
+            service is permission-gated by BIND_AUTOFILL_SERVICE, so on API 24/25
+            the framework never binds it and the class is never loaded — the
+            declaration is safe to keep. `tools:targetApi="o"` states that
+            requirement explicitly rather than suppressing the check or raising
+            minSdk, which would drop supported devices.
+
+            The Kotlin constants this component owns are `const val`, so they are
+            inlined at each use site; MainActivity's autofill intent path
+            therefore holds no runtime reference to this class on API 24/25.
+        -->
         <service
           android:name=".AegisAutofillService"
           android:exported="true"
           android:label="@string/autofill_service_label"
-          android:permission="android.permission.BIND_AUTOFILL_SERVICE">
+          android:permission="android.permission.BIND_AUTOFILL_SERVICE"
+          tools:targetApi="o">
           <intent-filter>
             <action android:name="android.service.autofill.AutofillService" />
           </intent-filter>

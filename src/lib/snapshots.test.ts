@@ -25,6 +25,8 @@ import * as attachments from './attachments';
 import * as encryption from './encryption';
 import * as vaultSession from './vaultSession';
 import * as desktopFiles from './desktopFiles';
+import { MAX_BACKUP_FILE_SIZE } from './backupValidation';
+import { MAX_RESTORE_ITEM_COUNT } from './snapshots';
 import type { VaultItem } from '../types';
 
 // Mock fake IndexedDB for unit tests
@@ -320,5 +322,84 @@ describe('Vault Snapshot History (snapshots.ts)', () => {
     await snapshotsLib.checkAndTriggerAutoSnapshot('lock');
 
     expect(storage.purgeExpiredTrashItems).not.toHaveBeenCalled();
+  });
+
+  // ─── O-16 / O-17: restore must be atomic and bounded ─────────────────────
+
+  it('O-16: restores through a single atomic replace, not per-item deletes', async () => {
+    // The regression: the old path looped `deleteVaultItem` and then
+    // `saveVaultItems`. Because the vault is a whole-blob rewrite, that was one
+    // full persist per deleted item, and a failure part-way through left the
+    // vault half-deleted with no rollback.
+    const replaceSpy = vi.spyOn(storage, 'replaceVaultItems').mockResolvedValue(sampleItems);
+    vi.spyOn(storage, 'deleteVaultItem').mockResolvedValue([]);
+
+    await vaultSession.openVaultSession('correct-master-password', 'correct-master-password', new Uint8Array(32));
+    await snapshotsLib.createVaultSnapshot('manual', 'before restore');
+    const snapshots = await snapshotsLib.getVaultSnapshots();
+
+    const outcome = await snapshotsLib.restoreVaultSnapshot(snapshots[0]!.id);
+
+    expect(outcome.restoredItems).toBe(sampleItems.length);
+    expect(replaceSpy).toHaveBeenCalledTimes(1);
+    expect(storage.deleteVaultItem).not.toHaveBeenCalled();
+  });
+
+  it('O-17: refuses a snapshot whose payload exceeds the byte budget', async () => {
+    // `validateBackupPayload` has always accepted a `fileSizeBytes` budget, but
+    // this call site never supplied one — the limit existed on paper only.
+    const oversized = 'x'.repeat(MAX_BACKUP_FILE_SIZE + 1024);
+    vi.spyOn(encryption, 'decryptDataWithPasswordSecure').mockResolvedValueOnce(oversized);
+    const replaceSpy = vi.spyOn(storage, 'replaceVaultItems').mockResolvedValue([]);
+
+    await vaultSession.openVaultSession('correct-master-password', 'correct-master-password', new Uint8Array(32));
+    await snapshotsLib.createVaultSnapshot('manual', 'oversized');
+    const snapshots = await snapshotsLib.getVaultSnapshots();
+
+    await expect(snapshotsLib.restoreVaultSnapshot(snapshots[0]!.id)).rejects.toThrow();
+
+    // Nothing was written.
+    expect(replaceSpy).not.toHaveBeenCalled();
+  });
+
+  it('O-17: refuses a snapshot declaring an implausible item count', async () => {
+    // A byte budget alone cannot catch this: many tiny items stay under the cap
+    // while still forcing one key derivation and encryption per item.
+    const items = Array.from({ length: MAX_RESTORE_ITEM_COUNT + 1 }, (_, index) => ({
+      ...sampleItems[0]!,
+      id: `item-${index}`,
+    }));
+    vi.spyOn(encryption, 'decryptDataWithPasswordSecure').mockResolvedValueOnce(
+      JSON.stringify({ version: 7, items }),
+    );
+    const replaceSpy = vi.spyOn(storage, 'replaceVaultItems').mockResolvedValue([]);
+
+    await vaultSession.openVaultSession('correct-master-password', 'correct-master-password', new Uint8Array(32));
+    await snapshotsLib.createVaultSnapshot('manual', 'too many');
+    const snapshots = await snapshotsLib.getVaultSnapshots();
+
+    await expect(snapshotsLib.restoreVaultSnapshot(snapshots[0]!.id)).rejects.toThrow();
+
+    expect(replaceSpy).not.toHaveBeenCalled();
+  });
+
+  it('O-17: accepts a snapshot at exactly the item limit', async () => {
+    // Guards against over-correction at the boundary.
+    const items = Array.from({ length: MAX_RESTORE_ITEM_COUNT }, (_, index) => ({
+      ...sampleItems[0]!,
+      id: `item-${index}`,
+    }));
+    vi.spyOn(encryption, 'decryptDataWithPasswordSecure').mockResolvedValueOnce(
+      JSON.stringify({ version: 7, items }),
+    );
+    vi.spyOn(storage, 'replaceVaultItems').mockResolvedValue(items);
+
+    await vaultSession.openVaultSession('correct-master-password', 'correct-master-password', new Uint8Array(32));
+    await snapshotsLib.createVaultSnapshot('manual', 'at limit');
+    const snapshots = await snapshotsLib.getVaultSnapshots();
+
+    const outcome = await snapshotsLib.restoreVaultSnapshot(snapshots[0]!.id);
+
+    expect(outcome.restoredItems).toBe(MAX_RESTORE_ITEM_COUNT);
   });
 });

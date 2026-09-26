@@ -900,6 +900,37 @@ export async function saveVaultItems(items: VaultItem[], onProgress?: (count: nu
 }
 
 /**
+ * O-16: replaces the whole item set, atomically where the repository supports it.
+ *
+ * Snapshot restore used to reconcile by deleting each surplus item and then
+ * saving the snapshot's items. Since the vault is a whole-blob rewrite, that was
+ * one full persist per deleted item — and a failure part-way through left the
+ * vault half-deleted, with no rollback.
+ *
+ * The repository's `replaceAllVaultItemsWithKey` is preferred because it
+ * persists exactly once and rolls back as a unit. The incremental path is kept as
+ * a fallback for repositories that do not implement it.
+ */
+export async function replaceVaultItems(items: VaultItem[]): Promise<VaultItem[]> {
+  return withSessionVaultKey([], async (vaultKey) => {
+    const repository = getVaultStorageRepository();
+
+    if (repository.replaceAllVaultItemsWithKey) {
+      return repository.replaceAllVaultItemsWithKey(items, vaultKey);
+    }
+
+    const currentItems = await repository.getVaultItemsWithKey!(vaultKey);
+    const targetIds = new Set(items.map((item) => item.id));
+    for (const current of currentItems) {
+      if (!targetIds.has(current.id)) {
+        await repository.deletePermanentlyWithKey!(current.id, vaultKey);
+      }
+    }
+    return repository.saveVaultItemsWithKey!(items, vaultKey);
+  });
+}
+
+/**
  * Deletes a vault item directly.
  */
 export async function deleteVaultItem(id: string): Promise<VaultItem[]> {

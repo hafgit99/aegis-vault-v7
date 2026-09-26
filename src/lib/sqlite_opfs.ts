@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -1203,6 +1203,119 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
         throw err;
       }
       throw new Error('vault-item-delete-failed');
+    }
+  }
+
+  /**
+   * O-16: replaces the whole item set atomically, persisting exactly once.
+   *
+   * Snapshot restore used to loop `deletePermanently` and then `saveVaultItems`.
+   * Since the vault is a whole-blob rewrite, that was one full persist **per
+   * deleted item** plus another for the inserts — and a failure part-way through
+   * left the vault half-deleted. Here the row set is swapped in one step and
+   * rolled back wholesale if the persist fails.
+   */
+  public async replaceAllVaultItemsWithKey(
+    items: VaultItem[],
+    derivedKey: Uint8Array,
+  ): Promise<VaultItem[]> {
+    const previousState = this.cloneState();
+    const previousDecryptedItemsCache = this.cloneDecryptedItemsCache();
+
+    // O-16: an empty replacement is refused when the vault currently holds
+    // items. Restoring an empty snapshot should not be an accidental way to wipe
+    // a populated vault; `resetAll` is the explicit, user-initiated path for
+    // that, and a replacement that matches an already-empty vault is a harmless
+    // no-op rather than a silent destruction.
+    if (items.length === 0 && this.state.vault_items.length > 0) {
+      throw new Error('vault-item-replace-empty-refused');
+    }
+
+    try {
+      this.ensureVaultEncryptionSalt();
+      const nowStr = new Date().toISOString();
+      const rebuilt: SQLiteRow[] = [];
+
+      // Reuse the existing row for items that survive, so fields this method does
+      // not model (and the per-item ciphertext) are not needlessly rewritten.
+      const existingById = new Map(this.state.vault_items.map((row) => [row.id, row]));
+
+      for (const item of items) {
+        const itemId = item.id || secureRandomToken(9);
+        const existing = existingById.get(itemId);
+        if (existing) {
+          const rebuiltItem = { ...item, id: itemId };
+          if (
+            existing.enc_metadata
+            && item.title === '[encrypted: aes-256-gcm]'
+            && item.username === '[encrypted: aes-256-gcm]'
+          ) {
+            // Un-decrypted placeholder: keep the existing ciphertext rather than
+            // overwriting real data with a placeholder (the Y-5 guard).
+            rebuilt.push(existing);
+            continue;
+          }
+          const perItemKey = await derivePerItemKey(derivedKey, itemId);
+          const encrypted = await webCryptoAesGcmEncrypt(
+            JSON.stringify(rebuiltItem),
+            perItemKey,
+            generateSafeIv(),
+          );
+          perItemKey.fill(0);
+          rebuilt.push(buildVaultItemRow({
+            id: itemId,
+            encrypted,
+            item: rebuiltItem,
+            createdAt: item.createdAt || existing.created_at || nowStr,
+            updatedAt: nowStr,
+          }));
+          this.decryptedItemsCache.set(itemId, {
+            enc_metadata: JSON.stringify(encrypted),
+            item: rebuiltItem,
+          });
+          continue;
+        }
+
+        const freshItem = { ...item, id: itemId };
+        const perItemKey = await derivePerItemKey(derivedKey, itemId);
+        const encrypted = await webCryptoAesGcmEncrypt(
+          JSON.stringify(freshItem),
+          perItemKey,
+          generateSafeIv(),
+        );
+        perItemKey.fill(0);
+        rebuilt.push(buildVaultItemRow({
+          id: itemId,
+          encrypted,
+          item: freshItem,
+          createdAt: item.createdAt || nowStr,
+          updatedAt: nowStr,
+        }));
+        this.decryptedItemsCache.set(itemId, {
+          enc_metadata: JSON.stringify(encrypted),
+          item: freshItem,
+        });
+      }
+
+      this.state.vault_items = rebuilt;
+
+      const persisted = await this.saveToPersistentStorage(derivedKey);
+      if (!persisted) {
+        throw new Error('vault-item-replace-persist-failed');
+      }
+      this.logQuery(
+        `DELETE FROM vault_items; -- replaced wholesale with ${items.length} row(s)`,
+        'SUCCESS',
+        items.length,
+      );
+      return this.getVaultItemsWithKey(derivedKey);
+    } catch (err) {
+      this.restoreTransactionalState(previousState, previousDecryptedItemsCache);
+      this.logQuery('Replace-all vault_items rolled back because persistence failed;', 'ERROR', 0);
+      if (err instanceof Error && err.message === 'vault-item-replace-persist-failed') {
+        throw err;
+      }
+      throw new Error('vault-item-replace-failed');
     }
   }
 

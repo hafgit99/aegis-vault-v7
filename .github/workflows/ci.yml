@@ -148,8 +148,15 @@ jobs:
       # android:exported="false" and must keep resolving Autofill requests
       # through the in-process registry instead of Intent extras, which is what
       # closed the forged-intent credential exfiltration.
+      #
+      # The gate also requires Android lint to be wired in, because lint was
+      # never run and had seven errors waiting unnoticed — four of them NewApi on
+      # this autofill path, a class extending an API 26 type while minSdk is 24.
       - name: 'Security: Android Autofill trust boundary (K-1)'
         run: npm run security:android-autofill-boundary
+
+      - name: 'Android: lint (K-1)'
+        run: npm run android:lint
 
       - name: 'Security: session callback authorization gate'
         run: npm run security:session-gates

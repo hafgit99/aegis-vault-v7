@@ -319,8 +319,21 @@ class MainActivity : TauriActivity() {
    * LAUNCHER filter moved to `LauncherActivity`), and even a delivered intent
    * cannot invent a request because an unregistered id is rejected.
    */
+  @Suppress("NewApi")
   private fun captureAutofillIntent(intent: Intent?) {
     val action = intent?.action ?: return
+    // `AegisAutofillService` extends `AutofillService`, which is API 26+, while
+    // minSdk is 24. Lint flags these three references as NewApi.
+    //
+    // They are safe: every constant used here is a Kotlin `const val`, so the
+    // compiler substitutes the literal at the call site and no runtime
+    // reference to `AegisAutofillService` survives in this method. This is
+    // called on every launch (onCreate/onNewIntent), so an actual class load
+    // here would crash every app start on API 24/25 — which is exactly why the
+    // inlining is documented rather than left implicit.
+    //
+    // The manifest keeps the service behind `BIND_AUTOFILL_SERVICE` with
+    // `tools:targetApi="o"`, so the framework never binds it below API 26.
     val requestId = intent.getStringExtra(AegisAutofillService.EXTRA_REQUEST_ID)
 
     when (action) {

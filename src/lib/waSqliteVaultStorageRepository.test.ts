@@ -497,6 +497,64 @@ describe('wa-sqlite vault storage repository', () => {
     });
   });
 
+  // ─── O-13: hydration must be memoized ─────────────────────────────────────
+
+  it('O-13: initializes the engine once across many repository calls', async () => {
+    const engine = createEngineStub();
+    const repository = createWaSqliteVaultStorageRepository({ engine });
+
+    // Every public method starts with `await this.hydrate()`. Opening a
+    // wa-sqlite database is not free, so an unlock that touches the repository a
+    // dozen times used to re-open it a dozen times.
+    await repository.hydrate();
+    await repository.hydrate();
+    await repository.hydrate();
+    await repository.hydrate();
+
+    expect(engine.initialize).toHaveBeenCalledTimes(1);
+  });
+
+  it('O-13: shares one initialization between concurrent callers', async () => {
+    const engine = createEngineStub();
+    const repository = createWaSqliteVaultStorageRepository({ engine });
+
+    await Promise.all([
+      repository.hydrate(),
+      repository.hydrate(),
+      repository.hydrate(),
+    ]);
+
+    // A boolean flag would let these race into three initializations.
+    expect(engine.initialize).toHaveBeenCalledTimes(1);
+  });
+
+  it('O-13: does not cache a failed initialization', async () => {
+    // A failed open is usually transient (origin quota, a WASM fetch hiccup).
+    // Caching the rejection would brick the repository for the whole session.
+    const engine = createEngineStub();
+    vi.mocked(engine.initialize).mockRejectedValueOnce(new Error('quota exceeded'));
+    const repository = createWaSqliteVaultStorageRepository({ engine });
+
+    await expect(repository.hydrate()).rejects.toThrow('quota exceeded');
+    await expect(repository.hydrate()).resolves.toBeUndefined();
+
+    expect(engine.initialize).toHaveBeenCalledTimes(2);
+  });
+
+  it('O-13: re-opens after a reset, since the schema metadata is gone', async () => {
+    const engine = createEngineStub();
+    const repository = createWaSqliteVaultStorageRepository({ engine });
+
+    await repository.hydrate();
+    expect(engine.initialize).toHaveBeenCalledTimes(1);
+
+    await repository.resetAll();
+
+    // The memo described state that no longer exists.
+    await repository.hydrate();
+    expect(engine.initialize).toHaveBeenCalledTimes(2);
+  });
+
   it('surfaces encrypted row corruption instead of silently returning plaintext placeholders', async () => {
     const engine = createEngineStub();
     const repository = createWaSqliteVaultStorageRepository({ engine });

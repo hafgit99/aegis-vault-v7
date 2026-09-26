@@ -108,7 +108,8 @@
     "release:readiness:final": "node scripts/release-readiness-summary.cjs --final --output release-local/RELEASE_READINESS_FINAL.md",
     "psl:generate": "node scripts/generate-psl-data.cjs",
     "security:release-signing": "node scripts/security-release-signing-gate.cjs",
-    "security:argon2-bounds": "node scripts/security-argon2-bounds-parity.cjs"
+    "security:argon2-bounds": "node scripts/security-argon2-bounds-parity.cjs",
+    "android:lint": "cd src-tauri/gen/android && gradlew.bat :app:lintArmDebug --console=plain"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

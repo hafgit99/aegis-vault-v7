@@ -81,7 +81,7 @@ object AutofillRequestRegistry {
      */
     fun registerFillRequest(request: AutofillLaunchRequest): String {
         synchronized(lock) {
-            evictExpiredLocked(fillRequests, request.createdAt)
+            evictExpiredLocked(fillRequests, { it.createdAt }, request.createdAt)
             fillRequests[request.requestId] = request
             trimLocked(fillRequests)
         }
@@ -90,7 +90,7 @@ object AutofillRequestRegistry {
 
     fun registerSaveCandidate(candidate: AutofillSaveCandidate): String {
         synchronized(lock) {
-            evictExpiredLocked(saveCandidates, candidate.createdAt)
+            evictExpiredLocked(saveCandidates, { it.createdAt }, candidate.createdAt)
             saveCandidates[candidate.requestId] = candidate
             trimLocked(saveCandidates)
         }
@@ -194,25 +194,21 @@ object AutofillRequestRegistry {
 
     // ---------------------------------------------------------------------
 
-    private inline fun evictExpiredLocked(
-        store: LinkedHashMap<String, Any>,
+    private fun <T> evictExpiredLocked(
+        store: LinkedHashMap<String, T>,
+        createdAtOf: (T) -> Long,
         now: Long,
     ) {
         val iterator = store.entries.iterator()
         while (iterator.hasNext()) {
             val entry = iterator.next()
-            val createdAt = when (val value = entry.value) {
-                is AutofillLaunchRequest -> value.createdAt
-                is AutofillSaveCandidate -> value.createdAt
-                else -> now
-            }
-            if (now - createdAt > AutofillLaunchRequest.AUTOFILL_REQUEST_MAX_AGE_MS) {
+            if (now - createdAtOf(entry.value) > AutofillLaunchRequest.AUTOFILL_REQUEST_MAX_AGE_MS) {
                 iterator.remove()
             }
         }
     }
 
-    private inline fun trimLocked(store: LinkedHashMap<String, Any>) {
+    private fun <T> trimLocked(store: LinkedHashMap<String, T>) {
         while (store.size > MAX_ENTRIES) {
             val oldest = store.keys.firstOrNull() ?: return
             store.remove(oldest)

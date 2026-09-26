@@ -80,9 +80,45 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
     this.engine = options.engine ?? createWaSqliteEngine();
   }
 
+  /**
+   * O-13: memoized hydration.
+   *
+   * Every public method began with `await this.hydrate()`, and `hydrate` called
+   * `engine.initialize()` unconditionally. Opening and schema-checking a
+   * wa-sqlite database is not free, so a single unlock — which touches the
+   * repository a dozen times — re-ran it a dozen times, and the cost was paid
+   * again on every read.
+   *
+   * The in-flight promise is cached rather than a boolean flag, so concurrent
+   * callers share one initialization instead of racing several. A **rejection is
+   * not cached**: a failed open is usually transient (origin quota, a WASM fetch
+   * hiccup), and caching the failure would brick the repository for the session.
+   */
+  private hydratePromise: Promise<void> | null = null;
+
   public async hydrate(): Promise<void> {
-    const health = await this.engine.initialize();
-    this.logQuery(`WA_SQLITE_REPOSITORY initialize database=${health.databaseName};`, 'SUCCESS', health.tableCount);
+    if (this.hydratePromise) {
+      return this.hydratePromise;
+    }
+
+    const attempt = (async () => {
+      const health = await this.engine.initialize();
+      this.logQuery(
+        `WA_SQLITE_REPOSITORY initialize database=${health.databaseName};`,
+        'SUCCESS',
+        health.tableCount,
+      );
+    })();
+
+    this.hydratePromise = attempt;
+
+    try {
+      await attempt;
+    } catch (err) {
+      // Let the next caller retry from scratch rather than being wedged.
+      this.hydratePromise = null;
+      throw err;
+    }
   }
 
   public clearDerivedKeyCache(): void {
@@ -345,6 +381,10 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
       await this.executeRequired('DELETE FROM storage_metadata;');
     });
     this.logQuery('DELETE FROM vault_items; DELETE FROM user_secrets; DELETE FROM storage_metadata;', 'SUCCESS', 1);
+    // A reset deletes the schema metadata the open was initialised against, so
+    // the memoized hydration is no longer valid. Re-opening on the next call
+    // keeps the cache from outliving what it described.
+    this.hydratePromise = null;
   }
 
   public async deletePermanently(id: string, passwordPlain: string): Promise<VaultItem[]> {

@@ -561,15 +561,88 @@ if (kotlinFiles.length === 0) {
 }
 
 // ---------------------------------------------------------------------------
+// K-1 (second part): Android lint must be part of the build, and the autofill
+// component's API-level requirement must be stated rather than assumed.
+//
+// Lint was never wired into CI. Seven errors sat in the manifest and
+// MainActivity for as long as the Android build existed, including four NewApi
+// errors on this very autofill path - a class extending an API 26 type while
+// minSdk is 24. Nobody saw them because nothing ran lint. A hand-written static
+// check cannot substitute for the real linter: only it knows that
+// `AegisAutofillService` requires API 26.
+// ---------------------------------------------------------------------------
+
+function checkLintIsWired() {
+  const pkg = JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf8'));
+  const scripts = pkg.scripts ?? {};
+
+  if (!scripts['android:lint']) {
+    fail('package.json: an "android:lint" script must exist');
+  } else if (!/lint/i.test(scripts['android:lint'])) {
+    fail('package.json: "android:lint" must actually invoke the Android linter');
+  }
+
+  const ciPath = path.join(rootDir, '.github', 'workflows', 'ci.yml');
+  if (!/android:lint/.test(fs.readFileSync(ciPath, 'utf8'))) {
+    fail('ci.yml: Android lint must run in CI, otherwise these errors return unseen');
+  }
+
+  const manifestPath = path.join(
+    rootDir,
+    'src-tauri', 'gen', 'android', 'app', 'src', 'main', 'AndroidManifest.xml',
+  );
+  const manifest = fs.readFileSync(manifestPath, 'utf8');
+
+  // AutofillService is API 26+ while minSdk is 24. The requirement must be
+  // declared, not left for a reader to infer.
+  const serviceBlock = manifest.match(/<service[\s\S]*?AegisAutofillService[\s\S]*?>/);
+  if (!serviceBlock) {
+    fail('AndroidManifest.xml: AegisAutofillService is not declared');
+  } else if (!/tools:targetApi="o"/.test(serviceBlock[0])) {
+    fail(
+      'AndroidManifest.xml: the autofill service needs tools:targetApi="o" — it is API 26+ while minSdk is 24',
+    );
+  }
+
+  // A LEANBACK launcher filter requires a TV banner, or the home screen shows a
+  // blank tile, and Play Store filters the app out of TV devices.
+  if (/LEANBACK_LAUNCHER/.test(manifest)) {
+    if (!/android:banner=/.test(manifest)) {
+      fail('AndroidManifest.xml: a LEANBACK_LAUNCHER filter requires android:banner');
+    }
+    if (!/android\.hardware\.touchscreen"[\s\S]{0,80}required="false"/.test(manifest)) {
+      fail(
+        'AndroidManifest.xml: a LEANBACK_LAUNCHER filter requires touchscreen to be explicitly optional',
+      );
+    }
+    for (const density of ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']) {
+      const banner = path.join(
+        rootDir, 'src-tauri', 'gen', 'android', 'app', 'src', 'main', 'res',
+        `drawable-${density}`, 'aegis_tv_banner.png',
+      );
+      if (!fs.existsSync(banner)) {
+        fail(`res/drawable-${density}/aegis_tv_banner.png: missing TV banner asset`);
+      }
+    }
+  }
+
+  pass('Android lint is wired into package scripts and CI (K-1)');
+  pass('Autofill service declares its API 26 requirement via tools:targetApi');
+}
+
+checkLintIsWired();
+
+// ---------------------------------------------------------------------------
 
 console.log('');
 if (findings.length > 0) {
-  console.error(`Status: BLOCKED — ${findings.length} Android Autofill boundary violation(s).`);
+  console.error(`Status: BLOCKED - ${findings.length} Android Autofill boundary violation(s).`);
   process.exit(1);
 }
 
 console.log(
-  `Status: PASS — ${checks.length} Android Autofill boundary checks passed ` +
-    '(K-1: non-exported credential Activity + registry-authoritative request routing).',
+  `Status: PASS - ${checks.length} Android Autofill boundary checks passed ` +
+    '(K-1: non-exported credential Activity + registry-authoritative request routing ' +
+    '+ lint wired and API-level requirements declared).',
 );
 process.exit(0);
