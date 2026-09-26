@@ -14,15 +14,13 @@ import { initializeStorage } from './lib/storage';
 
 const UnlockedApp = React.lazy(() => import('./UnlockedApp'));
 
-const MIN_BACKGROUND_LOCK_DELAY_MS = 60_000;
 const MAX_BACKGROUND_LOCK_DELAY_MS = 15 * 60_000;
 
+// Y-6: honour the user's configured auto-lock duration for background locks
+// — the old 60 s floor silently gave 15/30 s users a minute of open vault.
 function backgroundLockDelayFromAutoLock(autoLockDurationSeconds: number): number {
   if (autoLockDurationSeconds === 0) return MAX_BACKGROUND_LOCK_DELAY_MS;
-  return Math.min(
-    Math.max(autoLockDurationSeconds * 1000, MIN_BACKGROUND_LOCK_DELAY_MS),
-    MAX_BACKGROUND_LOCK_DELAY_MS,
-  );
+  return Math.min(autoLockDurationSeconds * 1000, MAX_BACKGROUND_LOCK_DELAY_MS);
 }
 
 export default function App() {

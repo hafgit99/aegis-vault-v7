@@ -38,6 +38,10 @@ export function useShareReceive({
   const [pendingShareHash, setPendingShareHash] = useState<string | null>(null);
   const [isSharePasswordPromptOpen, setIsSharePasswordPromptOpen] = useState(false);
   const [shareReceiveError, setShareReceiveError] = useState<string | null>(null);
+  // K-2: escalating attempt delay — Argon2id already makes each guess
+  // memory-hard, but the prompt itself also rate-limits retries.
+  const [shareFailedAttempts, setShareFailedAttempts] = useState(0);
+  const [shareRetryNotBefore, setShareRetryNotBefore] = useState(0);
 
   const openShare = (item: VaultItem) => {
     setSharingItem(item);
@@ -66,16 +70,31 @@ export function useShareReceive({
     if (!pendingShareHash) return;
     setShareReceiveError(null);
 
+    // K-2: escalating lockout between failed attempts.
+    const waitRemainingMs = shareRetryNotBefore - Date.now();
+    if (waitRemainingMs > 0) {
+      setShareReceiveError(
+        `${t('share.error.wrongPassword', 'Incorrect password or the link has expired.')} (${Math.ceil(waitRemainingMs / 1000)}s)`,
+      );
+      return;
+    }
+
     const payload = await decryptShareUrl(pendingShareHash, password);
     if (payload) {
+      setShareFailedAttempts(0);
+      setShareRetryNotBefore(0);
       setReceivedPayload(payload);
       setIsSharePasswordPromptOpen(false);
       setIsReceiveOpen(true);
       setPendingShareHash(null);
     } else {
+      const attempts = shareFailedAttempts + 1;
+      setShareFailedAttempts(attempts);
+      const delayMs = Math.min(2 ** attempts * 500, 30_000);
+      setShareRetryNotBefore(Date.now() + delayMs);
       setShareReceiveError(t('share.error.wrongPassword', 'Incorrect password or the link has expired.'));
     }
-  }, [pendingShareHash, t]);
+  }, [pendingShareHash, t, shareFailedAttempts, shareRetryNotBefore]);
 
   const cancelSharePasswordPrompt = useCallback(() => {
     setIsSharePasswordPromptOpen(false);
@@ -86,7 +105,7 @@ export function useShareReceive({
 
   const importShare = async (itemData: Partial<VaultItem>) => {
     try {
-      const now = new Date().toISOString().split('T')[0] ?? '';
+      const now = new Date().toISOString();
       const newItem: VaultItem = {
         id: crypto.randomUUID(),
         title: itemData.title || 'Shared Item',

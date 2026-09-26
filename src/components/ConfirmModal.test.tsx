@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { LanguageProvider } from '../i18n/LanguageContext';
@@ -31,7 +31,7 @@ describe('ConfirmModal', () => {
     expect(screen.queryByText('Delete item')).toBeNull();
   });
 
-  it('renders confirmation content and closes after confirm', () => {
+  it('renders confirmation content and closes after confirm', async () => {
     const onConfirm = vi.fn();
     const onCancel = vi.fn();
 
@@ -52,6 +52,7 @@ describe('ConfirmModal', () => {
     expect(screen.getByText('This action cannot be undone.')).toBeTruthy();
 
     fireEvent.click(screen.getByText('Delete'));
+    await act(async () => {});
 
     expect(onConfirm).toHaveBeenCalledTimes(1);
     expect(onCancel).toHaveBeenCalledTimes(1);
@@ -78,7 +79,7 @@ describe('ConfirmModal', () => {
     expect(onCancel).toHaveBeenCalledTimes(2);
   });
 
-  it('renders alert mode with only the automatic Tamam action', () => {
+  it('renders alert mode with only the automatic Tamam action', async () => {
     const onConfirm = vi.fn();
     const onCancel = vi.fn();
 
@@ -99,6 +100,7 @@ describe('ConfirmModal', () => {
     expect(screen.queryByText('Hidden')).toBeNull();
 
     fireEvent.click(screen.getByText('Tamam'));
+    await act(async () => {});
 
     expect(onConfirm).toHaveBeenCalledTimes(1);
     expect(onCancel).toHaveBeenCalledTimes(1);

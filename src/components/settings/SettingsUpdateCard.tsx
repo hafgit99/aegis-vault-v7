@@ -7,6 +7,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { ProgressFill } from '../ui/ProgressFill';
 import {
   ArrowUpCircle,
   RefreshCw,
@@ -145,9 +146,9 @@ export function SettingsUpdateCard() {
                 <span>{progress.percent}%</span>
               </div>
               <div className="w-full h-2 bg-surface rounded-full overflow-hidden border border-white/10">
-                <div
+                <ProgressFill
                   className="h-full bg-brand-primary transition-all duration-200 rounded-full"
-                  style={{ width: `${progress.percent}%` }}
+                  percent={progress.percent}
                 />
               </div>
             </div>

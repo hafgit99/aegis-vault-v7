@@ -33,7 +33,7 @@ const baseline = {
     'getActiveMasterPassword': 0,
     'masterPasswordPlain': 0,
     'passwordPlain': 0,
-    'deriveEncryptionKey': 5,  // setup, setupWithSecretKey, change, openDerivedVaultSession, migrateActiveVaultStorageToWaSqlite
+    'deriveEncryptionKey': 3,  // Aşama 1 #23: baseline narrowed — setup, changeMasterPassword, wa-sqlite promotion path
     'activeCredentialBytes': 0,
     'activeBackupPasswordBytes': 0,
     'activeAccountSecretKeyBytes': 0

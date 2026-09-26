@@ -318,7 +318,7 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
 
       this.state.vault_items = await Promise.all(reWrappedItems.map(async (item) => {
         const encrypted = await webCryptoAesGcmEncrypt(JSON.stringify(item), derivedKey, generateSafeIv());
-        const nowStr = new Date().toISOString().split('T')[0] ?? '';
+        const nowStr = new Date().toISOString();
 
         return buildVaultItemRow({
           id: item.id || secureRandomToken(9),
@@ -379,7 +379,7 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
 
       this.state.vault_items = await Promise.all(items.map(async (item) => {
         const encrypted = await webCryptoAesGcmEncrypt(JSON.stringify(item), newVaultKey, generateSafeIv());
-        const nowStr = new Date().toISOString().split('T')[0] ?? '';
+        const nowStr = new Date().toISOString();
 
         return buildVaultItemRow({
           id: item.id || secureRandomToken(9),
@@ -545,8 +545,14 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
 
       this.logQuery(queryStr, 'SUCCESS', list.length);
       return list;
-    } catch {
+    } catch (err) {
       this.logQuery(queryStr, 'ERROR', 0);
+      // K-3: an integrity failure must never collapse into an empty vault —
+      // swallowing it lets the next successful write launder the tampered
+      // state. Re-throw so callers surface a recovery path.
+      if (err instanceof Error && err.message === 'vault-database-integrity-corrupted') {
+        throw err;
+      }
       return [];
     }
   }
@@ -588,7 +594,7 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
       const encrypted = await webCryptoAesGcmEncrypt(rawSensitive, perItemKey, generateSafeIv());
       perItemKey.fill(0);
 
-      const nowStr = new Date().toISOString().split('T')[0] ?? '';
+      const nowStr = new Date().toISOString();
 
       const row: SQLiteRow = buildVaultItemRow({
         id: itemId,
@@ -661,7 +667,7 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
 
     try {
       this.ensureVaultEncryptionSalt();
-      const nowStr = new Date().toISOString().split('T')[0] ?? '';
+      const nowStr = new Date().toISOString();
 
       const allRows: SQLiteRow[] = [];
       const failedItems: Array<{ id: string; error: string }> = []; // Security fix Y7
@@ -977,14 +983,14 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
       this.state.vault_items = await Promise.all(demoItems.map(async (item) => {
         const sensitivePayload = JSON.stringify(item);
         const encrypted = await webCryptoAesGcmEncrypt(sensitivePayload, derivedKey, generateSafeIv());
-        const today = new Date().toISOString().split('T')[0] ?? '';
+        const nowStr = new Date().toISOString();
 
         const row = buildVaultItemRow({
           id: item.id || secureRandomToken(9),
           encrypted,
           item,
-          createdAt: today,
-          updatedAt: today,
+          createdAt: nowStr,
+          updatedAt: nowStr,
         });
 
         this.decryptedItemsCache.set(row.id, {

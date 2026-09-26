@@ -25,6 +25,7 @@ import {
   withActiveVaultEncryptionKey,
 } from './vaultSession';
 import { disableBiometric, hydrateBiometric } from './biometric';
+import { disableRecoveryKey } from './recoveryKey';
 import { createDemoItems } from './storageDemoItems';
 import {
   getSecureStorageItem,
@@ -479,6 +480,11 @@ export async function changeMasterPassword(oldPassword: string, newPassword: str
     newVaultKey.fill(0);
 
     disableBiometric();
+    // Y-3: the old recovery bundle is sealed under the previous master
+    // password — after a rotation it must be invalidated, otherwise a
+    // compromised 24-word phrase still unlocks the vault while the UI
+    // claims recovery is active.
+    disableRecoveryKey();
     setIndexedDbItemSync(STORAGE_KEYS.IS_SET_UP, 'true');
   } else {
     const oldCredential = await resolveCurrentVaultCredential(oldPassword);
@@ -531,6 +537,8 @@ export async function changeMasterPassword(oldPassword: string, newPassword: str
 
     await openDerivedVaultSession(newCredential, newPassword);
     disableBiometric();
+    // Y-3: see desktop branch — rotate-out stale recovery bundles.
+    disableRecoveryKey();
     setIndexedDbItemSync(STORAGE_KEYS.IS_SET_UP, 'true');
   }
 }

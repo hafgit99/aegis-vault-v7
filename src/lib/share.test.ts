@@ -11,6 +11,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { generateShareUrl, decryptShareUrl, base64urlEncode, base64urlDecode, MAX_SHARE_DURATION_HOURS } from './share';
 import type { VaultItem } from '../types';
 
+// The real Argon2id WASM hard-crashes the vitest fork (SharedArrayBuffer /
+// worker constraints in jsdom). Deterministic stand-in keeps the
+// encrypt→decrypt round-trip meaningful without the crash.
+vi.mock('./argon2id', () => ({
+  deriveArgon2idKey: vi.fn(async (password: string, salt: string) => {
+    const data = new TextEncoder().encode(`${password}:${salt}`);
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    return new Uint8Array(digest);
+  }),
+}));
+
 const testItem: VaultItem = {
   id: 'test-id',
   title: 'GitHub Test',
@@ -81,6 +92,19 @@ describe('Password Sharing Library', () => {
     const shareUrl = await generateShareUrl(testItem, 2, TEST_SHARE_PASSWORD);
     const hash = shareUrl.substring(shareUrl.indexOf('#'));
     const decrypted = await decryptShareUrl(hash, '');
+    expect(decrypted).toBeNull();
+  });
+
+  it('fails to decrypt when the salt parameter is swapped between bundles (K-2 AAD binding)', async () => {
+    const urlA = await generateShareUrl(testItem, 2, TEST_SHARE_PASSWORD);
+    const urlB = await generateShareUrl(testItem, 2, TEST_SHARE_PASSWORD);
+
+    const paramsA = new URLSearchParams(urlA.substring(urlA.indexOf('#') + 1));
+    const paramsB = new URLSearchParams(urlB.substring(urlB.indexOf('#') + 1));
+    // Take bundle A but swap in bundle B's salt — the AAD binding must
+    // break GCM verification instead of decrypting with the wrong context.
+    const swapped = `#share=${paramsA.get('share')}&s=${paramsB.get('s')}`;
+    const decrypted = await decryptShareUrl(swapped, TEST_SHARE_PASSWORD);
     expect(decrypted).toBeNull();
   });
 

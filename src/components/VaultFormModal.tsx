@@ -351,8 +351,8 @@ export default function VaultFormModal({
       url: url.trim(),
       totpSecret: totpSecret.trim(),
       notes: notes.trim(),
-      createdAt: editingItem?.createdAt || (new Date().toISOString().split('T')[0] ?? ''),
-      updatedAt: new Date().toISOString().split('T')[0] ?? '',
+      createdAt: editingItem?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       category,
       favorite: editingItem?.favorite || false,
       passwordHistory: editingItem
@@ -389,9 +389,17 @@ export default function VaultFormModal({
       tags: itemTags.length > 0 ? itemTags : undefined,
     };
 
-    onSave(itemData);
-    setIsUploading(false);
-    onClose();
+    // Y-21: await persistence — a rejected save (quota, crypto, storage)
+    // must keep the modal open, surface the error, and never silently drop
+    // the entry the user just typed.
+    try {
+      await onSave(itemData);
+      onClose();
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : t('vaultForm.saveFailed'));
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (

@@ -221,6 +221,7 @@ export const de = {
   'vaultForm.field.url': 'SICHERE URL',
   'vaultForm.placeholder.url': 'z.B. github.com',
   'vaultForm.validation.titleRequired': 'Bitte geben Sie einen beschreibenden Titel für diesen Datensatz ein.',
+  'vaultForm.saveFailed': 'Element konnte nicht gespeichert werden. Bitte erneut versuchen.',
   'vaultForm.attachment.fallbackName': 'Angehängte Datei',
   'vaultForm.footer.cancel': 'Stornieren',
   'vaultForm.footer.processing': 'Verarbeitung...',

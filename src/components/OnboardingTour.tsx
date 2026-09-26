@@ -8,6 +8,7 @@
 import { Check, CheckCircle2, Compass, ExternalLink, FileText, KeyRound, ShieldCheck, X } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
+import { ProgressFill } from './ui/ProgressFill';
 import type { UseOnboardingTourResult } from '../hooks/useOnboardingTour';
 
 interface OnboardingTourProps {
@@ -66,10 +67,10 @@ export default function OnboardingTour({ tour, onNewItem, onNavigate }: Onboardi
         <div className="flex items-center gap-3">
           {/* Progress bar */}
           <div className="w-28 sm:w-36 h-2 bg-surface-low rounded-full overflow-hidden border border-outline-variant/20">
-            <div
+            <ProgressFill
               data-testid="tour-progress-bar"
               className="h-full bg-brand-tertiary transition-all duration-500 rounded-full"
-              style={{ width: `${progressPercent}%` }}
+              percent={progressPercent}
             />
           </div>
 

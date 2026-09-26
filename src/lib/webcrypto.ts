@@ -113,11 +113,16 @@ export async function webCryptoAesGcmEncrypt(
   plaintext: string,
   rawKey: Uint8Array,
   iv: Uint8Array,
+  additionalData?: Uint8Array,
 ): Promise<WebCryptoAesGcmPayload> {
   const key = await importAesGcmKey(rawKey);
   const plaintextBytes = new TextEncoder().encode(plaintext);
   const encrypted = new Uint8Array(
-    await crypto.subtle.encrypt({ name: 'AES-GCM', iv, tagLength: 128 }, key, plaintextBytes),
+    await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv, tagLength: 128, ...(additionalData ? { additionalData } : {}) },
+      key,
+      plaintextBytes,
+    ),
   );
   const ciphertext = encrypted.slice(0, encrypted.length - AUTH_TAG_BYTES);
   const tag = encrypted.slice(encrypted.length - AUTH_TAG_BYTES);
@@ -132,6 +137,7 @@ export async function webCryptoAesGcmEncrypt(
 export async function webCryptoAesGcmDecrypt(
   payload: WebCryptoAesGcmPayload,
   rawKey: Uint8Array,
+  additionalData?: Uint8Array,
 ): Promise<string> {
   const key = await importAesGcmKey(rawKey);
   const iv = hexToBytes(payload.iv);
@@ -142,7 +148,7 @@ export async function webCryptoAesGcmDecrypt(
   encrypted.set(tag, ciphertext.length);
 
   const plaintextBytes = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv, tagLength: 128 },
+    { name: 'AES-GCM', iv, tagLength: 128, ...(additionalData ? { additionalData } : {}) },
     key,
     encrypted,
   );

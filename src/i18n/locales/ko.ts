@@ -221,6 +221,7 @@ export const ko = {
   'vaultForm.field.url': '보안 URL',
   'vaultForm.placeholder.url': '예를 들어 github.com',
   'vaultForm.validation.titleRequired': '이 레코드를 설명하는 제목을 입력하세요.',
+  'vaultForm.saveFailed': '항목을 저장하지 못했습니다. 다시 시도해 주세요.',
   'vaultForm.attachment.fallbackName': '첨부파일',
   'vaultForm.footer.cancel': '취소',
   'vaultForm.footer.processing': '처리 중...',

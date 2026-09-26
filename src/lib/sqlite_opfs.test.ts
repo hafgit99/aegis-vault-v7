@@ -909,8 +909,8 @@ category: undefined,
       deleted: false,
     });
 expect(saved[0]!.id).toHaveLength(9);
-    expect(saved[0]!.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(saved[0]!.updatedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(saved[0]!.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}(T|$)/);
+    expect(saved[0]!.updatedAt).toMatch(/^\d{4}-\d{2}-\d{2}(T|$)/);
 
     await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual([
       expect.objectContaining({
@@ -945,8 +945,8 @@ expect(saved[0]!.id).toHaveLength(9);
         expect.objectContaining({
           id: 'fresh-row',
           title: 'Email Account',
-          createdAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
-          updatedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+          createdAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}(T|$)/),
+          updatedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}(T|$)/),
         }),
       ]),
     );
@@ -965,8 +965,8 @@ expect(saved[0]!.id).toHaveLength(9);
     expect(rotated).toBeUndefined();
     const items = await sqlite.getVaultItems('brand-new-master');
     const restored = items.find((item) => item.id === 'no-timestamps')!;
-    expect(restored.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(restored.updatedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(restored.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}(T|$)/);
+    expect(restored.updatedAt).toMatch(/^\d{4}-\d{2}-\d{2}(T|$)/);
     await expect(sqlite.verifyPassword('master-pass')).resolves.toBe(false);
     await expect(sqlite.verifyPassword('brand-new-master')).resolves.toBe(true);
   });
@@ -1038,7 +1038,10 @@ expect(saved[0]!.id).toHaveLength(9);
     readDesktopVaultDatabase.mockResolvedValueOnce(JSON.stringify(parsed));
 
     const reloaded = await freshSqliteInstance();
-    // Tampered row fails HMAC check and returns empty list
-    await expect(reloaded.getVaultItems('master-pass')).resolves.toEqual([]);
+    // K-3: tampered rows now fail loudly — the engine re-throws the
+    // integrity error instead of silently returning an empty vault.
+    await expect(reloaded.getVaultItems('master-pass')).rejects.toThrow(
+      'vault-database-integrity-corrupted',
+    );
   });
 });
