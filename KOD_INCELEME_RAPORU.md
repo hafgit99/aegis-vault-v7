@@ -1,8 +1,8 @@
 ﻿# AegisVault v7 — Derinlemesine Kod İnceleme Raporu
 
 **Tarih:** 27 Eylül 2026
-**Kapsam:** `v7.0.7.0` (`a995bde`) — inceleme; `fb33981` — Aşama 0–1; `5c9752e` + çalışma ağacı — Aşama 0.5, K-1, K-3/K-4/K-7, Y-5, K-4 UI, O-4; `4ecf34c`/`b983354`/`85e5172`/`fb5ea7f`/`54552d6` — Aşama 2
-**Durum:** 🟢 **Aşama 0, 1, 0.5, 1.5, 2 uygulandı; K-1, K-3, K-4, K-7, Y-5, O-4, O-13, O-14, O-16, O-17 ve O-20/O-21 kapatıldı.** 7 kritik bulgunun **6'sı kapandı**, 1'i kısmen. **Veri kaybı sınıfındaki üçlü kapandı**; sömürülebilir tek kritik bulgu (K-1) kapandı ve Android Autofill sınırı CI'da **20** kontrollük statik kapıyla kilitlendi; bütünlük etiketi dosya dışı bir defterle zorunlu kılındı; kilit ekranından tek tıkla kurtarma var; **K-1'in Kotlin derleme borcu gerçek derlemeyle kapandı ve Android lint CI'a bağlandı**; snapshot geri yükleme atomik ve bütçeli; ve **passkey assertion imzası artık gerçekten doğrulanıyor**. Toplam **2138 test** yeşil, **8 güvenlik kapısı** PASS. Güncel durum için **§1.2 – §1.6**, **§1.16** ve **§8** okunmalı.
+**Kapsam:** `v7.0.7.0` (`a995bde`) — inceleme; `fb33981` — Aşama 0–1; `5c9752e` + çalışma ağacı — Aşama 0.5, K-1, K-3/K-4/K-7, Y-5, K-4 UI, O-4; `4ecf34c`/`b983354`/`85e5172`/`fb5ea7f`/`54552d6`/O-3 — Aşama 2
+**Durum:** 🟢 **Aşama 0, 1, 0.5, 1.5, 2 uygulandı; K-1, K-3, K-4, K-7, Y-5, O-4, O-13, O-14, O-16, O-17 ve O-20/O-21 kapatıldı.** 7 kritik bulgunun **6'sı kapandı**, 1'i kısmen. **Veri kaybı sınıfındaki üçlü kapandı**; sömürülebilir tek kritik bulgu (K-1) kapandı ve Android Autofill sınırı CI'da **20** kontrollük statik kapıyla kilitlendi; bütünlük etiketi dosya dışı bir defterle zorunlu kılındı; kilit ekranından tek tıkla kurtarma var; **K-1'in Kotlin derleme borcu gerçek derlemeyle kapandı ve Android lint CI'a bağlandı**; snapshot geri yükleme atomik ve bütçeli; ve **passkey assertion imzası artık gerçekten doğrulanıyor**. Toplam **2141 test** yeşil, **8 güvenlik kapısı** PASS. Güncel durum için **§1.2 – §1.6**, **§1.16** ve **§8** okunmalı.
 **Kalan açık iş:** tek kalem operasyonel — Y-19 imzalama sertifikaları (#32). Kodla değil secret yönetimiyle çözülür ve o zamana kadar imzasız yayın bilerek bloke kalır.
 **İnceleme Alanı:** Tüm depo — TypeScript/React 19 frontend, Rust/Tauri 2 masaüstü katmanı, Kotlin/Android katmanı, Chrome/Firefox/Safari eklenti katmanı, `wa-sqlite` depolama, CI/CD ve build scriptleri
 **Yöntem:** 5 paralel derin inceleme oturumu (kriptografi, depolama, import/sync, React, native/CI) + tüm otomatik kontrollerin çalıştırılması + kritik bulguların manuel doğrulanması
@@ -1754,6 +1754,54 @@ Test yazarken **iki tuzak vardı:**
 
 ---
 
+### O-3 — Sadece "dolu depo" değil, "öksüz kalan" ana şifre de temizleniyor (KAPANDI)
+
+O-2 ile aynı satırda raporlanmıştı ama O-2 çok büyük (bkz. aşağıdaki "Açık bırakılan karar"), O-3 ise dar ve hemen kapatılabilir bir bulguydu.
+
+#### Asıl bulgu bir boyut asimetrisi
+
+Temizlik `aegis_master_password` ve `aegis_vault_items` **ikisi de** kaldığında ve depo doluyken çalışıyordu. Bu koşul doğruymuş gibi görünüyor ama tersi: iki anahtarın boyutu tamamen farklı.
+
+- `aegis_master_password` = birkaç on bayt base64
+- `aegis_vault_items` = kasanın tamamı, megabayt olabilir
+
+**Tarayıcı kota baskısı altında büyük anahtarı siler, küçüğü tutar.** Yani terfi sonrası asla hayatta kalmaması gereken anahtar, hayatta kalma ihtimali en yüksek olan anahtar. Öğeler gittiğinde göç edilecek bir şey kalmıyor, şifre hiçbir şeyi açamıyor — ama base64 hâlinde sonsuza kadar duruyor. Üstelik `aegis_is_setup` da 'true' kaldığı için kullanıcı uygulamayı "kurulmuş" görüyor.
+
+Kodu okurken "bu koşul muhtemelen bir güvenlik önlemi" diye varsaymak kolay, ve bu tuzaktı: **asıl güvenlik koşulu "şifre verinin tek kopyası değil" idi; öğelerin yokluğu bunu, deponun dolu olması kadar sağlıyor.** Yani `aegis_vault_items` varlığına bağlamak koruma değil, kusurun kendisiydi.
+
+#### Kapatma
+
+1. **Öksüz şifre dalı:** şifre var, öğe yok, depo boş → şifre silinir, `storage.legacy.purged` olayı yazılır.
+2. **İkinci bir kapı kapatıldı:** `aegis_sqlite_fallback` aynasından yüklenen durumda fonksiyon `return` ile erken çıkıyordu, yani temizlik **hiç** çalışmıyordu. Aynı öksüz şifreye ikinci bir yoldan erişim mümkündü. İki çıkış da artık aynı temizliği kullanıyor.
+
+**Geri alma güvenliği değişmedi:** öğe blob'u varken depo boşsa şifre **korunur** — bu, göç edilmemiş bir kasa ve düz metin kaynaklar tek kopyadır.
+
+#### Testler (3) ve mutasyon
+
+| Mutasyon | Kırılan test |
+|---|---|
+| Öksüz şifre dalı kaldırıldı | 2 test ✅ |
+| Ayna erken çıkışındaki temizlik kaldırıldı | 1 test ✅ |
+| **Genişletildi** (öğe varken de sil) | 2 test ✅ |
+
+Üçüncü mutasyon kasıtlı olarak **aşırı düzeltmeyi** denedi: bulguyu "daha çok temizleme" diye okuyan biri tam olarak bunu yazardı. Yakalandı — çünkü geri alma güvenliğini ayrıca sabitleyen bir test yazmıştım.
+
+---
+
+### Açık bırakılan karar — O-2 (`localStorage` aynası) kaldırılmadı
+
+Aynı rapor satırındaki ikinci yarı, bilinçli olarak açık bırakıldı ve gerekçesi kayda geçti.
+
+`aegis_sqlite_fallback` kasanın **şifreli** tamamını `localStorage`'a yazıyor. Bunu kaldırmak cazip ama:
+
+- **Hareketli hedef değil, yük taşıyıcı.** `sqliteOpfsMigration.ts:46`, `storage.ts:170` ve `vaultStorageProvider.ts:243` bu anahtardan okuyor; mevcut kullanıcıların göç yolu buna dayanıyor. Kaldırmak, göçü tamamlanmamış kullanıcıların verisini taşınabilir hâle getirir.
+- **Asıl bulgu "düz metin sızıntısı" değil, "sessiz bayatlama".** Kota hatası `catch {}` ile yutuluyor, dolayısıyla "kurtarma aynası" sessizce eskiyebiliyor. Bayat bir aynayı kurtarma seçeneği olarak sunmak, kullanıcıya verisinin yedeği sanılan eski veriyi vermektir.
+- Şifreli olması, `localStorage`'ın XSS hedefi olması gerçeğini küçümsemiyor; ama ayna kaldırıldığında kazanılan güvenlik, **kaybedilecek göç verisinin** riskine göre tartılmalı.
+
+Önerilen sonraki adım, silmek değil: **bayatlığı görünür kılmak** — aynanın yazıldığı tarihi tutmak ve yükleme sırasında OPFS kopyasından eskiyse uyarı göstermek. Bu, sessiz veri kaybını kapatırken göç yolunu bozmaz.
+
+---
+
 ### Doğrulama
 
 | Kontrol | Sonuç |
@@ -1764,7 +1812,7 @@ Test yazarken **iki tuzak vardı:**
 | `cargo test --lib` | ✅ 57 / 57 |
 | `npm run typecheck` | ✅ |
 | `npm run lint` | ✅ **0 hata, 23 uyarı** (taban korundu) |
-| `npm run test:unit` | ✅ **2138 / 2138** (2121 → 2138, **+17**) |
+| `npm run test:unit` | ✅ **2141 / 2141** (2121 → 2141, **+20**) |
 | `npm run build` | ✅ |
 | `npm run test:fuzz` | ✅ 37 |
 | 8 güvenlik kapısı | ✅ hepsi PASS (K-1 kapısı 18 → **20** kontrol) |
@@ -2617,7 +2665,7 @@ Bu hook'ta **hiç `useEffect` yok** (grep: sıfır eşleşme). Hiçbir zamanlay�
 | 42 | ✅ **KAPANDI (bkz. §1.12, §1.13, §1.14)** — Rust: KDF maliyet parametrelerine üst sınır (Y-16). Yerel IPC'nin yetki gerektiren komutlarına fail-closed oturum kapısı (#42). `open_import_file` artık hem `stat` hem akış düzeyinde sınırlı. 24 Rust testi, 4 mutasyonla doğrulandı. |
 | 43 | ✅ **KISMEN KAPANDI (bkz. §1.13)** — Loopback IPC'ye okuma (30 sn) / yazma (15 sn) zaman aşımı ve **reddetmeli** sınırlı eşzamanlılık kapısı (tavan 32) eklendi; slot `Drop` ile serbest bırakılıyor, yani panikte sızmıyor. 11 test, mutasyonla doğrulandı. **Kalan:** `revoke` jenerasyon sayacı. |
 | 44 | `index.html`'i bütünlük manifestine alın + karşıt kontrol (Y-20). |
-| 45 | `localStorage` aynasını kaldırın; legacy ana şifre temizliğini koşullardan bağımsız yapın (O-2, O-3). |
+| 45 | ⚠️ **KISMEN KAPANDI (bkz. §1.16)** — O-3 kapandı: öksüz kalan base64 legacy ana şifre (öğe blob'u silinmiş, depo boş) artık koşullardan bağımsız temizleniyor, **ve ayna yolundaki ikinci kapı** da kapatıldı; 3 test, 3 mutasyon. **Kalan (O-2):** `localStorage` aynası kaldırılmadı — göç yolu ona dayanıyor, asıl bulgu "düz metin sızıntısı" değil **sessiz bayatlama**. Önerilen sonraki adım: silmek yerine aynanın yaşını tutup bayatlığını görünür kılmak. |
 | 46 | ✅ **KAPANDI (bkz. §1.7 ve §1.14)** — koşullu yazma (`If-Match`/ETag, 412/409 → `sync.remoteModified`) ve "uzak durum bilinmiyorken üzerine yazma" yasağı (Y-11, 17 test); meta veri şema doğrulaması + motor seviyesinde ikinci savunma (O-21, 20 test); indirme boyut tavanı (O-20, `Content-Length` + akış sınırı); `dispose()` referans sayımı ile hava boşluğu izin listesi sızıntısı (O-21, 16 test). |
 | 47 | ✅ **KAPANDI (bkz. §1.16)** — Anlık görüntü geri yükleme artık **atomik** (tek `replaceAllVaultItemsWithKey`, tek kalıcılık yazımı, rollback var) ve bayt + öğe sayısı bütçeleri uygulanıyor. Anlık görüntü geri yükleme işlemini atomik yapın; boyut bütçesi + sağlama doğrulaması; `pruneSnapshotsRetention(settings.maxSnapshots)`; yanlış olay kodunu düzeltin. **Kilit ekranından tek tıkla yeniden kurulum ✅ KAPANDI** (bkz. §1.5); geri yükleme işleminin kendisi hâlâ atomik değil → O-16/O-17. || 48 | ? **KAPANDI** (bkz. §1.6) — WebAuthn assertion imzası artık saklanan public key ile doğrulanıyor: challenge, origin, crossOrigin, rpIdHash, UP bayrağı, userHandle ve `signCount` klon sinyali dahil 9 kontrol. `signCount` artık yerel `+1` değil, doğrulanmış sayaç. |
 | 49 | CodeQL'e `rust` ve `java` ekleyin; Gradle `distributionSha256Sum` + `verification-metadata.xml` + dependabot `gradle` ekleyin. |

@@ -641,6 +641,54 @@ describe('migrateLegacyLocalStorage', () => {
     purgeStaleLegacyLocalStorageKeys(populated);
     expect(localStorage.getItem('aegis_master_password')).toBeNull();
   });
+
+  // ─── O-3: the orphaned password, not just the populated-store case ────────
+
+  it('O-3: purges a legacy password whose items blob is gone', () => {
+    // The browser evicted `aegis_vault_items` (megabytes) and kept
+    // `aegis_master_password` (dozens of bytes) - which is exactly the order
+    // a quota eviction goes in. Nothing is left to migrate, so the password is
+    // inert residue that must not survive.
+    localStorage.setItem('aegis_master_password', btoa('orphaned-pass'));
+
+    purgeStaleLegacyLocalStorageKeys(createEmptyVaultDatabaseState());
+
+    expect(localStorage.getItem('aegis_master_password')).toBeNull();
+    expect(logSecurityEvent).toHaveBeenCalledWith(
+      securityEventCodes.storageLegacyDataPurged,
+      'Orphaned legacy master password purged (no legacy items remained to migrate).',
+      'info',
+    );
+  });
+
+  it('O-3: still keeps a legacy password while an items blob could still be migrated', () => {
+    // Rollback safety is unchanged: with items present and the store empty,
+    // this is an un-migrated vault and the plaintext sources are the only copy.
+    localStorage.setItem('aegis_master_password', btoa('live-pass'));
+    localStorage.setItem('aegis_vault_items', '[]');
+
+    purgeStaleLegacyLocalStorageKeys(createEmptyVaultDatabaseState());
+
+    expect(localStorage.getItem('aegis_master_password')).not.toBeNull();
+    expect(localStorage.getItem('aegis_vault_items')).not.toBeNull();
+  });
+
+  it('O-3: cleans up the orphaned password on the fallback-mirror early return too', async () => {
+    // A second door onto the same finding: the mirror branch returned before
+    // any cleanup ran, so a user whose vault loaded from the mirror kept their
+    // base64 password indefinitely.
+    localStorage.setItem(LOCAL_FALLBACK_KEY, JSON.stringify({
+      schemaVersion: 1,
+      appId: 'aegis',
+      user_secrets: [],
+      vault_items: [],
+    }));
+    localStorage.setItem('aegis_master_password', btoa('orphaned-pass'));
+
+    await migrateLegacyLocalStorage(createEmptyVaultDatabaseState(), deps());
+
+    expect(localStorage.getItem('aegis_master_password')).toBeNull();
+  });
 });
 
 describe('decryptVaultRows', () => {
