@@ -27,6 +27,39 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # ─────────────────────────────────────────────────────────────────────────
+  # plan: decide which desktop platforms this run is allowed to publish.
+  #
+  # Why this exists: macOS and Windows cannot be published unsigned (Y-19), and
+  # without certificates the whole pipeline simply goes red and nothing ships.
+  # That is the correct default, but it also means there is no way to ship a
+  # Linux-only release in the meantime -- and Linux is the one platform whose
+  # artifacts need no certificate to be legitimate.
+  #
+  # The selection is a repository *variable* (`vars`), not a secret, so it is
+  # visible in the repo settings and auditable in the run summary. Unset or
+  # "all" means every platform, which preserves the pre-existing fail-closed
+  # behaviour exactly. Setting it to e.g. "linux" is the only way to narrow it.
+  #
+  # Deliberately NOT a workflow input: this workflow is tag-triggered, and tags
+  # cannot carry inputs. It is also deliberately not `continue-on-error` on the
+  # signing gates: that would turn a loud failure into a silent skip, and the
+  # Y-19 gate exists precisely to fail loudly.
+  plan:
+    name: Plan release platforms
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      macos: ${{ steps.select.outputs.macos }}
+      windows: ${{ steps.select.outputs.windows }}
+      selection: ${{ steps.select.outputs.selection }}
+    steps:
+      - name: Select platforms
+        id: select
+        env:
+          REQUESTED_PLATFORMS: ${{ vars.RELEASE_DESKTOP_PLATFORMS }}
+        run: node scripts/select-release-platforms.cjs
+
   build-linux:
     name: Build Linux packages
     runs-on: ubuntu-22.04
@@ -110,6 +143,8 @@ jobs:
 
   build-macos:
     name: Build macOS packages
+    needs: [plan]
+    if: needs.plan.outputs.macos == 'true'
     runs-on: macos-14
     timeout-minutes: 90
 
@@ -277,6 +312,8 @@ jobs:
 
   build-windows:
     name: Build Windows packages
+    needs: [plan]
+    if: needs.plan.outputs.windows == 'true'
     runs-on: windows-latest
     timeout-minutes: 90
 
@@ -554,7 +591,19 @@ jobs:
 
   generate-sbom:
     name: Generate SBOM (CycloneDX)
-    needs: [build-linux, build-macos, build-windows, build-android, build-extensions]
+    needs: [plan, build-linux, build-macos, build-windows, build-android, build-extensions]
+    # `always()` is required, not optional: a job whose `needs` includes a
+    # *skipped* job is itself skipped in GitHub Actions, so without this a
+    # partial release would silently produce no SBOM and no release at all.
+    # The explicit result checks are what keep it safe -- every platform that
+    # was selected must have actually succeeded.
+    if: >-
+      always() && !cancelled() &&
+      needs.build-linux.result == 'success' &&
+      needs.build-android.result == 'success' &&
+      needs.build-extensions.result == 'success' &&
+      (needs.plan.outputs.macos != 'true' || needs.build-macos.result == 'success') &&
+      (needs.plan.outputs.windows != 'true' || needs.build-windows.result == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -601,7 +650,19 @@ jobs:
 
   publish:
     name: Sign and publish GitHub Release
-    needs: [build-linux, build-macos, build-windows, build-android, build-extensions, generate-sbom]
+    needs: [plan, build-linux, build-macos, build-windows, build-android, build-extensions, generate-sbom]
+    # Same reasoning as generate-sbom: `always()` so a skipped optional platform
+    # does not skip the release, plus explicit success checks so a *failed*
+    # platform still blocks it. The difference between "skipped" and "failed" is
+    # the whole mechanism, and it is decided here rather than by accident.
+    if: >-
+      always() && !cancelled() &&
+      needs.generate-sbom.result == 'success' &&
+      needs.build-linux.result == 'success' &&
+      needs.build-android.result == 'success' &&
+      needs.build-extensions.result == 'success' &&
+      (needs.plan.outputs.macos != 'true' || needs.build-macos.result == 'success') &&
+      (needs.plan.outputs.windows != 'true' || needs.build-windows.result == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -634,12 +695,17 @@ jobs:
           path: release-local/linux
 
       - name: Download macOS artifacts
+        # Skipped when macOS was not selected: download-artifact fails outright
+        # on a missing artifact, so an unconditional step would turn a partial
+        # release back into a hard failure.
+        if: needs.plan.outputs.macos == 'true'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v6.0.0 (SHA-pinned)
         with:
           name: aegis-vault-v7-macos
           path: release-local/macos
 
       - name: Download Windows artifacts
+        if: needs.plan.outputs.windows == 'true'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v6.0.0 (SHA-pinned)
         with:
           name: aegis-vault-v7-windows
@@ -665,6 +731,49 @@ jobs:
 
       - name: Generate Tauri updater manifest (latest.json)
         run: node scripts/generate-updater-manifest.cjs
+
+      # The safety net for partial releases, and deliberately independent of the
+      # `plan` job. Each build job already gated its own artifacts, but this
+      # re-runs the same gate against what was actually *downloaded* here, at
+      # the last moment before anything is uploaded.
+      #
+      # That separation is the point: platform selection decides what is
+      # INCLUDED, and this step decides whether anything UNSIGNED can SHIP.
+      # A bug in `plan`, a mis-set repository variable, or a hand-edited `if:`
+      # cannot turn into an unsigned public artifact, because the presence of
+      # macOS/Windows files is what triggers the check -- not the flag that was
+      # supposed to allow them.
+      #
+      # Runs before the prune step, which deletes the per-platform metadata.json
+      # this gate reads.
+      - name: Re-verify collected artifacts before publishing
+        run: |
+          set -euo pipefail
+          for platform in macos windows; do
+            dir="release-local/$platform"
+            if [ -d "$dir" ] && [ -n "$(ls -A "$dir" 2>/dev/null)" ]; then
+              echo "::group::Re-verifying $platform artifacts"
+              npm run desktop:release:signing:report -- \
+                --platform "$platform" --dir "$dir" --require-signed
+              echo "::endgroup::"
+            else
+              echo "No $platform artifacts present - nothing to verify."
+            fi
+          done
+
+      - name: Fail if a selected platform produced no artifacts
+        run: |
+          set -euo pipefail
+          for platform in linux macos windows; do
+            dir="release-local/$platform"
+            if [ ! -d "$dir" ] || [ -z "$(ls -A "$dir" 2>/dev/null)" ]; then
+              if [ "$platform" = "linux" ]; then
+                echo "::error::Linux artifacts are missing; a release with no Linux build is not a release"
+                exit 1
+              fi
+              echo "::notice::$platform was not published in this release."
+            fi
+          done
 
       - name: Prune non-distributable files and deduplicate basenames
         run: |

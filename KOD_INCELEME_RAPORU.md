@@ -1453,7 +1453,7 @@ Bu kapı ilk çalıştırmasında **iki gerçek bulgu** verdi: `TAURI_SIGNING_PR
 
 | Konu | Kalan |
 |---|---|
-| **Y-19 operasyonel olarak açık** | Gerçek imzalama sertifika gerektirir. `APPLE_*` ve `WINDOWS_SIGNING_*` secret'ları eklenene kadar genel masaüstü yayını **bloke** kalır. Bu kasıtlı ve doğru; #32 olarak operasyonel kalıyor. **İkinci (pre-Y-19) pipeline kaldırıldı ve tekrar eklenmesi kapıya bağlandı — bkz. §1.20** |
+| **Y-19 operasyonel olarak açık** | Gerçek imzalama sertifika gerektirir. `APPLE_*` ve `WINDOWS_SIGNING_*` secret'ları eklenene kadar macOS/Windows yayını **bloke** kalır. Bu kasıtlı ve doğru; #32 olarak operasyonel kalıyor. **İkinci (pre-Y-19) pipeline kaldırıldı ve tekrar eklenmesi kapıya bağlandı — bkz. §1.20. Sertifikasız Linux-only yayın seçeneği açıldı (varsayılan yine fail-closed) — bkz. §1.21** |
 | **Windows'ta taşınabilir imzalama** | İlk sürüm Windows Authenticode, sonraki sürümler için de geçerli. Yeniden imzalama (dual-sign) kapsam dışı |
 | **`open_import_file` boyut kontrolü** | #42'nin son kalemi hâlâ açık: içe aktarma dosyası boyut sınırı yok |
 | **JS tarafında Argon2id tavanı** | Rust tarafı IPC üzerinden zorluyor; saf WASM yolunda üst sınır yok → Aşama 2 #51 |
@@ -2231,6 +2231,95 @@ Bu, aynı seansta üçüncü kez "yeşil test kanıt değildir" ile karşılaşm
 
 ---
 
+## 1.21 Kısmi (Linux-only) Masaüstü Yayını (Güncelleme: 27.09.2026)
+
+---
+
+### Soru ve cevapı
+
+"macOS/Windows imzası olmadan gerçek bir release çıkabilir mi?" sorusunun cevabı: **evet, ama yalnızca Linux için ve yalnızca kasıtlı, denetlenebilir bir seçimle.**
+
+Linux, `.deb`/`.appimage` varlıkları için sertifika gerektirmeyen tek platform — imza kapısı bunlarda "gerekli değil" diye işaretliyor. Yani Linux-only bir release meşru.
+
+### Tasarımın dayandığı ayrım
+
+Değişikliğin tamamı tek bir ayrıma dayanıyor:
+
+> **Platform seçimi neyin `DAHİL` olduğunu belirler. Hiçbir şey `İMZASIZ` yayınlanamaz.**
+
+Bunları ayrı ayrı güvenceye bağladım:
+
+| Garanti | Nasıl |
+|---|---|
+| Seçim bir **değişken** (`vars.RELEASE_DESKTOP_PLATFORMS`), secret değil — repo ayarlarında görünür, run özetinde denetlenebilir | `plan` işi |
+| **Vars ayarlanmamışsa tüm platformlar** seçilir → bugünkü fail-closed davranışı birebir korunur | `select-release-platforms.cjs` + 7 test |
+| Yanlış yazılmış platform adı **sessizce yok sayılmaz**, hata verir | `unknown` listesi + `exit 1` |
+| Linux **asla** dışlanamaz — Linux'siz release release değildir | `ALWAYS` sabiti |
+| Seçilen platform **başarısız** olursa publish yine de atlanır; yalnızca *atlanan* platform atlatır | `always() && !cancelled()` + açık `result == 'success'` kontrolleri |
+
+#### `continue-on-error` bilinçli olarak kullanılmadı
+
+Sertifika kapılarını `continue-on-error` yapmak en kısa yoldu ve **yanlış**: sessiz bir *skip*e çevirirdi. Y-19'un kapısı tam olarak yüksek sesle başarısız olmak için var; onu susturmak, sorunu çözmek değil gizlemek olurdu.
+
+#### Yayın noktasında bağımsız yeniden doğrulama — asıl emniyet ağı
+
+`plan` işine güvenmek yeterli olmazdı. Publish işi, indirilen varlıkları **kendi kendine yeniden doğruluyor** ve tetikleyici seçim bayrağı değil, **macOS/Windows dosyalarının varlığı**:
+
+```bash
+if [ -d "release-local/$platform" ] && [ -n "$(ls -A ...)" ]; then
+  npm run desktop:release:signing:report -- --platform "$platform" --dir "$dir" --require-signed
+fi
+```
+
+Yani `plan`'da bir hata, yanlış ayarlanmış bir değişken veya elle düzenlenmiş bir `if:` **imzasız bir kamuya açık varlığa dönüşemez** — çünkü kontrolü çalıştıran şey izin bayrağı değil, dosyaların varlığı. Ek olarak Linux yoksa publish hata veriyor.
+
+Bu adım `prune` adımından **önce** çalışıyor, çünkü prune per-platform `metadata.json`'u siliyor.
+
+### Yol üstünde kapatılan mevcut bir bulgu
+
+`latest.json` üreticisi, hiçbir imzalı varlık bulamazsa `platforms: {}` yazıp **sıfır çıkış koduyla** bitiyordu. Bu zaten raporda bir bulguydu ve kısmi release ile **kolayca tetiklenebilir** hale geliyordu: Linux-only bir release'ta beklenmedik bir imza sorunu sessizce bozuk bir güncelleyici yayınlar.
+
+Kapandı: boş manifest artık `exit 1`. Tarama kasten gevşek kaldı — bir build'in imzalanmadan önce çalışması meşru, eksik `.sig` build'i düşürmemeli — ama **sonuç bir kez burada** denetleniyor.
+
+### Test edilebilirlik: en kritik karar satır içi shell'den çıkarıldı
+
+Platform seçimi ilk yazımda workflow'un içinde bash olarak duruyordu. Test edilemiyordu, dolayısıyla da güvenilemezdi — bu, dosyada test **olmayan** bir `bash -c` mantığı demek.
+
+`scripts/select-release-platforms.cjs` olarak çıkardım ve workflow'dan çağırıyorum. 7 test, 3 mutasyon.
+
+**Mutasyonlar:**
+
+| # | Mutasyon | Kıran test |
+|---|---|---|
+| M1 | **Vars ayarlanmamışken "opsiyonel hiçbir şeyi seçme"** | 1 ✅ |
+| **M2** | **Aşırı düzeltme:** isteği harfi harfine uygula, "windows" Linux'i düşürebilsin | 5 ✅ |
+| **M3** | **Aşırı düzeltme:** "her şeyi daima derle", daraltmayı hiç reddetme | 4 ✅ |
+
+M1 en önemlisiydi: "eksik değişken sessizce hiçbir şeyi derlemeye" çözülürse, **hiçbir masaüstü build'i yayımlamayan yeşil bir run** elde edersiniz. Bir kısmi release'ı kısmi olmayan, ama daha kötü bir release'a çeviren varsayılan.
+
+#### Bu script'in testi yoktu — dördüncü kez aynı tuzak
+
+`generate-updater-manifest.cjs` için yazdığım düzeltmeyi doğrulamaya çalıştığımda mutasyon **geçti**, çünkü o scriptin **hiç testi yoktu**. Aynı seansta dördüncü kez "yeşil sonuç kanıt değil" — ama bu kez sebep farklıydı: burada yeşil olan mutasyondu ve test **yoktu**.
+
+Testi alt süreç (subprocess) olarak yazdım, çünkü sabitlenmesi gereken şey süreç çıkış kodu ve `process.exit`'i stub'lamak testi test etmekten ibaret. 4 test, 3 mutasyonla kırıldı.
+
+---
+
+### Doğrulama
+
+| Kontrol | Sonuç |
+|---|---|
+| `npm run test:unit` | ✅ **2182 / 2182** (2171 → 2182, **+11**) |
+| `npm run typecheck` | ✅ |
+| `npm run lint` | ✅ **0 hata, 23 uyarı** (taban korundu) |
+| `npm run build` | ✅ |
+| `npm run test:fuzz` | ✅ 37 |
+| `cargo test --lib` | ✅ 68 / 68 |
+| 8 güvenlik kapısı | ✅ hepsi PASS |
+| YAML ayrıştırma + `plan` mantığı | ✅ `plan, build-linux, build-macos, build-windows, build-android, build-extensions, generate-sbom, publish` |
+
+---
+
 ## 2. Mimari Özeti
 
 ```
@@ -2971,7 +3060,7 @@ Bu hook'ta **hiç `useEffect` yok** (grep: sıfır eşleşme). Hiçbir zamanlay�
 | **CI, depodaki kendi güvenlik kapılarının hiçbirini çalıştırmıyor.** `ci.yml` yalnızca `typecheck` + `test:unit` + `cargo check`/`cargo test` yapıyor. Çalışmayanlar: `lint`, `security:dependencies`, `security:csp`, `security:no-js-master-string`, `security:session-gates`, `test:fuzz` (8 fuzz paketi), gitleaks, `cargo clippy`/`audit`/`deny`/`fmt`. Sertleştirme kapısı yalnızca etiket-tetikli masaüstü işlerinde; `build-android` işinde **hiç** yok. `release-desktop-manual.yml`'de hiç yoktu — **dosya kaldırıldı ve tekrar eklenmesi `security:release-signing`'e bağlandı (bkz. §1.20)** | `.github/workflows/ci.yml` |
 | CodeQL **yalnızca javascript-typescript** — Rust kripto/KDF/IPC arka uç (elle yazılmış XChaCha20-Poly1305 çerçevelemesi, Argon2id, elle URL eşleştirici, token el sıkışması) ve Kotlin kripto/autofill/KeyStore katmanı hiç analiz edilmiyor. En çok işe yarayacak sorgular (sabit kod kimlik bilgisi, zayırf kripto, yetkisiz veri yolu, IPC giriş noktasında yetkilendirme eksikliği) yalnızca o dillerde tetikleniyor | `.github/workflows/codeql.yml:20-24` |
 | Sürüm yayınlama **atomik değil** ve otomatik-güncelleyici ucunu kararsızlaştırıyor: yeniden çalıştırma için yayınlanan sürüm (ve `latest.json` dahil) siliniyor, sonra varlık varlık yeniden oluşturuluyor; bu pencerede `releases/latest/download/latest.json` 404 döndürüyor ya da farklı bir etikete çözümleniyor → sürüm karışıklığı. `generate_release_notes: true` + `make_latest: true` "latest" işaretçisini sıfırlıyor. Düzeltme: taslakla yayınla → tüm varlıkları yükle → tek `PATCH` ile yayınla; veya `latest.json`'ı değişmez etiket URL'sinden sun | `release-desktop.yml:580-622` |
-| `latest.json` bütünlük iddiası olmadan yayınlanıyor: eksik `.sig` koleksiyonu sessizce atlanıyor (`if (!signature) continue;`), manifest `platforms: {}` ile ve **sıfır çıkış koduyla** yazılıyor, sonra cosign imzalanıp yükleniyor. İmza "doğrulaması" bir **alt dize testi** (`raw.includes('untrusted comment: signature from tauri secret key')`) — istemci gerçek minisign doğrulaması yaptığı için istismar edilemez, ama üretici bir doğrulama katmanı değil | `generate-updater-manifest.cjs:118-143` |
+| `latest.json` bütünlük iddiası olmadan yayınlanıyor: eksik `.sig` koleksiyonu sessizce atlanıyor (`if (!signature) continue;`), manifest `platforms: {}` ile ve **sıfır çıkış koduyla** yazılıyor, sonra cosign imzalanıp yükleniyor. İmza "doğrulaması" bir **alt dize testi** (`raw.includes('untrusted comment: signature from tauri secret key')`) — istemci gerçek minisign doğrulaması yaptığı için istismar edilemez, ama üretici bir doğrulama katmanı değil — ⚠️ **KISMEN KAPANDI (bkz. §1.21)**: boş manifest artık `exit 1` ile reddediliyor (4 test, 3 mutasyon), tarama kasten gevşek kaldı | `generate-updater-manifest.cjs:118-143` |
 | Android `isMinifyEnabled`/`isShrinkResources` etkin ama `-keep class com.hafgit99.aegisvault7.** { *; }` tüm uygulama kodunu koruyor → R8 yalnızca kütüphaneyi soyuyor. Saldırgana KeyStore sarmalayıcısının, autofill servisinin ve beş `@JavascriptInterface` bridge'inin tam sınıf/yöntem adlarını ücretsiz veriyor | `proguard-rules.pro:24-25` |
 | Android release imzalama Gradle düzeyinde isteğe bağlı (fail-open): yapılandırma yoksa yalnızca bir uyarı, **imzasız, yüklenebilir, dağıtılabilir** APK üretiliyor. CI dört sırrı açıkça kontrol ediyor ama `apksigner verify --print-certs` parmak izi kontrolü hiç yok | `build.gradle.kts:76-84` |
 | NSIS `NSIS_HOOK_PREUNINSTALL` `%APPDATA%\com.hafgit99.aegisvault7` dizinini **onaysız** siliyor — bir şifre yöneticisini kaldırmak kasayı ve eşleştirme token'ını sessizce yok ediyor | `nsis/installer.nsh:3-9` |
