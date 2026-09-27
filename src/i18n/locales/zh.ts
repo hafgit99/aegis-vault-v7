@@ -300,6 +300,8 @@
     'settings.title': '保险库设置',
     'vault.rollback.title': '保管库完整性警告',
     'vault.rollback.desc': '检测到保管库数据库回滚：较旧的快照可能替换了较新的数据。您的条目仍然处于加密保护之中；如果这次还原不是您本人操作，请先检查是否存在未经授权的更改。',
+    'vault.mirrorStale.title': '恢复镜像已过期',
+    'vault.mirrorStale.desc': '本地恢复镜像在上次保存后未能更新，因此比您的密码库更旧。它已被用于恢复您的数据，这意味着此后所做的更改可能已丢失。您的密码库并未损坏；请再次保存以更新镜像。',
     'vault.writeConflict.title': '密码库已在另一个标签页中更新',
     'vault.writeConflict.desc': '此标签页内容已过期，因此您的更改未被保存，较新的密码库已保留。请重新加载以获取最新条目，然后重新应用您的更改。',
     'vault.writeConflict.banner': '此标签页显示的是过时的密码库。重新加载前您的更改不会被保存。',

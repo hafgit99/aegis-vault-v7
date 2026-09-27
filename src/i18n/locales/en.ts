@@ -300,6 +300,8 @@
     'settings.title': 'Vault Settings',
     'vault.rollback.title': 'Vault Integrity Warning',
     'vault.rollback.desc': 'A vault database rollback was detected — an older snapshot may have replaced newer data. Your entries remain encrypted and protected; if you did not perform this restore yourself, check for unauthorized changes before trusting the contents.',
+    'vault.mirrorStale.title': 'Recovery mirror is out of date',
+    'vault.mirrorStale.desc': 'The local recovery mirror could not be updated after your last save, so it is older than your vault. It was used to recover your data, which means any changes made since that point may be missing. Your vault is not damaged; save again now to bring the mirror up to date.',
     'vault.writeConflict.title': 'Vault updated in another tab',
     'vault.writeConflict.desc': 'This tab was out of date, so your change was NOT saved and the newer vault was kept. Reload to pick up the latest entries, then re-apply your change.',
     'vault.writeConflict.banner': 'This tab is showing an outdated vault. Changes you make now will not be saved until you reload.',

@@ -11,6 +11,11 @@ export const securityEventCodes = {
   storageDesktopReadFailed: 'storage.desktop.readFailed',
   storageDesktopWriteFailed: 'storage.desktop.writeFailed',
   storageLocalFallbackUsed: 'storage.localFallback.used',
+  /**
+   * O-2: the localStorage vault mirror is behind the authoritative copy, so it
+   * must not be offered to the user as a recovery source without saying so.
+   */
+  storageLocalFallbackStale: 'storage.localFallback.stale',
   storageLegacyMigrationFailed: 'storage.legacyMigration.failed',
   storageLegacyMigrationSuccess: 'storage.legacyMigration.success',
   storageLegacyDataPurged: 'storage.legacyData.purged',

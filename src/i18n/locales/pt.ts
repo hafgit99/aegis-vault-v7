@@ -299,6 +299,8 @@
   'settings.title': 'Configurações do cofre',
   'vault.rollback.title': 'Aviso de integridade do cofre',
   'vault.rollback.desc': 'Foi detetada uma reversão (rollback) da base de dados do cofre: um snapshot mais antigo pode ter substituído dados mais recentes. As suas entradas continuam cifradas e protegidas; se não foi você quem fez esta restauração, verifique se há alterações não autorizadas antes de confiar no conteúdo.',
+    'vault.mirrorStale.title': 'O espelho de recuperação está desatualizado',
+    'vault.mirrorStale.desc': 'O espelho local de recuperação não pôde ser atualizado após o último salvamento, portanto está mais antigo que o seu cofre. Ele foi usado para recuperar seus dados, o que significa que as alterações feitas desde então podem estar faltando. Seu cofre não está danificado; salve novamente para atualizar o espelho.',
     'vault.writeConflict.title': 'Cofre atualizado noutro separador',
     'vault.writeConflict.desc': 'Este separador estava desatualizado, por isso a sua alteracao NAO foi guardada e o cofre mais recente foi mantido. Recarregue para obter as entradas mais recentes e volte a aplicar a alteracao.',
     'vault.writeConflict.banner': 'Este separador mostra um cofre desatualizado. As alteracoes so serao guardadas apos recarregar.',

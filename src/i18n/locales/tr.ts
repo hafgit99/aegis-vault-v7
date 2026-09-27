@@ -300,6 +300,8 @@
     'settings.title': 'Kasa Ayarları',
     'vault.rollback.title': 'Kasa Bütünlüğü Uyarısı',
     'vault.rollback.desc': 'Kasa veritabanında geri alma (rollback) tespit edildi — daha yeni veriler eski bir kopyayla değiştirilmiş olabilir. Kayıtlarınız hâlâ şifreli ve korumalı; ancak bu geri yüklemeyi siz yapmadıysanız, içeriğe güvenmeden önce yetkisiz değişiklikleri kontrol edin.',
+    'vault.mirrorStale.title': 'Kurtarma aynası güncel değil',
+    'vault.mirrorStale.desc': 'Yerel kurtarma aynası son kaydınızdan sonra güncellenemedi, bu yüzden kasanızdan daha eski. Verilerinizi kurtarmak için bu ayna kullanıldı; bu da o noktadan sonra yaptığınız değişikliklerin eksik olabileceği anlamına geliyor. Kasanız bozulmadı; şimdi tekrar kaydederek aynayı güncel hâle getirin.',
     'vault.writeConflict.title': 'Kasa başka sekmede güncellendi',
     'vault.writeConflict.desc': 'Bu sekme güncel olmadığı için değişikliğiniz KAYDEDILMEDİ ve daha yeni olan kasa korundu. Güncel kayıtları almak için sayfayı yenileyin, ardından değişikliğinizi yeniden uygulayın.',
     'vault.writeConflict.banner': 'Bu sekme güncel olmayan bir kasa gösteriyor. Sayfayı yenileyene kadar yaptığınız değişiklikler kaydedilmeyecek.',

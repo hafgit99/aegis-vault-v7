@@ -40,6 +40,7 @@ import { useAssetIntegrity } from './hooks/useAssetIntegrity';
 import { useAutoSnapshotScheduler } from './hooks/useAutoSnapshotScheduler';
 import { useAirgapAlerts } from './hooks/useAirgapAlerts';
 import { useVaultRollbackAlert } from './hooks/useVaultRollbackAlert';
+import { useVaultFallbackMirrorStaleAlert } from './hooks/useVaultFallbackMirrorStaleAlert';
 import { useVaultWriteConflict } from './hooks/useVaultWriteConflict';
 import { VaultStaleBanner } from './components/VaultStaleBanner';
 import { useLinuxSecurityStatus } from './hooks/useLinuxSecurityStatus';
@@ -187,6 +188,14 @@ export default function UnlockedApp({
   });
 
   useVaultRollbackAlert({
+    unlocked,
+    onNotify: showNotification,
+  });
+
+  // O-2: the localStorage recovery mirror can silently fall behind the
+  // authoritative copy, and a user cannot see that. Announced once per
+  // occurrence, right beside the rollback alert it is closest to in meaning.
+  useVaultFallbackMirrorStaleAlert({
     unlocked,
     onNotify: showNotification,
   });

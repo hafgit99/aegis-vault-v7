@@ -299,6 +299,8 @@
   'settings.title': 'Impostazioni del deposito',
   'vault.rollback.title': 'Avviso di integrità del vault',
   'vault.rollback.desc': 'È stato rilevato un rollback del database del vault: uno snapshot precedente potrebbe aver sostituito dati più recenti. Le voci restano cifrate e protette; se non hai eseguito tu questo ripristino, verifica che non ci siano modifiche non autorizzate.',
+    'vault.mirrorStale.title': 'Lo specchio di ripristino non è aggiornato',
+    'vault.mirrorStale.desc': 'Lo specchio locale di ripristino non è stato aggiornato dopo l\'ultimo salvataggio, quindi è più vecchio del tuo archivio. È stato usato per recuperare i tuoi dati, il che significa che le modifiche apportate da quel momento potrebbero mancare. Il tuo archivio non è danneggiato; salva di nuovo per aggiornare lo specchio.',
     'vault.writeConflict.title': 'Cassaforte aggiornata in un\'altra scheda',
     'vault.writeConflict.desc': 'Questa scheda non era aggiornata, quindi la modifica NON è stata salvata ed è stata mantenuta la cassaforte più recente. Ricarica per ottenere le voci più aggiornate, poi riapplica la modifica.',
     'vault.writeConflict.banner': 'Questa scheda mostra una cassaforte non aggiornata. Le modifiche verranno salvate solo dopo il ricaricamento.',

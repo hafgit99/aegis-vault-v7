@@ -299,6 +299,8 @@
   'settings.title': 'Paramètres du coffre-fort',
   'vault.rollback.title': 'Avertissement d’intégrité du coffre',
   'vault.rollback.desc': 'Une restauration (rollback) de la base du coffre a été détectée : un instantané plus ancien a peut-être remplacé des données plus récentes. Vos entrées restent chiffrées et protégées ; si vous n’avez pas effectué cette restauration vous-même, vérifiez le contenu avant de vous y fier.',
+    'vault.mirrorStale.title': 'Le miroir de récupération est obsolète',
+    'vault.mirrorStale.desc': 'Le miroir de récupération local n\'a pas pu être mis à jour après votre dernier enregistrement : il est donc plus ancien que votre coffre-fort. Il a servi à récupérer vos données, ce qui signifie que les modifications effectuées depuis ce moment ont pu être perdues. Votre coffre-fort n\'est pas endommagé ; enregistrez à nouveau pour actualiser le miroir.',
 
     'vault.writeConflict.title': 'Coffre mis à jour dans un autre onglet',
     'vault.writeConflict.desc': 'Cet onglet était obsolète : votre modification n\'a PAS été enregistrée et le coffre le plus récent a été conservé. Rechargez pour récupérer les entrées à jour, puis réappliquez votre modification.',

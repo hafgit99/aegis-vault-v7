@@ -27,7 +27,10 @@ import {
 } from './vaultDatabaseFormat';
 import { buildVaultItemRow, createVaultEncryptionSalt } from './sqliteOpfsShared';
 import { getIndexedDbItemSync } from './indexedDbStorage';
-import { LOCAL_FALLBACK_KEY } from './sqliteOpfsPersistence';
+import {
+  reportFallbackMirrorRecovery,
+  LOCAL_FALLBACK_KEY,
+} from './sqliteOpfsPersistence';
 
 export interface SqliteOpfsMigrationDeps {
   /** Derives the vault encryption key for the given password (uses the live salt). */
@@ -45,17 +48,30 @@ export async function migrateLegacyLocalStorage(
 ): Promise<VersionedVaultDatabaseState> {
   const fallback = getIndexedDbItemSync(LOCAL_FALLBACK_KEY);
   if (fallback) {
+    // Only the parse is guarded. The staleness check used to sit inside this
+    // `try`, which was a mistake: the `catch {}` swallowed its failure and the
+    // mirror was then never loaded at all. A diagnostic must not be able to
+    // change what the app does with the user's data.
+    let parsed: { desktopManaged?: unknown } | null = null;
     try {
-      const parsed = JSON.parse(fallback);
-      if (!parsed.desktopManaged) {
-        logSecurityEvent(securityEventCodes.storageLocalFallbackUsed, 'Loaded vault state from local fallback mirror.', 'warning');
-        // O-3: this early return used to skip the legacy cleanup entirely, which
-        // left a second door open onto the same orphaned password. Reuse the
-        // one purge so both exits behave identically.
-        purgeStaleLegacyLocalStorageKeys(currentState);
-        return parseVaultDatabaseState(fallback);
-      }
-    } catch {}
+      parsed = JSON.parse(fallback);
+    } catch {
+      parsed = null;
+    }
+    if (parsed && !parsed.desktopManaged) {
+      logSecurityEvent(securityEventCodes.storageLocalFallbackUsed, 'Loaded vault state from local fallback mirror.', 'warning');
+      // O-2: a mirror that silently fell behind the authoritative copy used to
+      // be loaded here and reported as an ordinary successful load. It is still
+      // the only copy when the authoritative store is genuinely absent, so it is
+      // still used -- but its age is now announced, because "your backup is
+      // older than your vault" is exactly what a user cannot see.
+      reportFallbackMirrorRecovery();
+      // O-3: this early return used to skip the legacy cleanup entirely, which
+      // left a second door open onto the same orphaned password. Reuse the
+      // one purge so both exits behave identically.
+      purgeStaleLegacyLocalStorageKeys(currentState);
+      return parseVaultDatabaseState(fallback);
+    }
   }
 
   // Attempt to seed from standard legacy keys

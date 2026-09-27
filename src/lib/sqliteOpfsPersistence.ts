@@ -20,7 +20,7 @@ import {
   readDesktopVaultDatabase,
   writeDesktopVaultDatabase,
 } from './desktopStorage';
-import { setIndexedDbItemSync } from './indexedDbStorage';
+import { didLocalMirrorWriteFail, setIndexedDbItemSync } from './indexedDbStorage';
 import { logSecurityEvent, securityEventCodes } from './securityEvents';
 import { parseVaultDatabaseState, type VersionedVaultDatabaseState } from './vaultDatabaseFormat';
 import { isTestEnv } from './environment';
@@ -29,6 +29,198 @@ import { readVaultIntegrityLedger } from './vaultIntegrityLedger';
 
 export const DB_FILENAME = 'aegis_sqlite.db';
 export const LOCAL_FALLBACK_KEY = 'aegis_sqlite_fallback';
+
+/**
+ * O-2: bookkeeping for the localStorage mirror, kept in its own tiny key.
+ *
+ * The report's suggested fix was "record the mirror's write date and warn when
+ * it is older than the OPFS copy". A timestamp is the weaker signal and this
+ * uses `versionCounter` instead, which the vault already maintains as a
+ * monotonically increasing number and which Y-5 already trusts for rollback
+ * detection. It answers the question directly -- "does the mirror hold an older
+ * version of the vault than the one we last managed to persist?" -- with no
+ * clock involved, so it cannot be wrong because of skew or because a write
+ * happened to land inside the same millisecond.
+ *
+ * `writtenAtMs` is still recorded, but only so the warning can tell the user
+ * how old the mirror is, not to decide whether it is stale.
+ */
+export const LOCAL_FALLBACK_META_KEY = 'aegis_sqlite_fallback_meta';
+
+export interface LocalFallbackMirrorMeta {
+  /** The vault `versionCounter` this mirror was meant to hold. */
+  version: number;
+  /** When the mirror was last written, in epoch milliseconds. */
+  writtenAtMs: number;
+}
+
+function readFallbackMeta(): LocalFallbackMirrorMeta | null {
+  if (typeof localStorage === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(LOCAL_FALLBACK_META_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<LocalFallbackMirrorMeta>;
+    if (typeof parsed.version !== 'number' || !Number.isFinite(parsed.version)) return null;
+    return {
+      version: parsed.version,
+      writtenAtMs: typeof parsed.writtenAtMs === 'number' ? parsed.writtenAtMs : 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Records the version the mirror is *about* to hold.
+ *
+ * If this write fails, so does the payload write that follows it — the mirror is
+ * megabytes and this is tens of bytes — so the mirror cannot be further behind
+ * than it already was, and the next successful write re-establishes the record.
+ * That is why a failed record is not treated as a failure signal in its own
+ * right.
+ */
+function writeFallbackMeta(version: number): void {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(
+      LOCAL_FALLBACK_META_KEY,
+      JSON.stringify({ version, writtenAtMs: Date.now() } satisfies LocalFallbackMirrorMeta),
+    );
+  } catch {
+    // If even this tiny write fails, quota is exhausted to the last byte. The
+    // mirror is then also unwriteable, so it cannot be further behind than it
+    // already was, and the next successful write re-establishes the record.
+  }
+}
+
+/** Why a mirror was found to be behind the authoritative copy. */
+export type FallbackMirrorStaleReason = 'write-failed' | 'version-behind';
+
+export interface FallbackMirrorStatus {
+  present: boolean;
+  stale: boolean;
+  reason?: FallbackMirrorStaleReason;
+  /** The vault version the mirror holds, when it could be read. */
+  version?: number;
+  /** The vault version the mirror was meant to hold. */
+  expectedVersion?: number;
+  writtenAtMs?: number;
+}
+
+/**
+ * Inspects the mirror without loading it as vault data.
+ *
+ * The version comparison is the reliable half and works whether or not the quota
+ * ever bit. The `write-failed` half is remembered in memory only: a quota-
+ * exhausted origin cannot be relied on to accept the marker, so it is a
+ * best-effort signal layered on top rather than the foundation.
+ */
+export function inspectLocalFallbackMirror(): FallbackMirrorStatus {
+  if (typeof localStorage === 'undefined') return { present: false, stale: false };
+
+  const meta = readFallbackMeta();
+  let version: number | undefined;
+  try {
+    const raw = localStorage.getItem(LOCAL_FALLBACK_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as { versionCounter?: unknown };
+      if (typeof parsed.versionCounter === 'number' && Number.isFinite(parsed.versionCounter)) {
+        version = parsed.versionCounter;
+      }
+    }
+  } catch {
+    // An unparseable mirror is not stale, it is unreadable, and the load path
+    // already handles that case separately. Do not conflate the two.
+  }
+
+  if (version !== undefined && meta && version < meta.version) {
+    return {
+      present: true,
+      stale: true,
+      reason: 'version-behind',
+      version,
+      expectedVersion: meta.version,
+      writtenAtMs: meta.writtenAtMs,
+    };
+  }
+
+  if (didLocalMirrorWriteFail(LOCAL_FALLBACK_KEY)) {
+    return {
+      present: version !== undefined || meta !== null,
+      stale: true,
+      reason: 'write-failed',
+      version,
+      expectedVersion: meta?.version,
+      writtenAtMs: meta?.writtenAtMs,
+    };
+  }
+
+  return {
+    present: version !== undefined || meta !== null,
+    stale: false,
+    version,
+    expectedVersion: meta?.version,
+    writtenAtMs: meta?.writtenAtMs,
+  };
+}
+
+/** O-2: set when a stale mirror was actually used; consumed once by the UI alert hook. */
+let vaultFallbackMirrorStale = false;
+
+export function consumeVaultFallbackMirrorStale(): boolean {
+  const detected = vaultFallbackMirrorStale;
+  vaultFallbackMirrorStale = false;
+  return detected;
+}
+
+/**
+ * Records that a stale mirror was used and announces it.
+ *
+ * Called from the load path rather than from the write path on purpose: a
+ * swallowed write is only something the user needs to hear about if the stale
+ * mirror is then actually used to recover their data. Warning on every quota
+ * hiccup during normal saving would train them to ignore it.
+ */
+export function markVaultFallbackMirrorStale(reason: FallbackMirrorStaleReason): void {
+  vaultFallbackMirrorStale = true;
+  logSecurityEvent(
+    securityEventCodes.storageLocalFallbackStale,
+    'The localStorage vault mirror is out of date and was used to recover data.',
+    'warning',
+    { reason },
+  );
+}
+
+/**
+ * Announces, if it applies, that the mirror being used to recover data is behind
+ * the authoritative copy.
+ *
+ * Wrapped in its own `try`/`catch` on purpose. This runs on the load path, and
+ * an earlier version of it sat inside the `try` that guards the mirror JSON
+ * parse -- where a failure was swallowed by `catch {}` and the mirror was then
+ * never loaded at all. Reporting a condition must never be able to change what
+ * happens to the user's vault.
+ */
+export function reportFallbackMirrorRecovery(): void {
+  try {
+    const mirror = inspectLocalFallbackMirror();
+    if (!mirror.stale) return;
+    logSecurityEvent(
+      securityEventCodes.storageLocalFallbackStale,
+      'Loaded vault state from a local fallback mirror that is out of date.',
+      'warning',
+      {
+        reason: mirror.reason,
+        mirrorVersion: mirror.version,
+        expectedVersion: mirror.expectedVersion,
+        writtenAtMs: mirror.writtenAtMs,
+      },
+    );
+    markVaultFallbackMirrorStale(mirror.reason ?? 'version-behind');
+  } catch {
+    // Swallowed deliberately, see above.
+  }
+}
 
 /** Marker JSON stored in the fallback mirror when the desktop app owns persistence. */
 export function createDesktopManagedSetupMarker(state: VersionedVaultDatabaseState): string {
@@ -48,6 +240,21 @@ export function writeLocalFallbackMirror(
   payloadStr: string,
   savedToDesktop: boolean,
 ): void {
+  // O-2: record the version this mirror is about to hold.
+  //
+  // The record is written *first*, and the honest reason is narrow: if the
+  // process dies between the two writes, meta-first leaves the record ahead of
+  // the payload, which over-reports staleness - a spurious warning the user can
+  // dismiss - whereas meta-last leaves both at the old version, which
+  // under-reports and is the failure this finding is about. Fail-closed.
+  //
+  // It is worth being precise about what this ordering does *not* buy, because
+  // the obvious claim is wrong: if the payload write is swallowed on quota while
+  // the record write succeeds, the mismatch is detected either way. I verified
+  // that by moving this line after the write and re-running the suite - the
+  // tests still passed. So the ordering is not what defeats the quota case; the
+  // record existing at all is.
+  writeFallbackMeta(state.versionCounter ?? 1);
   setIndexedDbItemSync(
     LOCAL_FALLBACK_KEY,
     savedToDesktop ? createDesktopManagedSetupMarker(state) : payloadStr,

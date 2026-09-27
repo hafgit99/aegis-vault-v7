@@ -1,8 +1,8 @@
 ﻿# AegisVault v7 — Derinlemesine Kod İnceleme Raporu
 
 **Tarih:** 27 Eylül 2026
-**Kapsam:** `v7.0.7.0` (`a995bde`) — inceleme; `fb33981` — Aşama 0–1; `5c9752e` + çalışma ağacı — Aşama 0.5, K-1, K-3/K-4/K-7, Y-5, K-4 UI, O-4; `4ecf34c`/`b983354`/`85e5172`/`fb5ea7f`/`54552d6`/`ac6ba3f`/O-3/#43/#44 — Aşama 2
-**Durum:** 🟢 **Aşama 0, 1, 0.5, 1.5, 2 uygulandı; K-1, K-3, K-4, K-7, Y-5, O-4, O-13, O-14, O-16, O-17, O-20/O-21 ve Y-20 kapatıldı.** 7 kritik bulgunun **6'sı kapandı**, 1'i kısmen. **Veri kaybı sınıfındaki üçlü kapandı**; sömürülebilir tek kritik bulgu (K-1) kapandı ve Android Autofill sınırı CI'da **20** kontrollük statik kapıyla kilitlendi; bütünlük etiketi dosya dışı bir defterle zorunlu kılındı; kilit ekranından tek tıkla kurtarma var; **K-1'in Kotlin derleme borcu gerçek derlemeyle kapandı ve Android lint CI'a bağlandı**; snapshot geri yükleme atomik ve bütçeli; **passkey assertion imzası artık gerçekten doğrulanıyor**; **`revoke` artık gerçekten iptal ediyor** (token döndürme, hâlâ açık oturumları da sonlandırıyor); ve **`index.html` artık bütünlük kapsamında** — `dist/`'de bütünlük garantisi olmayan dosya kalmadı. Toplam **2151 JS + 68 Rust** test yeşil, **8 güvenlik kapısı** PASS. Güncel durum için **§1.2 – §1.6**, **§1.16** – **§1.18** ve **§8** okunmalı.
+**Kapsam:** `v7.0.7.0` (`a995bde`) — inceleme; `fb33981` — Aşama 0–1; `5c9752e` + çalışma ağacı — Aşama 0.5, K-1, K-3/K-4/K-7, Y-5, K-4 UI, O-4; `4ecf34c`/`b983354`/`85e5172`/`fb5ea7f`/`54552d6`/`ac6ba3f`/O-3/#43/#44/O-2 — Aşama 2
+**Durum:** 🟢 **Aşama 0, 1, 0.5, 1.5, 2 uygulandı; K-1, K-3, K-4, K-7, Y-5, O-2, O-3, O-4, O-13, O-14, O-16, O-17, O-20/O-21 ve Y-20 kapatıldı.** 7 kritik bulgunun **6'sı kapandı**, 1'i kısmen. **Veri kaybı sınıfındaki üçlü kapandı**; sömürülebilir tek kritik bulgu (K-1) kapandı ve Android Autofill sınırı CI'da **20** kontrollük statik kapıyla kilitlendi; bütünlük etiketi dosya dışı bir defterle zorunlu kılındı; kilit ekranından tek tıkla kurtarma var; **K-1'in Kotlin derleme borcu gerçek derlemeyle kapandı ve Android lint CI'a bağlandı**; snapshot geri yükleme atomik ve bütçeli; **passkey assertion imzası artık gerçekten doğrulanıyor**; **`revoke` artık gerçekten iptal ediyor** (token döndürme, hâlâ açık oturumları da sonlandırıyor); **`index.html` artık bütünlük kapsamında** — `dist/`'de garantisi olmayan dosya kalmadı; ve **kurtarma aynasının bayatlaması artık sessiz değil.** Toplam **2171 JS + 68 Rust** test yeşil, **8 güvenlik kapısı** PASS. Güncel durum için **§1.2 – §1.6**, **§1.16** – **§1.19** ve **§8** okunmalı.
 **Kalan açık iş:** tek kalem operasyonel — Y-19 imzalama sertifikaları (#32). Kodla değil secret yönetimiyle çözülür ve o zamana kadar imzasız yayın bilerek bloke kalır.
 **İnceleme Alanı:** Tüm depo — TypeScript/React 19 frontend, Rust/Tauri 2 masaüstü katmanı, Kotlin/Android katmanı, Chrome/Firefox/Safari eklenti katmanı, `wa-sqlite` depolama, CI/CD ve build scriptleri
 **Yöntem:** 5 paralel derin inceleme oturumu (kriptografi, depolama, import/sync, React, native/CI) + tüm otomatik kontrollerin çalıştırılması + kritik bulguların manuel doğrulanması
@@ -1800,6 +1800,8 @@ Aynı rapor satırındaki ikinci yarı, bilinçli olarak açık bırakıldı ve 
 
 Önerilen sonraki adım, silmek değil: **bayatlığı görünür kılmak** — aynanın yazıldığı tarihi tutmak ve yükleme sırasında OPFS kopyasından eskiyse uyarı göstermek. Bu, sessiz veri kaybını kapatırken göç yolunu bozmaz.
 
+**Çözüldü (bkz. §1.19):** Tarih yerine `versionCounter` kullanıldı — Y-5'in zaten güvendiği, saat karşılaştırması olmayan bir sinyal. İki yutma noktası da kapatıldı (raporda yazılmayan ikincisi: açılışta IDB → localStorage senkronizasyonu, kayıt olmadan bayatlatabiliyor). Ayna silinmedi, çünkü silinmesi göçü taşınamaz hâle getirirdi; ama artık bayatlığı ölçülebilir ve kullanıcıya `danger` bildirimi olarak duyuruluyor.
+
 ---
 
 ### Doğrulama
@@ -2033,6 +2035,124 @@ M3'ün kırıldığı test `verifies the manifest root and every packaged asset`
 | `cargo test --lib` | ✅ 68 / 68 (değişmedi) |
 | 8 güvenlik kapısı | ✅ hepsi PASS |
 | Gerçek `dist/index.html` karşı kontrolü | ✅ `UNLISTED: []` (6 referansın 6'sı kapsamda) |
+
+---
+
+## 1.19 O-2 Kapatma Raporu — `localStorage` Aynasının Bayatlık Görünürlüğü (Güncelleme: 27.09.2026)
+
+---
+
+### Ayna silinmedi; yaşı ölçülebilir hâle getirildi
+
+§1.16'da bu karar bilinçli olarak açık bırakılmıştı: ayna bir **yük taşıyıcı** (üç kod yolu ondan okuyor, mevcut kullanıcıların göç yolu buna dayanıyor) ve asıl bulgu "düz metin sızıntısı" değil **sessiz bayatlama**.
+
+Önerilen adım "yazma tarihini tut, OPFS kopyasından eskiyse uyar" idi. **Tarih yerine `versionCounter` kullandım** ve bu, raporun kendi önerisinden sapmadır:
+
+- `versionCounter` zaten monoton artan bir sayı ve Y-5 onu zaten güvenilir kabul ediyor.
+- Tarih bir **saat** karşılaştırmasıdır: kayma yanlış sonuç verir, iki yazma aynı milisaniyeye düşerse sessizce eşit sayılır.
+- `versionCounter` doğrudan soruyu yanıtlar: "aynanın tuttuğu kasa sürümü, kalıcı kopyadan son başarılı kaydettiğimiz sürümden eski mi?"
+
+`writtenAtMs` de tutuluyor, ama yalnızca uyarının "ne kadar eski" demesi için — bayatlık kararı için değil.
+
+### Yutulan `catch {}` gerçekten iki kapıdan yutuyor
+
+Bulgu tek bir yazma yolundan bahsediyor. Kodda **iki** yutma noktası var ve ikisi de aynı sonuca ulaşıyor:
+
+1. **Kayıt yolu:** `setIndexedDbItemSync` → `localStorage.setItem`, `catch { /* ignore */ }`.
+2. **Açılış senkronizasyonu:** `initializeIndexedDbStorage` IDB'deki yetkili kopyayı localStorage'a geri yansıtıyor; buradaki `catch {}` yutuyor.
+
+İkincisi daha sinsi ve raporda hiç yazmıyordu: **kayıt olmadan**, uygulama açılır açılmaz ayna bayat olabiliyor. Ve bu yol `versionCounter` kaydına hiç dokunmadığı için sürüm karşılaştırması onu da yakalayamaz — yalnızca yutulan yazmanın kendisi sinyal veriyor.
+
+Bu iki `catch` artık `// ignore` değil. `indexedDbStorage` yutulan anahtarları bir kümede tutuyor ve **bir sonraki başarılı yazımda temizliyor** (tek bir geçici kota hatasının anahtarı sonsuza kadar işaretlemesin diye).
+
+### Tasarım: geri çağrı değil, sorgu
+
+İlk denemede bir dinleyici kaydettim. İki sorun çıktı ve ikisi de gerçek:
+
+1. **Üç test dosyasını kırdı.** `sqliteOpfsPersistence` bu kaydı **modül yüklenirken** yapıyordu; bu modülü kısmi mock'layan mevcut testler `onLocalMirrorWriteFailure` sağlamadığı için import sırasında patlıyorlardı. 42 test kırıldı. Bu varsayımsal değil, somut bir kırılganlıktı.
+2. **Yanlış varsayım.** Tek slotlu bir dinleyici, ikinci bir kayıt yapan tarafın vault'ın kendi kaydını sessizce ezmesine izin verirdi.
+
+Çözüm: dinleyici tamamen kalktı. `didLocalMirrorWriteFail(key)` diye düz bir sorgu var, **import-time yan etkisi yok** — mock'lamak önceden olduğu kadar kolay.
+
+### En önemli düzeltme: tanısal bir kontrol davranışı değiştiriyordu
+
+Bayatlık kontrolünü ilk yazdığımda `migrateLegacyLocalStorage`'daki mevcut `try { ... } catch {}` **içine** koydum. Bu bir hataydı ve testler onu yakaladı:
+
+- Kontrol, `didLocalMirrorWriteFail` mock'ta olmadığı için **patladı**.
+- Patlama `catch {}` ile **yutuldu**.
+- Fonksiyon aynayı hiç yüklemeye çalışmadı ve legacy anahtarlara düştü — yani **kurtarma yolu sessizce "ilk kurulum" yoluna dönüştü.**
+
+Yani bulguyu kapatmak için yaptığım şey, başka bir bulgu üretmişti: kullanıcının verisiyle ilgili herhangi bir yan yolun, o veriyi yükleme yetisini kısmen bozabileceği bir konum.
+
+İki düzeltme:
+
+1. `try` yalnızca `JSON.parse`'ı kapsıyor; kontrol onun dışında.
+2. Kontrolün kendisi `reportFallbackMirrorRecovery()` içinde kendi `try`'sına sahip.
+
+**Bir uyarının, kullanıcının kasasına ne olacağını değiştirememesi gerekir.** Bu tesadüfen değil, kasıtlı: yeme yolundaki `catch {}` tam da bu bulguyu gizleyen şeydi, ve aynı `catch {}` altına bir şey koymak onu yeniden kullanmak anlamına gelirdi.
+
+### Uyarı ne zaman gösteriliyor — ve neden her seferinde değil
+
+Uyarı **yazma** anında değil, bayat ayna **kurtarma için gerçekten kullanıldığında** çıkıyor. Normal kayıt sırasında her kota tıkanmasında uyarmak kullanıcıyı bu uyarıya duyarsızlaştırırdı; oysa tekrar eden bir alarm, hiç alarm vermemekle aynı şeydir.
+
+Yine `useVaultRollbackAlert` deseninin birebir aynısı: tek seferlik bayrak, `consume*()` ile tüketilir, `UnlockedApp`'de yan yana bağlı, `danger` bildirimi. Metin kullanıcıya ne yapabileceğini de söylüyor ("şimdi tekrar kaydederek aynayı güncel hâle getirin") — aksi hâlde uyarı sadece kaygı.
+
+**12 dil.** `i18n.test.ts` tüm sözlüklerde **anahtar sayısının birebir eşitliğini** zorunlu kılıyor; sadece `en` + `tr` eklemenin yeterli olduğu ilk varsayımım (fallback zinciri var diye) bu test tarafından yanlış bulundu.
+
+### Testler (17 + 3) ve 6 mutasyon
+
+`fallbackMirrorStaleness.test.ts` (14) + `useVaultFallbackMirrorStaleAlert.test.tsx` (3):
+
+| Test | Ne sabitliyor |
+|---|---|
+| `reports a fresh mirror as current` | Temiz durum |
+| `records the mirror version before writing the payload` | Sürüm + yük birlikte |
+| `detects a mirror left behind by a swallowed write` | **Asıl bulgu** |
+| `still detects a stale mirror after a restart` | Bellek sinyali yokken de yakalanıyor |
+| `flags the swallowed write itself when the record could not land` | Kota son bayta kadar tükenmiş |
+| `recovers once a later write succeeds` | Tek geçici hata sonsuza kadar uyarmıyor |
+| `remembers a swallowed mirror write until a later one succeeds` | `indexedDbStorage` kablolaması |
+| `remembers a boot-time IndexedDB sync that could not refresh the mirror` | **İkinci yutma noktası** |
+| `does not treat a swallowed write to a small setup flag as a stale mirror` | Küçük bir bayrak ≠ bayat kasa |
+| `raises the alert when a stale mirror is actually used` | Kullanıcıya duyuruluyor |
+| `says nothing when the mirror used for recovery is current` | Yanlış alarmsız |
+| `never lets the staleness report interfere with recovering the vault` | Yukarıdaki düzeltmenin sabitlenmesi |
+| `ignores an unparseable mirror rather than calling it stale` | Okunamaz ≠ bayat |
+| `does not report a mirror that is ahead of the record as stale` | **Aşırı düzeltme koruması** |
+| `ignores a missing mirror` | Olmayan ayna bayat sayılmıyor |
+| 3 hook testi | Kilitliyken uyarı yok, bir kez, `danger` |
+
+**Altı mutasyon, üçü aşırı düzeltme:**
+
+| # | Mutasyon | Kıran test |
+|---|---|---|
+| M1 | Meta kaydı ayna **sonrasına** | **1 (ve itiraz edilebilir — aşağıya bak)** |
+| M2 | Açılış senkronizasyonunun `catch`'i yeniden sessiz | 2 ✅ |
+| **M3** | **Aşırı düzeltme:** `<` yerine `<=` (eşit sürüm de bayat sayılsın) | 3 ✅ |
+| **M4** | **Aşırı düzeltme:** küçük bir bayrağın yutulan yazımı da bayat kasa saysın | 2 ✅ |
+| **M5** | **Aşırı düzeltme:** bayrağı hiç tüketme, uyarı sonsuza dek tekrarlansın | 1 ✅ |
+| M6 | Kontrolü yutan `try`ye geri koy | 6 ✅ (yan yol testleri) |
+
+**M1 hakkında dürüst olmak gerek:** meta kaydını ayna yazımının **sonrasına** taşıdım ve sadece bir test kırıldı. Yeni bir test yazıp onu da kırmaya çalıştım — o da geçti. Sonra durup düşündüm: **sıralamanın kota durumu için hiçbir önemi yok.** Meta yazımı başarılı olduğunda uyuşmazlık her iki sırada da yakalanıyor.
+
+Sıralamanın gerçek gerekçesi çok daha dar: süreç iki yazma arasında ölürse meta-önce **fazla** bildirir (kullanıcının kapatabileceği bir uyarı), meta-sonra **eksik** bildirir (sessiz bayatlama — bulgunun kendisi). Bu bir çökme penceresi ve testle provoke edilemez, bu yüzden **kodda gerekçesiyle yazıldı, testle kapsandığını iddia edilmedi.** İlk yazdığım yorum ("sıralama sayesinde kota yutmaları yakalanıyor") yanlıştı; düzelttim ve nedenini teste de yazdım.
+
+Ayrıca M2'yi ilk denediğimde yanlış `catch`'i susturdum ve test kırılmadı — çünkü ikinci yutma noktasının hiç testi yoktu. Bu, "mutasyonu uyguladım" ile "mutasyonu doğru yere uyguladım" arasındaki farkı gösterdi.
+
+---
+
+### Doğrulama
+
+| Kontrol | Sonuç |
+|---|---|
+| `npm run test:unit` | ✅ **2171 / 2171** (2151 → 2171, **+20**) |
+| `npm run typecheck` | ✅ |
+| `npm run lint` | ✅ **0 hata, 23 uyarı** (taban korundu) |
+| `npm run build` | ✅ |
+| `npm run test:fuzz` | ✅ 37 |
+| `cargo test --lib` | ✅ 68 / 68 (değişmedi) |
+| 8 güvenlik kapısı | ✅ hepsi PASS |
+| `i18n` 12 dil anahtar eşitliği | ✅ |
 
 ---
 
@@ -2674,7 +2794,7 @@ Bu hook'ta **hiç `useEffect` yok** (grep: sıfır eşleşme). Hiçbir zamanlay�
 | # | Bulgu | Dosya |
 |---|---|---|
 | O-1 | Eklenti kimlik bilgisi eşleştirmesi **üst alan adında** teklif veriyor — `bank.example.com` kaydı herhangi bir `example.com` alt alanında sunuluyor. Kimlik ifşası veya domain-takeover yolu. (Karşı yön — `example.com` → `login.example.com` — doğru ve güvenli) | `native_messaging.rs:521-530` |
-| O-2 | **Tüm şifreli kasa veritabanı `localStorage`'a yansıtılıyor.** `SETUP_STORAGE_KEYS` `aegis_sqlite_fallback`'i içeriyor, `savedToDesktop` her web derlemesinde `false` → her kayıtta tam vault JSON. `catch {}` kota hatasını yutuyor, "kurtarma aynası" sessizce bayatlaşıyor. Ayrıca kayıt yolunda eşzamanlı çok MB'lık `JSON.stringify` → ana iş parçacığı takılması | `indexedDbStorage.ts:178,218-230`, `sqliteOpfsPersistence.ts:50` |
+| O-2 | ✅ **KAPANDI (bkz. §1.19)** — Tüm şifreli kasa veritabanı `localStorage`'a yansıtılıyordu ve `catch {}` kota hatasını yutuyordu, "kurtarma aynası" sessizce bayatlıyordu. Ayna **silinmedi** (göç yolu ona dayanıyor) ama **bayatlığı ölçülebilir ve görünür** kılındı: küçük bir ayrı anahtara `versionCounter` yazılıyor (rapor önerisinden sapma — tarih yerine sürüm, saat kaymasına bağlı değil), yutulan yazmalar kaydediliyor ve **iki** kapıdan da bildiriliyor (raporda yazılmayan ikincisi: açılışta IDB → localStorage senkronizasyonu, kayıt olmadan bayatlatıyor). Bayat ayna kurtarma için kullanıldığında `danger` bildirimi çıkıyor (12 dil). 17+3 test, 6 mutasyon — üçü aşırı düzeltme. | `indexedDbStorage.ts`, `sqliteOpfsPersistence.ts`, `sqliteOpfsMigration.ts` |
 | O-3 | Legacy base64 ana şifre `localStorage`'da **süresiz kalabiliyor.** Temizleme üç koşulun **hepsine** bağlı (`isSetup && legacyPass && legacyItemsStr`); tarayıcı `aegis_vault_items`'ı evict edip küçük `aegis_master_password` anahtarını bırakırsa, `else` de temizlemeyi reddeder | `sqliteOpfsMigration.ts:58-62,143` |
 | O-4 | **Passkey assertion'ları hiç doğrulanmıyor.** `crypto.subtle.verify()`, `rpIdHash` karşılaştırması, `clientData.type` kontrolü, sayaç zorlaması — hiçbiri depoda yok. `useSettingsPasskey.ts:92-108` assertion'ı yok sayıp `passkey.authenticate.success` gösteriyor. `userVerification` varsayılanı `'preferred'`. Depolanan `publicKey` alanı hiçbir işe yaramıyor | `passkey.ts:422-500` |
 | O-5 | Kasa güvenlik denetimi zxcvbn yerine **elle yazılmış sezgisel** kullanıyor. `password123!` → 70 puan → "zayıf değil"; zxcvbn → 0. `qwertyuiop12` → 70. Aynı şifre öğe detayında **ZAYIF**, denetimde **güvenli** görünüyor. Güvenlik panosu sistematik olarak **fazla** raporluyor — bir denetim bypass'ı | `security.ts:86-124, 288-297` |
@@ -2884,7 +3004,7 @@ Bu hook'ta **hiç `useEffect` yok** (grep: sıfır eşleşme). Hiçbir zamanlay�
 | 42 | ✅ **KAPANDI (bkz. §1.12, §1.13, §1.14)** — Rust: KDF maliyet parametrelerine üst sınır (Y-16). Yerel IPC'nin yetki gerektiren komutlarına fail-closed oturum kapısı (#42). `open_import_file` artık hem `stat` hem akış düzeyinde sınırlı. 24 Rust testi, 4 mutasyonla doğrulandı. |
 | 43 | ✅ **KAPANDI (bkz. §1.17)** — `revoke` artık diğer canlı oturumları da sonlandırıyor: paylaşılan `RevokeGeneration` sayacı eklendi, kontrol mesaj döngüsü değil **tek geçiş noktası olan `read_authenticated_frame`** içine kondu (döngüdeki tek satır test edilemiyordu, silinseydi sessizce geri geliyordu). Kontrol okumadan **sonra** konumlandı; başta da olması isteniyordu, ama o zaman **blokeli okuma sırasında gerçekleşen iptal** test edilemiyordu, bu yüzden gereksiz olan baş kontrolü kaldırıldı — daha az kod, daha çok kanıt. Jenerasyon artışı `rotate_pairing_token_now`'un içinde, çünkü token'ı **iki** yol döndürüyordu (`revoke` eylemi ve `rotate_pairing_token` komutu) ve raporda yazılmayan ikinci kapı buydu. 11 test, **9 mutasyon** — üçü aşırı düzeltme (her oturumu iptal et, sayacı sıfırla, önce yaz sonra kes), üçü de yakalandı. |
 | 44 | ✅ **KAPANDI (bkz. §1.18)** — `index.html` artık bütünlük manifestinde ve `verifyRuntimeAssetIntegrity` manifesttekileri de dâhil **her** referansı reddediyor (Y-20). Dışlamanın "Tauri CSP'yi çalışma zamanında enjekte ediyor" gerekçesi **ölçülerek çürütüldü**: `tauri.conf.json`'un CSP'si ile `dist/index.html`'in CSP `<meta>` etiketi farklı stringler ve `<meta>` kaynak şablonuyla bayt bayt aynı. Karşı kontrol canlı `document`'i değil **doğrulanmış baytları** çözüyor, çünkü `outerHTML` yeniden serileştirme ve asla orijinal hash'i vermez. 10 test, 6 mutasyon — üçü aşırı düzeltme (her referansı reddet, `../`'yi çözümle, `.map`'leri de dahil et), üçü de yakalandı. |
-| 45 | ⚠️ **KISMEN KAPANDI (bkz. §1.16)** — O-3 kapandı: öksüz kalan base64 legacy ana şifre (öğe blob'u silinmiş, depo boş) artık koşullardan bağımsız temizleniyor, **ve ayna yolundaki ikinci kapı** da kapatıldı; 3 test, 3 mutasyon. **Kalan (O-2):** `localStorage` aynası kaldırılmadı — göç yolu ona dayanıyor, asıl bulgu "düz metin sızıntısı" değil **sessiz bayatlama**. Önerilen sonraki adım: silmek yerine aynanın yaşını tutup bayatlığını görünür kılmak. |
+| 45 | ✅ **KAPANDI (bkz. §1.16 ve §1.19)** — O-3 kapandı: öksüz kalan base64 legacy ana şifre koşullardan bağımsız temizleniyor, ayna yolundaki ikinci kapı da kapatıldı (3 test, 3 mutasyon). **O-2 de kapandı (bkz. §1.19):** ayna silinmedi — göç yolu ona dayanıyor — ama **bayatlığı ölçülebilir ve görünür** kılındı. Yazma tarihi yerine `versionCounter` (rapor önerisinden sapma, gerekçesi kodda). Yutulan `catch {}` **iki** kapıdan yutuyor; raporda yazılmayan ikincisi açılış senkronizasyonu. Sürüm kaydı + yutulan yazma sinyali, `danger` bildirimi (12 dil). 20 test, 6 mutasyon — üçü aşırı düzeltme. |
 | 46 | ✅ **KAPANDI (bkz. §1.7 ve §1.14)** — koşullu yazma (`If-Match`/ETag, 412/409 → `sync.remoteModified`) ve "uzak durum bilinmiyorken üzerine yazma" yasağı (Y-11, 17 test); meta veri şema doğrulaması + motor seviyesinde ikinci savunma (O-21, 20 test); indirme boyut tavanı (O-20, `Content-Length` + akış sınırı); `dispose()` referans sayımı ile hava boşluğu izin listesi sızıntısı (O-21, 16 test). |
 | 47 | ✅ **KAPANDI (bkz. §1.16)** — Anlık görüntü geri yükleme artık **atomik** (tek `replaceAllVaultItemsWithKey`, tek kalıcılık yazımı, rollback var) ve bayt + öğe sayısı bütçeleri uygulanıyor. Anlık görüntü geri yükleme işlemini atomik yapın; boyut bütçesi + sağlama doğrulaması; `pruneSnapshotsRetention(settings.maxSnapshots)`; yanlış olay kodunu düzeltin. **Kilit ekranından tek tıkla yeniden kurulum ✅ KAPANDI** (bkz. §1.5); geri yükleme işleminin kendisi hâlâ atomik değil → O-16/O-17. || 48 | ? **KAPANDI** (bkz. §1.6) — WebAuthn assertion imzası artık saklanan public key ile doğrulanıyor: challenge, origin, crossOrigin, rpIdHash, UP bayrağı, userHandle ve `signCount` klon sinyali dahil 9 kontrol. `signCount` artık yerel `+1` değil, doğrulanmış sayaç. |
 | 49 | CodeQL'e `rust` ve `java` ekleyin; Gradle `distributionSha256Sum` + `verification-metadata.xml` + dependabot `gradle` ekleyin. |
@@ -3015,5 +3135,21 @@ Bulgu iki yarımdan oluşuyordu ve ilkini yapmak ikincisini açık bırakırdı:
 Bu turda da bir refleksi durdum: yeni kontrol `DOMParser` istediği için test dosyasını bölmek istedim. Bu refleksi sorguladım, çünkü **güvenlik açısından ters yönde** bir bölme olurdu — yeni kontrolün uçtan uca testi, kontrolün çalıştığı ortamdan ayrılırdı. Önce ölçtüm: jsdom hem `DOMParser` hem çalışan `crypto.subtle` sağlıyor. Bölme gereksizdi.
 
 Altı mutasyonun üçü aşırı düzeltmeydi. En öğretici olanı, "her referansı reddet" yazımının meşru yapıyı bozduğunu ve **bunu meşru yapıyı reddeden bir regresyon testiyle** yakaladığım: `blob:` ve `data:` referansları paketlenmiş dosya değil, uygulamanın kendi ürettiği şeyler. Diğer aşırı düzeltme, `../`'yi aramadan önce çözümlemekti — bu, dist'ten kaçan bir referansı listede bulunabilecek bir şeye dönüştürerek **sessiz** bir açık kapı açardı; bir regresyon gibi görünmez, o yüzden sessizliği tehlikeli kılıyordu.
+
+---
+
+**Kurtarma aynasının bayatlaması artık sessiz değil (O-2 — bkz. §1.19).** Ayna silinmedi; üç kod yolu ondan okuduğu için silmek göçü taşınamaz hâle getirirdi. Asıl bulgu zaten "düz metin sızıntısı" değil **sessiz bayatlama** idi: `catch {}` kota hatasını yutup "kurtarma aynası" eskiyiveriyordu.
+
+Raporda tek bir yutma noktası yazıyordu; kodda **iki** tanesi vardı. İkincisi — açılışta IndexedDB'den localStorage'a yapılan senkronizasyon — daha sinsi, çünkü **kayıt olmadan** bayatlatıyor ve sürüm karşılaştırması onu yakalayamıyor (bu yol sürüm kaydına hiç dokunmuyor). Bu, "raporda yazılanı uygula" refleksinin ne kadar yetersiz kalabileceğinin bir örneği.
+
+Raporun kendi önerisinden sapladım: **yazma tarihi** yerine **`versionCounter`** kullandım. Tarih bir saat karşılaştırmasıdır — kayma yanlış sonuç verir, aynı milisaniyeye düşen iki yazma sessizce eşit sayılır. `versionCounter` zaten monoton artıyor ve Y-5 onu güvenilir kabul ediyor; soruyu doğrudan yanıtlıyor.
+
+Bu turda en değerli bulgu, düzeltmenin kendisiyle ilgiliydi. Bayatlık kontrolünü `migrateLegacyLocalStorage`'daki mevcut `try { … } catch {}` **içine** koydum; testler 42 kırıldı ve nedeni utandırıcıydı: kontrol patlıyordu, `catch {}` onu yutuyordu ve fonksiyon aynayı hiç yüklemeye çalışmadan legacy anahtarlara düşüyordu — yani **kurtarma yolu sessizce "ilk kurulum" yoluna dönüşüyordu.** Bulguyu kapatmak için yazdığım şey, başka bir bulguydu. Düzeltme: `try` yalnızca `JSON.parse`'ı kapsıyor, kontrolün kendi `try`'si var. **Bir uyarının kullanıcının kasasına ne olacağını değiştirememesi gerekir** — ki bu tesadüfen değil, tam da bu bulguyu gizleyen şeyin aynısıydı.
+
+Ayrıca tasarımda geriye doğru iki adım attım. Önce bir geri çağrı kaydettim; bu, modül yüklenirken çağrıldığı için bu modülü kısmi mock'layan **üç test dosyasını** kırdı ve 42 test düştü. Sorgu tabanlı bir API'ye (`didLocalMirrorWriteFail`) çevirdim — import-time yan etkisi yok, mock'lamak önceden olduğu kadar kolay.
+
+M1 mutasyonu da tam yakalanmadı ve bunu olduğu gibi bırakmak istemedim: meta kaydının ayna yazımından **sonra** taşınması hâlinde testler geçiyor. Durup düşününce sıranın kota durumu için **hiçbir** önemi olmadığını gördüm — meta yazımı başarılıysa uyuşmazlık her iki sırada da yakalanıyor. Gerçek gerekçe çok daha dar: süreç iki yazma arasında ölürse meta-önce fazla, meta-sonra eksik bildirir. Bu bir çökme penceresi, testle provoke edilemez; bu yüzden gerekçeyi kodda yazdım ve testle kapsandığını **iddia etmedim** — ilk yazdığım yorum ("sıralama sayesinde kota yutmaları yakalanıyor") yanlıştı.
+
+M2'yi ilk denediğimde de yanlış `catch`'i susturdum ve test kırılmadı: ikinci yutma noktasının hiç testi yoktu. "Mutasyonu uyguladım" ile "mutasyonu doğru yere uyguladım" arasındaki farkı bu turda iki kez öğrendim.
 
 

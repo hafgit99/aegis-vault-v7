@@ -299,6 +299,8 @@
   'settings.title': 'Tresoreinstellungen',
   'vault.rollback.title': 'Tresor-Integritätswarnung',
   'vault.rollback.desc': 'Ein Tresor-Datenbank-Rollback wurde erkannt — ein älterer Snapshot könnte neuere Daten ersetzt haben. Ihre Einträge bleiben verschlüsselt und geschützt; falls Sie diese Wiederherstellung nicht selbst vorgenommen haben, prüfen Sie den Inhalt auf unbefugte Änderungen.',
+    'vault.mirrorStale.title': 'Wiederherstellungsspiegel ist veraltet',
+    'vault.mirrorStale.desc': 'Der lokale Wiederherstellungsspiegel konnte nach Ihrer letzten Speicherung nicht aktualisiert werden und ist daher älter als Ihr Tresor. Er wurde zur Wiederherstellung Ihrer Daten verwendet, das bedeutet, seit diesem Zeitpunkt vorgenommene Änderungen fehlen möglicherweise. Ihr Tresor ist nicht beschädigt; speichern Sie erneut, um den Spiegel aktuell zu machen.',
     'vault.writeConflict.title': 'Tresor in einem anderen Tab aktualisiert',
     'vault.writeConflict.desc': 'Dieser Tab war veraltet, daher wurde Ihre Änderung NICHT gespeichert und der neuere Tresor beibehalten. Laden Sie neu, um den aktuellen Stand zu übernehmen, und wenden Sie Ihre Änderung dann erneut an.',
     'vault.writeConflict.banner': 'Dieser Tab zeigt einen veralteten Tresor. Änderungen werden erst nach dem Neuladen gespeichert.',

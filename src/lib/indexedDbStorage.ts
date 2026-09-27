@@ -9,6 +9,41 @@ const DB_VERSION = 1;
 
 const inMemoryCache: Record<string, string | null> = {};
 
+/**
+ * O-2: keys whose localStorage mirror write was swallowed, most recent first.
+ *
+ * Every localStorage write in this module is wrapped in `catch {}`, because a
+ * full quota or a locked-down storage policy must not break IndexedDB, which is
+ * the real store. That is the right behaviour and it hid the finding: the vault
+ * mirror (`aegis_sqlite_fallback`) is megabytes, it is the one value here large
+ * enough to hit the quota, and when its write failed the mirror silently fell
+ * behind the authoritative copy. A "recovery mirror" that is quietly out of date
+ * is worse than no mirror, because it is offered to the user as a backup.
+ *
+ * A query rather than a callback or a listener, and both alternatives were worse:
+ * a listener has to be registered, and registering one at module scope runs into
+ * every test that partially mocks this module (a real hazard here, not a
+ * hypothetical -- it broke three suites). A plain query has no import-time side
+ * effect, so mocking stays trivial.
+ *
+ * Cleared on the next successful write of the same key, so one transient quota
+ * error does not mark a key forever.
+ */
+const failedLocalMirrorWrites = new Set<string>();
+
+/** True when the most recent localStorage mirror write of `key` was swallowed. */
+export function didLocalMirrorWriteFail(key: string): boolean {
+  return failedLocalMirrorWrites.has(key);
+}
+
+function reportLocalMirrorWriteFailure(key: string, _error: unknown): void {
+  failedLocalMirrorWrites.add(key);
+}
+
+function reportLocalMirrorWriteSuccess(key: string): void {
+  failedLocalMirrorWrites.delete(key);
+}
+
 function initSetupDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     if (typeof indexedDB === 'undefined') {
@@ -178,8 +213,11 @@ export async function initializeIndexedDbStorage(): Promise<void> {
       if (typeof localStorage !== 'undefined') {
         try {
           localStorage.setItem(key, dbVal);
-        } catch {
-          // ignore quota or security errors
+          reportLocalMirrorWriteSuccess(key);
+        } catch (error) {
+          // O-2: was `catch {}`. Keeping IndexedDB authoritative is right, but
+          // the localStorage copy is now behind and nothing said so.
+          reportLocalMirrorWriteFailure(key, error);
         }
       }
     } else {
@@ -220,8 +258,11 @@ export function setIndexedDbItemSync(key: string, value: string): void {
   if (typeof localStorage !== 'undefined') {
     try {
       localStorage.setItem(key, value);
-    } catch {
-      // ignore
+      reportLocalMirrorWriteSuccess(key);
+    } catch (error) {
+      // O-2: was `catch {}`, with only a bare `// ignore`. See the note on
+      // `failedLocalMirrorWrites`.
+      reportLocalMirrorWriteFailure(key, error);
     }
   }
   setIndexedDbItem(key, value).catch((err) => {

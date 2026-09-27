@@ -299,6 +299,8 @@
   'settings.title': 'Configuración de la bóveda',
   'vault.rollback.title': 'Advertencia de integridad del vault',
   'vault.rollback.desc': 'Se detectó una reversión (rollback) de la base de datos del vault: una copia anterior podría haber reemplazado datos más recientes. Sus entradas siguen cifradas y protegidas; si usted no realizó esta restauración, revise si hay cambios no autorizados antes de confiar en el contenido.',
+    'vault.mirrorStale.title': 'El espejo de recuperación está desactualizado',
+    'vault.mirrorStale.desc': 'El espejo local de recuperación no pudo actualizarse tras su último guardado, por lo que es más antiguo que su bóveda. Se utilizó para recuperar sus datos, lo que significa que podrían faltar los cambios realizados desde ese momento. Su bóveda no está dañada; guarde de nuevo para actualizar el espejo.',
     'vault.writeConflict.title': 'Bóveda actualizada en otra pestaña',
     'vault.writeConflict.desc': 'Esta pestaña estaba desactualizada, por lo que tu cambio NO se guardó y se conservó la bóveda más reciente. Recarga para obtener las entradas más actualizadas y vuelve a aplicar el cambio.',
     'vault.writeConflict.banner': 'Esta pestaña muestra una bóveda desactualizada. Los cambios no se guardarán hasta que recargues.',
