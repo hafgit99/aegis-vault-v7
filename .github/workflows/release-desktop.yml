@@ -54,6 +54,15 @@ jobs:
       windows: ${{ steps.select.outputs.windows }}
       selection: ${{ steps.select.outputs.selection }}
     steps:
+      # Without this the job runs `node scripts/...` in an empty workspace and
+      # dies with MODULE_NOT_FOUND. `publish` reads only this job's *outputs*, not
+      # its result, so the failure did not stop a release -- it silently
+      # deselected macOS and Windows instead, which looked like a platform
+      # choice. A gate that cannot fail is not a gate; this step is the whole
+      # point of the job.
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (SHA-pinned)
+
       - name: Select platforms
         id: select
         env:
@@ -599,6 +608,7 @@ jobs:
     # was selected must have actually succeeded.
     if: >-
       always() && !cancelled() &&
+      needs.plan.result == 'success' &&
       needs.build-linux.result == 'success' &&
       needs.build-android.result == 'success' &&
       needs.build-extensions.result == 'success' &&
@@ -657,6 +667,7 @@ jobs:
     # the whole mechanism, and it is decided here rather than by accident.
     if: >-
       always() && !cancelled() &&
+      needs.plan.result == 'success' &&
       needs.generate-sbom.result == 'success' &&
       needs.build-linux.result == 'success' &&
       needs.build-android.result == 'success' &&

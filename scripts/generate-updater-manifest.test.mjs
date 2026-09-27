@@ -6,15 +6,32 @@
  * the module would run the generator as a side effect, and stubbing
  * `process.exit` would be testing the stub.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(here, '..');
-const releaseLocal = path.join(rootDir, 'release-local');
+
+// A scratch staging directory, NOT the repository's own `release-local/`.
+//
+// Two reasons, both learned the hard way:
+//
+//  1. Correctness. `release-local/` is where the release pipeline stages the
+//     artifacts it has just collected, and `desktop:release:gate` runs the unit
+//     suite after collecting them. Pointed at the real directory, the "fails when
+//     no signed artifact was collected" case found the release's own .sig files,
+//     the generator exited 0, and the test failed — on the runner, in the release
+//     gate, while passing everywhere else because a bare `npm run test:unit`
+//     starts from a tree with no `release-local/` at all.
+//  2. The blast radius. The old `afterEach` did `rm -rf` on the real
+//     `release-local/`, so running the suite mid-release deleted the artifacts the
+//     very next workflow step uploads. A test must not be able to do that.
+const stagingRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aegis-updater-manifest-'));
+const releaseLocal = path.join(stagingRoot, 'release-local');
 const updaterDir = path.join(releaseLocal, 'updater');
 
 // The exact marker the generator requires to accept a signature file. This is
@@ -31,6 +48,8 @@ function run() {
       cwd: rootDir,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
+      // The generator's staging directory, pointed at this test's scratch dir.
+      env: { ...process.env, RELEASE_LOCAL_DIR: releaseLocal },
     });
     return { code: 0, stdout, stderr: '' };
   } catch (error) {
@@ -43,7 +62,12 @@ function run() {
 }
 
 afterEach(() => {
+  // Only ever the scratch directory. Never the repository's `release-local/`.
   fs.rmSync(releaseLocal, { recursive: true, force: true });
+});
+
+afterAll(() => {
+  fs.rmSync(stagingRoot, { recursive: true, force: true });
 });
 
 describe('updater manifest generation', () => {

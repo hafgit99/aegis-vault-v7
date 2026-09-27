@@ -12,7 +12,19 @@ const path = require('path');
 
 const rootDir = path.resolve(__dirname, '..');
 const packageJson = require(path.join(rootDir, 'package.json'));
-const releaseLocalDir = path.join(rootDir, 'release-local');
+// Overridable so the tests can point the generator at a scratch directory.
+//
+// This is not a convenience. The generator's staging directory is `release-local/`,
+// which is also where the release pipeline puts the artifacts it has just
+// collected — and `desktop:release:gate` runs the unit suite *after* collecting
+// them, on the way to uploading them. A test that wrote to the real
+// `release-local/` was therefore reading whatever the release had staged (its
+// "no signed artifact" case found real .sig files and exited 0 instead of
+// failing), and its `afterEach` deleted the collected artifacts out from under
+// the upload step.
+const releaseLocalDir = process.env.RELEASE_LOCAL_DIR
+  ? path.resolve(process.env.RELEASE_LOCAL_DIR)
+  : path.join(rootDir, 'release-local');
 const updaterOutputDir = path.join(releaseLocalDir, 'updater');
 
 const version = packageJson.version; // full numeric version, e.g. 7.0.5.0 (tag + artifact names)
