@@ -161,6 +161,50 @@ function stripKotlinComments(source) {
 }
 
 /**
+ * Strips YAML comments from a workflow file, whole-line and trailing alike, so
+ * the CI checks below match executable configuration only.
+ *
+ * A gate that greps raw text punishes the person who writes down what went
+ * wrong, which is the opposite of what a gate is for — the K-1 lint step carries
+ * a long comment explaining the two bugs that made it unrunnable, and the first
+ * version of this gate tripped over the words in that comment. But stripping
+ * only whole-line comments leaves the same trap one character to the right: a
+ * trailing `# ...` on a command line. So both forms are removed here.
+ *
+ * Quote-aware: a `#` inside a shell or YAML string is content, not a comment,
+ * and `echo "a # b"` must survive intact.
+ */
+function stripYamlComments(source) {
+  return source
+    .split('\n')
+    .map((line) => {
+      let quote = null;
+      for (let i = 0; i < line.length; i += 1) {
+        const char = line[i];
+        if (quote) {
+          if (char === '\\') {
+            i += 1;
+          } else if (char === quote) {
+            quote = null;
+          }
+          continue;
+        }
+        if (char === '"' || char === "'") {
+          quote = char;
+          continue;
+        }
+        // A `#` only opens a comment at the start of the line or after
+        // whitespace, and never mid-token (so `sha256#1` survives).
+        if (char === '#' && (i === 0 || /\s/.test(line[i - 1]))) {
+          return line.slice(0, i);
+        }
+      }
+      return line;
+    })
+    .join('\n');
+}
+
+/**
  * Extracts a single `<tagName ...>...</tagName>` element whose `android:name`
  * matches `nameAttrValue`.
  *
@@ -586,30 +630,55 @@ function checkLintIsWired() {
   // was never the script, it was the *CI job* invoking it on Linux.
 
   const ciRaw = fs.readFileSync(path.join(rootDir, '.github', 'workflows', 'ci.yml'), 'utf8');
-  // Comments are stripped before matching. A gate that greps raw text punishes
-  // the person who writes down what went wrong, which is the opposite of what a
-  // gate is for.
-  const ci = ciRaw
-    .split('\n')
-    .filter((line) => !/^\s*#/.test(line))
-    .join('\n');
+  const ci = stripYamlComments(ciRaw);
 
   // Presence was the old test, and it is why this gate was green for a broken
-  // step. Assert the things that would actually have caught it: the linter is
-  // invoked with a wrapper that works on Linux, and the SDK is resolvable.
-  const invokesLinter = /android:lint/.test(ci) || /gradlew[^\n]*lintArmDebug/.test(ci);
-  if (!invokesLinter) {
-    fail('ci.yml: Android lint must run in CI, otherwise these errors return unseen');
+  // step. Assert the things that would actually have caught it.
+
+  // 1. The linter must be invoked through the POSIX wrapper. Note what is NOT
+  //    accepted here any more: `android:lint`. Accepting it kept a revert path
+  //    open, because `android:lint` calls `gradlew.bat` on the *other* machine —
+  //    so a step rewritten as `run: npm run android:lint` satisfied the
+  //    invocation check while the `gradlew.bat` check below never saw the
+  //    wrapper, and the exact broken step came back green.
+  if (!/\.\/gradlew[^\n]*\b(lint|lintVital)\w*/.test(ci)) {
+    fail(
+      'ci.yml: Android lint must run in CI through the POSIX wrapper (./gradlew :app:lintArmDebug or similar), otherwise these errors return unseen. Do not call `npm run android:lint` here: that script uses the Windows gradlew.bat wrapper and cannot run on a Linux runner',
+    );
   }
 
   if (/gradlew\.bat/.test(ci)) {
     fail('ci.yml: the Android lint step must not use gradlew.bat on a Linux runner');
   }
 
-  if (!/local\.properties|sdk\.dir/.test(ci)) {
+  // 2. The SDK must be resolvable, by any mechanism Gradle honours:
+  //    `local.properties` (gitignored, so it has to be written in the workflow),
+  //    `sdk.dir` inside it, or an exported ANDROID_HOME / ANDROID_SDK_ROOT.
+  if (!/local\.properties|sdk\.dir|ANDROID_HOME|ANDROID_SDK_ROOT/.test(ci)) {
     fail(
-      'ci.yml: the Android lint step needs a resolvable SDK — write src-tauri/gen/android/local.properties or set sdk.dir. That file is gitignored, so without this Gradle cannot find the SDK and the step fails before linting anything',
+      'ci.yml: the Android lint step needs a resolvable SDK — write src-tauri/gen/android/local.properties, set sdk.dir in it, or export ANDROID_HOME. That file is gitignored, so without this Gradle cannot find the SDK and the step fails before linting anything',
     );
+  }
+
+  // 3. The Tauri-generated Gradle glue must exist before Gradle is invoked.
+  //    `settings.gradle` does `apply from: 'tauri.settings.gradle'` and
+  //    `app/build.gradle.kts` applies `tauri.build.gradle.kts`. Both are
+  //    gitignored (they hold absolute cargo-registry paths, which is why they
+  //    must not be committed) and neither is tracked, so on a clean checkout
+  //    Gradle fails at configuration time with "Could not read script" —
+  //    before a single file is linted. The release workflow never hit this
+  //    because `tauri android build` generates the glue itself; a bare
+  //    `./gradlew` invocation does not.
+  if (!/android:init|tauri\.settings\.gradle/.test(ci)) {
+    fail(
+      'ci.yml: the Android lint step must generate the Tauri Gradle glue first (`npm run android:init`). settings.gradle applies the gitignored tauri.settings.gradle and app/build.gradle.kts applies tauri.build.gradle.kts; on a clean checkout neither exists and Gradle aborts during configuration',
+    );
+  }
+
+  // 4. AGP 8.x requires JDK 17. Without it the lint step fails in a way that
+  //    reads like a lint finding rather than a toolchain problem.
+  if (!/java-version:\s*['"]?1[79]['"]?/.test(ci)) {
+    fail('ci.yml: the Android lint step needs a pinned JDK (setup-java, java-version 17 or 19); AGP 8.x does not run on the runner default');
   }
 
   const manifestPath = path.join(

@@ -2380,6 +2380,36 @@ Ayrıca kapsamı daralttım: `package.json`'daki `android:lint` scripti `gradlew
 
 İki mutasyon, ikisi de yakalandı: CI adımı `gradlew.bat`'a döndü → 2 ihlal; SDK adımı silindi → 1 ihlal.
 
+#### 1.1 Takip: o düzeltme de çalışmıyordu — üçüncü bir sebep
+
+Yukarıdaki düzeltmeyi kendi commit'inden sonra gözden geçirdim ve **o da temiz checkout'ta kırmızı olacaktı.** İki sebep yazılmış, üçüncüsü hiç yazılmamıştı:
+
+**`tauri.settings.gradle` depoda yok.** `settings.gradle:3` → `apply from: 'tauri.settings.gradle'`, ama o dosya `gen/android/.gitignore:20` ile ignore ediliyor **ve track edilmiyor**. Aynı şekilde `app/build.gradle.kts:123` → `apply(from = "tauri.build.gradle.kts")`, o da `app/.gitignore:4` ile ignore ediliyor.
+
+Bu bilerek yapılmış ve doğru: her ikisi de mutlak cargo-registry yolları içeriyor (`tauri.settings.gradle:3` → `C:\Users\hrn21\.cargo\registry\...`), yani commit edilemez — hem kullanıcı adını sızdırır hem de başka makinede çalışmaz (rapor §6'da zaten yazılı). Ama bedeli şu: **temiz checkout'ta Gradle konfigürasyon aşamasında "Could not read script" ile patlar**, `:app:lintArmDebug`'a hiç ulaşamaz. `gradlew`'un LF olması ve `sdk.dir` yazılması doğruydu; ikisi de bu duvarın önünde çalışıyor.
+
+Release işi bunu hiç yaşamıyor, çünkü `npx tauri android build` yoluna giderken glue'u kendisi üretiyor. **Çıplak `./gradlew` çağrısı üretmiyor.**
+
+`npm run android:init` eklemek doğru çözüm — ama "güvenli mi?" diye ölçtüm, çünkü tarafımda değerlendirilecek bir risk vardı: `tauri android init` dokuz özelleştirilmiş Kotlin dosyasını ve imzalama yapılandırmasını ezip ezebilirdi. Çalıştırdım, `git status` kontrol ettim: **`src-tauri/gen/android` altında track edilmiş hiçbir dosyaya dokunmuyor**, sadece gitignored glue'u (üç dosya, bayt bayt aynı) ve `src-tauri/Cargo.toml`'u LF satır sonuyla yeniden yazıyor. Yani hem güvenli hem de tek doğru kaynak: glue'u kimin ürettiği değil, CLI'nin kendisi.
+
+**Kapı da eksik kalmıştı.** `checkLintIsWired()` üç koşulu da "CI'da `android:lint` geçiyor" idi. Yani `run: npm run android:lint`'e geri dönüşü — asıl bozuk adım — geçerli sayıyordu, çünkü o script `gradlew.bat` çağırıyor *başka bir makinede*, yani `gradlew.bat` kontrolü o metni hiç görmüyordu. **Bir önceki düzeltmenin tam olarak geri alınması yeşildi.** Artık CI'ın POSIX wrapper çağırması zorunlu, `android:lint` CI'da yasak.
+
+Ayrıca yorum temizleme yalnızca tam satır yorumlarını atıyordu; satır sonundaki `# gradlew.bat` yine kapıyı kırıyordu. Artık tırnak farkındalıklı, satır içi yorumları da temizliyor (`echo "a # b"` bozulmaz).
+
+**Üçüncü düzeltme: lint `security` işinde değil, kendi işinde.** O iş `npm ci` + 8 güvenlik kapısı + tip kontrolü çalıştırıyor, `timeout-minutes: 20`. Üstüne soğuk bir Gradle dağıtımı + AGP + `cargo fetch` eklendiğinde ilk çalıştırmada job timeout'a takılır ve **sadece lint değil, job'daki diğer bloklayıcı güvenlik adımları da düşer.** `android-lint` adlı ayrı bir işe taşındı (45 dk, kendi timeout'u). `security` 20 dakikada kaldı — artık Gradle indirmiyor.
+
+`cargo fetch --locked` de isteğe bağlı değil: init'in ürettiği glue `$CARGO_HOME/registry/src/*/tauri-*/mobile/android`'a işaret ettiği için, taze runner'da registry boşken init çalışmaz.
+
+**Yerelde lint'in gerçekten çalıştığını doğruladım** (soğuk cache ile 5–15 dk, sıcak cache ile 3 sn): `BUILD SUCCESSFUL`, 0 hata. Log `rustBuild*`/NDK task'larının **hiç** çalışmadığını gösteriyor — yani lint için NDK ve Rust Android target'ları gerekmiyor, sadece registry'nin dolu olması yeterli. `:app:lintArmDebug` görevi gerçek (RustPlugin `abi` flavor ekseni yaratıyor: `universal`, `arm64`, `arm`, `x86`, `x86_64`).
+
+#### 1.2 `clear_session`: yorum gerçeği ters söylüyordu
+
+Bir önceki düzeltmede `clear_session`'a `#[cfg(test)]` koyup üstüne "hiçbir production komutu çağırmıyor, renderer'ın kilitleme komutu bunu çağırmalı" notu düşmüştüm. **Üç ikisinden de doğru değildi:** `close_rust_session` (`credential_handler.rs:431`), `open_rust_session` (`:287`) ve `setup_rust_session` (`:338`) production'da `state.clear()` çağırıyor. Test-only sarmalayıcının kullanılmaması bir eksiklik değil; yorumu okuyan biri kasanın kilitlenmediğini sanardı.
+
+Sarmalayıcıyı sildim, testi production yoluna (`state.clear()`) bağladım. Test artık sarmalayıcının çalıştığını değil, **kilitlemenin kapıyı gerçekten kapattığını** kanıtlıyor — ki zaten `#42`nin tek amacı o.
+
+`set_active_credential_for_session` / `set_active_vault_key_for_session` kaldı: onların `#[cfg(test)]` notu doğru (`open_rust_session` alanı inline atıyor, gerçekten production çağıran yok).
+
 ---
 
 ### Doğrulama
@@ -2394,6 +2424,19 @@ Ayrıca kapsamı daralttım: `package.json`'daki `android:lint` scripti `gradlew
 | `npm run build` / `test:fuzz` | ✅ / 37 |
 | 8 güvenlik kapısı | ✅ hepsi PASS |
 | `ci.yml` YAML | ✅ geçerli |
+| `./gradlew :app:lintArmDebug` (lokal) | ✅ `BUILD SUCCESSFUL`, 0 hata |
+| `npm run android:init` → `git status` | ✅ track edilmiş Android dosyasına dokunmuyor |
+
+**1.1 takibinin doğrulaması** — 5 mutasyonun 5'i de yakalandı:
+
+| Mutasyon | Sonuç |
+|---|---|
+| `./gradlew` → `npm run android:lint` (önceki düzeltmenin geri alınması) | ✅ 1 ihlal |
+| `./gradlew` → `./gradlew.bat` | ✅ 1 ihlal |
+| `npm run android:init` adımı silindi | ✅ 1 ihlal |
+| `java-version: '17'` → `'11'` | ✅ 1 ihlal |
+| SDK adımı (`local.properties` + `ANDROID_HOME` doğrulaması) silindi | ✅ 1 ihlal |
+| *ters yön*: satır sonu yorumuna `# NOT gradlew.bat` eklendi | ✅ **PASS** (yorum temizlendi) |
 
 ---
 

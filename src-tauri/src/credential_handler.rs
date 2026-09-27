@@ -202,19 +202,6 @@ impl CredentialSession {
         state.active_vault_key = Some(key);
         Ok(())
     }
-
-    /// Revokes the session. After this the gate must refuse again.
-    ///
-    /// `cfg(test)`: see above. Worth flagging for a follow-up -- a renderer
-    /// command that locks the vault ought to call this, and today none does.
-    /// That is a real question about the lock path, not a lint matter, so it is
-    /// recorded rather than "fixed" here.
-    #[cfg(test)]
-    pub fn clear_session(&self) {
-        if let Ok(mut state) = self.state.lock() {
-            state.clear();
-        }
-    }
 }
 
 impl Default for CredentialSession {
@@ -684,7 +671,16 @@ mod tests {
             .expect("credential");
         assert!(session.require_active_session().is_ok());
 
-        session.clear_session();
+        // This is the production revoke path, not a test-only wrapper:
+        // `close_rust_session` takes the same lock and calls `SessionState::clear`
+        // (see the `close_rust_session` command). The wrapper that used to sit
+        // here did nothing the production path does not already do, so testing
+        // it only proved the wrapper worked.
+        session
+            .state
+            .lock()
+            .expect("session lock")
+            .clear();
 
         assert_eq!(
             session
