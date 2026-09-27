@@ -35,6 +35,22 @@ describe('release platform selection', () => {
     expect(result.windows).toBe(false);
   });
 
+  it('accepts "linux" as a token instead of reporting it as a typo', () => {
+    // The assertion that distinguishes the selection from the CLI. The test
+    // above passed while the real workflow failed: `selectReleasePlatforms`
+    // returned the right `selection`, and the *entry point* then exited 1
+    // because `linux` was not in the accepted set. So `RELEASE_DESKTOP_PLATFORMS=linux`
+    // — the one documented way to ship without desktop certificates — was a dead
+    // end that failed the whole release, for as long as it was documented.
+    //
+    // `unknown` is the field the CLI gates on, so assert on that.
+    expect(selectReleasePlatforms('linux').unknown).toEqual([]);
+    expect(selectReleasePlatforms('linux,macos').unknown).toEqual([]);
+    // A typo must still be rejected: over-correcting into "ignore what I don't
+    // recognise" would ship a partial release nobody asked for.
+    expect(selectReleasePlatforms('macos,windwos').unknown).toEqual(['windwos']);
+  });
+
   it('can select a single optional platform', () => {
     expect(selectReleasePlatforms('macos').selection).toBe('linux,macos');
     expect(selectReleasePlatforms('windows').selection).toBe('linux,windows');

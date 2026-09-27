@@ -2483,6 +2483,39 @@ only during `tauri android build`); WryActivity lives in the wry crate, not taur
 
 Bu, kapının üçüncü biçimi. İlk hâli "kablolama"yı doğruluyordu (varlık işlev değil), ikincisi varlığı doğruluyordu (yine varlık), üçüncüsü **yapısal olarak imkânsız olanın varlığını reddediyor.** `scripts/android-gradle-glue.cjs` ve `android:gradle-glue` scripti kaldı — yerelde `./gradlew` çalıştırmak isteyenler için gerekli, ve kapı hâlâ gerçek bir dosyanın varlığını doğruluyor.
 
+#### 1.1.4 Sertifikasız release'in tek yolu, belgelenen yoldu — ve o yol ölü bir çıkmaz sokaktı
+
+Kullanıcı "sertifikasız macOS/Windows release üretmiştim" dedi. Doğruladım: **haklı**, ve v7.0.7.0 koşusunun macOS/Windows işlerinde ne imza adımı ne de `--require-signed` kapısı var (14 adım, hepsi yeşil). Yayınlanan `.sig`/`.pem'ler cosign keyless imzaları — platform kod imzası değil. O kapılar v7.0.7.0'dan sonra eklendi (Y-19). Yani "sertifikasız üret" o zaman mümkündü, bugün değil.
+
+Bu da tek yol değilmiş gibi görünüyordu: `plan` işi, macOS/Windows'u **seçmemize** izin veriyor. Depo değişkeni zaten `linux` yapılmış. Ama iş hâlâ kırılıyordu:
+
+```
+$ REQUESTED_PLATFORMS=linux node scripts/select-release-platforms.cjs
+::error::Unsupported platform(s) in RELEASE_DESKTOP_PLATFORMS: linux
+::error::Supported: macos, windows or "all"          → exit 1
+```
+
+**`RELEASE_DESKTOP_PLATFORMS=linux` reddediliyor.** `SUPPORTED_OPTIONAL = ['macos','windows']` olduğu için `linux` yazım hatası sayılıyor. Boş string "unset" sayılıp "hepsi" demek olduğundan, **macOS'u da Windows'u da seçmeyen hiçbir değer yok** — sertifikasız release bu haliyle imkânsız. Üstelik `release-desktop.yml:39-42` tam tersini söylüyor: *"Setting it to e.g. `linux` is the only way to narrow it."* Yorum, kendi işlediği kodu yanlış tanımlıyordu.
+
+**Bu nasıl kaçtı — asıl ilginç kısım burası.** `select-release-platforms.test.mjs:31` zaten şunu söylüyor:
+
+```js
+it('can narrow to a Linux-only release', () => {
+  expect(selectReleasePlatforms('linux').selection).toBe('linux');
+```
+
+Ve o test **geçiyordu**. Fonksiyon da doğru dönüyor: `selection = 'linux'`. Hata yalnızca **CLI giriş noktasında** — `main()`'in `unknown` denetimi. Yani test yeşil, gerçek davranış kırmızı: iki farklı yerde yaşayan iki farklı kural, ikisi de yeşil. `unknown` alanı ayırt edici olan şey ve **onunla** bir assertion yoktu. Ekledim.
+
+Düzeltme küçük ve fail-closed'u bozmuyor: `RECOGNISED = {macos, windows, linux}` kabul kümesi; varsayılan (unset → hepsi) aynen duruyor, yazım hatası hâlâ `exit 1`.
+
+| Değer | Önce | Sonra |
+|---|---|---|
+| `linux` | ❌ exit 1 | ✅ `linux` |
+| `macos` | ✅ | ✅ `linux,macos` |
+| `windows` | ✅ | ✅ `linux,windows` |
+| `all` / unset | ✅ | ✅ `linux,macos,windows` |
+| `macos,windwos` | ✅ exit 1 | ✅ exit 1 (yazım hatası hâlâ reddedilir) |
+
 #### 1.2 `clear_session`: yorum gerçeği ters söylüyordu
 
 Bir önceki düzeltmede `clear_session`'a `#[cfg(test)]` koyup üstüne "hiçbir production komutu çağırmıyor, renderer'ın kilitleme komutu bunu çağırmalı" notu düşmüştüm. **Üç ikisinden de doğru değildi:** `close_rust_session` (`credential_handler.rs:431`), `open_rust_session` (`:287`) ve `setup_rust_session` (`:338`) production'da `state.clear()` çağırıyor. Test-only sarmalayıcının kullanılmaması bir eksiklik değil; yorumu okuyan biri kasanın kilitlenmediğini sanardı.

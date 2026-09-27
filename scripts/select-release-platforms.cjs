@@ -20,7 +20,10 @@
  *
  * Linux is always included and can never be deselected: it is the one platform
  * whose artifacts need no certificate, and a release with no Linux build is not
- * a release.
+ * a release. Naming it explicitly (`linux`) is how a release says "no desktop
+ * certificates this time" -- and that token has to be *accepted*, not rejected
+ * as a typo, or the only certificate-free route out of the pipeline is a dead
+ * end that fails the whole release. See `RECOGNISED` below.
  *
  * Writes GitHub Actions outputs to stdout as `key=value` lines, and appends to
  * $GITHUB_OUTPUT when that environment variable is set.
@@ -28,6 +31,19 @@
 
 const SUPPORTED_OPTIONAL = ['macos', 'windows'];
 const ALWAYS = 'linux';
+
+/**
+ * Tokens the selector accepts.
+ *
+ * This is deliberately NOT `SUPPORTED_OPTIONAL`. `linux` is a legal request that
+ * simply adds nothing, because Linux is included unconditionally; treating it as
+ * an unknown platform made `RELEASE_DESKTOP_PLATFORMS=linux` exit 1 -- while the
+ * unit test `can narrow to a Linux-only release` happily passed, because
+ * `selectReleasePlatforms` returns the right selection and only the CLI entry
+ * point rejected the token. A test on the selection alone could never have
+ * caught it. The distinguishing assertion is on `unknown`, and there is one now.
+ */
+const RECOGNISED = new Set([...SUPPORTED_OPTIONAL, ALWAYS]);
 
 /**
  * @param {string|undefined|null} requested raw value of vars.RELEASE_DESKTOP_PLATFORMS
@@ -42,7 +58,8 @@ function selectReleasePlatforms(requested) {
   const requestedWasUnset = normalized === '' || normalized === 'all';
   const optional = requestedWasUnset ? SUPPORTED_OPTIONAL : normalized.split(',').filter(Boolean);
 
-  const unknown = optional.filter((name) => !SUPPORTED_OPTIONAL.includes(name));
+  const unknown = optional.filter((name) => !RECOGNISED.has(name));
+
   const macos = optional.includes('macos');
   const windows = optional.includes('windows');
 
@@ -63,7 +80,10 @@ function main() {
     console.error(
       `::error::Unsupported platform(s) in RELEASE_DESKTOP_PLATFORMS: ${unknown.join(', ')}`
     );
-    console.error(`::error::Supported: ${SUPPORTED_OPTIONAL.join(', ')} or "all"`);
+    console.error(
+      `::error::Supported: ${[...SUPPORTED_OPTIONAL, ALWAYS].join(', ')} (comma-separated), or "all". `
+      + `${ALWAYS} is always built; naming it on its own is how a release ships without macOS/Windows certificates.`,
+    );
     process.exit(1);
   }
 
@@ -100,4 +120,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { selectReleasePlatforms, ALWAYS, SUPPORTED_OPTIONAL };
+module.exports = { selectReleasePlatforms, ALWAYS, SUPPORTED_OPTIONAL, RECOGNISED };
