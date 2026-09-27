@@ -1096,7 +1096,10 @@ fn handle_client(
                     // Fail-closed already: the generation was bumped before the write, so the
                     // sessions are gone either way. Log rather than fail the response — the
                     // caller asked to be disconnected and that is still being honoured.
-                    log::warn!("[Aegis IPC] revoke could not persist the new token: {}", error);
+                    log::warn!(
+                        "[Aegis IPC] revoke could not persist the new token: {}",
+                        error
+                    );
                 }
                 serde_json::json!({ "status": "revoked" })
             }
@@ -1874,9 +1877,8 @@ mod tests {
         let stale_key = derive_session_data_key(&retired_token);
         assert!(generation.ensure_not_revoked(admitted).is_ok());
 
-        let new_token =
-            rotate_pairing_token_now(&pairing_token, &generation, Some(path.clone()))
-                .expect("rotation should succeed");
+        let new_token = rotate_pairing_token_now(&pairing_token, &generation, Some(path.clone()))
+            .expect("rotation should succeed");
 
         // The generation moved, so the admitted session is refused ...
         assert!(generation.is_revoked(admitted));
@@ -1925,8 +1927,13 @@ mod tests {
         let generation = RevokeGeneration::default();
 
         let admitted = generation.current();
-        revoke_all_sessions(&pairing_token, &credentials, &generation, Some(path.clone()))
-            .expect("revoke should succeed");
+        revoke_all_sessions(
+            &pairing_token,
+            &credentials,
+            &generation,
+            Some(path.clone()),
+        )
+        .expect("revoke should succeed");
 
         assert!(
             credentials.lock().unwrap().is_none(),
@@ -1953,8 +1960,8 @@ mod tests {
         // A path whose parent is a regular *file* cannot be created, so the
         // write fails. (Pointing at a path inside a directory would not do:
         // `write_pairing_token_file` creates parents, and would succeed.)
-        let not_a_directory = std::env::temp_dir()
-            .join(format!("aegis-revoke-test-file-{}", generate_token()));
+        let not_a_directory =
+            std::env::temp_dir().join(format!("aegis-revoke-test-file-{}", generate_token()));
         fs::write(&not_a_directory, b"not a directory").expect("scratch file");
 
         let result = rotate_pairing_token_now(
@@ -1995,13 +2002,8 @@ mod tests {
         client.write_all(&frame).expect("client writes");
         client.flush().expect("client flushes");
 
-        let plaintext = super::read_authenticated_frame(
-            &mut server,
-            &key,
-            &generation,
-            admitted,
-        )
-        .expect("a live session must be served");
+        let plaintext = super::read_authenticated_frame(&mut server, &key, &generation, admitted)
+            .expect("a live session must be served");
 
         assert_eq!(plaintext, payload);
     }
@@ -2018,8 +2020,8 @@ mod tests {
         let admitted = generation.current();
         generation.revoke();
 
-        let frame = encrypt_message_frame(&key, b"{\"action\":\"get_credentials\"}")
-            .expect("encrypt");
+        let frame =
+            encrypt_message_frame(&key, b"{\"action\":\"get_credentials\"}").expect("encrypt");
         client.write_all(&frame).expect("client writes");
         client.flush().expect("client flushes");
 

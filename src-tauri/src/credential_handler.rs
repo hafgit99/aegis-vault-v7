@@ -676,11 +676,7 @@ mod tests {
         // (see the `close_rust_session` command). The wrapper that used to sit
         // here did nothing the production path does not already do, so testing
         // it only proved the wrapper worked.
-        session
-            .state
-            .lock()
-            .expect("session lock")
-            .clear();
+        session.state.lock().expect("session lock").clear();
 
         assert_eq!(
             session
