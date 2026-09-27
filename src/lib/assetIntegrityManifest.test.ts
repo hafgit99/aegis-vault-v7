@@ -17,7 +17,10 @@ const {
     rootSha256: string;
     assets: Array<{ path: string; sha256: string; size: number }>;
   };
-  generateIntegrityManifest: (dir: string) => { manifest: { rootSha256: string; assets: unknown[] }; manifestPath: string };
+  generateIntegrityManifest: (dir: string) => {
+    manifest: { rootSha256: string; assets: Array<{ path: string; sha256: string; size: number }> };
+    manifestPath: string;
+  };
   validateIntegrityManifest: (manifest: unknown, dir: string) => string[];
 };
 
@@ -47,9 +50,55 @@ describe('asset integrity manifest generator', () => {
     const { manifest, manifestPath } = generateIntegrityManifest(directory);
 
     expect(fs.existsSync(manifestPath)).toBe(true);
-    expect(manifest.assets).toHaveLength(1);
-    expect(manifest.assets[0]).toMatchObject({ path: 'assets/index.js' });
+    // Y-20: index.html is included. It used to be filtered out, which left the
+    // document that loads every other script as the one unhashed file in dist/.
+    expect(manifest.assets.map((asset: { path: string }) => asset.path).sort()).toEqual([
+      'assets/index.js',
+      'index.html',
+    ]);
     expect(validateIntegrityManifest(manifest, directory)).toEqual([]);
+  });
+
+  it('catches a script injected into index.html', async () => {
+    // Y-20: the actual attack. Every other asset is untouched, so the root hash
+    // of a manifest that excluded index.html still matched and the runtime check
+    // returned {status:'verified'} while attacker JS was loading.
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'aegis-integrity-'));
+    temporaryDirectories.push(directory);
+    fs.mkdirSync(path.join(directory, 'assets'));
+    fs.writeFileSync(
+      path.join(directory, 'index.html'),
+      '<script type="module" src="/assets/index.js"></script>',
+    );
+    fs.writeFileSync(path.join(directory, 'assets', 'index.js'), 'export {};');
+    const { manifest } = generateIntegrityManifest(directory);
+    expect(validateIntegrityManifest(manifest, directory)).toEqual([]);
+
+    fs.writeFileSync(
+      path.join(directory, 'index.html'),
+      '<script type="module" src="/assets/index.js"></script><script src="evil.js"></script>',
+    );
+
+    expect(validateIntegrityManifest(manifest, directory)).toContain(
+      'integrity manifest root does not match dist assets',
+    );
+  });
+
+  it('still excludes the manifest itself and source maps', () => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'aegis-integrity-'));
+    temporaryDirectories.push(directory);
+    fs.writeFileSync(path.join(directory, 'index.html'), '<main>Aegis</main>');
+    fs.writeFileSync(path.join(directory, 'app.js'), 'export {};');
+    fs.writeFileSync(path.join(directory, 'app.js.map'), '{}');
+
+    const { manifest } = generateIntegrityManifest(directory);
+
+    // The over-correction guard for the filter: "include everything" would make
+    // the manifest hash itself, which can never verify.
+    expect(manifest.assets.map((asset: { path: string }) => asset.path).sort()).toEqual([
+      'app.js',
+      'index.html',
+    ]);
   });
 
   it('detects a changed production asset', () => {

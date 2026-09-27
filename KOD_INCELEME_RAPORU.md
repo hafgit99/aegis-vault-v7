@@ -1,8 +1,8 @@
 ﻿# AegisVault v7 — Derinlemesine Kod İnceleme Raporu
 
 **Tarih:** 27 Eylül 2026
-**Kapsam:** `v7.0.7.0` (`a995bde`) — inceleme; `fb33981` — Aşama 0–1; `5c9752e` + çalışma ağacı — Aşama 0.5, K-1, K-3/K-4/K-7, Y-5, K-4 UI, O-4; `4ecf34c`/`b983354`/`85e5172`/`fb5ea7f`/`54552d6`/`ac6ba3f`/O-3/#43 — Aşama 2
-**Durum:** 🟢 **Aşama 0, 1, 0.5, 1.5, 2 uygulandı; K-1, K-3, K-4, K-7, Y-5, O-4, O-13, O-14, O-16, O-17 ve O-20/O-21 kapatıldı.** 7 kritik bulgunun **6'sı kapandı**, 1'i kısmen. **Veri kaybı sınıfındaki üçlü kapandı**; sömürülebilir tek kritik bulgu (K-1) kapandı ve Android Autofill sınırı CI'da **20** kontrollük statik kapıyla kilitlendi; bütünlük etiketi dosya dışı bir defterle zorunlu kılındı; kilit ekranından tek tıkla kurtarma var; **K-1'in Kotlin derleme borcu gerçek derlemeyle kapandı ve Android lint CI'a bağlandı**; snapshot geri yükleme atomik ve bütçeli; **passkey assertion imzası artık gerçekten doğrulanıyor**; ve **`revoke` artık gerçekten iptal ediyor — token döndürme, hâlâ açık olan oturumları da sonlandırıyor** (raporda yazılmayan ikinci kapı olan `rotate_pairing_token` dahil). Toplam **2141 JS + 68 Rust** test yeşil, **8 güvenlik kapısı** PASS. Güncel durum için **§1.2 – §1.6**, **§1.16**, **§1.17** ve **§8** okunmalı.
+**Kapsam:** `v7.0.7.0` (`a995bde`) — inceleme; `fb33981` — Aşama 0–1; `5c9752e` + çalışma ağacı — Aşama 0.5, K-1, K-3/K-4/K-7, Y-5, K-4 UI, O-4; `4ecf34c`/`b983354`/`85e5172`/`fb5ea7f`/`54552d6`/`ac6ba3f`/O-3/#43/#44 — Aşama 2
+**Durum:** 🟢 **Aşama 0, 1, 0.5, 1.5, 2 uygulandı; K-1, K-3, K-4, K-7, Y-5, O-4, O-13, O-14, O-16, O-17, O-20/O-21 ve Y-20 kapatıldı.** 7 kritik bulgunun **6'sı kapandı**, 1'i kısmen. **Veri kaybı sınıfındaki üçlü kapandı**; sömürülebilir tek kritik bulgu (K-1) kapandı ve Android Autofill sınırı CI'da **20** kontrollük statik kapıyla kilitlendi; bütünlük etiketi dosya dışı bir defterle zorunlu kılındı; kilit ekranından tek tıkla kurtarma var; **K-1'in Kotlin derleme borcu gerçek derlemeyle kapandı ve Android lint CI'a bağlandı**; snapshot geri yükleme atomik ve bütçeli; **passkey assertion imzası artık gerçekten doğrulanıyor**; **`revoke` artık gerçekten iptal ediyor** (token döndürme, hâlâ açık oturumları da sonlandırıyor); ve **`index.html` artık bütünlük kapsamında** — `dist/`'de bütünlük garantisi olmayan dosya kalmadı. Toplam **2151 JS + 68 Rust** test yeşil, **8 güvenlik kapısı** PASS. Güncel durum için **§1.2 – §1.6**, **§1.16** – **§1.18** ve **§8** okunmalı.
 **Kalan açık iş:** tek kalem operasyonel — Y-19 imzalama sertifikaları (#32). Kodla değil secret yönetimiyle çözülür ve o zamana kadar imzasız yayın bilerek bloke kalır.
 **İnceleme Alanı:** Tüm depo — TypeScript/React 19 frontend, Rust/Tauri 2 masaüstü katmanı, Kotlin/Android katmanı, Chrome/Firefox/Safari eklenti katmanı, `wa-sqlite` depolama, CI/CD ve build scriptleri
 **Yöntem:** 5 paralel derin inceleme oturumu (kriptografi, depolama, import/sync, React, native/CI) + tüm otomatik kontrollerin çalıştırılması + kritik bulguların manuel doğrulanması
@@ -1939,6 +1939,103 @@ Dürüstlük için: `handle_client`'ın kendisi hâlâ test edilemiyor (`tauri::
 
 ---
 
+## 1.18 #44 Kapatma Raporu — `index.html` Bütünlük Manifesti (Y-20) (Güncelleme: 27.09.2026)
+
+---
+
+### Dışlama gerekçesi bu proje için doğru değildi
+
+`index.html` manifestten **bilinçli** olarak çıkarılmıştı ve kodda gerekçesi yazılıydı:
+
+> Tauri yapılandırılmış CSP'yi `index.html`'e çalışma zamanında enjekte eder. WebView tarafındaki doğrulamanın yanlış pozitif vermemesi için yalnızca statik yükleri hashle.
+
+Bu, Tauri v2 için doğru değil — ve tahmin etmeyi reddettim, **ölçtüm**:
+
+1. `tauri.conf.json`'daki `security.csp` ile derlenmiş `dist/index.html` içindeki CSP `<meta>` etiketi **farklı stringler.** `tauri.conf.json`'daki policy `update.aegisvault.xyz`, `github.com` ve `objects.githubusercontent.com` izinleri içeriyor; `<meta>` etiketi ise `data:`/`blob:` içeriyor ve o üçünü içermiyor.
+2. `dist/index.html` içindeki `<meta>` CSP, **kaynak `index.html` şablonundakiyle bayt bayt aynı.**
+
+Yani Tauri v2 kendi CSP'sini `tauri://` protokolü üzerinde **yanıt başlığı** olarak uyguluyor ve dosyayı diskte yeniden yazmıyor. Hash'lenen baytlar, WebView'in yüklediği baytlar. Dışlama gerekçesiz değildi, **yanlıştı** — ve rapor §4.2'de bu gerekçeyle ele alınmış olması, bulgunun "niçin yapıldı" sorusunu cevaplamadan geçilmesinin sonucuydu.
+
+Düzeltilmiş `dist/index.html` üzerinde karşı kontrolü de çalıştırdım: 6 yerel referansın **tamamı** manifestte, `UNLISTED: []`. Yani üretimde yanlış pozitif yok.
+
+### İki yarım düzeltmeyi de kapatmak
+
+Bulgu iki şeyi içeriyordu; ilkini yapmak ikincisini açık bırakırdı:
+
+1. `index.html` manifestte **değil** → diskteki `dist/index.html`'e `<script src="evil.js">` ekleniyor, kök hash'i hâlâ eşleşiyor, kontrol `{status:'verified'}` döndürüyor ve **çözülmüş kasayla keyfi JS çalışıyor.**
+2. `verifyRuntimeAssetIntegrity` yalnızca `manifest.assets` üzerinde geziyor; manifestte **olmayan** bir isteği reddedecek karşı kontrollü **yok.**
+
+İkincisi olmadan birincisini kapatmak, tek bir saldırı yolunu kapatmak olurdu. İkincisi olmadan birincisini kapatmak ise yalnızca `index.html` hash'ini korur — hangi yeterli olmadığı, sonraki rotada başka bir belgenin aynı role girmesiyle anlaşılır.
+
+Karşı kontrol (`findUnlistedAssetReferences`) saf bir fonksiyon olarak yazıldı ve DOM'dan ayrı tutuldu, böylece DOM olmadan test edilebiliyor. `collectDocumentAssetReferences` **canlı `document`'i okumuyor**, çünkü `document.documentElement.outerHTML` ayrıştırılmış DOM'un yeniden serileştirilmiş hâlidir ve orijinal baytlarla **asla** aynı hash'i vermez; bunun yerine az önce doğruladığımız baytları ayrıştırıyor.
+
+#### Canlı `document`'i okumamak yerine baytları çözmekle ilgili tuzak
+
+Sayfadaki `script`/`link` referanslarını okumanın en doğal yolu `document.querySelectorAll` idi. Bu, `index.html`'in bütünlüğunu doğrulamak için **yanlış** olurdu: DOM serileştirmesi orijinal dosyadan farklıdır, dolayısıyla ne bir `<meta>` CSP yeniden yazımı ne de nitelik sırası hash'i kurtaramaz. Doğru girdi zaten elimizdeydi — `fetch` ile indirip hash'ini doğruladığımız baytlar.
+
+### Test ortamı, güvenlik açısından bir sinyal verdi
+
+`collectDocumentAssetReferences` `DOMParser` kullanıyor ve mevcut test dosyası **node** ortamında çalışıyor — `DOMParser` yok, testler kırmızı.
+
+İlk refleksim dosyayı bölmek oldu ("counter-check jsdom'da, doğrulama node'da"). Bu refleksi sorgulamaya değerdi, çünkü **güvenlik açısından yanlış bir yönde bölme** olurdu: yeni kontrolün uçtan uca testi, kontrolün gerçekten çalıştığı ortamdan ayrı düşerdi.
+
+Önce ölçtüm: bu depodaki jsdom hem `DOMParser` **hem** çalışan `crypto.subtle` sağlıyor. Yani bölme gereksizdi; dosyaya tek bir `@vitest-environment jsdom` satırı yeter. Böylece `verifyRuntimeAssetIntegrity`'nin karşı kontrollü yolu **aynı testte, aynı ortamda** kapsanıyor.
+
+### Var olan bir test gerçekten değişti
+
+`verifies the manifest root and every packaged asset` testi `index.html`'i manifestte olmayan bir varlıkla kuruyordu ve `{status:'verified', assetCount: 1}` bekliyordu. Artık `{status:'verified', assetCount: 2}` bekliyor ve `index.html`'i de içeriyor. Bu bir test düzeltmesi değil, **beklenen davranışın değişmesi** — ve tesadüfen, `index-html-unlisted` kapısının kapandığının da kanıtı.
+
+### Testler (8 yeni) ve 6 mutasyon
+
+| Test | Ne sabitliyor |
+|---|---|
+| `generates and validates ... without self-hashing` *(güncellendi)* | `index.html` manifestte; iki varlık |
+| `catches a script injected into index.html` | **Asıl saldırı** — diğer her şey sağlamken |
+| `still excludes the manifest itself and source maps` | Filtre hâlâ manifest'i ve `.map`'leri dışlıyor |
+| `verifies the manifest root and every packaged asset` *(güncellendi)* | Mutlu yol `index.html`'i de doğruluyor |
+| `fails closed when index.html is not covered by the manifest` | Varlık kapısı, tek varlık fetch edilmeden önce |
+| `fails closed when the verified document references an unlisted script` | Karşı kontrol; manifest/anchor/hash'ler **tutarlı** |
+| `flags a local reference the manifest does not cover` | Çekirdek davranış |
+| `accepts the site-absolute and relative forms` | `/assets/x.js` ≡ `assets/x.js` — üretimde yanlış pozitif olmamasının şartı |
+| `leaves non-local references alone` | **Aşırı düzeltme koruması** (`blob:`, `data:`, `https:`) |
+| `does not normalise a traversal attempt` | **Aşırı düzeltme koruması** (`/assets/../../evil.js`) |
+| `collects the asset URLs a document asks to load` | DOMParser bağlantısı, satır içi script hariç |
+| `finds nothing unlisted in the real built document` | Gerçek `dist/index.html` biçimi (modülpreload, splash CSS) |
+
+**Altı mutasyonun tamamı yakalandı** — üçü aşırı düzeltme:
+
+| # | Mutasyon | Kıran test |
+|---|---|---|
+| M1 | `index.html` dışlaması geri konuldu (**düzeltmeyi geri al**) | 3 ✅ |
+| M2 | Karşı kontrolün çağrısı kaldırıldı (**düzeltmeyi geri al**) | 1 ✅ |
+| **M3** | **Aşırı düzeltme:** manifesttekileri de dâhil **her** referansı reddet | 1 ✅ |
+| **M4** | **Aşırı düzeltme:** `../`'yi çözümleyip sonra bak (dist'ten kaçışı meşruya çevirir) | 1 ✅ |
+| M5 | `index.html` varlık kapısı kaldırıldı | 1 ✅ |
+| **M6** | **Aşırı düzeltme:** "her şeyi dahil et" — `.map` dosyaları da manifestte | 1 ✅ |
+
+M3'ün kırıldığı test `verifies the manifest root and every packaged asset` — yani **aşırı düzeltme, meşru yapıyı reddeden bir regresyon olarak** yakalandı, "daha güvenli görünüyor" diye geçmedi. M4 ise sessiz bir açık kapıyı kapatıyor: `../` çözümlemesi, dist'ten kaçan bir referansı listede bulunabilecek bir şeye dönüştürürdü.
+
+### Not
+
+`index.html`'i hash'lemek, `security:asset-integrity` kapısını yalnızca **derleme sonrası** doğruluyor; çalışma zamanı karşı kontrolü manifesti okuyarak aynı dosyayı tekrar doğruluyor. İkisi birbirini tamamlıyor: ilki üretim çıktısının doğru üretildiğini, ikincisi kurulu çıktının değiştirilmediğini söylüyor.
+
+---
+
+### Doğrulama
+
+| Kontrol | Sonuç |
+|---|---|
+| `npm run test:unit` | ✅ **2151 / 2151** (2141 → 2151, **+10**) |
+| `npm run typecheck` | ✅ |
+| `npm run lint` | ✅ **0 hata, 23 uyarı** (taban korundu) |
+| `npm run build` | ✅ manifest **15 → 16 varlık** (`index.html` eklendi) |
+| `npm run test:fuzz` | ✅ 37 |
+| `cargo test --lib` | ✅ 68 / 68 (değişmedi) |
+| 8 güvenlik kapısı | ✅ hepsi PASS |
+| Gerçek `dist/index.html` karşı kontrolü | ✅ `UNLISTED: []` (6 referansın 6'sı kapsamda) |
+
+---
+
 ## 2. Mimari Özeti
 
 ```
@@ -2484,8 +2581,8 @@ Beş workflow'taki her `run:` adımı sayıldı: `npm run desktop:release:signin
 
 **Öneri:** macOS işine `APPLE_CERTIFICATE` + `notarytool` staple, Windows işine Authenticode `signCommand` ekleyin ve her masaüstü işinden **önce** `npm run desktop:release:signing:report -- --require-signed` adımını **bloke edici** olarak koyun. Scriptler zaten var; sadece bağlantı eksik.
 
-**Y-20 · `index.html` varlık bütünlük manifestinden bilinçli olarak dışlanmış**
-`scripts/generate-asset-integrity-manifest.cjs:37-39` · `src/lib/assetIntegrity.ts:133-141`
+**Y-20 · `index.html` varlık bütünlük manifestinden bilinçli olarak dışlanmış** — ✅ **KAPANDI (bkz. §1.18)**
+`scripts/generate-asset-integrity-manifest.cjs` · `src/lib/assetIntegrity.ts`
 
 ```js
 .filter((entry) => entry.path !== MANIFEST_FILENAME && entry.path !== 'index.html' && !entry.path.endsWith('.map'))
@@ -2498,6 +2595,8 @@ Kurulu varlık dizinine yazma erişimi olan bir saldırgan (kurulum manipülasyo
 Gerekçe de Tauri v2 için doğru değil: Tauri v2, CSP'yi `tauri://`/`asset://` protokolü üzerinde yanıt başlığı olarak uygular, dosyayı diskte yeniden yazmaz.
 
 **Öneri:** `index.html`'i manifeste ekleyin (diskteki baytların değiştirilmediğini ampirik doğrulayın; değilse derleme-zamanı şablonunu hashleyin). `verifyRuntimeAssetIntegrity`'ye **karşı** kontrol ekleyin — manifestte olmayan her script URL'ini reddedin.
+
+**Çözüldü (bkz. §1.18):** Önerinin **ikisi de** uygulandı; biri diğerini tek başına kapatmıyordu. Dışlamanın gerekçesi ölçülerek çürütüldü: `tauri.conf.json`'un CSP'si ile derlenmiş `dist/index.html`'in CSP `<meta>` etiketi farklı stringler, ve `<meta>` etiketi kaynak şablonuyla bayt bayt aynı — yani Tauri v2 dosyayı diskte yeniden yazmıyor ve hash'lenen baytlar WebView'in yüklediği baytlar. Karşı kontrol, doğrulanan `index.html` baytlarından çıkarılan referansları manifestte adı bulunmayanlar için reddediyor; `blob:`/`data:`/mutlak `https:` referansları kapsam dışı, çünkü paketlenmiş dosya değiller. 10 yeni test, 6 mutasyonla doğrulandı (üçü aşırı düzeltme).
 
 ### 4.4 React / Kullanıcı Deneyimi — Veri Kaybı Riski
 
@@ -2784,7 +2883,7 @@ Bu hook'ta **hiç `useEffect` yok** (grep: sıfır eşleşme). Hiçbir zamanlay�
 | 41 | Android: `SecureStorageKeyStore`'a auth binding zorunlu kılın, `RUST-O5` rotasyonunu açılışta yapın (Y-8). |
 | 42 | ✅ **KAPANDI (bkz. §1.12, §1.13, §1.14)** — Rust: KDF maliyet parametrelerine üst sınır (Y-16). Yerel IPC'nin yetki gerektiren komutlarına fail-closed oturum kapısı (#42). `open_import_file` artık hem `stat` hem akış düzeyinde sınırlı. 24 Rust testi, 4 mutasyonla doğrulandı. |
 | 43 | ✅ **KAPANDI (bkz. §1.17)** — `revoke` artık diğer canlı oturumları da sonlandırıyor: paylaşılan `RevokeGeneration` sayacı eklendi, kontrol mesaj döngüsü değil **tek geçiş noktası olan `read_authenticated_frame`** içine kondu (döngüdeki tek satır test edilemiyordu, silinseydi sessizce geri geliyordu). Kontrol okumadan **sonra** konumlandı; başta da olması isteniyordu, ama o zaman **blokeli okuma sırasında gerçekleşen iptal** test edilemiyordu, bu yüzden gereksiz olan baş kontrolü kaldırıldı — daha az kod, daha çok kanıt. Jenerasyon artışı `rotate_pairing_token_now`'un içinde, çünkü token'ı **iki** yol döndürüyordu (`revoke` eylemi ve `rotate_pairing_token` komutu) ve raporda yazılmayan ikinci kapı buydu. 11 test, **9 mutasyon** — üçü aşırı düzeltme (her oturumu iptal et, sayacı sıfırla, önce yaz sonra kes), üçü de yakalandı. |
-| 44 | `index.html`'i bütünlük manifestine alın + karşıt kontrol (Y-20). |
+| 44 | ✅ **KAPANDI (bkz. §1.18)** — `index.html` artık bütünlük manifestinde ve `verifyRuntimeAssetIntegrity` manifesttekileri de dâhil **her** referansı reddediyor (Y-20). Dışlamanın "Tauri CSP'yi çalışma zamanında enjekte ediyor" gerekçesi **ölçülerek çürütüldü**: `tauri.conf.json`'un CSP'si ile `dist/index.html`'in CSP `<meta>` etiketi farklı stringler ve `<meta>` kaynak şablonuyla bayt bayt aynı. Karşı kontrol canlı `document`'i değil **doğrulanmış baytları** çözüyor, çünkü `outerHTML` yeniden serileştirme ve asla orijinal hash'i vermez. 10 test, 6 mutasyon — üçü aşırı düzeltme (her referansı reddet, `../`'yi çözümle, `.map`'leri de dahil et), üçü de yakalandı. |
 | 45 | ⚠️ **KISMEN KAPANDI (bkz. §1.16)** — O-3 kapandı: öksüz kalan base64 legacy ana şifre (öğe blob'u silinmiş, depo boş) artık koşullardan bağımsız temizleniyor, **ve ayna yolundaki ikinci kapı** da kapatıldı; 3 test, 3 mutasyon. **Kalan (O-2):** `localStorage` aynası kaldırılmadı — göç yolu ona dayanıyor, asıl bulgu "düz metin sızıntısı" değil **sessiz bayatlama**. Önerilen sonraki adım: silmek yerine aynanın yaşını tutup bayatlığını görünür kılmak. |
 | 46 | ✅ **KAPANDI (bkz. §1.7 ve §1.14)** — koşullu yazma (`If-Match`/ETag, 412/409 → `sync.remoteModified`) ve "uzak durum bilinmiyorken üzerine yazma" yasağı (Y-11, 17 test); meta veri şema doğrulaması + motor seviyesinde ikinci savunma (O-21, 20 test); indirme boyut tavanı (O-20, `Content-Length` + akış sınırı); `dispose()` referans sayımı ile hava boşluğu izin listesi sızıntısı (O-21, 16 test). |
 | 47 | ✅ **KAPANDI (bkz. §1.16)** — Anlık görüntü geri yükleme artık **atomik** (tek `replaceAllVaultItemsWithKey`, tek kalıcılık yazımı, rollback var) ve bayt + öğe sayısı bütçeleri uygulanıyor. Anlık görüntü geri yükleme işlemini atomik yapın; boyut bütçesi + sağlama doğrulaması; `pruneSnapshotsRetention(settings.maxSnapshots)`; yanlış olay kodunu düzeltin. **Kilit ekranından tek tıkla yeniden kurulum ✅ KAPANDI** (bkz. §1.5); geri yükleme işleminin kendisi hâlâ atomik değil → O-16/O-17. || 48 | ? **KAPANDI** (bkz. §1.6) — WebAuthn assertion imzası artık saklanan public key ile doğrulanıyor: challenge, origin, crossOrigin, rpIdHash, UP bayrağı, userHandle ve `signCount` klon sinyali dahil 9 kontrol. `signCount` artık yerel `+1` değil, doğrulanmış sayaç. |
@@ -2904,5 +3003,17 @@ Bu turda asıl değerli olan kısım düzeltmenin kendisi değil, **kendisini te
 İkinci ders, aşırı düzeltme disiplininin **eksiltme** yönünde işe yaramasıydı. Kontrolü hem fonksiyonun başına hem sonuna koymuştum (baştaki, sessizce duran iptal edilmiş bağlantıyı erken kapatmak içindi). Sonraki kontrolü silen mutasyonu denediğimde "blokeli okuma sırasında iptal" testim yine de geçti — çünkü testimin "başladı" sinyali fonksiyon çağrılmadan önce gönderiliyordu ve iptali **baş** kontrolü yakalıyordu. Baş kontrolü kaldırınca sonraki kontrol tek kontrole dönüştü ve test gerçekten bir şey kanıtlamaya başladı: **daha az kod, daha çok kanıt.**
 
 Dokuz mutasyonun üçü kasıtlı olarak aşırı düzeltmeydi ve üçü de yakalandı: *her* oturumu jenerasyon fark etmeksizin iptal etmek (yeni token'la yeniden el sıkışmış meşru oturumu öldürür), sayacı ilerletmek yerine **sıfırlamak** (emekliye ayrılmış oturumu geri canlandırır) ve "önce diske yaz, sonra bağlantıları kes" (fail-open: kullanıcı bağlantıyı kesmeyi istedi, yazma başarısız oldu, eklentiler hiçbir şey olmamış gibi okumaya devam etti).
+
+---
+
+**`index.html` artık bütünlük kapsamında, ve `dist/`'de garantisi olmayan dosya kalmadı (#44 / Y-20 — bkz. §1.18).** Bulgu, `dist/` içinde bütünlük garantisi olmayan **tek** dosyanın her diğer betiği yükleyen belge olmasıydı: yerel bir yazma `<script src="evil.js">` eklediğinde kök hash'i hâlâ eşleşiyor, kontrol `{status:'verified'}` döndürüyor ve çözülmüş kasayla keyfi JS çalışıyordu.
+
+Bu bulgunun en ilginç tarafı, dışlamanın **gerekçesiz** olmamasıydı. Kodda gerekçesi yazılıydı ve makul görünüyordu: "Tauri yapılandırılmış CSP'yi `index.html`'e çalışma zamanında enjekte ediyor." Bu Tauri v2 için doğru değil, ama tahmin etmek yerine **ölçtüm**: `tauri.conf.json`'un CSP'si ile derlenmiş `dist/index.html`'in CSP `<meta>` etiketi **farklı stringler**, ve `<meta>` etiketi kaynak şablonuyla bayt bayt aynı. Tauri kendi policy'sini yanıt başlığı olarak uyguluyor, dosyayı diskte yeniden yazmıyor. Gerekçe yanlıştı; ve raporda "niçin yapıldı" sorusu cevaplanmadan geçildiği için fark edilmemişti.
+
+Bulgu iki yarımdan oluşuyordu ve ilkini yapmak ikincisini açık bırakırdı: `index.html`'i hash'lemek, manifestte **olmayan** bir isteği reddetmeyen bir doğrulamayı daha güçlü kılmaz. Karşı kontrol eklendi — ama canlı `document`'i okumak yerine **doğrulanmış baytları** çözüyor, çünkü `document.documentElement.outerHTML` ayrıştırılmış DOM'un yeniden serileştirilmiş hâli ve orijinal hash'i asla vermez.
+
+Bu turda da bir refleksi durdum: yeni kontrol `DOMParser` istediği için test dosyasını bölmek istedim. Bu refleksi sorguladım, çünkü **güvenlik açısından ters yönde** bir bölme olurdu — yeni kontrolün uçtan uca testi, kontrolün çalıştığı ortamdan ayrılırdı. Önce ölçtüm: jsdom hem `DOMParser` hem çalışan `crypto.subtle` sağlıyor. Bölme gereksizdi.
+
+Altı mutasyonun üçü aşırı düzeltmeydi. En öğretici olanı, "her referansı reddet" yazımının meşru yapıyı bozduğunu ve **bunu meşru yapıyı reddeden bir regresyon testiyle** yakaladığım: `blob:` ve `data:` referansları paketlenmiş dosya değil, uygulamanın kendi ürettiği şeyler. Diğer aşırı düzeltme, `../`'yi aramadan önce çözümlemekti — bu, dist'ten kaçan bir referansı listede bulunabilecek bir şeye dönüştürerek **sessiz** bir açık kapı açardı; bir regresyon gibi görünmez, o yüzden sessizliği tehlikeli kılıyordu.
 
 
