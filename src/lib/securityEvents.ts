@@ -11,9 +11,19 @@ export const securityEventCodes = {
   storageDesktopReadFailed: 'storage.desktop.readFailed',
   storageDesktopWriteFailed: 'storage.desktop.writeFailed',
   storageLocalFallbackUsed: 'storage.localFallback.used',
+  /**
+   * O-2: the localStorage vault mirror is behind the authoritative copy, so it
+   * must not be offered to the user as a recovery source without saying so.
+   */
+  storageLocalFallbackStale: 'storage.localFallback.stale',
   storageLegacyMigrationFailed: 'storage.legacyMigration.failed',
   storageLegacyMigrationSuccess: 'storage.legacyMigration.success',
   storageLegacyDataPurged: 'storage.legacyData.purged',
+  /**
+   * Y-14: trash items past the 15-day retention were permanently deleted.
+   * Recorded so an irreversible multi-row delete is never silent.
+   */
+  storageTrashRetentionPurged: 'storage.trashRetention.purged',
   attachmentLegacyMigrationFailed: 'attachment.legacyMigration.failed',
   networkBlocked: 'network.blocked',
   passkeyCreateFailed: 'passkey.create.failed',
@@ -26,6 +36,7 @@ export const securityEventCodes = {
   androidAutofillFailed: 'android.autofill.failed',
   androidRuntimeRiskDetected: 'android.runtime.riskDetected',
   assetIntegrityFailed: 'application.assetIntegrity.failed',
+  appBundleLoadFailed: 'application.bundle.loadFailed',
   securityLegacyCryptoWarning: 'security.legacyCryptoWarning',
   cspViolation: 'security.cspViolation',
 } as const;

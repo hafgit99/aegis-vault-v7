@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -9,7 +9,8 @@ import {
   createEmptyVaultDatabaseState,
   computeStateIntegrityHmac,
   deriveVaultHmacKey,
-  verifyStateIntegrityHmac,
+  evaluateIntegrityState,
+  mayReSignState,
   type VaultDatabaseRow,
   type VersionedVaultDatabaseState,
 } from './vaultDatabaseFormat';
@@ -44,10 +45,24 @@ import {
 import { decryptVaultRows } from './sqliteOpfsRowDecryptor';
 import {
   LOCAL_FALLBACK_KEY,
+  DB_FILENAME,
+  getLastObservedVersionCounter,
   loadPersistedVaultDatabase,
   persistVaultDatabase,
+  setLastObservedVersionCounter,
   type PersistedLoadResult,
 } from './sqliteOpfsPersistence';
+import {
+  clearVaultIntegrityLedger,
+  readVaultIntegrityLedger,
+  type VaultIntegrityLedger,
+} from './vaultIntegrityLedger';
+import {
+  announceVaultCommit,
+  assertFreshWriteBaseline,
+  withVaultWriteLock,
+} from './vaultWriteCoordination';
+import type { IntegrityExpectations } from './vaultDatabaseFormat';
 import {
   migrateLegacyLocalStorage as runLegacyLocalStorageMigration,
 } from './sqliteOpfsMigration';
@@ -57,13 +72,87 @@ import {
  */
 export type SQLiteRow = VaultDatabaseRow;
 
+/** O-8: how a sealed vault with no integrity ledger is reported. */
+export interface LostLedgerReport {
+  /** True when the vault carries a seal but the durable high-water mark is gone. */
+  detected: boolean;
+  /** The version the vault itself claims to have been sealed at, when readable. */
+  vaultSealedAtVersion: number | null;
+}
+
+/**
+ * O-8: detects that the durable high-water mark has been lost.
+ *
+ * ## Why this reports instead of refusing
+ *
+ * The ledger lives in origin-scoped client storage (IndexedDB with a
+ * localStorage mirror and an in-memory cache). It is therefore lost *exactly*
+ * when the user clears site data or restores storage from a backup — which is
+ * also the moment an attacker replaying an old vault file would want. No
+ * client-side mark survives that; anything claiming otherwise is either stored
+ * in the vault file (where editing the file is enough again) or unachievable
+ * without a server or a platform keychain.
+ *
+ * Failing closed here was considered and rejected. A user who deliberately
+ * clears site data and then restores their own encrypted backup would be locked
+ * out of their password manager — bricking the vault to defend against a case
+ * they cannot be expected to control, and that they may well have caused
+ * themselves. Turning a working vault into an unusable one is a worse harm than
+ * a lost detection signal.
+ *
+ * So the condition is made **visible** instead: a sealed vault whose ledger has
+ * vanished is reported as a security event, which is the point at which a
+ * maintainer can decide the residual risk is unacceptable and fund a real
+ * solution (platform keychain, or server-held attestation) rather than a
+ * heuristic that silently locks people out.
+ */
+export function detectLostIntegrityLedger(
+  state: { integrityHmac?: string; sealedAtVersionCounter?: number } | null,
+): LostLedgerReport {
+  if (!state || !state.integrityHmac) {
+    // No seal: either a fresh vault or one predating the ledger. Not a signal.
+    return { detected: false, vaultSealedAtVersion: null };
+  }
+  if (readVaultIntegrityLedger() !== null) {
+    return { detected: false, vaultSealedAtVersion: state.sealedAtVersionCounter ?? null };
+  }
+
+  return { detected: true, vaultSealedAtVersion: state.sealedAtVersionCounter ?? null };
+}
+
+/**
+ * Y-5: merges the on-disk ledger with the in-session high-water mark.
+ *
+ * The ledger is the durable source of truth (it survives a restart, which the
+ * module-level counter did not). The in-session counter is still honoured
+ * because it can be higher within a single run — e.g. a file loaded twice — and
+ * taking the max costs nothing.
+ */
+function readIntegrityExpectations(): IntegrityExpectations {
+  const ledger: VaultIntegrityLedger | null = readVaultIntegrityLedger();
+  return {
+    minVersionCounter: Math.max(ledger?.highestVersionCounter ?? 0, getLastObservedVersionCounter()),
+    tagRequired: ledger?.sealed === true,
+  };
+}
+
 
 class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVaultDatabaseState = createEmptyVaultDatabaseState();
 
   private logs: SQLCommandLog[] = [];
   private onLogsChangedCallbacks: (() => void)[] = [];
   private hydratePromise: Promise<void>;
-
+  /** K-4: set when the authoritative vault file exists but could not be decoded. */
+  private startupFailure: Error | null = null;
+  /**
+   * K-3: the state exactly as it was read from storage, kept so a write can be
+   * gated on "was the STORED state verified?" rather than on the mutated
+   * in-memory state (which is expected to differ from the stored tag).
+   *
+   * `null` means there is no prior persisted state yet — a fresh setup, where
+   * there is nothing to contradict.
+   */
+  private loadedStateSnapshot: VersionedVaultDatabaseState | null = null;
   // KDF derived key cache to avoid repeating heavy Argon2id calculations
   private cachedPasswordBytes: Uint8Array | null = null;
   private cachedKeySalt: string | null = null;
@@ -75,7 +164,19 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
   private readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes TTL
 
   constructor() {
-    this.hydratePromise = this.loadFromPersistentStorage();
+    this.hydratePromise = this.loadFromPersistentStorage().catch((err: unknown) => {
+      // K-4: a damaged vault file must not fall back to the stale mirror, so
+      // the load fails. Record it, then re-throw: every public method funnels
+      // through hydrate() and the caller has to see the failure.
+      this.startupFailure = err instanceof Error ? err : new Error(String(err));
+      throw this.startupFailure;
+    });
+    // The constructor cannot await, and the repository may be constructed
+    // without any caller ever touching it. Attach a no-op handler so a failed
+    // load surfaces as an unhandled rejection warning (or a hard crash in
+    // strict hosts) instead of through hydrate(). The rejection is still
+    // observable via getStartupFailure() and hydrate().
+    void this.hydratePromise.catch(() => {});
     registerOnCloseSession(() => {
       this.clearDerivedKeyCache();
     });
@@ -83,6 +184,23 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
 
   public async hydrate(): Promise<void> {
     await this.hydratePromise;
+  }
+
+  /**
+   * K-4: why the vault could not be opened, if that is why. `null` means the
+   * load succeeded or is still in flight. Callers use this to block unlock and
+   * point the user at snapshot restore instead of showing an empty vault.
+   */
+  public getStartupFailure(): Error | null {
+    return this.startupFailure;
+  }
+
+  /**
+   * K-4: true when startup failed because the vault file itself is damaged, as
+   * opposed to any other load error.
+   */
+  public isVaultFileUnreadable(): boolean {
+    return this.startupFailure?.message.startsWith('vault-database-unreadable:') ?? false;
   }
 
   private checkCacheTtl(): void {
@@ -186,11 +304,48 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
 
     if (result.kind === 'state') {
       this.state = result.state;
+      // K-3: remember the stored bytes so a later write can ask "was this
+      // state verified?" before it re-signs anything.
+      this.loadedStateSnapshot = this.cloneState();
+
+      // O-8: a sealed vault whose durable high-water mark has vanished means the
+      // rollback signal is gone. Reported, not refused — see
+      // `detectLostIntegrityLedger` for why refusing would be the wrong trade.
+      const lostLedger = detectLostIntegrityLedger(result.state);
+      if (lostLedger.detected) {
+        logSecurityEvent(
+          securityEventCodes.storageLegacyMigrationFailed,
+          'Vault integrity ledger is missing for a sealed vault: the durable high-water ' +
+            'mark was lost, so a replayed older vault file can no longer be detected. ' +
+            'The vault is NOT locked — refusing here would deny a user who legitimately ' +
+            'cleared site data and restored their own backup.',
+          'warning',
+          { vaultSealedAtVersion: lostLedger.vaultSealedAtVersion },
+        );
+      }
+
       this.logQuery(result.logLabel, 'SUCCESS', 1);
       if (result.resaveAfterLoad) {
         await this.saveToPersistentStorage();
       }
       return;
+    }
+
+    // K-4: the authoritative vault file exists but could not be decoded.
+    // Falling back to the IndexedDB mirror here is what caused silent data
+    // loss: the user saw a stale vault, edited a record, and the next save
+    // overwrote the real database with the stale contents. There is no safe
+    // "best effort" for a damaged primary store, so this is a hard error and
+    // the UI is expected to offer snapshot restore.
+    if (result.kind === 'unreadable') {
+      this.logQuery(`sqlite3_open("${DB_FILENAME}")`, 'ERROR', 0);
+      logSecurityEvent(
+        securityEventCodes.storageDesktopReadFailed,
+        `Vault database file is unreadable (${result.reason}). Startup blocked to prevent overwriting it with the stale mirror.`,
+        'critical',
+        { reason: result.reason, detail: result.detail },
+      );
+      throw new Error(`vault-database-unreadable:${result.reason}`);
     }
 
     if (result.kind === 'missing') {
@@ -209,13 +364,67 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
 
   /**
    * Saves raw DB state to private OPFS with cryptographic HMAC state integrity.
+   *
+   * K-3: re-signing is gated by an integrity verdict instead of being
+   * unconditional. The finding was that `saveToPersistentStorage` recomputed
+   * `integrityHmac` for whatever state it was handed, so a tampered database
+   * only had to fail one read before the next write laundered it into a fresh,
+   * valid-looking signature — after which the tampering was indistinguishable
+   * from a legitimate edit.
+   *
+   * The verdict is evaluated against `loadedStateSnapshot` — the state **as it
+   * was read from storage**, before any in-memory edit — because the live state
+   * is *supposed* to diverge from the stored tag after a legitimate change.
+   * Evaluating the live state would report every save as tampering.
+   *
+   * `null` snapshot means there is no prior persisted state (fresh setup), so
+   * there is nothing to contradict and the first signature is written.
    */
-  private async saveToPersistentStorage(vaultKey?: Uint8Array): Promise<boolean> {
-    this.state.versionCounter = (this.state.versionCounter ?? 0) + 1;
+  private async saveToPersistentStorage(
+    vaultKey?: Uint8Array,
+    integrityVerifyKey?: Uint8Array,
+  ): Promise<boolean> {
     const key = vaultKey || this.cachedKeyBytes;
+
+    // Y-15: serialise the write and refuse it if another tab has committed a
+    // newer version since this tab loaded. The vault is a whole-blob rewrite, so
+    // a stale in-memory copy silently destroys whatever the other tab saved.
+    // This runs BEFORE the version counter is incremented so a refusal leaves
+    // our own state untouched.
+    return withVaultWriteLock(async () => {
+      assertFreshWriteBaseline(this.loadedStateSnapshot?.versionCounter);
+
+      if (key && this.loadedStateSnapshot) {
+      // The stored state was signed with the key that was current when it was
+      // written, which is NOT `key` during a credential rotation. Callers pass
+      // the previous key explicitly in that case.
+      const verifyKey = integrityVerifyKey || key;
+      const verdict = await evaluateIntegrityState(
+        this.loadedStateSnapshot,
+        verifyKey,
+        readIntegrityExpectations(),
+      );
+      if (!mayReSignState(verdict)) {
+        logSecurityEvent(
+          securityEventCodes.storageLegacyMigrationFailed,
+          `Refusing to write vault database: stored state failed integrity (${verdict.status}). ` +
+          'Re-signing unverified state would launder the modification.',
+          'critical',
+          verdict.status === 'rolled-back'
+            ? { loadedVersion: verdict.loadedVersion, expectedMinVersion: verdict.expectedMinVersion }
+            : { detail: verdict.status === 'tampered' ? verdict.detail : 'unknown' },
+        );
+        throw new Error(`vault-database-integrity-${verdict.status}`);
+      }
+    }
+
+    this.state.versionCounter = (this.state.versionCounter ?? 0) + 1;
     if (key) {
       try {
         const hmacKey = await deriveVaultHmacKey(key);
+        // K-3: bind the tag to the generation it covers, so a tag can never be
+        // replayed onto a later (or earlier) state generation.
+        this.state.sealedAtVersionCounter = this.state.versionCounter;
         this.state.integrityHmac = await computeStateIntegrityHmac(this.state, hmacKey);
       } catch (err) {
         logSecurityEvent(
@@ -226,7 +435,25 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
         );
       }
     }
-    return persistVaultDatabase(this.state);
+
+    const persisted = await persistVaultDatabase(this.state);
+    if (persisted) {
+      // The state we just signed becomes the new baseline a later write must
+      // still agree with.
+      this.loadedStateSnapshot = this.cloneState();
+      // Y-5: only a state that actually carried a signature may raise the
+      // high-water mark. Recording an unsigned write would make the mark claim
+      // a seal that never happened.
+      if (this.state.integrityHmac) {
+        setLastObservedVersionCounter(this.state.versionCounter ?? 1);
+        // Y-15: raising the mark and telling the other tabs are one step, so a
+        // tab that is about to write from a stale copy sees the new high-water
+        // mark instead of silently overwriting this commit.
+        announceVaultCommit(this.state.versionCounter ?? 1);
+      }
+    }
+    return persisted;
+  });
   }
 
   /**
@@ -260,8 +487,15 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
 
   /**
    * Configures primary master verification keys.
+   *
+   * K-3: `vaultEncryptionKey` is optional. The desktop path already holds the
+   * key (Rust returns it from `setup_rust_session`) and passes it, so that
+   * build seals the first persisted state immediately. The web path passes
+   * nothing, so its first state goes out unsigned and is sealed by the first
+   * keyed write instead — a deliberately small window, closed without adding
+   * another site that handles the master password in JS.
    */
-  public async setupMaster(password: string): Promise<void> {
+  public async setupMaster(password: string, vaultEncryptionKey?: Uint8Array): Promise<void> {
     await this.hydrate();
     const argonHash = await createArgon2idHash(password, createVaultEncryptionSalt());
     this.state.encryption_salt = createVaultEncryptionSalt();
@@ -271,10 +505,20 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
       argon_hash: argonHash,
     }];
     this.logQuery('INSERT INTO user_secrets (username, argon_hash) VALUES ("owner", "[argon2id verification hash]");', 'SUCCESS', 1);
-    await this.saveToPersistentStorage();
+    await this.saveToPersistentStorage(vaultEncryptionKey);
   }
 
-  public async setupMasterWithHash(argonHash: string, salt: string, kdfParams?: VersionedVaultDatabaseState['kdfParams']): Promise<void> {
+  /**
+   * K-3: `vaultEncryptionKey` is optional, with the same rationale as
+   * `setupMaster` — supplying it signs the first persisted state instead of
+   * leaving a master password on disk with no integrity tag.
+   */
+  public async setupMasterWithHash(
+    argonHash: string,
+    salt: string,
+    kdfParams?: VersionedVaultDatabaseState['kdfParams'],
+    vaultEncryptionKey?: Uint8Array,
+  ): Promise<void> {
     await this.hydrate();
     this.state.encryption_salt = salt;
     this.state.kdfParams = kdfParams;
@@ -283,7 +527,7 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
       argon_hash: argonHash,
     }];
     this.logQuery('INSERT INTO user_secrets (username, argon_hash) VALUES ("owner", "[argon2id verification hash]");', 'SUCCESS', 1);
-    await this.saveToPersistentStorage();
+    await this.saveToPersistentStorage(vaultEncryptionKey);
   }
 
   /**
@@ -314,18 +558,17 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
       const oldDerivedKey = await this.deriveEncryptionKey(oldPassword);
       const derivedKey = await this.deriveEncryptionKey(newPassword);
       const reWrappedItems = await reWrapPasskeysInVaultItems(items, oldDerivedKey, derivedKey);
-      oldDerivedKey.fill(0);
 
       this.state.vault_items = await Promise.all(reWrappedItems.map(async (item) => {
         const encrypted = await webCryptoAesGcmEncrypt(JSON.stringify(item), derivedKey, generateSafeIv());
-        const nowStr = new Date().toISOString().split('T')[0] ?? '';
+        const nowStr = new Date().toISOString();
 
         return buildVaultItemRow({
           id: item.id || secureRandomToken(9),
           encrypted,
           item,
           createdAt: item.createdAt || nowStr,
-          updatedAt: item.updatedAt || nowStr,
+          updatedAt: nowStr,
         });
       }));
 
@@ -340,7 +583,11 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
         }
       }
 
-      const persisted = await this.saveToPersistentStorage(derivedKey);
+      // K-3: the stored state carries a tag produced with the OLD key, so the
+      // re-seal gate has to verify against that key while signing with the new
+      // one. Zeroize the old key only after the write has been decided.
+      const persisted = await this.saveToPersistentStorage(derivedKey, oldDerivedKey);
+      oldDerivedKey.fill(0);
       if (!persisted) {
         throw new Error('master-password-rotation-persist-failed');
       }
@@ -379,7 +626,7 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
 
       this.state.vault_items = await Promise.all(items.map(async (item) => {
         const encrypted = await webCryptoAesGcmEncrypt(JSON.stringify(item), newVaultKey, generateSafeIv());
-        const nowStr = new Date().toISOString().split('T')[0] ?? '';
+        const nowStr = new Date().toISOString();
 
         return buildVaultItemRow({
           id: item.id || secureRandomToken(9),
@@ -401,7 +648,8 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
         }
       }
 
-      const persisted = await this.saveToPersistentStorage(newVaultKey);
+      // K-3: verify the stored tag with the OLD key, sign with the new one.
+      const persisted = await this.saveToPersistentStorage(newVaultKey, oldVaultKey);
       if (!persisted) {
         throw new Error('master-password-rotation-persist-failed');
       }
@@ -487,19 +735,44 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
       const migratedSalt = migration?.migratedSalt ?? this.state.encryption_salt;
       const migrationKey = migration?.migrationKey ?? derivedKey;
 
-      if (this.state.integrityHmac && !shouldMigrateStaticSalt && !shouldMigrateKdf) {
-        const hmacKey = await deriveVaultHmacKey(derivedKey);
-        const isIntegrityValid = await verifyStateIntegrityHmac(this.state, hmacKey);
-        if (!isIntegrityValid) {
-          logSecurityEvent(
-            securityEventCodes.storageLegacyMigrationFailed,
-            'Vault database HMAC integrity check failed! State tampering or unauthorized modification detected.',
-            'critical',
-            { versionCounter: this.state.versionCounter },
-          );
-          throw new Error('vault-database-integrity-corrupted');
-        }
+      // K-3 / Y-5: the verdict is evaluated BEFORE the migration flags are
+      // allowed to excuse a missing tag.
+      //
+      // The old condition was `integrityHmac && !shouldMigrate*`, so deleting
+      // `kdfParams` and `encryption_salt` from the JSON set both migration
+      // flags, made the whole condition false, skipped verification entirely —
+      // and then "helpfully" re-encrypted and saved the modified database. The
+      // ordering below means migration is no longer an exemption: it is only
+      // reached once integrity has been established.
+      //
+      // `evaluateIntegrityState` also rejects a state whose `sealedAtVersionCounter`
+      // trails its own `versionCounter`, so bumping the counter after sealing is
+      // no longer a way to make a tag "not apply" either.
+      const integrityVerdict = await evaluateIntegrityState(
+        this.state,
+        derivedKey,
+        readIntegrityExpectations(),
+      );
+      if (integrityVerdict.status === 'tampered' || integrityVerdict.status === 'rolled-back') {
+        logSecurityEvent(
+          securityEventCodes.storageLegacyMigrationFailed,
+          integrityVerdict.status === 'rolled-back'
+            ? `Vault database rollback detected! Loaded versionCounter (${integrityVerdict.loadedVersion}) is lower than the highest observed (${integrityVerdict.expectedMinVersion}).`
+            : 'Vault database HMAC integrity check failed! State tampering or unauthorized modification detected.',
+          'critical',
+          integrityVerdict.status === 'rolled-back'
+            ? { loadedVersion: integrityVerdict.loadedVersion, expectedMinVersion: integrityVerdict.expectedMinVersion }
+            : { versionCounter: this.state.versionCounter, detail: integrityVerdict.detail },
+        );
+        // K-3: record the verdict so a write cannot re-sign this state even if
+        // some other entry point reaches `saveToPersistentStorage` first.
+        this.loadedStateSnapshot = this.cloneState();
+        throw new Error('vault-database-integrity-corrupted');
       }
+
+      // K-3: the state verified (or is a legitimate pre-v2 state awaiting a
+      // re-seal). Refresh the baseline the write gate compares against.
+      this.loadedStateSnapshot = this.cloneState();
 
       if (shouldMigrateStaticSalt || shouldMigrateKdf) {
         logSecurityEvent(
@@ -545,8 +818,14 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
 
       this.logQuery(queryStr, 'SUCCESS', list.length);
       return list;
-    } catch {
+    } catch (err) {
       this.logQuery(queryStr, 'ERROR', 0);
+      // K-3: an integrity failure must never collapse into an empty vault —
+      // swallowing it lets the next successful write launder the tampered
+      // state. Re-throw so callers surface a recovery path.
+      if (err instanceof Error && err.message === 'vault-database-integrity-corrupted') {
+        throw err;
+      }
       return [];
     }
   }
@@ -588,7 +867,7 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
       const encrypted = await webCryptoAesGcmEncrypt(rawSensitive, perItemKey, generateSafeIv());
       perItemKey.fill(0);
 
-      const nowStr = new Date().toISOString().split('T')[0] ?? '';
+      const nowStr = new Date().toISOString();
 
       const row: SQLiteRow = buildVaultItemRow({
         id: itemId,
@@ -661,7 +940,7 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
 
     try {
       this.ensureVaultEncryptionSalt();
-      const nowStr = new Date().toISOString().split('T')[0] ?? '';
+      const nowStr = new Date().toISOString();
 
       const allRows: SQLiteRow[] = [];
       const failedItems: Array<{ id: string; error: string }> = []; // Security fix Y7
@@ -883,6 +1162,11 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
     }
 
     removeIndexedDbItemSync(LOCAL_FALLBACK_KEY);
+    // Y-5: a reset deliberately rewinds `versionCounter` to 1, so the durable
+    // high-water mark has to be cleared with it. Leaving it would make every
+    // post-reset write look like a rollback and permanently block the new vault.
+    clearVaultIntegrityLedger();
+    setLastObservedVersionCounter(0);
     const persisted = await this.saveToPersistentStorage();
     if (!persisted) {
       this.logQuery('DROP TABLE user_secrets; DROP TABLE vault_items; -- reset persistence failed', 'ERROR', 0);
@@ -919,6 +1203,178 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
         throw err;
       }
       throw new Error('vault-item-delete-failed');
+    }
+  }
+
+  /**
+   * O-16: replaces the whole item set atomically, persisting exactly once.
+   *
+   * Snapshot restore used to loop `deletePermanently` and then `saveVaultItems`.
+   * Since the vault is a whole-blob rewrite, that was one full persist **per
+   * deleted item** plus another for the inserts — and a failure part-way through
+   * left the vault half-deleted. Here the row set is swapped in one step and
+   * rolled back wholesale if the persist fails.
+   */
+  public async replaceAllVaultItemsWithKey(
+    items: VaultItem[],
+    derivedKey: Uint8Array,
+  ): Promise<VaultItem[]> {
+    const previousState = this.cloneState();
+    const previousDecryptedItemsCache = this.cloneDecryptedItemsCache();
+
+    // O-16: an empty replacement is refused when the vault currently holds
+    // items. Restoring an empty snapshot should not be an accidental way to wipe
+    // a populated vault; `resetAll` is the explicit, user-initiated path for
+    // that, and a replacement that matches an already-empty vault is a harmless
+    // no-op rather than a silent destruction.
+    if (items.length === 0 && this.state.vault_items.length > 0) {
+      throw new Error('vault-item-replace-empty-refused');
+    }
+
+    try {
+      this.ensureVaultEncryptionSalt();
+      const nowStr = new Date().toISOString();
+      const rebuilt: SQLiteRow[] = [];
+
+      // Reuse the existing row for items that survive, so fields this method does
+      // not model (and the per-item ciphertext) are not needlessly rewritten.
+      const existingById = new Map(this.state.vault_items.map((row) => [row.id, row]));
+
+      for (const item of items) {
+        const itemId = item.id || secureRandomToken(9);
+        const existing = existingById.get(itemId);
+        if (existing) {
+          const rebuiltItem = { ...item, id: itemId };
+          if (
+            existing.enc_metadata
+            && item.title === '[encrypted: aes-256-gcm]'
+            && item.username === '[encrypted: aes-256-gcm]'
+          ) {
+            // Un-decrypted placeholder: keep the existing ciphertext rather than
+            // overwriting real data with a placeholder (the Y-5 guard).
+            rebuilt.push(existing);
+            continue;
+          }
+          const perItemKey = await derivePerItemKey(derivedKey, itemId);
+          const encrypted = await webCryptoAesGcmEncrypt(
+            JSON.stringify(rebuiltItem),
+            perItemKey,
+            generateSafeIv(),
+          );
+          perItemKey.fill(0);
+          rebuilt.push(buildVaultItemRow({
+            id: itemId,
+            encrypted,
+            item: rebuiltItem,
+            createdAt: item.createdAt || existing.created_at || nowStr,
+            updatedAt: nowStr,
+          }));
+          this.decryptedItemsCache.set(itemId, {
+            enc_metadata: JSON.stringify(encrypted),
+            item: rebuiltItem,
+          });
+          continue;
+        }
+
+        const freshItem = { ...item, id: itemId };
+        const perItemKey = await derivePerItemKey(derivedKey, itemId);
+        const encrypted = await webCryptoAesGcmEncrypt(
+          JSON.stringify(freshItem),
+          perItemKey,
+          generateSafeIv(),
+        );
+        perItemKey.fill(0);
+        rebuilt.push(buildVaultItemRow({
+          id: itemId,
+          encrypted,
+          item: freshItem,
+          createdAt: item.createdAt || nowStr,
+          updatedAt: nowStr,
+        }));
+        this.decryptedItemsCache.set(itemId, {
+          enc_metadata: JSON.stringify(encrypted),
+          item: freshItem,
+        });
+      }
+
+      this.state.vault_items = rebuilt;
+
+      const persisted = await this.saveToPersistentStorage(derivedKey);
+      if (!persisted) {
+        throw new Error('vault-item-replace-persist-failed');
+      }
+      this.logQuery(
+        `DELETE FROM vault_items; -- replaced wholesale with ${items.length} row(s)`,
+        'SUCCESS',
+        items.length,
+      );
+      return this.getVaultItemsWithKey(derivedKey);
+    } catch (err) {
+      this.restoreTransactionalState(previousState, previousDecryptedItemsCache);
+      this.logQuery('Replace-all vault_items rolled back because persistence failed;', 'ERROR', 0);
+      if (err instanceof Error && err.message === 'vault-item-replace-persist-failed') {
+        throw err;
+      }
+      throw new Error('vault-item-replace-failed');
+    }
+  }
+
+  /**
+   * Y-15: moves one item in or out of the trash, touching only that row.
+   *
+   * The previous implementation read the whole vault, mutated one item in the
+   * resulting array, and wrote it back. That made a one-flag change depend on
+   * decrypting everything, and it made the write source a snapshot: any field
+   * that changed between the read and the write was silently reverted. Here the
+   * targeted row is located in `this.state.vault_items` and only its
+   * `deleted`/`deletedAt` fields are assigned.
+   */
+  public async setItemTrashedWithKey(id: string, trashed: boolean, derivedKey: Uint8Array): Promise<VaultItem[]> {
+    const previousState = this.cloneState();
+    const previousDecryptedItemsCache = this.cloneDecryptedItemsCache();
+
+    const row = this.state.vault_items.find((candidate) => candidate.id === id);
+    if (!row) {
+      // Nothing to flag. Returning the current view keeps callers simple and
+      // avoids a pointless write.
+      this.logQuery(`UPDATE vault_items SET deleted = ... WHERE id = "${sanitizeLogValue(id)}"; -- no row`, 'SUCCESS', 0);
+      return this.getVaultItemsWithKey(derivedKey);
+    }
+
+    try {
+      if (trashed) {
+        // The row schema is SQLite-shaped: `deleted` is an integer flag and
+        // `deleted_at` is nullable, not a boolean/undefined pair.
+        row.deleted = 1;
+        row.deleted_at = new Date().toISOString();
+      } else {
+        row.deleted = 0;
+        row.deleted_at = null;
+      }
+      // The plaintext cache would otherwise serve the pre-flag item.
+      this.decryptedItemsCache.delete(id);
+
+      const persisted = await this.saveToPersistentStorage(derivedKey);
+      if (!persisted) {
+        throw new Error('vault-item-trash-persist-failed');
+      }
+      this.logQuery(
+        `UPDATE vault_items SET deleted = ${trashed} WHERE id = "${sanitizeLogValue(id)}";`,
+        'SUCCESS',
+        1,
+      );
+      return this.getVaultItemsWithKey(derivedKey);
+    } catch (err) {
+      this.restoreTransactionalState(previousState, previousDecryptedItemsCache);
+      this.logQuery(
+        `UPDATE vault_items SET deleted = ... WHERE id = "${sanitizeLogValue(id)}" rolled back because persistence failed;`,
+        'ERROR',
+        0,
+      );
+      if (err instanceof Error && err.message === 'vault-item-trash-persist-failed') {
+        throw err;
+      }
+      throw new Error('vault-item-trash-failed');
     }
   }
 
@@ -977,14 +1433,14 @@ class SQLiteOPFS implements VaultStorageRepository {  private state: VersionedVa
       this.state.vault_items = await Promise.all(demoItems.map(async (item) => {
         const sensitivePayload = JSON.stringify(item);
         const encrypted = await webCryptoAesGcmEncrypt(sensitivePayload, derivedKey, generateSafeIv());
-        const today = new Date().toISOString().split('T')[0] ?? '';
+        const nowStr = new Date().toISOString();
 
         const row = buildVaultItemRow({
           id: item.id || secureRandomToken(9),
           encrypted,
           item,
-          createdAt: today,
-          updatedAt: today,
+          createdAt: nowStr,
+          updatedAt: nowStr,
         });
 
         this.decryptedItemsCache.set(row.id, {

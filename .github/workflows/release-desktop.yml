@@ -1,4 +1,4 @@
-# Desktop + Android + Extensions Release — tag-gated, signed, reproducible release pipeline
+﻿# Desktop + Android + Extensions Release — tag-gated, signed, reproducible release pipeline
 #
 # Flow: push tag `v*` (package.json version MUST match the tag)
 #   1. Build Linux / macOS / Windows packages, signed Android APKs and browser
@@ -27,6 +27,48 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # ─────────────────────────────────────────────────────────────────────────
+  # plan: decide which desktop platforms this run is allowed to publish.
+  #
+  # Why this exists: macOS and Windows cannot be published unsigned (Y-19), and
+  # without certificates the whole pipeline simply goes red and nothing ships.
+  # That is the correct default, but it also means there is no way to ship a
+  # Linux-only release in the meantime -- and Linux is the one platform whose
+  # artifacts need no certificate to be legitimate.
+  #
+  # The selection is a repository *variable* (`vars`), not a secret, so it is
+  # visible in the repo settings and auditable in the run summary. Unset or
+  # "all" means every platform, which preserves the pre-existing fail-closed
+  # behaviour exactly. Setting it to e.g. "linux" is the only way to narrow it.
+  #
+  # Deliberately NOT a workflow input: this workflow is tag-triggered, and tags
+  # cannot carry inputs. It is also deliberately not `continue-on-error` on the
+  # signing gates: that would turn a loud failure into a silent skip, and the
+  # Y-19 gate exists precisely to fail loudly.
+  plan:
+    name: Plan release platforms
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      macos: ${{ steps.select.outputs.macos }}
+      windows: ${{ steps.select.outputs.windows }}
+      selection: ${{ steps.select.outputs.selection }}
+    steps:
+      # Without this the job runs `node scripts/...` in an empty workspace and
+      # dies with MODULE_NOT_FOUND. `publish` reads only this job's *outputs*, not
+      # its result, so the failure did not stop a release -- it silently
+      # deselected macOS and Windows instead, which looked like a platform
+      # choice. A gate that cannot fail is not a gate; this step is the whole
+      # point of the job.
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (SHA-pinned)
+
+      - name: Select platforms
+        id: select
+        env:
+          REQUESTED_PLATFORMS: ${{ vars.RELEASE_DESKTOP_PLATFORMS }}
+        run: node scripts/select-release-platforms.cjs
+
   build-linux:
     name: Build Linux packages
     runs-on: ubuntu-22.04
@@ -95,6 +137,11 @@ jobs:
             -exec cp {} release-local/linux/ \;
           ls -la release-local/linux/
 
+      - name: 'Signing report gate — block unsigned releases (Y-19)'
+        run: npm run desktop:release:signing:report -- --platform linux --dir release-local/linux --require-signed
+
+      - name: Desktop release gate
+        run: npm run desktop:release:gate -- --platform linux
       - name: Upload Linux release artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
         with:
@@ -105,6 +152,8 @@ jobs:
 
   build-macos:
     name: Build macOS packages
+    needs: [plan]
+    if: needs.plan.outputs.macos == 'true'
     runs-on: macos-14
     timeout-minutes: 90
 
@@ -117,6 +166,68 @@ jobs:
         with:
           node-version: 22
           cache: npm
+
+      # ── Y-19: real Developer ID signing ─────────────────────────────────────
+      # This job previously always built with `APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY_RESOLVED || '-' }}`,
+      # i.e. ad-hoc. An ad-hoc signature cannot pass `spctl --assess`, so the
+      # signing-report gate below correctly failed — the job produced a build
+      # that was never publishable. Signing now happens when the documented
+      # secrets exist, and the build still fails at the gate when they do not.
+      # That is deliberate: an unsigned public release must not be possible.
+      - name: 'Import Developer ID certificate (Y-19)'
+        if: ${{ env.APPLE_SIGNING_CERT_P12 != '' }}
+        env:
+          APPLE_SIGNING_CERT_P12: ${{ secrets.APPLE_SIGNING_CERT_P12 }}
+          APPLE_SIGNING_CERT_PASSWORD: ${{ secrets.APPLE_SIGNING_CERT_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          CERT_PATH="$RUNNER_TEMP/developer-id.p12"
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+
+          # Never let a failure leave the certificate or keychain behind.
+          cleanup() {
+            security delete-keychain "$KEYCHAIN" 2>/dev/null || true
+            rm -f "$CERT_PATH"
+          }
+          trap cleanup EXIT
+
+          echo "$APPLE_SIGNING_CERT_P12" | base64 --decode > "$CERT_PATH"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$CERT_PATH" -k "$KEYCHAIN" \
+            -P "$APPLE_SIGNING_CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security list-keychain -d user -s "$KEYCHAIN" login.keychain-db
+          security set-key-partition-list -S apple-tool:,apple: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+
+          # Record the identity so the build step can use it instead of "-".
+          IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN" \
+            | sed -n 's/.*"\(Developer ID Application:.*\)"/\1/p' | head -n1)
+          if [ -z "$IDENTITY" ]; then
+            echo "::error::No Developer ID Application identity found in the imported certificate."
+            exit 1
+          fi
+          echo "APPLE_SIGNING_IDENTITY_RESOLVED=$IDENTITY" >> "$GITHUB_ENV"
+          echo "Resolved Developer ID identity."
+
+      - name: 'Store notarization credentials (Y-19)'
+        if: ${{ env.APPLE_SIGNING_CERT_P12 != '' }}
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APPLE_ID:-}" ] || [ -z "${APPLE_TEAM_ID:-}" ] || [ -z "${APPLE_APP_SPECIFIC_PASSWORD:-}" ]; then
+            echo "::error::APPLE_ID, APPLE_TEAM_ID and APPLE_APP_SPECIFIC_PASSWORD are all required for notarization."
+            exit 1
+          fi
+          xcrun notarytool store-credentials "AC_NOTARY" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD"
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable (SHA-pinned)
@@ -143,9 +254,37 @@ jobs:
       - name: Build macOS universal desktop packages
         run: npx tauri build --target universal-apple-darwin
         env:
-          APPLE_SIGNING_IDENTITY: "-"
+          # Y-19: the real Developer ID identity when a certificate was imported,
+          # otherwise ad-hoc. Either way the signing-report gate below decides
+          # whether the result may be published.
+          APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY_RESOLVED || '-' }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+      - name: 'Notarize and staple macOS build (Y-19)'
+        if: ${{ env.APPLE_SIGNING_CERT_P12 != '' }}
+        run: |
+          set -euo pipefail
+          APP_PATH=$(find src-tauri/target -type d -name '*.app' -path '*release/bundle/macos*' | head -n1)
+          DMG_PATH=$(find src-tauri/target -type f -name '*.dmg' -path '*release/bundle/macos*' | head -n1)
+          if [ -z "$APP_PATH" ] || [ -z "$DMG_PATH" ]; then
+            echo "::error::Could not locate the macOS .app/.dmg to notarize."
+            exit 1
+          fi
+
+          # Sign the bundle explicitly as well, so the signature covers the
+          # notarized contents rather than depending on the bundler's timing.
+          codesign --force --deep --options runtime --timestamp \
+            --sign "$APPLE_SIGNING_IDENTITY" "$APP_PATH"
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+
+          xcrun notarytool submit "$DMG_PATH" --keychain-profile "AC_NOTARY" --wait
+          xcrun stapler staple "$DMG_PATH"
+          xcrun stapler validate "$DMG_PATH"
+
+          # A successful staple is necessary but not sufficient: the gate below
+          # independently re-verifies with spctl.
+          echo "Notarized and stapled: $DMG_PATH"
 
       - name: Release security hardening gate
         run: npm run security:release-hardening
@@ -167,6 +306,11 @@ jobs:
           done
           ls -la release-local/macos/
 
+      - name: 'Signing report gate — block unsigned releases (Y-19)'
+        run: npm run desktop:release:signing:report -- --platform macos --dir release-local/macos --require-signed
+
+      - name: Desktop release gate
+        run: npm run desktop:release:gate -- --platform macos
       - name: Upload macOS release artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
         with:
@@ -177,6 +321,8 @@ jobs:
 
   build-windows:
     name: Build Windows packages
+    needs: [plan]
+    if: needs.plan.outputs.windows == 'true'
     runs-on: windows-latest
     timeout-minutes: 90
 
@@ -210,13 +356,62 @@ jobs:
       - name: Build browser extensions
         run: npm run build:extension
 
+      # ── Y-19: Authenticode signing ─────────────────────────────────────────
+      # There was previously no signing step at all on Windows, so every
+      # published `.exe`/`.msi` reached users unsigned and the signing-report
+      # gate failed. Secret names match `docs/RELEASE_PLAN.md`.
+      - name: 'Import Authenticode certificate (Y-19)'
+        if: ${{ env.WINDOWS_SIGNING_CERT_BASE64 != '' }}
+        shell: pwsh
+        env:
+          WINDOWS_SIGNING_CERT_BASE64: ${{ secrets.WINDOWS_SIGNING_CERT_BASE64 }}
+          WINDOWS_SIGNING_CERT_PASSWORD: ${{ secrets.WINDOWS_SIGNING_CERT_PASSWORD }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pfxPath = Join-Path $env:RUNNER_TEMP 'aegis-signing.pfx'
+          [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:WINDOWS_SIGNING_CERT_BASE64))
+
+          $secure = ConvertTo-SecureString -String $env:WINDOWS_SIGNING_CERT_PASSWORD -AsPlainText -Force
+          Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation 'Cert:\CurrentUser\My' -Password $secure | Out-Null
+          Remove-Item -Force $pfxPath
+
+          $cert = Get-ChildItem 'Cert:\CurrentUser\My' |
+            Where-Object { $_.HasPrivateKey -and $_.EnhancedKeyUsageList.ObjectId -contains '1.3.6.1.5.5.7.3.3' } |
+            Select-Object -First 1
+          if (-not $cert) { throw 'No code-signing certificate with a private key was imported.' }
+
+          "WINDOWS_SIGNING_THUMBPRINT=$($cert.Thumbprint)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "Imported code-signing certificate $($cert.Thumbprint)"
+
       - name: Build Windows desktop packages
         run: npx tauri build
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
-      - name: Release security hardening gate
+      - name: 'Sign Windows packages (Y-19)'
+        if: ${{ env.WINDOWS_SIGNING_CERT_BASE64 != '' }}
+        shell: pwsh
+        env:
+          WINDOWS_SIGNING_TIMESTAMP_URL: ${{ secrets.WINDOWS_SIGNING_TIMESTAMP_URL }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $timestamp = if ($env:WINDOWS_SIGNING_TIMESTAMP_URL) { $env:WINDOWS_SIGNING_TIMESTAMP_URL } else { 'http://timestamp.digicert.com' }
+
+          # Runs after the build, because the artifacts must exist to be signed.
+          $targets = Get-ChildItem 'src-tauri\target\release\bundle' -Recurse -File |
+            Where-Object { $_.Extension -in '.exe', '.msi' }
+          if (-not $targets) { throw 'No .exe or .msi artifacts found to sign.' }
+
+          foreach ($target in $targets) {
+            # Timestamped so the signature outlives the certificate's expiry.
+            & signtool sign /tr $timestamp /td sha256 /fd sha256 `
+              /sha1 $env:WINDOWS_SIGNING_THUMBPRINT $target.FullName
+            if ($LASTEXITCODE -ne 0) { throw "signtool failed for $($target.FullName)" }
+            Write-Host "Signed $($target.Name)"
+          }
+
+      - name: 'Release security hardening gate'
         run: npm run security:release-hardening
 
       - name: Collect Windows release artifacts
@@ -231,6 +426,11 @@ jobs:
             Copy-Item -Destination release-local/windows
           Get-ChildItem release-local/windows | Select-Object -ExpandProperty Name
 
+      - name: 'Signing report gate — block unsigned releases (Y-19)'
+        run: npm run desktop:release:signing:report -- --platform windows --dir release-local/windows --require-signed
+
+      - name: Desktop release gate
+        run: npm run desktop:release:gate -- --platform windows
       - name: Upload Windows release artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
         with:
@@ -254,7 +454,7 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Setup Rust (with Android targets)
+      - name: Setup Rust
         uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable (SHA-pinned)
         with:
           targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
@@ -400,7 +600,20 @@ jobs:
 
   generate-sbom:
     name: Generate SBOM (CycloneDX)
-    needs: [build-linux, build-macos, build-windows, build-android, build-extensions]
+    needs: [plan, build-linux, build-macos, build-windows, build-android, build-extensions]
+    # `always()` is required, not optional: a job whose `needs` includes a
+    # *skipped* job is itself skipped in GitHub Actions, so without this a
+    # partial release would silently produce no SBOM and no release at all.
+    # The explicit result checks are what keep it safe -- every platform that
+    # was selected must have actually succeeded.
+    if: >-
+      always() && !cancelled() &&
+      needs.plan.result == 'success' &&
+      needs.build-linux.result == 'success' &&
+      needs.build-android.result == 'success' &&
+      needs.build-extensions.result == 'success' &&
+      (needs.plan.outputs.macos != 'true' || needs.build-macos.result == 'success') &&
+      (needs.plan.outputs.windows != 'true' || needs.build-windows.result == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -447,7 +660,20 @@ jobs:
 
   publish:
     name: Sign and publish GitHub Release
-    needs: [build-linux, build-macos, build-windows, build-android, build-extensions, generate-sbom]
+    needs: [plan, build-linux, build-macos, build-windows, build-android, build-extensions, generate-sbom]
+    # Same reasoning as generate-sbom: `always()` so a skipped optional platform
+    # does not skip the release, plus explicit success checks so a *failed*
+    # platform still blocks it. The difference between "skipped" and "failed" is
+    # the whole mechanism, and it is decided here rather than by accident.
+    if: >-
+      always() && !cancelled() &&
+      needs.plan.result == 'success' &&
+      needs.generate-sbom.result == 'success' &&
+      needs.build-linux.result == 'success' &&
+      needs.build-android.result == 'success' &&
+      needs.build-extensions.result == 'success' &&
+      (needs.plan.outputs.macos != 'true' || needs.build-macos.result == 'success') &&
+      (needs.plan.outputs.windows != 'true' || needs.build-windows.result == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -480,12 +706,17 @@ jobs:
           path: release-local/linux
 
       - name: Download macOS artifacts
+        # Skipped when macOS was not selected: download-artifact fails outright
+        # on a missing artifact, so an unconditional step would turn a partial
+        # release back into a hard failure.
+        if: needs.plan.outputs.macos == 'true'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v6.0.0 (SHA-pinned)
         with:
           name: aegis-vault-v7-macos
           path: release-local/macos
 
       - name: Download Windows artifacts
+        if: needs.plan.outputs.windows == 'true'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v6.0.0 (SHA-pinned)
         with:
           name: aegis-vault-v7-windows
@@ -511,6 +742,49 @@ jobs:
 
       - name: Generate Tauri updater manifest (latest.json)
         run: node scripts/generate-updater-manifest.cjs
+
+      # The safety net for partial releases, and deliberately independent of the
+      # `plan` job. Each build job already gated its own artifacts, but this
+      # re-runs the same gate against what was actually *downloaded* here, at
+      # the last moment before anything is uploaded.
+      #
+      # That separation is the point: platform selection decides what is
+      # INCLUDED, and this step decides whether anything UNSIGNED can SHIP.
+      # A bug in `plan`, a mis-set repository variable, or a hand-edited `if:`
+      # cannot turn into an unsigned public artifact, because the presence of
+      # macOS/Windows files is what triggers the check -- not the flag that was
+      # supposed to allow them.
+      #
+      # Runs before the prune step, which deletes the per-platform metadata.json
+      # this gate reads.
+      - name: Re-verify collected artifacts before publishing
+        run: |
+          set -euo pipefail
+          for platform in macos windows; do
+            dir="release-local/$platform"
+            if [ -d "$dir" ] && [ -n "$(ls -A "$dir" 2>/dev/null)" ]; then
+              echo "::group::Re-verifying $platform artifacts"
+              npm run desktop:release:signing:report -- \
+                --platform "$platform" --dir "$dir" --require-signed
+              echo "::endgroup::"
+            else
+              echo "No $platform artifacts present - nothing to verify."
+            fi
+          done
+
+      - name: Fail if a selected platform produced no artifacts
+        run: |
+          set -euo pipefail
+          for platform in linux macos windows; do
+            dir="release-local/$platform"
+            if [ ! -d "$dir" ] || [ -z "$(ls -A "$dir" 2>/dev/null)" ]; then
+              if [ "$platform" = "linux" ]; then
+                echo "::error::Linux artifacts are missing; a release with no Linux build is not a release"
+                exit 1
+              fi
+              echo "::notice::$platform was not published in this release."
+            fi
+          done
 
       - name: Prune non-distributable files and deduplicate basenames
         run: |

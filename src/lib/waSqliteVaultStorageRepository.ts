@@ -31,6 +31,45 @@ const VAULT_ITEM_KDF = 'argon2-browser' as const;
 const VAULT_ENCRYPTION_SALT_KEY = 'vault_encryption_salt';
 const VAULT_KDF_PARAMS_KEY = 'vault_kdf_params';
 const ENCRYPTED_MARKER = '[encrypted: aes-256-gcm]';
+
+// O-14: per-row crypto is awaited one row at a time in the read and write
+// paths, so a 5,000 item vault serialises 5,000 rounds of async work. WebCrypto
+// already runs its work off the main thread, so a handful in flight is free
+// wall-clock savings.
+//
+// The bound is the point. `Promise.all` over every row would be faster still
+// and would be a denial-of-service against ourselves: snapshot restore accepts
+// up to 50,000 items, and 50,000 simultaneously live per-item keys plus
+// ciphertexts is a tab-sized allocation. Sixteen keeps every WebCrypto slot
+// busy without turning a large legitimate import into an out-of-memory crash.
+const ROW_CRYPTO_CONCURRENCY = 16;
+
+/**
+ * Maps `items` through an async transform with bounded concurrency, preserving
+ * input order. Rejects with the first failure once the in-flight work settles.
+ */
+async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  limit: number,
+  transform: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+
+  const worker = async (): Promise<void> => {
+    for (;;) {
+      const index = next++;
+      if (index >= items.length) {
+        return;
+      }
+      results[index] = await transform(items[index] as T, index);
+    }
+  };
+
+  const workers = Array.from({ length: Math.min(limit, items.length) }, () => worker());
+  await Promise.all(workers);
+  return results;
+}
 // 32 MiB / 3 iterations is the cross-platform safe profile that the bundled
 // argon2-browser WASM can always allocate in WebView2 (Windows), WebKit
 // (macOS/iOS), WebKitGTK (Linux) and Android WebView. Higher memory profiles
@@ -80,9 +119,45 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
     this.engine = options.engine ?? createWaSqliteEngine();
   }
 
+  /**
+   * O-13: memoized hydration.
+   *
+   * Every public method began with `await this.hydrate()`, and `hydrate` called
+   * `engine.initialize()` unconditionally. Opening and schema-checking a
+   * wa-sqlite database is not free, so a single unlock — which touches the
+   * repository a dozen times — re-ran it a dozen times, and the cost was paid
+   * again on every read.
+   *
+   * The in-flight promise is cached rather than a boolean flag, so concurrent
+   * callers share one initialization instead of racing several. A **rejection is
+   * not cached**: a failed open is usually transient (origin quota, a WASM fetch
+   * hiccup), and caching the failure would brick the repository for the session.
+   */
+  private hydratePromise: Promise<void> | null = null;
+
   public async hydrate(): Promise<void> {
-    const health = await this.engine.initialize();
-    this.logQuery(`WA_SQLITE_REPOSITORY initialize database=${health.databaseName};`, 'SUCCESS', health.tableCount);
+    if (this.hydratePromise) {
+      return this.hydratePromise;
+    }
+
+    const attempt = (async () => {
+      const health = await this.engine.initialize();
+      this.logQuery(
+        `WA_SQLITE_REPOSITORY initialize database=${health.databaseName};`,
+        'SUCCESS',
+        health.tableCount,
+      );
+    })();
+
+    this.hydratePromise = attempt;
+
+    try {
+      await attempt;
+    } catch (err) {
+      // Let the next caller retry from scratch rather than being wedged.
+      this.hydratePromise = null;
+      throw err;
+    }
   }
 
   public clearDerivedKeyCache(): void {
@@ -155,11 +230,7 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
     const oldSalt = await this.ensureVaultEncryptionSalt();
     const oldKey = await this.deriveEncryptionKey(oldPassword, oldSalt);
     const rows = await this.readVaultItemRows();
-    const items: VaultItem[] = [];
-
-    for (const row of rows) {
-      items.push(await this.mapVaultItemRow(row, oldKey));
-    }
+    const items = await mapWithConcurrency(rows, ROW_CRYPTO_CONCURRENCY, (row) => this.mapVaultItemRow(row, oldKey));
 
     const newSalt = this.createVaultEncryptionSalt();
     const newKey = await deriveArgon2idKey(newPassword, newSalt, DEFAULT_KDF_PARAMS);
@@ -257,11 +328,7 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
 
   public async getVaultItemsWithKey(key: Uint8Array): Promise<VaultItem[]> {
     const rows = await this.readVaultItemRows();
-    const items: VaultItem[] = [];
-
-    for (const row of rows) {
-      items.push(await this.mapVaultItemRow(row, key));
-    }
+    const items = await mapWithConcurrency(rows, ROW_CRYPTO_CONCURRENCY, (row) => this.mapVaultItemRow(row, key));
 
     this.logQuery('SELECT id, title, category, favorite, deleted, deleted_at, created_at, updated_at, username_db, notes_db, enc_metadata, enc_kdf FROM vault_items;', 'SUCCESS', items.length);
     return items;
@@ -310,11 +377,11 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
     key: Uint8Array,
     onProgress?: (count: number) => void,
   ): Promise<VaultItem[]> {
-    const rows: WaSqliteVaultItemRow[] = [];
-
-    for (const item of items) {
-      rows.push(await this.createEncryptedRow(item, key));
-    }
+    // Encryption runs before the transaction opens, so a failure here still
+    // leaves the vault untouched. `onProgress` deliberately stays on the write
+    // loop below: it reports persisted rows, and reporting from this phase too
+    // would double-count every item and make the bar advance past the real work.
+    const rows = await mapWithConcurrency(items, ROW_CRYPTO_CONCURRENCY, (item) => this.createEncryptedRow(item, key));
 
     await this.runTransaction(async () => {
       for (const [index, row] of rows.entries()) {
@@ -345,6 +412,10 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
       await this.executeRequired('DELETE FROM storage_metadata;');
     });
     this.logQuery('DELETE FROM vault_items; DELETE FROM user_secrets; DELETE FROM storage_metadata;', 'SUCCESS', 1);
+    // A reset deletes the schema metadata the open was initialised against, so
+    // the memoized hydration is no longer valid. Re-opening on the next call
+    // keeps the cache from outliving what it described.
+    this.hydratePromise = null;
   }
 
   public async deletePermanently(id: string, passwordPlain: string): Promise<VaultItem[]> {
@@ -437,9 +508,15 @@ export class WaSqliteVaultStorageRepository implements VaultStorageRepository {
   }
 
   private async readVaultItemRows(): Promise<WaSqliteVaultItemRow[]> {
+    // The id guard used to be a JavaScript `.filter` over every row, so a
+    // corrupt row with a blank id was still marshalled across the bridge and
+    // decoded before being thrown away. Pushing the predicate into SQL keeps
+    // `typeof` semantics exactly (a numeric id is rejected, not just an empty
+    // one) and means garbage never leaves SQLite.
     const rows = await this.engine.selectObjects(`
 SELECT id, title, category, favorite, deleted, deleted_at, created_at, updated_at, username_db, notes_db, enc_metadata, enc_kdf
-FROM vault_items;
+FROM vault_items
+WHERE typeof(id) = 'text' AND length(id) > 0;
 `);
     return rows.filter((candidate) => typeof candidate.id === 'string' && candidate.id.length > 0) as WaSqliteVaultItemRow[];
   }
@@ -494,7 +571,7 @@ FROM vault_items;
   }
 
   private async createEncryptedRow(item: VaultItem, key: Uint8Array): Promise<WaSqliteVaultItemRow> {
-    const nowStr = new Date().toISOString().split('T')[0] ?? new Date().toISOString();
+    const nowStr = new Date().toISOString();
     const id = item.id || secureRandomToken(9);
     const createdAt = item.createdAt || nowStr;
     const updatedAt = item.updatedAt || nowStr;

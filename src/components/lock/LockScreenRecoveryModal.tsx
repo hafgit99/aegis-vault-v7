@@ -52,6 +52,7 @@ export function LockScreenRecoveryModal({
 
   useEffect(() => {
     let cancelled = false;
+    if (!isOpen) return undefined;
     getPasswordHint()
       .then((hint) => {
         if (!cancelled) setHintContent(hint);
@@ -62,7 +63,27 @@ export function LockScreenRecoveryModal({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isOpen]);
+
+  // Y-2: scrub sensitive recovery material the moment the modal closes. The
+  // component stays mounted while hidden, so hooks run before the early
+  // return below — reset via the render-phase "adjust state on prop change"
+  // pattern instead of an effect (avoids a flash of stale secrets).
+  const [wasOpen, setWasOpen] = useState(isOpen);
+  if (wasOpen !== isOpen) {
+    setWasOpen(isOpen);
+    if (!isOpen) {
+      setRecoveryInputWords('');
+      setRecoveredMasterPassword(null);
+      setRecoveryNewPassword('');
+      setRecoveryConfirmPassword('');
+      setRecoveryModalError(null);
+      setRecoveryModalSuccess(null);
+      setRecoveryModalLoading(false);
+      setActiveRecoveryTab('key');
+      setHintContent(null);
+    }
+  }
 
   if (!isOpen) return null;
 

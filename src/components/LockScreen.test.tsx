@@ -34,6 +34,9 @@ vi.mock('../lib/storage', () => ({
   setupMasterPasswordWithSecretKey: vi.fn(async () => undefined),
   verifyMasterPassword: vi.fn(),
   resetSystem: vi.fn(async () => undefined),
+  // K-4: a damaged vault file is a storage failure, not a wrong password.
+  isVaultStorageUnreadableError: vi.fn((err: unknown) =>
+    err instanceof Error && err.message.startsWith('vault-database-unreadable:')),
 }));
 
 vi.mock('../lib/biometric', () => ({

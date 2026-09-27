@@ -1,4 +1,4 @@
-# CI — typecheck and unit test gates on every push and pull request
+# CI â€” typecheck and unit test gates on every push and pull request
 name: CI
 
 on:
@@ -81,6 +81,8 @@ jobs:
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable
+        with:
+          components: clippy
 
       - name: Cache cargo build artifacts
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
@@ -92,3 +94,121 @@ jobs:
 
       - name: Cargo tests
         run: cargo test
+
+      - name: Cargo clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Install cargo-deny (official release binary)
+        run: |
+          CD_VERSION=0.20.2
+          curl -sSfL "https://github.com/EmbarkStudios/cargo-deny/releases/download/${CD_VERSION}/cargo-deny-${CD_VERSION}-x86_64-unknown-linux-musl.tar.gz" -o /tmp/cargo-deny.tar.gz
+          tar -xzf /tmp/cargo-deny.tar.gz -C /tmp
+          sudo install -m 755 "/tmp/cargo-deny-${CD_VERSION}-x86_64-unknown-linux-musl/cargo-deny" /usr/local/bin/cargo-deny
+          cargo-deny --version
+
+      - name: Cargo deny (RustSec advisories, bans, licences, sources)
+        # All four gates are release blockers. `cargo deny check advisories`
+        # alone left the licence and source policies in src-tauri/deny.toml
+        # unenforced, so a copyleft or unknown-origin dependency could ship
+        # without any signal.
+        run: cargo deny check advisories bans licenses sources
+
+  security:
+    name: Security gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: 'Security: dependencies audit'
+        run: npm run security:dependencies
+
+      - name: 'Security: CSP strict-style gate'
+        run: npm run security:csp
+
+      - name: 'Security: no JS master password string'
+        run: npm run security:no-js-master-string
+
+      # K-1 regression gate. The credential-handling Activity must stay
+      # android:exported="false" and must keep resolving Autofill requests
+      # through the in-process registry instead of Intent extras, which is what
+      # closed the forged-intent credential exfiltration.
+      #
+      # The gate also used to require Android lint to be wired in, because lint
+      # was never run and had seven errors waiting unnoticed — four of them NewApi
+      # on this autofill path, a class extending an API 26 type while minSdk is
+      # 24. Android lint is deliberately NOT in this workflow. It cannot be, and
+      # the reason is worth writing down so nobody tries again:
+      #
+      # The app module's Kotlin does not compile until the Rust library has been
+      # cross-compiled. `MainActivity : TauriActivity`, but `TauriActivity` is
+      # not part of the `:tauri-android` Gradle project — it is a template at
+      # `tauri-<ver>/mobile/android-codegen/TauriActivity.kt` that tauri's
+      # `build.rs` copies into the app's Kotlin sources, and only when
+      # `WRY_ANDROID_KOTLIN_FILES_OUT_DIR` is set, which only wry's Gradle
+      # plugin does. Its own superclass is no better: `WryActivity` lives in the
+      # `wry` crate, not in tauri. So a bare `./gradlew :app:lintArmDebug`
+      # compiles the app against a missing base class and dies with
+      # "Unresolved reference: TauriActivity" plus a ~40-error cascade.
+      #
+      # Lint was attempted here twice and failed for reasons that each looked
+      # like the last one: first the gitignored Gradle glue
+      # (`tauri.settings.gradle`, `tauri.build.gradle.kts`) was missing, then the
+      # codegen. Only the release workflow has the environment this needs, and it
+      # already runs `tauri android build`, which compiles all of this Kotlin —
+      # so a Kotlin that does not compile is already a release blocker. The gap
+      # that leaves is narrow and named: lint's NewApi findings on a tree that
+      # compiles. The static gate above covers the exported-component and
+      # Intent-extra halves of K-1, and the autofill service's API 26
+      # requirement is asserted with `tools:targetApi`.
+      - name: 'Security: Android Autofill trust boundary (K-1)'
+        run: npm run security:android-autofill-boundary
+
+
+      - name: 'Security: session callback authorization gate'
+        run: npm run security:session-gates
+
+      # Y-19: the release workflow must keep its blocking signing gates and
+      # must keep the signing steps secret-driven and correctly ordered. This
+      # catches a deleted, reordered or mis-wired signing step in ordinary CI,
+      # rather than on release day.
+      - name: 'Security: release signing gate (Y-19)'
+        run: npm run security:release-signing
+
+      # Y-16 / O-6: the Rust IPC boundary and the TypeScript Argon2id layer are
+      # two implementations of one policy. If they drift, a parameter the desktop
+      # side refuses could still be honoured by the WASM path, and nothing else
+      # would notice.
+      - name: 'Security: Argon2id bound parity (Y-16 / O-6)'
+        run: npm run security:argon2-bounds
+
+      # N-2 / #26: the i18n audit was never wired into CI, which is why a
+      # two-language key regression (double-quoted keys are invisible to the
+      # audit's single-quote key regex) stayed invisible until it was found
+      # locally. Parity is a release-quality gate, not a nicety: a missing key
+      # ships as a raw key string in the UI of a password manager.
+      - name: 'i18n key parity audit (12 locales)'
+        run: npm run i18n:audit
+
+      - name: Fuzz tests
+        run: npm run test:fuzz
+
+      - name: Gitleaks (secret scan)
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

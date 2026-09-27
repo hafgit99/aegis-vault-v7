@@ -17,6 +17,9 @@ struct ExtensionState {
     credentials:
         std::sync::Arc<std::sync::Mutex<Option<native_messaging::ExtensionCredentialCache>>>,
     pairing_token: std::sync::Arc<std::sync::Mutex<String>>,
+    /// #43: shared with the loopback IPC accept loop. A token rotation has to retire the
+    /// sessions that are *already* connected, not just the handshakes that come after it.
+    session_generation: native_messaging::RevokeGeneration,
 }
 
 #[derive(serde::Serialize)]
@@ -308,6 +311,20 @@ fn replace_file_atomically(
 
 #[tauri::command]
 fn read_vault_database(app: AppHandle) -> Result<Option<String>, String> {
+    // #42: deliberately NOT gated on `CredentialSession`.
+    //
+    // The session is created by `open_rust_session`, which runs *after* the
+    // renderer has read the vault to obtain the salt and Argon2 hash needed to
+    // verify the password. `verifyMasterPassword` calls `initializeStorage()`
+    // first, which reaches this command. Gating it would make unlocking
+    // impossible — the read that bootstraps the session cannot require the
+    // session.
+    //
+    // The storage read is also not secret to the renderer in the way the
+    // commands below are: the file is the user's own encrypted vault, and the
+    // renderer already has filesystem-mediated access to its own app data.
+    // The privilege that genuinely requires an unlocked vault is the
+    // extension bridge, and those commands are gated.
     let database_path = vault_database_path(&app)?;
 
     if !database_path.exists() {
@@ -332,6 +349,8 @@ fn read_vault_database(app: AppHandle) -> Result<Option<String>, String> {
 
 #[tauri::command]
 fn write_vault_database(app: AppHandle, contents: String) -> Result<(), String> {
+    // #42: not gated — see the note on `read_vault_database`. A write can occur
+    // during first-time setup, which also precedes any session.
     let database_path = vault_database_path(&app)?;
     write_vault_database_file(&database_path, &contents)
 }
@@ -340,6 +359,17 @@ fn write_vault_database_file(
     database_path: &std::path::Path,
     contents: &str,
 ) -> Result<(), String> {
+    // Y-17: the write path had no size ceiling while the read path refused
+    // files above MAX_VAULT_FILE_BYTES — an oversized write made the vault
+    // permanently unreadable. Enforce the same limit on both sides.
+    if (contents.len() as u64) > MAX_VAULT_FILE_BYTES {
+        return Err(format!(
+            "vault database payload ({} MB) exceeds the maximum allowed limit of {} MB",
+            contents.len() / (1024 * 1024),
+            MAX_VAULT_FILE_BYTES / (1024 * 1024)
+        ));
+    }
+
     let tmp_path = database_path.with_extension(format!("tmp-{}", std::process::id()));
 
     {
@@ -371,6 +401,10 @@ fn write_vault_database_file(
 
 #[tauri::command]
 fn reset_vault_database(app: AppHandle) -> Result<(), String> {
+    // #42: not gated on `CredentialSession`, because `resetAll` also runs during
+    // first-time setup and system reset, both of which precede a session. The
+    // renderer-side gate in `resetSystem` is what requires an unlocked vault
+    // before this is reachable.
     let database_path = vault_database_path(&app)?;
 
     if database_path.exists() {
@@ -384,9 +418,15 @@ fn reset_vault_database(app: AppHandle) -> Result<(), String> {
 #[tauri::command]
 fn sync_extension_credentials(
     state: tauri::State<'_, ExtensionState>,
+    session: tauri::State<'_, CredentialSession>,
     credentials: Vec<native_messaging::ExtensionCredential>,
     ttl_ms: Option<u64>,
 ) -> Result<(), String> {
+    // #42: pushing credentials into the extension cache is a vault-adjacent
+    // write. Without a session a locked renderer could seed the cache that the
+    // extension bridge then hands out over loopback IPC.
+    session.require_active_session()?;
+
     let lease_expires_at = native_messaging::credential_lease_expires_at(
         ttl_ms.unwrap_or(native_messaging::EXTENSION_CREDENTIAL_LEASE_MS),
     );
@@ -402,27 +442,45 @@ fn sync_extension_credentials(
 }
 
 #[tauri::command]
-fn clear_extension_credentials(state: tauri::State<'_, ExtensionState>) -> Result<(), String> {
+fn clear_extension_credentials(
+    state: tauri::State<'_, ExtensionState>,
+    session: tauri::State<'_, CredentialSession>,
+) -> Result<(), String> {
+    // #42: gated for symmetry. Clearing is not destructive to vault data, but
+    // leaving it ungated would mean the gate can be side-stepped by toggling
+    // the cache from a locked renderer.
+    session.require_active_session()?;
+
     let mut creds = state.credentials.lock().map_err(|e| e.to_string())?;
     *creds = None;
     Ok(())
 }
 
 #[tauri::command]
-fn rotate_pairing_token(state: tauri::State<'_, ExtensionState>) -> Result<String, String> {
-    let new_token = native_messaging::generate_token();
+fn rotate_pairing_token(
+    state: tauri::State<'_, ExtensionState>,
+    session: tauri::State<'_, CredentialSession>,
+) -> Result<String, String> {
+    // #42: rotating the pairing token is a privilege change for the extension
+    // bridge. A locked renderer must not be able to mint a new token.
+    session.require_active_session()?;
 
-    if let Some(app_data_dir) = native_messaging::get_app_data_dir() {
-        let _ = fs::create_dir_all(&app_data_dir);
-        let token_path = app_data_dir.join(native_messaging::TOKEN_FILENAME);
-        native_messaging::write_pairing_token_file(&token_path, &new_token)
-            .map_err(|e| format!("failed to write pairing token to file: {e}"))?;
-    } else {
-        return Err("failed to resolve app data directory".to_string());
-    }
+    // #43: this goes through `rotate_pairing_token_now` so the retire-every-
+    // session step cannot be skipped. A token rotation only closes the door to
+    // *future* handshakes on its own; without the generation bump an
+    // extension that had already authenticated kept its derived session key
+    // and went on reading credentials after the user rotated the token away
+    // from it.
+    let token_path = native_messaging::get_app_data_dir()
+        .map(|dir| dir.join(native_messaging::TOKEN_FILENAME))
+        .ok_or_else(|| "failed to resolve app data directory".to_string())?;
 
-    let mut token_guard = state.pairing_token.lock().map_err(|e| e.to_string())?;
-    *token_guard = new_token.clone();
+    let new_token = native_messaging::rotate_pairing_token_now(
+        &state.pairing_token,
+        &state.session_generation,
+        Some(token_path),
+    )
+    .map_err(|e| format!("failed to write pairing token to file: {e}"))?;
 
     Ok(new_token)
 }
@@ -601,6 +659,69 @@ fn save_binary_file(default_filename: String, contents_base64: String) -> Result
     Ok(true)
 }
 
+/// #42: largest import file accepted from the native file dialog.
+///
+/// Import payloads are user-selected JSON, so this is generous relative to real
+/// exports, but it is not optional: `fs::read_to_string` allocates the whole
+/// file, so an oversized or sparse selection aborts the process.
+const MAX_IMPORT_FILE_BYTES: u64 = 25 * 1024 * 1024; // 25 MB
+/// Reads at most `max_bytes` from `reader`, then requires valid UTF-8.
+///
+/// Split out from `read_text_file_bounded` so the *stream* bound is directly
+/// testable. Testing it through a real file cannot prove anything: the
+/// `stat`-based pre-check rejects an oversized file first, so removing this
+/// bound leaves every file-based test green. A synthetic reader that yields
+/// more than the cap is the only way to exercise it.
+fn read_stream_bounded(
+    reader: &mut impl std::io::Read,
+    max_bytes: u64,
+    label: &str,
+) -> Result<String, String> {
+    use std::io::Read;
+
+    let mut limited = reader.take(max_bytes + 1);
+    let mut buffer = Vec::new();
+    limited
+        .read_to_end(&mut buffer)
+        .map_err(|error| format!("failed to read {label}: {error}"))?;
+
+    if buffer.len() as u64 > max_bytes {
+        return Err(format!(
+            "{label} exceeds the maximum allowed size of {} MB",
+            max_bytes / (1024 * 1024)
+        ));
+    }
+
+    String::from_utf8(buffer).map_err(|_| format!("{label} is not valid UTF-8 text"))
+}
+
+/// Reads a text file, refusing anything over `max_bytes`.
+///
+/// The length is checked **before** reading so an obviously-oversized file is
+/// rejected cheaply, and the stream is bounded independently so a file that
+/// grows between the `stat` and the read — or a special file that reports a
+/// small length — still cannot exhaust memory. A `stat`-only check would be a
+/// TOCTOU hole.
+fn read_text_file_bounded(
+    path: &std::path::Path,
+    max_bytes: u64,
+    label: &str,
+) -> Result<String, String> {
+    if let Ok(metadata) = fs::metadata(path) {
+        if metadata.len() > max_bytes {
+            return Err(format!(
+                "{label} ({} MB) exceeds the maximum allowed size of {} MB",
+                metadata.len() / (1024 * 1024),
+                max_bytes / (1024 * 1024)
+            ));
+        }
+    }
+
+    let mut file =
+        fs::File::open(path).map_err(|error| format!("failed to open {label}: {error}"))?;
+    read_stream_bounded(&mut file, max_bytes, label)
+}
+
 #[tauri::command]
 fn open_import_file() -> Result<Option<ImportFilePayload>, String> {
     let Some(path) = native_open_file_path()? else {
@@ -612,13 +733,12 @@ fn open_import_file() -> Result<Option<ImportFilePayload>, String> {
         .and_then(|value| value.to_str())
         .unwrap_or("selected-import")
         .to_string();
-    let contents =
-        fs::read_to_string(path).map_err(|error| format!("failed to read import file: {error}"))?;
+    let contents = read_text_file_bounded(&path, MAX_IMPORT_FILE_BYTES, "import file")?;
 
     Ok(Some(ImportFilePayload { name, contents }))
 }
 
-use credential_handler::{get_params, RustArgon2idOptions};
+use credential_handler::{get_params, CredentialSession, RustArgon2idOptions};
 
 #[tauri::command]
 fn derive_argon2id_key(
@@ -706,9 +826,11 @@ pub fn run() {
     let credentials = std::sync::Arc::new(std::sync::Mutex::new(None));
     let initial_token = native_messaging::generate_token();
     let pairing_token = std::sync::Arc::new(std::sync::Mutex::new(initial_token.clone()));
+    let session_generation = native_messaging::RevokeGeneration::new();
     let state = ExtensionState {
         credentials: credentials.clone(),
         pairing_token: pairing_token.clone(),
+        session_generation: session_generation.clone(),
     };
 
     let credential_session = credential_handler::CredentialSession::default();
@@ -757,6 +879,7 @@ pub fn run() {
                 app.handle().clone(),
                 pairing_token,
                 credentials.clone(),
+                session_generation,
             );
 
             Ok(())
@@ -799,6 +922,173 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ─── #42: bounded import file reading ───────────────────────────────────
+
+    fn temp_path(name: &str) -> std::path::PathBuf {
+        let mut dir = std::env::temp_dir();
+        dir.push(format!("aegis-import-test-{}-{}", std::process::id(), name));
+        dir
+    }
+
+    #[test]
+    fn import_reader_accepts_a_file_within_the_limit() {
+        let path = temp_path("within.bin");
+        fs::write(&path, br#"{"items":[]}"#).expect("write");
+
+        let contents = read_text_file_bounded(&path, 1024, "import file").expect("must accept");
+
+        assert_eq!(contents, r#"{"items":[]}"#);
+        let _ = fs::remove_file(&path);
+    }
+
+    #[test]
+    fn import_reader_rejects_an_oversized_file_before_reading_it() {
+        let path = temp_path("oversized.bin");
+        // Written sparsely-ish: the point is the length check, not the content.
+        fs::write(&path, vec![b'a'; 4096]).expect("write");
+
+        let error = read_text_file_bounded(&path, 1024, "import file")
+            .expect_err("must refuse an oversized import");
+
+        assert!(
+            error.contains("exceeds the maximum allowed size"),
+            "got: {error}"
+        );
+        let _ = fs::remove_file(&path);
+    }
+
+    #[test]
+    fn import_reader_refuses_when_the_stream_is_longer_than_the_limit() {
+        // A real file whose stream exceeds the limit is rejected by the pre-check,
+        // which is the cheap path. The stream bound itself is covered by
+        // `stream_bound_refuses_a_reader_that_yields_more_than_the_cap`, since no
+        // on-disk file can distinguish the two.
+        let path = temp_path("grew.bin");
+        fs::write(&path, vec![b'a'; 4096]).expect("write");
+
+        let error = read_text_file_bounded(&path, 2048, "import file")
+            .expect_err("must refuse an oversized import");
+
+        assert!(
+            error.contains("exceeds the maximum allowed size"),
+            "got: {error}"
+        );
+        let _ = fs::remove_file(&path);
+    }
+
+    #[test]
+    fn import_reader_accepts_a_file_exactly_at_the_limit() {
+        let path = temp_path("exact.bin");
+        fs::write(&path, vec![b'a'; 2048]).expect("write");
+
+        let contents = read_text_file_bounded(&path, 2048, "import file")
+            .expect("a file exactly at the cap is allowed");
+
+        assert_eq!(contents.len(), 2048);
+        let _ = fs::remove_file(&path);
+    }
+
+    #[test]
+    fn import_reader_rejects_non_utf8_content() {
+        // Invalid UTF-8 must be a clear error, not a panic or a lossy decode.
+        let path = temp_path("binary.bin");
+        fs::write(&path, [0xff, 0xfe, 0x00, 0x01]).expect("write");
+
+        let error = read_text_file_bounded(&path, 4096, "import file")
+            .expect_err("must refuse binary content");
+
+        assert!(error.contains("not valid UTF-8"), "got: {error}");
+        let _ = fs::remove_file(&path);
+    }
+
+    #[test]
+    fn stream_bound_refuses_a_reader_that_yields_more_than_the_cap() {
+        // This is the invariant the `stat` pre-check cannot cover, and the reason
+        // `read_stream_bounded` exists as a separate function: the reader reports
+        // no size, so only the stream bound can stop it.
+        struct Endless {
+            remaining: usize,
+        }
+        impl std::io::Read for Endless {
+            fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+                if self.remaining == 0 {
+                    return Ok(0);
+                }
+                let n = buf.len().min(self.remaining);
+                for slot in buf.iter_mut().take(n) {
+                    *slot = b'a';
+                }
+                self.remaining -= n;
+                Ok(n)
+            }
+        }
+
+        // Claims nothing about its size, yet yields far more than the cap.
+        let mut endless = Endless {
+            remaining: 1024 * 1024,
+        };
+        let error = read_stream_bounded(&mut endless, 2048, "import file")
+            .expect_err("must refuse a stream longer than the cap");
+
+        assert!(
+            error.contains("exceeds the maximum allowed size"),
+            "got: {error}"
+        );
+    }
+
+    #[test]
+    fn stream_bound_accepts_a_reader_exactly_at_the_cap() {
+        struct Exact {
+            remaining: usize,
+        }
+        impl std::io::Read for Exact {
+            fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+                if self.remaining == 0 {
+                    return Ok(0);
+                }
+                let n = buf.len().min(self.remaining);
+                for slot in buf.iter_mut().take(n) {
+                    *slot = b'a';
+                }
+                self.remaining -= n;
+                Ok(n)
+            }
+        }
+
+        let mut exact = Exact { remaining: 2048 };
+        let contents = read_stream_bounded(&mut exact, 2048, "import file")
+            .expect("exactly at the cap is allowed");
+
+        assert_eq!(contents.len(), 2048);
+    }
+
+    #[test]
+    fn stream_bound_rejects_non_utf8() {
+        let mut binary: &[u8] = &[0xff, 0xfe, 0x00, 0x01];
+        let error = read_stream_bounded(&mut binary, 4096, "import file")
+            .expect_err("binary content must be refused");
+
+        assert!(error.contains("not valid UTF-8"), "got: {error}");
+    }
+
+    #[test]
+    fn import_reader_reports_a_missing_file_clearly() {
+        let path = temp_path("missing.bin");
+        let _ = fs::remove_file(&path);
+
+        let error = read_text_file_bounded(&path, 4096, "import file")
+            .expect_err("a missing file must error");
+
+        assert!(error.contains("failed to open import file"), "got: {error}");
+    }
+
+    #[test]
+    fn import_limit_matches_the_vault_file_limit() {
+        // Same order of magnitude as the vault file, so a legitimate encrypted
+        // backup can always be imported.
+        assert_eq!(MAX_IMPORT_FILE_BYTES, MAX_VAULT_FILE_BYTES);
+    }
     use std::path::PathBuf;
     use std::time::{SystemTime, UNIX_EPOCH};
 

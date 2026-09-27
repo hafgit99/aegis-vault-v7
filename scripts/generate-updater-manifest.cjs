@@ -12,7 +12,19 @@ const path = require('path');
 
 const rootDir = path.resolve(__dirname, '..');
 const packageJson = require(path.join(rootDir, 'package.json'));
-const releaseLocalDir = path.join(rootDir, 'release-local');
+// Overridable so the tests can point the generator at a scratch directory.
+//
+// This is not a convenience. The generator's staging directory is `release-local/`,
+// which is also where the release pipeline puts the artifacts it has just
+// collected — and `desktop:release:gate` runs the unit suite *after* collecting
+// them, on the way to uploading them. A test that wrote to the real
+// `release-local/` was therefore reading whatever the release had staged (its
+// "no signed artifact" case found real .sig files and exited 0 instead of
+// failing), and its `afterEach` deleted the collected artifacts out from under
+// the upload step.
+const releaseLocalDir = process.env.RELEASE_LOCAL_DIR
+  ? path.resolve(process.env.RELEASE_LOCAL_DIR)
+  : path.join(rootDir, 'release-local');
 const updaterOutputDir = path.join(releaseLocalDir, 'updater');
 
 const version = packageJson.version; // full numeric version, e.g. 7.0.5.0 (tag + artifact names)
@@ -137,10 +149,32 @@ function generateManifest() {
   }
 
   const manifestPath = path.join(updaterOutputDir, 'latest.json');
+  const configured = Object.keys(manifest.platforms);
+
+  // An empty manifest is not a valid updater target, and writing one with exit
+  // code 0 is how a release ships that silently breaks auto-update: every
+  // client reads `platforms: {}`, matches nothing, and either does nothing or
+  // errors, depending on the Tauri version.
+  //
+  // Every entry is skipped silently by design elsewhere -- a missing `.sig` must
+  // not fail the build, because a build legitimately runs before signing. That
+  // is right for the per-platform scan and wrong for the end result. So the
+  // scan stays lenient and the outcome is checked once, here.
+  //
+  // This was already a latent bug; making desktop platforms optional made it
+  // reachable by a Linux-only release.
+  if (configured.length === 0) {
+    console.error('✗ Updater manifest has no platform entries.');
+    console.error('  No artifact with a valid Tauri minisign signature was found under');
+    console.error('  release-local/. Publishing this would ship a release whose auto-update');
+    console.error('  is broken for every platform.');
+    process.exit(1);
+  }
+
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
   console.log(`✓ Updater manifest written to: ${path.relative(rootDir, manifestPath)}`);
   console.log(`  Target Version: v${version}`);
-  console.log(`  Target Platforms Configured: ${Object.keys(manifest.platforms).join(', ') || 'None (Signatures pending build)'}`);
+  console.log(`  Target Platforms Configured: ${configured.join(', ')}`);
   console.log(`  Download Base URL: ${downloadBaseUrl}\n`);
 }
 

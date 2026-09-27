@@ -1,0 +1,264 @@
+# cargo-deny configuration — https://embarkstudios.github.io/cargo-deny/
+#
+# Checked in CI (`rust-tests` job): `cargo deny check advisories bans licenses sources`
+#
+# Policy: every gate below is a RELEASE BLOCKER. An ignore entry is only
+# acceptable when the advisory has no fix available AND the impact is
+# documented below. Do not add an ignore to make a red build green without
+# recording why the risk is acceptable.
+
+[graph]
+# Build the full feature graph, otherwise `tauri` feature-gated dependencies
+# (which is where most of the crypto/TLS crates live) are not checked at all.
+all-features = true
+
+[output]
+feature-depth = 1
+
+[advisories]
+version = 2
+ignore = [
+    # proc-macro-error is unmaintained (RUSTSEC-2024-0370). Transitive via
+    # tauri 2.11 -> gtk 0.18 -> glib-macros; upstream has no safe upgrade
+    # ("No safe upgrade is available!"). Revisit when the gtk-rs 0.19 /
+    # tauri stack migrates away from proc-macro-error.
+    "RUSTSEC-2024-0370",
+
+    # The `unic-*` family (open-i18n/rust-unic) is unmaintained. One root
+    # advisory plus four "part of the same unmaintained family" advisories.
+    # Transitive and unavoidable at the current pin:
+    #   tauri-utils 2.9.3 -> urlpattern 0.3.0 -> unic-ucd-ident 0.9.0
+    # `urlpattern` 0.6.0 (which drops rust-unic) exists, but tauri-utils 2.x
+    # pins `urlpattern = "0.3"`, so the only upgrade path is Tauri 3 (alpha).
+    # Impact: unmaintained, NOT a vulnerability. rust-unic performs Unicode
+    # identifier lookups while parsing URLPattern at build time; AegisVault
+    # does not accept URLPattern input from untrusted sources at runtime.
+    # Revisit when tauri-utils moves to urlpattern 0.6+.
+    "RUSTSEC-2025-0075", # unic-char-range
+    "RUSTSEC-2025-0080", # unic-common
+    "RUSTSEC-2025-0081", # unic-char-property
+    "RUSTSEC-2025-0098", # unic-ucd-version
+    "RUSTSEC-2025-0100", # unic-ucd-ident
+]
+
+# NOTE: RUSTSEC-2026-0285 (rustls TLS 1.3 encryption-level confusion) is NOT
+# ignored — it has a fix, so it was resolved by upgrading the lockfile to
+# rustls 0.23.45. If it reappears, upgrade; do not add it here.
+
+[bans]
+# Duplicate versions are expected in the tauri/gtk/wry tree and are not a
+# security property. Warn so the list stays visible without failing the build.
+multiple-versions = "warn"
+# `foo = "*"` style requirements make a build non-reproducible in ways a
+# lockfile bump cannot fully undo. None are present today.
+wildcards = "deny"
+# Nothing is hard-denied: the tauri stack has no safe alternative for these.
+deny = []
+
+[licenses]
+version = 2
+# Permissive licences only, plus MPL-2.0 (weak, file-level copyleft).
+# Copyleft that would impose obligations on the distributed binary
+# (GPL / AGPL / LGPL-only) is deliberately NOT allowed.
+allow = [
+    "0BSD",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "CC0-1.0",
+    "CDLA-Permissive-2.0",
+    "ISC",
+    "MIT",
+    "MIT-0",
+    "Unlicense",
+    "Unicode-3.0",
+    "Zlib",
+    # MPL-2.0: file-level copyleft, reached only through the Linux `wry`
+    # chain (scraper/html5ever -> cssparser, selectors, dtoa-short,
+    # option-ext). Used as an unmodified library; MPL-2.0 obliges us to
+    # publish modifications to THOSE FILES, and we make none. A copyleft
+    # licence here is a release-review item, not an automatic rejection.
+    "MPL-2.0",
+]
+# A crate removed from the tree must not leave a stale allowance behind.
+unused-allowed-license = "warn"
+
+# Licences that are not valid SPDX expressions and therefore need an explicit
+# interpretation. Pinned to the exact versions in Cargo.lock so the mapping is
+# reproducible and gets re-reviewed on the next dependency bump.
+[[licenses.clarify]]
+name = "fnv"
+version = "1.0.7"
+expression = "Apache-2.0 OR MIT"
+license-files = [{ path = "LICENSE-APACHE", hash = 0xbd0eed23 }, { path = "LICENSE-MIT", hash = 0xbd0eed23 }]
+
+[[licenses.clarify]]
+name = "bitflags"
+version = "1.3.2"
+expression = "MIT OR Apache-2.0"
+license-files = []
+
+[[licenses.clarify]]
+name = "filetime"
+version = "0.2.29"
+expression = "MIT OR Apache-2.0"
+license-files = []
+
+[[licenses.clarify]]
+name = "foreign-types"
+version = "0.5.0"
+expression = "MIT OR Apache-2.0"
+license-files = []
+
+[[licenses.clarify]]
+name = "foreign-types-macros"
+version = "0.2.4"
+expression = "MIT OR Apache-2.0"
+license-files = []
+
+[[licenses.clarify]]
+name = "foreign-types-shared"
+version = "0.3.1"
+expression = "MIT OR Apache-2.0"
+license-files = []
+
+[[licenses.clarify]]
+name = "ident_case"
+version = "1.0.1"
+expression = "MIT OR Apache-2.0"
+license-files = []
+
+[[licenses.clarify]]
+name = "jni"
+version = "0.21.1"
+expression = "MIT OR Apache-2.0"
+license-files = []
+
+[[licenses.clarify]]
+name = "json-patch"
+version = "3.0.1"
+expression = "MIT OR Apache-2.0"
+license-files = []
+
+[[licenses.clarify]]
+name = "siphasher"
+version = "1.0.3"
+expression = "MIT OR Apache-2.0"
+license-files = []
+
+[[licenses.clarify]]
+name = "unic-char-property"
+version = "0.9.0"
+expression = "MIT OR Apache-2.0"
+license-files = []
+
+[[licenses.clarify]]
+name = "unic-char-range"
+version = "0.9.0"
+expression = "MIT OR Apache-2.0"
+license-files = []
+
+[[licenses.clarify]]
+name = "unic-common"
+version = "0.9.0"
+expression = "MIT OR Apache-2.0"
+license-files = []
+
+[[licenses.clarify]]
+name = "unic-ucd-ident"
+version = "0.9.0"
+expression = "MIT OR Apache-2.0"
+license-files = []
+
+[[licenses.clarify]]
+name = "unic-ucd-version"
+version = "0.9.0"
+expression = "MIT OR Apache-2.0"
+license-files = []
+
+[[licenses.clarify]]
+name = "version_check"
+version = "0.9.5"
+expression = "MIT OR Apache-2.0"
+license-files = []
+
+[[licenses.clarify]]
+name = "winapi"
+version = "0.3.9"
+expression = "MIT OR Apache-2.0"
+license-files = []
+
+[[licenses.clarify]]
+name = "winapi-i686-pc-windows-gnu"
+version = "0.4.0"
+expression = "MIT OR Apache-2.0"
+license-files = []
+
+[[licenses.clarify]]
+name = "winapi-x86_64-pc-windows-gnu"
+version = "0.4.0"
+expression = "MIT OR Apache-2.0"
+license-files = []
+
+[[licenses.clarify]]
+name = "brotli-decompressor"
+version = "5.0.3"
+expression = "MIT OR BSD-3-Clause"
+license-files = []
+
+[[licenses.clarify]]
+name = "same-file"
+version = "1.0.6"
+expression = "MIT OR Unlicense"
+license-files = []
+
+[[licenses.clarify]]
+name = "walkdir"
+version = "2.5.0"
+expression = "MIT OR Unlicense"
+license-files = []
+
+[[licenses.clarify]]
+name = "unicode-ident"
+version = "1.0.24"
+expression = "(MIT OR Apache-2.0) AND Unicode-3.0"
+license-files = []
+
+[[licenses.clarify]]
+name = "linux-raw-sys"
+version = "0.12.1"
+expression = "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+license-files = []
+
+[[licenses.clarify]]
+name = "rustix"
+version = "1.1.4"
+expression = "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+license-files = []
+
+[[licenses.clarify]]
+name = "wasi"
+version = "0.11.1+wasi-snapshot-preview1"
+expression = "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+license-files = []
+
+[[licenses.clarify]]
+name = "wasip2"
+version = "1.0.4+wasi-0.2.12"
+expression = "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+license-files = []
+
+[[licenses.clarify]]
+name = "wit-bindgen"
+version = "0.57.1"
+expression = "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+license-files = []
+
+[sources]
+# Only crates.io. A dependency that starts arriving from a git host or an
+# unknown registry must be reviewed before it can ship.
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

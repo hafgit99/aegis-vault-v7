@@ -6,8 +6,15 @@
 import type { VaultItem } from '../../types';
 import { encryptDataWithPasswordSecure, decryptDataWithPasswordSecure } from '../encryption';
 import { secureRandomToken } from '../random';
-import type { SyncProvider, SyncResult, SyncMetadata, SyncConflictItem } from './syncTypes';
+import type {
+  SyncProvider,
+  SyncResult,
+  SyncMetadata,
+  SyncRemoteMetadata,
+  SyncConflictItem,
+} from './syncTypes';
 import { SyncError, syncErrorCodes } from './syncTypes';
+import { validateRemoteSyncMetadata } from './syncTypes';
 
 const VAULT_VERSION = '7.0';
 
@@ -164,9 +171,9 @@ export async function performSync(
   localItems: VaultItem[],
   masterPassword: string,
 ): Promise<SyncResult & { mergedItems: VaultItem[] }> {
-  let remoteMetadata: SyncMetadata | null;
+  let remoteState: SyncRemoteMetadata;
   try {
-    remoteMetadata = await provider.getRemoteMetadata();
+    remoteState = await provider.getRemoteMetadata();
   } catch (err) {
     const syncErr = err instanceof SyncError ? err : new SyncError(syncErrorCodes.downloadFailed, String(err));
     return { status: 'error', error: syncErr, mergedItems: localItems };
@@ -176,7 +183,49 @@ export async function performSync(
   let mergedCount = 0;
   let conflicts: SyncConflictItem[] = [];
 
-  if (remoteMetadata) {
+  // Y-11: the remote exists but we cannot read its descriptor. Its vault blob
+  // may be intact AND newer than local — a metadata write can fail while the
+  // blob write succeeds, which is exactly how this state arises in practice.
+  //
+  // The old code mapped this to "no remote" and then uploaded unconditionally,
+  // destroying the user's only off-device backup and reporting success. Not
+  // knowing what is remote is a reason to stop, not a reason to overwrite.
+  if (remoteState.kind === 'unreadable') {
+    return {
+      status: 'error',
+      error: new SyncError(
+        syncErrorCodes.remoteStateUnknown,
+        `Refusing to upload: the remote snapshot exists but its metadata is unreadable (${remoteState.detail}). ` +
+        'Nothing was uploaded, so the remote vault is untouched. Check the remote folder, then run sync again.',
+      ),
+      mergedItems: localItems,
+    };
+  }
+
+  /** ETag observed on the read, replayed as a write precondition. */
+  let observedETag: string | undefined;
+
+  if (remoteState.kind === 'ok') {
+    // O-21 (defence in depth): the providers validate the remote metadata, but
+    // this is the code that actually compares timestamps and decides whether it
+    // is safe to upload. The invariant that matters must hold *here*, not merely
+    // in the callers: an unparsable `updatedAt` becomes `NaN`, and `NaN > x` is
+    // false, which would make sync skip the download and overwrite the remote.
+    const validation = validateRemoteSyncMetadata(remoteState.metadata);
+    if (!validation.ok) {
+      return {
+        status: 'error',
+        error: new SyncError(
+          syncErrorCodes.remoteMetadataInvalid,
+          `Refusing to upload: remote metadata is unusable (${validation.reason}). ` +
+            'Nothing was uploaded, so the remote vault is untouched.',
+        ),
+        mergedItems: localItems,
+      };
+    }
+    const remoteMetadata = validation.metadata;
+    observedETag = remoteState.etag;
+
     // Determine whether the remote snapshot is worth downloading.
     // We always download when we have no local data yet, or when the remote
     // metadata timestamp is strictly newer than our newest local item.
@@ -226,10 +275,24 @@ export async function performSync(
   }
 
   try {
-    await provider.uploadVault(encryptedBlob, metadata);
+    // Y-11: the write is conditional on the ETag we read, so a concurrent
+    // modification from another device is rejected instead of clobbered.
+    await provider.uploadVault(encryptedBlob, metadata, { ifMatch: observedETag });
   } catch (err) {
     const syncErr = err instanceof SyncError ? err : new SyncError(syncErrorCodes.uploadFailed, String(err));
     return { status: 'error', error: syncErr, mergedItems };
+  }
+
+  // Y-11: the ETag of the object we just wrote, so the next sync can tell
+  // "still my snapshot" from "another device replaced it". Best effort — a
+  // provider that cannot report it leaves this undefined.
+  let uploadedETag: string | undefined;
+  if (typeof provider.getVaultETag === 'function') {
+    try {
+      uploadedETag = (await provider.getVaultETag()) ?? undefined;
+    } catch {
+      uploadedETag = undefined;
+    }
   }
 
   return {
@@ -238,5 +301,6 @@ export async function performSync(
     mergedCount,
     conflicts,
     mergedItems,
+    uploadedETag,
   };
 }

@@ -3,9 +3,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { addSyncAllowedOrigin, isPrivateOrLoopbackHostname, removeSyncAllowedOrigin } from '../airgapNetworkPolicy';
-import type { SyncProvider, SyncMetadata} from './syncTypes';
+import { acquireSyncOriginLease, isPrivateOrLoopbackHostname } from '../airgapNetworkPolicy';
+import type {
+  SyncProvider,
+  SyncMetadata,
+  SyncRemoteMetadata,
+  SyncUploadPreconditions,
+} from './syncTypes';
 import { SyncError, syncErrorCodes } from './syncTypes';
+import {
+  MAX_SYNC_PAYLOAD_BYTES,
+  readResponseTextBounded,
+  validateRemoteSyncMetadata,
+} from './syncTypes';
 
 const VAULT_FILE = 'vault.aegis';
 const METADATA_FILE = 'metadata.json';
@@ -46,6 +56,11 @@ export class WebDavSyncProvider implements SyncProvider {
   private readonly baseUrl: string;
   private readonly authHeader: string;
   private readonly origin: string;
+  /**
+   * O-21: releases this provider's hold on the air-gap whitelist. Idempotent, so
+   * a double `dispose()` cannot revoke another live provider's exemption.
+   */
+  private releaseOriginLease: (() => void) | null = null;
 
   constructor(url: string, username: string, password: string) {
     let parsedUrl: URL;
@@ -65,13 +80,15 @@ export class WebDavSyncProvider implements SyncProvider {
     this.authHeader = buildBasicAuthHeader(username, password);
     this.origin = new URL(this.baseUrl).origin;
 
-    // Register this origin in the air-gap whitelist so our fetch calls are allowed
-    addSyncAllowedOrigin(this.origin);
+    // Take a lease rather than a bare whitelist entry, so this origin can
+    // actually be revoked when the provider goes away.
+    this.releaseOriginLease = acquireSyncOriginLease(this.origin);
   }
 
   /** Call this when the user removes the WebDAV configuration. */
   dispose(): void {
-    removeSyncAllowedOrigin(this.origin);
+    this.releaseOriginLease?.();
+    this.releaseOriginLease = null;
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -121,20 +138,38 @@ export class WebDavSyncProvider implements SyncProvider {
     }
   }
 
-  async uploadVault(encryptedBlob: string, metadata: SyncMetadata): Promise<void> {
+  async uploadVault(
+    encryptedBlob: string,
+    metadata: SyncMetadata,
+    preconditions?: SyncUploadPreconditions,
+  ): Promise<void> {
     await this.ensureDirectory();
 
     // 1. Upload the encrypted vault blob
     const vaultUrl = buildFileUrl(this.baseUrl, VAULT_FILE);
+    const vaultHeaders = {
+      ...this.defaultHeaders(),
+      'Content-Type': 'application/octet-stream',
+    } as Record<string, string>;
+    // Y-11: make the write conditional on the ETag we read. WebDAV servers
+    // enforce `If-Match` atomically, so a concurrent write from another device
+    // is rejected instead of being clobbered.
+    if (preconditions?.ifMatch) {
+      vaultHeaders['If-Match'] = preconditions.ifMatch;
+    }
+
     const vaultRes = await fetch(vaultUrl, {
       method: 'PUT',
-      headers: {
-        ...this.defaultHeaders(),
-        'Content-Type': 'application/octet-stream',
-      },
+      headers: vaultHeaders,
       body: encryptedBlob,
     });
 
+    if (vaultRes.status === 412 || vaultRes.status === 409) {
+      throw new SyncError(
+        syncErrorCodes.remoteModified,
+        'Remote vault changed during sync — upload rejected, nothing was overwritten. Run sync again.',
+      );
+    }
     if (!vaultRes.ok) {
       throw new SyncError(
         syncErrorCodes.uploadFailed,
@@ -154,9 +189,15 @@ export class WebDavSyncProvider implements SyncProvider {
     });
 
     if (!metaRes.ok) {
+      // Y-11: the blob landed but the descriptor did not. The next sync will
+      // see 'unreadable' metadata and refuse to overwrite, which is exactly
+      // the intended fail-safe — the remote vault is intact, only its label is
+      // missing. Surfaced rather than swallowed so the user knows the remote
+      // is in that state.
       throw new SyncError(
         syncErrorCodes.uploadFailed,
-        `Vault uploaded but metadata write failed: HTTP ${metaRes.status}`,
+        `Vault uploaded but metadata write failed: HTTP ${metaRes.status}. ` +
+        'The remote vault is intact but unlabelled; the next sync will refuse to overwrite it.',
       );
     }
   }
@@ -178,10 +219,12 @@ export class WebDavSyncProvider implements SyncProvider {
       throw new SyncError(syncErrorCodes.downloadFailed, `Failed to download vault: HTTP ${res.status}`);
     }
 
-    return res.text();
+    // O-20: a bounded read. The remote controls the body, so it cannot be
+    // trusted to stay small.
+    return readResponseTextBounded(res, MAX_SYNC_PAYLOAD_BYTES, 'Remote vault snapshot');
   }
 
-  async getRemoteMetadata(): Promise<SyncMetadata | null> {
+  async getRemoteMetadata(): Promise<SyncRemoteMetadata> {
     const metaUrl = buildFileUrl(this.baseUrl, METADATA_FILE);
     let res: Response;
     try {
@@ -193,16 +236,42 @@ export class WebDavSyncProvider implements SyncProvider {
       throw new SyncError(syncErrorCodes.downloadFailed, `Network error fetching metadata: ${String(err)}`);
     }
 
-    if (res.status === 404) return null;
+    // Y-11: 404 means "no remote snapshot yet", which is a legitimate first
+    // sync. It is NOT the same as "the file is there but unreadable".
+    if (res.status === 404) return { kind: 'absent' };
     if (!res.ok) {
       throw new SyncError(syncErrorCodes.downloadFailed, `Failed to fetch metadata: HTTP ${res.status}`);
     }
 
     try {
-      return (await res.json()) as SyncMetadata;
+      // O-21: the remote is untrusted, and `updatedAt` steers a destructive
+      // decision. An unparsable timestamp must never reach a comparison.
+      const validation = validateRemoteSyncMetadata(await res.json());
+      if (!validation.ok) {
+        return { kind: 'unreadable', detail: `metadata.json failed validation: ${validation.reason}` };
+      }
+      return { kind: 'ok', metadata: validation.metadata, etag: res.headers?.get?.('etag') ?? undefined };
+    } catch (err) {
+      // Y-11: the metadata file EXISTS but could not be parsed. The vault
+      // blob may be intact and newer than local, so this must be reported as
+      // 'unreadable' — reporting it as absent is what caused the overwrite.
+      return {
+        kind: 'unreadable',
+        detail: `metadata.json is present but not parsable: ${err instanceof Error ? err.message : String(err)}`,
+      };
+    }
+  }
+
+  async getVaultETag(): Promise<string | null> {
+    const vaultUrl = buildFileUrl(this.baseUrl, VAULT_FILE);
+    let res: Response;
+    try {
+      res = await fetch(vaultUrl, { method: 'HEAD', headers: this.defaultHeaders() });
     } catch {
-      // Corrupt metadata — treat as no remote
       return null;
     }
+    if (res.status === 404) return null;
+    if (!res.ok) return null;
+    return res.headers?.get?.('etag') ?? null;
   }
 }

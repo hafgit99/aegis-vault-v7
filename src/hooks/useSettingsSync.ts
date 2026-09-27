@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import type {
   SyncProviderType} from '../lib/sync';
+import type { SyncProvider } from '../lib/sync/syncTypes';
 import {
   getLastSyncTime,
   hasSyncConfig,
@@ -81,34 +82,32 @@ export function useSettingsSync({ onDatabaseChanged }: UseSettingsSyncOptions) {
   }, []);
 
   const handleSyncTest = useCallback(async () => {
-    if (syncProvider === 'webdav') {
-      const err = validateWebDavConfig({ url: syncUrl, username: syncUsername, password: syncPassword });
-      if (err) { setSyncTestResult(`❌ ${err}`); return; }
-      setSyncTestLoading(true);
-      setSyncTestResult(null);
-      try {
-        const provider = new WebDavSyncProvider(syncUrl, syncUsername, syncPassword);
+    // O-21: the provider takes an air-gap whitelist lease when constructed.
+    // Testing a connection used to leak that lease permanently, so every click
+    // granted a lasting network exemption that removing the sync configuration
+    // never revoked. The provider is now always disposed.
+    let provider: WebDavSyncProvider | S3SyncProvider | null = null;
+    try {
+      if (syncProvider === 'webdav') {
+        const err = validateWebDavConfig({ url: syncUrl, username: syncUsername, password: syncPassword });
+        if (err) { setSyncTestResult(`❌ ${err}`); return; }
+        setSyncTestLoading(true);
+        setSyncTestResult(null);
+        provider = new WebDavSyncProvider(syncUrl, syncUsername, syncPassword);
         await provider.testConnection();
         setSyncTestResult(t('settings.sync.test.success'));
-      } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e || '');
-        setSyncTestResult(t('settings.sync.test.failed') + (msg ? ` (${msg})` : ''));
-      } finally {
-        setSyncTestLoading(false);
-      }
-    } else if (syncProvider === 's3') {
-      const err = validateS3Config({
-        endpoint: s3Endpoint,
-        region: s3Region,
-        bucket: s3Bucket,
-        accessKeyId: s3AccessKeyId,
-        secretAccessKey: s3SecretAccessKey,
-      });
-      if (err) { setSyncTestResult(`❌ ${err}`); return; }
-      setSyncTestLoading(true);
-      setSyncTestResult(null);
-      try {
-        const provider = new S3SyncProvider({
+      } else if (syncProvider === 's3') {
+        const err = validateS3Config({
+          endpoint: s3Endpoint,
+          region: s3Region,
+          bucket: s3Bucket,
+          accessKeyId: s3AccessKeyId,
+          secretAccessKey: s3SecretAccessKey,
+        });
+        if (err) { setSyncTestResult(`❌ ${err}`); return; }
+        setSyncTestLoading(true);
+        setSyncTestResult(null);
+        provider = new S3SyncProvider({
           type: 's3',
           endpoint: s3Endpoint,
           region: s3Region,
@@ -118,12 +117,15 @@ export function useSettingsSync({ onDatabaseChanged }: UseSettingsSyncOptions) {
         });
         await provider.testConnection();
         setSyncTestResult(t('settings.sync.test.success'));
-      } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e || '');
-        setSyncTestResult(t('settings.sync.test.failed') + (msg ? ` (${msg})` : ''));
-      } finally {
-        setSyncTestLoading(false);
       }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e || '');
+      setSyncTestResult(t('settings.sync.test.failed') + (msg ? ` (${msg})` : ''));
+    } finally {
+      // Runs on the success, failure and early-return paths alike. Optional
+      // because `SyncProvider.dispose` is an optional capability.
+      provider?.dispose?.();
+      setSyncTestLoading(false);
     }
   },
     [syncProvider, syncUrl, syncUsername, syncPassword, s3Endpoint, s3Region, s3Bucket, s3AccessKeyId, s3SecretAccessKey, t]
@@ -183,9 +185,12 @@ export function useSettingsSync({ onDatabaseChanged }: UseSettingsSyncOptions) {
       setSyncLoading(true);
       setSyncStatus('syncing');
       setSyncMessage(null);
+      // O-21: the provider holds an air-gap whitelist lease. Declared outside the
+      // try so the early-return path releases it too.
+      let provider: SyncProvider | null = null;
       try {
         const config = await loadSyncConfig(backupPassword);
-        const provider = createSyncProvider(config);
+        provider = createSyncProvider(config);
         if (!provider) { setSyncStatus('error'); setSyncMessage(t('settings.sync.error.connection')); return; }
         const localItems = await getVaultItems();
         const result = await performSync(provider, localItems, backupPassword);
@@ -215,6 +220,9 @@ export function useSettingsSync({ onDatabaseChanged }: UseSettingsSyncOptions) {
         const msg = e instanceof Error ? e.message : String(e || '');
         setSyncMessage(msg || t('settings.sync.error.connection'));
       } finally {
+        // Without this, every "Sync now" left a permanent network exemption for
+        // the configured origin.
+        provider?.dispose?.();
         setSyncLoading(false);
       }
     });

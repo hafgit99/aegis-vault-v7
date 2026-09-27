@@ -287,7 +287,14 @@ export function runVaultAudit(items: VaultItem[]): AuditReport {
 
   items.forEach((item) => {
     const pw = item.password || '';
-    const score = fastPasswordScore(pw);
+    // O-5: the fast heuristic systematically over-reports (password123! → 70
+    // "not weak" while zxcvbn rates it 0). Verify every "not weak" verdict
+    // with real zxcvbn entropy scoring before trusting it; scores below the
+    // weak threshold are already classified without the expensive call.
+    let score = fastPasswordScore(pw);
+    if (score >= 40) {
+      score = calculatePasswordScore(pw);
+    }
     totalIndividualScore += score;
 
     if (pw.length < 8 || score < 40) {

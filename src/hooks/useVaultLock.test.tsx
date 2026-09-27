@@ -5,6 +5,14 @@
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+// The lock callback triggers the K-7 auto-snapshot flow, which reaches into
+// real storage (IndexedDB / wa-sqlite WASM) and crashes the test fork. Lock
+// behavior is the unit under test here — mock the snapshot trigger.
+vi.mock('../lib/snapshots', () => ({
+  checkAndTriggerAutoSnapshot: vi.fn().mockResolvedValue(null),
+}));
+
+import { checkAndTriggerAutoSnapshot } from '../lib/snapshots';
 import { closeVaultSession, hasActiveMasterPassword, openVaultSession } from '../lib/vaultSession';
 import { useVaultLock } from './useVaultLock';
 
@@ -52,6 +60,8 @@ describe('useVaultLock', () => {
     expect(hasActiveMasterPassword()).toBe(false);
     expect(resetReveals).toHaveBeenCalledTimes(1);
     expect(clearCopiedField).toHaveBeenCalledTimes(1);
+    // K-7 regression: locking must trigger the auto-snapshot flow.
+    expect(vi.mocked(checkAndTriggerAutoSnapshot)).toHaveBeenCalledWith('lock');
   });
 
   it('auto-locks after the configured idle duration', () => {

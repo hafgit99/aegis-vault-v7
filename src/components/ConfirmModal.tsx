@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, AlertTriangle, Trash2, CheckCircle, Info } from 'lucide-react';
 
 import { useLanguage } from '../i18n/LanguageContext';
@@ -12,7 +12,7 @@ interface ConfirmModalProps {
   confirmText?: string;
   cancelText?: string;
   isAlert?: boolean;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   onCancel: () => void;
 }
 
@@ -28,6 +28,7 @@ export default function ConfirmModal({
   onCancel,
 }: ConfirmModalProps) {
   const { t } = useLanguage();
+  const [isConfirming, setIsConfirming] = useState(false);
 
   if (!isOpen) return null;
 
@@ -99,11 +100,20 @@ export default function ConfirmModal({
             )}
             <button
               data-testid="confirm-modal-confirm-button"
-              onClick={() => {
-                onConfirm();
-                onCancel(); // Close current modal automatically after confirming
+              disabled={isConfirming}
+              onClick={async () => {
+                // Y-21: await the async onConfirm before closing, and block
+                // double submission while the destructive action settles.
+                if (isConfirming) return;
+                setIsConfirming(true);
+                try {
+                  await onConfirm();
+                  onCancel(); // Close current modal automatically after confirming
+                } finally {
+                  setIsConfirming(false);
+                }
               }}
-              className={`flex-1 py-2.5 rounded-xl font-bold text-xs active:scale-95 transition-all cursor-pointer shadow-md ${buttonColors[type]}`}
+              className={`flex-1 py-2.5 rounded-xl font-bold text-xs active:scale-95 transition-all cursor-pointer shadow-md disabled:opacity-60 disabled:cursor-wait ${buttonColors[type]}`}
             >
               {isAlert ? t('confirm.defaultAlert') : confirmText ?? t('confirm.defaultConfirm')}
             </button>

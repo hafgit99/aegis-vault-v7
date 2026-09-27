@@ -35,7 +35,8 @@ const authorizedFiles = [
   path.normalize('src/hooks/useSettingsBackupImport.ts'),
   path.normalize('src/hooks/useSettingsBiometric.ts'),
   path.normalize('src/hooks/useSettingsSync.ts'),
-  path.normalize('src/lib/vaultSession.ts')
+  path.normalize('src/lib/vaultSession.ts'),
+  path.normalize('src/lib/snapshots.ts')
 ];
 
 const sensitiveCallbacks = [

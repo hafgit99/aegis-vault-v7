@@ -8,7 +8,7 @@
  * @license SPDX-License-Identifier: Apache-2.0
  */
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useLanguage } from '../i18n/LanguageContext';
 import type { TFunction } from '../i18n/LanguageContext';
@@ -142,6 +142,9 @@ export function useSettingsBackupImport({
       setBackupError(t('settings.export.plainConfirmMismatch'));
       return;
     }
+    // Y-25: a second hold press must orphan-proof the previous timers,
+    // otherwise cancelHoldExport can no longer stop the first export.
+    cancelHoldExport();
     setBackupError(null);
     setHoldProgress(0);
 
@@ -173,6 +176,16 @@ export function useSettingsBackupImport({
     if (holdIntervalRef.current) clearInterval(holdIntervalRef.current);
     setHoldProgress(0);
   };
+
+  // Y-25: leaving Settings (or locking) must cancel a pending plain-text
+  // export hold — previously the 3s timer fired after unmount and exported
+  // the unencrypted vault with zero feedback.
+  useEffect(() => {
+    return () => {
+      if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+      if (holdIntervalRef.current) clearInterval(holdIntervalRef.current);
+    };
+  }, []);
 
   // Generate a plain (unencrypted) json export download
   const handleExportPlain = () => {
@@ -295,7 +308,7 @@ export function useSettingsBackupImport({
 
   const handleImportedItems = async (itemsList: Array<Partial<VaultItem>>, attachmentsList: AttachmentBackupRecord[] = []) => {
     const mappedItems: VaultItem[] = [];
-    const nowStr = new Date().toISOString().split('T')[0] ?? '';
+    const nowStr = new Date().toISOString();
 
     // Snapshot of current SQLite items state to support transactional rollback
     const originalItems = await getVaultItems();

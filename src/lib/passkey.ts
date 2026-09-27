@@ -22,6 +22,7 @@ import {
 } from './webcrypto';
 import { withActiveVaultEncryptionKey } from './vaultSession';
 import { logSecurityEvent, securityEventCodes } from './securityEvents';
+import { verifyPasskeyAssertion } from './passkeyAssertion';
 
 export const PASSKEY_KEY_CONTEXT = 'aegis-vault-v7:passkey-vault-key:v1';
 
@@ -37,6 +38,10 @@ export const passkeyErrorCodes = {
   unsupportedAlgorithm: 'passkey.unsupportedAlgorithm',
   invalidCredentialId: 'passkey.invalidCredentialId',
   invalidJwk: 'passkey.invalidJwk',
+  /** O-4: the assertion carried no verifiable material (signature/authData/clientData). */
+  assertionUnverifiable: 'passkey.assertionUnverifiable',
+  /** O-4: the assertion failed cryptographic verification. */
+  assertionInvalid: 'passkey.assertionInvalid',
 } as const;
 
 export type PasskeyErrorCode = (typeof passkeyErrorCodes)[keyof typeof passkeyErrorCodes];
@@ -417,6 +422,13 @@ export interface AuthenticatePasskeyResult {
   signatureBase64?: string;
   authenticatorDataBase64?: string;
   clientDataJsonBase64?: string;
+  /**
+   * O-4: the challenge this call actually issued, so the caller can verify the
+   * assertion instead of taking the authenticator's word for it.
+   */
+  challenge: Uint8Array;
+  /** O-4: sign counter read from the VERIFIED authenticator data. */
+  signCount?: number;
 }
 
 export async function authenticatePasskey(input: AuthenticatePasskeyInput): Promise<AuthenticatePasskeyResult> {
@@ -461,6 +473,8 @@ export async function authenticatePasskey(input: AuthenticatePasskeyInput): Prom
     signatureBase64: response.signature ? arrayBufferToBase64(response.signature) : undefined,
     authenticatorDataBase64: response.authenticatorData ? arrayBufferToBase64(response.authenticatorData) : undefined,
     clientDataJsonBase64: response.clientDataJSON ? arrayBufferToBase64(response.clientDataJSON) : undefined,
+    // O-4: handed back so the caller can bind the assertion to THIS challenge.
+    challenge: new Uint8Array(challenge),
   };
 }
 
@@ -475,28 +489,114 @@ export async function unwrapPasskeyPrivateKey(record: PasskeyRecord): Promise<Js
   });
 }
 
-export function incrementPasskeySignCount(record: PasskeyRecord): PasskeyRecord {
+export function incrementPasskeySignCount(record: PasskeyRecord, verifiedSignCount?: number): PasskeyRecord {
   return {
     ...record,
-    signCount: (record.signCount || 0) + 1,
+    // O-4: the stored counter now comes from the VERIFIED authenticator data
+    // rather than being a local `+ 1`. A local increment is meaningless: it
+    // would look like a real relying-party counter while having no relationship
+    // to what the authenticator actually signed.
+    signCount: typeof verifiedSignCount === 'number' && Number.isFinite(verifiedSignCount)
+      ? verifiedSignCount
+      : (record.signCount || 0) + 1,
     lastUsedAt: new Date().toISOString(),
   };
 }
 
 export async function authenticateAndIncrementPasskey(
   record: PasskeyRecord,
-  options: Partial<AuthenticatePasskeyInput> = {}
+  options: Partial<AuthenticatePasskeyInput> & { expectedOrigin?: string } = {}
 ): Promise<{ assertion: AuthenticatePasskeyResult; updatedRecord: PasskeyRecord }> {
+  const { expectedOrigin, ...requestOptions } = options;
   const assertion = await authenticatePasskey({
     rpId: record.rpId,
     credentialIds: [record.credentialId],
-    ...options,
+    ...requestOptions,
   });
   if (assertion.credentialId !== record.credentialId) {
     throw new PasskeyError(passkeyErrorCodes.invalidCredentialId);
   }
-  const updatedRecord = incrementPasskeySignCount(record);
+
+  // O-4: the assertion is now verified cryptographically. Everything above
+  // this line could have been satisfied by anything the platform returned for
+  // this credential id; nothing below can.
+  await assertVerifiedPasskeyAssertion(record, assertion, expectedOrigin);
+
+  const updatedRecord = incrementPasskeySignCount(record, assertion.signCount);
   return { assertion, updatedRecord };
+}
+
+/**
+ * O-4: verifies the assertion and throws on any failure.
+ *
+ * This used to not exist. `authenticateAndIncrementPasskey` reported success as
+ * soon as the credential id matched, so the passkey "authenticate" action was a
+ * false security claim: the UI showed a successful authentication, the vault
+ * bumped `signCount` and stamped `lastUsedAt`, and no signature was ever
+ * checked against the public key stored at registration.
+ */
+export async function assertVerifiedPasskeyAssertion(
+  record: PasskeyRecord,
+  assertion: AuthenticatePasskeyResult,
+  expectedOrigin?: string,
+): Promise<void> {
+  const { signatureBase64, authenticatorDataBase64, clientDataJsonBase64 } = assertion;
+  if (!signatureBase64 || !authenticatorDataBase64 || !clientDataJsonBase64) {
+    logSecurityEvent(
+      securityEventCodes.passkeyCreateFailed,
+      'Passkey assertion arrived without verifiable material.',
+      'warning',
+      { credentialId: record.credentialId },
+    );
+    throw new PasskeyError(passkeyErrorCodes.assertionUnverifiable);
+  }
+
+  const origin = expectedOrigin ?? defaultExpectedOrigin();
+  const result = await verifyPasskeyAssertion({
+    publicKeyBase64Url: record.publicKey,
+    rpId: record.rpId,
+    expectedChallenge: assertion.challenge,
+    expectedOrigin: origin,
+    algorithm: record.algorithm,
+    authenticatorData: base64ToBytes(authenticatorDataBase64),
+    clientDataJson: base64ToBytes(clientDataJsonBase64),
+    signature: base64ToBytes(signatureBase64),
+    previousSignCount: record.signCount,
+    userHandleBase64Url: assertion.userHandle,
+    expectedUserHandleBase64Url: record.userHandle,
+  });
+
+  if (!result.verified) {
+    logSecurityEvent(
+      securityEventCodes.passkeyCreateFailed,
+      `Passkey assertion verification failed (${result.reason}).`,
+      'critical',
+      { credentialId: record.credentialId, rpId: record.rpId, reason: result.reason },
+    );
+    throw new PasskeyError(passkeyErrorCodes.assertionInvalid);
+  }
+
+  assertion.signCount = result.signCount;
+}
+
+/**
+ * The origin an assertion must claim. Aegis Vault is a local-first app, so the
+ * origin is the one the app itself is served from.
+ */
+function defaultExpectedOrigin(): string {
+  if (typeof window !== 'undefined' && window.location?.origin
+    && window.location.origin !== 'null') {
+    return window.location.origin;
+  }
+  // Tauri: the webview origin for the bundled asset protocol.
+  return 'tauri://localhost';
+}
+
+function base64ToBytes(base64: string): Uint8Array {
+  const binary = atob(base64);
+  const out = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) out[i] = binary.charCodeAt(i);
+  return out;
 }
 
 export function recordToVaultFields(record: PasskeyRecord): VaultPasskeyFields {

@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+﻿import { invoke } from '@tauri-apps/api/core';
 import { logSecurityEvent, securityEventCodes } from './securityEvents';
 
 export interface Argon2idOptions {
@@ -47,6 +47,59 @@ export { isDesktopRuntime };
 // recommendation when paired with 3+ iterations and AES-256-GCM at rest.
 export const MIN_ARGON2ID_MEMORY_KIB = 8192; // 8 MiB floor
 export const MIN_ARGON2ID_ITERATIONS = 3;
+export const MIN_ARGON2ID_PARALLELISM = 1;
+export const MIN_ARGON2ID_HASH_LENGTH = 32;
+
+/**
+ * O-6: upper bounds on Argon2id cost.
+ *
+ * These were floors-only, so KDF parameters arriving from an untrusted source —
+ * an imported backup, a crafted vault file, a synced envelope — could request an
+ * arbitrary memory or iteration count. The WASM path would then attempt the
+ * allocation or spin for effectively forever, taking the renderer down with it.
+ *
+ * The values match the Rust IPC boundary exactly (`credential_handler.rs`), so
+ * both ends of the same request agree on what is acceptable. Every profile this
+ * application ships is far below the ceilings: 32–64 MiB and 3–4 iterations.
+ */
+export const MAX_ARGON2ID_MEMORY_KIB = 1024 * 1024; // 1 GiB
+export const MAX_ARGON2ID_ITERATIONS = 20;
+export const MAX_ARGON2ID_PARALLELISM = 16;
+export const MAX_ARGON2ID_HASH_LENGTH = 64;
+
+const ARGON2ID_MEMORY_RANGE: [number, number] = [MIN_ARGON2ID_MEMORY_KIB, MAX_ARGON2ID_MEMORY_KIB];
+const ARGON2ID_ITERATION_RANGE: [number, number] = [MIN_ARGON2ID_ITERATIONS, MAX_ARGON2ID_ITERATIONS];
+const ARGON2ID_PARALLELISM_RANGE: [number, number] = [MIN_ARGON2ID_PARALLELISM, MAX_ARGON2ID_PARALLELISM];
+const ARGON2ID_HASH_LENGTH_RANGE: [number, number] = [MIN_ARGON2ID_HASH_LENGTH, MAX_ARGON2ID_HASH_LENGTH];
+
+/** Thrown when an untrusted KDF parameter falls outside the accepted range. */
+export class Argon2idParameterError extends Error {
+  readonly parameter: string;
+  readonly value: number;
+
+  constructor(parameter: string, value: number, min: number, max: number) {
+    super(`argon2id-parameter-out-of-range: ${parameter}=${value} is outside ${min}..=${max}`);
+    this.name = 'Argon2idParameterError';
+    this.parameter = parameter;
+    this.value = value;
+  }
+}
+
+export function isArgon2idParameterError(err: unknown): err is Argon2idParameterError {
+  return err instanceof Argon2idParameterError
+    || (err instanceof Error && err.message.startsWith('argon2id-parameter-out-of-range:'));
+}
+
+function requireInRange(
+  name: string,
+  value: number,
+  [min, max]: [number, number],
+): number {
+  if (!Number.isFinite(value) || value < min || value > max) {
+    throw new Argon2idParameterError(name, value, min, max);
+  }
+  return value;
+}
 
 /** High-security profile for desktop native runtime (64 MiB, 4 iter, 2 lanes) */
 export const DESKTOP_NATIVE_KDF_PROFILE: Required<Argon2idOptions> = {
@@ -68,12 +121,40 @@ export function getDefaultKdfProfile(): Required<Argon2idOptions> {
   return isDesktopRuntime() ? DESKTOP_NATIVE_KDF_PROFILE : CROSS_PLATFORM_KDF_PROFILE;
 }
 
+/**
+ * Raises weak parameters to the floor and **rejects** out-of-range ones.
+ *
+ * Rejecting rather than clamping is deliberate, and matches the Rust IPC
+ * boundary: silently reducing a request for four billion iterations to twenty
+ * would hand the caller a key derived under parameters it did not ask for while
+ * reporting success — a subtler failure than an explicit refusal. The environment
+ * degradation in `deriveWasmHash` is a separate, error-driven mechanism and is
+ * unaffected.
+ */
 export function enforceMinimumKdfFloor(options: Argon2idOptions = {}): Required<Argon2idOptions> {
   const defaultProfile = getDefaultKdfProfile();
-  const memoryKiB = Math.max(MIN_ARGON2ID_MEMORY_KIB, options.memoryKiB ?? defaultProfile.memoryKiB);
-  const iterations = Math.max(MIN_ARGON2ID_ITERATIONS, options.iterations ?? defaultProfile.iterations);
-  const parallelism = Math.max(1, options.parallelism ?? defaultProfile.parallelism);
-  const hashLength = options.hashLength ?? defaultProfile.hashLength;
+  const memoryKiB = requireInRange(
+    'memoryKiB',
+    Math.max(MIN_ARGON2ID_MEMORY_KIB, options.memoryKiB ?? defaultProfile.memoryKiB),
+    ARGON2ID_MEMORY_RANGE,
+  );
+  const iterations = requireInRange(
+    'iterations',
+    Math.max(MIN_ARGON2ID_ITERATIONS, options.iterations ?? defaultProfile.iterations),
+    ARGON2ID_ITERATION_RANGE,
+  );
+  const parallelism = requireInRange(
+    'parallelism',
+    Math.max(MIN_ARGON2ID_PARALLELISM, options.parallelism ?? defaultProfile.parallelism),
+    ARGON2ID_PARALLELISM_RANGE,
+  );
+  const hashLength = requireInRange(
+    'hashLength',
+    // A short output is a weakness to be corrected upward, not an attack, so it
+    // keeps the original floor behaviour. Only the ceiling is new here.
+    Math.max(MIN_ARGON2ID_HASH_LENGTH, options.hashLength ?? defaultProfile.hashLength),
+    ARGON2ID_HASH_LENGTH_RANGE,
+  );
 
   return {
     memoryKiB,

@@ -102,7 +102,7 @@ describe('S3SyncProvider', () => {
     provider.dispose();
   });
 
-  it('getRemoteMetadata returns metadata object or null on 404', async () => {
+  it('getRemoteMetadata distinguishes absent, ok and unreadable', async () => {
     const provider = new S3SyncProvider(validConfig);
     const metaObj = {
       updatedAt: '2026-08-04T20:00:00.000Z',
@@ -112,17 +112,24 @@ describe('S3SyncProvider', () => {
       itemCount: 10,
     };
 
-    globalThis.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify(metaObj), { status: 200 }));
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(metaObj), { status: 200, headers: { etag: '"e1"' } }),
+    );
     const result = await provider.getRemoteMetadata();
-    expect(result).toEqual(metaObj);
+    expect(result.kind).toBe('ok');
+    expect(result.kind === 'ok' && result.metadata).toEqual(metaObj);
+    expect(result.kind === 'ok' && result.etag).toBe('"e1"');
 
     globalThis.fetch = vi.fn().mockResolvedValue(new Response(null, { status: 404 }));
-    const result404 = await provider.getRemoteMetadata();
-    expect(result404).toBeNull();
+    expect(await provider.getRemoteMetadata()).toEqual({ kind: 'absent' });
 
-    // Invalid JSON returns null
+    // Y-11 regression: an unparsable metadata.json must NOT be reported as
+    // absent. performSync used to treat it as "no remote" and overwrite the
+    // (possibly intact) remote vault.
     globalThis.fetch = vi.fn().mockResolvedValue(new Response('not-json', { status: 200 }));
-    expect(await provider.getRemoteMetadata()).toBeNull();
+    const unreadable = await provider.getRemoteMetadata();
+    expect(unreadable.kind).toBe('unreadable');
+    expect(unreadable.kind === 'unreadable' && unreadable.detail).toBeTruthy();
 
     // Network error throws SyncError
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('S3 down'));

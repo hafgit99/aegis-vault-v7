@@ -6,6 +6,7 @@
 import type { VaultItem } from '../types';
 import type { WebCryptoAesGcmPayload } from './webcrypto';
 import { generateSafeIv, webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt } from './webcrypto';
+import { deriveArgon2idKey } from './argon2id';
 import { secureRandomBytes } from './random';
 
 export interface DecryptedSharePayload {
@@ -22,8 +23,9 @@ export interface DecryptedSharePayload {
 /** Maximum share link duration in hours. */
 export const MAX_SHARE_DURATION_HOURS = 24;
 
-/** Minimum share password length. */
-export const MIN_SHARE_PASSWORD_LENGTH = 4;
+/** Minimum share password length. K-2: raised from 4 — a 4-character ASCII
+ * password over a fast KDF is exhaustible in under a second on a GPU. */
+export const MIN_SHARE_PASSWORD_LENGTH = 12;
 
 /**
  * Encodes Uint8Array into a base64url string.
@@ -54,24 +56,24 @@ export function base64urlDecode(str: string): Uint8Array {
 
 /**
  * Derives a 32-byte AES-256 key from a user-provided share password and salt
- * using HKDF-SHA256. This ensures that the decryption key is never embedded
- * in the share URL — only the holder of the password can decrypt.
+ * using Argon2id (64 MiB / 3 iterations — the same memory-hard KDF profile
+ * the vault itself uses).
+ *
+ * K-2: HKDF is a *derivation* function, not a password hardening function —
+ * one guess cost two HMAC-SHA256 invocations (~10⁹ guesses/s on a GPU).
+ * Argon2id makes offline guessing of the share password memory-bound.
+ *
+ * 32 MiB / 3 iterations = the repo's CROSS_PLATFORM_KDF_PROFILE: WASM
+ * runtimes (the share receive path runs in the browser) can fail
+ * allocations above ~64 MiB (see argon2id.ts). Still orders of magnitude
+ * beyond the old HKDF cost.
  */
 async function deriveShareKey(password: string, salt: Uint8Array): Promise<Uint8Array> {
-  const encoder = new TextEncoder();
-  const passwordBytes = encoder.encode(password);
-  const ikm = await crypto.subtle.importKey('raw', passwordBytes, 'HKDF', false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits(
-    {
-      name: 'HKDF',
-      hash: 'SHA-256',
-      salt,
-      info: encoder.encode('aegis-share-key-v7'),
-    },
-    ikm,
-    256,
-  );
-  return new Uint8Array(bits);
+  const saltHex = Array.from(salt).map((b) => b.toString(16).padStart(2, '0')).join('');
+  return deriveArgon2idKey(password, saltHex, {
+    memoryKiB: 32 * 1024,
+    iterations: 3,
+  });
 }
 
 /**
@@ -114,7 +116,10 @@ export async function generateShareUrl(
   const derivedKey = await deriveShareKey(sharePassword, salt);
   const iv = generateSafeIv();
 
-  const encrypted = await webCryptoAesGcmEncrypt(plaintext, derivedKey, iv);
+  // K-2: bind the salt (the `s=` URL parameter) into the AEAD as associated
+  // data — a salt swapped between two share bundles now breaks GCM
+  // verification instead of silently decrypting with the wrong key context.
+  const encrypted = await webCryptoAesGcmEncrypt(plaintext, derivedKey, iv, salt);
 
   // Pack the encrypted payload (iv, tag, ciphertext)
   const bundle = JSON.stringify({
@@ -165,7 +170,7 @@ export async function decryptShareUrl(
       ciphertext: bundle.c,
     };
 
-    const plaintext = await webCryptoAesGcmDecrypt(gcmPayload, derivedKey);
+    const plaintext = await webCryptoAesGcmDecrypt(gcmPayload, derivedKey, salt);
     const decrypted = JSON.parse(plaintext) as DecryptedSharePayload;
 
     if (decrypted.expiresAt && Date.now() > decrypted.expiresAt) {

@@ -15,8 +15,8 @@ export function useVaultFormState() {
         password: prefill.password || '',
         url: prefill.url || '',
         category: prefill.category || 'login',
-        createdAt: new Date().toISOString().split('T')[0],
-        updatedAt: new Date().toISOString().split('T')[0],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       } as VaultItem);
     } else {
       setEditingItem(null);

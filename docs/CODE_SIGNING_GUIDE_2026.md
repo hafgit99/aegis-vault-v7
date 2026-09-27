@@ -48,3 +48,52 @@ npm run release:checksums
 npm run audit:checksums
 ```
 This generates `SHA256SUMS` and `CHECKSUMS.txt` for public verification.
+
+---
+
+## 5. GitHub Actions secrets required for release signing (Y-19)
+
+The signing steps in `.github/workflows/release-desktop.yml` are **secret-driven**.
+Each step is skipped when its secret is absent, and the
+`desktop:release:signing:report -- --require-signed` gate then fails the job.
+That is intentional: without these secrets no public desktop release is
+publishable, rather than an unsigned one shipping.
+
+### macOS — Developer ID Application + notarization
+
+| Secret | Purpose |
+|---|---|
+| `APPLE_SIGNING_CERT_P12` | base64-encoded `.p12` with the Developer ID Application certificate and private key |
+| `APPLE_SIGNING_CERT_PASSWORD` | password for that `.p12` |
+| `APPLE_KEYCHAIN_PASSWORD` | password for the temporary signing keychain created on the runner |
+| `APPLE_ID` | Apple ID used by `notarytool` |
+| `APPLE_TEAM_ID` | Apple Developer team ID |
+| `APPLE_APP_SPECIFIC_PASSWORD` | app-specific password for `notarytool` |
+
+### Windows — Authenticode
+
+| Secret | Purpose |
+|---|---|
+| `WINDOWS_SIGNING_CERT_BASE64` | base64-encoded `.pfx` with the code-signing certificate and private key |
+| `WINDOWS_SIGNING_CERT_PASSWORD` | password for that `.pfx` |
+| `WINDOWS_SIGNING_TIMESTAMP_URL` | RFC 3161 timestamp server; defaults to `http://timestamp.digicert.com` |
+
+### Android — already wired, unchanged
+
+| Secret | Purpose |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64` | base64-encoded release keystore |
+| `AEGIS_ANDROID_KEYSTORE_PASSWORD` | keystore password |
+| `AEGIS_ANDROID_KEY_ALIAS` | key alias |
+| `AEGIS_ANDROID_KEY_PASSWORD` | key password |
+
+### Tauri updater bundles
+
+| Secret | Purpose |
+|---|---|
+| `TAURI_SIGNING_PRIVATE_KEY` | minisign key for the automatic updater bundles |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | passphrase for that key |
+
+The updater signature is separate from platform code signing: it is what the
+built-in updater verifies, whereas Authenticode/Developer ID are what the
+operating system verifies. Both are required for a public desktop release.

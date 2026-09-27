@@ -17,7 +17,6 @@ import {
   exportVaultSnapshotToFile,
   getSnapshotSettings,
   saveSnapshotSettings,
-  checkAndTriggerAutoSnapshot,
   type VaultSnapshotRecord,
   type SnapshotSettings,
   SnapshotError,

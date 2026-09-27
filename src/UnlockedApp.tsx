@@ -37,8 +37,12 @@ import { useRuntimeSecurity } from './hooks/useRuntimeSecurity';
 import { useAndroidAutofillCoordinator } from './hooks/useAndroidAutofillCoordinator';
 import { useAndroidRuntimeSecurity } from './hooks/useAndroidRuntimeSecurity';
 import { useAssetIntegrity } from './hooks/useAssetIntegrity';
+import { useAutoSnapshotScheduler } from './hooks/useAutoSnapshotScheduler';
 import { useAirgapAlerts } from './hooks/useAirgapAlerts';
 import { useVaultRollbackAlert } from './hooks/useVaultRollbackAlert';
+import { useVaultFallbackMirrorStaleAlert } from './hooks/useVaultFallbackMirrorStaleAlert';
+import { useVaultWriteConflict } from './hooks/useVaultWriteConflict';
+import { VaultStaleBanner } from './components/VaultStaleBanner';
 import { useLinuxSecurityStatus } from './hooks/useLinuxSecurityStatus';
 import { useExtensionCredentialSync } from './hooks/useExtensionCredentialSync';
 import { useExtensionCredentialListener } from './hooks/useExtensionCredentialListener';
@@ -84,6 +88,8 @@ export default function UnlockedApp({
     saveItem: handleSaveItem,
     saveItems: handleSaveItems,
     toggleFavorite: handleToggleFavorite,
+    writeConflict,
+    clearWriteConflict,
   } = useVaultData();
 
   const totpCountdown = useTotpCountdown(getTotpPeriod(selectedItem?.totpSecret));
@@ -156,16 +162,25 @@ export default function UnlockedApp({
     showNotification,
   });
 
+  // Y-23: stable identity — the runtime-security effects bind native
+  // listeners once; a fresh callback here would tear them down every render.
+  const handleSensitiveStateClear = useCallback(() => {
+    resetReveals();
+    clearCopiedField();
+  }, [resetReveals, clearCopiedField]);
+
   const { privacyShieldVisible, screenRecordingDetected } = useRuntimeSecurity({
     unlocked,
     onLock: handleLock,
-    onSensitiveStateClear: () => {
-      resetReveals();
-      clearCopiedField();
-    },
+    onSensitiveStateClear: handleSensitiveStateClear,
     backgroundLockDelayMs,
     isAutofillMode: Boolean(pendingAutofillRequest),
   });
+
+  // K-7: gives `daily` / `weekly` snapshot frequencies a production caller.
+  // Without it they were only evaluated inside useVaultLock's `lock` context,
+  // so a user who kept the vault unlocked never got an automatic backup.
+  useAutoSnapshotScheduler({ unlocked });
 
   useAirgapAlerts({
     unlocked,
@@ -176,6 +191,31 @@ export default function UnlockedApp({
     unlocked,
     onNotify: showNotification,
   });
+
+  // O-2: the localStorage recovery mirror can silently fall behind the
+  // authoritative copy, and a user cannot see that. Announced once per
+  // occurrence, right beside the rollback alert it is closest to in meaning.
+  useVaultFallbackMirrorStaleAlert({
+    unlocked,
+    onNotify: showNotification,
+  });
+
+  // Y-15: another tab committed a newer vault, or one of our writes was refused
+  // because this tab is behind. The user must be told their change did not land,
+  // and the stale list must be refreshed rather than left on screen.
+  const { isVaultStale, clearStale: clearVaultStale } = useVaultWriteConflict({
+    unlocked,
+    onNotify: showNotification,
+    writeConflict,
+  });
+
+  // Re-reading the vault makes this tab current again, so the staleness banner
+  // can go — but only after an actual refresh, never on the conflict flag alone.
+  const refreshDatabaseAndClearStale = useCallback(async () => {
+    await refreshDatabase();
+    clearVaultStale();
+    clearWriteConflict();
+  }, [refreshDatabase, clearVaultStale, clearWriteConflict]);
 
   useAndroidRuntimeSecurity({
     unlocked,
@@ -377,6 +417,11 @@ export default function UnlockedApp({
         />
 
         <main className="lg:ml-[280px] ml-0 flex-1 flex flex-col min-h-0 min-w-0 max-w-full overflow-hidden bg-brand-bg">
+          <VaultStaleBanner
+            isVisible={isVaultStale}
+            onRefresh={() => { void refreshDatabaseAndClearStale(); }}
+            onDismiss={clearVaultStale}
+          />
           <TopBar
             activeTab={activeTab}
             searchQuery={searchQuery}

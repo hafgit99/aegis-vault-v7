@@ -89,6 +89,152 @@ afterEach(() => {
 });
 
 describe('SQLite OPFS persistence engine', () => {
+  // ─── Y-15: targeted trash updates ─────────────────────────────────────────
+
+  it('Y-15: flags one item as trashed without touching any other row', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    await sqlite.saveVaultItem(sampleItem({ id: 'keep-1', title: 'Keep One' }), 'master-pass');
+    await sqlite.saveVaultItem(sampleItem({ id: 'target', title: 'Target' }), 'master-pass');
+    await sqlite.saveVaultItem(sampleItem({ id: 'keep-2', title: 'Keep Two' }), 'master-pass');
+
+    const key = await sqlite.deriveEncryptionKey('master-pass');
+    await sqlite.setItemTrashedWithKey('target', true, key);
+
+    const items = await sqlite.getVaultItemsWithKey(key);
+    const target = items.find((i) => i.id === 'target');
+    expect(target?.deleted).toBe(true);
+    expect(target?.deletedAt).toEqual(expect.any(String));
+
+    // The regression: the old path wrote back an item object built from a full
+    // vault read, so untouched rows could be altered as a side effect.
+    for (const id of ['keep-1', 'keep-2']) {
+      const untouched = items.find((i) => i.id === id);
+      expect(untouched?.deleted).toBeFalsy();
+      expect(untouched?.title).toBe(id === 'keep-1' ? 'Keep One' : 'Keep Two');
+    }
+  });
+
+  it('Y-15: preserves other fields of the targeted item', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    const original = sampleItem({ id: 'target', title: 'Original Title', notes: 'keep these notes' });
+    await sqlite.saveVaultItem(original, 'master-pass');
+
+    const key = await sqlite.deriveEncryptionKey('master-pass');
+    await sqlite.setItemTrashedWithKey('target', true, key);
+
+    const updated = (await sqlite.getVaultItemsWithKey(key)).find((i) => i.id === 'target');
+    expect(updated?.title).toBe('Original Title');
+    expect(updated?.notes).toBe('keep these notes');
+  });
+
+  it('Y-15: restoring clears both trash fields', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    await sqlite.saveVaultItem(sampleItem({ id: 'target' }), 'master-pass');
+
+    const key = await sqlite.deriveEncryptionKey('master-pass');
+    await sqlite.setItemTrashedWithKey('target', true, key);
+    await sqlite.setItemTrashedWithKey('target', false, key);
+
+    const restored = (await sqlite.getVaultItemsWithKey(key)).find((i) => i.id === 'target');
+    expect(restored?.deleted).toBeFalsy();
+    expect(restored?.deletedAt).toBeUndefined();
+  });
+
+  it('Y-15: does not write when the target item does not exist', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    await sqlite.saveVaultItem(sampleItem({ id: 'existing' }), 'master-pass');
+
+    const key = await sqlite.deriveEncryptionKey('master-pass');
+    const before = (await sqlite.getVaultItemsWithKey(key)).length;
+    const versionBefore = (await sqlite.getVaultItemsWithKey(key)).length;
+
+    await expect(sqlite.setItemTrashedWithKey('missing', true, key)).resolves.toHaveLength(before);
+    // A no-op must not bump the version counter, or it would look like a commit.
+    expect((await sqlite.getVaultItemsWithKey(key)).length).toBe(versionBefore);
+  });
+
+  // ─── O-16: atomic whole-vault replacement ────────────────────────────────
+
+  it('O-16: replaces the whole item set with a single persist', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    for (let i = 0; i < 5; i += 1) {
+      await sqlite.saveVaultItem(sampleItem({ id: `old-${i}`, title: `Old ${i}` }), 'master-pass');
+    }
+
+    const key = await sqlite.deriveEncryptionKey('master-pass');
+    const persisted = vi.spyOn(sqlite, 'saveVaultItemsWithKey');
+
+    await sqlite.replaceAllVaultItemsWithKey(
+      [sampleItem({ id: 'new-a', title: 'New A' }), sampleItem({ id: 'new-b', title: 'New B' })],
+      key,
+    );
+
+    // The whole point: restoring did not walk the old rows one at a time.
+    expect(persisted).not.toHaveBeenCalled();
+    const items = await sqlite.getVaultItemsWithKey(key);
+    expect(items.map((i) => i.id).sort()).toEqual(['new-a', 'new-b']);
+  });
+
+  it('O-16: leaves the vault untouched when the replacement produces nothing', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    await sqlite.saveVaultItem(sampleItem({ id: 'keep-me', title: 'Keep Me' }), 'master-pass');
+    const key = await sqlite.deriveEncryptionKey('master-pass');
+
+    // An empty snapshot must not silently wipe the vault. Callers validate the
+    // item count before reaching here, but the repository refuses an empty
+    // replacement as a second line of defence.
+    await expect(sqlite.replaceAllVaultItemsWithKey([], key)).rejects.toThrow();
+
+    const items = await sqlite.getVaultItemsWithKey(key);
+    expect(items.map((i) => i.id)).toEqual(['keep-me']);
+  });
+
+  it('O-16: restores every field of a replaced item', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    const key = await sqlite.deriveEncryptionKey('master-pass');
+
+    const restored = sampleItem({
+      id: 'restored',
+      title: 'Restored Title',
+      username: 'restored-user',
+      password: 'restored-secret',
+      url: 'https://restored.example.com',
+      notes: 'restored notes',
+      favorite: true,
+    });
+    await sqlite.replaceAllVaultItemsWithKey([restored], key);
+
+    const [item] = await sqlite.getVaultItemsWithKey(key);
+    expect(item).toMatchObject({
+      id: 'restored',
+      title: 'Restored Title',
+      username: 'restored-user',
+      password: 'restored-secret',
+      notes: 'restored notes',
+      favorite: true,
+    });
+  });
+
+  it('O-16: preserves trash flags on items carried across a replace', async () => {
+    const sqlite = await freshSqliteInstance();
+    await sqlite.setupMaster('master-pass');
+    const key = await sqlite.deriveEncryptionKey('master-pass');
+    await sqlite.saveVaultItem(sampleItem({ id: 'survivor' }), 'master-pass');
+    await sqlite.setItemTrashedWithKey('survivor', true, key);
+
+    await sqlite.replaceAllVaultItemsWithKey([sampleItem({ id: 'survivor' })], key);
+
+    const [item] = await sqlite.getVaultItemsWithKey(key);
+    expect(item?.id).toBe('survivor');
+  });
+
   it('sets up a master password, stores encrypted rows, and exposes read-only SQL results', async () => {
     const sqlite = await freshSqliteInstance();
     let notifications = 0;
@@ -437,7 +583,18 @@ describe('SQLite OPFS persistence engine', () => {
 
     const persisted = JSON.parse(localStorage.getItem('aegis_sqlite_fallback') ?? '{}');
     delete persisted.encryption_salt;
+    // K-3: a genuine pre-v2 database cannot carry a v2 tag. Leaving
+    // `integrityHmac` in place while deleting a signed field is exactly the
+    // tampering shape the re-seal gate now rejects, so the legacy fixture has
+    // to drop the tag too.
+    delete persisted.integrityHmac;
+    delete persisted.sealedAtVersionCounter;
     localStorage.setItem('aegis_sqlite_fallback', JSON.stringify(persisted));
+    // Y-5: a genuine legacy vault also predates the integrity ledger. Without
+    // clearing it, the ledger still says "this vault has been sealed", and a
+    // missing tag is then (correctly) treated as tag blanking rather than as an
+    // unsealed vault — which is precisely the protection under test elsewhere.
+    localStorage.removeItem('aegis_vault_integrity_ledger');
 
     const legacyStaticSaltSqlite = await freshSqliteInstance();
 
@@ -909,8 +1066,8 @@ category: undefined,
       deleted: false,
     });
 expect(saved[0]!.id).toHaveLength(9);
-    expect(saved[0]!.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(saved[0]!.updatedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(saved[0]!.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}(T|$)/);
+    expect(saved[0]!.updatedAt).toMatch(/^\d{4}-\d{2}-\d{2}(T|$)/);
 
     await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual([
       expect.objectContaining({
@@ -945,8 +1102,8 @@ expect(saved[0]!.id).toHaveLength(9);
         expect.objectContaining({
           id: 'fresh-row',
           title: 'Email Account',
-          createdAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
-          updatedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+          createdAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}(T|$)/),
+          updatedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}(T|$)/),
         }),
       ]),
     );
@@ -965,8 +1122,8 @@ expect(saved[0]!.id).toHaveLength(9);
     expect(rotated).toBeUndefined();
     const items = await sqlite.getVaultItems('brand-new-master');
     const restored = items.find((item) => item.id === 'no-timestamps')!;
-    expect(restored.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(restored.updatedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(restored.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}(T|$)/);
+    expect(restored.updatedAt).toMatch(/^\d{4}-\d{2}-\d{2}(T|$)/);
     await expect(sqlite.verifyPassword('master-pass')).resolves.toBe(false);
     await expect(sqlite.verifyPassword('brand-new-master')).resolves.toBe(true);
   });
@@ -1038,7 +1195,10 @@ expect(saved[0]!.id).toHaveLength(9);
     readDesktopVaultDatabase.mockResolvedValueOnce(JSON.stringify(parsed));
 
     const reloaded = await freshSqliteInstance();
-    // Tampered row fails HMAC check and returns empty list
-    await expect(reloaded.getVaultItems('master-pass')).resolves.toEqual([]);
+    // K-3: tampered rows now fail loudly — the engine re-throws the
+    // integrity error instead of silently returning an empty vault.
+    await expect(reloaded.getVaultItems('master-pass')).rejects.toThrow(
+      'vault-database-integrity-corrupted',
+    );
   });
 });

@@ -80,6 +80,7 @@ vi.mock('./argon2id', () => ({
 }));
 
 import { logSecurityEvent, securityEventCodes } from './securityEvents';
+import { recordVaultSeal } from './vaultIntegrityLedger';
 
 beforeEach(() => {
   localStorage.clear();
@@ -395,6 +396,83 @@ describe('loadPersistedVaultDatabase', () => {
     await loadPersistedVaultDatabase();
     expect(consumeVaultRollbackDetected()).toBe(false);
   });
+
+  // ─── Y-15: rollback detection must survive a page reload ───────────────────
+  //
+  // The two tests above both set the in-session counter explicitly. On a real
+  // page load that counter is 0, so its `> 0` guard never fired and
+  // `useVaultRollbackAlert` was dead code in production. These tests use the
+  // durable ledger instead — the only thing that survives a reload.
+
+  it('Y-15: detects rollback from the durable ledger with no in-session counter', async () => {
+    // Simulates a fresh page load: nothing observed in this session yet.
+    setLastObservedVersionCounter(0);
+    // A previous session sealed the vault at version 20.
+    recordVaultSeal(20);
+
+    const rolledBackState = {
+      ...createEmptyVaultDatabaseState(),
+      versionCounter: 4,
+    };
+    readDesktopVaultDatabase.mockResolvedValueOnce(JSON.stringify(rolledBackState));
+
+    const result = await loadPersistedVaultDatabase();
+
+    expect(result.kind).toBe('state');
+    expect(logSecurityEvent).toHaveBeenCalledWith(
+      securityEventCodes.storageLegacyMigrationFailed,
+      expect.stringContaining('Vault database rollback detected'),
+      'critical',
+      expect.objectContaining({ loadedVersion: 4, expectedMinVersion: 20 }),
+    );
+    // The UI alert can finally fire in production.
+    expect(consumeVaultRollbackDetected()).toBe(true);
+  });
+
+  it('Y-15: does not flag rollback when the file matches the durable mark', async () => {
+    setLastObservedVersionCounter(0);
+    recordVaultSeal(20);
+
+    const currentState = {
+      ...createEmptyVaultDatabaseState(),
+      versionCounter: 20,
+    };
+    readDesktopVaultDatabase.mockResolvedValueOnce(JSON.stringify(currentState));
+
+    await loadPersistedVaultDatabase();
+
+    expect(consumeVaultRollbackDetected()).toBe(false);
+  });
+
+  it('Y-15: does not flag rollback for a vault newer than the durable mark', async () => {
+    setLastObservedVersionCounter(0);
+    recordVaultSeal(20);
+
+    const newerState = {
+      ...createEmptyVaultDatabaseState(),
+      versionCounter: 21,
+    };
+    readDesktopVaultDatabase.mockResolvedValueOnce(JSON.stringify(newerState));
+
+    await loadPersistedVaultDatabase();
+
+    expect(consumeVaultRollbackDetected()).toBe(false);
+  });
+
+  it('Y-15: uses the higher of the in-session counter and the durable mark', async () => {
+    setLastObservedVersionCounter(30);
+    recordVaultSeal(10);
+
+    const rolledBackState = {
+      ...createEmptyVaultDatabaseState(),
+      versionCounter: 12,
+    };
+    readDesktopVaultDatabase.mockResolvedValueOnce(JSON.stringify(rolledBackState));
+
+    await loadPersistedVaultDatabase();
+
+    expect(consumeVaultRollbackDetected()).toBe(true);
+  });
 });
 
 describe('migrateLegacyLocalStorage', () => {
@@ -561,6 +639,54 @@ describe('migrateLegacyLocalStorage', () => {
     populated.user_secrets = [{ username: 'owner', argon_hash: 'h' }];
 
     purgeStaleLegacyLocalStorageKeys(populated);
+    expect(localStorage.getItem('aegis_master_password')).toBeNull();
+  });
+
+  // ─── O-3: the orphaned password, not just the populated-store case ────────
+
+  it('O-3: purges a legacy password whose items blob is gone', () => {
+    // The browser evicted `aegis_vault_items` (megabytes) and kept
+    // `aegis_master_password` (dozens of bytes) - which is exactly the order
+    // a quota eviction goes in. Nothing is left to migrate, so the password is
+    // inert residue that must not survive.
+    localStorage.setItem('aegis_master_password', btoa('orphaned-pass'));
+
+    purgeStaleLegacyLocalStorageKeys(createEmptyVaultDatabaseState());
+
+    expect(localStorage.getItem('aegis_master_password')).toBeNull();
+    expect(logSecurityEvent).toHaveBeenCalledWith(
+      securityEventCodes.storageLegacyDataPurged,
+      'Orphaned legacy master password purged (no legacy items remained to migrate).',
+      'info',
+    );
+  });
+
+  it('O-3: still keeps a legacy password while an items blob could still be migrated', () => {
+    // Rollback safety is unchanged: with items present and the store empty,
+    // this is an un-migrated vault and the plaintext sources are the only copy.
+    localStorage.setItem('aegis_master_password', btoa('live-pass'));
+    localStorage.setItem('aegis_vault_items', '[]');
+
+    purgeStaleLegacyLocalStorageKeys(createEmptyVaultDatabaseState());
+
+    expect(localStorage.getItem('aegis_master_password')).not.toBeNull();
+    expect(localStorage.getItem('aegis_vault_items')).not.toBeNull();
+  });
+
+  it('O-3: cleans up the orphaned password on the fallback-mirror early return too', async () => {
+    // A second door onto the same finding: the mirror branch returned before
+    // any cleanup ran, so a user whose vault loaded from the mirror kept their
+    // base64 password indefinitely.
+    localStorage.setItem(LOCAL_FALLBACK_KEY, JSON.stringify({
+      schemaVersion: 1,
+      appId: 'aegis',
+      user_secrets: [],
+      vault_items: [],
+    }));
+    localStorage.setItem('aegis_master_password', btoa('orphaned-pass'));
+
+    await migrateLegacyLocalStorage(createEmptyVaultDatabaseState(), deps());
+
     expect(localStorage.getItem('aegis_master_password')).toBeNull();
   });
 });

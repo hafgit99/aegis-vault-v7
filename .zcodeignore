@@ -1,0 +1,113 @@
+node_modules/
+build/
+dist/
+dist-extension/
+dist-extension-firefox/
+dist-extension-safari/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+*.keystore
+*.jks
+*.p12
+*.pfx
+keystore.properties
+key.properties
+
+# Native messaging host registration files (EXT-B2: generated at install/registration
+# time by scripts/register-host.js; contain machine-specific absolute paths and must
+# never be committed or shipped in build outputs)
+native-host-local/
+dist-extension*/com.hafgit99.aegisvault7.json
+dist-extension*/aegis-host.bat
+release-local/**/com.hafgit99.aegisvault7.json
+release-local/**/aegis-host.bat
+
+# Local tool states
+.commandcode/
+.kilo/
+
+# Desktop / mobile build outputs
+src-tauri/target/
+src-tauri/gen/*
+!src-tauri/gen/android/
+!src-tauri/gen/android/**
+src-tauri/gen/android/**/build/
+src-tauri/gen/android/**/.cxx/
+src-tauri/gen/android/**/.gradle/
+.kotlin/
+*.kotlin/
+target/
+release-local/
+.tmp/
+
+# Tooling caches
+.vite/
+.vitest/
+playwright-report/
+test-results/
+reports/
+.stryker-tmp/
+
+# Local signing secrets
+.secrets/
+
+# Local security audit report & competitive analysis (private, not published to the remote)
+docs/GUVENLIK_DENETIM_RAPORU.md
+docs/GUVENLIK_INCELEME_RAPORU.md
+docs/GUVENLIK_VE_MIMARI_RAPORU.md
+docs/KOD_DUZENI_DENETIM_RAPORU_2026.md
+docs/COMPETITIVE_ANALYSIS.md
+docs/SECURITY_CODE_AUDIT_REPORT_2026.md
+docs/SIber_Guvenlik_Degerlendirmesi_2026.md
+docs/Siber_Guvenlik_Degerlendirmesi_2026.md
+docs/KAPSAMLI_KOD_ANALIZ_RAPORU.md
+docs/KOD_VE_GUVENLIK_ANALIZ_RAPORU_*.md
+docs/KOD_VE_GUVENLIK_ANALIZ_RAPORU_2026-08-27.md
+docs/PREMIUM_STRATEJISI_VE_YOL_HARITASI.md
+KOD_GUVENLIK_ANALIZ_RAPORU_TR.md
+GUVENLIK_VE_MIMARI_RAPORU.md
+session-*.md
+
+# Scratchpad
+scratch/
+
+# Website (kept local, excluded from GitHub remote)
+aegisvault-website/
+
+# Self-hosted backup infra (kept local, excluded from GitHub remote)
+deploy/
+
+# Local testing and debug configs
+args/
+src-tauri/tauri.dev.conf.json
+
+# ===== ↑ 以上同步自 .gitignore（「从 .gitignore 同步」只重写以上部分）=====
+.git/
+.hg/
+.svn/
+bower_components/
+jspm_packages/
+__pycache__/
+site-packages/
+venv/
+htmlcov/
+lcov-report/
+cmakefiles/
+cmake-build-*/
+bazel-*/
+pods/
+deriveddata/
+storybook-static/
+allure-results/
+allure-report/
+cdk.out/
+*.egg-info/
+*.dist-info/
+eggs/
+pip-wheel-metadata/
+wheels/
+# ----- ↑ 以上为 ZCode 默认排除规则（自定义规则请写在本行下方，不会被同步/恢复改动）-----
+# 自定义规则写在下方（本行提示可删除）

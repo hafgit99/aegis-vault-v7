@@ -10,7 +10,7 @@
  * @license SPDX-License-Identifier: Apache-2.0
  */
 
-import { getVaultItems, saveVaultItems, deleteVaultItem } from './storage';
+import { getVaultItems, replaceVaultItems } from './storage';
 import { exportAllAttachments, importAttachments, type AttachmentBackupRecord } from './attachments';
 import { encryptDataWithPasswordSecure, decryptDataWithPasswordSecure } from './encryption';
 import { validateBackupPayload } from './backupValidation';
@@ -24,6 +24,26 @@ export const SNAPSHOT_DB_NAME = 'aegis_snapshots_db';
 export const SNAPSHOT_STORE_NAME = 'snapshots';
 export const SNAPSHOT_DB_VERSION = 1;
 export const MAX_SNAPSHOTS_DEFAULT = 30;
+
+/**
+ * O-17: upper bound on how many items a single restore may write.
+ *
+ * The byte budget cannot catch this on its own: a payload of many very small
+ * items stays comfortably under `MAX_BACKUP_FILE_SIZE` while still forcing one
+ * key derivation and one AES-GCM encryption per item, which is enough to wedge a
+ * mobile WebView mid-restore. 50k items is far beyond any real vault — the
+ * desktop app holds thousands — so nothing legitimate is refused.
+ */
+export const MAX_RESTORE_ITEM_COUNT = 50_000;
+
+function assertRestorableItemCount(count: number): void {
+  if (count > MAX_RESTORE_ITEM_COUNT) {
+    throw new SnapshotError(
+      'snapshots.tooManyItems',
+      `Snapshot declares ${count} items, above the ${MAX_RESTORE_ITEM_COUNT}-item restore limit.`,
+    );
+  }
+}
 
 export type SnapshotTrigger = 'manual' | 'auto' | 'pre_restore';
 
@@ -253,20 +273,32 @@ export async function restoreVaultSnapshot(snapshotId: string): Promise<Snapshot
         const rawJson = await decryptDataWithPasswordSecure(target.encryptedPayload, masterPassword);
         const parsed = JSON.parse(rawJson);
 
-        // 3. Validate backup envelope integrity
-        const validated = validateBackupPayload(parsed);
+        // 3. Validate backup envelope integrity.
+        //
+        // O-17: the byte size is passed through. `validateBackupPayload` has
+        // always supported a `fileSizeBytes` budget, but this call site never
+        // supplied one, so the limit existed on paper only — a snapshot
+        // decrypted from attacker-supplied or corrupt storage could declare an
+        // arbitrary number of items and drive the restore straight into memory
+        // exhaustion.
+        const decryptedSizeBytes = new TextEncoder().encode(rawJson).byteLength;
+        const validated = validateBackupPayload(parsed, decryptedSizeBytes);
         const snapshotItems: VaultItem[] = validated.items as unknown as VaultItem[];
         const snapshotAttachments: AttachmentBackupRecord[] = (validated.attachments || []) as unknown as AttachmentBackupRecord[];
 
-        // 4. Reconcile items: delete items not in snapshot, save snapshot items
-        const currentItems = await getVaultItems();
-        const targetIds = new Set(snapshotItems.map((i) => i.id));
-        for (const cur of currentItems) {
-          if (!targetIds.has(cur.id)) {
-            await deleteVaultItem(cur.id);
-          }
-        }
-        await saveVaultItems(snapshotItems);
+        // A size budget alone does not bound the work: a payload of many tiny
+        // items stays under the byte cap while still forcing one encryption and
+        // one row per item. Bound the count too.
+        assertRestorableItemCount(snapshotItems.length);
+
+        // 4. Replace items atomically.
+        //
+        // O-16: this used to loop `deleteVaultItem` and then `saveVaultItems`.
+        // The vault is a whole-blob rewrite, so that was one full persist **per
+        // deleted item** plus another for the inserts — and any failure part-way
+        // through (disk full, crash, closed tab) left the vault half-deleted.
+        // One atomic replace, one persist.
+        await replaceVaultItems(snapshotItems);
 
         // 5. Reconcile attachments
         if (snapshotAttachments.length > 0) {

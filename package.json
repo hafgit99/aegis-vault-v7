@@ -1,7 +1,7 @@
 {
   "name": "aegis-vault-v7",
   "private": true,
-  "version": "7.0.7.0",
+  "version": "7.0.9.0",
   "type": "module",
   "bin": {
     "aegis-cli": "./scripts/aegis-cli.cjs"
@@ -22,6 +22,7 @@
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build",
     "android:init": "tauri android init",
+    "android:gradle-glue": "node scripts/android-gradle-glue.cjs",
     "android:dev": "tauri android dev",
     "android:run": "tauri android run",
     "android:clean:jni": "node scripts/clean-android-jni.cjs",
@@ -92,6 +93,7 @@
     "wa-sqlite:final:gate:dry": "node scripts/wa-sqlite-final-gate.cjs --dry-run",
     "desktop:release:import": "node scripts/desktop-release-import-artifacts.cjs",
     "security:no-js-master-string": "node scripts/security-no-js-master-string.cjs",
+    "security:android-autofill-boundary": "node scripts/security-android-autofill-boundary.cjs",
     "security:session-gates": "node scripts/security-session-gates.cjs",
     "audit:checksums": "node scripts/generate-audit-package-checksums.cjs",
     "audit:checksums:verify": "node scripts/generate-audit-package-checksums.cjs --verify",
@@ -105,7 +107,10 @@
     "rust:test:native": "cargo test --manifest-path src-tauri/Cargo.toml write_vault_database_file",
     "release:readiness": "node scripts/release-readiness-summary.cjs",
     "release:readiness:final": "node scripts/release-readiness-summary.cjs --final --output release-local/RELEASE_READINESS_FINAL.md",
-    "psl:generate": "node scripts/generate-psl-data.cjs"
+    "psl:generate": "node scripts/generate-psl-data.cjs",
+    "security:release-signing": "node scripts/security-release-signing-gate.cjs",
+    "security:argon2-bounds": "node scripts/security-argon2-bounds-parity.cjs",
+    "android:lint": "cd src-tauri/gen/android && gradlew.bat :app:lintArmDebug --console=plain"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

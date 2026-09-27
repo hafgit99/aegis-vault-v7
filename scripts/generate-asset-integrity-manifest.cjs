@@ -34,9 +34,23 @@ function createAssetEntries(distDir) {
       file,
       path: path.relative(distDir, file).replace(/\\/g, '/'),
     }))
-    // Tauri injects the configured CSP into index.html at runtime. Hash the
-    // static payloads only so WebView-side verification does not false-positive.
-    .filter((entry) => entry.path !== MANIFEST_FILENAME && entry.path !== 'index.html' && !entry.path.endsWith('.map'))
+    // Y-20: index.html is now included. It used to be excluded on the stated
+    // grounds that "Tauri injects the configured CSP into index.html at
+    // runtime, so the on-disk bytes differ from the served ones". That is not
+    // how Tauri v2 works, and leaving the exclusion in place was the whole
+    // finding: index.html is the document that loads every other script, and it
+    // was the only file in dist/ with no integrity guarantee at all. A local
+    // write to dist/index.html adding `<script src="evil.js">` left the root
+    // hash matching and the check returning {status:'verified'}.
+    //
+    // Verified empirically for this project rather than assumed:
+    //   - Tauri v2 serves the custom protocol with `security.csp` applied as a
+    //     *response header*. It does not rewrite the file on disk.
+    //   - tauri.conf.json's CSP and the CSP <meta> in the built dist/index.html
+    //     are different strings, and the latter is byte-identical to the one in
+    //     the source index.html template.
+    // So the bytes hashed here are the bytes the WebView loads.
+    .filter((entry) => entry.path !== MANIFEST_FILENAME && !entry.path.endsWith('.map'))
     .map((entry) => {
       const contents = fs.readFileSync(entry.file);
       return {

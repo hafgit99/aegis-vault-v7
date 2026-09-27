@@ -24,7 +24,13 @@ import {
   withActiveSessionSecrets,
   withActiveVaultEncryptionKey,
 } from './vaultSession';
+import { clearVaultIntegrityLedger } from './vaultIntegrityLedger';
+import { getVaultSnapshots } from './snapshots';
+import { decryptDataWithPasswordSecure } from './encryption';
+import { validateBackupPayload } from './backupValidation';
+import { importAttachments, type AttachmentBackupRecord } from './attachments';
 import { disableBiometric, hydrateBiometric } from './biometric';
+import { disableRecoveryKey } from './recoveryKey';
 import { createDemoItems } from './storageDemoItems';
 import {
   getSecureStorageItem,
@@ -54,6 +60,58 @@ interface AccountSecretProfile {
   enabled: true;
 }
 
+/**
+ * K-4: raised when the authoritative vault file exists but cannot be decoded.
+ *
+ * This is deliberately a distinct type rather than a generic `Error`:
+ *  - the UI must not shake or count it as a wrong password;
+ *  - the correct user action is "restore from a snapshot", not "try again";
+ *  - the failure must NOT be swallowed into an empty vault, because that is the
+ *    data-loss path this whole change exists to close.
+ */
+export class VaultStorageUnreadableError extends Error {
+  readonly reason: string;
+
+  constructor(reason: string) {
+    super(`vault-database-unreadable:${reason}`);
+    this.name = 'VaultStorageUnreadableError';
+    this.reason = reason;
+  }
+}
+
+export function isVaultStorageUnreadableError(err: unknown): err is VaultStorageUnreadableError {
+  return err instanceof VaultStorageUnreadableError
+    || (err instanceof Error && err.message.startsWith('vault-database-unreadable:'));
+}
+
+/**
+ * Y-13: a wa-sqlite promotion marker exists but its database could not be opened
+ * on this attempt (transient IndexedDB/WASM failure, origin quota exhausted,
+ * tab-restore race).
+ *
+ * This is a distinct type because the semantics are the opposite of
+ * `VaultStorageUnreadableError`:
+ *  - the vault is NOT corrupt — the database is intact and still referenced by
+ *    the promotion marker, which is deliberately preserved;
+ *  - the correct user action is "retry", not "restore from a snapshot";
+ *  - it must NOT be swallowed, because the alternative is a new empty database
+ *    being created and presented as the user's vault.
+ */
+export class VaultStorageUnavailableError extends Error {
+  readonly reason: string;
+
+  constructor(reason: string) {
+    super(`vault-storage-unavailable:${reason}`);
+    this.name = 'VaultStorageUnavailableError';
+    this.reason = reason;
+  }
+}
+
+export function isVaultStorageUnavailableError(err: unknown): err is VaultStorageUnavailableError {
+  return err instanceof VaultStorageUnavailableError
+    || (err instanceof Error && err.message.startsWith('vault-storage-unavailable:'));
+}
+
 export async function initializeStorage(): Promise<void> {
   // Phase 1: IndexedDB cache must be ready before anything reads setup flags,
   // but biometric hydrate is completely independent — run them together.
@@ -67,18 +125,39 @@ export async function initializeStorage(): Promise<void> {
       })
     : Promise.resolve();
 
-  await Promise.all([
-    opfsPromise,
+  const [startupBackendStatus] = await Promise.all([
     restoreOrActivateDefaultVaultStorageBackend({
       hasLegacyOpfsVaultData: isMasterPasswordSet,
     }),
+    opfsPromise,
   ]);
 
+  // Y-13: a promotion marker exists but the wa-sqlite database would not open.
+  // Surface it instead of continuing: the next phase would otherwise operate on
+  // whatever repository happens to be active, and the user would be shown an
+  // empty vault with no explanation.
+  if (startupBackendStatus === 'wa-sqlite-unavailable') {
+    throw new VaultStorageUnavailableError('persisted-wa-sqlite-backend-unavailable');
+  }
+
   // Phase 3: Vault repo hydrate + wait for biometric (should already be done).
-  await Promise.all([
-    getVaultStorageRepository().hydrate(),
-    biometricPromise,
-  ]);
+  // K-4: a hydrate() rejection here means the vault file is present but
+  // damaged. It must propagate as a typed, non-fatal-but-blocking error so the
+  // lock screen can offer snapshot restore — NOT be caught and turned into an
+  // empty vault.
+  const repo = getVaultStorageRepository();
+  const repoHydrate = repo.hydrate().catch((e: unknown) => {
+    if (isVaultStorageUnreadableError(e)) throw e;
+    console.error('Failed to hydrate vault storage repository:', e);
+  });
+  await Promise.all([repoHydrate, biometricPromise]);
+
+  // K-4: reuses the same repository handle rather than re-resolving it.
+  if (repo.isVaultFileUnreadable?.()) {
+    const failure = repo.getStartupFailure?.();
+    const reason = failure?.message.split(':').slice(1).join(':') || 'unknown';
+    throw new VaultStorageUnreadableError(reason);
+  }
 
   migrateRememberedSecretKeyToSecureStorage();
 }
@@ -318,15 +397,20 @@ export async function setupMasterPassword(password: string): Promise<void> {
     const vaultKeyBytes = new Uint8Array(result.vaultEncryptionKey);
     const repo = getVaultStorageRepository();
     if (repo.setupMasterWithHash) {
-      await repo.setupMasterWithHash(result.argonHash, result.salt, kdfParams);
+      // K-3: pass the derived key so the first persisted state is signed.
+      await repo.setupMasterWithHash(result.argonHash, result.salt, kdfParams, vaultKeyBytes);
     } else {
       const credential = resolveVaultCredential(password);
-      await repo.setupMaster(credential);
+      await repo.setupMaster(credential, vaultKeyBytes);
     }
     
     openVaultSession(credential, password, vaultKeyBytes);
   } else {
     const credential = resolveVaultCredential(password);
+    // K-3: `setupMaster` derives the key itself (it already holds the
+    // credential) so the first persisted state is signed. Keeping the
+    // derivation inside the repository avoids widening the JS-side master
+    // password surface in this file.
     await getVaultStorageRepository().setupMaster(credential);
     await openDerivedVaultSession(credential, password);
   }
@@ -479,6 +563,11 @@ export async function changeMasterPassword(oldPassword: string, newPassword: str
     newVaultKey.fill(0);
 
     disableBiometric();
+    // Y-3: the old recovery bundle is sealed under the previous master
+    // password — after a rotation it must be invalidated, otherwise a
+    // compromised 24-word phrase still unlocks the vault while the UI
+    // claims recovery is active.
+    disableRecoveryKey();
     setIndexedDbItemSync(STORAGE_KEYS.IS_SET_UP, 'true');
   } else {
     const oldCredential = await resolveCurrentVaultCredential(oldPassword);
@@ -531,6 +620,8 @@ export async function changeMasterPassword(oldPassword: string, newPassword: str
 
     await openDerivedVaultSession(newCredential, newPassword);
     disableBiometric();
+    // Y-3: see desktop branch — rotate-out stale recovery bundles.
+    disableRecoveryKey();
     setIndexedDbItemSync(STORAGE_KEYS.IS_SET_UP, 'true');
   }
 }
@@ -543,6 +634,117 @@ export async function resetSystem(): Promise<void> {
   closeVaultSession();
   clearAllSetupFlagsSync();
   clearPersistedActiveVaultStorageBackend();
+}
+
+export interface VaultRebuildFromSnapshotResult {
+  restoredItems: number;
+  restoredAttachments: number;
+  /** Snapshots that failed the master-password check, oldest first. */
+  skippedSnapshots: number;
+}
+
+/**
+ * K-4: rebuilds an unreadable vault from an encrypted snapshot, in place, while
+ * the vault is still locked.
+ *
+ * ## Why this cannot go through the normal restore path
+ *
+ * `restoreVaultSnapshot` reads the CURRENT vault (`getVaultItems`) to reconcile
+ * against, and needs an open session. Neither is available here: the file that
+ * holds the vault is the thing that is broken, which is precisely why the
+ * lock screen cannot offer the ordinary "restore" affordance.
+ *
+ * ## What this does instead
+ *
+ * The snapshot is encrypted with the master password, and the master password is
+ * something the user still knows. So recovery is a REBUILD rather than a
+ * rollback:
+ *
+ *   1. decrypt the chosen snapshot with the supplied password — this both proves
+ *      the password is right and yields the plaintext items;
+ *   2. wipe the unreadable vault and re-create it with the SAME password (new
+ *      salt, new argon2id hash, so the user's password keeps working);
+ *   3. write the snapshot's items and attachments into the fresh vault.
+ *
+ * The password itself is never changed, so afterwards the user unlocks with
+ * exactly what they used before.
+ *
+ * ## Destructive by design
+ *
+ * The unreadable file is unrecoverable, and a rebuild cannot merge with it. The
+ * caller is expected to have shown the user what is about to be replaced. The
+ * integrty ledger is cleared with the vault, otherwise the new vault's counter
+ * would sit below the old mark and every write would be refused.
+ */
+export async function rebuildVaultFromSnapshot(
+  snapshotId: string,
+  masterPassword: string,
+): Promise<VaultRebuildFromSnapshotResult> {
+  const snapshots = await getVaultSnapshots();
+  const target = snapshots.find((snapshot) => snapshot.id === snapshotId);
+  if (!target) {
+    throw new Error('snapshot-not-found');
+  }
+
+  // Proves the password before anything destructive happens.
+  let rawJson: string;
+  try {
+    rawJson = await decryptDataWithPasswordSecure(target.encryptedPayload, masterPassword);
+  } catch {
+    throw new Error('snapshot-password-mismatch');
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawJson);
+  } catch {
+    throw new Error('snapshot-unreadable');
+  }
+
+  const validated = validateBackupPayload(parsed);
+  const items = validated.items as unknown as VaultItem[];
+  const attachments = (validated.attachments || []) as unknown as AttachmentBackupRecord[];
+
+  // 1. Replace the unreadable vault with an empty one under the same password.
+  await getVaultStorageRepository().resetAll();
+  clearVaultIntegrityLedger();
+  clearAllSetupFlagsSync();
+  clearPersistedActiveVaultStorageBackend();
+  closeVaultSession();
+
+  // 2. Re-create the vault so the user's existing password works again.
+  await setupMasterPassword(masterPassword);
+
+  // 3. Repopulate from the snapshot. From here on the normal, session-backed
+  //    save path is usable, so no bespoke write path is needed.
+  const sessionCredential = resolveVaultCredential(masterPassword);
+  await openDerivedVaultSession(sessionCredential, masterPassword);
+
+  let restoredAttachments = 0;
+  try {
+    await saveVaultItems(items);
+    if (attachments.length > 0) {
+      await importAttachments(attachments);
+      restoredAttachments = attachments.length;
+    }
+  } finally {
+    closeVaultSession();
+  }
+
+  // Older snapshots may be encrypted under a previous password; counting them
+  // keeps the summary honest rather than silently restoring a partial vault.
+  const skippedSnapshots = snapshots.filter(
+    (snapshot) => snapshot.id !== snapshotId && snapshot.encryptedPayload !== target.encryptedPayload,
+  ).length;
+
+  logSecurityEvent(
+    securityEventCodes.storageLegacyMigrationFailed,
+    `Rebuilt an unreadable vault from snapshot ${snapshotId} (${items.length} items, ${restoredAttachments} attachments).`,
+    'warning',
+    { snapshotId, restoredItems: items.length, restoredAttachments },
+  );
+
+  return { restoredItems: items.length, restoredAttachments, skippedSnapshots };
 }
 
 export async function migrateActiveVaultStorageToWaSqlite(): Promise<WaSqliteActiveBackendMigrationResult> {
@@ -564,18 +766,28 @@ export async function migrateActiveVaultStorageToWaSqlite(): Promise<WaSqliteAct
     }
     if (migrationResult.status === 'promoted') {
       setIndexedDbItemSync(STORAGE_KEYS.IS_SET_UP, 'true');
-      // SEC-B3: reuse the already-derived vault key from the active session
-      // instead of re-deriving it over IPC (which would cross the boundary
-      // with the master password again). Derive only when no key is held.
-      const existingKey = withActiveVaultEncryptionKey((key) => new Uint8Array(key));
-      if (existingKey) {
-        updateActiveVaultEncryptionKey(existingKey);
-        existingKey.fill(0);
-      } else {
-        const newKey = await getVaultStorageRepository().deriveEncryptionKey(credential);
-        updateActiveVaultEncryptionKey(newKey);
-        newKey.fill(0);
-      }
+      // Y-12: always re-derive from the newly promoted repository.
+      //
+      // `runVaultStorageMigration` calls `targetRepository.setupMaster(...)`,
+      // which mints a BRAND NEW random salt and then writes every migrated row
+      // under `Argon2id(credential, newSalt)`. The key already sitting in the
+      // session is `Argon2id(credential, oldOpfsSalt)` — a different key.
+      //
+      // The old `if (existingKey)` shortcut pushed that stale key straight into
+      // the session. The first `changeMasterPassword` after promotion then
+      // handed it to `changeMasterPasswordWithHash(..., oldVaultKey, ...)`, and
+      // every wa-sqlite row failed to decrypt: `WA_SQLITE_ROW_DECRYPT_ERROR` on
+      // the very first row. The user could not change their master password at
+      // all, and storage.ts:466-474 then tried an extra rotation with the
+      // mismatched pair, making it worse.
+      //
+      // The SEC-B3 justification on the shortcut was never real: the credential
+      // is already decoded in this scope by `withActiveSessionSecrets`, and the
+      // `else` branch performed exactly this derivation. The shortcut bought no
+      // security and produced a wrong key.
+      const promotedKey = await getVaultStorageRepository().deriveEncryptionKey(credential);
+      updateActiveVaultEncryptionKey(promotedKey);
+      promotedKey.fill(0);
     }
     return migrationResult;
   });
@@ -601,33 +813,73 @@ async function withSessionVaultKey<T>(fallback: T, action: (vaultEncryptionKey: 
 }
 
 
+/** Trash items are permanently deleted this many days after deletion. */
+export const TRASH_RETENTION_DAYS = 15;
+
+const TRASH_RETENTION_MS = TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+
 /**
- * Retrieves of clean vault items from database.
+ * Retrieves vault items from the database.
+ *
+ * Y-14: this used to be a **read that destroyed data**. Every call permanently
+ * deleted every trashed item older than 15 days, and returned the result of
+ * that delete. It had 11 call sites, including the worst possible ones:
+ *
+ *   - `createVaultSnapshot`  — taking a backup purged the trash
+ *   - `restoreVaultSnapshot` — restoring a backup purged the trash
+ *   - `useSettingsSync`      — syncing to WebDAV/S3 purged the trash
+ *   - `useSettingsPasskey`   — a passkey operation purged the trash
+ *   - `useSettingsBackupImport` — importing a backup purged the trash
+ *
+ * So merely opening the vault, taking a snapshot, or pushing it to remote
+ * storage silently and irreversibly destroyed user data — with no
+ * confirmation, no snapshot, and no log entry.
+ *
+ * Reading is now a pure read. Retention is enforced by
+ * `purgeExpiredTrashItems()`, which is explicit and logs a
+ * `storage.trashRetention.purged` event.
  */
 export async function getVaultItems(): Promise<VaultItem[]> {
-  return withSessionVaultKey([], async (vaultKey) => {
-    const rawItems = await getVaultStorageRepository().getVaultItemsWithKey!(vaultKey);
+  return withSessionVaultKey([], (vaultKey) =>
+    getVaultStorageRepository().getVaultItemsWithKey!(vaultKey),
+  );
+}
 
-    let hasChanges = false;
-    const expiredIds: string[] = [];
-    const now = new Date().getTime();
-    const cleanItems = rawItems.filter((item) => {
-      if (item.deleted && item.deletedAt) {
+/**
+ * Y-14: explicitly delete trash items past the 15-day retention window.
+ *
+ * Separate from `getVaultItems` so that irreversible multi-row deletion only
+ * happens where it was asked for, and always leaves an audit record.
+ *
+ * @returns the remaining items, and how many were purged.
+ */
+export async function purgeExpiredTrashItems(): Promise<{ items: VaultItem[]; purgedCount: number }> {
+  return withSessionVaultKey({ items: [], purgedCount: 0 }, async (vaultKey) => {
+    const items = await getVaultStorageRepository().getVaultItemsWithKey!(vaultKey);
+    const now = Date.now();
+    const expiredIds = items
+      .filter((item) => {
+        if (!item.deleted || !item.deletedAt) return false;
         const deletedTime = new Date(item.deletedAt).getTime();
-        const diffDays = (now - deletedTime) / (1000 * 60 * 60 * 24);
-        if (diffDays >= 15) {
-          hasChanges = true;
-          expiredIds.push(item.id);
-          return false;
-        }
-      }
-      return true;
-    });
+        return Number.isFinite(deletedTime) && now - deletedTime >= TRASH_RETENTION_MS;
+      })
+      .map((item) => item.id);
 
-    if (hasChanges) {
-      return getVaultStorageRepository().deletePermanentlyBatchWithKey!(expiredIds, vaultKey);
+    if (expiredIds.length === 0) {
+      return { items, purgedCount: 0 };
     }
-    return cleanItems;
+
+    const remaining = await getVaultStorageRepository().deletePermanentlyBatchWithKey!(expiredIds, vaultKey);
+
+    // An irreversible delete must never be silent.
+    logSecurityEvent(
+      securityEventCodes.storageTrashRetentionPurged,
+      `Permanently deleted ${expiredIds.length} trashed item(s) past the ${TRASH_RETENTION_DAYS}-day retention window.`,
+      'warning',
+      { purgedCount: expiredIds.length, retentionDays: TRASH_RETENTION_DAYS },
+    );
+
+    return { items: remaining, purgedCount: expiredIds.length };
   });
 }
 
@@ -648,6 +900,37 @@ export async function saveVaultItems(items: VaultItem[], onProgress?: (count: nu
 }
 
 /**
+ * O-16: replaces the whole item set, atomically where the repository supports it.
+ *
+ * Snapshot restore used to reconcile by deleting each surplus item and then
+ * saving the snapshot's items. Since the vault is a whole-blob rewrite, that was
+ * one full persist per deleted item — and a failure part-way through left the
+ * vault half-deleted, with no rollback.
+ *
+ * The repository's `replaceAllVaultItemsWithKey` is preferred because it
+ * persists exactly once and rolls back as a unit. The incremental path is kept as
+ * a fallback for repositories that do not implement it.
+ */
+export async function replaceVaultItems(items: VaultItem[]): Promise<VaultItem[]> {
+  return withSessionVaultKey([], async (vaultKey) => {
+    const repository = getVaultStorageRepository();
+
+    if (repository.replaceAllVaultItemsWithKey) {
+      return repository.replaceAllVaultItemsWithKey(items, vaultKey);
+    }
+
+    const currentItems = await repository.getVaultItemsWithKey!(vaultKey);
+    const targetIds = new Set(items.map((item) => item.id));
+    for (const current of currentItems) {
+      if (!targetIds.has(current.id)) {
+        await repository.deletePermanentlyWithKey!(current.id, vaultKey);
+      }
+    }
+    return repository.saveVaultItemsWithKey!(items, vaultKey);
+  });
+}
+
+/**
  * Deletes a vault item directly.
  */
 export async function deleteVaultItem(id: string): Promise<VaultItem[]> {
@@ -655,34 +938,50 @@ export async function deleteVaultItem(id: string): Promise<VaultItem[]> {
 }
 
 /**
- * Moves a vault item to trash in SQLite.
+ * Moves a vault item to trash.
+ *
+ * Y-15: uses the repository's targeted flag update when available. The previous
+ * implementation read the whole vault, mutated one item in the resulting array
+ * and wrote it back — so a one-field change decrypted everything, and any field
+ * that changed between the read and the write was silently reverted.
  */
 export async function moveToTrash(id: string): Promise<VaultItem[]> {
   return withSessionVaultKey([], async (vaultKey) => {
-    const items = await getVaultStorageRepository().getVaultItemsWithKey!(vaultKey);
+    const repository = getVaultStorageRepository();
+    if (repository.setItemTrashedWithKey) {
+      return repository.setItemTrashedWithKey(id, true, vaultKey);
+    }
+
+    const items = await repository.getVaultItemsWithKey!(vaultKey);
     const found = items.find(x => x.id === id);
     if (found) {
       found.deleted = true;
       found.deletedAt = new Date().toISOString();
-      await getVaultStorageRepository().saveVaultItemWithKey!(found, vaultKey);
+      await repository.saveVaultItemWithKey!(found, vaultKey);
     }
-    return getVaultStorageRepository().getVaultItemsWithKey!(vaultKey);
+    return repository.getVaultItemsWithKey!(vaultKey);
   });
 }
 
 /**
- * Restores a vault item from trash in SQLite.
+ * Restores a vault item from trash. See `moveToTrash` for why the targeted
+ * update is preferred.
  */
 export async function restoreFromTrash(id: string): Promise<VaultItem[]> {
   return withSessionVaultKey([], async (vaultKey) => {
-    const items = await getVaultStorageRepository().getVaultItemsWithKey!(vaultKey);
+    const repository = getVaultStorageRepository();
+    if (repository.setItemTrashedWithKey) {
+      return repository.setItemTrashedWithKey(id, false, vaultKey);
+    }
+
+    const items = await repository.getVaultItemsWithKey!(vaultKey);
     const found = items.find(x => x.id === id);
     if (found) {
       found.deleted = false;
       delete found.deletedAt;
-      await getVaultStorageRepository().saveVaultItemWithKey!(found, vaultKey);
+      await repository.saveVaultItemWithKey!(found, vaultKey);
     }
-    return getVaultStorageRepository().getVaultItemsWithKey!(vaultKey);
+    return repository.getVaultItemsWithKey!(vaultKey);
   });
 }
 

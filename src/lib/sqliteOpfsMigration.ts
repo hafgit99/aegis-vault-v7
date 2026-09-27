@@ -27,7 +27,10 @@ import {
 } from './vaultDatabaseFormat';
 import { buildVaultItemRow, createVaultEncryptionSalt } from './sqliteOpfsShared';
 import { getIndexedDbItemSync } from './indexedDbStorage';
-import { LOCAL_FALLBACK_KEY } from './sqliteOpfsPersistence';
+import {
+  reportFallbackMirrorRecovery,
+  LOCAL_FALLBACK_KEY,
+} from './sqliteOpfsPersistence';
 
 export interface SqliteOpfsMigrationDeps {
   /** Derives the vault encryption key for the given password (uses the live salt). */
@@ -45,13 +48,30 @@ export async function migrateLegacyLocalStorage(
 ): Promise<VersionedVaultDatabaseState> {
   const fallback = getIndexedDbItemSync(LOCAL_FALLBACK_KEY);
   if (fallback) {
+    // Only the parse is guarded. The staleness check used to sit inside this
+    // `try`, which was a mistake: the `catch {}` swallowed its failure and the
+    // mirror was then never loaded at all. A diagnostic must not be able to
+    // change what the app does with the user's data.
+    let parsed: { desktopManaged?: unknown } | null = null;
     try {
-      const parsed = JSON.parse(fallback);
-      if (!parsed.desktopManaged) {
-        logSecurityEvent(securityEventCodes.storageLocalFallbackUsed, 'Loaded vault state from local fallback mirror.', 'warning');
-        return parseVaultDatabaseState(fallback);
-      }
-    } catch {}
+      parsed = JSON.parse(fallback);
+    } catch {
+      parsed = null;
+    }
+    if (parsed && !parsed.desktopManaged) {
+      logSecurityEvent(securityEventCodes.storageLocalFallbackUsed, 'Loaded vault state from local fallback mirror.', 'warning');
+      // O-2: a mirror that silently fell behind the authoritative copy used to
+      // be loaded here and reported as an ordinary successful load. It is still
+      // the only copy when the authoritative store is genuinely absent, so it is
+      // still used -- but its age is now announced, because "your backup is
+      // older than your vault" is exactly what a user cannot see.
+      reportFallbackMirrorRecovery();
+      // O-3: this early return used to skip the legacy cleanup entirely, which
+      // left a second door open onto the same orphaned password. Reuse the
+      // one purge so both exits behave identically.
+      purgeStaleLegacyLocalStorageKeys(currentState);
+      return parseVaultDatabaseState(fallback);
+    }
   }
 
   // Attempt to seed from standard legacy keys
@@ -129,7 +149,7 @@ export async function migrateLegacyLocalStorage(
 }
 
 /**
- * Security fix Y3: Purge stale legacy plaintext localStorage keys.
+ * Security fix Y3 / O-3: Purge stale legacy plaintext localStorage keys.
  * For users who migrated in a previous version without the cleanup,
  * this removes any remaining plaintext data if the SQLite store is populated.
  */
@@ -138,18 +158,47 @@ export function purgeStaleLegacyLocalStorageKeys(state: VersionedVaultDatabaseSt
     const hasLegacyPassword = localStorage.getItem('aegis_master_password');
     const hasLegacyItems = localStorage.getItem('aegis_vault_items');
 
-    if (hasLegacyPassword || hasLegacyItems) {
+    if (!hasLegacyPassword && !hasLegacyItems) {
+      return;
+    }
+
+    const vaultPopulated = state.vault_items.length > 0 || state.user_secrets.length > 0;
+
+    if (vaultPopulated) {
       // Only purge if we already have vault data in SQLite (i.e., migration happened before)
-      if (state.vault_items.length > 0 || state.user_secrets.length > 0) {
-        localStorage.removeItem('aegis_master_password');
-        localStorage.removeItem('aegis_vault_items');
-        localStorage.removeItem('aegis_is_setup');
-        logSecurityEvent(
-          securityEventCodes.storageLegacyDataPurged,
-          'Stale legacy plaintext localStorage keys purged (post-migration cleanup).',
-          'info',
-        );
-      }
+      localStorage.removeItem('aegis_master_password');
+      localStorage.removeItem('aegis_vault_items');
+      localStorage.removeItem('aegis_is_setup');
+      logSecurityEvent(
+        securityEventCodes.storageLegacyDataPurged,
+        'Stale legacy plaintext localStorage keys purged (post-migration cleanup).',
+        'info',
+      );
+      return;
+    }
+
+    // O-3: the legacy password with no items to migrate is inert residue, and
+    // the original code refused to touch it.
+    //
+    // The reason it survived is a size asymmetry worth stating plainly:
+    // `aegis_master_password` is a few dozen base64 bytes, `aegis_vault_items`
+    // is the entire vault and can be megabytes. Under storage pressure a
+    // browser evicts the large key and keeps the small one - so the single key
+    // that must never outlive migration is the one most likely to. Once the
+    // items blob is gone there is nothing left to migrate and the password
+    // cannot unlock anything, yet it sits there in base64 indefinitely.
+    //
+    // Gating this on `aegis_vault_items` being present was the bug, not the
+    // safeguard: the condition that made the purge safe was "the password is
+    // not the only copy of the data", and the absence of items satisfies that
+    // just as well as the presence of a populated store.
+    if (hasLegacyPassword && !hasLegacyItems) {
+      localStorage.removeItem('aegis_master_password');
+      logSecurityEvent(
+        securityEventCodes.storageLegacyDataPurged,
+        'Orphaned legacy master password purged (no legacy items remained to migrate).',
+        'info',
+      );
     }
   } catch {
     // Silently ignore — localStorage may not be available in all contexts

@@ -17,16 +17,31 @@ export function useAssetIntegrity({ unlocked, onNotify }: UseAssetIntegrityOptio
 
   useEffect(() => {
     let active = true;
-    void verifyRuntimeAssetIntegrity().then((result) => {
-      if (!active || result.status !== 'failed') return;
-      logSecurityEvent(
-        securityEventCodes.assetIntegrityFailed,
-        'Application asset integrity verification failed.',
-        'critical',
-        { reason: result.reason },
-      );
-      setFailureReason(result.reason);
-    });
+    // O-33: verification itself must be fail-closed. A rejected promise
+    // (unexpected exception, unavailable API) is treated as an integrity
+    // failure — never as an invisible "pass".
+    void verifyRuntimeAssetIntegrity()
+      .then((result) => {
+        if (!active || result.status !== 'failed') return;
+        logSecurityEvent(
+          securityEventCodes.assetIntegrityFailed,
+          'Application asset integrity verification failed.',
+          'critical',
+          { reason: result.reason },
+        );
+        setFailureReason(result.reason);
+      })
+      .catch((err: unknown) => {
+        if (!active) return;
+        const reason = err instanceof Error ? err.message : 'asset-integrity-unverifiable';
+        logSecurityEvent(
+          securityEventCodes.assetIntegrityFailed,
+          'Application asset integrity verification could not be completed (fail-closed).',
+          'critical',
+          { reason },
+        );
+        setFailureReason(reason);
+      });
     return () => {
       active = false;
     };

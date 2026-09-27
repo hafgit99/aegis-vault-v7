@@ -13,9 +13,10 @@ use std::fs;
 use std::io::{self, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use subtle::ConstantTimeEq;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
@@ -123,7 +124,29 @@ pub fn decrypt_message_frame(key: &[u8; 32], frame: &[u8]) -> io::Result<Vec<u8>
 /// Reads a length-prefixed authenticated frame from the stream and returns the
 /// decrypted plaintext. Requires a 4-byte BE ciphertext length prefix, then the
 /// `[version][nonce][ciphertext||tag]` body.
-fn read_authenticated_frame(stream: &mut TcpStream, key: &[u8; 32]) -> io::Result<Vec<u8>> {
+///
+/// #43: the revoke-generation check lives **here**, not in the message loop.
+/// This function is the single point every request passes through, so a check
+/// sitting in the loop was one deletable line that the compiler would not
+/// complain about; putting it in the admit path means the only way to skip it is
+/// to stop using the reader.
+///
+/// It is placed **after** the blocking read and never before it. The read can
+/// park for up to `IPC_READ_TIMEOUT`, so a check at the top of the function
+/// would leave a revoke that lands while the handler is parked with nothing to
+/// stop it: the frame already in flight would be served and the connection
+/// would carry on. Checking here means every request is either admitted against
+/// the live generation or refused.
+///
+/// The price is that a revoked connection which then goes quiet is not torn
+/// down until its read times out. That is bounded by the Y-18 idle budget and
+/// costs a connection slot, whereas the alternative costs a served request.
+fn read_authenticated_frame(
+    stream: &mut TcpStream,
+    key: &[u8; 32],
+    session_generation: &RevokeGeneration,
+    admitted_generation: u64,
+) -> io::Result<Vec<u8>> {
     let mut len_buf = [0u8; 4];
     stream.read_exact(&mut len_buf)?;
     let frame_len = u32::from_be_bytes(len_buf) as usize;
@@ -140,7 +163,11 @@ fn read_authenticated_frame(stream: &mut TcpStream, key: &[u8; 32]) -> io::Resul
     let mut frame = Vec::with_capacity(4 + frame_body.len());
     frame.extend_from_slice(&len_buf);
     frame.extend_from_slice(&frame_body);
-    decrypt_message_frame(key, &frame)
+    let plaintext = decrypt_message_frame(key, &frame)?;
+
+    // Authoritative: everything above may have happened before the revoke.
+    session_generation.ensure_not_revoked(admitted_generation)?;
+    Ok(plaintext)
 }
 
 /// Encrypts plaintext into an authenticated frame and writes it to the stream.
@@ -262,7 +289,7 @@ pub fn write_pairing_token_file(path: &PathBuf, token: &str) -> io::Result<()> {
             .open(path)?;
         file.write_all(token.as_bytes())?;
         file.flush()?;
-        return Ok(());
+        Ok(())
     }
 
     #[cfg(windows)]
@@ -328,10 +355,224 @@ fn bind_dynamic_tcp_listener() -> io::Result<(TcpListener, u16)> {
     Ok((listener, bound_port))
 }
 
+/// Y-18: idle read/write budget for a single IPC connection.
+///
+/// A connection that sends nothing must not pin a worker for ever. This bounds
+/// how long any single socket read or write may block before it is treated as
+/// dead.
+pub const IPC_READ_TIMEOUT: Duration = Duration::from_secs(30);
+pub const IPC_WRITE_TIMEOUT: Duration = Duration::from_secs(15);
+
+/// Y-18: maximum number of connections handled concurrently.
+///
+/// The rate limiter bounds *new connections per second* but never the number
+/// alive at once. A process running as the same user — or a local page that
+/// loopback-SSRFs this port, or a hostile extension — could open connections
+/// faster than they close and pin a blocked thread each. On a 64-bit Rust
+/// default that is 2 MiB of reserved stack per thread, and with
+/// `panic = "abort"` in the release profile there is no graceful degradation
+/// either.
+pub const MAX_CONCURRENT_IPC_CONNECTIONS: usize = 32;
+
+/// Y-18: response sent when the connection budget is exhausted.
+pub const SERVER_BUSY_RESPONSE: &[u8] = b"SERVER_BUSY";
+
+/// A non-blocking, bounded-concurrency gate.
+///
+/// Deliberately **not** a blocking semaphore: when the budget is exhausted the
+/// caller rejects the connection immediately. Blocking here would hand a single
+/// attacker the ability to stall the accept loop for every other client, which
+/// is the same denial of service the limit exists to prevent.
+#[derive(Debug)]
+pub struct ConnectionGate {
+    active: Arc<Mutex<usize>>,
+    capacity: usize,
+}
+
+impl ConnectionGate {
+    pub fn new(capacity: usize) -> Self {
+        Self {
+            active: Arc::new(Mutex::new(0)),
+            capacity: capacity.max(1),
+        }
+    }
+
+    /// Takes a slot if one is free. `None` means the budget is exhausted.
+    ///
+    /// The slot shares the counter rather than borrowing the gate, so it can be
+    /// moved into a worker thread without keeping the gate alive.
+    pub fn try_acquire(&self) -> Option<ConnectionSlot> {
+        let mut active = match self.active.lock() {
+            Ok(guard) => guard,
+            // A poisoned lock means another handler panicked. Refusing is the
+            // fail-closed choice: the true in-flight count is unknown.
+            Err(_) => return None,
+        };
+        if *active >= self.capacity {
+            return None;
+        }
+        *active += 1;
+        Some(ConnectionSlot {
+            active: Arc::clone(&self.active),
+        })
+    }
+
+    /// Connections currently being handled.
+    ///
+    /// `cfg(test)`: these two are observability helpers for the Y-18 concurrency
+    /// tests. Production code only ever calls `try_acquire` and lets the slot's
+    /// `Drop` release -- which is the property the tests exist to prove, so
+    /// reading the counter from production would weaken what they check.
+    #[cfg(test)]
+    pub fn in_flight(&self) -> usize {
+        self.active.lock().map(|guard| *guard).unwrap_or(0)
+    }
+
+    #[cfg(test)]
+    pub fn capacity(&self) -> usize {
+        self.capacity
+    }
+}
+
+/// Releases its slot back to the gate when dropped, including on panic paths.
+pub struct ConnectionSlot {
+    active: Arc<Mutex<usize>>,
+}
+
+impl Drop for ConnectionSlot {
+    fn drop(&mut self) {
+        if let Ok(mut active) = self.active.lock() {
+            // Saturating: never let the count wrap below zero if a double
+            // release ever happened.
+            *active = active.saturating_sub(1);
+        }
+    }
+}
+
+/// Y-18: applies the idle budget to a freshly accepted socket.
+///
+/// Returns `false` when the platform refused to set a timeout, so the caller can
+/// refuse the connection rather than silently serving it with no bound at all.
+fn apply_connection_timeouts(stream: &TcpStream) -> bool {
+    stream.set_read_timeout(Some(IPC_READ_TIMEOUT)).is_ok()
+        && stream.set_write_timeout(Some(IPC_WRITE_TIMEOUT)).is_ok()
+}
+
+/// #43: the generation under which a loopback IPC session was admitted.
+///
+/// Rotating the pairing token only ever invalidated *future* handshakes. A
+/// client that had already completed one derived its `session_data_key` from
+/// the retired token once, at connect time, and kept presenting that key for as
+/// long as the process lived — so `revoke` terminated the connection that
+/// asked for it and left every other paired extension exactly where it was.
+///
+/// The counter is what makes "revoke" mean what the protocol documentation
+/// already claimed. Each accepted connection records the generation that was
+/// live when it authenticated, and the frame reader refuses to hand back any
+/// request whose generation has moved on.
+///
+/// A plain counter rather than the token itself: the token is secret material
+/// that would otherwise have to be re-read under a mutex on every single
+/// request, and the counter answers the only question a handler actually asks —
+/// "is my session still the live one?".
+///
+/// `u64` cannot realistically wrap: a session only lives for the length of one
+/// request, bounded by `IPC_READ_TIMEOUT`, so reaching 2^64 revokes would take
+/// longer than the process could possibly stay up.
+#[derive(Debug, Clone, Default)]
+pub struct RevokeGeneration(Arc<AtomicU64>);
+
+impl RevokeGeneration {
+    /// A counter whose current generation is 0, so a freshly admitted session
+    /// is live.
+    ///
+    /// Intentionally not defined in terms of the derived `Default`: the two
+    /// must be caught if they ever disagree, which only works while they are
+    /// constructed independently.
+    pub fn new() -> Self {
+        Self(Arc::new(AtomicU64::new(0)))
+    }
+
+    /// The live generation. Read once per connection, next to the token.
+    pub fn current(&self) -> u64 {
+        self.0.load(Ordering::Acquire)
+    }
+
+    /// Retires every session admitted under an earlier generation.
+    pub fn revoke(&self) {
+        self.0.fetch_add(1, Ordering::AcqRel);
+    }
+
+    /// True when a session admitted under `admitted` has since been revoked.
+    pub fn is_revoked(&self, admitted: u64) -> bool {
+        admitted != self.current()
+    }
+
+    /// Fails closed for a session whose generation has moved on.
+    ///
+    /// This is the exact call `read_authenticated_frame` makes, so tests
+    /// exercise the served path rather than re-implementing the comparison.
+    pub fn ensure_not_revoked(&self, admitted: u64) -> io::Result<()> {
+        if self.is_revoked(admitted) {
+            return Err(io::Error::new(
+                io::ErrorKind::ConnectionAborted,
+                "IPC session revoked",
+            ));
+        }
+        Ok(())
+    }
+}
+
+/// #43: installs a freshly generated pairing token and retires every session
+/// admitted under the previous one.
+///
+/// The generation bump lives **here** rather than at the call sites, and that
+/// placement is the point. Rotating the token while leaving live sessions
+/// running is exactly the bug this closes, and there are two independent ways
+/// to rotate it (the `revoke` IPC action and the `rotate_pairing_token`
+/// renderer command). Leaving the bump to the callers would mean two places to
+/// remember, and the one that forgot would reintroduce the finding silently.
+///
+/// `token_path` is injected so this stays testable without writing to the real
+/// app data directory. `None` means "rotate in memory only".
+pub fn rotate_pairing_token_now(
+    pairing_token: &Arc<Mutex<String>>,
+    session_generation: &RevokeGeneration,
+    token_path: Option<PathBuf>,
+) -> io::Result<String> {
+    // Bumped first, before anything that can fail. Retiring live sessions is
+    // the fail-closed direction, so it must happen even if the write below
+    // fails; the reverse order would let a failed write leave every session
+    // still being served under the token the user just tried to replace.
+    session_generation.revoke();
+
+    let new_token = generate_token();
+    if let Some(path) = token_path {
+        write_pairing_token_file(&path, &new_token)?;
+    }
+    *pairing_token.lock().unwrap() = new_token.clone();
+    Ok(new_token)
+}
+
+/// #43: the body of the `revoke` action — wipe the credential lease, then
+/// retire every live session and rotate the pairing token.
+pub fn revoke_all_sessions(
+    pairing_token: &Arc<Mutex<String>>,
+    credentials: &Arc<Mutex<Option<ExtensionCredentialCache>>>,
+    session_generation: &RevokeGeneration,
+    token_path: Option<PathBuf>,
+) -> io::Result<String> {
+    // The lease goes first: it is what hands credentials out, so a revoke that
+    // failed to reach the token file must still have emptied it.
+    *credentials.lock().unwrap() = None;
+    rotate_pairing_token_now(pairing_token, session_generation, token_path)
+}
+
 pub fn start_tcp_server(
     app_handle: tauri::AppHandle,
     pairing_token: Arc<Mutex<String>>,
     credentials: Arc<Mutex<Option<ExtensionCredentialCache>>>,
+    session_generation: RevokeGeneration,
 ) {
     thread::spawn(move || {
         let (listener, bound_port) = match bind_dynamic_tcp_listener() {
@@ -350,6 +591,7 @@ pub fn start_tcp_server(
         log::info!("TCP IPC server bound dynamically to port {}", bound_port);
 
         let limiter = Arc::new(ConnectionRateLimiter::new());
+        let gate = Arc::new(ConnectionGate::new(MAX_CONCURRENT_IPC_CONNECTIONS));
 
         for stream in listener.incoming() {
             match stream {
@@ -360,13 +602,50 @@ pub fn start_tcp_server(
                         let _ = stream.flush();
                         continue;
                     }
+
+                    // Y-18: bound the idle time on the socket before anything can
+                    // block on it.
+                    if !apply_connection_timeouts(&stream) {
+                        log::warn!(
+                            "Failed to apply IPC socket timeouts; refusing connection. \
+                             Serving it unbounded would allow a permanent resource hold."
+                        );
+                        let _ = stream.write_all(SERVER_BUSY_RESPONSE);
+                        let _ = stream.flush();
+                        continue;
+                    }
+
+                    // Y-18: bound how many connections are alive at once. Taken
+                    // before the spawn and released when the handler returns, so
+                    // a handler blocked on a read still holds its slot — which is
+                    // exactly the case the limit exists for.
+                    let slot = match gate.try_acquire() {
+                        Some(slot) => slot,
+                        None => {
+                            log::warn!(
+                                "Concurrent IPC connection limit ({}) reached. Rejecting connection.",
+                                MAX_CONCURRENT_IPC_CONNECTIONS
+                            );
+                            let _ = stream.write_all(SERVER_BUSY_RESPONSE);
+                            let _ = stream.flush();
+                            continue;
+                        }
+                    };
+
                     let credentials_clone = credentials.clone();
                     let token_arc = pairing_token.clone();
+                    let generation = session_generation.clone();
                     let app_clone = app_handle.clone();
                     thread::spawn(move || {
-                        if let Err(e) =
-                            handle_client(app_clone, &mut stream, token_arc, credentials_clone)
-                        {
+                        // `slot` lives for exactly the handler's lifetime.
+                        let _slot = slot;
+                        if let Err(e) = handle_client(
+                            app_clone,
+                            &mut stream,
+                            token_arc,
+                            credentials_clone,
+                            generation,
+                        ) {
                             log::debug!("TCP connection error: {}", e);
                         }
                     });
@@ -600,16 +879,25 @@ fn focus_webview_window(window: &tauri::WebviewWindow) {
 ///    authentication in a single layer.
 /// 4. Frame Verification: Any structurally invalid, version-mismatched or unauthenticated frame
 ///    causes immediate session termination (fail-closed).
-/// 5. Session Revocation: The `revoke` action rotates the pairing token, wipes the credential
-///    lease and terminates the connection, invalidating all previously issued session keys.
+/// 5. Session Revocation: The `revoke` action (and a pairing-token rotation) bumps the shared
+///    `RevokeGeneration` counter, wipes the credential lease and terminates the requesting
+///    connection. Every other live connection admitted under an older generation is refused at
+///    its next request, which is what actually invalidates all previously issued session keys —
+///    rotating the token alone only ever stopped *future* handshakes (#43).
 fn handle_client(
     app_handle: tauri::AppHandle,
     stream: &mut TcpStream,
     pairing_token: Arc<Mutex<String>>,
     credentials: Arc<Mutex<Option<ExtensionCredentialCache>>>,
+    session_generation: RevokeGeneration,
 ) -> Result<(), Box<dyn std::error::Error>> {
     use tauri::{Emitter, Manager};
 
+    // #43: the generation is snapshotted next to the token so the two can never disagree. A
+    // revoke landing after this point leaves the pair stale, and the message loop below refuses
+    // to serve it. A revoke landing before it means we already hold the new token, because
+    // both were read from the same rotated state.
+    let admitted_generation = session_generation.current();
     let current_token = pairing_token
         .lock()
         .map_err(|_| "Pairing token mutex poisoned")?
@@ -640,9 +928,22 @@ fn handle_client(
 
     // 2. Ana mesaj döngüsü (Framing: [4-byte len][version][24-byte nonce][ciphertext||tag])
     loop {
-        let msg_buf = match read_authenticated_frame(stream, &session_data_key) {
+        // #43: `read_authenticated_frame` performs the revoke-generation check, so a session
+        // retired by a token rotation or a `revoke` elsewhere is refused here and never reaches
+        // the dispatch below.
+        let msg_buf = match read_authenticated_frame(
+            stream,
+            &session_data_key,
+            &session_generation,
+            admitted_generation,
+        ) {
             Ok(buf) => buf,
             Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break, // Bağlantı kapandı
+            Err(e) if e.kind() == io::ErrorKind::ConnectionAborted => {
+                // Not corruption: this session was revoked while it was connected.
+                log::info!("[Aegis IPC] refused a request from a revoked session");
+                return Err("Session revoked".into());
+            }
             Err(_) => {
                 log::warn!(
                     "[Aegis IPC] AEAD frame decryption failed! Terminating corrupted connection."
@@ -717,7 +1018,7 @@ fn handle_client(
                     }
 
                     // Sort by score descending (highest score first)
-                    scored_credentials.sort_by(|a, b| b.0.cmp(&a.0));
+                    scored_credentials.sort_by_key(|(score, _)| std::cmp::Reverse(*score));
 
                     let matching: Vec<ExtensionCredential> = scored_credentials
                         .into_iter()
@@ -751,7 +1052,7 @@ fn handle_client(
                                 scored_credentials.push((score, item.clone()));
                             }
                         }
-                        scored_credentials.sort_by(|a, b| b.0.cmp(&a.0));
+                        scored_credentials.sort_by_key(|(score, _)| std::cmp::Reverse(*score));
                         let matching: Vec<ExtensionCredential> = scored_credentials
                             .into_iter()
                             .map(|(_, cred)| cred)
@@ -780,23 +1081,26 @@ fn handle_client(
                 }
             }
             "revoke" => {
-                // RUST-Y1: session revocation — wipe the credential lease,
-                // rotate the pairing token (invalidating all prior session keys)
-                // and terminate this connection immediately after responding.
-                {
-                    let mut creds_guard = credentials.lock().unwrap();
-                    *creds_guard = None;
-                }
-                let new_token = generate_token();
-                {
-                    let mut token_guard = pairing_token.lock().unwrap();
-                    *token_guard = new_token.clone();
-                }
-                if let Some(app_data_dir) = get_app_data_dir() {
-                    let token_path = app_data_dir.join(TOKEN_FILENAME);
-                    let _ = write_pairing_token_file(&token_path, &new_token);
-                }
+                // RUST-Y1/#43: session revocation — retire every live session, wipe the
+                // credential lease, rotate the pairing token and terminate this connection
+                // immediately after responding. Set before the work so the connection is torn
+                // down even if the rotation reports a failure.
                 revoke_session = true;
+                let token_path = get_app_data_dir().map(|dir| dir.join(TOKEN_FILENAME));
+                if let Err(error) = revoke_all_sessions(
+                    &pairing_token,
+                    &credentials,
+                    &session_generation,
+                    token_path,
+                ) {
+                    // Fail-closed already: the generation was bumped before the write, so the
+                    // sessions are gone either way. Log rather than fail the response — the
+                    // caller asked to be disconnected and that is still being honoured.
+                    log::warn!(
+                        "[Aegis IPC] revoke could not persist the new token: {}",
+                        error
+                    );
+                }
                 serde_json::json!({ "status": "revoked" })
             }
             _ => serde_json::json!({ "error": "unknown action" }),
@@ -898,6 +1202,16 @@ pub fn run_host() {
         }
     }
 
+    // #43: this process is the *client*, and the revoke counter deliberately
+    // stays at zero here. The counter lives in the server's address space and
+    // cannot be shared across the process boundary. That is fine: the server is
+    // the authority, and it refuses a revoked session at the frame reader, so
+    // this host learns about a revoke by getting an error and dropping the loop
+    // below. A non-zero local counter would only be a second, unreachable copy
+    // of the truth.
+    let session_generation = RevokeGeneration::default();
+    let admitted_generation = session_generation.current();
+
     loop {
         let msg = match read_message() {
             Ok(Some(m)) => m,
@@ -917,7 +1231,12 @@ pub fn run_host() {
                 break;
             }
 
-            let resp_bytes = match read_authenticated_frame(s, data_key) {
+            let resp_bytes = match read_authenticated_frame(
+                s,
+                data_key,
+                &session_generation,
+                admitted_generation,
+            ) {
                 Ok(bytes) => bytes,
                 Err(_) => {
                     log::error!(
@@ -967,6 +1286,204 @@ pub fn run_host() {
 #[cfg(test)]
 mod tests {
     use super::extract_etld_plus_one;
+
+    // ─── Y-18: bounded connection concurrency ───────────────────────────────
+    //
+    // The rate limiter bounds new connections per second but never the number
+    // alive at once, so connections that send nothing could pin a blocked
+    // thread each with no ceiling.
+
+    #[test]
+    fn y18_gate_allows_up_to_capacity() {
+        let gate = super::ConnectionGate::new(3);
+        assert_eq!(gate.capacity(), 3);
+
+        let a = gate.try_acquire().expect("slot 1");
+        let b = gate.try_acquire().expect("slot 2");
+        let c = gate.try_acquire().expect("slot 3");
+        assert_eq!(gate.in_flight(), 3);
+
+        drop((a, b, c));
+        assert_eq!(gate.in_flight(), 0);
+    }
+
+    #[test]
+    fn y18_gate_rejects_once_full_instead_of_blocking() {
+        // Blocking would let one attacker stall the accept loop for everyone —
+        // the same DoS the limit exists to prevent.
+        let gate = super::ConnectionGate::new(1);
+        let _held = gate.try_acquire().expect("first slot");
+
+        assert!(
+            gate.try_acquire().is_none(),
+            "must refuse rather than wait when the budget is spent"
+        );
+        assert_eq!(gate.in_flight(), 1);
+    }
+
+    #[test]
+    fn y18_gate_frees_capacity_when_a_handler_returns() {
+        let gate = super::ConnectionGate::new(1);
+        {
+            let _first = gate.try_acquire().expect("slot");
+            assert!(gate.try_acquire().is_none());
+        }
+        // A finished connection must not permanently consume budget.
+        assert!(gate.try_acquire().is_some(), "slot must be reusable");
+    }
+
+    #[test]
+    fn y18_gate_releases_the_slot_when_a_handler_panics() {
+        let gate = std::sync::Arc::new(super::ConnectionGate::new(1));
+
+        let worker_gate = std::sync::Arc::clone(&gate);
+        let result = std::panic::catch_unwind(move || {
+            let _slot = worker_gate.try_acquire().expect("slot");
+            panic!("simulated handler panic");
+        });
+
+        assert!(
+            result.is_err(),
+            "the panic must propagate, not be swallowed"
+        );
+        assert_eq!(
+            gate.in_flight(),
+            0,
+            "a panicking handler must not leak its slot"
+        );
+    }
+
+    #[test]
+    fn y18_gate_enforces_a_ceiling_under_concurrent_acquisition() {
+        // The actual attack: many threads racing to pin resources.
+        //
+        // Note what is being asserted: **peak concurrency**, not the total
+        // number of grants. Slots are returned as handlers finish, so a
+        // long-running test legitimately grants far more than `capacity` in
+        // total. Asserting on the total made this test fail intermittently
+        // depending on thread scheduling, and it was measuring the wrong thing.
+        let gate = std::sync::Arc::new(super::ConnectionGate::new(4));
+        let peak = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let mut handles = Vec::new();
+
+        for _ in 0..64 {
+            let gate = std::sync::Arc::clone(&gate);
+            let peak = std::sync::Arc::clone(&peak);
+            handles.push(std::thread::spawn(move || {
+                let held = gate.try_acquire();
+                if let Some(slot) = held {
+                    // Sample the in-flight count while this slot is held; the
+                    // gate is the single source of truth for it.
+                    let current = gate.in_flight();
+                    peak.fetch_max(current, std::sync::atomic::Ordering::SeqCst);
+                    std::thread::sleep(std::time::Duration::from_millis(2));
+                    drop(slot);
+                }
+            }));
+        }
+
+        for handle in handles {
+            handle.join().expect("worker must not panic");
+        }
+
+        let observed_peak = peak.load(std::sync::atomic::Ordering::SeqCst);
+        assert!(
+            observed_peak <= 4,
+            "peak concurrency reached {observed_peak} for a capacity of 4 — the limit was exceeded"
+        );
+        assert_eq!(gate.in_flight(), 0, "every slot must be released");
+    }
+
+    #[test]
+    fn y18_gate_never_exceeds_capacity_for_one_slot_per_connection() {
+        // 32 is the shipped budget. Holding all of them must block the next.
+        let gate = super::ConnectionGate::new(super::MAX_CONCURRENT_IPC_CONNECTIONS);
+        let slots: Vec<_> = (0..super::MAX_CONCURRENT_IPC_CONNECTIONS)
+            .map(|_| gate.try_acquire().expect("within capacity"))
+            .collect();
+
+        assert_eq!(gate.in_flight(), super::MAX_CONCURRENT_IPC_CONNECTIONS);
+        assert!(gate.try_acquire().is_none());
+
+        drop(slots);
+        assert_eq!(gate.in_flight(), 0);
+    }
+
+    #[test]
+    fn y18_gate_capacity_is_at_least_one() {
+        // A misconfigured capacity of 0 would reject every client forever.
+        let gate = super::ConnectionGate::new(0);
+        assert!(gate.capacity() >= 1);
+        assert!(gate.try_acquire().is_some());
+    }
+
+    #[test]
+    fn y18_timeouts_are_bounded() {
+        // An unbounded or absent timeout is the original defect.
+        assert!(super::IPC_READ_TIMEOUT > Duration::from_secs(0));
+        assert!(super::IPC_WRITE_TIMEOUT > Duration::from_secs(0));
+        assert!(super::IPC_READ_TIMEOUT <= Duration::from_secs(120));
+    }
+
+    #[test]
+    fn y18_socket_timeouts_are_actually_applied() {
+        use std::net::{TcpListener, TcpStream};
+
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind loopback");
+        let port = listener.local_addr().expect("addr").port();
+        let client = TcpStream::connect(("127.0.0.1", port)).expect("connect");
+        let (server, _) = listener.accept().expect("accept");
+
+        assert!(
+            super::apply_connection_timeouts(&server),
+            "timeouts must be settable on a real socket"
+        );
+        assert_eq!(
+            server.read_timeout().expect("read timeout readable"),
+            Some(super::IPC_READ_TIMEOUT)
+        );
+        assert_eq!(
+            server.write_timeout().expect("write timeout readable"),
+            Some(super::IPC_WRITE_TIMEOUT)
+        );
+
+        drop(client);
+    }
+
+    #[test]
+    fn y18_an_idle_connection_is_dropped_after_the_read_timeout() {
+        // The end-to-end shape of the resource hold: a client that connects and
+        // then sends nothing must not keep the connection alive.
+        use std::io::Read;
+        use std::net::{TcpListener, TcpStream};
+
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind loopback");
+        let port = listener.local_addr().expect("addr").port();
+        let _idle_client = TcpStream::connect(("127.0.0.1", port)).expect("connect");
+        let (mut server, _) = listener.accept().expect("accept");
+
+        assert!(super::apply_connection_timeouts(&server));
+        server
+            .set_read_timeout(Some(Duration::from_millis(150)))
+            .expect("shorten for the test");
+
+        // The client never writes, so this must fail rather than block for ever.
+        let mut buf = [0u8; 4];
+        let result = server.read_exact(&mut buf);
+        assert!(
+            result.is_err(),
+            "an idle peer must not hold the read open indefinitely"
+        );
+    }
+
+    #[test]
+    fn y18_busy_response_is_distinct_from_rate_limit() {
+        // The client must be able to tell "come back later" from "slow down",
+        // and neither may be confused with a successful handshake.
+        assert_ne!(super::SERVER_BUSY_RESPONSE, b"RATE_LIMIT_EXCEEDED");
+        assert_ne!(super::SERVER_BUSY_RESPONSE, b"OK");
+        assert_ne!(super::SERVER_BUSY_RESPONSE, b"UNAUTHORIZED");
+    }
 
     #[test]
     fn etld_plus_one_matches_psl_spec_vectors() {
@@ -1230,5 +1747,358 @@ mod tests {
         // Two distinct info domains (data vs mac) must not collide.
         let data_once = derive_session_data_key(&token);
         assert_eq!(data_key, data_once);
+    }
+
+    // ---- #43: revoke generation counter ----
+    //
+    // The bug these pin down: rotating the pairing token invalidated *future*
+    // handshakes only. A connection that had already authenticated derived its
+    // session key once and was then served for the rest of the process
+    // lifetime, so `revoke` cut off the caller and nobody else.
+
+    #[test]
+    fn a_fresh_generation_admits_its_own_sessions() {
+        // The starting state. `new()` and `default()` must agree, because the
+        // app builds the counter with `default()` and tests reach for `new()`
+        // — a divergence would make a "fresh" session look revoked on sight.
+        let from_new = RevokeGeneration::new();
+        let from_default = RevokeGeneration::default();
+
+        assert_eq!(from_new.current(), 0);
+        assert_eq!(from_default.current(), 0);
+        assert!(!from_new.is_revoked(from_new.current()));
+        assert!(from_new.ensure_not_revoked(from_new.current()).is_ok());
+    }
+
+    #[test]
+    fn revoke_invalidates_a_session_admitted_under_the_previous_generation() {
+        let generation = RevokeGeneration::default();
+
+        // A connection authenticates: this is the snapshot `handle_client`
+        // takes next to the pairing token.
+        let admitted = generation.current();
+
+        generation.revoke();
+
+        assert!(
+            generation.is_revoked(admitted),
+            "a session admitted before the revoke must not keep being served"
+        );
+        let error = generation
+            .ensure_not_revoked(admitted)
+            .expect_err("the served path must fail closed for a revoked session");
+        assert_eq!(error.kind(), std::io::ErrorKind::ConnectionAborted);
+    }
+
+    #[test]
+    fn a_session_admitted_after_a_revoke_is_still_served() {
+        // The over-correction guard. A reader who "fixes" this finding by
+        // treating every existing session as revoked — or by comparing against
+        // something that only ever goes one way — would kill the connection
+        // that just re-authenticated with the *new* token. That is a denial of
+        // service dressed up as a fix.
+        let generation = RevokeGeneration::default();
+        generation.revoke();
+
+        // A client re-handshakes against the rotated token and is admitted
+        // under the new generation.
+        let readmitted = generation.current();
+
+        assert!(!generation.is_revoked(readmitted));
+        assert!(generation.ensure_not_revoked(readmitted).is_ok());
+    }
+
+    #[test]
+    fn every_revoke_retires_all_earlier_generations() {
+        // Two consecutive revokes. A counter that reset to 0 instead of moving
+        // forward would re-admit a session that the first revoke had already
+        // killed — so a stale admission must stay stale no matter how much
+        // later it re-authenticates.
+        let generation = RevokeGeneration::default();
+
+        let first_admission = generation.current();
+        generation.revoke();
+        let second_admission = generation.current();
+        generation.revoke();
+
+        assert!(
+            second_admission > first_admission,
+            "the counter must move forward, never reset"
+        );
+        assert!(generation.is_revoked(first_admission));
+        assert!(
+            generation.is_revoked(second_admission),
+            "the intermediate generation must stay retired"
+        );
+    }
+
+    #[test]
+    fn a_cloned_generation_observes_the_revoke() {
+        // The wiring this whole mechanism depends on. `start_tcp_server` hands
+        // every accepted connection its own clone, while `rotate_pairing_token`
+        // bumps the copy held in `ExtensionState`. If cloning ever produced an
+        // independent counter, the command would bump one counter and the
+        // server would check another — the exact silent failure the finding
+        // describes, and one no single-counter test would catch.
+        let in_state = RevokeGeneration::default();
+        let in_accept_loop = in_state.clone();
+
+        let admitted = in_accept_loop.current();
+        assert!(in_accept_loop.ensure_not_revoked(admitted).is_ok());
+
+        // Rotated from the renderer side, i.e. through the other handle.
+        in_state.revoke();
+
+        assert!(
+            in_accept_loop.is_revoked(admitted),
+            "a revoke raised through one handle must retire sessions tracked by the other"
+        );
+    }
+
+    /// A scratch token path, so the rotation tests exercise the real file write
+    /// without touching the app data directory.
+    fn scratch_token_path(label: &str) -> PathBuf {
+        std::env::temp_dir().join(format!("aegis-revoke-test-{label}-{}", generate_token()))
+    }
+
+    #[test]
+    fn rotating_the_pairing_token_retires_the_live_sessions() {
+        // The structural half of the fix. Both the `revoke` action and the
+        // `rotate_pairing_token` command rotate the token, so the retire step
+        // lives inside `rotate_pairing_token_now` rather than in either caller
+        // — a test on the counter alone would still pass if a caller stopped
+        // invoking the rotation.
+        let path = scratch_token_path("rotate");
+        let pairing_token = Arc::new(Mutex::new(generate_token()));
+        let generation = RevokeGeneration::default();
+
+        let admitted = generation.current();
+        let retired_token = pairing_token.lock().unwrap().clone();
+        let stale_key = derive_session_data_key(&retired_token);
+        assert!(generation.ensure_not_revoked(admitted).is_ok());
+
+        let new_token = rotate_pairing_token_now(&pairing_token, &generation, Some(path.clone()))
+            .expect("rotation should succeed");
+
+        // The generation moved, so the admitted session is refused ...
+        assert!(generation.is_revoked(admitted));
+        assert!(generation.ensure_not_revoked(admitted).is_err());
+
+        // ... and the token it derived its key from is gone from both memory
+        // and disk, so the key it is still holding is useless.
+        let live_token = pairing_token.lock().unwrap().clone();
+        assert_ne!(
+            live_token, retired_token,
+            "the in-memory token must be replaced, not left for live sessions to keep using"
+        );
+        assert_ne!(derive_session_data_key(&live_token), stale_key);
+        let on_disk = fs::read_to_string(&path).expect("the new token must be persisted");
+        assert_eq!(
+            on_disk, new_token,
+            "memory and disk must agree, or the extension host reads a token the server rejects"
+        );
+        assert_ne!(
+            on_disk, retired_token,
+            "the file must not keep serving the revoked token after a restart"
+        );
+
+        let _ = fs::remove_file(&path);
+    }
+
+    #[test]
+    fn revoking_wipes_the_credential_lease_as_well_as_the_sessions() {
+        // The `revoke` action promises two things, and the second one is the
+        // reason the first matters: a lease that survived would keep handing
+        // credentials out even if every session were cut.
+        let path = scratch_token_path("revoke");
+        let pairing_token = Arc::new(Mutex::new(generate_token()));
+        let credentials = Arc::new(Mutex::new(Some(ExtensionCredentialCache {
+            credentials: vec![ExtensionCredential {
+                id: "id".to_string(),
+                title: "Example".to_string(),
+                username: "alice".to_string(),
+                password: "supersecretpassword123".to_string(),
+                url: "https://example.com".to_string(),
+                category: "login".to_string(),
+                favorite: false,
+            }],
+            expires_at_epoch_ms: u64::MAX,
+        })));
+        let generation = RevokeGeneration::default();
+
+        let admitted = generation.current();
+        revoke_all_sessions(
+            &pairing_token,
+            &credentials,
+            &generation,
+            Some(path.clone()),
+        )
+        .expect("revoke should succeed");
+
+        assert!(
+            credentials.lock().unwrap().is_none(),
+            "the credential lease must be wiped by a revoke"
+        );
+        assert!(generation.is_revoked(admitted));
+
+        let _ = fs::remove_file(&path);
+    }
+
+    #[test]
+    fn a_failed_persist_still_retires_every_session() {
+        // The ordering inside `rotate_pairing_token_now`, pinned.
+        //
+        // The obvious alternative is to write the token first and bump the
+        // generation only on success — which reads as tidier but is the
+        // fail-open direction: the user asked to be disconnected, the disk
+        // write failed, and every already-connected extension carried on
+        // reading credentials as though nothing had happened.
+        let pairing_token = Arc::new(Mutex::new(generate_token()));
+        let generation = RevokeGeneration::default();
+        let admitted = generation.current();
+
+        // A path whose parent is a regular *file* cannot be created, so the
+        // write fails. (Pointing at a path inside a directory would not do:
+        // `write_pairing_token_file` creates parents, and would succeed.)
+        let not_a_directory =
+            std::env::temp_dir().join(format!("aegis-revoke-test-file-{}", generate_token()));
+        fs::write(&not_a_directory, b"not a directory").expect("scratch file");
+
+        let result = rotate_pairing_token_now(
+            &pairing_token,
+            &generation,
+            Some(not_a_directory.join("token.bin")),
+        );
+        assert!(result.is_err(), "the write was expected to fail");
+
+        assert!(
+            generation.is_revoked(admitted),
+            "a failed persist must not leave live sessions behind"
+        );
+
+        let _ = fs::remove_file(&not_a_directory);
+    }
+
+    /// A connected socket pair, ready for the frame reader.
+    fn frame_socket_pair() -> (TcpStream, TcpStream) {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind loopback");
+        let port = listener.local_addr().expect("addr").port();
+        let client = TcpStream::connect(("127.0.0.1", port)).expect("connect");
+        let (server, _) = listener.accept().expect("accept");
+        (client, server)
+    }
+
+    #[test]
+    fn the_frame_reader_admits_a_request_for_a_live_session() {
+        // The no-regression half: the generation check must not cost a healthy
+        // session anything.
+        let (mut client, mut server) = frame_socket_pair();
+        let key = derive_session_data_key(&generate_token());
+        let generation = RevokeGeneration::default();
+        let admitted = generation.current();
+
+        let payload = b"{\"action\":\"ping\"}";
+        let frame = encrypt_message_frame(&key, payload).expect("encrypt");
+        client.write_all(&frame).expect("client writes");
+        client.flush().expect("client flushes");
+
+        let plaintext = super::read_authenticated_frame(&mut server, &key, &generation, admitted)
+            .expect("a live session must be served");
+
+        assert_eq!(plaintext, payload);
+    }
+
+    #[test]
+    fn the_frame_reader_refuses_a_revoked_session() {
+        // This is the finding, at the level where it is actually enforced: no
+        // request body is ever handed back to the dispatcher after a revoke.
+        let (mut client, mut server) = frame_socket_pair();
+        let key = derive_session_data_key(&generate_token());
+        let generation = RevokeGeneration::default();
+
+        // Handshake, then a revoke from another connection.
+        let admitted = generation.current();
+        generation.revoke();
+
+        let frame =
+            encrypt_message_frame(&key, b"{\"action\":\"get_credentials\"}").expect("encrypt");
+        client.write_all(&frame).expect("client writes");
+        client.flush().expect("client flushes");
+
+        let error = super::read_authenticated_frame(&mut server, &key, &generation, admitted)
+            .expect_err("a revoked session must not be served");
+
+        assert_eq!(
+            error.kind(),
+            std::io::ErrorKind::ConnectionAborted,
+            "the loop distinguishes this from corruption by error kind"
+        );
+    }
+
+    #[test]
+    fn a_revoke_that_lands_during_a_blocked_read_is_still_caught() {
+        // The check that a top-of-function placement would miss.
+        //
+        // A revoke raised while the handler is parked in `read_exact` must still
+        // stop the request, otherwise a connection that had been revoked simply
+        // gets served one more request and then goes on living.
+        //
+        // Deterministic rather than timing-based: the client sends everything
+        // except the final byte, so the reader is provably blocked waiting for
+        // it, and that last byte is only written *after* the main thread has
+        // revoked. So the request is provably admitted-then-revoked-then-
+        // completed, which is the ordering a top-of-function check would miss.
+        //
+        // An earlier version of this test also had a check at the top of the
+        // reader, and it passed with the post-read check deleted — the
+        // "reader has started" signal fired before the function was even
+        // called, so the top check was catching the revoke instead. Deleting
+        // the redundant top check is what makes this assertion mean anything:
+        // the post-read check is now the only one, so nothing else can produce
+        // this error.
+        use std::sync::mpsc::channel;
+
+        let (mut client, mut server) = frame_socket_pair();
+        let key = derive_session_data_key(&generate_token());
+        let generation = RevokeGeneration::default();
+        let admitted = generation.current();
+
+        // `encrypt_message_frame` already emits the reader's wire format:
+        // [4-byte BE length][version][nonce][ciphertext||tag].
+        let wire =
+            encrypt_message_frame(&key, b"{\"action\":\"get_credentials\"}").expect("encrypt");
+        let split_at = wire.len() - 1;
+
+        let (reader_ready_tx, reader_ready_rx) = channel::<()>();
+        let (body_tx, body_rx) = channel::<()>();
+
+        let reader = thread::spawn({
+            let generation = generation.clone();
+            move || {
+                reader_ready_tx.send(()).expect("signal");
+                body_rx.recv().expect("wait for the body");
+                super::read_authenticated_frame(&mut server, &key, &generation, admitted)
+            }
+        });
+
+        // All but the last byte: the reader now blocks in `read_exact`.
+        client
+            .write_all(&wire[..split_at])
+            .expect("client writes the prefix");
+        client.flush().expect("client flushes");
+        reader_ready_rx.recv().expect("reader is starting");
+
+        generation.revoke();
+        body_tx.send(()).expect("release the reader");
+        client
+            .write_all(&wire[split_at..])
+            .expect("client completes the frame");
+        client.flush().expect("client flushes");
+
+        let error = reader
+            .join()
+            .expect("reader thread")
+            .expect_err("a revoke during a blocked read must still refuse the request");
+        assert_eq!(error.kind(), std::io::ErrorKind::ConnectionAborted);
     }
 }
