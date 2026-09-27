@@ -17,6 +17,9 @@ struct ExtensionState {
     credentials:
         std::sync::Arc<std::sync::Mutex<Option<native_messaging::ExtensionCredentialCache>>>,
     pairing_token: std::sync::Arc<std::sync::Mutex<String>>,
+    /// #43: shared with the loopback IPC accept loop. A token rotation has to retire the
+    /// sessions that are *already* connected, not just the handshakes that come after it.
+    session_generation: native_messaging::RevokeGeneration,
 }
 
 #[derive(serde::Serialize)]
@@ -462,19 +465,22 @@ fn rotate_pairing_token(
     // bridge. A locked renderer must not be able to mint a new token.
     session.require_active_session()?;
 
-    let new_token = native_messaging::generate_token();
+    // #43: this goes through `rotate_pairing_token_now` so the retire-every-
+    // session step cannot be skipped. A token rotation only closes the door to
+    // *future* handshakes on its own; without the generation bump an
+    // extension that had already authenticated kept its derived session key
+    // and went on reading credentials after the user rotated the token away
+    // from it.
+    let token_path = native_messaging::get_app_data_dir()
+        .map(|dir| dir.join(native_messaging::TOKEN_FILENAME))
+        .ok_or_else(|| "failed to resolve app data directory".to_string())?;
 
-    if let Some(app_data_dir) = native_messaging::get_app_data_dir() {
-        let _ = fs::create_dir_all(&app_data_dir);
-        let token_path = app_data_dir.join(native_messaging::TOKEN_FILENAME);
-        native_messaging::write_pairing_token_file(&token_path, &new_token)
-            .map_err(|e| format!("failed to write pairing token to file: {e}"))?;
-    } else {
-        return Err("failed to resolve app data directory".to_string());
-    }
-
-    let mut token_guard = state.pairing_token.lock().map_err(|e| e.to_string())?;
-    *token_guard = new_token.clone();
+    let new_token = native_messaging::rotate_pairing_token_now(
+        &state.pairing_token,
+        &state.session_generation,
+        Some(token_path),
+    )
+    .map_err(|e| format!("failed to write pairing token to file: {e}"))?;
 
     Ok(new_token)
 }
@@ -820,9 +826,11 @@ pub fn run() {
     let credentials = std::sync::Arc::new(std::sync::Mutex::new(None));
     let initial_token = native_messaging::generate_token();
     let pairing_token = std::sync::Arc::new(std::sync::Mutex::new(initial_token.clone()));
+    let session_generation = native_messaging::RevokeGeneration::new();
     let state = ExtensionState {
         credentials: credentials.clone(),
         pairing_token: pairing_token.clone(),
+        session_generation: session_generation.clone(),
     };
 
     let credential_session = credential_handler::CredentialSession::default();
@@ -871,6 +879,7 @@ pub fn run() {
                 app.handle().clone(),
                 pairing_token,
                 credentials.clone(),
+                session_generation,
             );
 
             Ok(())

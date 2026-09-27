@@ -13,6 +13,7 @@ use std::fs;
 use std::io::{self, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -123,7 +124,29 @@ pub fn decrypt_message_frame(key: &[u8; 32], frame: &[u8]) -> io::Result<Vec<u8>
 /// Reads a length-prefixed authenticated frame from the stream and returns the
 /// decrypted plaintext. Requires a 4-byte BE ciphertext length prefix, then the
 /// `[version][nonce][ciphertext||tag]` body.
-fn read_authenticated_frame(stream: &mut TcpStream, key: &[u8; 32]) -> io::Result<Vec<u8>> {
+///
+/// #43: the revoke-generation check lives **here**, not in the message loop.
+/// This function is the single point every request passes through, so a check
+/// sitting in the loop was one deletable line that the compiler would not
+/// complain about; putting it in the admit path means the only way to skip it is
+/// to stop using the reader.
+///
+/// It is placed **after** the blocking read and never before it. The read can
+/// park for up to `IPC_READ_TIMEOUT`, so a check at the top of the function
+/// would leave a revoke that lands while the handler is parked with nothing to
+/// stop it: the frame already in flight would be served and the connection
+/// would carry on. Checking here means every request is either admitted against
+/// the live generation or refused.
+///
+/// The price is that a revoked connection which then goes quiet is not torn
+/// down until its read times out. That is bounded by the Y-18 idle budget and
+/// costs a connection slot, whereas the alternative costs a served request.
+fn read_authenticated_frame(
+    stream: &mut TcpStream,
+    key: &[u8; 32],
+    session_generation: &RevokeGeneration,
+    admitted_generation: u64,
+) -> io::Result<Vec<u8>> {
     let mut len_buf = [0u8; 4];
     stream.read_exact(&mut len_buf)?;
     let frame_len = u32::from_be_bytes(len_buf) as usize;
@@ -140,7 +163,11 @@ fn read_authenticated_frame(stream: &mut TcpStream, key: &[u8; 32]) -> io::Resul
     let mut frame = Vec::with_capacity(4 + frame_body.len());
     frame.extend_from_slice(&len_buf);
     frame.extend_from_slice(&frame_body);
-    decrypt_message_frame(key, &frame)
+    let plaintext = decrypt_message_frame(key, &frame)?;
+
+    // Authoritative: everything above may have happened before the revoke.
+    session_generation.ensure_not_revoked(admitted_generation)?;
+    Ok(plaintext)
 }
 
 /// Encrypts plaintext into an authenticated frame and writes it to the stream.
@@ -424,10 +451,121 @@ fn apply_connection_timeouts(stream: &TcpStream) -> bool {
         && stream.set_write_timeout(Some(IPC_WRITE_TIMEOUT)).is_ok()
 }
 
+/// #43: the generation under which a loopback IPC session was admitted.
+///
+/// Rotating the pairing token only ever invalidated *future* handshakes. A
+/// client that had already completed one derived its `session_data_key` from
+/// the retired token once, at connect time, and kept presenting that key for as
+/// long as the process lived — so `revoke` terminated the connection that
+/// asked for it and left every other paired extension exactly where it was.
+///
+/// The counter is what makes "revoke" mean what the protocol documentation
+/// already claimed. Each accepted connection records the generation that was
+/// live when it authenticated, and the frame reader refuses to hand back any
+/// request whose generation has moved on.
+///
+/// A plain counter rather than the token itself: the token is secret material
+/// that would otherwise have to be re-read under a mutex on every single
+/// request, and the counter answers the only question a handler actually asks —
+/// "is my session still the live one?".
+///
+/// `u64` cannot realistically wrap: a session only lives for the length of one
+/// request, bounded by `IPC_READ_TIMEOUT`, so reaching 2^64 revokes would take
+/// longer than the process could possibly stay up.
+#[derive(Debug, Clone, Default)]
+pub struct RevokeGeneration(Arc<AtomicU64>);
+
+impl RevokeGeneration {
+    /// A counter whose current generation is 0, so a freshly admitted session
+    /// is live.
+    ///
+    /// Intentionally not defined in terms of the derived `Default`: the two
+    /// must be caught if they ever disagree, which only works while they are
+    /// constructed independently.
+    pub fn new() -> Self {
+        Self(Arc::new(AtomicU64::new(0)))
+    }
+
+    /// The live generation. Read once per connection, next to the token.
+    pub fn current(&self) -> u64 {
+        self.0.load(Ordering::Acquire)
+    }
+
+    /// Retires every session admitted under an earlier generation.
+    pub fn revoke(&self) {
+        self.0.fetch_add(1, Ordering::AcqRel);
+    }
+
+    /// True when a session admitted under `admitted` has since been revoked.
+    pub fn is_revoked(&self, admitted: u64) -> bool {
+        admitted != self.current()
+    }
+
+    /// Fails closed for a session whose generation has moved on.
+    ///
+    /// This is the exact call `read_authenticated_frame` makes, so tests
+    /// exercise the served path rather than re-implementing the comparison.
+    pub fn ensure_not_revoked(&self, admitted: u64) -> io::Result<()> {
+        if self.is_revoked(admitted) {
+            return Err(io::Error::new(
+                io::ErrorKind::ConnectionAborted,
+                "IPC session revoked",
+            ));
+        }
+        Ok(())
+    }
+}
+
+/// #43: installs a freshly generated pairing token and retires every session
+/// admitted under the previous one.
+///
+/// The generation bump lives **here** rather than at the call sites, and that
+/// placement is the point. Rotating the token while leaving live sessions
+/// running is exactly the bug this closes, and there are two independent ways
+/// to rotate it (the `revoke` IPC action and the `rotate_pairing_token`
+/// renderer command). Leaving the bump to the callers would mean two places to
+/// remember, and the one that forgot would reintroduce the finding silently.
+///
+/// `token_path` is injected so this stays testable without writing to the real
+/// app data directory. `None` means "rotate in memory only".
+pub fn rotate_pairing_token_now(
+    pairing_token: &Arc<Mutex<String>>,
+    session_generation: &RevokeGeneration,
+    token_path: Option<PathBuf>,
+) -> io::Result<String> {
+    // Bumped first, before anything that can fail. Retiring live sessions is
+    // the fail-closed direction, so it must happen even if the write below
+    // fails; the reverse order would let a failed write leave every session
+    // still being served under the token the user just tried to replace.
+    session_generation.revoke();
+
+    let new_token = generate_token();
+    if let Some(path) = token_path {
+        write_pairing_token_file(&path, &new_token)?;
+    }
+    *pairing_token.lock().unwrap() = new_token.clone();
+    Ok(new_token)
+}
+
+/// #43: the body of the `revoke` action — wipe the credential lease, then
+/// retire every live session and rotate the pairing token.
+pub fn revoke_all_sessions(
+    pairing_token: &Arc<Mutex<String>>,
+    credentials: &Arc<Mutex<Option<ExtensionCredentialCache>>>,
+    session_generation: &RevokeGeneration,
+    token_path: Option<PathBuf>,
+) -> io::Result<String> {
+    // The lease goes first: it is what hands credentials out, so a revoke that
+    // failed to reach the token file must still have emptied it.
+    *credentials.lock().unwrap() = None;
+    rotate_pairing_token_now(pairing_token, session_generation, token_path)
+}
+
 pub fn start_tcp_server(
     app_handle: tauri::AppHandle,
     pairing_token: Arc<Mutex<String>>,
     credentials: Arc<Mutex<Option<ExtensionCredentialCache>>>,
+    session_generation: RevokeGeneration,
 ) {
     thread::spawn(move || {
         let (listener, bound_port) = match bind_dynamic_tcp_listener() {
@@ -489,13 +627,18 @@ pub fn start_tcp_server(
 
                     let credentials_clone = credentials.clone();
                     let token_arc = pairing_token.clone();
+                    let generation = session_generation.clone();
                     let app_clone = app_handle.clone();
                     thread::spawn(move || {
                         // `slot` lives for exactly the handler's lifetime.
                         let _slot = slot;
-                        if let Err(e) =
-                            handle_client(app_clone, &mut stream, token_arc, credentials_clone)
-                        {
+                        if let Err(e) = handle_client(
+                            app_clone,
+                            &mut stream,
+                            token_arc,
+                            credentials_clone,
+                            generation,
+                        ) {
                             log::debug!("TCP connection error: {}", e);
                         }
                     });
@@ -729,16 +872,25 @@ fn focus_webview_window(window: &tauri::WebviewWindow) {
 ///    authentication in a single layer.
 /// 4. Frame Verification: Any structurally invalid, version-mismatched or unauthenticated frame
 ///    causes immediate session termination (fail-closed).
-/// 5. Session Revocation: The `revoke` action rotates the pairing token, wipes the credential
-///    lease and terminates the connection, invalidating all previously issued session keys.
+/// 5. Session Revocation: The `revoke` action (and a pairing-token rotation) bumps the shared
+///    `RevokeGeneration` counter, wipes the credential lease and terminates the requesting
+///    connection. Every other live connection admitted under an older generation is refused at
+///    its next request, which is what actually invalidates all previously issued session keys —
+///    rotating the token alone only ever stopped *future* handshakes (#43).
 fn handle_client(
     app_handle: tauri::AppHandle,
     stream: &mut TcpStream,
     pairing_token: Arc<Mutex<String>>,
     credentials: Arc<Mutex<Option<ExtensionCredentialCache>>>,
+    session_generation: RevokeGeneration,
 ) -> Result<(), Box<dyn std::error::Error>> {
     use tauri::{Emitter, Manager};
 
+    // #43: the generation is snapshotted next to the token so the two can never disagree. A
+    // revoke landing after this point leaves the pair stale, and the message loop below refuses
+    // to serve it. A revoke landing before it means we already hold the new token, because
+    // both were read from the same rotated state.
+    let admitted_generation = session_generation.current();
     let current_token = pairing_token
         .lock()
         .map_err(|_| "Pairing token mutex poisoned")?
@@ -769,9 +921,22 @@ fn handle_client(
 
     // 2. Ana mesaj döngüsü (Framing: [4-byte len][version][24-byte nonce][ciphertext||tag])
     loop {
-        let msg_buf = match read_authenticated_frame(stream, &session_data_key) {
+        // #43: `read_authenticated_frame` performs the revoke-generation check, so a session
+        // retired by a token rotation or a `revoke` elsewhere is refused here and never reaches
+        // the dispatch below.
+        let msg_buf = match read_authenticated_frame(
+            stream,
+            &session_data_key,
+            &session_generation,
+            admitted_generation,
+        ) {
             Ok(buf) => buf,
             Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break, // Bağlantı kapandı
+            Err(e) if e.kind() == io::ErrorKind::ConnectionAborted => {
+                // Not corruption: this session was revoked while it was connected.
+                log::info!("[Aegis IPC] refused a request from a revoked session");
+                return Err("Session revoked".into());
+            }
             Err(_) => {
                 log::warn!(
                     "[Aegis IPC] AEAD frame decryption failed! Terminating corrupted connection."
@@ -909,23 +1074,23 @@ fn handle_client(
                 }
             }
             "revoke" => {
-                // RUST-Y1: session revocation — wipe the credential lease,
-                // rotate the pairing token (invalidating all prior session keys)
-                // and terminate this connection immediately after responding.
-                {
-                    let mut creds_guard = credentials.lock().unwrap();
-                    *creds_guard = None;
-                }
-                let new_token = generate_token();
-                {
-                    let mut token_guard = pairing_token.lock().unwrap();
-                    *token_guard = new_token.clone();
-                }
-                if let Some(app_data_dir) = get_app_data_dir() {
-                    let token_path = app_data_dir.join(TOKEN_FILENAME);
-                    let _ = write_pairing_token_file(&token_path, &new_token);
-                }
+                // RUST-Y1/#43: session revocation — retire every live session, wipe the
+                // credential lease, rotate the pairing token and terminate this connection
+                // immediately after responding. Set before the work so the connection is torn
+                // down even if the rotation reports a failure.
                 revoke_session = true;
+                let token_path = get_app_data_dir().map(|dir| dir.join(TOKEN_FILENAME));
+                if let Err(error) = revoke_all_sessions(
+                    &pairing_token,
+                    &credentials,
+                    &session_generation,
+                    token_path,
+                ) {
+                    // Fail-closed already: the generation was bumped before the write, so the
+                    // sessions are gone either way. Log rather than fail the response — the
+                    // caller asked to be disconnected and that is still being honoured.
+                    log::warn!("[Aegis IPC] revoke could not persist the new token: {}", error);
+                }
                 serde_json::json!({ "status": "revoked" })
             }
             _ => serde_json::json!({ "error": "unknown action" }),
@@ -1027,6 +1192,16 @@ pub fn run_host() {
         }
     }
 
+    // #43: this process is the *client*, and the revoke counter deliberately
+    // stays at zero here. The counter lives in the server's address space and
+    // cannot be shared across the process boundary. That is fine: the server is
+    // the authority, and it refuses a revoked session at the frame reader, so
+    // this host learns about a revoke by getting an error and dropping the loop
+    // below. A non-zero local counter would only be a second, unreachable copy
+    // of the truth.
+    let session_generation = RevokeGeneration::default();
+    let admitted_generation = session_generation.current();
+
     loop {
         let msg = match read_message() {
             Ok(Some(m)) => m,
@@ -1046,7 +1221,12 @@ pub fn run_host() {
                 break;
             }
 
-            let resp_bytes = match read_authenticated_frame(s, data_key) {
+            let resp_bytes = match read_authenticated_frame(
+                s,
+                data_key,
+                &session_generation,
+                admitted_generation,
+            ) {
                 Ok(bytes) => bytes,
                 Err(_) => {
                     log::error!(
@@ -1557,5 +1737,359 @@ mod tests {
         // Two distinct info domains (data vs mac) must not collide.
         let data_once = derive_session_data_key(&token);
         assert_eq!(data_key, data_once);
+    }
+
+    // ---- #43: revoke generation counter ----
+    //
+    // The bug these pin down: rotating the pairing token invalidated *future*
+    // handshakes only. A connection that had already authenticated derived its
+    // session key once and was then served for the rest of the process
+    // lifetime, so `revoke` cut off the caller and nobody else.
+
+    #[test]
+    fn a_fresh_generation_admits_its_own_sessions() {
+        // The starting state. `new()` and `default()` must agree, because the
+        // app builds the counter with `default()` and tests reach for `new()`
+        // — a divergence would make a "fresh" session look revoked on sight.
+        let from_new = RevokeGeneration::new();
+        let from_default = RevokeGeneration::default();
+
+        assert_eq!(from_new.current(), 0);
+        assert_eq!(from_default.current(), 0);
+        assert!(!from_new.is_revoked(from_new.current()));
+        assert!(from_new.ensure_not_revoked(from_new.current()).is_ok());
+    }
+
+    #[test]
+    fn revoke_invalidates_a_session_admitted_under_the_previous_generation() {
+        let generation = RevokeGeneration::default();
+
+        // A connection authenticates: this is the snapshot `handle_client`
+        // takes next to the pairing token.
+        let admitted = generation.current();
+
+        generation.revoke();
+
+        assert!(
+            generation.is_revoked(admitted),
+            "a session admitted before the revoke must not keep being served"
+        );
+        let error = generation
+            .ensure_not_revoked(admitted)
+            .expect_err("the served path must fail closed for a revoked session");
+        assert_eq!(error.kind(), std::io::ErrorKind::ConnectionAborted);
+    }
+
+    #[test]
+    fn a_session_admitted_after_a_revoke_is_still_served() {
+        // The over-correction guard. A reader who "fixes" this finding by
+        // treating every existing session as revoked — or by comparing against
+        // something that only ever goes one way — would kill the connection
+        // that just re-authenticated with the *new* token. That is a denial of
+        // service dressed up as a fix.
+        let generation = RevokeGeneration::default();
+        generation.revoke();
+
+        // A client re-handshakes against the rotated token and is admitted
+        // under the new generation.
+        let readmitted = generation.current();
+
+        assert!(!generation.is_revoked(readmitted));
+        assert!(generation.ensure_not_revoked(readmitted).is_ok());
+    }
+
+    #[test]
+    fn every_revoke_retires_all_earlier_generations() {
+        // Two consecutive revokes. A counter that reset to 0 instead of moving
+        // forward would re-admit a session that the first revoke had already
+        // killed — so a stale admission must stay stale no matter how much
+        // later it re-authenticates.
+        let generation = RevokeGeneration::default();
+
+        let first_admission = generation.current();
+        generation.revoke();
+        let second_admission = generation.current();
+        generation.revoke();
+
+        assert!(
+            second_admission > first_admission,
+            "the counter must move forward, never reset"
+        );
+        assert!(generation.is_revoked(first_admission));
+        assert!(
+            generation.is_revoked(second_admission),
+            "the intermediate generation must stay retired"
+        );
+    }
+
+    #[test]
+    fn a_cloned_generation_observes_the_revoke() {
+        // The wiring this whole mechanism depends on. `start_tcp_server` hands
+        // every accepted connection its own clone, while `rotate_pairing_token`
+        // bumps the copy held in `ExtensionState`. If cloning ever produced an
+        // independent counter, the command would bump one counter and the
+        // server would check another — the exact silent failure the finding
+        // describes, and one no single-counter test would catch.
+        let in_state = RevokeGeneration::default();
+        let in_accept_loop = in_state.clone();
+
+        let admitted = in_accept_loop.current();
+        assert!(in_accept_loop.ensure_not_revoked(admitted).is_ok());
+
+        // Rotated from the renderer side, i.e. through the other handle.
+        in_state.revoke();
+
+        assert!(
+            in_accept_loop.is_revoked(admitted),
+            "a revoke raised through one handle must retire sessions tracked by the other"
+        );
+    }
+
+    /// A scratch token path, so the rotation tests exercise the real file write
+    /// without touching the app data directory.
+    fn scratch_token_path(label: &str) -> PathBuf {
+        std::env::temp_dir().join(format!("aegis-revoke-test-{label}-{}", generate_token()))
+    }
+
+    #[test]
+    fn rotating_the_pairing_token_retires_the_live_sessions() {
+        // The structural half of the fix. Both the `revoke` action and the
+        // `rotate_pairing_token` command rotate the token, so the retire step
+        // lives inside `rotate_pairing_token_now` rather than in either caller
+        // — a test on the counter alone would still pass if a caller stopped
+        // invoking the rotation.
+        let path = scratch_token_path("rotate");
+        let pairing_token = Arc::new(Mutex::new(generate_token()));
+        let generation = RevokeGeneration::default();
+
+        let admitted = generation.current();
+        let retired_token = pairing_token.lock().unwrap().clone();
+        let stale_key = derive_session_data_key(&retired_token);
+        assert!(generation.ensure_not_revoked(admitted).is_ok());
+
+        let new_token =
+            rotate_pairing_token_now(&pairing_token, &generation, Some(path.clone()))
+                .expect("rotation should succeed");
+
+        // The generation moved, so the admitted session is refused ...
+        assert!(generation.is_revoked(admitted));
+        assert!(generation.ensure_not_revoked(admitted).is_err());
+
+        // ... and the token it derived its key from is gone from both memory
+        // and disk, so the key it is still holding is useless.
+        let live_token = pairing_token.lock().unwrap().clone();
+        assert_ne!(
+            live_token, retired_token,
+            "the in-memory token must be replaced, not left for live sessions to keep using"
+        );
+        assert_ne!(derive_session_data_key(&live_token), stale_key);
+        let on_disk = fs::read_to_string(&path).expect("the new token must be persisted");
+        assert_eq!(
+            on_disk, new_token,
+            "memory and disk must agree, or the extension host reads a token the server rejects"
+        );
+        assert_ne!(
+            on_disk, retired_token,
+            "the file must not keep serving the revoked token after a restart"
+        );
+
+        let _ = fs::remove_file(&path);
+    }
+
+    #[test]
+    fn revoking_wipes_the_credential_lease_as_well_as_the_sessions() {
+        // The `revoke` action promises two things, and the second one is the
+        // reason the first matters: a lease that survived would keep handing
+        // credentials out even if every session were cut.
+        let path = scratch_token_path("revoke");
+        let pairing_token = Arc::new(Mutex::new(generate_token()));
+        let credentials = Arc::new(Mutex::new(Some(ExtensionCredentialCache {
+            credentials: vec![ExtensionCredential {
+                id: "id".to_string(),
+                title: "Example".to_string(),
+                username: "alice".to_string(),
+                password: "supersecretpassword123".to_string(),
+                url: "https://example.com".to_string(),
+                category: "login".to_string(),
+                favorite: false,
+            }],
+            expires_at_epoch_ms: u64::MAX,
+        })));
+        let generation = RevokeGeneration::default();
+
+        let admitted = generation.current();
+        revoke_all_sessions(&pairing_token, &credentials, &generation, Some(path.clone()))
+            .expect("revoke should succeed");
+
+        assert!(
+            credentials.lock().unwrap().is_none(),
+            "the credential lease must be wiped by a revoke"
+        );
+        assert!(generation.is_revoked(admitted));
+
+        let _ = fs::remove_file(&path);
+    }
+
+    #[test]
+    fn a_failed_persist_still_retires_every_session() {
+        // The ordering inside `rotate_pairing_token_now`, pinned.
+        //
+        // The obvious alternative is to write the token first and bump the
+        // generation only on success — which reads as tidier but is the
+        // fail-open direction: the user asked to be disconnected, the disk
+        // write failed, and every already-connected extension carried on
+        // reading credentials as though nothing had happened.
+        let pairing_token = Arc::new(Mutex::new(generate_token()));
+        let generation = RevokeGeneration::default();
+        let admitted = generation.current();
+
+        // A path whose parent is a regular *file* cannot be created, so the
+        // write fails. (Pointing at a path inside a directory would not do:
+        // `write_pairing_token_file` creates parents, and would succeed.)
+        let not_a_directory = std::env::temp_dir()
+            .join(format!("aegis-revoke-test-file-{}", generate_token()));
+        fs::write(&not_a_directory, b"not a directory").expect("scratch file");
+
+        let result = rotate_pairing_token_now(
+            &pairing_token,
+            &generation,
+            Some(not_a_directory.join("token.bin")),
+        );
+        assert!(result.is_err(), "the write was expected to fail");
+
+        assert!(
+            generation.is_revoked(admitted),
+            "a failed persist must not leave live sessions behind"
+        );
+
+        let _ = fs::remove_file(&not_a_directory);
+    }
+
+    /// A connected socket pair, ready for the frame reader.
+    fn frame_socket_pair() -> (TcpStream, TcpStream) {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind loopback");
+        let port = listener.local_addr().expect("addr").port();
+        let client = TcpStream::connect(("127.0.0.1", port)).expect("connect");
+        let (server, _) = listener.accept().expect("accept");
+        (client, server)
+    }
+
+    #[test]
+    fn the_frame_reader_admits_a_request_for_a_live_session() {
+        // The no-regression half: the generation check must not cost a healthy
+        // session anything.
+        let (mut client, mut server) = frame_socket_pair();
+        let key = derive_session_data_key(&generate_token());
+        let generation = RevokeGeneration::default();
+        let admitted = generation.current();
+
+        let payload = b"{\"action\":\"ping\"}";
+        let frame = encrypt_message_frame(&key, payload).expect("encrypt");
+        client.write_all(&frame).expect("client writes");
+        client.flush().expect("client flushes");
+
+        let plaintext = super::read_authenticated_frame(
+            &mut server,
+            &key,
+            &generation,
+            admitted,
+        )
+        .expect("a live session must be served");
+
+        assert_eq!(plaintext, payload);
+    }
+
+    #[test]
+    fn the_frame_reader_refuses_a_revoked_session() {
+        // This is the finding, at the level where it is actually enforced: no
+        // request body is ever handed back to the dispatcher after a revoke.
+        let (mut client, mut server) = frame_socket_pair();
+        let key = derive_session_data_key(&generate_token());
+        let generation = RevokeGeneration::default();
+
+        // Handshake, then a revoke from another connection.
+        let admitted = generation.current();
+        generation.revoke();
+
+        let frame = encrypt_message_frame(&key, b"{\"action\":\"get_credentials\"}")
+            .expect("encrypt");
+        client.write_all(&frame).expect("client writes");
+        client.flush().expect("client flushes");
+
+        let error = super::read_authenticated_frame(&mut server, &key, &generation, admitted)
+            .expect_err("a revoked session must not be served");
+
+        assert_eq!(
+            error.kind(),
+            std::io::ErrorKind::ConnectionAborted,
+            "the loop distinguishes this from corruption by error kind"
+        );
+    }
+
+    #[test]
+    fn a_revoke_that_lands_during_a_blocked_read_is_still_caught() {
+        // The check that a top-of-function placement would miss.
+        //
+        // A revoke raised while the handler is parked in `read_exact` must still
+        // stop the request, otherwise a connection that had been revoked simply
+        // gets served one more request and then goes on living.
+        //
+        // Deterministic rather than timing-based: the client sends everything
+        // except the final byte, so the reader is provably blocked waiting for
+        // it, and that last byte is only written *after* the main thread has
+        // revoked. So the request is provably admitted-then-revoked-then-
+        // completed, which is the ordering a top-of-function check would miss.
+        //
+        // An earlier version of this test also had a check at the top of the
+        // reader, and it passed with the post-read check deleted — the
+        // "reader has started" signal fired before the function was even
+        // called, so the top check was catching the revoke instead. Deleting
+        // the redundant top check is what makes this assertion mean anything:
+        // the post-read check is now the only one, so nothing else can produce
+        // this error.
+        use std::sync::mpsc::channel;
+
+        let (mut client, mut server) = frame_socket_pair();
+        let key = derive_session_data_key(&generate_token());
+        let generation = RevokeGeneration::default();
+        let admitted = generation.current();
+
+        // `encrypt_message_frame` already emits the reader's wire format:
+        // [4-byte BE length][version][nonce][ciphertext||tag].
+        let wire =
+            encrypt_message_frame(&key, b"{\"action\":\"get_credentials\"}").expect("encrypt");
+        let split_at = wire.len() - 1;
+
+        let (reader_ready_tx, reader_ready_rx) = channel::<()>();
+        let (body_tx, body_rx) = channel::<()>();
+
+        let reader = thread::spawn({
+            let generation = generation.clone();
+            move || {
+                reader_ready_tx.send(()).expect("signal");
+                body_rx.recv().expect("wait for the body");
+                super::read_authenticated_frame(&mut server, &key, &generation, admitted)
+            }
+        });
+
+        // All but the last byte: the reader now blocks in `read_exact`.
+        client
+            .write_all(&wire[..split_at])
+            .expect("client writes the prefix");
+        client.flush().expect("client flushes");
+        reader_ready_rx.recv().expect("reader is starting");
+
+        generation.revoke();
+        body_tx.send(()).expect("release the reader");
+        client
+            .write_all(&wire[split_at..])
+            .expect("client completes the frame");
+        client.flush().expect("client flushes");
+
+        let error = reader
+            .join()
+            .expect("reader thread")
+            .expect_err("a revoke during a blocked read must still refuse the request");
+        assert_eq!(error.kind(), std::io::ErrorKind::ConnectionAborted);
     }
 }

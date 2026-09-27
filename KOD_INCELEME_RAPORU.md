@@ -1,8 +1,8 @@
 ﻿# AegisVault v7 — Derinlemesine Kod İnceleme Raporu
 
 **Tarih:** 27 Eylül 2026
-**Kapsam:** `v7.0.7.0` (`a995bde`) — inceleme; `fb33981` — Aşama 0–1; `5c9752e` + çalışma ağacı — Aşama 0.5, K-1, K-3/K-4/K-7, Y-5, K-4 UI, O-4; `4ecf34c`/`b983354`/`85e5172`/`fb5ea7f`/`54552d6`/O-3 — Aşama 2
-**Durum:** 🟢 **Aşama 0, 1, 0.5, 1.5, 2 uygulandı; K-1, K-3, K-4, K-7, Y-5, O-4, O-13, O-14, O-16, O-17 ve O-20/O-21 kapatıldı.** 7 kritik bulgunun **6'sı kapandı**, 1'i kısmen. **Veri kaybı sınıfındaki üçlü kapandı**; sömürülebilir tek kritik bulgu (K-1) kapandı ve Android Autofill sınırı CI'da **20** kontrollük statik kapıyla kilitlendi; bütünlük etiketi dosya dışı bir defterle zorunlu kılındı; kilit ekranından tek tıkla kurtarma var; **K-1'in Kotlin derleme borcu gerçek derlemeyle kapandı ve Android lint CI'a bağlandı**; snapshot geri yükleme atomik ve bütçeli; ve **passkey assertion imzası artık gerçekten doğrulanıyor**. Toplam **2141 test** yeşil, **8 güvenlik kapısı** PASS. Güncel durum için **§1.2 – §1.6**, **§1.16** ve **§8** okunmalı.
+**Kapsam:** `v7.0.7.0` (`a995bde`) — inceleme; `fb33981` — Aşama 0–1; `5c9752e` + çalışma ağacı — Aşama 0.5, K-1, K-3/K-4/K-7, Y-5, K-4 UI, O-4; `4ecf34c`/`b983354`/`85e5172`/`fb5ea7f`/`54552d6`/`ac6ba3f`/O-3/#43 — Aşama 2
+**Durum:** 🟢 **Aşama 0, 1, 0.5, 1.5, 2 uygulandı; K-1, K-3, K-4, K-7, Y-5, O-4, O-13, O-14, O-16, O-17 ve O-20/O-21 kapatıldı.** 7 kritik bulgunun **6'sı kapandı**, 1'i kısmen. **Veri kaybı sınıfındaki üçlü kapandı**; sömürülebilir tek kritik bulgu (K-1) kapandı ve Android Autofill sınırı CI'da **20** kontrollük statik kapıyla kilitlendi; bütünlük etiketi dosya dışı bir defterle zorunlu kılındı; kilit ekranından tek tıkla kurtarma var; **K-1'in Kotlin derleme borcu gerçek derlemeyle kapandı ve Android lint CI'a bağlandı**; snapshot geri yükleme atomik ve bütçeli; **passkey assertion imzası artık gerçekten doğrulanıyor**; ve **`revoke` artık gerçekten iptal ediyor — token döndürme, hâlâ açık olan oturumları da sonlandırıyor** (raporda yazılmayan ikinci kapı olan `rotate_pairing_token` dahil). Toplam **2141 JS + 68 Rust** test yeşil, **8 güvenlik kapısı** PASS. Güncel durum için **§1.2 – §1.6**, **§1.16**, **§1.17** ve **§8** okunmalı.
 **Kalan açık iş:** tek kalem operasyonel — Y-19 imzalama sertifikaları (#32). Kodla değil secret yönetimiyle çözülür ve o zamana kadar imzasız yayın bilerek bloke kalır.
 **İnceleme Alanı:** Tüm depo — TypeScript/React 19 frontend, Rust/Tauri 2 masaüstü katmanı, Kotlin/Android katmanı, Chrome/Firefox/Safari eklenti katmanı, `wa-sqlite` depolama, CI/CD ve build scriptleri
 **Yöntem:** 5 paralel derin inceleme oturumu (kriptografi, depolama, import/sync, React, native/CI) + tüm otomatik kontrollerin çalıştırılması + kritik bulguların manuel doğrulanması
@@ -1819,6 +1819,126 @@ Aynı rapor satırındaki ikinci yarı, bilinçli olarak açık bırakıldı ve 
 
 ---
 
+## 1.17 #43 Kapatma Raporu — `revoke` Jenerasyon Sayacı (Güncelleme: 27.09.2026)
+
+---
+
+### Asıl bulgu: iptal, geleceğe dair bir işlemdi
+
+`revoke` döngüsel IPC eylemi token'ı döndürüyor, kimlik bilgisi kirasını siliyor ve **kim onu istediyse o bağlantıyı kapatıyor.** Dokümantasyon ise "tüm önceden verilmiş oturum anahtarlarını geçersiz kılar" diyordu.
+
+Token döndürmek yalnızca **gelecekteki el sıkışmaları** geçersiz kılar. `handle_client` `session_data_key`'i bağlantı anında **bir kez** türetiyor; ondan sonra anahtarı bellekte taşıyor. Yani:
+
+- A eklentisi `revoke` gönderdi → A'nın bağlantısı kapanır, A'nın kirası silinir.
+- B eklentisi hâlâ açık. Hâlâ **eskiden türetilmiş** anahtarını sunuyor.
+- Sunucu o anahtarı tanıyor, çünkü karşılaştırdığı şey token'ın kendisi değil, türetilmiş anahtar.
+
+B, işlem ömrü boyunca `get_credentials` çağırabilmeye devam ediyor. Kullanıcı "bağlantıyı kes" dediğinde olan şey, "yalnızca kendi bağlantısını kes" oldu.
+
+Aynı kusurun ikinci bir kapısı daha vardı ve raporda ondan söz edilmiyordu: **`rotate_pairing_token` komutu da aynı şeyi yapıyordu.** Kullanıcı ayarlardan eşleştirme token'ını döndürdüğünde, döngüsel IPC'de hâlâ açık olan oturumlar da yaşamaya devam ediyordu. Yani bulgu "revoke düğmesi eksik" değil, **"token döndürme hiçbir koşulda canlı oturumları sonlandırmıyor"** idi. `revoke`'u düzeltip `rotate_pairing_token`'ı kendi halinde bırakmak, bulgunun yarısını düzeltmek olurdu.
+
+### Çözüm: paylaşılan bir jenerasyon sayacı
+
+`RevokeGeneration(Arc<AtomicU64>)` — kabul edilen her bağlantı, kendisiyle birlikte gelen token'ın **yanında** jenerasyonu da kaydeder, ve çerçeve okuyucu, jenerasyon ilerlemişse isteği hiç döndürmez.
+
+Token'ın kendisi değil, bir sayaç kullanmanın gerekçesi: token gizli malzeme ve her istekte bir mutex altında yeniden okunmak zorunda kalırdı. Sayaç, bir işleyicinin gerçekten sorduğu tek soruyu yanıtlıyor — "oturumum hâlâ yaşayan oturum mu?"
+
+#### Kontrolün `read_authenticated_frame`'in **içine** konması
+
+İlk yazımımda kontrolü mesaj döngüsüne, `serde_json::from_slice`'ten hemen önce koydum. Sonra kendi testimi gerçekten sınadığımda gördüm ki **o satırı silmek hiçbir testi kırmıyordu.** `handle_client` bir `tauri::AppHandle` istiyor, dolayısıyla test onu çağıramıyor ve o çağrı noktası testlerle hiçbir şekilde bağlanmıyordu. Yani elimde bulgu kapatmış gibi görünen, ama aslında kendi haline bırakılsa sessizce geri gelen bir düzeltme vardı.
+
+Bunun yerine kontrolü **tek geçtiği noktaya**, yani çerçeve okuyucuya taşıdım. Artık atlanmasının tek yolu okuyucuyu kullanmamaktır. Yan fayda: işleyici günlüğü artık iptali bozulmadan ayırt edebiliyor (`ConnectionAborted` kendi koluna düşüyor, "AEAD frame decryption failed" değil) — çünkü `handle_client` içinde yine de test edilemeyen bir satır duruyor, bu sefer yalnızca bir log ayrımı.
+
+#### Kontrolün okumadan **sonra** olması
+
+Kontrolü önce fonksiyonun başına, sonra sonuna koymuştum. Nedeni: okuma `IPC_READ_TIMEOUT` boyunca bloklar, yani yalnızca başta kontrol edilirse, o süre içinde gerçekleşen bir iptal hiçbir şeyi durdurmaz — eldeki kare sunulur ve bağlantı devam eder. Son kontrol yetkili olan.
+
+Ama bu iki kontrollü tasarım **kara kutu testiyle ayırt edilemiyordu.** İlk mutasyonumda sonraki kontrolü sildim ve "blokeli okuma sırasında iptal" testim yine de geçti. Sebep: testimin "okuyucu başladı" sinyali fonksiyon **çağrılmadan önce** gönderiliyordu, yani baş kontrolü iptali yakalıyordu ve testin iddia ettiği şeyi kanıtlamıyordu.
+
+Burada tasarımı değiştirdim: **baştaki kontrolü kaldırdım.** O kontrol yalnızca bir optimizasyondu (sessizce duran iptal edilmiş bir bağlantıyı 30 saniye boyunca blokeli okumada tutmamak). Kaldırınca sonraki kontrol tek kontrole dönüşüyor, okuyucu hâlâ tek geçiş noktası kalıyor ve test gerçekten bir şey kanıtlıyor. Testin kendi yorumu da düzeltildi: artık "zamanlama tahminine değil, yapıya dayanarak" izole ediyor.
+
+**Bu, O-3'te işe yarayan aşırı düzeltme disiplininin ters yönde işe yaramış hâli:** önce "daha çok kontrol koy" dedim, test bunu kanıtlamadı, sonra **eksiltmeye** giderek hem daha az kod hem daha çok kanıtlanabilir davranış bıraktım.
+
+#### Düzeltme çağrı yerine değil, döndüren fonksiyonun içinde
+
+İki bağımsız token döndürme yolu var (`revoke` eylemi ve `rotate_pairing_token` komutu). Jenerasyon artışını çağrılara bırakırsam **unutulacak iki yer** olur. Bu yüzden artış `rotate_pairing_token_now`'un **içinde**:
+
+```rust
+session_generation.revoke();              // önce, hiçbir şey başarısız olamadan önce
+let new_token = generate_token();
+write_pairing_token_file(&path, &new_token)?;   // sonra — başarısız olabilir
+```
+
+Sıralama kasıtlı ve ayrı bir testle sabitlendi. "Önce yaz, sonra bağlantıları kes" daha derli toplu görünüyor, ama **fail-open** yönü: kullanıcı bağlantıyı kesmeyi istedi, disk yazımı başarısız oldu ve tüm bağlı eklentiler hiçbir şey olmamış gibi kimlik bilgilerini okumaya devam etti.
+
+#### İstemci tarafı neden sayacı paylaşamıyor
+
+`run_host` (native messaging host) **ayrı bir süreç.** Sayacı sunucunun adres alanında, bu yüzden paylaşılamaz — ve bu bir sorun değil: yetkili sunucudur, iptal edilmiş bir oturumu çerçeve okuyucuda reddeder, host bir hata alıp döngüden düşer. Yerelde sıfırdan farklı bir sayaç yalnızca **ulaşılamaz** bir gerçeğin ikinci kopyası olurdu; bu yüzden `run_host` bilinçli olarak sıfırda bırakıldı ve gerekçesi koda yazıldı.
+
+### Testler (11 adet) ve 9 mutasyon
+
+Yeni testler (`native_messaging.rs`), 57 → 68:
+
+| Test | Ne sabitliyor |
+|---|---|
+| `a_fresh_generation_admits_its_own_sessions` | `new()` ve `default()` bağımsız kurulur; ayrışırlarsa yakalanır |
+| `revoke_invalidates_a_session_admitted_under_the_previous_generation` | Çekirdek bulgu + `ConnectionAborted` hata türü |
+| `a_session_admitted_after_a_revoke_is_still_served` | **Aşırı düzeltme koruması** (aşağıda) |
+| `every_revoke_retires_all_earlier_generations` | Sayaç ileri gider, sıfırlanmaz; ara jenerasyon da emekli kalır |
+| `a_cloned_generation_observes_the_revoke` | `ExtensionState` ile kabul döngüsü **aynı** sayacı görüyor |
+| `rotating_the_pairing_token_retires_the_live_sessions` | Düzeltmenin kendisi: sayaç ilerler, eski anahtar ölür, disk de güncellenir |
+| `revoking_wipes_the_credential_lease_as_well_as_the_sessions` | `revoke` iki şeyi de yapıyor |
+| `a_failed_persist_still_retires_every_session` | Yukarıdaki sıralama kararı |
+| `the_frame_reader_admits_a_request_for_a_live_session` | Kontrolün sağlıklı oturuma maliyeti yok |
+| `the_frame_reader_refuses_a_revoked_session` | Bulgu, uygulandığı yerde |
+| `a_revoke_that_lands_during_a_blocked_read_is_still_caught` | **Sonra** konumlandırmanın gerekçesi (aşağıda) |
+
+**Dokuz mutasyonun tamamı yakalandı** — üçü kasıtlı olarak **aşırı düzeltme**, yani bulguyu "daha çok temizleme" diye okuyan birinin yazacağı kod:
+
+| # | Mutasyon | Kıran test |
+|---|---|---|
+| M1 | Çerçeve okuyucudaki kontrol silindi | 2 ✅ |
+| M2 | Döndürme fonksiyonundaki `revoke()` silindi (**düzeltmeyi geri al**) | 3 ✅ |
+| **M3** | **Aşırı düzeltme:** *her* oturumu, jenerasyon fark etmeksizin iptal edilmiş say | 4 ✅ |
+| **M4** | **Aşırı düzeltme:** sayacı ilerletmek yerine **sıfırla** ("temiz bir çağ") | 8 ✅ |
+| **M5** | **Aşırı düzeltme:** önce diske yaz, yalnızca başarı olursa oturumları emekliye ayır | 1 ✅ |
+| M6 | `new()` sıfırdan farklı bir değerle başlıyor | 1 ✅ |
+| M7 | `Clone` bağımsız bir sayaç üretiyor (sessiz kablolama kusuru) | 2 ✅ |
+| M8 | Token diske yazılmıyor, yalnızca bellekte | 2 ✅ |
+| M9 | Kimlik bilgisi kirası silinmiyor | 1 ✅ |
+
+M3 ve M4'ün birlikte öğrettiği şey şu: "daha çok temizleme" burada **iki ayrı tuzağa** düşüyor. M3, yeni token'la yeniden el sıkışmış meşru bir oturumu da öldürüyor (kullanıcıyı eklentisinden koparan bir hizmet reddi). M4, geri alınmış bir oturumu **yeniden canlandırıyor** — sayaç sıfırlandığı için, tam da iptal edildiği andaki değere geri dönüyor. Üçüncüsü (M5) ise kodun en dürüst görünen, "sırayı düzelt" yazımı.
+
+#### Bu turda iki test hatası
+
+Bunları yazmadım çünkü testler ilk denemede kırmızıydı, ama kayda değer:
+
+1. **Yanlış varsayım:** aynada okunan token ile bellekteki token'ın *farklı* olmasını bekledim. Elbette aynı — ikisi de yeni token. Doğru olan kontrol, *emekliye ayrılan* token'dan farklı olmalarıydı. Test, uygulamayla değil kafamdaki senaryoyla yazılmıştı.
+2. **Yanlış "yazılamaz" yol seçtim:** bir dizinin *içine* yazmayı reddedeceğini sandım; ama `write_pairing_token_file` üst dizinleri oluşturuyor, dolayısıyla yazma **başarılı** oldu. Doğru yol: üst öğesi sıfır **dosya** olan bir yol.
+
+### Kapanmayan veya kapsam dışı bırakılan kısım
+
+Dürüstlük için: `handle_client`'ın kendisi hâlâ test edilemiyor (`tauri::AppHandle` gerektiriyor). Kontrol oraya değil, test edilebilir olan `read_authenticated_frame`'e taşındığı için **güvenlik davranışının tamamı** test kapsamında; kapsam dışı kalan tek şey, o kontrolün mesaj döngüsünde *çağrıldığı* satır. Onu da kapatmanın yolu bir statik kapı eklemek (`security:session-gates` bunun için zaten var) — bu turda kapsam dışı bırakıldı, çünkü sekiz güvenlik kapısının sayısını değiştirir.
+
+`rotate_pairing_token` komutunun oturum kapısı (#42) korundu ve `security:session-gates` geçiyor.
+
+---
+
+### Doğrulama
+
+| Kontrol | Sonuç |
+|---|---|
+| `cargo test --lib` | ✅ 68 / 68 (57 → 68, **+11**) |
+| `cargo clippy --lib --all-targets` | ✅ 4 uyarı — **taban korundu** (yeni uyarı yok) |
+| `npm run typecheck` | ✅ |
+| `npm run lint` | ✅ **0 hata, 23 uyarı** (taban korundu) |
+| `npm run test:unit` | ✅ **2141 / 2141** (değişmedi) |
+| `npm run build` | ✅ |
+| `npm run test:fuzz` | ✅ 37 |
+| 8 güvenlik kapısı | ✅ hepsi PASS |
+
+---
+
 ## 2. Mimari Özeti
 
 ```
@@ -2548,7 +2668,7 @@ Bu hook'ta **hiç `useEffect` yok** (grep: sıfır eşleşme). Hiçbir zamanlay�
 | Linux ekran yakalama monitörü: alt dize eşleşmesi (`obsidian`, `spectacled`, `peek` içeren her süreç) **spam edilebilir** yanlış pozitifler üretiyor; 3 saniyelik döngüde **dört** PATH ile çözümlenen yardımcı süreç, `MONITORING_STARTED` yani hiç durmuyor — kasa kilitliyken bile. Aynı PATH çözümleme deseni `icacls`, `keytool`, `taskkill` çağrılarında da | `linux_security.rs:52-55,66-200`, `native_messaging.rs:274` |
 | `is_native_host` argv sezgisinin son disjunct'i `argv[0]`'ı **dahil** ediyor: kullanıcı hesap adında `@` olan bir makinede (AD tabanlı kurumsal imajlarda olağan) AegisVault ile ilişkilendirilmiş **herhangi bir `.json` dosyası** açmak GUI'siz native-messaging-ana moduna giriyor, pencere hiç açılmıyor; çevrimdışı yedek yolunda her istek için GUI örneği spawn ediyor | `src-tauri/src/lib.rs:692-704` |
 | Windows eşleştirme token'ı ACL kısıtlaması **fail-open**: `USERNAME` ayarlanmamışsa iki "fail-closed" dalı atlanıp `Ok(())` dönüyor, token miras kalan dizin ACL'siyle okunabilir kalıyor. Aynı fonksiyon port dosyası için de kullanılıyor, `rotate_pairing_token`/`setup`/`revoke`'tan çağrılıyor. `icacls` yerine doğrudan Win32 API önerilir | `native_messaging.rs:268-297` |
-| `revoke` diğer canlı oturumları sonlandırmıyor — `handle_client` token'ı bağlantı anında bir kez alıyor, diğer istemciler kendi `session_data_key`'iyle yaşamaya devam ediyor. Dokümantasyon ("tüm önceden verilmiş oturum anahtarlarını geçersiz kılar") bunun tersini vaat ediyor | `native_messaging.rs:589-604,782-801` |
+| ✅ **KAPANDI (bkz. §1.17)** — `revoke` diğer canlı oturumları sonlandırmıyordu: `handle_client` token'ı bağlantı anında bir kez alıyor, diğer istemciler kendi `session_data_key`'iyle yaşamaya devam ediyordu. Dokümantasyonun ("tüm önceden verilmiş oturum anahtarlarını geçersiz kılar") tersini vaat ettiği davranış. Paylaşılan bir jenerasyon sayacı eklendi ve kontrol **çerçeve okuyucuya** kondu (tek geçiş noktası). Bulgunun raporda yazılmayan ikinci kapısı da vardı: `rotate_pairing_token` komutu da token döndürdüğü için aynı kusuru taşıyordu — artış, döndüren fonksiyonun **içinde** olduğu için iki yoldan biri unutsa bile açılmaz | `native_messaging.rs` (`RevokeGeneration`, `read_authenticated_frame`, `rotate_pairing_token_now`) |
 | PSL algoritması **IP sabitlerine** uygulanıyor, tüm `127.0.0.0/8`'i tek kimliğe çökertiyor (`extract_etld_plus_one("127.0.0.1")` → `"0.1"`). İki farklı döngüç adresi 85 puanla eşleşiyor. Sondaki nokta, IDN/punycode ve `user:pass@` normalleştirilmiyor (`parse_url` `userinfo`'yu ayıklamıyor) | `native_messaging.rs:466-536` |
 | Eklenti `blocked` dalları `chrome.tabs.query` geri çağrısı içinden `return` ediyor, **listener'dan** değil → çağıran her zaman `{ status: 'ok' }` alıyor. Güvenlik kontrolü çalışıyor, raporlaması çalışmıyor | `src-extension/background.ts:306-308` |
 | `adm-zip` tam olarak pinlenmiş (hem `devDependencies` hem `overrides`), iki override ölü (`shell-quote` lockfile'da hiç yok, `qs` bağımlı tarafından 6.15.1'de sabitlenmiş), `engines`/`packageManager`/corepack yok. `argon2-browser` üretim paketinde Rust `argon2 0.6`'ya **yanında** ikinci bir Argon2id uygulaması olarak gidiyor — parametre/salt kodlaması sapması riski. `npx tauri` yerine `npx --no-install` | `package.json:144,158-163` |
@@ -2663,7 +2783,7 @@ Bu hook'ta **hiç `useEffect` yok** (grep: sıfır eşleşme). Hiçbir zamanlay�
 | 40 | ✅ **KAPANDI (bkz. §1.3 ve §1.16)** — Android: autofill istekleri süreç registry'sine taşındı, `MainActivity` `exported="false"` yapıldı, LAUNCHER `LauncherActivity` trampoline'ine taşındı, düz metin şifre yolu silindi, `security:android-autofill-boundary` kapısı CI'a eklendi. |
 | 41 | Android: `SecureStorageKeyStore`'a auth binding zorunlu kılın, `RUST-O5` rotasyonunu açılışta yapın (Y-8). |
 | 42 | ✅ **KAPANDI (bkz. §1.12, §1.13, §1.14)** — Rust: KDF maliyet parametrelerine üst sınır (Y-16). Yerel IPC'nin yetki gerektiren komutlarına fail-closed oturum kapısı (#42). `open_import_file` artık hem `stat` hem akış düzeyinde sınırlı. 24 Rust testi, 4 mutasyonla doğrulandı. |
-| 43 | ✅ **KISMEN KAPANDI (bkz. §1.13)** — Loopback IPC'ye okuma (30 sn) / yazma (15 sn) zaman aşımı ve **reddetmeli** sınırlı eşzamanlılık kapısı (tavan 32) eklendi; slot `Drop` ile serbest bırakılıyor, yani panikte sızmıyor. 11 test, mutasyonla doğrulandı. **Kalan:** `revoke` jenerasyon sayacı. |
+| 43 | ✅ **KAPANDI (bkz. §1.17)** — `revoke` artık diğer canlı oturumları da sonlandırıyor: paylaşılan `RevokeGeneration` sayacı eklendi, kontrol mesaj döngüsü değil **tek geçiş noktası olan `read_authenticated_frame`** içine kondu (döngüdeki tek satır test edilemiyordu, silinseydi sessizce geri geliyordu). Kontrol okumadan **sonra** konumlandı; başta da olması isteniyordu, ama o zaman **blokeli okuma sırasında gerçekleşen iptal** test edilemiyordu, bu yüzden gereksiz olan baş kontrolü kaldırıldı — daha az kod, daha çok kanıt. Jenerasyon artışı `rotate_pairing_token_now`'un içinde, çünkü token'ı **iki** yol döndürüyordu (`revoke` eylemi ve `rotate_pairing_token` komutu) ve raporda yazılmayan ikinci kapı buydu. 11 test, **9 mutasyon** — üçü aşırı düzeltme (her oturumu iptal et, sayacı sıfırla, önce yaz sonra kes), üçü de yakalandı. |
 | 44 | `index.html`'i bütünlük manifestine alın + karşıt kontrol (Y-20). |
 | 45 | ⚠️ **KISMEN KAPANDI (bkz. §1.16)** — O-3 kapandı: öksüz kalan base64 legacy ana şifre (öğe blob'u silinmiş, depo boş) artık koşullardan bağımsız temizleniyor, **ve ayna yolundaki ikinci kapı** da kapatıldı; 3 test, 3 mutasyon. **Kalan (O-2):** `localStorage` aynası kaldırılmadı — göç yolu ona dayanıyor, asıl bulgu "düz metin sızıntısı" değil **sessiz bayatlama**. Önerilen sonraki adım: silmek yerine aynanın yaşını tutup bayatlığını görünür kılmak. |
 | 46 | ✅ **KAPANDI (bkz. §1.7 ve §1.14)** — koşullu yazma (`If-Match`/ETag, 412/409 → `sync.remoteModified`) ve "uzak durum bilinmiyorken üzerine yazma" yasağı (Y-11, 17 test); meta veri şema doğrulaması + motor seviyesinde ikinci savunma (O-21, 20 test); indirme boyut tavanı (O-20, `Content-Length` + akış sınırı); `dispose()` referans sayımı ile hava boşluğu izin listesi sızıntısı (O-21, 16 test). |
@@ -2772,5 +2892,17 @@ Bu derlemenin asıl kazancı, daha önce hiç çalışmayan bir kapının ortaya
 Aynı bulgunun ikinci yarısı bir izin listesi sızıntısıydı: "Test connection" düğmesi her tıklamada kalıcı bir ağ muafiyeti bırakıyor, `dispose()` hiç çağrılmıyordu. Referans sayımıyla kapatıldı.
 
 **Bu turda iki test düzeltmesi yapıldı ve ikisi de aynı dersi verdi.** Biri: stream boyut sınırını gerçek bir dosyayla test etmek imkânsız, çünkü `stat` ön kontrolü zaten yakalıyor — sınırı kaldırsanız bile testler yeşil kalıyordu; sentetik okuyucuya geçirildi. İkisi: eşzamanlılık testi toplam edinimi sınırlıyordu, oysa sınır *eşzamanlı* sayıyı sınırlıyor. **Yeşil bir test, tek başına kanıt değildir.**
+
+---
+
+**`revoke` artık gerçekten iptal ediyor (#43 — bkz. §1.17).** Bulgu bir eksik düğme değil, **"token döndürme hiçbir koşulda canlı oturumları sonlandırmıyor"** idi: `handle_client` `session_data_key`'i bağlantı anında bir kez türetiyor, sonra onu bellekte taşıyor; token'ın kendisi hiçbir istekte karşılaştırılmadığı için döndürmek yalnızca gelecekteki el sıkışmalarını etkiliyordu. Kullanıcı "bağlantıyı kes" dediğinde olan şey "yalnızca kendi bağlantısını kes" oldu.
+
+Raporda yazılmayan ikinci bir kapı çıktı: **`rotate_pairing_token` komutu da token döndürüyordu**, yani aynı kusuru taşıyordu. Sadece `revoke`'u düzeltmek bulgunun yarısını düzeltmek olurdu. Bu yüzden jenerasyon artışı, döndüren fonksiyonun **içine** kondu — iki yoldan biri unutsa bile açılmaz.
+
+Bu turda asıl değerli olan kısım düzeltmenin kendisi değil, **kendisini test edemeyen bir düzeltmeyi fark etmem** oldu. Kontrolü önce mesaj döngüsüne koydum; sonra o satırı sildiğimde hiçbir test kırmadı, çünkü `handle_client` bir `tauri::AppHandle` istiyor ve testler ona hiç ulaşamıyor. Kontrolü **tek geçtiği noktaya**, çerçeve okuyucuya taşıdım — artık atlanmasının tek yolu okuyucuyu kullanmamak.
+
+İkinci ders, aşırı düzeltme disiplininin **eksiltme** yönünde işe yaramasıydı. Kontrolü hem fonksiyonun başına hem sonuna koymuştum (baştaki, sessizce duran iptal edilmiş bağlantıyı erken kapatmak içindi). Sonraki kontrolü silen mutasyonu denediğimde "blokeli okuma sırasında iptal" testim yine de geçti — çünkü testimin "başladı" sinyali fonksiyon çağrılmadan önce gönderiliyordu ve iptali **baş** kontrolü yakalıyordu. Baş kontrolü kaldırınca sonraki kontrol tek kontrole dönüştü ve test gerçekten bir şey kanıtlamaya başladı: **daha az kod, daha çok kanıt.**
+
+Dokuz mutasyonun üçü kasıtlı olarak aşırı düzeltmeydi ve üçü de yakalandı: *her* oturumu jenerasyon fark etmeksizin iptal etmek (yeni token'la yeniden el sıkışmış meşru oturumu öldürür), sayacı ilerletmek yerine **sıfırlamak** (emekliye ayrılmış oturumu geri canlandırır) ve "önce diske yaz, sonra bağlantıları kes" (fail-open: kullanıcı bağlantıyı kesmeyi istedi, yazma başarısız oldu, eklentiler hiçbir şey olmamış gibi okumaya devam etti).
 
 
