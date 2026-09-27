@@ -1453,7 +1453,7 @@ Bu kapı ilk çalıştırmasında **iki gerçek bulgu** verdi: `TAURI_SIGNING_PR
 
 | Konu | Kalan |
 |---|---|
-| **Y-19 operasyonel olarak açık** | Gerçek imzalama sertifika gerektirir. `APPLE_*` ve `WINDOWS_SIGNING_*` secret'ları eklenene kadar genel masaüstü yayını **bloke** kalır. Bu kasıtlı ve doğru; #32 olarak operasyonel kalıyor |
+| **Y-19 operasyonel olarak açık** | Gerçek imzalama sertifika gerektirir. `APPLE_*` ve `WINDOWS_SIGNING_*` secret'ları eklenene kadar genel masaüstü yayını **bloke** kalır. Bu kasıtlı ve doğru; #32 olarak operasyonel kalıyor. **İkinci (pre-Y-19) pipeline kaldırıldı ve tekrar eklenmesi kapıya bağlandı — bkz. §1.20** |
 | **Windows'ta taşınabilir imzalama** | İlk sürüm Windows Authenticode, sonraki sürümler için de geçerli. Yeniden imzalama (dual-sign) kapsam dışı |
 | **`open_import_file` boyut kontrolü** | #42'nin son kalemi hâlâ açık: içe aktarma dosyası boyut sınırı yok |
 | **JS tarafında Argon2id tavanı** | Rust tarafı IPC üzerinden zorluyor; saf WASM yolunda üst sınır yok → Aşama 2 #51 |
@@ -2153,6 +2153,81 @@ Ayrıca M2'yi ilk denediğimde yanlış `catch`'i susturdum ve test kırılmadı
 | `cargo test --lib` | ✅ 68 / 68 (değişmedi) |
 | 8 güvenlik kapısı | ✅ hepsi PASS |
 | `i18n` 12 dil anahtar eşitliği | ✅ |
+
+---
+
+## 1.20 Y-19 Artık Kalıntı — İkinci Release Pipeline Kaldırıldı (Güncelleme: 27.09.2026)
+
+---
+
+### Push öncesi soru, gizli bir açığa götürdü
+
+"İmza olmadan release üretiyordum, devam edebilir miyim?" sorusu üzerine yapılan kontrol iki şey ortaya çıkardı.
+
+**İyi haber:** etiket-tetikli pipeline gerçekten fail-closed. Boş bir kanıt dizini ve **sadık** bir imzasız örnek kurup fiilen doğrulandı:
+
+```
+macOS imzasız   → Required signing verification failed for:
+                  aegis-vault-v7-universal.dmg, Aegis Vault 7.app   exit 1
+Windows imzasız → Required signing verification failed for:
+                  aegis-vault-v7-x64.msi, ...-x64-setup.exe          exit 1
+```
+
+`publish` işi beş build işine de `needs` ile bağlı, sertifika yoksa hiçbiri geçmiyor.
+
+**Kötü haber:** depoda **ikinci bir release pipeline** duruyordu — `release-desktop-manual.yml` — ve §1.16'daki K-1 "Android lint CI'a bağlı değil" dersinin tam aynısıydı:
+
+| | `release-desktop.yml` (etiket) | `release-desktop-manual.yml` |
+|---|---|---|
+| `--require-signed` kapısı | 3 platformda var | **yok** |
+| macOS imzası | Developer ID + notary + staple | **`APPLE_SIGNING_IDENTITY: "-"`** (ad-hoc) |
+| Windows | var | **yok** |
+| cosign / SBOM / updater / eklentiler | var | **yok** |
+| `permissions` | yazma | `contents: read` |
+
+Yani Y-19'un `release-desktop.yml`'de kaldırdığı **ad-hoc imzayı** içeren, hiçbir güvenlik kapısı taşımayan, etiket-tetikli pipeline'ın tam bir alt kümesi olan bir ikinci yol.
+
+Bugün bir delik değil: `contents: read` ile GitHub Release **oluşturamaz**. Ama risk gerçek ve iki katmanlı:
+
+1. `security:release-signing` kapısı **yalnızca `release-desktop.yml`'i** okuyor (satır 26), yani bu dosya hiçbir kapının kapsamı dışında.
+2. İleride biri bu işe publish adımı ekler veya izinleri `contents: write` yaparsa, **Y-19'un bütün garantileri sessizce uygulanmaz hâle gelir** — ve çalışma gününde değil, güncelleme yazan bir gün fark edilir.
+
+### Silmek yetmiyor — tekrar eklenmesini de engelledim
+
+Dosyayı silmek tek başına bir önlem değil, çünkü onu geri koyan hiçbir şey yoktu. Y-19'un asıl dersi bu: **bağlanmayan kapı, zamanla düşer.** Aynı repo içinde bu ikinci kez oldu (K-1'de Android lint, burada ikinci pipeline).
+
+Bu yüzden `security-release-signing-gate.cjs`'e dokuzuncu kontrol eklendi: **`release-desktop.yml` dışındaki hiçbir workflow masaüstü build paketlemeyebilir veya macOS'u ad-hoc imzaya sabitleyemez.** Tekrarlamanın kendisi artık ihlal.
+
+Kontrol hem topluluk ilkesi hem de daha somut olanı kapsıyor: tek bir release pipeline kuralı, ve Y-19'un ad-hoc yasağının kapı dışına taşınması.
+
+#### Mutasyonla doğrulama — ve birinci denemem geçersizdi
+
+Kapıyı "sildiğim dosyayı geri koyunca kırılıyor" diye doğrulamak istedim ve **ilk denemede geçti.** Kapıyı zayıf sandım.
+
+Nedeni kapı değil, testimdi: PowerShell 5.1'in `>` yönlendirmesi dosyayı **UTF-16** yazıyor, ben de bozuk içeriği "orijinal dosya" sandım. Bozuk dosyada `tauri build` ve `APPLE_SIGNING_IDENTITY` **yoktu**, yani kapının yakalayacak bir şey de yoktu.
+
+Doğru yolla (`git checkout`) geri yükleyince kapı yakaladı:
+
+```
+FAIL release-desktop-manual.yml: must not package a desktop build;
+     release-desktop.yml is the only release pipeline
+FAIL release-desktop-manual.yml: must not pin macOS to an ad-hoc signing identity (Y-19)
+exit 1
+```
+
+Bu, aynı seansta üçüncü kez "yeşil test kanıt değildir" ile karşılaşmak. Ayrım her seferinde aynı: **mutasyonu uyguladım** ile **mutasyonu gerçekten uyguladım** arasında. Boz UTF-16 dosya, uygulanmamış bir mutasyondan ayırt edilemiyor.
+
+---
+
+### Doğrulama
+
+| Kontrol | Sonuç |
+|---|---|
+| `npm run security:release-signing` | ✅ PASS (tek pipeline kuralı eklendi) |
+| Aynı kapı, ikinci pipeline geri konunca | ✅ **FAIL, exit 1** (2 ihlal) |
+| `npm run test:unit` | ✅ değişmedi |
+| `npm run typecheck` / `lint` / `build` | ✅ değişmedi |
+| 8 güvenlik kapısı | ✅ hepsi PASS |
 
 ---
 
@@ -2893,7 +2968,7 @@ Bu hook'ta **hiç `useEffect` yok** (grep: sıfır eşleşme). Hiçbir zamanlay�
 | `adm-zip` tam olarak pinlenmiş (hem `devDependencies` hem `overrides`), iki override ölü (`shell-quote` lockfile'da hiç yok, `qs` bağımlı tarafından 6.15.1'de sabitlenmiş), `engines`/`packageManager`/corepack yok. `argon2-browser` üretim paketinde Rust `argon2 0.6`'ya **yanında** ikinci bir Argon2id uygulaması olarak gidiyor — parametre/salt kodlaması sapması riski. `npx tauri` yerine `npx --no-install` | `package.json:144,158-163` |
 | Gradle dağıtımı `distributionSha256Sum` olmadan indiriliyor ve çalıştırılıyor; `verification-metadata.xml` yok, bağımlılık kilitleme yok, dependabot `gradle` ekosistemini **hiç** kapsamıyor. Kotlin 1.9.25 + AGP 8.11 desteklenen matrisin dışında | `gradle-wrapper.properties:3`, `buildSrc/build.gradle.kts:8-11` |
 | İmzalama sırları (`TAURI_SIGNING_PRIVATE_KEY`, Android keystore parolaları) `npm ci`'nin **tüm** devDependency kurulum/yapım grafığını çalıştıran `npx tauri build` sürecinin ortamında; tek bir ele geçirilmiş transitive devDependency + `postinstall` imzalama anahtarını sızdırır. `persist-credentials` varsayılan `true` bırakılmış | `release-desktop.yml:68-86,132-151,274-316` |
-| **CI, depodaki kendi güvenlik kapılarının hiçbirini çalıştırmıyor.** `ci.yml` yalnızca `typecheck` + `test:unit` + `cargo check`/`cargo test` yapıyor. Çalışmayanlar: `lint`, `security:dependencies`, `security:csp`, `security:no-js-master-string`, `security:session-gates`, `test:fuzz` (8 fuzz paketi), gitleaks, `cargo clippy`/`audit`/`deny`/`fmt`. Sertleştirme kapısı yalnızca etiket-tetikli masaüstü işlerinde; `build-android` işinde **hiç** yok, `release-desktop-manual.yml`'de hiç yok | `.github/workflows/ci.yml` |
+| **CI, depodaki kendi güvenlik kapılarının hiçbirini çalıştırmıyor.** `ci.yml` yalnızca `typecheck` + `test:unit` + `cargo check`/`cargo test` yapıyor. Çalışmayanlar: `lint`, `security:dependencies`, `security:csp`, `security:no-js-master-string`, `security:session-gates`, `test:fuzz` (8 fuzz paketi), gitleaks, `cargo clippy`/`audit`/`deny`/`fmt`. Sertleştirme kapısı yalnızca etiket-tetikli masaüstü işlerinde; `build-android` işinde **hiç** yok. `release-desktop-manual.yml`'de hiç yoktu — **dosya kaldırıldı ve tekrar eklenmesi `security:release-signing`'e bağlandı (bkz. §1.20)** | `.github/workflows/ci.yml` |
 | CodeQL **yalnızca javascript-typescript** — Rust kripto/KDF/IPC arka uç (elle yazılmış XChaCha20-Poly1305 çerçevelemesi, Argon2id, elle URL eşleştirici, token el sıkışması) ve Kotlin kripto/autofill/KeyStore katmanı hiç analiz edilmiyor. En çok işe yarayacak sorgular (sabit kod kimlik bilgisi, zayırf kripto, yetkisiz veri yolu, IPC giriş noktasında yetkilendirme eksikliği) yalnızca o dillerde tetikleniyor | `.github/workflows/codeql.yml:20-24` |
 | Sürüm yayınlama **atomik değil** ve otomatik-güncelleyici ucunu kararsızlaştırıyor: yeniden çalıştırma için yayınlanan sürüm (ve `latest.json` dahil) siliniyor, sonra varlık varlık yeniden oluşturuluyor; bu pencerede `releases/latest/download/latest.json` 404 döndürüyor ya da farklı bir etikete çözümleniyor → sürüm karışıklığı. `generate_release_notes: true` + `make_latest: true` "latest" işaretçisini sıfırlıyor. Düzeltme: taslakla yayınla → tüm varlıkları yükle → tek `PATCH` ile yayınla; veya `latest.json`'ı değişmez etiket URL'sinden sun | `release-desktop.yml:580-622` |
 | `latest.json` bütünlük iddiası olmadan yayınlanıyor: eksik `.sig` koleksiyonu sessizce atlanıyor (`if (!signature) continue;`), manifest `platforms: {}` ile ve **sıfır çıkış koduyla** yazılıyor, sonra cosign imzalanıp yükleniyor. İmza "doğrulaması" bir **alt dize testi** (`raw.includes('untrusted comment: signature from tauri secret key')`) — istemci gerçek minisign doğrulaması yaptığı için istismar edilemez, ama üretici bir doğrulama katmanı değil | `generate-updater-manifest.cjs:118-143` |
@@ -3151,5 +3226,15 @@ Ayrıca tasarımda geriye doğru iki adım attım. Önce bir geri çağrı kayde
 M1 mutasyonu da tam yakalanmadı ve bunu olduğu gibi bırakmak istemedim: meta kaydının ayna yazımından **sonra** taşınması hâlinde testler geçiyor. Durup düşününce sıranın kota durumu için **hiçbir** önemi olmadığını gördüm — meta yazımı başarılıysa uyuşmazlık her iki sırada da yakalanıyor. Gerçek gerekçe çok daha dar: süreç iki yazma arasında ölürse meta-önce fazla, meta-sonra eksik bildirir. Bu bir çökme penceresi, testle provoke edilemez; bu yüzden gerekçeyi kodda yazdım ve testle kapsandığını **iddia etmedim** — ilk yazdığım yorum ("sıralama sayesinde kota yutmaları yakalanıyor") yanlıştı.
 
 M2'yi ilk denediğimde de yanlış `catch`'i susturdum ve test kırılmadı: ikinci yutma noktasının hiç testi yoktu. "Mutasyonu uyguladım" ile "mutasyonu doğru yere uyguladım" arasındaki farkı bu turda iki kez öğrendim.
+
+---
+
+**İkinci bir release pipeline vardı ve push sorusu onu ortaya çıkardı (Y-19 artık kalıntı — bkz. §1.20).** "İmzasız release üretiyordum, devam edebilir miyim?" sorusunu doğrulayarak yanıtladım: etiket-tetikli pipeline gerçekten fail-closed, boş bir kanıt dizini ve sadık bir imzasız örnekle fiilen iki platformda da kırıldığını gördüm. Ama ararken depada `release-desktop-manual.yml` buldum: Y-19 öncesinden kalma, `--require-signed` kapısı olmayan, macOS'u **ad-hoc** imzaya sabitleyen, Windows'u hiç içermeyen, etiket-tetikli pipeline'ın tam bir alt kümesi.
+
+Bugün bir delik değil — `contents: read` ile Release oluşturamaz. Risk iki katmanlıydı: `security:release-signing` yalnızca `release-desktop.yml`'i okuduğu için bu dosya hiçbir kapının kapsamı dışındaydı, ve ileride publish yetkisi verilirse Y-19'un bütün garantileri sessizce uygulanmaz hâle gelecekti.
+
+Dosyayı sildim — **ama silmek tek başına önlem değil**, çünkü onu geri koyan hiçbir şey yoktu. Aynı repo içinde bu ikinci kez oldu (K-1'de Android lint CI'a bağlı değildi). Bu yüzden dokuzuncu kontrolü ekledim: başka hiçbir workflow masaüstü build paketleyemez veya ad-hoc imzaya sabitleyemez. Tekrarlamanın kendisi ihlal.
+
+Mutasyon doğrulamasında bu seansta üçüncü kez aynı tuzağa düştüm: kapı "geçti" ve zayıf sandım. Meğer PowerShell 5.1'in `>` yönlendirmesi dosyayı UTF-16 yazmış, ben de bozuk içeriği orijinal saymıştım — bozuk dosyada `tauri build` ve `APPLE_SIGNING_IDENTITY` yoktu, yani kapının yakalayacağı bir şey de yoktu. `git checkout` ile geri yükleyince iki ihlali de yakaladı. Boz bir mutasyon, uygulanmamış mutasyondan ayırt edilemiyor; üçüncü kez hatırlatmak gerekti.
 
 

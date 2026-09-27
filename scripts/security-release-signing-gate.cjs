@@ -161,6 +161,41 @@ function main() {
     'release-desktop.yml: the signing gate must not be marked continue-on-error'
   );
 
+  // --- 9. There must be exactly one desktop release pipeline. ---------------
+  //
+  // Y-19 follow-up. `release-desktop-manual.yml` was a pre-Y-19 workflow left in
+  // the repo: it had no `--require-signed` gate and pinned macOS to
+  // `APPLE_SIGNING_IDENTITY: "-"`, i.e. ad-hoc, which is precisely what Y-19
+  // removed from the real pipeline. It could not publish (`contents: read`) and
+  // it was a strict subset of the tag-gated pipeline, so it had no legitimate
+  // release function -- only the standing risk that someone grants it publish
+  // rights later and every Y-19 guarantee silently stops applying.
+  //
+  // Deleting the file is not enough on its own, because nothing stopped it from
+  // being re-added. Any *other* workflow that packages a desktop build is a
+  // second pipeline, and it will not be covered by the checks above, which all
+  // read `release-desktop.yml` only. So the duplication itself is the invariant.
+  const workflowsDir = path.join(rootDir, '.github', 'workflows');
+  const otherWorkflows = fs
+    .readdirSync(workflowsDir)
+    .filter((name) => name.endsWith('.yml') && name !== 'release-desktop.yml');
+  for (const name of otherWorkflows) {
+    const contents = fs.readFileSync(path.join(workflowsDir, name), 'utf8');
+    check(
+      !/tauri\s+build/.test(contents),
+      `${name}: must not package a desktop build; release-desktop.yml is the only release pipeline`
+    );
+    check(
+      !/APPLE_SIGNING_IDENTITY:\s*"?-/.test(contents),
+      `${name}: must not pin macOS to an ad-hoc signing identity (Y-19)`
+    );
+  }
+  notes.push(
+    otherWorkflows.length
+      ? `other workflows checked for duplicate release pipelines: ${otherWorkflows.sort().join(', ')}`
+      : 'no other workflows present'
+  );
+
   for (const note of notes) console.log(`  note: ${note}`);
 
   if (failures.length > 0) {
