@@ -141,7 +141,28 @@ jobs:
         run: npm run desktop:release:signing:report -- --platform linux --dir release-local/linux --require-signed
 
       - name: Desktop release gate
-        run: npm run desktop:release:gate -- --platform linux
+        # Verify, do not rebuild.
+        #
+        # This gate also runs a Tauri desktop build and
+        # collect-release-artifacts.cjs, and the collect script begins with
+        # ensureCleanDir(), which is an rm -rf of its output directory. Run after
+        # the workflow's own collect steps, it therefore deleted what those steps
+        # had just staged:
+        #
+        #   - Linux: the Tauri minisign "*.sig" updater artifacts. This step's
+        #     build has no TAURI_SIGNING_PRIVATE_KEY in its environment, so tauri
+        #     skips updater artifact generation, and the collect step does not
+        #     copy signatures itself. `publish` then found no signed bundle and the
+        #     manifest generator refused to publish an updater offering nothing.
+        #   - Windows/macOS: worse, and quieter. The signing-report gate above had
+        #     already verified the *signed* artifacts; this step then replaced them
+        #     with the output of an unsigned rebuild, and the upload sent those.
+        #
+        # Building, collecting and reporting signatures are this workflow's job
+        # and all three already ran above, so the gate is only asked to check the
+        # tree. Locally the gate still does the full sequence, which is what a
+        # developer running a release from their own machine wants.
+        run: npm run desktop:release:gate -- --platform linux --skip-desktop-build --skip-collect --skip-signing-report
       - name: Upload Linux release artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
         with:
@@ -310,7 +331,12 @@ jobs:
         run: npm run desktop:release:signing:report -- --platform macos --dir release-local/macos --require-signed
 
       - name: Desktop release gate
-        run: npm run desktop:release:gate -- --platform macos
+        # Verify, do not rebuild. See the note on the same step in build-linux:
+        # this gate's collect step starts with an rm -rf of release-local/macos,
+        # so running it here would replace the Developer ID signed and notarized
+        # artifacts with the output of an unsigned rebuild, after the
+        # signing-report gate had already verified the real ones.
+        run: npm run desktop:release:gate -- --platform macos --skip-desktop-build --skip-collect --skip-signing-report
       - name: Upload macOS release artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
         with:
@@ -430,7 +456,12 @@ jobs:
         run: npm run desktop:release:signing:report -- --platform windows --dir release-local/windows --require-signed
 
       - name: Desktop release gate
-        run: npm run desktop:release:gate -- --platform windows
+        # Verify, do not rebuild. See the note on the same step in build-linux:
+        # this gate's collect step starts with an rm -rf of release-local/windows,
+        # so running it here would replace the Authenticode-signed artifacts with
+        # the output of an unsigned rebuild, after the signing-report gate had
+        # already verified the real ones.
+        run: npm run desktop:release:gate -- --platform windows --skip-desktop-build --skip-collect --skip-signing-report
       - name: Upload Windows release artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
         with:
@@ -567,6 +598,25 @@ jobs:
         run: npm run package:firefox:xpi -- --skip-build
 
       - name: Sign Firefox xpi with Mozilla AMO (optional)
+        # Optional means optional.
+        #
+        # This step failed the whole release twice, for reasons that have nothing
+        # to do with the code being shipped:
+        #
+        #   1. AMO accepts a given add-on version once. Re-running a tag after any
+        #      later failure re-submits the same version and is rejected, so each
+        #      attempt burned a version and the next attempt needed a new one.
+        #   2. Any AMO outage or credential problem did the same.
+        #
+        # The unsigned xpi is already built and staged by the previous step, so
+        # the degradation is exactly the one this step's own message describes
+        # and the one the no-credentials branch has always taken: publish it
+        # unsigned. What must not happen is a third-party signing service
+        # deciding that no release ships today.
+        #
+        # The build job still fails if the *packaging* fails; only the signature
+        # is best-effort.
+        continue-on-error: true
         env:
           WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
           WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
