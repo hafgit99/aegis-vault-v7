@@ -2516,6 +2516,47 @@ Düzeltme küçük ve fail-closed'u bozmuyor: `RECOGNISED = {macos, windows, lin
 | `all` / unset | ✅ | ✅ `linux,macos,windows` |
 | `macos,windwos` | ✅ exit 1 | ✅ exit 1 (yazım hatası hâlâ reddedilir) |
 
+#### 1.1.5 `rust:fmt:check` kırıktı — ve bu kez kozmetik değil
+
+Kullanıcı `npm run rust:fmt:check`'in hata verdiğini söyledi. 7 diff var. **Bu release'i durduruyor:**
+
+`desktop-release-gate.cjs:192` bu komutu kapının **7 adımından 3.'sü** olarak çalıştırıyor, ve release işi her platformda `npm run desktop:release:gate -- --platform <p>` çağırıyor. Yani fmt check kırmızı → build işi kırmızı → `publish` o işlerin başarısını şart koşuyor → **hiçbir release yayınlanmıyor.**
+
+7 diff'in 6'sı `native_messaging.rs`'de, `6a97fad`'deki `#[cfg(test)]` işaretlemelerinden; 1'i benim `credential_handler` testimdeki bir zincirleme çağrı. Düzeltme düz `cargo fmt`.
+
+**Ve yine aynı desen:** `.github/workflows/` içinde **hiçbir yerde format kontrolü yok.** Yani kontrol var, hiç çalışmıyor, çürüyor — Android lint adımıyla birebir aynı. Bu dal CI'yi yeşile çevirdi ama release kapısındaki fmt adımını kimse çalıştırmamıştı.
+
+Doğrulama, kırılan tek komutla değil **release yolunun gerçek komutlarıyla** yapıldı: `rust:fmt:check` exit 0, `clippy -D warnings` temiz, `cargo test --lib` 68/68, `rust:test:native` 2/2, `desktop:release:version:check` 7.0.8 tutarlı, lint 23 uyarı/0 hata, i18n + 8 güvenlik kapısı exit 0.
+
+`desktop:release:gate --platform linux`'in tamamı burada çalıştırılamıyor: script doğru şekilde Windows'ta Linux artifact'i üretmeyi reddediyor (`assertHostCanBuild`), bu yüzden 7 adım tek tek koşuldu.
+
+#### 1.1.6 Tag atıldı, koşu iki yerden düştü — ikisi de bu dalın kendi hataları
+
+Tag `v7.0.8.0` atılırken ilk uyarı: yerelde **zaten** `v7.0.8.0` tag'ı vardı ve `fdd9ba8`'i gösteriyordu — HEAD'den 3 commit geri, yani `fmt` düzeltmesinden önce. Hiç push edilmemişti. Olduğu gibi push edilseydi `rust:fmt:check` yüzünden Linux build işi düşer, yani az önce düzelttiğimiz hatanın ta kendisi release'i öldürürdü. Yerel tag HEAD'e taşındı.
+
+Koşu iki yerden kırıldı, ikisi de daha önce tespit edemediğim hatalar:
+
+**1. `generate-updater-manifest` testi gerçek `release-local/` dizinini kullanıyordu.**
+
+`desktop:release:gate` birim testlerini artifact'ler **toplandıktan sonra** çalıştırıyor. Runner'da test şöyle düştü:
+
+```
+FAIL scripts/generate-updater-manifest.test.mjs > fails when no signed artifact was collected
+AssertionError: expected +0 not to be +0
+```
+
+Üreticinin staging dizini `release-local/` ve o an içinde release'in **gerçek `.sig` dosyaları** vardı; "hiçbir şey imzalı değil" senaryosu imzalı bir bulup `exit 0` verdi, test beklediği `exit != 0`'ı alamadı. Çıplak `npm run test:unit` çalıştırınca ağaçta `release-local/` olmadığı için her yerde geçiyordu.
+
+Dahası: aynı sıralama, testin `afterEach`'inin bir sonraki workflow adımının yükleyeceği artifact'leri **`rm -rf` etmesi** anlamına geliyordu. Yani kapı, topladığı artifact'leri kendi eliyle silme riskiyle çalışıyordu.
+
+İkisini de yerelde yeniden ürettim: `release-local/linux` içine imzalı artifact koyup eski testi koşturdum → 1 test düştü **ve** artifact silindi. Üretici artık `RELEASE_LOCAL_DIR`'ı honor ediyor, test `mkdtemp` geçici dizini kullanıyor. Aynı koşulla tekrar: 4 test geçti, artifact yerinde.
+
+**2. `plan` işinde `actions/checkout` yoktu.** `node scripts/select-release-platforms.cjs` boş çalışma alanında çalışıp `MODULE_NOT_FOUND` ile düşüyordu.
+
+**Ve kimse fark etmedi — asıl kötü kısım bu.** `publish` ve `generate-sbom` bu işin **çıktısını** okuyor ama **sonucunu** hiç kontrol etmiyor. Yani kırık `plan` release'i *durdurmuyor*, sadece macOS/Windows'u sessizce seçtiriyor — ve bu, bilinçli bir platform tercihinden ayırt edilemiyor. **Düşemeyen kapı kapı değildir.** Artık iki iş de `needs.plan.result == 'success'` şart koşuyor: kırık plan release'i gürültülü biçimde durdurur, istenenden az şey sessizce yayınlamaz.
+
+Bu, koşunun "kısmen şanslı" olduğunu da gösteriyor: bir önceki koşuda `plan` düştüğü halde `publish`'e hiç girilmedi. Ama `plan` düşüp diğerleri başarılı olsaydı, **kimsor seçmediği bir kısmi release yayınlanacaktı.**
+
 #### 1.2 `clear_session`: yorum gerçeği ters söylüyordu
 
 Bir önceki düzeltmede `clear_session`'a `#[cfg(test)]` koyup üstüne "hiçbir production komutu çağırmıyor, renderer'ın kilitleme komutu bunu çağırmalı" notu düşmüştüm. **Üç ikisinden de doğru değildi:** `close_rust_session` (`credential_handler.rs:431`), `open_rust_session` (`:287`) ve `setup_rust_session` (`:338`) production'da `state.clear()` çağırıyor. Test-only sarmalayıcının kullanılmaması bir eksiklik değil; yorumu okuyan biri kasanın kilitlenmediğini sanardı.
