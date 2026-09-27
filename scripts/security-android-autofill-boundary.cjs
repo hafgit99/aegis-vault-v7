@@ -605,15 +605,38 @@ if (kotlinFiles.length === 0) {
 }
 
 // ---------------------------------------------------------------------------
-// K-1 (second part): Android lint must be part of the build, and the autofill
-// component's API-level requirement must be stated rather than assumed.
+// K-1 (second part): the autofill component's API-level requirement must be
+// stated rather than assumed, and CI must not claim to run Android lint.
 //
-// Lint was never wired into CI. Seven errors sat in the manifest and
+// Lint was never wired into CI, and seven errors sat in the manifest and
 // MainActivity for as long as the Android build existed, including four NewApi
 // errors on this very autofill path - a class extending an API 26 type while
-// minSdk is 24. Nobody saw them because nothing ran lint. A hand-written static
-// check cannot substitute for the real linter: only it knows that
-// `AegisAutofillService` requires API 26.
+// minSdk is 24. The fix for that was attempted twice and both attempts are
+// recorded in ci.yml and KOD_INCELEME_RAPORU.md, because the reasons compound:
+//
+//   1. `settings.gradle` applies the gitignored `tauri.settings.gradle` and
+//      `app/build.gradle.kts` applies `tauri.build.gradle.kts`. Neither is
+//      tracked (both carry absolute cargo-registry paths), so a clean checkout
+//      cannot even configure Gradle.
+//   2. With that solved, `:app` still does not compile. `MainActivity :
+//      TauriActivity`, but TauriActivity is a template at
+//      `tauri-<ver>/mobile/android-codegen/TauriActivity.kt` that tauri's
+//      `build.rs` copies into the app's Kotlin sources only when
+//      `WRY_ANDROID_KOTLIN_FILES_OUT_DIR` is set - which only wry's Gradle
+//      plugin does, i.e. only during the native Android build. `WryActivity`,
+//      its own superclass, lives in the `wry` crate rather than in tauri.
+//
+// So lint cannot run in ordinary CI: the app module needs the Rust library
+// cross-compiled first, which is the release job's environment, and that job
+// already compiles all of this Kotlin - so Kotlin that does not compile is
+// already a release blocker. The residual gap is narrow and named: lint's
+// NewApi findings on a tree that compiles.
+//
+// That makes this a *negative* check. The old version asserted that lint WAS
+// wired into CI, and that assertion is what let a step that could never run sit
+// there green for days. Asserting the opposite is the honest form: if a lint
+// step reappears in ci.yml, whoever adds it has to deal with the codegen, and
+// this gate makes them read why rather than rediscover it.
 // ---------------------------------------------------------------------------
 
 function checkLintIsWired() {
@@ -625,81 +648,40 @@ function checkLintIsWired() {
   } else if (!/lint/i.test(scripts['android:lint'])) {
     fail('package.json: "android:lint" must actually invoke the Android linter');
   }
-  // Note: `android:lint` is allowed to keep calling gradlew.bat. It is a local
-  // convenience script and the repository is developed on Windows; the defect
-  // was never the script, it was the *CI job* invoking it on Linux.
+  // `android:lint` calls gradlew.bat, which is fine for a local convenience
+  // script on a Windows development machine. It must never be what CI runs.
 
-  // The glue generator has to exist as a real file, not just as a mention in the
-  // workflow. A gate that greps ci.yml for `android:gradle-glue` would happily
-  // pass while the script it names had been deleted — the same
-  // presence-is-not-workability mistake this function already made once.
+  // The glue generator has to exist as a real file, not just as a mention in
+  // package.json. A check that greps a workflow for `android:gradle-glue` would
+  // pass happily while the script it names had been deleted - the same
+  // presence-is-not-workability mistake this function has now made twice.
   const glueScript = scripts['android:gradle-glue'];
   if (!glueScript) {
     fail('package.json: an "android:gradle-glue" script must exist — a bare ./gradlew cannot configure the project without the Tauri Gradle glue');
   } else {
-    const gluePath = path.join(rootDir, glueScript.replace(/^node\s+/, ''));
-    if (!fs.existsSync(gluePath)) {
-      fail(`package.json: "android:gradle-glue" runs ${glueScript}, but ${glueScript.replace(/^node\s+/, '')} does not exist`);
+    const glueRelative = glueScript.replace(/^node\s+/, '');
+    if (!fs.existsSync(path.join(rootDir, glueRelative))) {
+      fail(`package.json: "android:gradle-glue" runs ${glueScript}, but ${glueRelative} does not exist`);
     } else {
       pass('the Gradle glue generator script exists');
     }
   }
 
   const ciRaw = fs.readFileSync(path.join(rootDir, '.github', 'workflows', 'ci.yml'), 'utf8');
+  // Comments are stripped before matching: a gate that greps raw text punishes
+  // the person who writes down what went wrong, which is the opposite of what a
+  // gate is for. ci.yml carries a long comment explaining exactly why lint is
+  // not there.
   const ci = stripYamlComments(ciRaw);
 
-  // Presence was the old test, and it is why this gate was green for a broken
-  // step. Assert the things that would actually have caught it.
-
-  // 1. The linter must be invoked through the POSIX wrapper. Note what is NOT
-  //    accepted here any more: `android:lint`. Accepting it kept a revert path
-  //    open, because `android:lint` calls `gradlew.bat` on the *other* machine —
-  //    so a step rewritten as `run: npm run android:lint` satisfied the
-  //    invocation check while the `gradlew.bat` check below never saw the
-  //    wrapper, and the exact broken step came back green.
-  if (!/\.\/gradlew[^\n]*\b(lint|lintVital)\w*/.test(ci)) {
+  const runsLintInCi = /android:lint/.test(ci)
+    || /gradlew[^\n]*\b(lint|lintVital)\w*/.test(ci);
+  if (runsLintInCi) {
     fail(
-      'ci.yml: Android lint must run in CI through the POSIX wrapper (./gradlew :app:lintArmDebug or similar), otherwise these errors return unseen. Do not call `npm run android:lint` here: that script uses the Windows gradlew.bat wrapper and cannot run on a Linux runner',
+      'ci.yml: Android lint cannot run in this workflow and must not be added here. `:app` does not compile until the Rust library is cross-compiled: MainActivity extends TauriActivity, which is a template at tauri-<ver>/mobile/android-codegen/ that tauri\'s build.rs copies into the app\'s Kotlin sources only when WRY_ANDROID_KOTLIN_FILES_OUT_DIR is set (i.e. only during `tauri android build`); WryActivity lives in the wry crate, not tauri. A bare ./gradlew therefore fails with "Unresolved reference: TauriActivity". To lint on every push, the job has to run the native Android build first (~20-40 min, NDK + Rust); the release workflow already compiles this Kotlin, so an uncompilable app is already a release blocker',
     );
-  }
-
-  if (/gradlew\.bat/.test(ci)) {
-    fail('ci.yml: the Android lint step must not use gradlew.bat on a Linux runner');
-  }
-
-  // 2. The SDK must be resolvable, by any mechanism Gradle honours:
-  //    `local.properties` (gitignored, so it has to be written in the workflow),
-  //    `sdk.dir` inside it, or an exported ANDROID_HOME / ANDROID_SDK_ROOT.
-  if (!/local\.properties|sdk\.dir|ANDROID_HOME|ANDROID_SDK_ROOT/.test(ci)) {
-    fail(
-      'ci.yml: the Android lint step needs a resolvable SDK — write src-tauri/gen/android/local.properties, set sdk.dir in it, or export ANDROID_HOME. That file is gitignored, so without this Gradle cannot find the SDK and the step fails before linting anything',
-    );
-  }
-
-  // 3. The Tauri-generated Gradle glue must exist before Gradle is invoked.
-  //    `settings.gradle` does `apply from: 'tauri.settings.gradle'` and
-  //    `app/build.gradle.kts` applies `tauri.build.gradle.kts`. Both are
-  //    gitignored (they hold absolute cargo-registry paths, which is why they
-  //    must not be committed) and neither is tracked, so on a clean checkout
-  //    Gradle fails at configuration time with "Could not read script" —
-  //    before a single file is linted. The release workflow never hit this
-  //    because `tauri android build` writes the glue itself; a bare
-  //    `./gradlew` invocation does not.
-  //
-  //    `tauri android init` is NOT accepted here. It is the obvious candidate
-  //    and it does not work: with both files deleted it reports success and
-  //    creates neither, because it only scaffolds a project that does not exist
-  //    yet. That was tried, and CI failed on exactly this.
-  if (!/android:gradle-glue|android-gradle-glue\.cjs/.test(ci)) {
-    fail(
-      'ci.yml: the Android lint step must generate the Tauri Gradle glue first (`npm run android:gradle-glue`). settings.gradle applies the gitignored tauri.settings.gradle and app/build.gradle.kts applies tauri.build.gradle.kts; on a clean checkout neither exists and Gradle aborts during configuration. `tauri android init` does not fix this — it scaffolds a new project and writes neither file',
-    );
-  }
-
-  // 4. AGP 8.x requires JDK 17. Without it the lint step fails in a way that
-  //    reads like a lint finding rather than a toolchain problem.
-  if (!/java-version:\s*['"]?1[79]['"]?/.test(ci)) {
-    fail('ci.yml: the Android lint step needs a pinned JDK (setup-java, java-version 17 or 19); AGP 8.x does not run on the runner default');
+  } else {
+    pass('ci.yml does not claim to run Android lint (it cannot, see the comment there)');
   }
 
   const manifestPath = path.join(
@@ -741,7 +723,6 @@ function checkLintIsWired() {
     }
   }
 
-  pass('Android lint is wired into package scripts and CI (K-1)');
   pass('Autofill service declares its API 26 requirement via tools:targetApi');
 }
 
@@ -758,6 +739,6 @@ if (findings.length > 0) {
 console.log(
   `Status: PASS - ${checks.length} Android Autofill boundary checks passed ` +
     '(K-1: non-exported credential Activity + registry-authoritative request routing ' +
-    '+ lint wired and API-level requirements declared).',
+    '+ API-level requirements declared + no unrunnable lint step in CI).',
 );
 process.exit(0);

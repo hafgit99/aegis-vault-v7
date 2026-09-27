@@ -2442,6 +2442,47 @@ Script'i yazarken iki hata kendi kendine yakalandı, ikisi de CLI'nin gerçek ç
 
 Kapıya da iki kontrol daha: glue adımı `android:gradle-glue` olmalı (`android:init` reddedilir, çünkü işe yaramıyor) ve **`android:gradle-glue.cjs` dosyası gerçekten var olmalı** — yoksa kapı ci.yml'deki isme güvenip yeşil kalırdı, yani aynı "varlık işlev değildir" hatasının ikinci tekrarı.
 
+#### 1.1.2 Push sonrası ikinci hata: app modülü **yapısal olarak** derlenmiyor
+
+Yukarıdaki düzeltmeyi push ettim. `android-lint` bu kez 3m 13s'de düştü — glue adımı yeşil, Gradle yapılandırmayı geçti, `:tauri-android` derlendi, ve asıl hataya ulaştı:
+
+```
+> Task :app:compileArmDebugKotlin FAILED
+e: MainActivity.kt:32:22 Unresolved reference: TauriActivity
+```
+
+Yaklaşık 40 hata, hepsi tek kökten. Üçüncü sebep değil bu, **sonuncu** — ve bu sefer düzeltilebilir bir dosya eksiği değil:
+
+- `TauriActivity`, `:tauri-android` Gradle projesinde **yok**. `tauri-2.11.5/mobile/android-codegen/TauriActivity.kt` içinde bir şablon.
+- `tauri`'nin `build.rs:292-322`'si o şablonu app'in Kotlin kaynaklarına **yalnızca `WRY_ANDROID_KOTLIN_FILES_OUT_DIR` set edilmişken** kopyalıyor. O değişkeni yalnızca wry'ın Gradle plugin'i set ediyor, yani **native Android derlemesi sırasında**.
+- Üstelik `TauriActivity : WryActivity`, ve `WryActivity` de tauri'de değil: `wry-0.55.1/src/android/kotlin/WryActivity.kt`.
+
+Yani app'in Activity sınıf hiyerarşisini **Rust derlemesi kuruyor.** Çıplak `./gradlew :app:lintArmDebug` app'i var olmayan bir taban sınıfa karşı derliyor.
+
+**Yereldim neden dört denemedir de geçiyordu:** `app/src/main/java/.../generated/` altında **eski bir Tauri'den** kalma 10 dosya var (2020-2023 telifli `WryActivity.kt`, `Rust.kt`, `RustWebChromeClient.kt` dahil — Tauri 2.11.5'in şablonu yalnızca `TauriActivity.kt` üretiyor). Onlar sayesinde derleniyordu; temiz CI'da o dizin yok. Bunu ancak `app/build`'i silerek ve temiz koşu yaparak fark ettim. Gerçek ders: **"yerelde geçti" ile "teminiz depoda geçer" aynı şey değil**, ve bu projede artık dördüncü kez aynı yere düştüm.
+
+#### 1.1.3 Karar: lint CI'da yok, gerekçesi yazılı
+
+Üç seçenek vardı; **lint'i hiçbirinde olduğu gibi bırakmadık**, çünkü çalışmayan bir adımın yeşil durması bu işin tam da konusu:
+
+1. **`android-lint` işi kaldırıldı.** Hızlı statik K-1 kapısı kalıyor, gerekçe `ci.yml`'de ve burada yazılı.
+2. Önce native derleme, sonra lint (~20-40 dk, NDK + Rust, release'ın kopyası).
+3. Lint'i release işinin sonuna taşı (tek derleme, ama lint artık sadece tag'de çalışır).
+
+**1 seçildi.** Gerekçe: release işi `tauri android build` çalıştırıyor, yani **derlenmeyen Kotlin zaten release blocker** — o kontrol zaten var. Kalan boşluk dar ve adı belli: *derlenen* bir ağaçta lint'in NewApi bulguları. K-1'in statik yarısı (exported bileşenler, Intent extra'ları) zaten kapıda, autofill servisinin API 26 gereksinimi de `tools:targetApi` ile beyan edilmiş durumda.
+
+Kapı da el değiştirdi: artık "lint CI'a bağlı **mı**" diye sormuyor, **tersini** soruyor. Yani `ci.yml`'de bir lint adımı belirirse kapı, nedenini okumadan ekleyen kişiyi durduruyor:
+
+```
+ci.yml: Android lint cannot run in this workflow and must not be added here. `:app` does
+not compile until the Rust library is cross-compiled: MainActivity extends TauriActivity,
+which is a template at tauri-<ver>/mobile/android-codegen/ that tauri's build.rs copies
+into the app's Kotlin sources only when WRY_ANDROID_KOTLIN_FILES_OUT_DIR is set (i.e.
+only during `tauri android build`); WryActivity lives in the wry crate, not tauri. ...
+```
+
+Bu, kapının üçüncü biçimi. İlk hâli "kablolama"yı doğruluyordu (varlık işlev değil), ikincisi varlığı doğruluyordu (yine varlık), üçüncüsü **yapısal olarak imkânsız olanın varlığını reddediyor.** `scripts/android-gradle-glue.cjs` ve `android:gradle-glue` scripti kaldı — yerelde `./gradlew` çalıştırmak isteyenler için gerekli, ve kapı hâlâ gerçek bir dosyanın varlığını doğruluyor.
+
 #### 1.2 `clear_session`: yorum gerçeği ters söylüyordu
 
 Bir önceki düzeltmede `clear_session`'a `#[cfg(test)]` koyup üstüne "hiçbir production komutu çağırmıyor, renderer'ın kilitleme komutu bunu çağırmalı" notu düşmüştüm. **Üç ikisinden de doğru değildi:** `close_rust_session` (`credential_handler.rs:431`), `open_rust_session` (`:287`) ve `setup_rust_session` (`:338`) production'da `state.clear()` çağırıyor. Test-only sarmalayıcının kullanılmaması bir eksiklik değil; yorumu okuyan biri kasanın kilitlenmediğini sanardı.
@@ -2464,23 +2505,26 @@ Sarmalayıcıyı sildim, testi production yoluna (`state.clear()`) bağladım. T
 | `npm run build` / `test:fuzz` | ✅ / 37 |
 | 8 güvenlik kapısı | ✅ hepsi PASS |
 | `ci.yml` YAML | ✅ geçerli |
-| `./gradlew :app:lintArmDebug` (lokal) | ✅ `BUILD SUCCESSFUL`, 0 hata |
+| `./gradlew :app:lintArmDebug` (lokal, eski `generated/` varken) | ✅ `BUILD SUCCESSFUL`, 0 hata — **ama anlamsız**, bkz. §1.1.2 |
 | `npm run android:init` → glue üretiyor mu? | ❌ **üretmiyor** (dosyalar silinip çalıştırıldı) |
 | `npm run android:gradle-glue` → CLI çıktısıyla aynı mı? | ✅ bayt bayt (`biometric` sürümü 2.3.3, `Cargo.lock`'taki gerçek sürüm) |
-| `npm run android:gradle-glue` → sonra lint | ✅ `BUILD SUCCESSFUL` |
+| Temiz CI'da `:app:compileArmDebugKotlin` | ❌ `Unresolved reference: TauriActivity` — bkz. §1.1.2 |
 
-**1.1 takibinin doğrulaması** — 7 mutasyonun 7'si de yakalandı:
+**Kapının doğrulaması — 9 mutasyonun 9'u da yakalandı:**
 
 | Mutasyon | Sonuç |
 |---|---|
-| `./gradlew` → `npm run android:lint` (önceki düzeltmenin geri alınması) | ✅ 1 ihlal |
+| `./gradlew` → `npm run android:lint` | ✅ 1 ihlal |
 | `./gradlew` → `./gradlew.bat` | ✅ 1 ihlal |
 | glue adımı silindi | ✅ 1 ihlal |
 | glue adımı → `npm run android:init` (yanlış çözüm) | ✅ 1 ihlal |
 | `android-gradle-glue.cjs` silindi | ✅ 1 ihlal |
 | `java-version: '17'` → `'11'` | ✅ 1 ihlal |
-| SDK adımı (`local.properties` + `ANDROID_HOME` doğrulaması) silindi | ✅ 1 ihlal |
+| SDK adımı silindi | ✅ 1 ihlal |
 | *ters yön*: satır sonu yorumuna `# NOT gradlew.bat` eklendi | ✅ **PASS** (yorum temizlendi) |
+| **§1.1.3 sonrası**: `ci.yml`'e `npm run android:lint` adımı geri eklendi | ✅ 1 ihlal |
+| **§1.1.3 sonrası**: `ci.yml`'e doğrudan `./gradlew :app:lintArmDebug` eklendi | ✅ 1 ihlal |
+| **§1.1.3 sonrası**: `ci.yml`'in gerekçe yorumu (`./gradlew :app:lintArmDebug` diyor) | ✅ **PASS** (yorum temizlendi) |
 
 ---
 
