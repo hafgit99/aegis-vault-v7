@@ -2320,6 +2320,83 @@ Testi alt süreç (subprocess) olarak yazdım, çünkü sabitlenmesi gereken şe
 
 ---
 
+## 1.22 CI'daki İki Kırmızı — ve "Bağlı" Olan Bir Kapının Asla Çalışmamış Olması (Güncelleme: 27.09.2026)
+
+---
+
+### Nasıl buldum
+
+`gh` CLI kurulu değil; repo public olduğu için Actions REST API'sini kimlik doğrulamasız sorguladım. `release/v7.0.7.0` → `main` PR'ında iki iş kırmızıydı:
+
+| İş | Adım | Sonuç |
+|---|---|---|
+| `Rust check and tests` | `Cargo clippy` | ❌ |
+| `Security gates` | `Android: lint (K-1)` | ❌ |
+| `Typecheck`, `Unit tests` | — | ✅ |
+
+**Hiçbiri benim commitlerimden gelmiyordu:** run 358–361 dün 13:36'dan beri kırmızıydı, yani 5 commit öncesinden.
+
+**Hiçbiri release'i engellemiyor:** `release-desktop.yml` ne `clippy` ne `android:lint` çalıştırıyor. Yani tag'i şimdi atabilirsin.
+
+### 1. `cargo clippy --all-targets -- -D warnings`
+
+CI uyarıları **hata** sayıyor (`-D warnings`). Yerelde "taban korundu" dedim ve bu doğruydu — ama **daha önce `-D warnings`'sız komutu çalıştırıyordum.** CI'nin çalıştırdığı komutu birebir çalıştırınca 4 hata:
+
+1. `doc list item without indentation` ×2 — `credential_handler.rs:56-57`, girinti kaymış
+2. `set_active_credential_for_session`, `set_active_vault_key_for_session`, `clear_session` — hiç kullanılmıyor
+3. `ConnectionGate::in_flight`, `capacity` — hiç kullanılmıyor
+
+Beş metot "ölü" görünüyor ama **hepsi `#[cfg(test)]` modüllerinde kullanılıyor** (credential_handler `mod tests` :445, kullanım :649+; native_messaging `mod tests` :1277, kullanım :1289+). Yani test yardımcıları; `#[cfg(test)]` ile işaretledim, silmedim — testler gerçek tipe karşı assert etmeye devam etsin.
+
+**Burada dürüst olmam gereken bir nokta var:** rapor "clippy tabanı korundu" diyor ve bu doğru, ama **tabanın kendisi CI'yı kırmızı bırakıyordu.** "Değiştirmedim" ile "CI yeşil" aynı şey değil. `-D warnings`'ı yerelde de çalıştırmam gerekirdi; CI'nin gerçek komutunu çalıştırmak refleks olmalı.
+
+Bir de `#[cfg(test)]` işaretlerken bir gözlem: **`clear_session`'ı hiçbir production komutu çağırmıyor.** Renderer'da "kasayı kilitle" komutu bunu çağırmalı. Bu bir lint meselesi değil, kilitleme yolunda gerçek bir soru — dokunmadım, sadece kayda geçirdim.
+
+### 2. Android lint hiç çalışamıyordu — ve kapısı "bağlı" diyordu
+
+Bu, sezginin üstünde bir bulgu. Adım `npm run android:lint` idi, o da `gradlew.bat` çağırıyordu:
+
+```json
+"android:lint": "cd src-tauri/gen/android && gradlew.bat :app:lintArmDebug --console=plain"
+```
+
+`security` işi `ubuntu-latest`'te çalışıyor. **`gradlew.bat` Windows batch sarmalayıcısı** — Linux'ta hiç çalışamaz. POSIX `gradlew` hemen yanında duruyor (5951 bayt).
+
+Daha kötüsü ikinci bir bağımsız sebep: `local.properties` **gitignore'lu**, ve geliştirici makinedeki kopyası bir Windows SDK yolu içeriyor (`sdk.dir=C\:/Users/hrn21/...`). CI'da hiç oluşmuyor, `ANDROID_HOME` da ayarlanmıyor. Yani Gradle SDK'yı çözemiyor.
+
+**K-1'in kendi kapısı bunu kaçırdı.** `checkLintIsWired()` yalnızca üç şeye bakıyordu: script var mı, "lint" kelimesi geçiyor mu, `ci.yml` içinde `android:lint` geçiyor mu. Yani **kablolamayı** doğruluyordu, **çalışabilirliği** değil. Adım üç gündür "bağlı" diye yeşilken hiç lint çalıştırmamış.
+
+Bu, raporun kendi dersinin ikinci kez uygulanması: "bağlanmayan kapı zamanla düşer" — ama burada daha kötüsü, kapı **bağlıydı ve yine de ölüydü.**
+
+#### Düzeltme
+
+- CI adımı artık `./gradlew` kullanıyor, `working-directory` ile.
+- `setup-java` (Temurin 17) ve `ANDROID_HOME`'dan `local.properties` yazan adım eklendi.
+- Kapı artık varlığı değil **işlevi** denetliyor: POSIX wrapper, `gradlew.bat` yok, SDK çözülebilir.
+
+**Kapının kendisine de dokunmak gerekti.** İlk yazımda `ci.yml` içindeki açıklama yorumumun geçen `gradlew.bat` kelimesi kapıyı tetikledi — yani **hatayı belgeleyen kişiyi cezalandıran** bir kapı. Yorumlar eşleştirmeden önce atılıyor.
+
+Ayrıca kapsamı daralttım: `package.json`'daki `android:lint` scripti `gradlew.bat` çağırabilir, o **yerel bir kolaylık** ve repo Windows'ta geliştiriliyor. Kusur script değil, **CI adımıydı.** Çalışan bir script'i bir lint kuralına uydurmak, gerçek hatayı gizlemek olurdu.
+
+İki mutasyon, ikisi de yakalandı: CI adımı `gradlew.bat`'a döndü → 2 ihlal; SDK adımı silindi → 1 ihlal.
+
+---
+
+### Doğrulama
+
+| Kontrol | Sonuç |
+|---|---|
+| `cargo clippy --all-targets -- -D warnings` | ✅ **exit 0** (CI'nin birebir komutu) |
+| `cargo test --lib` | ✅ 68 / 68 |
+| `npm run security:android-autofill-boundary` | ✅ 20 kontrol PASS |
+| `npm run test:unit` | ✅ 2182 / 2182 |
+| `npm run typecheck` / `lint` | ✅ 0 hata, 23 uyarı |
+| `npm run build` / `test:fuzz` | ✅ / 37 |
+| 8 güvenlik kapısı | ✅ hepsi PASS |
+| `ci.yml` YAML | ✅ geçerli |
+
+---
+
 ## 2. Mimari Özeti
 
 ```

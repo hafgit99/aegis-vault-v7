@@ -418,10 +418,17 @@ impl ConnectionGate {
     }
 
     /// Connections currently being handled.
+    ///
+    /// `cfg(test)`: these two are observability helpers for the Y-18 concurrency
+    /// tests. Production code only ever calls `try_acquire` and lets the slot's
+    /// `Drop` release -- which is the property the tests exist to prove, so
+    /// reading the counter from production would weaken what they check.
+    #[cfg(test)]
     pub fn in_flight(&self) -> usize {
         self.active.lock().map(|guard| *guard).unwrap_or(0)
     }
 
+    #[cfg(test)]
     pub fn capacity(&self) -> usize {
         self.capacity
     }

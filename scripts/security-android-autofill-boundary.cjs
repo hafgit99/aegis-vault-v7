@@ -581,10 +581,35 @@ function checkLintIsWired() {
   } else if (!/lint/i.test(scripts['android:lint'])) {
     fail('package.json: "android:lint" must actually invoke the Android linter');
   }
+  // Note: `android:lint` is allowed to keep calling gradlew.bat. It is a local
+  // convenience script and the repository is developed on Windows; the defect
+  // was never the script, it was the *CI job* invoking it on Linux.
 
-  const ciPath = path.join(rootDir, '.github', 'workflows', 'ci.yml');
-  if (!/android:lint/.test(fs.readFileSync(ciPath, 'utf8'))) {
+  const ciRaw = fs.readFileSync(path.join(rootDir, '.github', 'workflows', 'ci.yml'), 'utf8');
+  // Comments are stripped before matching. A gate that greps raw text punishes
+  // the person who writes down what went wrong, which is the opposite of what a
+  // gate is for.
+  const ci = ciRaw
+    .split('\n')
+    .filter((line) => !/^\s*#/.test(line))
+    .join('\n');
+
+  // Presence was the old test, and it is why this gate was green for a broken
+  // step. Assert the things that would actually have caught it: the linter is
+  // invoked with a wrapper that works on Linux, and the SDK is resolvable.
+  const invokesLinter = /android:lint/.test(ci) || /gradlew[^\n]*lintArmDebug/.test(ci);
+  if (!invokesLinter) {
     fail('ci.yml: Android lint must run in CI, otherwise these errors return unseen');
+  }
+
+  if (/gradlew\.bat/.test(ci)) {
+    fail('ci.yml: the Android lint step must not use gradlew.bat on a Linux runner');
+  }
+
+  if (!/local\.properties|sdk\.dir/.test(ci)) {
+    fail(
+      'ci.yml: the Android lint step needs a resolvable SDK — write src-tauri/gen/android/local.properties or set sdk.dir. That file is gitignored, so without this Gradle cannot find the SDK and the step fails before linting anything',
+    );
   }
 
   const manifestPath = path.join(

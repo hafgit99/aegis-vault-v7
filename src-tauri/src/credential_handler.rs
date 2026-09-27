@@ -53,8 +53,8 @@ impl RustArgon2idOptions {
      * for four billion iterations to twenty would hand the caller a key derived
      * under parameters it did not ask for, while reporting success — a subtler
      * and harder-to-debug failure than an explicit refusal. Every caller in this
-    /// codebase uses values far inside the bounds, so nothing legitimate is
-    /// rejected.
+     * codebase uses values far inside the bounds, so nothing legitimate is
+     * rejected.
      */
     fn to_params(&self) -> Result<argon2::Params, String> {
         let mem = clamp_or_reject(
@@ -184,13 +184,19 @@ impl CredentialSession {
 
     /// Establishes the credential half of a session. Used by `open_rust_session`
     /// and by the session-gate tests.
+    ///
+    /// `cfg(test)`: the session-gate tests need to drive the state directly, and
+    /// no production caller does -- `open_rust_session` sets it inline. Marked
+    /// rather than deleted so the tests keep asserting against the real type.
+    #[cfg(test)]
     pub fn set_active_credential_for_session(&self, password: &str) -> Result<(), String> {
         let mut state = self.state.lock().map_err(|e| e.to_string())?;
         state.active_credential = Some(password.as_bytes().to_vec());
         Ok(())
     }
 
-    /// Establishes the vault-key half of a session.
+    /// Establishes the vault-key half of a session. `cfg(test)`, see above.
+    #[cfg(test)]
     pub fn set_active_vault_key_for_session(&self, key: Vec<u8>) -> Result<(), String> {
         let mut state = self.state.lock().map_err(|e| e.to_string())?;
         state.active_vault_key = Some(key);
@@ -198,6 +204,12 @@ impl CredentialSession {
     }
 
     /// Revokes the session. After this the gate must refuse again.
+    ///
+    /// `cfg(test)`: see above. Worth flagging for a follow-up -- a renderer
+    /// command that locks the vault ought to call this, and today none does.
+    /// That is a real question about the lock path, not a lint matter, so it is
+    /// recorded rather than "fixed" here.
+    #[cfg(test)]
     pub fn clear_session(&self) {
         if let Ok(mut state) = self.state.lock() {
             state.clear();
