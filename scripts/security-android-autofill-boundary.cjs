@@ -629,6 +629,22 @@ function checkLintIsWired() {
   // convenience script and the repository is developed on Windows; the defect
   // was never the script, it was the *CI job* invoking it on Linux.
 
+  // The glue generator has to exist as a real file, not just as a mention in the
+  // workflow. A gate that greps ci.yml for `android:gradle-glue` would happily
+  // pass while the script it names had been deleted — the same
+  // presence-is-not-workability mistake this function already made once.
+  const glueScript = scripts['android:gradle-glue'];
+  if (!glueScript) {
+    fail('package.json: an "android:gradle-glue" script must exist — a bare ./gradlew cannot configure the project without the Tauri Gradle glue');
+  } else {
+    const gluePath = path.join(rootDir, glueScript.replace(/^node\s+/, ''));
+    if (!fs.existsSync(gluePath)) {
+      fail(`package.json: "android:gradle-glue" runs ${glueScript}, but ${glueScript.replace(/^node\s+/, '')} does not exist`);
+    } else {
+      pass('the Gradle glue generator script exists');
+    }
+  }
+
   const ciRaw = fs.readFileSync(path.join(rootDir, '.github', 'workflows', 'ci.yml'), 'utf8');
   const ci = stripYamlComments(ciRaw);
 
@@ -667,11 +683,16 @@ function checkLintIsWired() {
   //    must not be committed) and neither is tracked, so on a clean checkout
   //    Gradle fails at configuration time with "Could not read script" —
   //    before a single file is linted. The release workflow never hit this
-  //    because `tauri android build` generates the glue itself; a bare
+  //    because `tauri android build` writes the glue itself; a bare
   //    `./gradlew` invocation does not.
-  if (!/android:init|tauri\.settings\.gradle/.test(ci)) {
+  //
+  //    `tauri android init` is NOT accepted here. It is the obvious candidate
+  //    and it does not work: with both files deleted it reports success and
+  //    creates neither, because it only scaffolds a project that does not exist
+  //    yet. That was tried, and CI failed on exactly this.
+  if (!/android:gradle-glue|android-gradle-glue\.cjs/.test(ci)) {
     fail(
-      'ci.yml: the Android lint step must generate the Tauri Gradle glue first (`npm run android:init`). settings.gradle applies the gitignored tauri.settings.gradle and app/build.gradle.kts applies tauri.build.gradle.kts; on a clean checkout neither exists and Gradle aborts during configuration',
+      'ci.yml: the Android lint step must generate the Tauri Gradle glue first (`npm run android:gradle-glue`). settings.gradle applies the gitignored tauri.settings.gradle and app/build.gradle.kts applies tauri.build.gradle.kts; on a clean checkout neither exists and Gradle aborts during configuration. `tauri android init` does not fix this — it scaffolds a new project and writes neither file',
     );
   }
 

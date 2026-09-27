@@ -2402,6 +2402,46 @@ Ayrıca yorum temizleme yalnızca tam satır yorumlarını atıyordu; satır son
 
 **Yerelde lint'in gerçekten çalıştığını doğruladım** (soğuk cache ile 5–15 dk, sıcak cache ile 3 sn): `BUILD SUCCESSFUL`, 0 hata. Log `rustBuild*`/NDK task'larının **hiç** çalışmadığını gösteriyor — yani lint için NDK ve Rust Android target'ları gerekmiyor, sadece registry'nin dolu olması yeterli. `:app:lintArmDebug` görevi gerçek (RustPlugin `abi` flavor ekseni yaratıyor: `universal`, `arm64`, `arm`, `x86`, `x86_64`).
 
+#### 1.1.1 Push sonrası: `android:init` çözüm **yanlıştı**, CI kırmızı geldi
+
+Yukarıdaki düzeltmeyi push ettim, `android-lint` job'ı 44 saniyede düştü. Log tek cümle:
+
+```
+* Where: Settings file '.../src-tauri/gen/android/settings.gradle' line: 3
+> Could not read script '.../tauri.settings.gradle' as it does not exist.
+```
+
+`npm run android:init` adımı **başarıyla** yeşildi (10 sn) ve dosyayı yazmadı. Yerelde doğrulamamın neden yetmediği açık: o dosya bende zaten vardı, init de ona dokunmadı — yani "yarattığını" değil, **"bozmadığını"** kanıtlamışım. Üçüncü bir deneyle ayrıştırdım: iki dosyayı sildim, `android:init` çalıştırdım.
+
+```
+victory: Project generated successfully!
+tauri.settings.gradle: False
+tauri.build.gradle.kts: False
+```
+
+**`tauri android init` mevcut projede hiçbir şey üretmiyor.** Adı "Android hedefini başlat" dediği için aklına gelen ilk komut, ama init yalnızca *henüz olmayan* bir projeyi iskeletliyor; glue ise build/dev/run'ın yan yolu (`inject_tauri_settings`). Geriye üç komut kalıyor: `build`, `dev`, `run` — üçü de NDK ile Rust kütüphanesini üç Android ABI için derler. Yani "Kotlin'i lint et" işi için üç ABİ'lik native derleme.
+
+Bu, raporun ikinci kez aynı dersi verdiği yer: **doğru varsaydığım şeyi ölçmedim.** İlk seferinde "temiz checkout" dedim ama kontrol ettiğim şey temiz checkout değildi.
+
+**Çözüm: `scripts/android-gradle-glue.cjs`** — CLI'nin yazdığı iki dosyayı `Cargo.lock` + açılmış crate kaynaklarından üretiyor. Kuralı tahmin etmedim, **CLI'nin çıktısından okudum:**
+
+| crate | Gradle projesi | dizin |
+|---|---|---|
+| `tauri` | `:tauri-android` | `<crate>/mobile/android` |
+| `tauri-plugin-biometric` | `:tauri-plugin-biometric` | `<crate>/android` |
+
+İsimlendirme asimetrik ve crate düzeninden tahmin edilemiyor: çekirdek kütüphanenin modülü Tauri'nin kendi verdiği adla (`:tauri-android`, crate adı değil) çağrılıyor.
+
+`android/` dizini kuralı da gözlemden çıktı: `Cargo.toml` `tauri-plugin-log` ve `tauri-plugin-updater` bağımlılıklarını da içeriyor, ama CLI ikisini de dahil **etmiyor** — çünkü ikisi de Android kodu taşımıyor. Sadece `biometric` taşıyor. Yani "Android dizini olan crate'ler" kuralı CLI'nin davranışını birebir veriyor.
+
+Sürümler `Cargo.lock`'tan geliyor, hardcoded listeden değil: bu makinede registry'de `tauri-plugin-biometric-2.3.2` **ve** `2.3.3` var. (Bonus: eski `tauri.settings.gradle` 2.3.2'yi gösteriyordu, yani `Cargo.lock`'tan bayat kalmıştı; script 2.3.3'ü yazıyor.)
+
+**Drift riski kabul edildi, sessiz olamıyor:** Gelecekte Tauri üretilen dosyaya bir satır eklerse script bilmez. Bu durum **gürültülü** patlar — app modülü eksik sembol yüzünden derlenemez, lint kırmızıya döner. Sessizce daha az lint etme imkânı yok.
+
+Script'i yazarken iki hata kendi kendine yakalandı, ikisi de CLI'nin gerçek çıktısıyla karşılaştırma sayesinde: (a) `failExit` yalnızca `exitCode` atıyor, akışı **durdurmuyor** — yani guard'larım "hata" yazdıktan sonra dosyayı yazmaya devam ediyordu; (b) `:tauri` / `android/` — yukarıdaki asimetri. Yerel `BUILD SUCCESSFUL` ancak bundan sonra geldi.
+
+Kapıya da iki kontrol daha: glue adımı `android:gradle-glue` olmalı (`android:init` reddedilir, çünkü işe yaramıyor) ve **`android:gradle-glue.cjs` dosyası gerçekten var olmalı** — yoksa kapı ci.yml'deki isme güvenip yeşil kalırdı, yani aynı "varlık işlev değildir" hatasının ikinci tekrarı.
+
 #### 1.2 `clear_session`: yorum gerçeği ters söylüyordu
 
 Bir önceki düzeltmede `clear_session`'a `#[cfg(test)]` koyup üstüne "hiçbir production komutu çağırmıyor, renderer'ın kilitleme komutu bunu çağırmalı" notu düşmüştüm. **Üç ikisinden de doğru değildi:** `close_rust_session` (`credential_handler.rs:431`), `open_rust_session` (`:287`) ve `setup_rust_session` (`:338`) production'da `state.clear()` çağırıyor. Test-only sarmalayıcının kullanılmaması bir eksiklik değil; yorumu okuyan biri kasanın kilitlenmediğini sanardı.
@@ -2425,15 +2465,19 @@ Sarmalayıcıyı sildim, testi production yoluna (`state.clear()`) bağladım. T
 | 8 güvenlik kapısı | ✅ hepsi PASS |
 | `ci.yml` YAML | ✅ geçerli |
 | `./gradlew :app:lintArmDebug` (lokal) | ✅ `BUILD SUCCESSFUL`, 0 hata |
-| `npm run android:init` → `git status` | ✅ track edilmiş Android dosyasına dokunmuyor |
+| `npm run android:init` → glue üretiyor mu? | ❌ **üretmiyor** (dosyalar silinip çalıştırıldı) |
+| `npm run android:gradle-glue` → CLI çıktısıyla aynı mı? | ✅ bayt bayt (`biometric` sürümü 2.3.3, `Cargo.lock`'taki gerçek sürüm) |
+| `npm run android:gradle-glue` → sonra lint | ✅ `BUILD SUCCESSFUL` |
 
-**1.1 takibinin doğrulaması** — 5 mutasyonun 5'i de yakalandı:
+**1.1 takibinin doğrulaması** — 7 mutasyonun 7'si de yakalandı:
 
 | Mutasyon | Sonuç |
 |---|---|
 | `./gradlew` → `npm run android:lint` (önceki düzeltmenin geri alınması) | ✅ 1 ihlal |
 | `./gradlew` → `./gradlew.bat` | ✅ 1 ihlal |
-| `npm run android:init` adımı silindi | ✅ 1 ihlal |
+| glue adımı silindi | ✅ 1 ihlal |
+| glue adımı → `npm run android:init` (yanlış çözüm) | ✅ 1 ihlal |
+| `android-gradle-glue.cjs` silindi | ✅ 1 ihlal |
 | `java-version: '17'` → `'11'` | ✅ 1 ihlal |
 | SDK adımı (`local.properties` + `ANDROID_HOME` doğrulaması) silindi | ✅ 1 ihlal |
 | *ters yön*: satır sonu yorumuna `# NOT gradlew.bat` eklendi | ✅ **PASS** (yorum temizlendi) |

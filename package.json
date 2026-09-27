@@ -22,6 +22,7 @@
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build",
     "android:init": "tauri android init",
+    "android:gradle-glue": "node scripts/android-gradle-glue.cjs",
     "android:dev": "tauri android dev",
     "android:run": "tauri android run",
     "android:clean:jni": "node scripts/clean-android-jni.cjs",
