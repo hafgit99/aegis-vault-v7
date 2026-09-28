@@ -730,9 +730,52 @@ jobs:
           retention-days: 14
           path: release-local/sbom/*.json
 
+  verify-release-scripts:
+    name: Verify release scripts
+    needs: [plan]
+    # The alias staging step is shell, and shell in a workflow is only tested by
+    # a failing release. It failed three in a row: v7.0.12.0 published three of
+    # seven aliases (a `*-latest.*` glob cannot match `AegisVault7-`), v7.0.13.0
+    # died on a `test && append` under `set -e`, and v7.0.14.0 ran the test
+    # itself with bare `node` so vitest was missing.
+    #
+    # Its own job rather than a step in `publish`, because `publish` never runs
+    # `npm ci` -- it is deliberately a shell-only job, and its one node step
+    # (`generate-updater-manifest.cjs`) has no dependencies. Adding the test
+    # there meant it failed with "vitest: not found", which is the same class of
+    # error as the two before it: a release lost to the test harness rather than
+    # to the code. This job installs dependencies once, runs the check, and
+    # `publish` waits for it.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (SHA-pinned)
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.7 (SHA-pinned)
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Extracts the alias step's script from the workflow and runs it against a
+      # staged tree, so the shell under test is the shell that ships. Also
+      # asserts the publish wiring: that the publish step consumes the list
+      # rather than a glob, and that the aliases are staged before the checksum
+      # manifest is built.
+      - name: Verify release alias staging
+        run: npm run test:release
+
   publish:
     name: Sign and publish GitHub Release
-    needs: [plan, build-linux, build-macos, build-windows, build-android, build-extensions, generate-sbom]
+    needs: [plan, build-linux, build-macos, build-windows, build-android, build-extensions, generate-sbom, verify-release-scripts]
     # Same reasoning as generate-sbom: `always()` so a skipped optional platform
     # does not skip the release, plus explicit success checks so a *failed*
     # platform still blocks it. The difference between "skipped" and "failed" is
@@ -741,6 +784,7 @@ jobs:
       always() && !cancelled() &&
       needs.plan.result == 'success' &&
       needs.generate-sbom.result == 'success' &&
+      needs.verify-release-scripts.result == 'success' &&
       needs.build-linux.result == 'success' &&
       needs.build-android.result == 'success' &&
       needs.build-extensions.result == 'success' &&
@@ -916,22 +960,10 @@ jobs:
           echo "Prune + dedupe complete."
           find linux macos windows android extensions sbom updater -type f | wc -l
 
-      # The alias step below is shell, and shell in a workflow is only tested by
-      # a failing release. It cost two in a row: v7.0.12.0 published three of
-      # seven aliases because a `*-latest.*` glob cannot match `AegisVault7-`,
-      # and v7.0.13.0 died on a `test && append` under `set -e`. Both were green
-      # or benign from the outside.
-      #
-      # This runs the step's own script, extracted from this file, against a
-      # staged tree shaped like a real one, and asserts the list it hands to the
-      # publish step. It is a separate step from `test:unit` because it does
-      # not need a browser environment and does not belong to the app's test
-      # suite; it is a release-pipeline test.
-      - name: Verify release alias staging
-        run: npm run test:release
-
       - name: Stage version-less aliases for stable download URLs
         id: alias
+        # Verified by the verify-release-scripts job before this one starts; the
+        # step's own shell is the thing that test exercises.
         # Why this exists
         # -------------
         # The website links every download to a versioned path:
