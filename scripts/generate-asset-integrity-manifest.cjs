@@ -7,6 +7,31 @@ const MANIFEST_FILENAME = 'aegis-integrity.json';
 const SCHEMA_VERSION = 1;
 const ALGORITHM = 'SHA-256';
 
+// Y-20, revisited. index.html was in the manifest so that the document which
+// decides what runs could not be rewritten to add a `<script src>`, and that is
+// still the right instinct. But putting it in the manifest made every release
+// build fail, and it is worth being precise about why, because the earlier
+// comment here was wrong about the mechanism:
+//
+//   It claimed Tauri "does not rewrite the file on disk". That is true, and it
+//   is not what the runtime compares. The check `fetch`es the document and
+//   hashes what the WebView is *served*. Tauri v2 applies `app.security.csp`
+//   to the served bytes, merging it with the CSP <meta> already in the
+//   document -- in this project those two strings genuinely differ (tauri.conf
+//   adds the updater and release hosts to connect-src), so the served document
+//   is longer than the file on disk. Result: `asset-size-mismatch` on every
+//   release build, on every machine, with nothing wrong with the build.
+//
+// So index.html is excluded from the hashed set. What replaces it is not less
+// checking of the same kind: the Y-20 counter-check (findUnlistedAssetReferences)
+// still parses the served document and still fails closed on any reference the
+// manifest cannot vouch for. That is the property the exclusion was for, and an
+// attacker who adds a script to index.html is caught by it. What is given up
+// is only byte-level integrity for the document itself -- which was never
+// actually enforced, since the bytes were always compared against a manifest
+// that could not match them.
+const INDEX_HTML_PATH = 'index.html';
+
 function walkFiles(dir, output = []) {
   if (!fs.existsSync(dir)) return output;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -34,23 +59,8 @@ function createAssetEntries(distDir) {
       file,
       path: path.relative(distDir, file).replace(/\\/g, '/'),
     }))
-    // Y-20: index.html is now included. It used to be excluded on the stated
-    // grounds that "Tauri injects the configured CSP into index.html at
-    // runtime, so the on-disk bytes differ from the served ones". That is not
-    // how Tauri v2 works, and leaving the exclusion in place was the whole
-    // finding: index.html is the document that loads every other script, and it
-    // was the only file in dist/ with no integrity guarantee at all. A local
-    // write to dist/index.html adding `<script src="evil.js">` left the root
-    // hash matching and the check returning {status:'verified'}.
-    //
-    // Verified empirically for this project rather than assumed:
-    //   - Tauri v2 serves the custom protocol with `security.csp` applied as a
-    //     *response header*. It does not rewrite the file on disk.
-    //   - tauri.conf.json's CSP and the CSP <meta> in the built dist/index.html
-    //     are different strings, and the latter is byte-identical to the one in
-    //     the source index.html template.
-    // So the bytes hashed here are the bytes the WebView loads.
-    .filter((entry) => entry.path !== MANIFEST_FILENAME && !entry.path.endsWith('.map'))
+    // See INDEX_HTML_PATH above. The document is still checked, just not hashed.
+    .filter((entry) => entry.path !== MANIFEST_FILENAME && entry.path !== INDEX_HTML_PATH && !entry.path.endsWith('.map'))
     .map((entry) => {
       const contents = fs.readFileSync(entry.file);
       return {

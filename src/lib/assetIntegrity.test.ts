@@ -64,51 +64,49 @@ describe('runtime asset integrity', () => {
   });
 
   it('verifies the manifest root and every packaged asset', async () => {
-    // Y-20: index.html is part of the verified set now, so the happy path has to
-    // carry it. The document below references only `assets/index.js`, which is
-    // also in the manifest -- that is what the counter-check requires.
+    // index.html is not in the manifest (Tauri rewrites the served bytes), so
+    // it is fetched separately and only its references are checked.
     const indexHtml = new TextEncoder().encode(
       '<!doctype html><html><head><script type="module" src="/assets/index.js"></script></head><body></body></html>',
     );
     const script = new TextEncoder().encode('export {};');
-    const assets = [
-      { path: 'index.html', sha256: hash(indexHtml), size: indexHtml.byteLength },
-      { path: 'assets/index.js', sha256: hash(script), size: script.byteLength },
-    ];
+    const assets = [{ path: 'assets/index.js', sha256: hash(script), size: script.byteLength }];
     const rootSha256 = hash(canonicalAssetPayload(assets));
     const manifest = { schemaVersion: 1, algorithm: 'SHA-256', rootSha256, assets };
 
     invokeMock.mockResolvedValue({ ...manifest, production: true });
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(responseJson(manifest))
-      .mockResolvedValueOnce(responseBytes(indexHtml))
-      .mockResolvedValueOnce(responseBytes(script));
+      .mockResolvedValueOnce(responseBytes(script))
+      .mockResolvedValueOnce(responseBytes(indexHtml));
     vi.stubGlobal('fetch', fetchMock);
 
-    await expect(verifyRuntimeAssetIntegrity()).resolves.toEqual({ status: 'verified', assetCount: 2 });
-    expect(fetchMock).toHaveBeenNthCalledWith(2, './index.html', {
+    await expect(verifyRuntimeAssetIntegrity()).resolves.toEqual({ status: 'verified', assetCount: 1 });
+    expect(fetchMock).toHaveBeenNthCalledWith(2, './assets/index.js', {
       cache: 'no-store',
       credentials: 'same-origin',
     });
-    expect(fetchMock).toHaveBeenNthCalledWith(3, './assets/index.js', {
+    // The document is read last, and read but never hashed.
+    expect(fetchMock).toHaveBeenNthCalledWith(3, './index.html', {
       cache: 'no-store',
       credentials: 'same-origin',
     });
   });
 
-  it('fails closed when index.html is not covered by the manifest', async () => {
-    // Y-20. This is the exclusion being removed: with index.html outside the
-    // manifest, the document that decides what runs was the one unverified
-    // file in dist/, and a write to it added a script while the root hash still
-    // matched. Fails before any asset is fetched.
-    const script = new TextEncoder().encode('export {};');
-    const assets = [{ path: 'assets/index.js', sha256: hash(script), size: script.byteLength }];
+  it('fails closed when index.html is hashed into the manifest', async () => {
+    // The mirror image of the exclusion. If the generator's filter ever stops
+    // excluding index.html, the document would be in the hashed set and the
+    // counter-check below would reason about bytes that were never verified --
+    // worse than not checking it at all, because it would look checked.
+    const indexHtml = new TextEncoder().encode('<!doctype html><html><head></head></html>');
+    const assets = [{ path: 'index.html', sha256: hash(indexHtml), size: indexHtml.byteLength }];
     const manifest = {
       schemaVersion: 1,
       algorithm: 'SHA-256',
       rootSha256: hash(canonicalAssetPayload(assets)),
       assets,
     };
+
     invokeMock.mockResolvedValue({ ...manifest, production: true });
     const fetchMock = vi.fn().mockResolvedValueOnce(responseJson(manifest));
     vi.stubGlobal('fetch', fetchMock);
@@ -121,10 +119,12 @@ describe('runtime asset integrity', () => {
   });
 
   it('fails closed when the verified document references an unlisted script', async () => {
-    // The counter-check. Note the manifest, the native anchor and the *hashes*
-    // are all internally consistent here: this is not a tamper that a hash
-    // comparison would catch. It is the counter-check refusing a reference it
-    // cannot trace to a verified asset.
+    // The counter-check, and the reason index.html is still verified at all
+    // even though it is no longer hashed. Every hashed asset is untouched and
+    // the root matches: this is not a tamper a hash comparison would catch. The
+    // document asks for a file the manifest cannot vouch for, and that is the
+    // Y-20 attack -- so the exclusion traded a hash that could never match for
+    // a check that actually runs.
     const tamperedHtml = new TextEncoder().encode(
       '<!doctype html><html><head>'
       + '<script type="module" src="/assets/index.js"></script>'
@@ -132,10 +132,7 @@ describe('runtime asset integrity', () => {
       + '</head><body></body></html>',
     );
     const script = new TextEncoder().encode('export {};');
-    const assets = [
-      { path: 'index.html', sha256: hash(tamperedHtml), size: tamperedHtml.byteLength },
-      { path: 'assets/index.js', sha256: hash(script), size: script.byteLength },
-    ];
+    const assets = [{ path: 'assets/index.js', sha256: hash(script), size: script.byteLength }];
     const manifest = {
       schemaVersion: 1,
       algorithm: 'SHA-256',
@@ -145,8 +142,8 @@ describe('runtime asset integrity', () => {
     invokeMock.mockResolvedValue({ ...manifest, production: true });
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(responseJson(manifest))
-      .mockResolvedValueOnce(responseBytes(tamperedHtml))
-      .mockResolvedValueOnce(responseBytes(script));
+      .mockResolvedValueOnce(responseBytes(script))
+      .mockResolvedValueOnce(responseBytes(tamperedHtml));
     vi.stubGlobal('fetch', fetchMock);
 
     await expect(verifyRuntimeAssetIntegrity()).resolves.toEqual({
@@ -155,8 +152,32 @@ describe('runtime asset integrity', () => {
     });
   });
 
+  it('fails closed when the document cannot be read at all', async () => {
+    // No index.html means no counter-check is possible. Reporting `verified`
+    // here would be the silent pass this whole function exists to prevent.
+    const script = new TextEncoder().encode('export {};');
+    const assets = [{ path: 'assets/index.js', sha256: hash(script), size: script.byteLength }];
+    const manifest = {
+      schemaVersion: 1,
+      algorithm: 'SHA-256',
+      rootSha256: hash(canonicalAssetPayload(assets)),
+      assets,
+    };
+    invokeMock.mockResolvedValue({ ...manifest, production: true });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(responseJson(manifest))
+      .mockResolvedValueOnce(responseBytes(script))
+      .mockResolvedValueOnce({ ok: false, arrayBuffer: vi.fn() });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(verifyRuntimeAssetIntegrity()).resolves.toEqual({
+      status: 'failed',
+      reason: 'index-html-unavailable',
+    });
+  });
+
   it('fails closed for a manifest root mismatch', async () => {
-    const assets = [{ path: 'index.html', sha256: 'a'.repeat(64), size: 1 }];
+    const assets = [{ path: 'assets/index.js', sha256: 'a'.repeat(64), size: 1 }];
     const manifest = {
       schemaVersion: 1,
       algorithm: 'SHA-256',
@@ -172,7 +193,7 @@ describe('runtime asset integrity', () => {
   it('rejects a modified asset after the root is anchored', async () => {
     const expected = new TextEncoder().encode('expected');
     const modified = new TextEncoder().encode('modified');
-    const assets = [{ path: 'index.html', sha256: hash(expected), size: modified.byteLength }];
+    const assets = [{ path: 'assets/index.js', sha256: hash(expected), size: modified.byteLength }];
     const rootSha256 = hash(canonicalAssetPayload(assets));
     const manifest = { schemaVersion: 1, algorithm: 'SHA-256', rootSha256, assets };
     invokeMock.mockResolvedValue({ schemaVersion: 1, algorithm: 'SHA-256', rootSha256, production: true });
@@ -243,27 +264,29 @@ describe('Y-20 asset reference counter-check', () => {
   it('finds nothing unlisted in the real built document', () => {
     // Guards against the counter-check false-positiving on the actual build
     // shape: hashed filenames, a splash stylesheet and a modulepreload set.
-    // The paths below are copied from a real dist/index.html, and this test
-    // passed against a real `npm run build` as well.
+    // The paths below are copied from a real dist/index.html.
     const html = [
       '<!doctype html><html lang="tr" class="dark splash-root"><head>',
       '<link rel="icon" type="image/png" href="/assets/aegis-app-icon-zGEMGRK0.png">',
       '<link rel="stylesheet" href="/splash.css">',
-      '<script type="module" crossorigin src="/assets/index-By4Vtpet.js"></script>',
+      '<script type="module" crossorigin src="/assets/index-Cr3DG0Y1.js"></script>',
       '<link rel="modulepreload" crossorigin href="/assets/rolldown-runtime-DS2seoW7.js">',
       '<link rel="modulepreload" crossorigin href="/assets/react-vendor-DPx6u12k.js">',
-      '<link rel="stylesheet" crossorigin href="/assets/index-CVwmi6Ux.css">',
+      '<link rel="stylesheet" crossorigin href="/assets/index-Bzi1NMM1.css">',
       '</head><body><div id="root"></div></body></html>',
     ].join('');
 
+    // index.html is absent because it is no longer hashed. That is the real
+    // manifest shape -- a document never references itself, so nothing here
+    // changes for the document, but the list has to match what the generator
+    // actually emits or this test stops guarding anything.
     const manifestPaths = [
-      'index.html',
       'splash.css',
       'assets/aegis-app-icon-zGEMGRK0.png',
-      'assets/index-By4Vtpet.js',
+      'assets/index-Cr3DG0Y1.js',
       'assets/rolldown-runtime-DS2seoW7.js',
       'assets/react-vendor-DPx6u12k.js',
-      'assets/index-CVwmi6Ux.css',
+      'assets/index-Bzi1NMM1.css',
     ];
 
     expect(findUnlistedAssetReferences(manifestPaths, collectDocumentAssetReferences(html))).toEqual([]);

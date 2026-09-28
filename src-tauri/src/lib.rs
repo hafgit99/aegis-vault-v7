@@ -37,6 +37,34 @@ struct AssetIntegrityAnchor {
     production: bool,
 }
 
+/// Diagnostic file written by `record_asset_integrity_result`. Read this when
+/// the app reports an asset integrity failure in a release build.
+const ASSET_INTEGRITY_RESULT_FILENAME: &str = "aegis_asset_integrity_result.txt";
+
+/// Reduces a caller-supplied reason code to a safe, bounded token.
+///
+/// `reason` reaches this from the webview, so it is not trusted as free-form
+/// text: a diagnostic file that a webview script can write arbitrary bytes into
+/// is a way to smuggle content onto disk. Only the lowercase code characters the
+/// real reasons use (`manifest-unavailable`, `asset-hash-mismatch`, ...) survive,
+/// and the result is length-capped.
+///
+/// Returns `None` when nothing usable is left, so the caller can refuse to
+/// write rather than write an empty file that reads like a verdict.
+fn sanitize_asset_integrity_reason(reason: &str) -> Option<String> {
+    const MAX_REASON_LEN: usize = 64;
+    let sanitized: String = reason
+        .chars()
+        .filter(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || *c == '-')
+        .take(MAX_REASON_LEN)
+        .collect();
+    if sanitized.is_empty() {
+        None
+    } else {
+        Some(sanitized)
+    }
+}
+
 #[tauri::command]
 fn get_asset_integrity_anchor() -> AssetIntegrityAnchor {
     AssetIntegrityAnchor {
@@ -50,6 +78,39 @@ fn get_asset_integrity_anchor() -> AssetIntegrityAnchor {
 #[tauri::command]
 fn restart_app(app_handle: AppHandle) {
     app_handle.restart();
+}
+
+/// Records the outcome of the runtime asset-integrity check next to the app's
+/// other diagnostic files.
+///
+/// `verifyRuntimeAssetIntegrity` returns a `reason` for every failure, but it
+/// reaches the developer only through `console.error`. A release build has no
+/// devtools, so a real user reporting "Application Integrity Warning" cannot
+/// say *which* check failed, and neither can we: the control is fail-closed by
+/// design, and the string that would explain it is discarded.
+///
+/// Deliberately not gated on `CredentialSession` and deliberately not treated
+/// as vault data. The reason codes are a fixed enum the frontend chooses from
+/// (`manifest-unavailable`, `asset-hash-mismatch`, ...) — never anything
+/// derived from vault contents or user input — so writing them needs no
+/// unlocked session and discloses nothing.
+///
+/// Overwrites rather than appends: there is one verdict per run, and a log that
+/// accumulates would be harder to read than the thing it replaced.
+#[tauri::command]
+fn record_asset_integrity_result(reason: String) -> Result<(), String> {
+    let Some(sanitized) = sanitize_asset_integrity_reason(&reason) else {
+        return Err("refusing to record an empty asset integrity reason".to_string());
+    };
+
+    let Some(app_dir) = native_messaging::get_app_data_dir() else {
+        return Err("app data directory is unavailable".to_string());
+    };
+    let _ = fs::create_dir_all(&app_dir);
+
+    let path = app_dir.join(ASSET_INTEGRITY_RESULT_FILENAME);
+    fs::write(&path, format!("{sanitized}\n"))
+        .map_err(|error| format!("failed to record asset integrity result: {error}"))
 }
 
 #[cfg(target_os = "windows")]
@@ -886,6 +947,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             get_asset_integrity_anchor,
+            record_asset_integrity_result,
             read_vault_database,
             write_vault_database,
             reset_vault_database,
@@ -1145,5 +1207,108 @@ mod tests {
         assert_eq!(contents, "old vault contents");
 
         fs::remove_dir_all(&dir).expect("test directory should be removed");
+    }
+
+    #[test]
+    fn sanitize_asset_integrity_reason_keeps_every_real_reason_intact() {
+        // The whole point of the diagnostic is to survive being read back, so
+        // every reason the frontend can produce has to come out unchanged.
+        for reason in [
+            "debug-build",
+            "browser-runtime",
+            "android-signed-package",
+            "native-anchor-unavailable",
+            "native-anchor-invalid",
+            "manifest-unavailable",
+            "manifest-invalid",
+            "index-html-unlisted",
+            "manifest-root-mismatch",
+            "asset-unavailable",
+            "asset-size-mismatch",
+            "asset-hash-mismatch",
+            "asset-verification-failed",
+            "index-html-unverified",
+            "unlisted-asset-reference",
+            "asset-integrity-unverifiable",
+        ] {
+            assert_eq!(
+                sanitize_asset_integrity_reason(reason).as_deref(),
+                Some(reason),
+                "reason {reason} should survive sanitisation unchanged"
+            );
+        }
+    }
+
+    #[test]
+    fn sanitize_asset_integrity_reason_strips_anything_that_is_not_a_code_character() {
+        // `reason` comes from the webview, so this is the boundary that stops a
+        // script from writing arbitrary content into a file on disk.
+        assert_eq!(
+            sanitize_asset_integrity_reason("asset-hash-mismatch\n../../evil").as_deref(),
+            Some("asset-hash-mismatchevil")
+        );
+        assert_eq!(
+            sanitize_asset_integrity_reason("  spaces  and\ttabs\n").as_deref(),
+            Some("spacesandtabs")
+        );
+        assert_eq!(
+            sanitize_asset_integrity_reason("drop\r\ntable").as_deref(),
+            Some("droptable")
+        );
+        // Uppercase is dropped rather than lowercased: the filter is a
+        // whitelist, not a transform, so `Reason-With-Case` loses its `R`, `W`
+        // and `C`. The real reasons are all lowercase, so nothing is lost in
+        // practice, and lowercasing would make the function accept shapes the
+        // reason codes do not have.
+        assert_eq!(
+            sanitize_asset_integrity_reason("Reason-With-Case").as_deref(),
+            Some("eason-ith-ase")
+        );
+    }
+
+    #[test]
+    fn sanitize_asset_integrity_reason_rejects_input_with_nothing_to_record() {
+        // Writing an empty file would be worse than not writing: it would read
+        // as a verdict on a run that never happened.
+        // `<script>` is *not* here: the filter keeps the letters and drops the
+        // angle brackets, so it records "script". That is fine for a one-line
+        // diagnostic in a fixed location — the file is never rendered as HTML
+        // and never used as a path — and pretending otherwise here would assert
+        // a guarantee the function does not make.
+        for reason in ["", "   ", "\n\r\t", "//////", "..\\..\\..", "!!!", "..."] {
+            assert_eq!(
+                sanitize_asset_integrity_reason(reason),
+                None,
+                "reason {reason:?} should be refused rather than recorded as empty"
+            );
+        }
+    }
+
+    #[test]
+    fn sanitize_asset_integrity_reason_neutralises_a_traversal_attempt() {
+        // A path is not a reason code, but the filter is a character whitelist
+        // rather than a lookup, so the separators are dropped instead of the
+        // input being rejected. Worth pinning: the result must not be usable as
+        // a path, whatever the caller sent.
+        assert_eq!(
+            sanitize_asset_integrity_reason("../../etc/passwd").as_deref(),
+            Some("etcpasswd")
+        );
+        assert_eq!(
+            sanitize_asset_integrity_reason("..\\..\\Windows\\System32").as_deref(),
+            Some("indowsystem32")
+        );
+    }
+
+    #[test]
+    fn sanitize_asset_integrity_reason_caps_the_length() {
+        let long = "a".repeat(500);
+        let sanitized =
+            sanitize_asset_integrity_reason(&long).expect("a long code is still usable");
+        assert_eq!(
+            sanitized.len(),
+            64,
+            "recorded reason should be length-capped"
+        );
     }
 }

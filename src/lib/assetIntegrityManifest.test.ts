@@ -40,7 +40,7 @@ describe('asset integrity manifest generator', () => {
     expect(buildIntegrityManifest([b, a]).rootSha256).toMatch(/^[a-f0-9]{64}$/);
   });
 
-  it('generates and validates static production assets without self-hashing the manifest', () => {
+  it('excludes index.html because Tauri rewrites the served bytes', () => {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'aegis-integrity-'));
     temporaryDirectories.push(directory);
     fs.mkdirSync(path.join(directory, 'assets'));
@@ -50,19 +50,22 @@ describe('asset integrity manifest generator', () => {
     const { manifest, manifestPath } = generateIntegrityManifest(directory);
 
     expect(fs.existsSync(manifestPath)).toBe(true);
-    // Y-20: index.html is included. It used to be filtered out, which left the
-    // document that loads every other script as the one unhashed file in dist/.
+    // index.html is out of the hashed set because Tauri merges
+    // `app.security.csp` into the served document, so the bytes the runtime
+    // `fetch`es are not the bytes that were built. Hashing it made every
+    // release build fail with `asset-size-mismatch`. The document is still
+    // checked at runtime, by the reference counter-check.
     expect(manifest.assets.map((asset: { path: string }) => asset.path).sort()).toEqual([
       'assets/index.js',
-      'index.html',
     ]);
     expect(validateIntegrityManifest(manifest, directory)).toEqual([]);
   });
 
-  it('catches a script injected into index.html', async () => {
-    // Y-20: the actual attack. Every other asset is untouched, so the root hash
-    // of a manifest that excluded index.html still matched and the runtime check
-    // returned {status:'verified'} while attacker JS was loading.
+  it('does not detect an injected script via the root hash, because the document is not hashed', () => {
+    // The honest statement of what the manifest no longer does. Y-20 removed
+    // this hash, and pretending otherwise here would assert a guarantee the
+    // code no longer makes. Catching this is the runtime counter-check's job,
+    // and this is the shape of the attack it has to catch.
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'aegis-integrity-'));
     temporaryDirectories.push(directory);
     fs.mkdirSync(path.join(directory, 'assets'));
@@ -72,16 +75,15 @@ describe('asset integrity manifest generator', () => {
     );
     fs.writeFileSync(path.join(directory, 'assets', 'index.js'), 'export {};');
     const { manifest } = generateIntegrityManifest(directory);
-    expect(validateIntegrityManifest(manifest, directory)).toEqual([]);
 
     fs.writeFileSync(
       path.join(directory, 'index.html'),
       '<script type="module" src="/assets/index.js"></script><script src="evil.js"></script>',
     );
 
-    expect(validateIntegrityManifest(manifest, directory)).toContain(
-      'integrity manifest root does not match dist assets',
-    );
+    // Every hashed asset is untouched, so the root still matches. This is
+    // exactly the gap the runtime reference check covers.
+    expect(validateIntegrityManifest(manifest, directory)).toEqual([]);
   });
 
   it('still excludes the manifest itself and source maps', () => {
@@ -94,10 +96,11 @@ describe('asset integrity manifest generator', () => {
     const { manifest } = generateIntegrityManifest(directory);
 
     // The over-correction guard for the filter: "include everything" would make
-    // the manifest hash itself, which can never verify.
+    // the manifest hash itself, which can never verify. index.html is excluded
+    // for the separate reason documented above, and app.js.map because sourcemaps
+    // are not part of what the app loads.
     expect(manifest.assets.map((asset: { path: string }) => asset.path).sort()).toEqual([
       'app.js',
-      'index.html',
     ]);
   });
 
