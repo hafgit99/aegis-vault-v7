@@ -989,8 +989,16 @@ jobs:
             # lowercase extension ones were found.
             staged_files+=("${alias}")
             for ext in sig sigstore.json pem; do
-              [ -f "${alias}.${ext}" ] && staged_files+=("${alias}.${ext}")
+              # `if`, not `&&`: with `set -e` a trailing `[ -f ] && ...` whose
+              # test fails makes the loop's last command return non-zero, and the
+              # function exits there. The .deb alias has a .sig and no
+              # .sigstore.json, so the second iteration is a failing test and the
+              # step died one line after the first "aliased" message.
+              if [ -f "${alias}.${ext}" ]; then
+                staged_files+=("${alias}.${ext}")
+              fi
             done
+            return 0
           }
 
           link_alias 'AegisVault7-latest-linux-amd64.deb' 'AegisVault7-*-linux-amd64.deb'
