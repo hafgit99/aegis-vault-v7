@@ -151,6 +151,31 @@ if (shouldSign) {
   };
 
   run('npx', signArgs, { env: signEnv });
+
+  // `web-ext sign` has no --filename (that flag is `build`-only), so AMO names
+  // the download from the add-on slug: aegis_vault_7-<version>.xpi. Left alone,
+  // the unsigned xpiName from the packaging step would sit next to it and both
+  // would be uploaded and cosign-signed. Replace the unsigned one.
+  const signedXpis = fs
+    .readdirSync(artifactsDir)
+    .filter((name) => name.endsWith('.xpi') && name !== xpiName);
+
+  if (signedXpis.length === 0) {
+    console.error(`AMO signing reported success but no signed .xpi appeared in ${artifactsDir}`);
+    process.exit(1);
+  }
+  if (signedXpis.length > 1) {
+    console.error(`Expected exactly one signed .xpi, found: ${signedXpis.join(', ')}`);
+    process.exit(1);
+  }
+
+  const signedPath = path.join(artifactsDir, signedXpis[0]);
+  const unsignedPath = path.join(artifactsDir, xpiName);
+  fs.rmSync(unsignedPath, { force: true });
+  if (signedXpis[0] !== xpiName) {
+    fs.renameSync(signedPath, unsignedPath);
+  }
+  console.log(`AMO-signed xpi installed as ${xpiName}`);
 } else {
   run('npx', [
     'web-ext',

@@ -141,7 +141,28 @@ jobs:
         run: npm run desktop:release:signing:report -- --platform linux --dir release-local/linux --require-signed
 
       - name: Desktop release gate
-        run: npm run desktop:release:gate -- --platform linux
+        # Verify, do not rebuild.
+        #
+        # This gate also runs a Tauri desktop build and
+        # collect-release-artifacts.cjs, and the collect script begins with
+        # ensureCleanDir(), which is an rm -rf of its output directory. Run after
+        # the workflow's own collect steps, it therefore deleted what those steps
+        # had just staged:
+        #
+        #   - Linux: the Tauri minisign "*.sig" updater artifacts. This step's
+        #     build has no TAURI_SIGNING_PRIVATE_KEY in its environment, so tauri
+        #     skips updater artifact generation, and the collect step does not
+        #     copy signatures itself. `publish` then found no signed bundle and the
+        #     manifest generator refused to publish an updater offering nothing.
+        #   - Windows/macOS: worse, and quieter. The signing-report gate above had
+        #     already verified the *signed* artifacts; this step then replaced them
+        #     with the output of an unsigned rebuild, and the upload sent those.
+        #
+        # Building, collecting and reporting signatures are this workflow's job
+        # and all three already ran above, so the gate is only asked to check the
+        # tree. Locally the gate still does the full sequence, which is what a
+        # developer running a release from their own machine wants.
+        run: npm run desktop:release:gate -- --platform linux --skip-desktop-build --skip-collect --skip-signing-report
       - name: Upload Linux release artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
         with:
@@ -310,7 +331,12 @@ jobs:
         run: npm run desktop:release:signing:report -- --platform macos --dir release-local/macos --require-signed
 
       - name: Desktop release gate
-        run: npm run desktop:release:gate -- --platform macos
+        # Verify, do not rebuild. See the note on the same step in build-linux:
+        # this gate's collect step starts with an rm -rf of release-local/macos,
+        # so running it here would replace the Developer ID signed and notarized
+        # artifacts with the output of an unsigned rebuild, after the
+        # signing-report gate had already verified the real ones.
+        run: npm run desktop:release:gate -- --platform macos --skip-desktop-build --skip-collect --skip-signing-report
       - name: Upload macOS release artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
         with:
@@ -430,7 +456,12 @@ jobs:
         run: npm run desktop:release:signing:report -- --platform windows --dir release-local/windows --require-signed
 
       - name: Desktop release gate
-        run: npm run desktop:release:gate -- --platform windows
+        # Verify, do not rebuild. See the note on the same step in build-linux:
+        # this gate's collect step starts with an rm -rf of release-local/windows,
+        # so running it here would replace the Authenticode-signed artifacts with
+        # the output of an unsigned rebuild, after the signing-report gate had
+        # already verified the real ones.
+        run: npm run desktop:release:gate -- --platform windows --skip-desktop-build --skip-collect --skip-signing-report
       - name: Upload Windows release artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
         with:
@@ -567,15 +598,56 @@ jobs:
         run: npm run package:firefox:xpi -- --skip-build
 
       - name: Sign Firefox xpi with Mozilla AMO (optional)
+        # Optional means optional.
+        #
+        # This step failed the whole release twice, for reasons that have nothing
+        # to do with the code being shipped:
+        #
+        #   1. AMO accepts a given add-on version once. Re-running a tag after any
+        #      later failure re-submits the same version and is rejected, so each
+        #      attempt burned a version and the next attempt needed a new one.
+        #   2. Any AMO outage or credential problem did the same.
+        #
+        # The unsigned xpi is already built and staged by the previous step, so
+        # the degradation is exactly the one this step's own message describes
+        # and the one the no-credentials branch has always taken: publish it
+        # unsigned. What must not happen is a third-party signing service
+        # deciding that no release ships today.
+        #
+        # The build job still fails if the *packaging* fails; only the signature
+        # is best-effort.
+        #
+        # `continue-on-error` makes the job green either way, so the outcome is
+        # written to a marker the publish job reads and surfaces. Green must not
+        # mean "signed by AMO" and "published unsigned" indistinguishably.
+        continue-on-error: true
         env:
           WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
           WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
           AMO_CHANNEL: unlisted
         run: |
+          set -euo pipefail
+          mkdir -p release-local/firefox
+          XPI="release-local/firefox/$(node -p "'aegis-vault-7-firefox-v' + require('./package.json').version + '.xpi'")"
+          echo "signed-by-amo=true" > release-local/firefox/AMO_SIGNING_STATUS.txt
           if [ -n "$WEB_EXT_API_KEY" ] && [ -n "$WEB_EXT_API_SECRET" ]; then
-            npm run sign:firefox:xpi -- --skip-build
+            if npm run sign:firefox:xpi -- --skip-build; then
+              # Guard against a truncated xpi: web-ext exiting 0 does not prove
+              # the download finished, and `if-no-files-found` cannot see inside
+              # a file that exists.
+              if ! unzip -tqq "$XPI" >/dev/null 2>&1; then
+                echo "::error::AMO-reported success but ${XPI} is not a valid zip archive"
+                echo "signed-by-amo=false" > release-local/firefox/AMO_SIGNING_STATUS.txt
+                exit 1
+              fi
+              echo "::notice::Firefox xpi signed by Mozilla AMO."
+            else
+              echo "::warning::AMO signing failed — publishing the unsigned xpi"
+              echo "signed-by-amo=false" > release-local/firefox/AMO_SIGNING_STATUS.txt
+            fi
           else
-            echo "AMO credentials (WEB_EXT_API_KEY / WEB_EXT_API_SECRET) not configured — publishing unsigned xpi only."
+            echo "::warning::AMO credentials (WEB_EXT_API_KEY / WEB_EXT_API_SECRET) not configured — publishing unsigned xpi only."
+            echo "signed-by-amo=false" > release-local/firefox/AMO_SIGNING_STATUS.txt
           fi
 
       - name: Package Safari WebExtension bundle
@@ -786,6 +858,26 @@ jobs:
             fi
           done
 
+      # The extensions job is green whether AMO signed the xpi or not, so the
+      # distinction has to be re-established here, on the artifact that is
+      # actually about to be published. Read before the prune step, which
+      # deletes the marker along with the other evidence files.
+      - name: Report Firefox extension signing status
+        run: |
+          set -euo pipefail
+          status_file="release-local/extensions/firefox/AMO_SIGNING_STATUS.txt"
+          if [ ! -f "$status_file" ]; then
+            echo "::warning::No AMO signing marker found — treating the Firefox xpi as unsigned."
+            echo "signed-by-amo=false" >> "$GITHUB_STEP_SUMMARY"
+            echo "The Firefox xpi in this release is UNSIGNED (no signing status marker was produced)."
+          elif grep -q '^signed-by-amo=true$' "$status_file"; then
+            echo "::notice::Firefox xpi was signed by Mozilla AMO."
+            echo "- Firefox xpi: signed by Mozilla AMO." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::The Firefox xpi in this release is UNSIGNED."
+            echo "- Firefox xpi: **UNSIGNED** (Mozilla AMO signing did not complete) — install will show an unsigned-addon warning." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Prune non-distributable files and deduplicate basenames
         run: |
           cd release-local
@@ -796,24 +888,28 @@ jobs:
           #    evidence copy) are superseded by the single global manifest generated
           #    in the next step — keeping them causes a basename collision with
           #    release-local/SHA256SUMS.txt ("update-a-release-asset: Not Found").
-          prune_names='README.md DESKTOP_MANUAL_SMOKE_CHECKLIST.md metadata.json Info.plist CodeResources icon.icns aegis-vault-v7 control.tar.gz data.tar.gz manifest.json SHA256SUMS.txt'
+          # DESKTOP_SIGNATURES.md: the per-platform signing report is an evidence
+          # file, not a distributable. It was missing from this list, so it
+          # survived the prune and the cosign step below tried to sign it (and
+          # publish it) as if it were a release artifact.
+          prune_names='README.md DESKTOP_MANUAL_SMOKE_CHECKLIST.md DESKTOP_SIGNATURES.md AMO_SIGNING_STATUS.txt metadata.json Info.plist CodeResources icon.icns aegis-vault-v7 control.tar.gz data.tar.gz manifest.json SHA256SUMS.txt'
           for name in $prune_names; do
             find linux macos windows android extensions sbom updater -type f \( \
-              -name "$name" -o -name "$name.sig" -o -name "$name.pem" \) -delete 2>/dev/null || true
+              -name "$name" -o -name "$name.sig" -o -name "$name.pem" -o -name "$name.sigstore.json" \) -delete 2>/dev/null || true
           done
           # 2) Deduplicate basenames across staging dirs: keep first (sorted), drop
           #    later copies together with their signatures.
-          dupes=$(find linux macos windows android extensions sbom updater -type f ! -name '*.sig' ! -name '*.pem' -printf '%f\n' | sort | uniq -d)
+          dupes=$(find linux macos windows android extensions sbom updater -type f ! -name '*.sig' ! -name '*.pem' ! -name '*.sigstore.json' -printf '%f\n' | sort | uniq -d)
           for dup in $dupes; do
             first=1
             while IFS= read -r f; do
               if [ "$first" = "1" ]; then first=0; continue; fi
               echo "dedupe: removing duplicate '$dup' at $f"
-              rm -f "$f" "$f.sig" "$f.pem"
+              rm -f "$f" "$f.sig" "$f.pem" "$f.sigstore.json"
             done < <(find linux macos windows android extensions sbom updater -type f -name "$dup" | sort)
           done
           # 3) Fail hard if duplicate basenames remain (upload would break anyway).
-          if find linux macos windows android extensions sbom updater -type f ! -name '*.sig' ! -name '*.pem' -printf '%f\n' | sort | uniq -d | grep -q .; then
+          if find linux macos windows android extensions sbom updater -type f ! -name '*.sig' ! -name '*.pem' ! -name '*.sigstore.json' -printf '%f\n' | sort | uniq -d | grep -q .; then
             echo "::error::Duplicate basenames remain in release staging"
             exit 1
           fi
@@ -842,12 +938,16 @@ jobs:
               echo "skip (already signed by Tauri): ${f}"
               continue
             fi
-            cosign sign-blob --yes \
-              --output-signature "${f}.sig" \
-              --output-certificate "${f}.pem" \
-              "$f"
+            # --bundle, not --output-signature/--output-certificate: cosign v3
+            # signs in the Sigstore bundle format and treats those two flags as
+            # deprecated no-ops ("WARNING: --output-signature is deprecated ...
+            # and will be ignored"). With no --bundle the run still exits 0 but
+            # writes no signature at all, so the release shipped unverified
+            # blobs. The bundle carries both the signature and the certificate.
+            cosign sign-blob --yes --bundle "${f}.sigstore.json" "$f"
+            [ -s "${f}.sigstore.json" ] || { echo "::error::cosign produced no bundle for ${f}"; exit 1; }
             signed=$((signed + 1))
-          done < <(find release-local/linux release-local/macos release-local/windows release-local/android release-local/extensions release-local/sbom release-local/updater release-local/SHA256SUMS.txt -type f ! -name '*.sig' ! -name '*.pem' -print0)
+          done < <(find release-local/linux release-local/macos release-local/windows release-local/android release-local/extensions release-local/sbom release-local/updater release-local/SHA256SUMS.txt -type f ! -name '*.sig' ! -name '*.pem' ! -name '*.sigstore.json' -print0)
           echo "Signed ${signed} artifact(s) with Sigstore keyless."
           [ "$signed" -gt 0 ] || { echo "::error::No artifacts were signed"; exit 1; }
 
@@ -922,9 +1022,9 @@ jobs:
           # the only channel this user has (ForceCommand internal-sftp, no shell).
           if scp -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
             release-local/updater/latest.json \
-            release-local/updater/latest.json.sig \
+            release-local/updater/latest.json.sigstore.json \
             release-local/SHA256SUMS.txt \
-            release-local/SHA256SUMS.txt.sig \
+            release-local/SHA256SUMS.txt.sigstore.json \
             "$CLEAN_HOST:pub/"; then
             echo "Updater manifest published to backup endpoint."
           else

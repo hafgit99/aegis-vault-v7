@@ -185,10 +185,14 @@ export async function verifyRuntimeAssetIntegrity(): Promise<AssetIntegrityResul
   }
   if (!manifest) return { status: 'failed', reason: 'manifest-invalid' };
 
-  // Y-20: index.html must be in the manifest. If it is not, the document that
-  // decides what runs is unverified, and every other hash in here is about
-  // files that document merely references.
-  if (!manifest.assets.some((asset) => asset.path === INDEX_HTML_PATH)) {
+  // index.html is deliberately NOT in the manifest, so this is not a check that
+  // it is there. It is a check that the exclusion has not been used to smuggle
+  // the document out of verification: if index.html is present, the generator's
+  // filter changed and every hash below is about files the document merely
+  // references, so the counter-check at the end would reason about a document
+  // that was never verified. Refuse rather than silently half-verify.
+  const indexIsListed = manifest.assets.some((asset) => asset.path === INDEX_HTML_PATH);
+  if (indexIsListed) {
     return { status: 'failed', reason: 'index-html-unlisted' };
   }
 
@@ -198,7 +202,6 @@ export async function verifyRuntimeAssetIntegrity(): Promise<AssetIntegrityResul
   }
 
   const manifestPaths = manifest.assets.map((asset) => asset.path);
-  let verifiedHtml: string | null = null;
 
   try {
     for (const asset of manifest.assets) {
@@ -209,25 +212,28 @@ export async function verifyRuntimeAssetIntegrity(): Promise<AssetIntegrityResul
       if (await sha256Hex(contents) !== asset.sha256) {
         return { status: 'failed', reason: 'asset-hash-mismatch' };
       }
-      // Y-20: keep the exact bytes we just hashed, so the counter-check below
-      // reasons about the same document rather than re-fetching a second copy.
-      if (asset.path === INDEX_HTML_PATH) {
-        verifiedHtml = new TextDecoder().decode(contents);
-      }
+    }
+
+    // The document itself is fetched but not hashed. Tauri merges
+    // `app.security.csp` into the served bytes, so the served document is
+    // legitimately not the file that was built -- which is why it cannot be in
+    // the manifest. What is still enforced, and is what Y-20 was protecting
+    // against, is that every reference it makes resolves to a verified asset
+    // above: adding a script to index.html is a reference the manifest cannot
+    // name, and it fails closed here.
+    const documentResponse = await fetch('./' + INDEX_HTML_PATH, { cache: 'no-store', credentials: 'same-origin' });
+    if (!documentResponse.ok) return { status: 'failed', reason: 'index-html-unavailable' };
+    const verifiedHtml = new TextDecoder().decode(await documentResponse.arrayBuffer());
+
+    const unlisted = findUnlistedAssetReferences(
+      manifestPaths,
+      collectDocumentAssetReferences(verifiedHtml),
+    );
+    if (unlisted.length > 0) {
+      return { status: 'failed', reason: 'unlisted-asset-reference' };
     }
   } catch {
     return { status: 'failed', reason: 'asset-verification-failed' };
-  }
-
-  if (verifiedHtml === null) return { status: 'failed', reason: 'index-html-unverified' };
-
-  // The counter-check, run against the bytes that were just verified.
-  const unlisted = findUnlistedAssetReferences(
-    manifestPaths,
-    collectDocumentAssetReferences(verifiedHtml),
-  );
-  if (unlisted.length > 0) {
-    return { status: 'failed', reason: 'unlisted-asset-reference' };
   }
 
   return { status: 'verified', assetCount: manifest.assets.length };

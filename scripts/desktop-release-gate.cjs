@@ -230,20 +230,26 @@ if (!skipCollect) {
   steps.push({ command: 'node', args: ['scripts/collect-release-artifacts.cjs', '--platform', platform] });
 }
 
-if (!skipCollect && !skipSigningReport) {
+// The three steps below read and write release-local/<platform>; none of them
+// depends on *this* invocation having just collected it. They used to be gated
+// on !skipCollect as well, which meant that a caller who supplied the artifacts
+// by other means -- exactly what release-desktop.yml does, since its collect
+// steps run above the gate -- silently lost the release notes and the evidence
+// verification too. Each has its own flag, so that is what decides.
+if (!skipSigningReport) {
   const signingArgs = ['scripts/desktop-signing-report.cjs', '--platform', platform];
   if (requireSignedArtifacts) signingArgs.push('--require-signed');
   steps.push({ command: 'node', args: signingArgs });
 }
 
-if (!skipCollect && !skipReleaseNotes) {
+if (!skipReleaseNotes) {
   const notesArgs = ['scripts/desktop-release-notes.cjs', '--platform', platform];
   if (releaseChannel) notesArgs.push('--channel', releaseChannel);
   if (signedReleaseNotes) notesArgs.push('--signed');
   steps.push({ command: 'node', args: notesArgs });
 }
 
-if (!skipCollect && !skipEvidenceVerify) {
+if (!skipEvidenceVerify) {
   const evidenceArgs = ['scripts/desktop-release-evidence.cjs', '--platform', platform];
   if (allowDirtyEvidence) evidenceArgs.push('--allow-dirty');
   if (allowEmptyEvidence) evidenceArgs.push('--allow-empty');
