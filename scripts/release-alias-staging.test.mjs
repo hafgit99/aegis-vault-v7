@@ -148,6 +148,12 @@ let root;
 let staged;
 let stdout;
 
+// Generous timeout: this hook forks a real bash and runs the step's shell
+// against a staged tree. Five seconds on an idle machine, but CI runners and
+// loaded dev boxes are slower, and a timeout here surfaces as a failed release
+// rather than as a slow machine.
+const ALIAS_SETUP_TIMEOUT_MS = 60_000;
+
 beforeAll(() => {
   root = mkdtempSync(path.join(tmpdir(), 'aegis-alias-'));
   for (const rel of FIXTURE_FILES) {
@@ -158,7 +164,7 @@ beforeAll(() => {
   const result = runBash(extractAliasScript(readFileSync(WORKFLOW, 'utf8')), root);
   staged = result.staged;
   stdout = result.stdout;
-});
+}, ALIAS_SETUP_TIMEOUT_MS);
 
 afterAll(() => {
   // Windows and OneDrive can hold a handle on a fresh temp tree briefly; a
@@ -225,7 +231,7 @@ describe('release alias staging', () => {
 describe('release alias wiring', () => {
   let workflow;
 
-  beforeAll(() => {
+beforeAll(() => {
     workflow = readFileSync(WORKFLOW, 'utf8');
   });
 

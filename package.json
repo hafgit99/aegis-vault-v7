@@ -15,7 +15,7 @@
     "lint": "eslint \"src/**/*.{ts,tsx}\" \"tests/**/*.ts\" \"scripts/**/*.cjs\"",
     "i18n:audit": "node scripts/i18n-audit.cjs",
     "test:unit": "vitest run",
-    "test:release": "vitest run scripts/release-alias-staging.test.mjs",
+    "test:release": "vitest run --config vitest.release.config.ts",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:chromium": "playwright test --project=chromium",
