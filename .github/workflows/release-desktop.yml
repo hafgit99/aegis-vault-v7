@@ -916,9 +916,133 @@ jobs:
           echo "Prune + dedupe complete."
           find linux macos windows android extensions sbom updater -type f | wc -l
 
+      - name: Stage version-less aliases for stable download URLs
+        id: alias
+        # Why this exists
+        # -------------
+        # The website links every download to a versioned path:
+        #   .../releases/download/v7.0.7.0/AegisVault7-7.0.7.0-linux-amd64.deb
+        # That has to be edited by hand in 9 files on every release, and when it
+        # is forgotten the site does not break -- it keeps serving the previous
+        # version to every visitor, silently. That is what happened between
+        # 7.0.7.0 and 7.0.11.0.
+        #
+        # `releases/latest/download/<name>` redirects to the newest release, but
+        # only for assets whose name does not change per release. Verified, not
+        # assumed: `/releases/latest/download/SHA256SUMS.txt` returns 200 while
+        # `/releases/latest/download/AegisVault7-7.0.7.0-windows-x64-setup.exe`
+        # returns 404, because the version is in the filename and the newest
+        # release has no such file. So an alias has to exist under a fixed name.
+        #
+        # These copies are byte-identical to the versioned artifacts and are
+        # published alongside them -- the versioned download keeps working, and
+        # is what a user who wants to pin a specific version should use. The
+        # alias is for "give me the current release" links, which is what a
+        # website needs and cannot know the answer to.
+        #
+        # Deliberately not created for every artifact: only for the ones the
+        # site links to. An alias for an artifact that does not exist in this
+        # release must not appear, or a stale file from a previous tag would
+        # keep resolving through /latest/ and serve the wrong build.
+        run: |
+          set -euo pipefail
+          cd release-local
+          aliased=0
+          staged_files=()
+          link_alias() {
+            # $1 = alias basename, remaining args = candidate glob patterns
+            local alias="$1"; shift
+            local src=""
+            for pattern in "$@"; do
+              # Exactly one match or none: two matches means the alias would be
+              # ambiguous, and picking the first would make the link silently
+              # platform-dependent.
+              local matches=()
+              while IFS= read -r -d '' f; do matches+=("$f"); done \
+                < <(find . -type f -name "$pattern" ! -name '*.sig' ! -name '*.sigstore.json' ! -name '*.pem' -print0)
+              if [ "${#matches[@]}" -eq 0 ]; then
+                continue
+              fi
+              if [ "${#matches[@]}" -gt 1 ]; then
+                echo "::error::Alias ${alias} is ambiguous: ${matches[*]}"
+                exit 1
+              fi
+              src="${matches[0]}"
+              break
+            done
+            if [ -z "$src" ]; then
+              echo "no match for alias ${alias} (not published in this release)"
+              return 0
+            fi
+            cp "$src" "$alias"
+            # The signature has to follow the alias, or the site would tell users
+            # to verify a file that has no signature next to it.
+            for ext in sig sigstore.json pem; do
+              if [ -f "${src}.${ext}" ]; then cp "${src}.${ext}" "${alias}.${ext}"; fi
+            done
+            echo "aliased ${src} -> ${alias}"
+            aliased=$((aliased + 1))
+            # Record what this function actually wrote. A later `*-latest.*`
+            # glob cannot be trusted to rediscover it: `*` does not match an
+            # uppercase leading character here, which is exactly how the Linux
+            # aliases (AegisVault7-...) went missing in v7.0.12.0 while the
+            # lowercase extension ones were found.
+            staged_files+=("${alias}")
+            for ext in sig sigstore.json pem; do
+              [ -f "${alias}.${ext}" ] && staged_files+=("${alias}.${ext}")
+            done
+          }
+
+          link_alias 'AegisVault7-latest-linux-amd64.deb' 'AegisVault7-*-linux-amd64.deb'
+          link_alias 'AegisVault7-latest-linux-x64.AppImage' 'AegisVault7-*-linux-x64.AppImage'
+          link_alias 'aegis-vault-7-chrome-latest.zip' 'aegis-vault-7-chrome-*.zip'
+          link_alias 'aegis-vault-7-edge-latest.zip' 'aegis-vault-7-edge-*.zip'
+          link_alias 'aegis-vault-7-firefox-latest.xpi' 'aegis-vault-7-firefox-*.xpi'
+          link_alias 'aegis-vault-7-safari-latest-webextension.zip' 'aegis-vault-7-safari-*-webextension.zip'
+          # No alias for install.sh: it is not published in this release at all
+          # (verified against the v7.0.11.0 asset list), so aliasing it would
+          # advertise a download that 404s. The site's CLI page links to a
+          # versioned path for a file the pipeline does not upload; that is a
+          # separate broken link, tracked with the site update.
+          link_alias 'aegis-vault-7-latest-universal.apk' 'app-universal-universal-release.apk'
+
+          echo "Staged ${aliased} version-less alias(es)."
+          [ "$aliased" -gt 0 ] || { echo "::error::No aliases were staged"; exit 1; }
+
+          # Hand the exact list to the publish step instead of letting it
+          # rediscover the files through a `*-latest.*` glob.
+          #
+          # The glob approach silently dropped four of the seven aliases in
+          # v7.0.12.0. The Linux (.deb, .AppImage), Android and Safari copies
+          # were never uploaded and nothing failed: action-gh-release reports an
+          # unmatched pattern as an informational "🤔 does not match any files"
+          # and the step still succeeds, so the run was green while the website
+          # served 404s for two of its platforms. `*` did not match the leading
+          # uppercase `A` of `AegisVault7-latest-...`, which is why exactly the
+          # non-extension aliases went missing.
+          #
+          # The list is built from what link_alias actually wrote, so it cannot
+          # drift from what exists, and it cannot silently miss a file.
+          {
+            echo 'staged<<AEGIS_ALIAS_EOF'
+            for f in "${staged_files[@]}"; do
+              [ -f "$f" ] || { echo "::error::staged alias is missing on disk: $f"; exit 1; }
+              echo "release-local/${f}"
+            done
+            echo 'AEGIS_ALIAS_EOF'
+          } >> "$GITHUB_OUTPUT"
+          echo "Handed ${#staged_files[@]} alias file(s) to the publish step."
+
       - name: Generate global SHA256SUMS.txt
         run: |
           cd release-local
+          # `.` as well as the named subdirectories: the version-less aliases
+          # live at the root of release-local, and a manifest that omits them
+          # leaves the website telling users to verify a file it cannot find an
+          # entry for. `-maxdepth 1` keeps this from descending into the
+          # subdirectories the explicit paths already cover.
+          find . -maxdepth 1 -type f ! -name 'SHA256SUMS.txt' ! -name 'metadata.json' ! -name 'README.md' \
+            -exec sha256sum {} \;
           find linux macos windows android extensions sbom updater -type f ! -name 'metadata.json' ! -name 'README.md' \
             -exec sha256sum {} \; \
             | awk '{ n=split($2, p, "/"); printf "%s  %s\n", $1, p[n] }' \
@@ -980,88 +1104,6 @@ jobs:
             echo "No pre-existing release for tag $TAG — clean."
           fi
 
-      - name: Stage version-less aliases for stable download URLs
-        # Why this exists
-        # -------------
-        # The website links every download to a versioned path:
-        #   .../releases/download/v7.0.7.0/AegisVault7-7.0.7.0-linux-amd64.deb
-        # That has to be edited by hand in 9 files on every release, and when it
-        # is forgotten the site does not break -- it keeps serving the previous
-        # version to every visitor, silently. That is what happened between
-        # 7.0.7.0 and 7.0.11.0.
-        #
-        # `releases/latest/download/<name>` redirects to the newest release, but
-        # only for assets whose name does not change per release. Verified, not
-        # assumed: `/releases/latest/download/SHA256SUMS.txt` returns 200 while
-        # `/releases/latest/download/AegisVault7-7.0.7.0-windows-x64-setup.exe`
-        # returns 404, because the version is in the filename and the newest
-        # release has no such file. So an alias has to exist under a fixed name.
-        #
-        # These copies are byte-identical to the versioned artifacts and are
-        # published alongside them -- the versioned download keeps working, and
-        # is what a user who wants to pin a specific version should use. The
-        # alias is for "give me the current release" links, which is what a
-        # website needs and cannot know the answer to.
-        #
-        # Deliberately not created for every artifact: only for the ones the
-        # site links to. An alias for an artifact that does not exist in this
-        # release must not appear, or a stale file from a previous tag would
-        # keep resolving through /latest/ and serve the wrong build.
-        run: |
-          set -euo pipefail
-          cd release-local
-          aliased=0
-          link_alias() {
-            # $1 = alias basename, remaining args = candidate glob patterns
-            local alias="$1"; shift
-            local src=""
-            for pattern in "$@"; do
-              # Exactly one match or none: two matches means the alias would be
-              # ambiguous, and picking the first would make the link silently
-              # platform-dependent.
-              local matches=()
-              while IFS= read -r -d '' f; do matches+=("$f"); done \
-                < <(find . -type f -name "$pattern" ! -name '*.sig' ! -name '*.sigstore.json' ! -name '*.pem' -print0)
-              if [ "${#matches[@]}" -eq 0 ]; then
-                continue
-              fi
-              if [ "${#matches[@]}" -gt 1 ]; then
-                echo "::error::Alias ${alias} is ambiguous: ${matches[*]}"
-                exit 1
-              fi
-              src="${matches[0]}"
-              break
-            done
-            if [ -z "$src" ]; then
-              echo "no match for alias ${alias} (not published in this release)"
-              return 0
-            fi
-            cp "$src" "$alias"
-            # The signature has to follow the alias, or the site would tell users
-            # to verify a file that has no signature next to it.
-            for ext in sig sigstore.json pem; do
-              if [ -f "${src}.${ext}" ]; then cp "${src}.${ext}" "${alias}.${ext}"; fi
-            done
-            echo "aliased ${src} -> ${alias}"
-            aliased=$((aliased + 1))
-          }
-
-          link_alias 'AegisVault7-latest-linux-amd64.deb' 'AegisVault7-*-linux-amd64.deb'
-          link_alias 'AegisVault7-latest-linux-x64.AppImage' 'AegisVault7-*-linux-x64.AppImage'
-          link_alias 'aegis-vault-7-chrome-latest.zip' 'aegis-vault-7-chrome-*.zip'
-          link_alias 'aegis-vault-7-edge-latest.zip' 'aegis-vault-7-edge-*.zip'
-          link_alias 'aegis-vault-7-firefox-latest.xpi' 'aegis-vault-7-firefox-*.xpi'
-          link_alias 'aegis-vault-7-safari-latest-webextension.zip' 'aegis-vault-7-safari-*-webextension.zip'
-          # No alias for install.sh: it is not published in this release at all
-          # (verified against the v7.0.11.0 asset list), so aliasing it would
-          # advertise a download that 404s. The site's CLI page links to a
-          # versioned path for a file the pipeline does not upload; that is a
-          # separate broken link, tracked with the site update.
-          link_alias 'aegis-vault-7-latest-universal.apk' 'app-universal-universal-release.apk'
-
-          echo "Staged ${aliased} version-less alias(es)."
-          [ "$aliased" -gt 0 ] || { echo "::error::No aliases were staged"; exit 1; }
-
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v2.4.2 (SHA-pinned)
         with:
@@ -1076,13 +1118,7 @@ jobs:
             release-local/sbom/**
             release-local/updater/latest.json
             release-local/SHA256SUMS.txt
-            # Version-less aliases, staged by the step above. Listed
-            # explicitly: the `**` patterns only match inside the named
-            # directories, and these sit at the root of release-local.
-            release-local/*-latest.*
-            release-local/*-latest.*.sig
-            release-local/*-latest.*.sigstore.json
-            release-local/*-latest.*.pem
+            ${{ steps.alias.outputs.staged }}
 
       - name: Publish updater manifest to backup endpoint (update.aegisvault.xyz)
         continue-on-error: true
