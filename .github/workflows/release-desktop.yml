@@ -916,6 +916,20 @@ jobs:
           echo "Prune + dedupe complete."
           find linux macos windows android extensions sbom updater -type f | wc -l
 
+      # The alias step below is shell, and shell in a workflow is only tested by
+      # a failing release. It cost two in a row: v7.0.12.0 published three of
+      # seven aliases because a `*-latest.*` glob cannot match `AegisVault7-`,
+      # and v7.0.13.0 died on a `test && append` under `set -e`. Both were green
+      # or benign from the outside.
+      #
+      # This runs the step's own script, extracted from this file, against a
+      # staged tree shaped like a real one, and asserts the list it hands to the
+      # publish step. It is a separate step from `test:unit` because it does
+      # not need a browser environment and does not belong to the app's test
+      # suite; it is a release-pipeline test.
+      - name: Verify release alias staging
+        run: npm run test:release
+
       - name: Stage version-less aliases for stable download URLs
         id: alias
         # Why this exists

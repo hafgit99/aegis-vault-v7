@@ -1,6 +1,6 @@
 [package]
 name = "aegis-vault-v7"
-version = "7.0.13"
+version = "7.0.14"
 description = "Local-first secure desktop vault."
 authors = ["hafgit99"]
 license = "Apache-2.0"
