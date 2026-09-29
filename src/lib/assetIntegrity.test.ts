@@ -113,9 +113,95 @@ describe('runtime asset integrity', () => {
 
     await expect(verifyRuntimeAssetIntegrity()).resolves.toEqual({
       status: 'failed',
-      reason: 'index-html-unlisted',
+      reason: 'html-asset-listed-1',
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails closed when any other .html asset is hashed into the manifest', async () => {
+    // The bug this whole change exists for. Excluding only index.html left
+    // every other bundled .html hashed against bytes Tauri rewrites, and
+    // public/icon-showcase.html did exactly that: a correct build reported
+    // asset-size-mismatch and told the user their install may be tampered with.
+    // The exclusion has to be the whole class, not one member of it.
+    const page = new TextEncoder().encode('<!doctype html><html><body>showcase</body></html>');
+    const script = new TextEncoder().encode('export {};');
+    const assets = [
+      { path: 'assets/index.js', sha256: hash(script), size: script.byteLength },
+      { path: 'icon-showcase.html', sha256: hash(page), size: page.byteLength },
+    ];
+    const manifest = {
+      schemaVersion: 1,
+      algorithm: 'SHA-256',
+      rootSha256: hash(canonicalAssetPayload(assets)),
+      assets,
+    };
+
+    invokeMock.mockResolvedValue({ ...manifest, production: true });
+    // Only the manifest is ever fetched: the check must refuse before it
+    // measures a single asset.
+    const fetchMock = vi.fn().mockResolvedValueOnce(responseJson(manifest));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(verifyRuntimeAssetIntegrity()).resolves.toEqual({
+      status: 'failed',
+      reason: 'html-asset-listed-1',
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('accepts a manifest with no .html in it at all', async () => {
+    // The shape every correct build now has: documents present in dist, absent
+    // from the manifest. This is the case that used to be impossible to satisfy
+    // while a second .html was in the bundle.
+    const script = new TextEncoder().encode('export {};');
+    const assets = [{ path: 'assets/index.js', sha256: hash(script), size: script.byteLength }];
+    const manifest = {
+      schemaVersion: 1,
+      algorithm: 'SHA-256',
+      rootSha256: hash(canonicalAssetPayload(assets)),
+      assets,
+    };
+
+    invokeMock.mockResolvedValue({ ...manifest, production: true });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(responseJson(manifest))
+      .mockResolvedValueOnce(responseBytes(script))
+      .mockResolvedValueOnce(responseBytes(
+        new TextEncoder().encode('<!doctype html><html><head></head><body></body></html>'),
+      ));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(verifyRuntimeAssetIntegrity()).resolves.toEqual({
+      status: 'verified',
+      assetCount: 1,
+    });
+  });
+
+  it('names the offending asset in a size mismatch', async () => {
+    // A bare `asset-size-mismatch` across nineteen assets is what made the
+    // false failure above take a full diagnosis cycle. The two sizes are the
+    // part that distinguishes a Tauri-side rewrite from an altered file.
+    const short = new TextEncoder().encode('ab');
+    const long = new TextEncoder().encode('abcd');
+    const assets = [{ path: 'app-icon.png', sha256: hash(short), size: short.byteLength }];
+    const manifest = {
+      schemaVersion: 1,
+      algorithm: 'SHA-256',
+      rootSha256: hash(canonicalAssetPayload(assets)),
+      assets,
+    };
+
+    invokeMock.mockResolvedValue({ ...manifest, production: true });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(responseJson(manifest))
+      .mockResolvedValueOnce(responseBytes(long));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(verifyRuntimeAssetIntegrity()).resolves.toEqual({
+      status: 'failed',
+      reason: 'asset-size-mismatch-2-vs-4-app-icon-png',
+    });
   });
 
   it('fails closed when the verified document references an unlisted script', async () => {
@@ -201,7 +287,10 @@ describe('runtime asset integrity', () => {
       .mockResolvedValueOnce(responseJson(manifest))
       .mockResolvedValueOnce(responseBytes(modified)));
 
-    await expect(verifyRuntimeAssetIntegrity()).resolves.toEqual({ status: 'failed', reason: 'asset-hash-mismatch' });
+    await expect(verifyRuntimeAssetIntegrity()).resolves.toEqual({
+      status: 'failed',
+      reason: 'asset-hash-mismatch-assets-index-js',
+    });
   });
 });
 

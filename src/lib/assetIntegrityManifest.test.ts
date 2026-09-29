@@ -115,4 +115,56 @@ describe('asset integrity manifest generator', () => {
 
     expect(validateIntegrityManifest(manifest, directory)).toContain('integrity manifest root does not match dist assets');
   });
+
+  // The regression below is the reason the filter above is now a class and not
+  // a single file. Tauri rewrites the served bytes of *every* .html asset --
+  // from tauri 2.11.5 src/manager/mod.rs `get_asset`:
+  //
+  //     let is_html = asset_path.as_ref().ends_with(".html");
+  //     let final_data = if is_html {
+  //       let mut asset = String::from_utf8_lossy(&asset_response).into_owned();
+  //       if let Some(csp) = self.csp() {
+  //         let mut csp_map = set_csp(&mut asset, &self.assets, &asset_path, self, csp);
+  //         ...
+  //       }
+  //       asset.into_bytes()
+  //     } else { asset_response.into_owned() };
+  //
+  // Excluding only index.html left public/icon-showcase.html -- added with the
+  // icon set -- hashed against bytes the app is never served. Every build since
+  // then reported `asset-size-mismatch` and told the user their installation
+  // may have been tampered with. v7.0.18.0, which shipped before that file
+  // existed, verified clean.
+  it('excludes every html asset, not only the main document', () => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'KalderaShield-integrity-'));
+    temporaryDirectories.push(directory);
+    fs.mkdirSync(path.join(directory, 'assets'));
+    fs.writeFileSync(path.join(directory, 'index.html'), '<main>KalderaShield</main>');
+    fs.writeFileSync(path.join(directory, 'icon-showcase.html'), '<main>showcase</main>');
+    fs.writeFileSync(path.join(directory, 'assets', 'Report.HTML'), '<main>nested</main>');
+    fs.writeFileSync(path.join(directory, 'assets.js'), 'export {};');
+
+    const { manifest } = generateIntegrityManifest(directory);
+
+    expect(manifest.assets.map((asset: { path: string }) => asset.path).sort()).toEqual([
+      'assets.js',
+    ]);
+  });
+
+  it('recognises every html spelling Tauri rewrites', () => {
+    const { isTauriRewrittenHtml } = require('../../scripts/generate-asset-integrity-manifest.cjs') as {
+      isTauriRewrittenHtml: (assetPath: string) => boolean;
+    };
+
+    expect(isTauriRewrittenHtml('index.html')).toBe(true);
+    expect(isTauriRewrittenHtml('icon-showcase.html')).toBe(true);
+    // Tauri's check is on the resolved path, and the runtime's list comparison
+    // is exact, so a differently-cased suffix has to be excluded too or it is
+    // hashed and can never match.
+    expect(isTauriRewrittenHtml('nested/Report.HTML')).toBe(true);
+    expect(isTauriRewrittenHtml('assets/index-Bxxj4Aio.js')).toBe(false);
+    expect(isTauriRewrittenHtml('app-icon.png')).toBe(false);
+    // Not an html file that merely contains the letters.
+    expect(isTauriRewrittenHtml('assets/htmlish.js')).toBe(false);
+  });
 });

@@ -16,6 +16,10 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 serde_json = "1.0"
+# build.rs recomputes the manifest root instead of trusting the field, so it
+# hashes the canonical payload itself. Pinned to the same version the crate
+# already uses so the lockfile does not carry two copies.
+sha2 = "0.11"
 tauri-build = { version = "2.6.2", features = [] }
 
 [dependencies]
