@@ -764,8 +764,22 @@ chrome.runtime.onMessage.addListener((message) => {
       showSecurityToast(translate('phishing.autofill.blocked', activeLanguage));
       return;
     }
-    const activeEl = document.activeElement as HTMLInputElement;
-    const target = (activeEl && isLoginInput(activeEl)) ? activeEl : (document.querySelector('input[type="password"], input[type="email"], input[type="text"]') as HTMLInputElement);
+    // Prefer the focused field, but do not fall back to "first input in the
+    // document": when the fill is triggered from the popup the page has no
+    // focused login field (focus sits in the popup), and the first input is
+    // almost always the username, so only the username got filled.
+    // Anchoring on the password field makes fillPageCredentials locate its
+    // paired username itself.
+    const activeEl = document.activeElement as HTMLInputElement | null;
+    let target: HTMLInputElement | null = null;
+
+    if (activeEl && isLoginInput(activeEl)) {
+      target = activeEl;
+    } else {
+      const passwordInput = findPasswordInput();
+      target = passwordInput || findAssociatedUsernameFallback();
+    }
+
     if (target) {
       fillPageCredentials(target, message.username, message.password);
     }
@@ -1345,7 +1359,7 @@ function isNonUsernameInput(el: HTMLInputElement): boolean {
   return false;
 }
 
-function scoreUsernameCandidate(el: HTMLInputElement, passwordInput: HTMLInputElement): number {
+function scoreUsernameCandidate(el: HTMLInputElement, passwordInput: HTMLInputElement | null): number {
   if (isNonUsernameInput(el)) return -1;
 
   let score = 0;
@@ -1371,7 +1385,7 @@ function scoreUsernameCandidate(el: HTMLInputElement, passwordInput: HTMLInputEl
   }
 
   // Preceding closeness bonus (closer to password input in DOM is more likely to be username)
-  if ((el.compareDocumentPosition(passwordInput) & Node.DOCUMENT_POSITION_PRECEDING) !== 0) {
+  if (passwordInput && (el.compareDocumentPosition(passwordInput) & Node.DOCUMENT_POSITION_PRECEDING) !== 0) {
     score += 20;
   }
 
@@ -1383,7 +1397,7 @@ function scoreUsernameCandidate(el: HTMLInputElement, passwordInput: HTMLInputEl
   return score;
 }
 
-function pickBestUsernameCandidate(inputs: HTMLInputElement[], passwordInput: HTMLInputElement): HTMLInputElement | null {
+function pickBestUsernameCandidate(inputs: HTMLInputElement[], passwordInput: HTMLInputElement | null): HTMLInputElement | null {
   let bestInput: HTMLInputElement | null = null;
   let bestScore = 0;
 
@@ -1427,6 +1441,17 @@ function findAssociatedUsernameInput(passwordInput: HTMLInputElement): HTMLInput
   if (bestPreceding) return bestPreceding;
 
   return null;
+}
+
+// Fallback for pages with no password field (search boxes, two-step login).
+// Reuses the same candidate scoring as the password-paired lookup so a page
+// with several text inputs still picks the most login-like one.
+function findAssociatedUsernameFallback(): HTMLInputElement | null {
+  const textInputs = Array.from(
+    document.querySelectorAll('input[type="text"], input[type="email"]'),
+  ) as HTMLInputElement[];
+  const best = pickBestUsernameCandidate(textInputs, null);
+  return best || textInputs[0] || null;
 }
 
 // Helper to find active password input on the page or inside container
