@@ -134,7 +134,7 @@
   "devDependencies": {
     "@cyclonedx/cyclonedx-npm": "^6.0.1",
     "@eslint/js": "^10.0.1",
-    "@playwright/test": "^1.62.1",
+    "@playwright/test": "^1.63.0",
     "@stryker-mutator/core": "^10.0.0",
     "@stryker-mutator/typescript-checker": "^10.0.0",
     "@stryker-mutator/vitest-runner": "^10.0.0",
