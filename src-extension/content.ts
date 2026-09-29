@@ -19,9 +19,7 @@ const inlineStyle = `
     background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%) !important;
     color: white !important;
     border: none !important;
-    font-family: sans-serif !important;
-    font-weight: bold !important;
-    font-size: 11px !important;
+    padding: 0 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -109,18 +107,16 @@ const inlineStyle = `
     gap: 12px !important;
     flex: 1 !important;
   }
-  .KalderaShield-banner-logo {
-    width: 32px !important;
-    height: 32px !important;
-    background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%) !important;
-    border-radius: 8px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    color: white !important;
-    font-weight: bold !important;
-    font-size: 16px !important;
-  }
+        .KalderaShield-banner-logo {
+          width: 32px !important;
+          height: 32px !important;
+          background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%) !important;
+          border-radius: 8px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          color: white !important;
+        }
   .KalderaShield-banner-text {
     display: flex !important;
     flex-direction: column !important;
@@ -525,18 +521,16 @@ const EXTENSION_SHADOW_STYLES = `
     align-items: center !important;
     gap: 12px !important;
   }
-  .KalderaShield-banner-logo {
-    width: 28px !important;
-    height: 28px !important;
-    background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%) !important;
-    border-radius: 8px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    font-weight: bold !important;
-    color: white !important;
-    font-size: 14px !important;
-  }
+        .KalderaShield-banner-logo {
+          width: 28px !important;
+          height: 28px !important;
+          background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%) !important;
+          border-radius: 8px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          color: white !important;
+        }
   .KalderaShield-banner-text {
     display: flex !important;
     flex-direction: column !important;
@@ -902,11 +896,19 @@ function scanAndInject() {
 
     parent.classList.add('KalderaShield-input-container');
 
-    const iconBtn = document.createElement('button');
-    iconBtn.className = 'KalderaShield-icon-btn';
-    iconBtn.textContent = 'A';
-    iconBtn.type = 'button';
-    iconBtn.title = 'KalderaShield Auto-fill';
+      const iconBtn = document.createElement('button');
+      iconBtn.className = 'KalderaShield-icon-btn';
+      // A shield mark rather than a letter: the old single "A" initial read as a
+      // leftover from the previous name and looked like a stray character in the
+      // password field rather than a control.
+      iconBtn.innerHTML =
+        '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" ' +
+        'stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>' +
+        '<path d="m9 12 2 2 4-4"/></svg>';
+      iconBtn.type = 'button';
+      iconBtn.title = 'KalderaShield Auto-fill';
+      iconBtn.setAttribute('aria-label', 'KalderaShield Auto-fill');
 
     iconBtn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -1245,7 +1247,11 @@ function showSavePromptBanner(cred: CapturedCredentialPayload) {
   
   const logo = document.createElement('div');
   logo.className = 'KalderaShield-banner-logo';
-  logo.textContent = 'A';
+  logo.innerHTML =
+    '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" ' +
+    'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>' +
+    '<path d="m9 12 2 2 4-4"/></svg>';
   
   const text = document.createElement('div');
   text.className = 'KalderaShield-banner-text';
