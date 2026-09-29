@@ -527,5 +527,9 @@
   "win-store-title": "Kommt in den Microsoft Store",
   "win-store-desc": "Der Store signiert das Paket mit seinem eigenen Zertifikat neu. Sie installieren ohne SmartScreen-Warnung, und es muss kein Code-Signatur-Zertifikat gekauft werden.",
   "win-store-cta": "Diese Seite verfolgen",
-  "win-pinned-note": "Dieses Windows-Paket ist nicht signiert: Es liegt kein Code-Signatur-Zertifikat vor, daher zeigt Windows bei der Installation möglicherweise eine SmartScreen-Warnung. Mit der SHA-256-Prüfsumme können Sie prüfen, ob die Datei unverändert ist."
+  "win-pinned-note": "Dieses Windows-Paket ist nicht signiert: Es liegt kein Code-Signatur-Zertifikat vor, daher zeigt Windows bei der Installation möglicherweise eine SmartScreen-Warnung. Mit der SHA-256-Prüfsumme können Sie prüfen, ob die Datei unverändert ist.",
+  "privacy-eyebrow": "Rechtliches",
+  "privacy-title": "Datenschutzerklärung",
+  "terms-eyebrow": "Rechtliches",
+  "terms-title": "Nutzungsbedingungen"
 }

@@ -527,5 +527,9 @@
   "win-store-title": "Microsoft Store'a geliyor",
   "win-store-desc": "Store, paketi kendi sertifikasıyla yeniden imzalar. Böylece SmartScreen uyarısı olmadan, hiçbir kod imzalama sertifikası satın almadan kurarsınız.",
   "win-store-cta": "Bu sayfayı takip edin",
-  "win-pinned-note": "Bu Windows paketi imzasızdır: kod imzalama sertifikası bulunmadığı için kurulum särasında SmartScreen uyarısı görülû. Dosyanın değiştirilmediğini SHA-256 özetiyle doğrulayabilirsiniz."
+  "win-pinned-note": "Bu Windows paketi imzasızdır: kod imzalama sertifikası bulunmadığı için kurulum särasında SmartScreen uyarısı görülû. Dosyanın değiştirilmediğini SHA-256 özetiyle doğrulayabilirsiniz.",
+  "privacy-eyebrow": "Yasal",
+  "privacy-title": "Gizlilik Politikası",
+  "terms-eyebrow": "Yasal",
+  "terms-title": "Kullanım Şartları"
 }

@@ -527,5 +527,9 @@
   "win-store-title": "Bientôt disponible sur le Microsoft Store",
   "win-store-desc": "Le Store resigne le paquet avec son propre certificat : vous installez sans avertissement SmartScreen, sans avoir à acheter de certificat de signature de code.",
   "win-store-cta": "Suivez cette page",
-  "win-pinned-note": "Ce paquet Windows n'est pas signé : sans certificat de signature de code, Windows peut afficher un avertissement SmartScreen lors de l'installation. La somme de contrôle SHA-256 permet de vérifier que le fichier est inchangé."
+  "win-pinned-note": "Ce paquet Windows n'est pas signé : sans certificat de signature de code, Windows peut afficher un avertissement SmartScreen lors de l'installation. La somme de contrôle SHA-256 permet de vérifier que le fichier est inchangé.",
+  "privacy-eyebrow": "Mentions légales",
+  "privacy-title": "Politique de confidentialité",
+  "terms-eyebrow": "Mentions légales",
+  "terms-title": "Conditions d'utilisation"
 }

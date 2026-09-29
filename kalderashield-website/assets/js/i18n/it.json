@@ -527,5 +527,9 @@
   "win-store-title": "In arrivo su Microsoft Store",
   "win-store-desc": "Lo Store rifirma il pacchetto con il proprio certificato: installerai senza avvisi di SmartScreen e senza dover acquistare un certificato di firma del codice.",
   "win-store-cta": "Segui questa pagina",
-  "win-pinned-note": "Questo pacchetto Windows non è firmato: senza un certificato di firma del codice, Windows può mostrare un avviso SmartScreen durante l’installazione. Il checksum SHA-256 permette di verificare che il file non sia stato modificato."
+  "win-pinned-note": "Questo pacchetto Windows non è firmato: senza un certificato di firma del codice, Windows può mostrare un avviso SmartScreen durante l’installazione. Il checksum SHA-256 permette di verificare che il file non sia stato modificato.",
+  "privacy-eyebrow": "Legale",
+  "privacy-title": "Informativa sulla privacy",
+  "terms-eyebrow": "Legale",
+  "terms-title": "Termini di utilizzo"
 }

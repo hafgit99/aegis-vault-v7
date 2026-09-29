@@ -527,5 +527,9 @@
   "win-store-title": "Próximamente en Microsoft Store",
   "win-store-desc": "La Store vuelve a firmar el paquete con su propio certificado: instalarás sin advertencias de SmartScreen y sin necesidad de comprar un certificado de firma de código.",
   "win-store-cta": "Sigue esta página",
-  "win-pinned-note": "Este paquete de Windows no está firmado: sin certificado de firma de código, Windows puede mostrar una advertencia de SmartScreen durante la instalación. La suma de comprobación SHA-256 le permite comprobar que el archivo no ha cambiado."
+  "win-pinned-note": "Este paquete de Windows no está firmado: sin certificado de firma de código, Windows puede mostrar una advertencia de SmartScreen durante la instalación. La suma de comprobación SHA-256 le permite comprobar que el archivo no ha cambiado.",
+  "privacy-eyebrow": "Legal",
+  "privacy-title": "Política de Privacidad",
+  "terms-eyebrow": "Legal",
+  "terms-title": "Términos de Uso"
 }

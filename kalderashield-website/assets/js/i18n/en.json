@@ -527,5 +527,9 @@
   "win-store-title": "Coming to the Microsoft Store",
   "win-store-desc": "The Store re-signs the package with its own certificate, so you install without a SmartScreen warning and without anyone having to buy a code-signing certificate.",
   "win-store-cta": "Watch this page",
-  "win-pinned-note": "This Windows package is unsigned: there is no code-signing certificate, so Windows may show a SmartScreen warning during installation. You can check that the file is unmodified with its SHA-256 checksum."
+  "win-pinned-note": "This Windows package is unsigned: there is no code-signing certificate, so Windows may show a SmartScreen warning during installation. You can check that the file is unmodified with its SHA-256 checksum.",
+  "privacy-eyebrow": "Legal",
+  "privacy-title": "Privacy Policy",
+  "terms-eyebrow": "Legal",
+  "terms-title": "Terms of Use"
 }

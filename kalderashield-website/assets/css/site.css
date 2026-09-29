@@ -5,11 +5,13 @@
  * violation in Germany. The system font stack renders instantly and
  * needs no consent.
  *
- * The palette is taken from the app icon so the site and the product read as
- * one thing: a near-black blue ground, the caldera magma orange as the single
- * accent, and the cyan from the shield's deflector lines used sparingly as a
- * second voice. Orange carries every interactive and every "brand" state on
- * purpose, so it is never used for two different meanings at once.
+ * Palette (approved direction "Buzul Teal + Kaldera Kor vurgusu"):
+ * the near-black blue ground and the teal-cyan from the icon's deflector
+ * lines carry every interactive state (links, buttons, focus, dots) — this
+ * is the app icon's dominant hue range (180-210°). The caldera ember orange
+ * is demoted to a single-point identity accent: the wordmark's "Shield".
+ * Nothing else uses it, so the brand moment never competes with the
+ * interactive language.
  */
 
 :root {
@@ -25,13 +27,12 @@
   --text-muted: #9aa5b6;
   --text-faint: #6d7889;
 
-  --accent: #ff7b2e;
-  --accent-strong: #ffa261;
-  /* Eyebrow and other small brand-coloured text. Needs to clear 4.5:1 on
-     --bg, which the brighter orange does and the icon's own rim orange does
-     not at this size. */
-  --accent-text: #ff9a52;
-  --cyan: #22d3ee;
+  --accent: #2dd4bf;
+  --accent-strong: #5eead4;
+  /* Eyebrow and other small brand-coloured text: clears 10:1 on --bg. */
+  --accent-text: #2dd4bf;
+  /* Identity-only accent: the wordmark's "Shield". No other rule may use it. */
+  --ember: #ff7b2e;
 
   --warn: #ffb454;
   --warn-bg: #241a10;
@@ -60,10 +61,10 @@
     --text: #16120e;
     --text-muted: #57504a;
     --text-faint: #7d746c;
-    --accent: #c2410c;
-    --accent-strong: #9a3412;
-    --accent-text: #b23c0d;
-    --cyan: #0e7490;
+    --accent: #0f766e;
+    --accent-strong: #115e59;
+    --accent-text: #0f766e;
+    --ember: #c2410c;
     --warn: #8a5a12;
     --warn-bg: #fdf6e7;
     --warn-line: #e6d3a8;
@@ -130,7 +131,7 @@ a:hover {
   left: -9999px;
   top: 0;
   background: var(--accent);
-  color: #08110c;
+  color: #05201c;
   padding: 0.6rem 1rem;
   z-index: 100;
   font-weight: 600;
@@ -181,8 +182,14 @@ a:hover {
 }
 
 .brand img {
-  width: 26px;
-  height: 26px;
+  width: 40px;
+  height: 40px;
+}
+
+/* The one ember moment: the product wordmark. Everything interactive is
+   teal; this is the only place the caldera orange appears. */
+.brand-accent {
+  color: var(--ember);
 }
 
 .site-nav {
@@ -334,12 +341,12 @@ a:hover {
 
 .btn-primary {
   background: var(--accent);
-  color: #120802;
+  color: #05201c;
 }
 
 .btn-primary:hover {
   background: var(--accent-strong);
-  color: #120802;
+  color: #05201c;
 }
 
 /* In light mode --accent is a deep burnt orange, and near-black text on it
@@ -348,7 +355,7 @@ a:hover {
 @media (prefers-color-scheme: light) {
   .btn-primary,
   .btn-primary:hover {
-    color: #fff8f2;
+    color: #ffffff;
   }
 }
 

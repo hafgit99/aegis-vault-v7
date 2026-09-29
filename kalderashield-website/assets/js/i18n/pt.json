@@ -527,5 +527,9 @@
   "win-store-title": "Em breve no Microsoft Store",
   "win-store-desc": "A Store reassina o pacote com o próprio certificado: você instala sem avisos do SmartScreen e sem precisar comprar um certificado de assinatura de código.",
   "win-store-cta": "Acompanhe esta página",
-  "win-pinned-note": "Este pacote do Windows não é assinado: sem certificado de assinatura de código, o Windows pode exibir um aviso do SmartScreen durante a instalação. O checksum SHA-256 permite confirmar que o arquivo não foi alterado."
+  "win-pinned-note": "Este pacote do Windows não é assinado: sem certificado de assinatura de código, o Windows pode exibir um aviso do SmartScreen durante a instalação. O checksum SHA-256 permite confirmar que o arquivo não foi alterado.",
+  "privacy-eyebrow": "Jurídico",
+  "privacy-title": "Política de Privacidade",
+  "terms-eyebrow": "Jurídico",
+  "terms-title": "Termos de Uso"
 }
