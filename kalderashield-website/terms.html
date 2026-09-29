@@ -38,8 +38,27 @@
       <a href="/download/" data-i18n="nav-download">İndir</a>
 
       <details class="lang">
-        <summary aria-label="Language / Dil">🌐 12</summary>
-        <div class="lang-menu" id="lang-menu" role="menu"></div>
+        <summary data-i18n-attr="aria-label:lang-switch-label">
+          <span class="lang-code" data-lang-code>TR</span>
+          <span data-lang-current>Türkçe</span>
+        </summary>
+        <div class="lang-menu" id="lang-menu"></div>
+      </details>
+
+      <details class="theme">
+        <summary data-i18n-attr="aria-label:theme-switch-label">
+          <span class="theme-glyph" aria-hidden="true">◐</span>
+          <span class="theme-current" data-theme-current data-i18n="theme-system">Sistem</span>
+        </summary>
+        <div class="theme-menu" id="theme-menu"></div>
+      </details>
+
+      <details class="theme">
+        <summary data-i18n-attr="aria-label:theme-switch-label">
+          <span class="theme-glyph" aria-hidden="true">◐</span>
+          <span class="theme-current" data-theme-current data-i18n="theme-system">Sistem</span>
+        </summary>
+        <div class="theme-menu" id="theme-menu"></div>
       </details>
     </nav>
   </div>
@@ -55,29 +74,22 @@
 
   <section>
     <div class="wrap prose">
-      <h2>1. Lisans</h2>
-      <p>KalderaShield, <strong>Apache License 2.0</strong> koşullarıyla kaynak kodu açık olarak yayımlanır. Yazılımı kullanabilir, inceleyebilir, değiştirebilir ve lisans koşullarına uygun şekilde dağıtabilirsiniz. Tam lisans metnine <a href="https://github.com/hafgit99/kalderashield/blob/main/LICENSE" rel="noopener noreferrer">GitHub deposundan</a> ulaşabilirsiniz.</p>
+      <h2 data-i18n="terms-h2-1">1. Lisans</h2>
+      <p data-i18n="terms-p1-1">KalderaShield, <strong>Apache License 2.0</strong> koşullarıyla kaynak kodu açık olarak yayımlanır. Yazılımı kullanabilir, inceleyebilir, değiştirebilir ve lisans koşullarına uygun şekilde dağıtabilirsiniz. Tam lisans metnine <a href="https://github.com/hafgit99/kalderashield/blob/main/LICENSE" rel="noopener noreferrer">GitHub deposundan</a> ulaşabilirsiniz.</p>
 
-      <h2>2. Sorumluluk Reddi</h2>
-      <p>Yazılım "OLDUĞU GİBİ" sağlanır ve ticari elverişlilik, belirli bir amaca uygunluk ve ihlal etmeme taahhütleri dâhil, zımni hiçbir garanti içermez. <strong>Şifre yöneticisi olarak KalderaShield, ana parolanızı veya kurtarma anahtarınızı bilmez; bu bilgilerin kaybı hâlinde kasanıza erişimi geri getirebilecek bir kurtarma mekanizması mevcut değildir.</strong> Ana parolanızı ve kurtarma anahtarınızı güvenli şekilde yedeklemek sizin sorumluluğunuzdadır.</p>
+      <h2 data-i18n="terms-h2-2">2. Sorumluluk Reddi</h2>
+      <p data-i18n="terms-p1-2">Yazılım "OLDUĞU GİBİ" sağlanır ve ticari elverişlilik, belirli bir amaca uygunluk ve ihlal etmeme taahhütleri dâhil, zımni hiçbir garanti içermez. <strong>Şifre yöneticisi olarak KalderaShield, ana parolanızı veya kurtarma anahtarınızı bilmez; bu bilgilerin kaybı hâlinde kasanıza erişimi geri getirebilecek bir kurtarma mekanizması mevcut değildir.</strong> Ana parolanızı ve kurtarma anahtarınızı güvenli şekilde yedeklemek sizin sorumluluğunuzdadır.</p>
 
-      <h2>3. İndirmeler ve Doğrulama</h2>
-      <p>Kurulum paketleri GitHub Releases üzerinden sunulur. Yayınlanan her dosyanın SHA-256 özeti ve imzaları sürüm sayfasında paylaşılır; kurulum öncesi bütünlük doğrulaması yapmanız önerilir. Üçüncü taraf kaynaklardan indirilen paketlerin bütünlüğü garanti edilemez.</p>
+      <h2 data-i18n="terms-h2-3">3. İndirmeler ve Doğrulama</h2>
+      <p data-i18n="terms-p1-3">Kurulum paketleri GitHub Releases üzerinden sunulur. Yayınlanan her dosyanın SHA-256 özeti ve imzaları sürüm sayfasında paylaşılır; kurulum öncesi bütünlük doğrulaması yapmanız önerilir. Üçüncü taraf kaynaklardan indirilen paketlerin bütünlüğü garanti edilemez.</p>
 
-      <h2>4. Kullanım Koşulları</h2>
-      <p>Yazılımı ve web sitesini yasaya aykırı herhangi bir amaçla kullanamaz, kalderashield adını ve logosunu ürünün resmi sürümleriyle karıştırılacak biçimde izinsiz kullanamazsınız. "KalderaShield" adı ve logosu sahibinin mülkiyetindedir.</p>
+      <h2 data-i18n="terms-h2-4">4. Kullanım Koşulları</h2>
+      <p data-i18n="terms-p1-4">Yazılımı ve web sitesini yasaya aykırı herhangi bir amaçla kullanamaz, kalderashield adını ve logosunu ürünün resmi sürümleriyle karıştırılacak biçimde izinsiz kullanamazsınız. "KalderaShield" adı ve logosu sahibinin mülkiyetindedir.</p>
 
-      <h2>5. İletişim</h2>
-      <p>Şartlar hakkındaki sorularınız için: <a href="mailto:admin@kalderashield.xyz">admin@kalderashield.xyz</a></p>
+      <h2 data-i18n="terms-h2-5">5. İletişim</h2>
+      <p data-i18n="terms-p1-5">Şartlar hakkındaki sorularınız için: <a href="mailto:admin@{{DOMAIN}}">admin@{{DOMAIN}}</a></p>
 
-      <hr>
-
-      <h2>Terms of Use (English)</h2>
-      <p><strong>1. License.</strong> KalderaShield is released as open source under the <strong>Apache License 2.0</strong>. You may use, study, modify and distribute the software in accordance with the license terms. The full license text is available in the <a href="https://github.com/hafgit99/kalderashield/blob/main/LICENSE" rel="noopener noreferrer">GitHub repository</a>.</p>
-      <p><strong>2. No warranty.</strong> The software is provided "AS IS" without warranty of any kind, including merchantability and fitness for a particular purpose. <strong>As a password manager, KalderaShield never knows your master password or recovery key; there is no recovery mechanism that can restore access to your vault if those are lost.</strong> Backing up your master password and recovery key securely is your responsibility.</p>
-      <p><strong>3. Downloads and verification.</strong> Install packages are published on GitHub Releases. The SHA-256 digest and signatures of every file are published on the release page; verifying integrity before installation is recommended. Integrity of packages obtained from third-party sources cannot be guaranteed.</p>
-      <p><strong>4. Acceptable use.</strong> You may not use the software or this website for any unlawful purpose, nor use the KalderaShield name or logo in ways that confuse them with unofficial builds. The KalderaShield name and logo are property of their owner.</p>
-      <p><strong>5. Contact.</strong> Questions about these terms: <a href="mailto:admin@kalderashield.xyz">admin@kalderashield.xyz</a>. In case of differences, the Turkish text governs.</p>
+      <p class="muted" data-i18n="terms-governing">Çeviri ile Türkçe metin arasında bir farklılık olması hâlinde Türkçe metin esas alınır.</p>
     </div>
   </section>
 

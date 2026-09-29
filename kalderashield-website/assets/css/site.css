@@ -14,6 +14,23 @@
  * interactive language.
  */
 
+/* Palette selection.
+ *
+ * Dark is the default and light follows the operating system, which is what this
+ * did before a visitor could overrule either. Three rules cover every state,
+ * in increasing precedence:
+ *
+ *   :root                            dark values, the default
+ *   :root[data-theme="light"]        explicit light, overrides the OS
+ *   prefers-color-scheme: light
+ *     :root:not([data-theme="dark"]) light when following the system
+ *
+ * "system" is deliberately the absence of the attribute rather than a third set
+ * of values, so it keeps tracking the OS live -- a device switching to dark at
+ * sunset moves the page with it, with no script involved and no transition
+ * missed. An explicit choice pins color-scheme as well as the variables, which
+ * is what makes the browser render form controls and scrollbars to match.
+ */
 :root {
   color-scheme: dark;
 
@@ -50,9 +67,30 @@
     "Liberation Mono", monospace;
 }
 
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #fcfbf9;
+  --bg-raised: #ffffff;
+  --bg-sunken: #f4f2ef;
+  --line: #e2ddd6;
+  --line-strong: #cbc3b9;
+  --text: #16120e;
+  --text-muted: #57504a;
+  --text-faint: #7d746c;
+  --accent: #0f766e;
+  --accent-strong: #115e59;
+  --accent-text: #0f766e;
+  --ember: #c2410c;
+  --warn: #8a5a12;
+  --warn-bg: #fdf6e7;
+  --warn-line: #e6d3a8;
+}
+
 @media (prefers-color-scheme: light) {
-  :root {
+  :root:not([data-theme="dark"]) {
     color-scheme: light;
+
     --bg: #fcfbf9;
     --bg-raised: #ffffff;
     --bg-sunken: #f4f2ef;
@@ -214,7 +252,8 @@ a:hover {
   position: relative;
 }
 
-.lang > summary {
+.lang > summary,
+.theme > summary {
   list-style: none;
   cursor: pointer;
   color: var(--text-muted);
@@ -222,52 +261,136 @@ a:hover {
   padding: 0.25rem 0.5rem;
   border: 1px solid var(--line);
   border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
 }
 
-.lang > summary::-webkit-details-marker {
+.lang > summary::-webkit-details-marker,
+.theme > summary::-webkit-details-marker {
   display: none;
 }
 
-.lang[open] > summary {
+.lang[open] > summary,
+.theme[open] > summary {
   color: var(--text);
   border-color: var(--line-strong);
 }
 
-.lang-menu {
+.lang-menu,
+.theme-menu {
   position: absolute;
   right: 0;
   top: calc(100% + 0.4rem);
-  min-width: 190px;
-  max-height: 70vh;
-  overflow-y: auto;
   background: var(--bg-raised);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: 0 12px 32px rgb(0 0 0 / 0.32);
   padding: 0.35rem;
+}
+
+.lang-menu {
+  min-width: 210px;
+  max-height: 70vh;
+  overflow-y: auto;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* One column. A two-letter badge needs a fixed width to line up, and a flag
+   * would have been the only thing wide enough to justify the second column. */
+  grid-template-columns: 1fr;
   gap: 0.1rem;
 }
 
-.lang-menu button {
+.theme-menu {
+  min-width: 150px;
+  display: grid;
+  gap: 0.1rem;
+}
+
+.lang-menu button,
+.theme-menu button {
   all: unset;
   cursor: pointer;
-  padding: 0.4rem 0.55rem;
   border-radius: 7px;
   font-size: 0.9rem;
   color: var(--text-muted);
   white-space: nowrap;
 }
 
-.lang-menu button:hover {
+.lang-menu button {
+  padding: 0.4rem 0.55rem;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.theme-menu button {
+  padding: 0.4rem 0.55rem;
+}
+
+/* The two-letter code. Fixed width so the endonyms align into a column, and
+ * monospaced so the codes do not shift as the active one changes weight. */
+.lang-code {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 0.1rem 0.3rem;
+  min-width: 2.1em;
+  text-align: center;
+  flex: none;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.lang-name {
+  min-width: 0;
+}
+
+.lang-menu button:hover,
+.theme-menu button:hover {
   background: var(--bg-sunken);
   color: var(--text);
 }
 
-.lang-menu button[aria-current="true"] {
+.lang-menu button[aria-current="true"],
+.theme-menu button[aria-current="true"] {
   color: var(--accent);
   font-weight: 600;
+}
+
+.lang-menu button[aria-current="true"] .lang-code {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: transparent;
+}
+
+.theme {
+  position: relative;
+}
+
+/* Half-filled disc, meaning "follows the system". The glyph is decorative --
+ * the adjacent text carries the state and the summary's aria-label names the
+ * control -- so it is hidden from assistive technology and needs to work as a
+ * shape in both palettes rather than as a picture.
+ */
+.theme-glyph {
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--text-faint);
+}
+
+.theme[open] .theme-glyph {
+  color: var(--text-muted);
+}
+
+/* The active theme is named in the closed control, like the language is, so
+ * neither setting is only discoverable from inside its own menu. */
+.theme-current {
+  font-weight: 600;
+  color: var(--text);
 }
 
 /* ---------- hero ---------- */
@@ -748,7 +871,7 @@ th {
     padding-block: 3rem 2.5rem;
   }
   .lang-menu {
-    grid-template-columns: 1fr;
+    min-width: 190px;
   }
   .legal dl {
     grid-template-columns: 1fr;

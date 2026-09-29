@@ -38,8 +38,27 @@
       <a href="/download/" data-i18n="nav-download">İndir</a>
 
       <details class="lang">
-        <summary aria-label="Language / Dil">🌐 12</summary>
-        <div class="lang-menu" id="lang-menu" role="menu"></div>
+        <summary data-i18n-attr="aria-label:lang-switch-label">
+          <span class="lang-code" data-lang-code>TR</span>
+          <span data-lang-current>Türkçe</span>
+        </summary>
+        <div class="lang-menu" id="lang-menu"></div>
+      </details>
+
+      <details class="theme">
+        <summary data-i18n-attr="aria-label:theme-switch-label">
+          <span class="theme-glyph" aria-hidden="true">◐</span>
+          <span class="theme-current" data-theme-current data-i18n="theme-system">Sistem</span>
+        </summary>
+        <div class="theme-menu" id="theme-menu"></div>
+      </details>
+
+      <details class="theme">
+        <summary data-i18n-attr="aria-label:theme-switch-label">
+          <span class="theme-glyph" aria-hidden="true">◐</span>
+          <span class="theme-current" data-theme-current data-i18n="theme-system">Sistem</span>
+        </summary>
+        <div class="theme-menu" id="theme-menu"></div>
       </details>
     </nav>
   </div>
@@ -50,30 +69,24 @@
   <div class="wrap">
     <span class="eyebrow" data-i18n="privacy-eyebrow">Yasal</span>
     <h1 data-i18n="privacy-title">Gizlilik Politikası</h1>
-    <p class="muted prose" data-i18n="privacy-updated">Son güncelleme: Eylül 2026 · Bu politika Türkçe ve İngilizce olarak sunulur; Türkçe metin esas alınır.</p>
+    <p class="muted prose" data-i18n="privacy-updated">Son güncelleme: Eylül 2026 · 12 dilde sunulur.</p>
   </div>
 
   <section>
     <div class="wrap prose">
-      <h2>1. Kasa Veriniz: Asla Toplanmaz</h2>
-      <p>KalderaShield, sıfır-bilgi ve çevrimdışı öncelikli tasarımı gereği kasanızda sakladığınız şifreleri, kullanıcı adlarını, notları, passkey'leri ve ekleri <strong>hiçbir koşulda toplamaz, işlemez ve paylaşmaz</strong>. Verileriniz yalnızca cihazınızda, sizin ana parolanızdan türetilen anahtarlarla şifreli olarak saklanır. Ana parolanızın veya türetilen anahtarların bir kopyası bizde asla bulunmaz.</p>
+      <h2 data-i18n="privacy-h2-1">1. Kasa Veriniz: Asla Toplanmaz</h2>
+      <p data-i18n="privacy-p1-1">KalderaShield, sıfır-bilgi ve çevrimdışı öncelikli tasarımı gereği kasanızda sakladığınız şifreleri, kullanıcı adlarını, notları, passkey'leri ve ekleri <strong>hiçbir koşulda toplamaz, işlemez ve paylaşmaz</strong>. Verileriniz yalnızca cihazınızda, sizin ana parolanızdan türetilen anahtarlarla şifreli olarak saklanır. Ana parolanızın veya türetilen anahtarların bir kopyası bizde asla bulunmaz.</p>
 
-      <h2>2. Web Sitesi: Çerezsiz ve İzlemesiz</h2>
-      <p>Bu web sitesi <strong>izleme çerezi, reklam çerezi, parmak izi (fingerprinting) veya analitik betiği kullanmaz.</strong> Ziyaretçi davranışı ölçülmez; üçüncü taraf istekleri yapılmaz. Sitede depolanan tek veri, arayüz dil tercihinizin hatırlanması için tarayıcınızın yerel depolamasında (localStorage) tutulan dil kodudur. Bu veri cihazınızdan çıkmaz.</p>
+      <h2 data-i18n="privacy-h2-2">2. Web Sitesi: Çerezsiz ve İzlemesiz</h2>
+      <p data-i18n="privacy-p1-2">Bu web sitesi <strong>izleme çerezi, reklam çerezi, parmak izi (fingerprinting) veya analitik betiği kullanmaz.</strong> Ziyaretçi davranışı ölçülmez; üçüncü taraf istekleri yapılmaz. Sitede depolanan tek veri, arayüz dil tercihinizin hatırlanması için tarayıcınızın yerel depolamasında (localStorage) tutulan dil kodudur. Bu veri cihazınızdan çıkmaz.</p>
 
-      <h2>3. İndirmeler ve GitHub</h2>
-      <p>Uygulama ve eklenti paketleri GitHub Releases üzerinden dağıtılır. İndirme sırasında GitHub/Microsoft'un kendi gizlilik uygulamaları geçerlidir; bu sırada bize hiçbir veri iletilmez. <code>install.sh</code> betiği, sürüm numarasını ve SHA-256 özetlerini yalnızca bütünlük doğrulaması için GitHub Releases'ten okur.</p>
+      <h2 data-i18n="privacy-h2-3">3. İndirmeler ve GitHub</h2>
+      <p data-i18n="privacy-p1-3">Uygulama ve eklenti paketleri GitHub Releases üzerinden dağıtılır. İndirme sırasında GitHub/Microsoft'un kendi gizlilik uygulamaları geçerlidir; bu sırada bize hiçbir veri iletilmez. <code>install.sh</code> betiği, sürüm numarasını ve SHA-256 özetlerini yalnızca bütünlük doğrulaması için GitHub Releases'ten okur.</p>
 
-      <h2>4. İletişim</h2>
-      <p>Gizlilik sorularınız için: <a href="mailto:admin@kalderashield.xyz">admin@kalderashield.xyz</a></p>
+      <h2 data-i18n="privacy-h2-4">4. İletişim</h2>
+      <p data-i18n="privacy-p1-4">Gizlilik sorularınız için: <a href="mailto:admin@{{DOMAIN}}">admin@{{DOMAIN}}</a></p>
 
-      <hr>
-
-      <h2>Privacy Policy (English)</h2>
-      <p><strong>1. Your vault data: never collected.</strong> KalderaShield's zero-knowledge, offline-first design means the passwords, usernames, notes, passkeys and attachments stored in your vault are never collected, processed or shared. They stay on your device, encrypted with keys derived from your master password. We never hold a copy of your master password or any derived key.</p>
-      <p><strong>2. This website: cookieless and tracking-free.</strong> This site uses no tracking cookies, no advertising cookies, no fingerprinting and no analytics scripts. Visitor behaviour is not measured and no third-party requests are made. The only data stored is your interface language preference, kept in your browser's local storage — it never leaves your device.</p>
-      <p><strong>3. Downloads and GitHub.</strong> Application packages are distributed via GitHub Releases; GitHub/Microsoft's own privacy practices apply to those downloads. No data is transmitted to us in the process. The <code>install.sh</code> script reads the release version and SHA-256 digests from GitHub Releases solely for integrity verification.</p>
-      <p><strong>4. Contact.</strong> Privacy questions: <a href="mailto:admin@kalderashield.xyz">admin@kalderashield.xyz</a>. In case of differences, the Turkish text of this policy governs.</p>
+      <p class="muted" data-i18n="privacy-governing">Çeviri ile Türkçe metin arasında bir farklılık olması hâlinde Türkçe metin esas alınır.</p>
     </div>
   </section>
 
