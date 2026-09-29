@@ -1,0 +1,12 @@
+# Security Disclosure Policy (RFC 9116)
+#
+# Replace the {{DOMAIN}} token before deploying. scripts/check-placeholders.cjs
+# fails a deploy while one is present, so a published site cannot carry a
+# contact address that goes nowhere.
+
+Contact: mailto:security@{{DOMAIN}}
+Contact: https://github.com/hafgit99/kalderashield/security/advisories/new
+Expires: 2027-12-31T00:00:00.000Z
+Preferred-Languages: tr, en
+Canonical: https://{{DOMAIN}}/.well-known/security.txt
+Policy: https://{{DOMAIN}}/privacy.html
