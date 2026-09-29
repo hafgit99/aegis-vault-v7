@@ -1,4 +1,4 @@
-﻿# AegisVault v7 — Derinlemesine Kod İnceleme Raporu
+# AegisVault v7 — Derinlemesine Kod İnceleme Raporu
 
 **Tarih:** 27 Eylül 2026
 **Kapsam:** `v7.0.7.0` (`a995bde`) — inceleme; `fb33981` — Aşama 0–1; `5c9752e` + çalışma ağacı — Aşama 0.5, K-1, K-3/K-4/K-7, Y-5, K-4 UI, O-4; `4ecf34c`/`b983354`/`85e5172`/`fb5ea7f`/`54552d6`/`ac6ba3f`/O-3/#43/#44/O-2 — Aşama 2

@@ -1,4 +1,4 @@
-ackage com.kalderashield.app.crypto
+ckage com.kalderashield.desktop.crypto
 
 import android.content.Context
 import android.os.Build

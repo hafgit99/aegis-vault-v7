@@ -1,4 +1,4 @@
-ackage com.kalderashield.app.bridges
+ckage com.kalderashield.desktop.bridges
 
 import android.util.Base64
 import android.util.Log
@@ -6,7 +6,7 @@ import android.webkit.JavascriptInterface
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
-import com.kalderashield.app.crypto.SecureStorageKeyStore
+import com.kalderashield.desktop.crypto.SecureStorageKeyStore
 import java.util.concurrent.Executor
 import javax.crypto.Cipher
 import org.json.JSONObject

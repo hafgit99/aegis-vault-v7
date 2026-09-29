@@ -1,4 +1,4 @@
-ackage com.kalderashield.app.bridges
+ckage com.kalderashield.desktop.bridges
 
 import android.app.Activity
 import android.content.Intent
@@ -11,11 +11,11 @@ import android.view.autofill.AutofillManager
 import android.view.autofill.AutofillValue
 import android.webkit.JavascriptInterface
 import android.widget.RemoteViews
-import com.kalderashield.app.MainActivity
-import com.kalderashield.app.R
-import com.kalderashield.app.model.AutofillLaunchRequest
-import com.kalderashield.app.model.AutofillSaveCandidate
-import com.kalderashield.app.security.SecureTempFileStorage
+import com.kalderashield.desktop.MainActivity
+import com.kalderashield.desktop.R
+import com.kalderashield.desktop.model.AutofillLaunchRequest
+import com.kalderashield.desktop.model.AutofillSaveCandidate
+import com.kalderashield.desktop.security.SecureTempFileStorage
 import java.nio.charset.StandardCharsets
 import org.json.JSONObject
 

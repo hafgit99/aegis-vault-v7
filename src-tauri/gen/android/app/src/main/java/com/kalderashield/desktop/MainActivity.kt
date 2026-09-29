@@ -1,4 +1,4 @@
-ackage com.kalderashield.app
+ckage com.kalderashield.desktop
 
 import android.app.Activity
 import android.content.Intent
@@ -14,19 +14,19 @@ import android.util.Log
 import android.view.WindowManager
 import android.webkit.WebView
 import androidx.activity.enableEdgeToEdge
-import com.kalderashield.app.bridges.AndroidAutofillBridge
-import com.kalderashield.app.bridges.AndroidBiometricKeyStoreBridge
-import com.kalderashield.app.bridges.AndroidFileBridge
-import com.kalderashield.app.bridges.AndroidRuntimeSecurityBridge
-import com.kalderashield.app.bridges.AndroidSecureStorageBridge
-import com.kalderashield.app.crypto.SecureStorageKeyStore
-import com.kalderashield.app.model.AndroidImportFile
-import com.kalderashield.app.model.AutofillLaunchRequest
-import com.kalderashield.app.model.AutofillSaveCandidate
-import com.kalderashield.app.model.PendingSave
-import com.kalderashield.app.security.AutofillRequestRegistry
-import com.kalderashield.app.security.AutofillSecurityLog
-import com.kalderashield.app.security.RuntimeSecurityPosture
+import com.kalderashield.desktop.bridges.AndroidAutofillBridge
+import com.kalderashield.desktop.bridges.AndroidBiometricKeyStoreBridge
+import com.kalderashield.desktop.bridges.AndroidFileBridge
+import com.kalderashield.desktop.bridges.AndroidRuntimeSecurityBridge
+import com.kalderashield.desktop.bridges.AndroidSecureStorageBridge
+import com.kalderashield.desktop.crypto.SecureStorageKeyStore
+import com.kalderashield.desktop.model.AndroidImportFile
+import com.kalderashield.desktop.model.AutofillLaunchRequest
+import com.kalderashield.desktop.model.AutofillSaveCandidate
+import com.kalderashield.desktop.model.PendingSave
+import com.kalderashield.desktop.security.AutofillRequestRegistry
+import com.kalderashield.desktop.security.AutofillSecurityLog
+import com.kalderashield.desktop.security.RuntimeSecurityPosture
 import org.json.JSONObject
 
 class MainActivity : TauriActivity() {

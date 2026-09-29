@@ -71,7 +71,7 @@ fs.mkdirSync(firefoxHostDir, { recursive: true });
 fs.writeFileSync(batPath, batContent);
 console.log(`Created: ${batPath}`);
 
-// 2. Create com.hafgit99.KalderaShield7.json
+// 2. Create com.hafgit99.KalderaShield.json
 // Note: Chrome/Edge do NOT support wildcards (*) in allowed_origins.
 // We only permit official/configured extension IDs and reject arbitrary placeholders.
 const extensionId = process.argv[2] || process.env.KALDERASHIELD_EXTENSION_ID;

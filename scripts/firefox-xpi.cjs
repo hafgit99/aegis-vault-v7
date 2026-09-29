@@ -13,11 +13,11 @@ const shouldSign = args.has('--sign');
 const skipBuild = args.has('--skip-build');
 const channel = process.env.AMO_CHANNEL || 'unlisted';
 const approvalTimeout = process.env.AMO_APPROVAL_TIMEOUT || process.env.WEB_EXT_APPROVAL_TIMEOUT;
-const xpiName = `KalderaShield-vault-7-firefox-v${packageJson.version}.xpi`;
+const xpiName = `kalderashield-firefox-v${packageJson.version}.xpi`;
 
 const excludedNames = new Set([
   'KalderaShield-host.bat',
-  'com.hafgit99.KalderaShield7.json',
+  'com.hafgit99.KalderaShield.json',
 ]);
 
 function maskCommandArgs(cmdArgs) {
@@ -94,8 +94,8 @@ function assertFirefoxManifest() {
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   const geckoId = manifest.browser_specific_settings?.gecko?.id;
 
-  if (geckoId !== 'KalderaShield7@hafgit99.com') {
-    throw new Error('Firefox manifest must include browser_specific_settings.gecko.id = KalderaShield7@hafgit99.com');
+  if (geckoId !== 'KalderaShield@hafgit99.com') {
+    throw new Error('Firefox manifest must include browser_specific_settings.gecko.id = KalderaShield@hafgit99.com');
   }
 
   if (manifest.background?.service_worker) {

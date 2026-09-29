@@ -1,4 +1,4 @@
-# Desktop + Android + Extensions Release — tag-gated, signed, reproducible release pipeline
+#Desktop + Android + Extensions Release — tag-gated, signed, reproducible release pipeline
 #
 # Flow: push tag `v*` (package.json version MUST match the tag)
 #   1. Build Linux / macOS / Windows packages, signed Android APKs and browser
@@ -628,7 +628,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p release-local/firefox
-          XPI="release-local/firefox/$(node -p "'KalderaShield-vault-7-firefox-v' + require('./package.json').version + '.xpi'")"
+          XPI="release-local/firefox/$(node -p "'kalderashield-firefox-v' + require('./package.json').version + '.xpi'")"
           echo "signed-by-amo=true" > release-local/firefox/AMO_SIGNING_STATUS.txt
           if [ -n "$WEB_EXT_API_KEY" ] && [ -n "$WEB_EXT_API_SECRET" ]; then
             if npm run sign:firefox:xpi -- --skip-build; then
@@ -655,7 +655,7 @@ jobs:
           npm run extension:safari
           mkdir -p release-local/safari
           VERSION=$(node -p "require('./package.json').version")
-          zip -qr "release-local/safari/KalderaShield-vault-7-safari-v${VERSION}-webextension.zip" dist-extension-safari
+          zip -qr "release-local/safari/kalderashield-safari-v${VERSION}-webextension.zip" dist-extension-safari
           echo "Safari WebExtension bundle zipped (native Safari app wrapper still requires Xcode conversion on macOS)."
 
       - name: Upload extension artifacts
@@ -735,7 +735,7 @@ jobs:
     needs: [plan]
     # The alias staging step is shell, and shell in a workflow is only tested by
     # a failing release. It failed three in a row: v7.0.12.0 published three of
-    # seven aliases (a `*-latest.*` glob cannot match `KalderaShield7-`), v7.0.13.0
+    # seven aliases (a `*-latest.*` glob cannot match `KalderaShield-`), v7.0.13.0
     # died on a `test && append` under `set -e`, and v7.0.14.0 ran the test
     # itself with bare `node` so vitest was missing.
     #
@@ -967,7 +967,7 @@ jobs:
         # Why this exists
         # -------------
         # The website links every download to a versioned path:
-        #   .../releases/download/v7.0.7.0/KalderaShield7-7.0.7.0-linux-amd64.deb
+        #   .../releases/download/v7.0.7.0/KalderaShield-7.0.7.0-linux-amd64.deb
         # That has to be edited by hand in 9 files on every release, and when it
         # is forgotten the site does not break -- it keeps serving the previous
         # version to every visitor, silently. That is what happened between
@@ -976,7 +976,7 @@ jobs:
         # `releases/latest/download/<name>` redirects to the newest release, but
         # only for assets whose name does not change per release. Verified, not
         # assumed: `/releases/latest/download/SHA256SUMS.txt` returns 200 while
-        # `/releases/latest/download/KalderaShield7-7.0.7.0-windows-x64-setup.exe`
+        # `/releases/latest/download/KalderaShield-7.0.7.0-windows-x64-setup.exe`
         # returns 404, because the version is in the filename and the newest
         # release has no such file. So an alias has to exist under a fixed name.
         #
@@ -1031,7 +1031,7 @@ jobs:
             # Record what this function actually wrote. A later `*-latest.*`
             # glob cannot be trusted to rediscover it: `*` does not match an
             # uppercase leading character here, which is exactly how the Linux
-            # aliases (KalderaShield7-...) went missing in v7.0.12.0 while the
+            # aliases (KalderaShield-...) went missing in v7.0.12.0 while the
             # lowercase extension ones were found.
             staged_files+=("${alias}")
             for ext in sig sigstore.json pem; do
@@ -1047,18 +1047,18 @@ jobs:
             return 0
           }
 
-          link_alias 'KalderaShield7-latest-linux-amd64.deb' 'KalderaShield7-*-linux-amd64.deb'
-          link_alias 'KalderaShield7-latest-linux-x64.AppImage' 'KalderaShield7-*-linux-x64.AppImage'
-          link_alias 'KalderaShield-vault-7-chrome-latest.zip' 'KalderaShield-vault-7-chrome-*.zip'
-          link_alias 'KalderaShield-vault-7-edge-latest.zip' 'KalderaShield-vault-7-edge-*.zip'
-          link_alias 'KalderaShield-vault-7-firefox-latest.xpi' 'KalderaShield-vault-7-firefox-*.xpi'
-          link_alias 'KalderaShield-vault-7-safari-latest-webextension.zip' 'KalderaShield-vault-7-safari-*-webextension.zip'
+          link_alias 'KalderaShield-latest-linux-amd64.deb' 'KalderaShield-*-linux-amd64.deb'
+          link_alias 'KalderaShield-latest-linux-x64.AppImage' 'KalderaShield-*-linux-x64.AppImage'
+          link_alias 'kalderashield-chrome-latest.zip' 'kalderashield-chrome-*.zip'
+          link_alias 'kalderashield-edge-latest.zip' 'kalderashield-edge-*.zip'
+          link_alias 'kalderashield-firefox-latest.xpi' 'kalderashield-firefox-*.xpi'
+          link_alias 'kalderashield-safari-latest-webextension.zip' 'kalderashield-safari-*-webextension.zip'
           # No alias for install.sh: it is not published in this release at all
           # (verified against the v7.0.11.0 asset list), so aliasing it would
           # advertise a download that 404s. The site's CLI page links to a
           # versioned path for a file the pipeline does not upload; that is a
           # separate broken link, tracked with the site update.
-          link_alias 'KalderaShield-vault-7-latest-universal.apk' 'app-universal-universal-release.apk'
+          link_alias 'kalderashield-latest-universal.apk' 'app-universal-universal-release.apk'
 
           echo "Staged ${aliased} version-less alias(es)."
           [ "$aliased" -gt 0 ] || { echo "::error::No aliases were staged"; exit 1; }
@@ -1072,7 +1072,7 @@ jobs:
           # unmatched pattern as an informational "🤔 does not match any files"
           # and the step still succeeds, so the run was green while the website
           # served 404s for two of its platforms. `*` did not match the leading
-          # uppercase `A` of `KalderaShield7-latest-...`, which is why exactly the
+          # uppercase `A` of `KalderaShield-latest-...`, which is why exactly the
           # non-extension aliases went missing.
           #
           # The list is built from what link_alias actually wrote, so it cannot

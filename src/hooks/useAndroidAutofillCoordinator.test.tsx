@@ -388,7 +388,7 @@ describe('useAndroidAutofillCoordinator', () => {
     const encryptedCandidate = {
       ...saveCandidate({ requestId: 'encrypted-save' }),
       password: '',
-      payloadUri: 'content://com.hafgit99.KalderaShield7.fileprovider/KalderaShield-autofill-tmp/abcd.aest',
+      payloadUri: 'content://com.kalderashield.desktop.fileprovider/KalderaShield-autofill-tmp/abcd.aest',
       payloadToken: 'opaque-token',
     };
     autofillState.pendingSaveCandidate = encryptedCandidate;
@@ -420,7 +420,7 @@ describe('useAndroidAutofillCoordinator', () => {
     const encryptedCandidate = {
       ...saveCandidate({ requestId: 'encrypted-missing' }),
       password: '',
-      payloadUri: 'content://com.hafgit99.KalderaShield7.fileprovider/KalderaShield-autofill-tmp/missing.aest',
+      payloadUri: 'content://com.kalderashield.desktop.fileprovider/KalderaShield-autofill-tmp/missing.aest',
       payloadToken: 'opaque-token',
     };
     const { openNewItemForm, setActiveTab, showNotification } = renderCoordinator(true);

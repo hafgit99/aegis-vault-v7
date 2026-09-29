@@ -207,7 +207,7 @@ function scanSourceConfiguration() {
   if (!/android:usesCleartextTraffic="\$\{usesCleartextTraffic\}"/.test(manifest)) {
     fail(`${manifestPath}: cleartext traffic must be controlled by the release-safe manifest placeholder`);
   }
-  const mainActivityPath = 'src-tauri/gen/android/app/src/main/java/com/hafgit99/KalderaShield7/MainActivity.kt';
+  const mainActivityPath = 'src-tauri/gen/android/app/src/main/java/com/kalderashield/desktop/MainActivity.kt';
   const mainActivity = readText(mainActivityPath);
   if (!/WebView\.setWebContentsDebuggingEnabled\(BuildConfig\.DEBUG\)/.test(mainActivity)) {
     fail(`${mainActivityPath}: WebView debugging must be tied to BuildConfig.DEBUG`);

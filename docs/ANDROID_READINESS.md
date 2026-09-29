@@ -1,6 +1,6 @@
 # Android Readiness Plan
 
-This document tracks the Android preparation path for Aegis Vault 7. Android is not treated as a simple resize of the desktop app because the vault stores secrets, encrypted attachments, remembered Secret Key state, and backup files.
+This document tracks the Android preparation path for KalderaShield. Android is not treated as a simple resize of the desktop app because the vault stores secrets, encrypted attachments, remembered Secret Key state, and backup files.
 
 ## Current Status
 
@@ -130,11 +130,11 @@ Local device smoke baseline from this workstation:
 
 - Device model: `2311DRK48G`.
 - Device ABI: `arm64-v8a`.
-- Debug package: `com.hafgit99.aegisvault7.debug`.
+- Debug package: `com.kalderashield.desktop.debug`.
 - APK install through `adb install -r` succeeded.
 - App launch through `am start` succeeded.
 - Process was running after launch and no immediate `FATAL EXCEPTION` appeared in the sampled logcat output.
-- `android:device:smoke` now waits for delayed process startup and verifies the debug package data directory is app-private at `/data/user/0/com.hafgit99.aegisvault7.debug`.
+- `android:device:smoke` now waits for delayed process startup and verifies the debug package data directory is app-private at `/data/user/0/com.kalderashield.desktop.debug`.
 
 ## Phase 1: Readiness Gate
 
@@ -152,7 +152,7 @@ Before treating Android as a product target, verify:
 - `npm run android:device:security -- --launch` to capture foreground, app-private storage, `FLAG_SECURE`, and crash-log evidence
 - Optional compatibility check: `npm run android:build:apk:debug`
 
-The device smoke gate installs the latest debug or release APK for the selected mode, optionally uninstalls the selected package first with `--fresh-install`, launches the expected package (`com.hafgit99.aegisvault7.debug` for debug or `com.hafgit99.aegisvault7` for release), waits for the process to become visible, and fails if Android reports a non-private app data directory.
+The device smoke gate installs the latest debug or release APK for the selected mode, optionally uninstalls the selected package first with `--fresh-install`, launches the expected package (`com.kalderashield.desktop.debug` for debug or `com.kalderashield.desktop` for release), waits for the process to become visible, and fails if Android reports a non-private app data directory.
 
 Manual smoke checklist for the first debug APK:
 
@@ -185,7 +185,7 @@ Run this checklist before every APK/AAB candidate that may be shared outside loc
 - Generate `ANDROID_RELEASE_NOTES.md` with `npm run android:release:notes -- --dir release-local/android/<timestamp> --signed --final` and keep it in the evidence folder.
 - Confirm `metadata.json` reports `"dirty": false` before sharing any APK/AAB outside local development.
 - Run `npm run android:release:signing:check` before building a signed release candidate.
-- Build release APK/AAB with signing configuration when release keys are ready. Use `npm run android:release:gate -- --signed --evidence` for artifact evidence, and add `--device` only when a physical device should install/test the signed release package `com.hafgit99.aegisvault7`. Add `--fresh-install` for the final clean-install smoke pass.
+- Build release APK/AAB with signing configuration when release keys are ready. Use `npm run android:release:gate -- --signed --evidence` for artifact evidence, and add `--device` only when a physical device should install/test the signed release package `com.kalderashield.desktop`. Add `--fresh-install` for the final clean-install smoke pass.
 - Run `npm run android:release:report
 npm run security:release-hardening:android -- --strict` and store the output with the release candidate notes; for signed release candidates use `npm run android:release:report
 npm run security:release-hardening:android -- --strict --signed`.

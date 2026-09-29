@@ -12,7 +12,7 @@ const buildType = releaseMode ? 'release' : 'debug';
 const sdkRoot = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT;
 const adb = sdkRoot ? path.join(sdkRoot, 'platform-tools', process.platform === 'win32' ? 'adb.exe' : 'adb') : 'adb';
 const apk = findLatestAndroidApk(repoRoot, { buildType });
-const packageName = releaseMode ? 'com.hafgit99.KalderaShield7' : 'com.hafgit99.KalderaShield7.debug';
+const packageName = releaseMode ? 'com.hafgit99.KalderaShield' : 'com.hafgit99.KalderaShield.debug';
 const processWaitTimeoutMs = 15000;
 const processPollIntervalMs = 500;
 

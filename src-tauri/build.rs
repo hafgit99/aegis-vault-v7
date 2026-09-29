@@ -1,7 +1,7 @@
 use serde_json::Value;
 use std::{env, fs};
 
-const MANIFEST_PATH: &str = "../dist/aegis-integrity.json";
+const MANIFEST_PATH: &str = "../dist/KalderaShield-integrity.json";
 
 fn integrity_root() -> Option<String> {
     let contents = fs::read_to_string(MANIFEST_PATH).ok()?;
@@ -24,10 +24,10 @@ fn main() {
     let profile = env::var("PROFILE").unwrap_or_default();
     let root = integrity_root();
     if profile == "release" && root.is_none() {
-        panic!("release build requires a valid dist/aegis-integrity.json manifest");
+        panic!("release build requires a valid dist/KalderaShield-integrity.json manifest");
     }
     println!(
-        "cargo:rustc-env=AEGIS_ASSET_INTEGRITY_ROOT={}",
+        "cargo:rustc-env=KALDERASHIELD_ASSET_INTEGRITY_ROOT={}",
         root.unwrap_or_default()
     );
 

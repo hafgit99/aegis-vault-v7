@@ -874,8 +874,8 @@ pub fn run() {
     let is_native_host = args.iter().any(|arg| {
         arg == "--native-messaging-host"
             || arg.starts_with("chrome-extension://")
-            || arg.ends_with("com.kalderashield.app.json")
-            || arg == "KalderaShield7@hafgit99.com"
+            || arg.ends_with("com.kalderashield.desktop.json")
+            || arg == "kalderashield@hafgit99.com"
             || (arg.ends_with(".json") && args.iter().any(|a| a.contains('@')))
     });
 

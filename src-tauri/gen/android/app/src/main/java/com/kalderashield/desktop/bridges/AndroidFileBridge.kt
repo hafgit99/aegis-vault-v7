@@ -1,8 +1,8 @@
-ackage com.kalderashield.app.bridges
+ckage com.kalderashield.desktop.bridges
 
 import android.content.Intent
 import android.webkit.JavascriptInterface
-import com.kalderashield.app.MainActivity
+import com.kalderashield.desktop.MainActivity
 
 class AndroidFileBridge(
     private val activity: MainActivity,

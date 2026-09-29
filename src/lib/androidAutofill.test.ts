@@ -276,7 +276,7 @@ describe('android autofill bridge', () => {
       url: 'https://example.com',
       appPackage: 'com.android.chrome',
       webDomain: 'example.com',
-      payloadUri: 'content://com.hafgit99.KalderaShield7.fileprovider/KalderaShield-autofill-tmp/abcd.aest',
+      payloadUri: 'content://com.kalderashield.desktop.fileprovider/KalderaShield-autofill-tmp/abcd.aest',
       payloadToken: 'opaque-token',
     };
 

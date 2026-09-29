@@ -125,7 +125,7 @@ function allMatches(predicate) {
 }
 
 function normalizeName(kind, ext) {
-  return `KalderaShield7-${version}-${platform}-${kind}${ext}`;
+  return `KalderaShield-${version}-${platform}-${kind}${ext}`;
 }
 
 function collectWindows() {
@@ -226,7 +226,7 @@ function copyBrowserExtensions() {
       .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs)[0];
 
     if (xpi) {
-      artifacts.push(copyFile(xpi, `KalderaShield7-${version}-firefox-signed.xpi`));
+      artifacts.push(copyFile(xpi, `KalderaShield-${version}-firefox-signed.xpi`));
     }
   }
 

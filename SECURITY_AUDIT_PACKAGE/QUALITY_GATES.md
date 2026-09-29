@@ -1,4 +1,4 @@
-﻿# Quality Gates
+# Quality Gates
 
 This document tracks the automated test gates for Aegis Vault 7. The goal is to raise confidence in small, measurable steps without making early development brittle.
 

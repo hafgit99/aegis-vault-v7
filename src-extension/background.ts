@@ -1,6 +1,6 @@
 import { extractRegistrableDomainFromUrl } from './psl-utils';
 
-const HOST_NAME = 'com.hafgit99.KalderaShield7';
+const HOST_NAME = 'com.kalderashield.desktop';
 
 export interface ExtensionDraftCredential {
   title?: string;

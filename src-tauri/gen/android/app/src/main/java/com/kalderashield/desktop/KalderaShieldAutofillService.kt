@@ -1,4 +1,4 @@
-ackage com.kalderashield.app
+ckage com.kalderashield.desktop
 
 import android.app.PendingIntent
 import android.content.Intent
@@ -19,10 +19,10 @@ import android.app.assist.AssistStructure
 import android.widget.RemoteViews
 import androidx.annotation.RequiresApi
 import androidx.core.content.FileProvider
-import com.kalderashield.app.model.AutofillLaunchRequest
-import com.kalderashield.app.model.AutofillSaveCandidate
-import com.kalderashield.app.security.AutofillRequestRegistry
-import com.kalderashield.app.security.SecureTempFileStorage
+import com.kalderashield.desktop.model.AutofillLaunchRequest
+import com.kalderashield.desktop.model.AutofillSaveCandidate
+import com.kalderashield.desktop.security.AutofillRequestRegistry
+import com.kalderashield.desktop.security.SecureTempFileStorage
 import java.util.UUID
 import org.json.JSONObject
 
@@ -408,8 +408,8 @@ class KalderaShieldAutofillService : AutofillService() {
      * `android:exported="false"`, so only the system — executing a
      * `PendingIntent` this service created — can deliver them.
      */
-    const val ACTION_AUTOFILL_AUTHENTICATE = "com.kalderashield.app.action.AUTOFILL_AUTHENTICATE"
-    const val ACTION_AUTOFILL_SAVE = "com.kalderashield.app.action.AUTOFILL_SAVE"
+    const val ACTION_AUTOFILL_AUTHENTICATE = "com.kalderashield.desktop.action.AUTOFILL_AUTHENTICATE"
+    const val ACTION_AUTOFILL_SAVE = "com.kalderashield.desktop.action.AUTOFILL_SAVE"
 
     /**
      * The ONLY extras the Autofill Intents carry. Both are routing metadata:
@@ -425,7 +425,7 @@ class KalderaShieldAutofillService : AutofillService() {
      * plaintext password from an Intent is an attack surface, not a
      * compatibility feature.
      */
-    const val EXTRA_REQUEST_ID = "com.kalderashield.app.extra.AUTOFILL_REQUEST_ID"
-    const val EXTRA_REQUEST_CREATED_AT = "com.kalderashield.app.extra.AUTOFILL_CREATED_AT"
+    const val EXTRA_REQUEST_ID = "com.kalderashield.desktop.extra.AUTOFILL_REQUEST_ID"
+    const val EXTRA_REQUEST_CREATED_AT = "com.kalderashield.desktop.extra.AUTOFILL_CREATED_AT"
   }
 }

@@ -1,7 +1,7 @@
-ackage com.kalderashield.app.bridges
+ckage com.kalderashield.desktop.bridges
 
 import android.webkit.JavascriptInterface
-import com.kalderashield.app.security.RuntimeSecurityPosture
+import com.kalderashield.desktop.security.RuntimeSecurityPosture
 
 class AndroidRuntimeSecurityBridge(
     private val securityPosture: RuntimeSecurityPosture

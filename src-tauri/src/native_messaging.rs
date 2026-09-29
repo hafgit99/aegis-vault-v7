@@ -238,7 +238,7 @@ pub fn get_app_data_dir() -> Option<PathBuf> {
     {
         std::env::var("APPDATA")
             .ok()
-            .map(|appdata| PathBuf::from(appdata).join("com.kalderashield.app"))
+            .map(|appdata| PathBuf::from(appdata).join("com.kalderashield.desktop"))
     }
     #[cfg(target_os = "macos")]
     {
@@ -246,7 +246,7 @@ pub fn get_app_data_dir() -> Option<PathBuf> {
             PathBuf::from(home)
                 .join("Library")
                 .join("Application Support")
-                .join("com.kalderashield.app")
+                .join("com.kalderashield.desktop")
         })
     }
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
@@ -254,7 +254,7 @@ pub fn get_app_data_dir() -> Option<PathBuf> {
         std::env::var("HOME").ok().map(|home| {
             PathBuf::from(home)
                 .join(".config")
-                .join("com.kalderashield.app")
+                .join("com.kalderashield.desktop")
         })
     }
 }

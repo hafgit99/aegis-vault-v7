@@ -16,9 +16,9 @@ const SRC = path.join('release-local', 'windows');
 const OUT = path.join('release-local', 'downloads-staging');
 
 const ALIASES = {
-  'KalderaShield7-7.0.16.0-windows-x64-setup.exe': 'KalderaShield7-latest-windows-x64-setup.exe',
-  'KalderaShield7-7.0.16.0-windows-x64.msi': 'KalderaShield7-latest-windows-x64.msi',
-  'KalderaShield7-7.0.16.0-windows-x64-portable.exe': 'KalderaShield7-latest-windows-x64-portable.exe',
+  'KalderaShield-7.0.16.0-windows-x64-setup.exe': 'KalderaShield-latest-windows-x64-setup.exe',
+  'KalderaShield-7.0.16.0-windows-x64.msi': 'KalderaShield-latest-windows-x64.msi',
+  'KalderaShield-7.0.16.0-windows-x64-portable.exe': 'KalderaShield-latest-windows-x64-portable.exe',
 };
 
 fs.rmSync(OUT, { recursive: true, force: true });

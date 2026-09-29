@@ -62,7 +62,7 @@ describe('manifest builders', () => {
       extensionIds: [PRIMARY_CHROME_EXTENSION_ID],
     });
     expect(manifest).toEqual({
-      name: 'com.hafgit99.KalderaShield7',
+      name: 'com.hafgit99.KalderaShield',
       description: 'KalderaShield Native Messaging Host',
       path: 'C:\\install\\KalderaShield.exe',
       type: 'stdio',
@@ -73,7 +73,7 @@ describe('manifest builders', () => {
 
   it('builds a Firefox manifest pinned to the signed Gecko ID', () => {
     const manifest = buildFirefoxHostManifest({ hostPath: '/usr/bin/KalderaShield' });
-    expect(manifest.allowed_extensions).toEqual(['KalderaShield7@hafgit99.com']);
+    expect(manifest.allowed_extensions).toEqual(['KalderaShield@hafgit99.com']);
     expect(manifest.allowed_origins).toBeUndefined();
   });
 });

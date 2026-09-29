@@ -1,4 +1,4 @@
-﻿import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '@tauri-apps/api/core';
 import { logSecurityEvent, securityEventCodes } from './securityEvents';
 
 export interface Argon2idOptions {

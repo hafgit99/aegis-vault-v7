@@ -7,9 +7,9 @@
  * pure logic here allows unit testing without touching the filesystem.
  */
 
-export const HOST_NAME = 'com.hafgit99.KalderaShield7';
+export const HOST_NAME = 'com.hafgit99.KalderaShield';
 export const HOST_DESCRIPTION = 'KalderaShield Native Messaging Host';
-export const FIREFOX_EXTENSION_ID = 'KalderaShield7@hafgit99.com';
+export const FIREFOX_EXTENSION_ID = 'KalderaShield@hafgit99.com';
 
 /** Primary signed Chrome Web Store extension ID. */
 export const PRIMARY_CHROME_EXTENSION_ID = 'bfjfdbphbmdfinjddbbegnlclanbpnch';

@@ -35,7 +35,7 @@ const path = require('path');
 
 const rootDir = path.resolve(__dirname, '..');
 const androidMainDir = path.join(rootDir, 'src-tauri', 'gen', 'android', 'app', 'src', 'main');
-const kotlinDir = path.join(androidMainDir, 'java', 'com', 'hafgit99', 'KalderaShield7');
+const kotlinDir = path.join(androidMainDir, 'java', 'com', 'kalderashield', 'desktop');
 const manifestPath = path.join(androidMainDir, 'AndroidManifest.xml');
 
 const findings = [];
@@ -263,14 +263,14 @@ function findTagEnd(xml, start) {
  * the intended behaviour, not a limitation.
  */
 const ROUTING_EXTRA_ALLOWLIST = new Set([
-  'com.hafgit99.KalderaShield7.extra.AUTOFILL_REQUEST_ID',
-  'com.hafgit99.KalderaShield7.extra.AUTOFILL_CREATED_AT',
+    'com.kalderashield.desktop.extra.AUTOFILL_REQUEST_ID',
+    'com.kalderashield.desktop.extra.AUTOFILL_CREATED_AT',
 ]);
 
 /**
  * Every Autofill extra name mentioned in `source`, in both spellings:
  *   - the Kotlin constant, e.g. `EXTRA_AUTOFILL_WEB_DOMAIN`
- *   - the fully qualified extra name, e.g. `"com.hafgit99.KalderaShield7.extra.AUTOFILL_WEB_DOMAIN"`
+ *   - the fully qualified extra name, e.g. `"com.kalderashield.desktop.extra.AUTOFILL_WEB_DOMAIN"`
  */
 function collectAutofillExtraReferences(source) {
   const references = new Set();
@@ -300,8 +300,8 @@ function buildExtraConstantMap(serviceCode) {
 /**
  * Reduces a reference to the literal extra name that crosses the Intent
  * boundary. `KalderaShieldAutofillService.EXTRA_REQUEST_ID` and
- * `"com.hafgit99.KalderaShield7.extra.AUTOFILL_REQUEST_ID"` both resolve to
- * `com.hafgit99.KalderaShield7.extra.AUTOFILL_REQUEST_ID`.
+ * `"com.kalderashield.desktop.extra.AUTOFILL_REQUEST_ID"` both resolve to
+ * `com.kalderashield.desktop.extra.AUTOFILL_REQUEST_ID`.
  */
 function resolveExtraName(reference, constantMap) {
   const cleaned = reference.replace(/^["']|["']$/g, '');

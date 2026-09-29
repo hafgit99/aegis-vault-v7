@@ -143,7 +143,7 @@ Bu bölüm, `docs/SECURITY_CODE_AUDIT_REPORT_2026.md` raporundaki P0-P3 önerile
 MainActivity 712 → 500 satıra indi, dört yeni pakete bölündü:
 
 ```
-com/hafgit99/aegisvault7/
+com/kalderashield/desktop/
 ├── MainActivity.kt                (500 satır — sadece lifecycle + wiring)
 ├── AegisAutofillService.kt        (yeniden yazıldı, AU-1..AU-9 düzeltildi)
 ├── bridges/
@@ -231,7 +231,7 @@ Bu, **"kullan-at" credential taşıma** için endüstri standardı bir implement
 | Backend (native) | Rust 2021, edition 1.77.2 | `src-tauri/src/` |
 | Crypto | Argon2id (Rust tarafı), Web Crypto API, AndroidKeyStore (mobile) | `src/lib/encryption.ts`, `src/lib/argon2id.ts`, `src-tauri/src/credential_handler.rs` |
 | Storage | SQLite (wa-sqlite) + IndexedDB (attachments) | `src/lib/sqlite_opfs.ts`, `src/lib/indexedDbStorage.ts` |
-| Android shell | Kotlin, TauriActivity tabanlı — 4 pakete bölünmüş | `src-tauri/gen/android/app/src/main/java/com/hafgit99/aegisvault7/` |
+| Android shell | Kotlin, TauriActivity tabanlı — 4 pakete bölünmüş | `src-tauri/gen/android/app/src/main/java/com/kalderashield/desktop/` |
 | iOS shell | Tauri Mobile (init edilmemiş) | — |
 | Browser extension | MV3 (Chrome) + Firefox (XPI) + 12 dil i18n | `src-extension/` |
 

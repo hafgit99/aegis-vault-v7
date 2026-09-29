@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "KalderaShield",
   "version": "7.0.17",
-  "identifier": "com.kalderashield.app",
+  "identifier": "com.kalderashield.desktop",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:3000",
@@ -53,7 +53,7 @@
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVBREY5OThBMjI0QUY5N0QKUldSOStVb2lpcG5mV3JuUUdIQ3doaW8wRkJlY0FLSmU2RUVBUGdkZ01OcE9XQlRWQXBybVNoRU4K",
       "endpoints": [
         "https://update.aegisvault.xyz/latest.json",
-        "https://github.com/hafgit99/aegis-vault-v7/releases/latest/download/latest.json"
+        "https://github.com/hafgit99/kalderashield/releases/latest/download/latest.json"
       ]
     }
   }

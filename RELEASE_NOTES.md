@@ -1,4 +1,4 @@
-﻿# Aegis Vault 7 â€” 7.0.1.0 Release Candidate Release Notes
+# Aegis Vault 7 â€” 7.0.1.0 Release Candidate Release Notes
 
 - **Version:** 7.0.1.0
 - **Channel:** Release Candidate (internal validation)

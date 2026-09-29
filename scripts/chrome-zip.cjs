@@ -11,12 +11,12 @@ const packageJson = require(path.join(rootDir, 'package.json'));
 
 const args = new Set(process.argv.slice(2));
 const skipBuild = args.has('--skip-build');
-const zipName = `KalderaShield-vault-7-chrome-v${packageJson.version}.zip`;
-const edgeZipName = `KalderaShield-vault-7-edge-v${packageJson.version}.zip`;
+const zipName = `kalderashield-chrome-v${packageJson.version}.zip`;
+const edgeZipName = `kalderashield-edge-v${packageJson.version}.zip`;
 
 const excludedNames = new Set([
   'KalderaShield-host.bat',
-  'com.hafgit99.KalderaShield7.json',
+  'com.hafgit99.KalderaShield.json',
   'chromium-extension.rar',
 ]);
 

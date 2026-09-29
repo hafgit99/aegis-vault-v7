@@ -1,7 +1,7 @@
-ackage com.kalderashield.app.security
+ckage com.kalderashield.desktop.security
 
-import com.kalderashield.app.model.AutofillLaunchRequest
-import com.kalderashield.app.model.AutofillSaveCandidate
+import com.kalderashield.desktop.model.AutofillLaunchRequest
+import com.kalderashield.desktop.model.AutofillSaveCandidate
 
 /**
  * K-1 — process-global Autofill request registry.

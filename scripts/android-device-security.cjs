@@ -9,7 +9,7 @@ const releaseMode = args.has('--release');
 const buildType = releaseMode ? 'release' : 'debug';
 const sdkRoot = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || '';
 const adb = sdkRoot ? path.join(sdkRoot, 'platform-tools', process.platform === 'win32' ? 'adb.exe' : 'adb') : 'adb';
-const packageName = releaseMode ? 'com.hafgit99.KalderaShield7' : 'com.hafgit99.KalderaShield7.debug';
+const packageName = releaseMode ? 'com.hafgit99.KalderaShield' : 'com.hafgit99.KalderaShield.debug';
 const mainActivitySource = path.join(
   repoRoot,
   'src-tauri',
@@ -21,7 +21,7 @@ const mainActivitySource = path.join(
   'java',
   'com',
   'hafgit99',
-  'KalderaShield7',
+  'KalderaShield',
   'MainActivity.kt',
 );
 let failed = false;

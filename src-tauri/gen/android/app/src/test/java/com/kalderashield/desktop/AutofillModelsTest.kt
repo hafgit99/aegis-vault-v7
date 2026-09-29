@@ -1,7 +1,7 @@
-ackage com.kalderashield.app
+ckage com.kalderashield.desktop
 
-import com.kalderashield.app.model.AutofillLaunchRequest
-import com.kalderashield.app.model.AutofillSaveCandidate
+import com.kalderashield.desktop.model.AutofillLaunchRequest
+import com.kalderashield.desktop.model.AutofillSaveCandidate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

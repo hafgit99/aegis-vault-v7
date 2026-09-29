@@ -1,10 +1,10 @@
-ackage com.kalderashield.app.bridges
+ckage com.kalderashield.desktop.bridges
 
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import android.webkit.JavascriptInterface
-import com.kalderashield.app.crypto.SecureStorageKeyStore
+import com.kalderashield.desktop.crypto.SecureStorageKeyStore
 
 class AndroidSecureStorageBridge(
     private val context: Context,

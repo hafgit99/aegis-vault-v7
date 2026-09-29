@@ -6,16 +6,26 @@ All notable KalderaShield changes are tracked here. The project follows a securi
 
 ### Breaking Changes
 
-- **Product renamed to KalderaShield.** The application identifier is now `com.kalderashield.app`.
-- **Local data directory changed.** Existing vaults live under `%APPDATA%\com.hafgit99.aegisvault7\`. The new release reads and writes `%APPDATA%\com.kalderashield.app\`, so a fresh vault is created on first launch. Back up any existing vault data before updating.
+- **Product renamed to KalderaShield.** The application identifier is now `com.kalderashield.desktop`.
+- **Local data directory changed.** Existing vaults live under `%APPDATA%\com.hafgit99.aegisvault7\`. The new release reads and writes `%APPDATA%\com.kalderashield.desktop\`, so a fresh vault is created on first launch. Back up any existing vault data before updating.
 - **Vault database renamed** to `kalderashield.db` (was `aegis_sqlite.db`).
 - **Sync file names changed.** WebDAV and S3 now store `vault.ks` in a `KalderaShield/` directory (was `vault.aegis` in `AegisVault/`). Point existing sync targets at the new path or re-pair the provider.
 - **Export/import file extension** is now `.ks` (was `.aegis`).
+- **Browser extension ID changed** to `kalderashield@hafgit99.com` (was `aegisvault7@hafgit99.com`). Extensions already installed under the old ID will not be updated by the store; remove the old copy before installing this release.
 
-### Preserved for Compatibility
+### Renamed Identifiers
 
-- The browser extension keeps its existing store ID, `aegisvault7@hafgit99.com`, so installed extensions continue to receive updates.
-- The browser extension's native messaging host is registered as `com.kalderashield.app`.
+| Item | Previous | Current |
+| --- | --- | --- |
+| Application identifier | `com.hafgit99.aegisvault7` | `com.kalderashield.desktop` |
+| Browser extension ID | `aegisvault7@hafgit99.com` | `kalderashield@hafgit99.com` |
+| Native messaging host | `com.hafgit99.aegisvault7` | `com.kalderashield.desktop` |
+| Android package | `com.hafgit99.aegisvault7` | `com.kalderashield.desktop` |
+| GitHub repository | `hafgit99/aegis-vault-v7` | `hafgit99/kalderashield` |
+
+The `.desktop` suffix is deliberate: Tauri warns when a bundle identifier ends
+in `.app`, because that collides with the macOS application bundle extension
+and can break notarisation.
 
 ### Security
 

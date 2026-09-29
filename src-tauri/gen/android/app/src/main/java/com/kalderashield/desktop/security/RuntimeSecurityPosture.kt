@@ -1,10 +1,10 @@
-ackage com.kalderashield.app.security
+ckage com.kalderashield.desktop.security
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.os.Build
 import android.os.Debug
-import com.kalderashield.app.BuildConfig
+import com.kalderashield.desktop.BuildConfig
 import org.json.JSONArray
 import org.json.JSONObject
 
