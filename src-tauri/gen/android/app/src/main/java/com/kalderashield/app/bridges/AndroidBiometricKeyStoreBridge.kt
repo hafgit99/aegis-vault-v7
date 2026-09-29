@@ -1,4 +1,4 @@
-package com.hafgit99.aegisvault7.bridges
+ackage com.kalderashield.app.bridges
 
 import android.util.Base64
 import android.util.Log
@@ -6,7 +6,7 @@ import android.webkit.JavascriptInterface
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
-import com.hafgit99.aegisvault7.crypto.SecureStorageKeyStore
+import com.kalderashield.app.crypto.SecureStorageKeyStore
 import java.util.concurrent.Executor
 import javax.crypto.Cipher
 import org.json.JSONObject
@@ -116,7 +116,7 @@ class AndroidBiometricKeyStoreBridge(
                     // NOT terminal: BiometricPrompt keeps the dialog open so the
                     // user can retry in place. Rejecting here would fail the JS
                     // promise while the prompt is still on screen.
-                    Log.w("AegisBiometric", "Biometric attempt not recognized; awaiting retry")
+                    Log.w("KalderaShieldBiometric", "Biometric attempt not recognized; awaiting retry")
                 }
             }
         )
@@ -124,7 +124,7 @@ class AndroidBiometricKeyStoreBridge(
 
     private fun promptInfo(): BiometricPrompt.PromptInfo =
         BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Aegis Vault")
+            .setTitle("KalderaShield Vault")
             .setSubtitle("Confirm your identity to access your vault")
             .setNegativeButtonText("Cancel")
             .setAllowedAuthenticators(androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG)
@@ -138,14 +138,14 @@ class AndroidBiometricKeyStoreBridge(
     }
 
     private fun resolve(callbackId: String, value: String) {
-        val script = "window.__aegisBiometric && window.__aegisBiometric.resolve(" +
+        val script = "window.__KalderaShieldBiometric && window.__KalderaShieldBiometric.resolve(" +
             "${JSONObject.quote(callbackId)}, ${JSONObject.quote(value)})"
         onEvaluateJs(script)
     }
 
     private fun reject(callbackId: String, message: String) {
-        Log.w("AegisBiometric", "Biometric bridge rejection: $message")
-        val script = "window.__aegisBiometric && window.__aegisBiometric.reject(" +
+        Log.w("KalderaShieldBiometric", "Biometric bridge rejection: $message")
+        val script = "window.__KalderaShieldBiometric && window.__KalderaShieldBiometric.reject(" +
             "${JSONObject.quote(callbackId)}, ${JSONObject.quote(message)})"
         onEvaluateJs(script)
     }

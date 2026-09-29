@@ -57,5 +57,5 @@ export function isAccountSecretKeyFormatValid(secretKey: string): boolean {
 }
 
 export function combineMasterPasswordAndSecretKey(password: string, secretKey: string): string {
-  return `aegis-vault-v7:${password}\0${normalizeAccountSecretKey(secretKey)}`;
+  return `kalderashield:${password}\0${normalizeAccountSecretKey(secretKey)}`;
 }

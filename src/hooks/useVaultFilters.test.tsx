@@ -135,7 +135,7 @@ describe('useVaultFilters', () => {
     // Storage events
     act(() => {
       window.dispatchEvent(new StorageEvent('storage', { key: 'other-key' }));
-      window.dispatchEvent(new StorageEvent('storage', { key: 'aegis-vault-v7-recent-searches' }));
+      window.dispatchEvent(new StorageEvent('storage', { key: 'kalderashield-recent-searches' }));
     });
   });
 });

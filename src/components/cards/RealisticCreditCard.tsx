@@ -120,7 +120,7 @@ export function RealisticCreditCard({
           border: 'border-brand-primary/30',
           accent: 'text-brand-primary',
           glow: 'rgba(0, 255, 178, 0.2)',
-          brandName: 'AEGIS SECURE',
+          brandName: 'KALDERASHIELD SECURE',
           chip: 'from-amber-200 via-amber-400 to-amber-600',
         };
     }

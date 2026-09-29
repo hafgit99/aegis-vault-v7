@@ -12,13 +12,13 @@ const buildType = releaseMode ? 'release' : 'debug';
 const sdkRoot = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || '';
 const adb = sdkRoot ? path.join(sdkRoot, 'platform-tools', process.platform === 'win32' ? 'adb.exe' : 'adb') : 'adb';
 const apk = findLatestAndroidApk(repoRoot, { buildType });
-const packageName = releaseMode ? 'com.hafgit99.aegisvault7' : 'com.hafgit99.aegisvault7.debug';
-const debugAutofillServiceName = `${packageName}/com.hafgit99.aegisvault7.AegisAutofillService`;
+const packageName = releaseMode ? 'com.hafgit99.KalderaShield7' : 'com.hafgit99.KalderaShield7.debug';
+const debugAutofillServiceName = `${packageName}/com.hafgit99.KalderaShield7.KalderaShieldAutofillService`;
 const autofillServiceNames = [
-  'com.hafgit99.aegisvault7/.AegisAutofillService',
-  'com.hafgit99.aegisvault7/com.hafgit99.aegisvault7.AegisAutofillService',
-  `${packageName}/.AegisAutofillService`,
-  `${packageName}/com.hafgit99.aegisvault7.AegisAutofillService`,
+  'com.hafgit99.KalderaShield7/.KalderaShieldAutofillService',
+  'com.hafgit99.KalderaShield7/com.hafgit99.KalderaShield7.KalderaShieldAutofillService',
+  `${packageName}/.KalderaShieldAutofillService`,
+  `${packageName}/com.hafgit99.KalderaShield7.KalderaShieldAutofillService`,
 ];
 let failed = false;
 
@@ -134,10 +134,10 @@ if (readyDevices.length > 0) {
       fail(`app dataDir is not app-private: ${dataDir || 'unknown'}`);
     }
 
-    if (packageDump.includes('AegisAutofillService')) {
-      pass('Aegis Autofill service is declared in installed package');
+    if (packageDump.includes('KalderaShieldAutofillService')) {
+      pass('KalderaShield Autofill service is declared in installed package');
     } else {
-      fail('Aegis Autofill service is missing from installed package dump');
+      fail('KalderaShield Autofill service is missing from installed package dump');
     }
   } else {
     warn(`${packageName} is not installed yet; run npm run android:device:install or android:release:gate -- --device`);
@@ -152,9 +152,9 @@ if (readyDevices.length > 0) {
 
   const autofillSetting = tryRun(['shell', 'settings', 'get', 'secure', 'autofill_service']);
   if (autofillServiceNames.some((serviceName) => autofillSetting.includes(serviceName))) {
-    pass('Aegis is the active Android Autofill service');
+    pass('KalderaShield is the active Android Autofill service');
   } else {
-    warn(`Aegis is not the active Android Autofill service: ${autofillSetting || 'empty'}`);
+    warn(`KalderaShield is not the active Android Autofill service: ${autofillSetting || 'empty'}`);
     if (enableAutofill && autofillEnableOutput) {
       warn(`Android rejected automatic Autofill activation: ${autofillEnableOutput.replace(/\s+/g, ' ').slice(0, 600)}`);
     }

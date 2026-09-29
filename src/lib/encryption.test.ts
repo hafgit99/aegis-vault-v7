@@ -104,7 +104,7 @@ describe('encrypted backup envelope', () => {
   it('rejects secure envelopes with missing or weak KDF parameters', async () => {
     const baseEnvelope = {
       version: '1.2',
-      generator: 'Aegis Secure Core',
+      generator: 'KalderaShield Secure Core',
       kdf: 'Argon2id',
       kdfImplementation: 'argon2-browser',
       cipher: 'WebCrypto AES-256-GCM',

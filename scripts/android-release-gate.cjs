@@ -29,7 +29,7 @@ Options:
   --skip-android-build  Skip Android APK build.
   --skip-device         Skip device smoke even when --device is present.
   --evidence            Copy APK/AAB artifacts and release report under release-local/android.
-  --enable-autofill     Try to re-enable Aegis as Android Autofill provider after APK install.
+  --enable-autofill     Try to re-enable KalderaShield as Android Autofill provider after APK install.
   --fresh-install       Uninstall the selected Android package before device smoke install.
   --allow-dirty         Allow evidence export from a dirty working tree.
   --help                Show this help.

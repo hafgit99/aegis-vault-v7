@@ -27,7 +27,7 @@ import type {
   VaultItem,
 } from '../types';
 
-export const SMART_FOLDER_LIBRARY_STORAGE_KEY = 'aegis-vault-v7-smart-folders-v1';
+export const SMART_FOLDER_LIBRARY_STORAGE_KEY = 'kalderashield-smart-folders-v1';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

@@ -36,7 +36,7 @@ describe('androidAutofillSecurity', () => {
     logAndroidAutofillSecurityEvent('completed', request, item);
 
     expect(info).toHaveBeenCalledWith(expect.objectContaining({
-      source: 'AegisSecurity',
+      source: 'KalderaShieldSecurity',
       code: securityEventCodes.androidAutofillCompleted,
       severity: 'info',
       meta: expect.objectContaining({

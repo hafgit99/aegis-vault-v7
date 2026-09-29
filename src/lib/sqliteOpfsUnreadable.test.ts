@@ -170,6 +170,6 @@ describe('K-4: loadPersistedVaultDatabase', () => {
   });
 
   it('surfaces the DB_FILENAME so the error names the file the user must not delete', () => {
-    expect(DB_FILENAME).toBe('aegis_sqlite.db');
+    expect(DB_FILENAME).toBe('kalderashield.db');
   });
 });

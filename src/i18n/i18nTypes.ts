@@ -1,6 +1,6 @@
 /**
  * @file i18nTypes.ts
- * @description Core types, language metadata, flags, and RTL attributes for AegisVault v7.
+ * @description Core types, language metadata, flags, and RTL attributes for KalderaShield v7.
  * Supports 12 languages out of the box.
  *
  * @license SPDX-License-Identifier: Apache-2.0
@@ -61,7 +61,7 @@ export function isRtlLanguage(code: LanguageCode): boolean {
 }
 
 export const defaultLanguage: LanguageCode = 'tr';
-export const languageStorageKey = 'aegis-vault-language';
+export const languageStorageKey = 'KalderaShield-vault-language';
 
 /** Named interpolation parameters passed to the `t()` translation function. */
 export type TParams = Record<string, string | number>;

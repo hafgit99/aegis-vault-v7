@@ -5,7 +5,7 @@
 
 declare global {
   interface Window {
-    AegisAndroidAutofill?: {
+    KalderaShieldAndroidAutofill?: {
       isSupported(): boolean;
       isEnabled(): boolean;
       openSettings(): boolean;
@@ -25,7 +25,7 @@ declare global {
        */
       resolveEncryptedSavePayload?(requestId: string): string | null;
     };
-    __aegisAndroidAutofill?: {
+    __KalderaShieldAndroidAutofill?: {
       onRequest(request: AndroidAutofillRequest | null): void;
       onSave(candidate: AndroidAutofillSaveCandidate | null): void;
     };
@@ -77,9 +77,9 @@ export const ANDROID_AUTOFILL_REQUEST_MAX_AGE_MS = 5 * 60 * 1000;
 const listeners = new Set<AndroidAutofillRequestListener>();
 const saveCandidateListeners = new Set<AndroidAutofillSaveCandidateListener>();
 
-function androidAutofillBridge(): NonNullable<Window['AegisAndroidAutofill']> | null {
+function androidAutofillBridge(): NonNullable<Window['KalderaShieldAndroidAutofill']> | null {
   if (typeof window === 'undefined') return null;
-  return window.AegisAndroidAutofill ?? null;
+  return window.KalderaShieldAndroidAutofill ?? null;
 }
 
 function isAndroidAutofillRequest(value: unknown): value is AndroidAutofillRequest {
@@ -151,7 +151,7 @@ function parsePendingSaveCandidate(payload: string | null): AndroidAutofillSaveC
 function ensureAndroidAutofillCallback(): void {
   if (typeof window === 'undefined') return;
 
-  window.__aegisAndroidAutofill = {
+  window.__KalderaShieldAndroidAutofill = {
     onRequest(request) {
       if (!isAndroidAutofillRequest(request)) return;
       listeners.forEach((listener) => listener(request));

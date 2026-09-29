@@ -1,7 +1,7 @@
-package com.hafgit99.aegisvault7.bridges
+ackage com.kalderashield.app.bridges
 
 import android.webkit.JavascriptInterface
-import com.hafgit99.aegisvault7.security.RuntimeSecurityPosture
+import com.kalderashield.app.security.RuntimeSecurityPosture
 
 class AndroidRuntimeSecurityBridge(
     private val securityPosture: RuntimeSecurityPosture

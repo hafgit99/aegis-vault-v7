@@ -27,7 +27,7 @@ import {
 import { closeVaultSession, openVaultSession } from './vaultSession';
 import { webCryptoAesGcmEncryptBytes } from './webcrypto';
 
-const DB_NAME = 'aegis_attachments_db';
+const DB_NAME = 'KalderaShield_attachments_db';
 const STORE_NAME = 'attachments';
 
 const TEST_VAULT_KEY = new Uint8Array(32).fill(7);
@@ -62,7 +62,7 @@ async function blobText(blob: Blob | undefined): Promise<string> {
 }
 
 function legacyXorEncrypt(buffer: ArrayBuffer): ArrayBuffer {
-  const key = new TextEncoder().encode('aegis_secure_file');
+  const key = new TextEncoder().encode('KalderaShield_secure_file');
   return new Uint8Array(buffer).map((byte, index) => byte ^ key[index % key.length]!).buffer;
 }
 
@@ -425,7 +425,7 @@ describe('attachment encryption', () => {
     openTestVaultSession();
 
     // Manually construct an old record with SHA-256 KDF (no kdf property)
-    const keyMaterial = new TextEncoder().encode(`aegis-vault-v7:attachment-key:attachment-old:master-pass`);
+    const keyMaterial = new TextEncoder().encode(`kalderashield:attachment-key:attachment-old:master-pass`);
     const oldKey = new Uint8Array(await crypto.subtle.digest('SHA-256', keyMaterial));
     const encrypted = await webCryptoAesGcmEncryptBytes(bytes('private file'), oldKey, new Uint8Array(12).fill(1));
 
@@ -452,7 +452,7 @@ describe('attachment encryption', () => {
     openTestVaultSession();
 
     // Manually construct an old record with SHA-256 KDF and save to IndexedDB
-    const keyMaterial = new TextEncoder().encode(`aegis-vault-v7:attachment-key:attachment-old-bulk:master-pass`);
+    const keyMaterial = new TextEncoder().encode(`kalderashield:attachment-key:attachment-old-bulk:master-pass`);
     const oldKey = new Uint8Array(await crypto.subtle.digest('SHA-256', keyMaterial));
     const encrypted = await webCryptoAesGcmEncryptBytes(bytes('bulk migrate file'), oldKey, new Uint8Array(12).fill(2));
 

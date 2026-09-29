@@ -1,5 +1,5 @@
 name: 🐞 Bug Report
-description: Report a reproducible defect in Aegis Vault 7
+description: Report a reproducible defect in KalderaShield
 labels: ["bug"]
 body:
   - type: markdown

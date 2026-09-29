@@ -55,7 +55,7 @@ export function generateDiceware(options: DicewareOptions): string {
 
   for (let i = 0; i < options.wordCount; i++) {
     const randomIndex = secureRandomIndex(wordPool.length);
-    let word = wordPool[randomIndex] ?? 'aegis';
+    let word = wordPool[randomIndex] ?? 'KalderaShield';
 
     if (options.capitalize) {
       word = word.charAt(0).toUpperCase() + word.slice(1);

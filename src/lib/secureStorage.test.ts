@@ -14,7 +14,7 @@ import {
 } from './secureStorage';
 
 afterEach(() => {
-  delete window.AegisAndroidSecureStorage;
+  delete window.KalderaShieldAndroidSecureStorage;
   vi.restoreAllMocks();
 });
 
@@ -37,7 +37,7 @@ describe('secure storage bridge', () => {
     ];
 
     for (const bridge of incompleteBridges) {
-      window.AegisAndroidSecureStorage = bridge as unknown as typeof window.AegisAndroidSecureStorage;
+      window.KalderaShieldAndroidSecureStorage = bridge as unknown as typeof window.KalderaShieldAndroidSecureStorage;
       expect(isSecureStorageAvailable()).toBe(false);
       expect(getSecureStorageItem(secureStorageKeys.rememberedSecretKey)).toBeNull();
       expect(setSecureStorageItem(secureStorageKeys.rememberedSecretKey, 'secret')).toBe(false);
@@ -47,7 +47,7 @@ describe('secure storage bridge', () => {
 
   it('routes get, set, and remove through the Android secure storage bridge', () => {
     const values = new Map<string, string>();
-    window.AegisAndroidSecureStorage = {
+    window.KalderaShieldAndroidSecureStorage = {
       getItem: vi.fn((key) => values.get(key) ?? null),
       setItem: vi.fn((key, value) => {
         values.set(key, value);
@@ -64,7 +64,7 @@ describe('secure storage bridge', () => {
   });
 
   it('fails closed when the bridge throws', () => {
-    window.AegisAndroidSecureStorage = {
+    window.KalderaShieldAndroidSecureStorage = {
       getItem: vi.fn(() => {
         throw new Error('bridge failed');
       }),
@@ -83,12 +83,12 @@ describe('secure storage bridge', () => {
 
   it('handles setSecureStorageItemResult across available, error, and throwing scenarios', () => {
     // Missing bridge
-    delete window.AegisAndroidSecureStorage;
+    delete window.KalderaShieldAndroidSecureStorage;
     const res1 = setSecureStorageItemResult(secureStorageKeys.rememberedSecretKey, 'secret');
     expect(res1.success).toBe(false);
 
     // Bridge with setItem returning true
-    window.AegisAndroidSecureStorage = {
+    window.KalderaShieldAndroidSecureStorage = {
       getItem: vi.fn(() => null),
       setItem: vi.fn(() => true),
       removeItem: vi.fn(() => true),
@@ -97,7 +97,7 @@ describe('secure storage bridge', () => {
     expect(res2.success).toBe(true);
 
     // Bridge with setItem returning false
-    window.AegisAndroidSecureStorage = {
+    window.KalderaShieldAndroidSecureStorage = {
       getItem: vi.fn(() => null),
       setItem: vi.fn(() => false),
       removeItem: vi.fn(() => false),
@@ -106,7 +106,7 @@ describe('secure storage bridge', () => {
     expect(res3.success).toBe(false);
 
     // Bridge throwing
-    window.AegisAndroidSecureStorage = {
+    window.KalderaShieldAndroidSecureStorage = {
       getItem: vi.fn(() => null),
       setItem: vi.fn(() => {
         throw new Error('Disk full');

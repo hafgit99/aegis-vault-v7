@@ -8,7 +8,7 @@
 import { getIndexedDbItemSync, setIndexedDbItemSync, removeIndexedDbItemSync } from './indexedDbStorage';
 import { VAULT_DB_APP_ID } from './vaultDatabaseFormat';
 
-export const VAULT_INTEGRITY_LEDGER_KEY = 'aegis_vault_integrity_ledger';
+export const VAULT_INTEGRITY_LEDGER_KEY = 'KalderaShield_vault_integrity_ledger';
 
 export interface VaultIntegrityLedger {
   appId: string;

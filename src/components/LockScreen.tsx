@@ -45,7 +45,7 @@ import {
   generateAccountSecretKey,
   isAccountSecretKeyFormatValid,
 } from '../lib/secretKey';
-import aegisLogo from '../../assets/aegis-app-icon.png';
+import KalderaShieldLogo from '../../assets/KalderaShield-app-icon.png';
 import { saveEmergencyKit } from '../lib/emergencyKit';
 import { validateMasterPassword } from '../lib/security';
 import { LockScreenHeader } from './lock/LockScreenHeader';
@@ -312,12 +312,12 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
         // K-4: a damaged vault file is not a wrong password. Shaking the form
         // and appending a technical message would push the user to retype a
         // correct password forever; the actionable answer is snapshot restore.
-        console.error('[AegisVault] Vault file unreadable:', err);
+        console.error('[KalderaShield] Vault file unreadable:', err);
         openVaultRecovery();
         return;
       }
       triggerShake();
-      console.error('[AegisVault] Unlock/setup error:', err);
+      console.error('[KalderaShield] Unlock/setup error:', err);
       const message = err instanceof Error ? err.message : String(err);
       setError(`${t('lock.error.cryptoFailed', 'Vault initialization failed.')} (${message})`);
     }
@@ -342,7 +342,7 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
       clearLockoutState();
       window.location.reload();
     } catch (err) {
-      console.error('[AegisVault] Reset error:', err);
+      console.error('[KalderaShield] Reset error:', err);
       const message = err instanceof Error ? err.message : String(err);
       setError(`${t('lock.error.resetFailed')} (${message})`);
       setShowResetConfirm(false);
@@ -401,7 +401,7 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
                 {/* Brand Logo and Title */}
                 <div className="flex items-center gap-4 mb-2">
                   <div className="w-16 h-16 rounded-2xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center shadow-[0_0_30px_rgba(220,225,255,0.1)] overflow-hidden group">
-                    <img src={aegisLogo} alt="Aegis Vault Logo" className="w-14 h-14 object-contain group-hover:scale-105 transition-transform duration-300" />
+                    <img src={KalderaShieldLogo} alt="KalderaShield Logo" className="w-14 h-14 object-contain group-hover:scale-105 transition-transform duration-300" />
                   </div>
                   <div>
                     <h2 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-on-surface">
@@ -475,7 +475,7 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
               <div className={`w-full surface-panel rounded-2xl p-5 sm:p-6 relative z-10 transition-all duration-300 hover:border-brand-primary/30 hover:shadow-brand-primary/5 ${isShaking ? 'animate-shake border-red-500/50 ring-2 ring-red-500/20' : ''}`}>
                 <div className="flex flex-col items-center text-center mb-4 sm:mb-6">
                   <div className="w-12 h-12 rounded-xl bg-brand-primary/5 border border-brand-primary/20 flex items-center justify-center mb-3 sm:mb-4 shadow-[0_0_15px_rgba(220,225,255,0.05)] overflow-hidden group lg:hidden">
-                    <img src={aegisLogo} alt="Aegis Vault Logo" className="w-10 h-10 object-contain group-hover:scale-105 transition-transform duration-300" />
+                    <img src={KalderaShieldLogo} alt="KalderaShield Logo" className="w-10 h-10 object-contain group-hover:scale-105 transition-transform duration-300" />
                   </div>
                   <h1 className="font-display text-2xl font-bold text-on-surface leading-tight tracking-tight lg:hidden">
                     {isSetup ? t('lock.panel.unlockTitle') : t('lock.panel.setupTitle')}

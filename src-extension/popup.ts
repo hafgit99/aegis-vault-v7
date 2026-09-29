@@ -72,14 +72,14 @@ focusAppBtn.addEventListener('click', () => {
 });
 
 // Initialize theme
-const currentTheme = localStorage.getItem('aegis-extension-theme') || 'dark';
+const currentTheme = localStorage.getItem('KalderaShield-extension-theme') || 'dark';
 document.body.className = currentTheme;
 themeToggle.textContent = currentTheme === 'dark' ? '☀️' : '🌙';
 
 themeToggle.addEventListener('click', () => {
   const newTheme = document.body.className === 'dark' ? 'light' : 'dark';
   document.body.className = newTheme;
-  localStorage.setItem('aegis-extension-theme', newTheme);
+  localStorage.setItem('KalderaShield-extension-theme', newTheme);
   themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
 });
 
@@ -473,7 +473,7 @@ function renderPhishingBanner(result: PhishingResult) {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     if (tabs[0]?.id) {
       chrome.tabs.sendMessage(tabs[0].id, {
-        action: 'aegis_phishing_alert',
+        action: 'KalderaShield_phishing_alert',
         threatType: result.threatType,
         matchedDomain: result.matchedDomain,
         details: result.details

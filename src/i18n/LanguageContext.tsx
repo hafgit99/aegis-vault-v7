@@ -1,6 +1,6 @@
 /**
  * @file LanguageContext.tsx
- * @description React Context Provider for AegisVault v7 multi-language support.
+ * @description React Context Provider for KalderaShield v7 multi-language support.
  * Features automatic browser/OS language detection, fallback resolution,
  * and dynamic RTL (Right-to-Left) document layout management.
  *

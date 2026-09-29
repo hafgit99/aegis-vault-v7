@@ -281,8 +281,8 @@ describe('LockScreen', () => {
       expect(onUnlock).not.toHaveBeenCalled();
     });
 
-    window.localStorage.removeItem('aegis_lockout_state');
-    removeIndexedDbItemSync('aegis_lockout_state');
+    window.localStorage.removeItem('KalderaShield_lockout_state');
+    removeIndexedDbItemSync('KalderaShield_lockout_state');
 
     fireEvent.change(password, { target: { value: 'correct-pass' } });
     fireEvent.submit(document.querySelector('form') as HTMLFormElement);

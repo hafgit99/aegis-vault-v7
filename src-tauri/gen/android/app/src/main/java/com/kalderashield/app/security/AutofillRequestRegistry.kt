@@ -1,7 +1,7 @@
-package com.hafgit99.aegisvault7.security
+ackage com.kalderashield.app.security
 
-import com.hafgit99.aegisvault7.model.AutofillLaunchRequest
-import com.hafgit99.aegisvault7.model.AutofillSaveCandidate
+import com.kalderashield.app.model.AutofillLaunchRequest
+import com.kalderashield.app.model.AutofillSaveCandidate
 
 /**
  * K-1 — process-global Autofill request registry.
@@ -12,7 +12,7 @@ import com.hafgit99.aegisvault7.model.AutofillSaveCandidate
  * intent-filter) and it built its Autofill state directly from Intent extras:
  *
  * ```
- * if (intent?.action != AegisAutofillService.ACTION_AUTOFILL_AUTHENTICATE) return
+ * if (intent?.action != KalderaShieldAutofillService.ACTION_AUTOFILL_AUTHENTICATE) return
  * pendingAutofillRequest = AutofillLaunchRequest(
  *   requestId = intent.getStringExtra(EXTRA_AUTOFILL_REQUEST_ID),
  *   webDomain = intent.getStringExtra(EXTRA_AUTOFILL_WEB_DOMAIN),
@@ -33,7 +33,7 @@ import com.hafgit99.aegisvault7.model.AutofillSaveCandidate
  *
  * The Intent is now only a **routing hint carrying an opaque request id**.
  * The authoritative request object lives here, in the app's own address
- * space, and is written by exactly one caller: `AegisAutofillService`, which
+ * space, and is written by exactly one caller: `KalderaShieldAutofillService`, which
  * is the only component the system ever invokes with a real
  * `FillRequest`/`SaveRequest` and the only one that can read the
  * `AssistStructure` the `appPackage`/`webDomain` are derived from.
@@ -52,7 +52,7 @@ import com.hafgit99.aegisvault7.model.AutofillSaveCandidate
  * one process. Neither declares `android:process`, so Android runs them in the
  * app's default process. `security:android-autofill-boundary` fails the build
  * if a component ever declares `android:process`, and it also fails if any
- * file other than `AegisAutofillService.kt` calls a mutating method here.
+ * file other than `KalderaShieldAutofillService.kt` calls a mutating method here.
  *
  * If the process is killed between the fill request and the Activity launch,
  * the registry is empty and the request is simply refused — the user retries
@@ -72,7 +72,7 @@ object AutofillRequestRegistry {
     private val saveCandidates = LinkedHashMap<String, AutofillSaveCandidate>()
 
     // ---------------------------------------------------------------------
-    // Write side — AegisAutofillService ONLY.
+    // Write side — KalderaShieldAutofillService ONLY.
     // ---------------------------------------------------------------------
 
     /**

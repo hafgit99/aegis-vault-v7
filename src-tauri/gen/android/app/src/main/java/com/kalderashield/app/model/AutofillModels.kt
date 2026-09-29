@@ -1,4 +1,4 @@
-package com.hafgit99.aegisvault7.model
+ackage com.kalderashield.app.model
 
 import android.view.autofill.AutofillId
 import org.json.JSONObject

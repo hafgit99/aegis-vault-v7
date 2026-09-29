@@ -20,7 +20,7 @@ const VAULT_VERSION = '7.0';
 
 /** Returns a stable per-device random UUID, generated once and persisted in localStorage. */
 function getOrCreateDeviceId(): string {
-  const key = 'aegis_sync_device_id';
+  const key = 'KalderaShield_sync_device_id';
   const store = typeof localStorage !== 'undefined' ? localStorage : null;
   const existing = store?.getItem(key);
   if (existing) return existing;
@@ -41,7 +41,7 @@ async function sha256Hex(input: string): Promise<string> {
 
 /**
  * Encrypts vault items into a portable sync envelope using the existing
- * Aegis Argon2id + AES-256-GCM backup format (encryptDataWithPasswordSecure).
+ * KalderaShield Argon2id + AES-256-GCM backup format (encryptDataWithPasswordSecure).
  *
  * The envelope includes all items (active + tombstones) so that remote peers
  * can replay deletions correctly.

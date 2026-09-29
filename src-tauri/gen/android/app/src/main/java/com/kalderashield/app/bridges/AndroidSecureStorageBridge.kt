@@ -1,10 +1,10 @@
-package com.hafgit99.aegisvault7.bridges
+ackage com.kalderashield.app.bridges
 
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import android.webkit.JavascriptInterface
-import com.hafgit99.aegisvault7.crypto.SecureStorageKeyStore
+import com.kalderashield.app.crypto.SecureStorageKeyStore
 
 class AndroidSecureStorageBridge(
     private val context: Context,
@@ -54,7 +54,7 @@ class AndroidSecureStorageBridge(
     }
 
     companion object {
-        private const val SECURE_PREFS_NAME = "aegis_secure_storage"
-        private const val SECURE_STORAGE_LOG_TAG = "AegisSecureStorage"
+        private const val SECURE_PREFS_NAME = "KalderaShield_secure_storage"
+        private const val SECURE_STORAGE_LOG_TAG = "KalderaShieldSecureStorage"
     }
 }

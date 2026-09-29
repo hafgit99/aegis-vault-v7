@@ -267,7 +267,7 @@ describe('Y-20 asset reference counter-check', () => {
     // The paths below are copied from a real dist/index.html.
     const html = [
       '<!doctype html><html lang="tr" class="dark splash-root"><head>',
-      '<link rel="icon" type="image/png" href="/assets/aegis-app-icon-zGEMGRK0.png">',
+      '<link rel="icon" type="image/png" href="/assets/KalderaShield-app-icon-zGEMGRK0.png">',
       '<link rel="stylesheet" href="/splash.css">',
       '<script type="module" crossorigin src="/assets/index-Cr3DG0Y1.js"></script>',
       '<link rel="modulepreload" crossorigin href="/assets/rolldown-runtime-DS2seoW7.js">',
@@ -282,7 +282,7 @@ describe('Y-20 asset reference counter-check', () => {
     // actually emits or this test stops guarding anything.
     const manifestPaths = [
       'splash.css',
-      'assets/aegis-app-icon-zGEMGRK0.png',
+      'assets/KalderaShield-app-icon-zGEMGRK0.png',
       'assets/index-Cr3DG0Y1.js',
       'assets/rolldown-runtime-DS2seoW7.js',
       'assets/react-vendor-DPx6u12k.js',

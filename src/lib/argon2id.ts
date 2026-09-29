@@ -42,7 +42,7 @@ export { isDesktopRuntime };
 
 // WebView2/WebKit/WebKitGTK can fail Argon2id allocations above ~64 MiB with
 // "memory access out of bounds" runtime errors (see docs/SECURITY_NOTES.md and
-// the Aegis Vault backup WASM memory hardening). 32 MiB is a conservative,
+// the KalderaShield backup WASM memory hardening). 32 MiB is a conservative,
 // widely portable default that still meets the OWASP password storage
 // recommendation when paired with 3+ iterations and AES-256-GCM at rest.
 export const MIN_ARGON2ID_MEMORY_KIB = 8192; // 8 MiB floor
@@ -298,7 +298,7 @@ async function deriveWasmHash(
         throw error;
       }
       console.warn(
-        `[AegisSecurity] WASM Argon2id memory limit encountered (${profile.memoryKiB} KiB). Degrading profile parameters from requested ${requested.memoryKiB} KiB.`
+        `[KalderaShieldSecurity] WASM Argon2id memory limit encountered (${profile.memoryKiB} KiB). Degrading profile parameters from requested ${requested.memoryKiB} KiB.`
       );
       logSecurityEvent(
         securityEventCodes.securityLegacyCryptoWarning,

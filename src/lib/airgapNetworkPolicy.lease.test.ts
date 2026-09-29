@@ -35,7 +35,7 @@ describe('O-21 air-gap origin leases', () => {
     lease(ORIGIN);
 
     expect(getSyncAllowedOrigins().has(ORIGIN)).toBe(true);
-    expect(isNetworkUrlAllowed(`${ORIGIN}/AegisVault/vault.aegis`)).toBe(true);
+    expect(isNetworkUrlAllowed(`${ORIGIN}/KalderaShield/vault.KalderaShield`)).toBe(true);
   });
 
   it('revokes the origin when the last lease is released', () => {
@@ -47,7 +47,7 @@ describe('O-21 air-gap origin leases', () => {
     release();
 
     expect(getSyncAllowedOrigins().has(ORIGIN)).toBe(false);
-    expect(isNetworkUrlAllowed(`${ORIGIN}/AegisVault/vault.aegis`)).toBe(false);
+    expect(isNetworkUrlAllowed(`${ORIGIN}/KalderaShield/vault.KalderaShield`)).toBe(false);
   });
 
   it('keeps the origin whitelisted while another lease is still live', () => {
@@ -149,7 +149,7 @@ describe('O-21 air-gap origin leases', () => {
     expect(getLeasedSyncOriginCount()).toBe(0);
     expect(getSyncAllowedOrigins().size).toBe(0);
     for (let i = 0; i < 20; i += 1) {
-      expect(isNetworkUrlAllowed(`https://server-${i}.example.com/AegisVault/vault.aegis`)).toBe(false);
+      expect(isNetworkUrlAllowed(`https://server-${i}.example.com/KalderaShield/vault.KalderaShield`)).toBe(false);
     }
   });
 });

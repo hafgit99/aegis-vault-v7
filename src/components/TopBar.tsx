@@ -82,8 +82,8 @@ export default function TopBar({
       inputRef.current?.focus();
       inputRef.current?.select();
     };
-    window.addEventListener('aegis-focus-search', handleFocusSearch);
-    return () => window.removeEventListener('aegis-focus-search', handleFocusSearch);
+    window.addEventListener('KalderaShield-focus-search', handleFocusSearch);
+    return () => window.removeEventListener('KalderaShield-focus-search', handleFocusSearch);
   }, []);
 
   // Close the advanced panel when clicking outside or pressing Escape.

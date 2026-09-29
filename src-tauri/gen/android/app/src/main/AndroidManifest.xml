@@ -8,7 +8,7 @@
     <uses-feature android:name="android.software.autofill" android:required="false" />
 
     <!--
-        Aegis Vault is a phone/tablet application. The LEANBACK_LAUNCHER category
+        kalderashield Vault is a phone/tablet application. The LEANBACK_LAUNCHER category
         is declared so the launcher can show it on Android TV, which requires the
         touchscreen to be explicitly optional, otherwise Play Store filters the app
         out of TV devices entirely. It also requires a TV banner, or the home
@@ -18,11 +18,11 @@
 
     <application
         android:allowBackup="false"
-        android:banner="@drawable/aegis_tv_banner"
+        android:banner="@drawable/kalderashield_tv_banner"
         android:fullBackupContent="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:theme="@style/Theme.aegis_vault_v7"
+        android:theme="@style/Themekalderashield_vault_v7"
         android:usesCleartextTraffic="${usesCleartextTraffic}">
         <!--
             K-1: MainActivity is NOT exported.
@@ -34,7 +34,7 @@
             read the approved credential back from its own onActivityResult.
             The LAUNCHER filter now lives on the LauncherActivity trampoline
             below, so this Activity is reachable only by this app (and by the
-            system executing the PendingIntent AegisAutofillService creates).
+            system executing the PendingIntent KalderaShieldAutofillService creates).
 
             Do not add an intent-filter here, and do not set exported="true":
             `npm run security:android-autofill-boundary` fails the build if
@@ -54,7 +54,7 @@
             android:exported="true"
             android:excludeFromRecents="true"
             android:noHistory="true"
-            android:theme="@style/Theme.aegis_vault_v7">
+            android:theme="@style/Themekalderashield_vault_v7">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -76,7 +76,7 @@
             therefore holds no runtime reference to this class on API 24/25.
         -->
         <service
-          android:name=".AegisAutofillService"
+          android:name=".KalderaShieldAutofillService"
           android:exported="true"
           android:label="@string/autofill_service_label"
           android:permission="android.permission.BIND_AUTOFILL_SERVICE"
@@ -86,7 +86,7 @@
           </intent-filter>
           <meta-data
             android:name="android.autofill"
-            android:resource="@xml/aegis_autofill_service" />
+            android:resource="@xml/kalderashield_autofill_service" />
         </service>
 
         <provider

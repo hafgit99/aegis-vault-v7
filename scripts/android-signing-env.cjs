@@ -6,18 +6,18 @@ const path = require('path');
 const signingEnvFile = path.resolve(__dirname, '..', '.secrets', 'android-signing.env');
 
 // Preferred location: user profile directory OUTSIDE any cloud-synced folder.
-const externalSigningEnvFile = path.join(os.homedir(), 'AegisVaultKeys', 'android-signing.env');
+const externalSigningEnvFile = path.join(os.homedir(), 'KalderaShieldKeys', 'android-signing.env');
 
 /**
  * Resolves the signing env file location:
  *  1. explicit `options.file`
- *  2. AEGIS_SIGNING_ENV_FILE environment variable
- *  3. ~/.AegisVaultKeys/android-signing.env (outside OneDrive/cloud sync — preferred)
+ *  2. KALDERASHIELD_SIGNING_ENV_FILE environment variable
+ *  3. ~/.KalderaShieldKeys/android-signing.env (outside OneDrive/cloud sync — preferred)
  *  4. legacy <repo>/.secrets/android-signing.env (backward compatibility)
  */
 function resolveSigningEnvFile(options = {}) {
   if (options.file) return path.resolve(options.file);
-  const fromVar = process.env.AEGIS_SIGNING_ENV_FILE;
+  const fromVar = process.env.KALDERASHIELD_SIGNING_ENV_FILE;
   if (fromVar) return path.resolve(fromVar);
   if (fs.existsSync(externalSigningEnvFile)) return externalSigningEnvFile;
   return signingEnvFile;

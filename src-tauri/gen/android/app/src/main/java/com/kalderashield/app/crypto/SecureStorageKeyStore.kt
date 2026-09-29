@@ -1,4 +1,4 @@
-package com.hafgit99.aegisvault7.crypto
+ackage com.kalderashield.app.crypto
 
 import android.content.Context
 import android.os.Build
@@ -16,7 +16,7 @@ import org.json.JSONObject
 
 /**
  * Thread-safe wrapper around Android KeyStore for AES-256-GCM encrypted
- * preference storage used by Aegis Vault.
+ * preference storage used by KalderaShield Vault.
  *
  * Two distinct keys are managed:
  *  - The general-purpose AES-GCM key encrypts non-sensitive metadata and is
@@ -184,10 +184,10 @@ class SecureStorageKeyStore(private val context: Context) {
 
     companion object {
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
-        private const val SECURE_STORAGE_KEY_ALIAS = "aegis_vault_v7_secure_storage"
-        private const val SECURE_STORAGE_BIOMETRIC_ALIAS = "aegis_vault_v7_biometric_wrapping"
+        private const val SECURE_STORAGE_KEY_ALIAS = "KalderaShield_vault_v7_secure_storage"
+        private const val SECURE_STORAGE_BIOMETRIC_ALIAS = "KalderaShield_vault_v7_biometric_wrapping"
         private const val SECURE_STORAGE_CIPHER = "AES/GCM/NoPadding"
         private const val GCM_TAG_LENGTH_BITS = 128
-        private const val SECURE_STORAGE_LOG_TAG = "AegisSecureStorage"
+        private const val SECURE_STORAGE_LOG_TAG = "KalderaShieldSecureStorage"
     }
 }

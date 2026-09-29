@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { AegisSecurityError, logSecurityEvent, securityEventCodes } from './securityEvents';
+import { KalderaShieldSecurityError, logSecurityEvent, securityEventCodes } from './securityEvents';
 
 const HIBP_RANGE_ORIGIN = 'https://api.pwnedpasswords.com';
 const HIBP_RANGE_PATH_PATTERN = /^\/range\/[0-9A-Fa-f]{5}$/;
@@ -40,12 +40,12 @@ export function addSyncAllowedOrigin(origin: string): void {
     const parsed = new URL(origin);
     const isLocal = isPrivateOrLoopbackHostname(parsed.hostname);
     if (parsed.protocol !== 'https:' && !isLocal) {
-      console.warn('[AegisAirGap] Refused to whitelist non-HTTPS sync origin:', origin);
+      console.warn('[KalderaShieldAirGap] Refused to whitelist non-HTTPS sync origin:', origin);
       return;
     }
     syncAllowedOrigins.add(parsed.origin);
   } catch {
-    console.warn('[AegisAirGap] Invalid sync origin, not whitelisted:', origin);
+    console.warn('[KalderaShieldAirGap] Invalid sync origin, not whitelisted:', origin);
   }
 }
 
@@ -164,9 +164,9 @@ export function assertNetworkUrlAllowed(input: string | URL): void {
     'critical',
     { url: normalized },
   );
-  throw new AegisSecurityError(
+  throw new KalderaShieldSecurityError(
     securityEventCodes.networkBlocked,
-    'Outbound network access is blocked by Aegis Vault air-gap policy.',
+    'Outbound network access is blocked by KalderaShield air-gap policy.',
     'critical',
   );
 }
@@ -249,9 +249,9 @@ export function installAirgapNetworkPolicy(): void {
         'critical',
         { url: 'webrtc:' },
       );
-      throw new AegisSecurityError(
+      throw new KalderaShieldSecurityError(
         securityEventCodes.networkBlocked,
-        'WebRTC is blocked by Aegis Vault air-gap policy.',
+        'WebRTC is blocked by KalderaShield air-gap policy.',
         'critical',
       );
     } as unknown as typeof RTCPeerConnection;

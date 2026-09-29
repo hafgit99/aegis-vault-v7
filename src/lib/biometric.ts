@@ -106,7 +106,7 @@ function base64ToBytes(value: string): Uint8Array {
   return new Uint8Array(atob(value).split('').map((char) => char.charCodeAt(0)));
 }
 
-const BIOMETRIC_DB_NAME = 'aegis_biometric_db';
+const BIOMETRIC_DB_NAME = 'KalderaShield_biometric_db';
 const BIOMETRIC_STORE_NAME = 'biometric_info';
 const BIOMETRIC_DB_VERSION = 1;
 const BIOMETRIC_KEY = 'biometric_setup';
@@ -222,7 +222,7 @@ export async function hydrateBiometric(): Promise<void> {
     // Anyone with access to IndexedDB/secure storage can reconstruct the wrapping key
     // from credentialId + salt + bundle + iterations without biometric authentication.
     if (cachedBiometricInfo && cachedBiometricInfo.version === 2) {
-      console.warn('[AegisVault Security] Insecure biometric v2 registration detected. Removing and requiring re-registration.');
+      console.warn('[KalderaShield Security] Insecure biometric v2 registration detected. Removing and requiring re-registration.');
       disableBiometric();
       biometricV2UpgradeRequired = true;
     }
@@ -243,7 +243,7 @@ export async function hydrateBiometric(): Promise<void> {
         if (!saveBiometricToSecureStorage(migratedInfo)) {
           await saveBiometricToIndexedDB(migratedInfo);
         }
-        console.info('[AegisVault Security] Biometric v3 wrappingSecret migrated to secure storage (P0-3).');
+        console.info('[KalderaShield Security] Biometric v3 wrappingSecret migrated to secure storage (P0-3).');
       }
     }
 
@@ -310,7 +310,7 @@ async function authenticateNativeBiometric(): Promise<void> {
     throw new BiometricError(biometricErrorCodes.unsupported);
   }
 
-  await nativeBiometric.authenticate('Unlock Aegis Vault', {
+  await nativeBiometric.authenticate('Unlock KalderaShield', {
     allowDeviceCredential: true,
     title: APP_NAME,
     subtitle: 'Confirm your screen lock to continue',
@@ -402,11 +402,11 @@ function parseBiometricPayload(decryptedRaw: string): BiometricCredentialsPayloa
           secretKey: parsed.secretKey || null,
         };
       }
-    } else if (decryptedRaw.startsWith('aegis-vault-v7:')) {
+    } else if (decryptedRaw.startsWith('kalderashield:')) {
       const sepIdx = decryptedRaw.indexOf('\0');
       if (sepIdx !== -1) {
         return {
-          masterPassword: decryptedRaw.substring('aegis-vault-v7:'.length, sepIdx),
+          masterPassword: decryptedRaw.substring('kalderashield:'.length, sepIdx),
           secretKey: decryptedRaw.substring(sepIdx + 1),
         };
       }
@@ -457,7 +457,7 @@ async function registerWebAuthnBiometric(payload: string, type: 'platform' | 'cr
       },
       user: {
         id: userId,
-        name: "aegis_user_" + Date.now(),
+        name: "KalderaShield_user_" + Date.now(),
         displayName: `${APP_SHORT_NAME} User`,
       },
       pubKeyCredParams: [
@@ -585,7 +585,7 @@ async function rotateLegacyNativeSecretToHardwareBound(wrappingSecret: Uint8Arra
   try {
     const handle = await wrapAndroidBiometricSecret(wrappingSecret);
     setSecureStorageItem(secureStorageKeys.biometricWrappingSecret, handle);
-    console.info('[AegisVault Security] Legacy native biometric wrapping secret rotated to hardware-bound AndroidKeyStore handle (RUST-O5).');
+    console.info('[KalderaShield Security] Legacy native biometric wrapping secret rotated to hardware-bound AndroidKeyStore handle (RUST-O5).');
   } catch {
     // Non-fatal: keep the legacy raw secret; retry on the next unlock.
   }
@@ -708,7 +708,7 @@ export async function authenticateBiometric(): Promise<string> {
   return masterPassword;
 }
 
-const BIOMETRIC_AUTOFILL_REQUIRE_KEY = 'aegis_biometric_autofill_require';
+const BIOMETRIC_AUTOFILL_REQUIRE_KEY = 'KalderaShield_biometric_autofill_require';
 
 export function isBiometricAutofillRequireEnabled(): boolean {
   if (typeof localStorage === 'undefined') return false;

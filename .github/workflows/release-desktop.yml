@@ -166,7 +166,7 @@ jobs:
       - name: Upload Linux release artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
         with:
-          name: aegis-vault-v7-linux
+          name: kalderashield-linux
           if-no-files-found: error
           retention-days: 14
           path: release-local/linux/**
@@ -340,7 +340,7 @@ jobs:
       - name: Upload macOS release artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
         with:
-          name: aegis-vault-v7-macos
+          name: kalderashield-macos
           if-no-files-found: error
           retention-days: 14
           path: release-local/macos/**
@@ -394,7 +394,7 @@ jobs:
           WINDOWS_SIGNING_CERT_PASSWORD: ${{ secrets.WINDOWS_SIGNING_CERT_PASSWORD }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $pfxPath = Join-Path $env:RUNNER_TEMP 'aegis-signing.pfx'
+          $pfxPath = Join-Path $env:RUNNER_TEMP 'KalderaShield-signing.pfx'
           [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:WINDOWS_SIGNING_CERT_BASE64))
 
           $secure = ConvertTo-SecureString -String $env:WINDOWS_SIGNING_CERT_PASSWORD -AsPlainText -Force
@@ -465,7 +465,7 @@ jobs:
       - name: Upload Windows release artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
         with:
-          name: aegis-vault-v7-windows
+          name: kalderashield-windows
           if-no-files-found: error
           retention-days: 14
           path: release-local/windows/**
@@ -523,27 +523,27 @@ jobs:
       - name: Verify and decode Android signing secrets
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          KEY_ALIAS: ${{ secrets.AEGIS_ANDROID_KEY_ALIAS }}
-          KEYSTORE_PASSWORD: ${{ secrets.AEGIS_ANDROID_KEYSTORE_PASSWORD }}
-          KEY_PASSWORD: ${{ secrets.AEGIS_ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KALDERASHIELD_ANDROID_KEY_ALIAS }}
+          KEYSTORE_PASSWORD: ${{ secrets.KALDERASHIELD_ANDROID_KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KALDERASHIELD_ANDROID_KEY_PASSWORD }}
         run: |
           missing=0
           for v in KEYSTORE_B64 KEY_ALIAS KEYSTORE_PASSWORD KEY_PASSWORD; do
             if [ -z "${!v}" ]; then
-              echo "::error::Missing Android signing secret: $v (add ANDROID_KEYSTORE_BASE64, AEGIS_ANDROID_KEY_ALIAS, AEGIS_ANDROID_KEYSTORE_PASSWORD, AEGIS_ANDROID_KEY_PASSWORD as repository secrets)"
+              echo "::error::Missing Android signing secret: $v (add ANDROID_KEYSTORE_BASE64, KALDERASHIELD_ANDROID_KEY_ALIAS, KALDERASHIELD_ANDROID_KEYSTORE_PASSWORD, KALDERASHIELD_ANDROID_KEY_PASSWORD as repository secrets)"
               missing=1
             fi
           done
           if [ "$missing" -ne 0 ]; then exit 1; fi
-          echo "$KEYSTORE_B64" | base64 -d > "${RUNNER_TEMP}/aegis-release.keystore"
-          echo "Keystore decoded to ${RUNNER_TEMP}/aegis-release.keystore"
+          echo "$KEYSTORE_B64" | base64 -d > "${RUNNER_TEMP}/KalderaShield-release.keystore"
+          echo "Keystore decoded to ${RUNNER_TEMP}/KalderaShield-release.keystore"
 
       - name: Build Android release APKs (all ABIs)
         env:
-          AEGIS_ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/aegis-release.keystore
-          AEGIS_ANDROID_KEY_ALIAS: ${{ secrets.AEGIS_ANDROID_KEY_ALIAS }}
-          AEGIS_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.AEGIS_ANDROID_KEYSTORE_PASSWORD }}
-          AEGIS_ANDROID_KEY_PASSWORD: ${{ secrets.AEGIS_ANDROID_KEY_PASSWORD }}
+          KALDERASHIELD_ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/KalderaShield-release.keystore
+          KALDERASHIELD_ANDROID_KEY_ALIAS: ${{ secrets.KALDERASHIELD_ANDROID_KEY_ALIAS }}
+          KALDERASHIELD_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.KALDERASHIELD_ANDROID_KEYSTORE_PASSWORD }}
+          KALDERASHIELD_ANDROID_KEY_PASSWORD: ${{ secrets.KALDERASHIELD_ANDROID_KEY_PASSWORD }}
         run: npx tauri android build --apk
 
       - name: Collect Android release artifacts
@@ -562,7 +562,7 @@ jobs:
       - name: Upload Android release artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
         with:
-          name: aegis-vault-v7-android
+          name: kalderashield-android
           if-no-files-found: error
           retention-days: 14
           path: release-local/android/**
@@ -628,7 +628,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p release-local/firefox
-          XPI="release-local/firefox/$(node -p "'aegis-vault-7-firefox-v' + require('./package.json').version + '.xpi'")"
+          XPI="release-local/firefox/$(node -p "'KalderaShield-vault-7-firefox-v' + require('./package.json').version + '.xpi'")"
           echo "signed-by-amo=true" > release-local/firefox/AMO_SIGNING_STATUS.txt
           if [ -n "$WEB_EXT_API_KEY" ] && [ -n "$WEB_EXT_API_SECRET" ]; then
             if npm run sign:firefox:xpi -- --skip-build; then
@@ -655,13 +655,13 @@ jobs:
           npm run extension:safari
           mkdir -p release-local/safari
           VERSION=$(node -p "require('./package.json').version")
-          zip -qr "release-local/safari/aegis-vault-7-safari-v${VERSION}-webextension.zip" dist-extension-safari
+          zip -qr "release-local/safari/KalderaShield-vault-7-safari-v${VERSION}-webextension.zip" dist-extension-safari
           echo "Safari WebExtension bundle zipped (native Safari app wrapper still requires Xcode conversion on macOS)."
 
       - name: Upload extension artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
         with:
-          name: aegis-vault-v7-extensions
+          name: kalderashield-extensions
           if-no-files-found: error
           retention-days: 14
           path: |
@@ -725,7 +725,7 @@ jobs:
       - name: Upload SBOM artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
         with:
-          name: aegis-vault-v7-sbom
+          name: kalderashield-sbom
           if-no-files-found: error
           retention-days: 14
           path: release-local/sbom/*.json
@@ -735,7 +735,7 @@ jobs:
     needs: [plan]
     # The alias staging step is shell, and shell in a workflow is only tested by
     # a failing release. It failed three in a row: v7.0.12.0 published three of
-    # seven aliases (a `*-latest.*` glob cannot match `AegisVault7-`), v7.0.13.0
+    # seven aliases (a `*-latest.*` glob cannot match `KalderaShield7-`), v7.0.13.0
     # died on a `test && append` under `set -e`, and v7.0.14.0 ran the test
     # itself with bare `node` so vitest was missing.
     #
@@ -818,7 +818,7 @@ jobs:
       - name: Download Linux artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v6.0.0 (SHA-pinned)
         with:
-          name: aegis-vault-v7-linux
+          name: kalderashield-linux
           path: release-local/linux
 
       - name: Download macOS artifacts
@@ -828,32 +828,32 @@ jobs:
         if: needs.plan.outputs.macos == 'true'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v6.0.0 (SHA-pinned)
         with:
-          name: aegis-vault-v7-macos
+          name: kalderashield-macos
           path: release-local/macos
 
       - name: Download Windows artifacts
         if: needs.plan.outputs.windows == 'true'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v6.0.0 (SHA-pinned)
         with:
-          name: aegis-vault-v7-windows
+          name: kalderashield-windows
           path: release-local/windows
 
       - name: Download Android artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v6.0.0 (SHA-pinned)
         with:
-          name: aegis-vault-v7-android
+          name: kalderashield-android
           path: release-local/android
 
       - name: Download extension artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v6.0.0 (SHA-pinned)
         with:
-          name: aegis-vault-v7-extensions
+          name: kalderashield-extensions
           path: release-local/extensions
 
       - name: Download SBOM artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v6.0.0 (SHA-pinned)
         with:
-          name: aegis-vault-v7-sbom
+          name: kalderashield-sbom
           path: release-local/sbom
 
       - name: Generate Tauri updater manifest (latest.json)
@@ -936,7 +936,7 @@ jobs:
           # file, not a distributable. It was missing from this list, so it
           # survived the prune and the cosign step below tried to sign it (and
           # publish it) as if it were a release artifact.
-          prune_names='README.md DESKTOP_MANUAL_SMOKE_CHECKLIST.md DESKTOP_SIGNATURES.md AMO_SIGNING_STATUS.txt metadata.json Info.plist CodeResources icon.icns aegis-vault-v7 control.tar.gz data.tar.gz manifest.json SHA256SUMS.txt'
+          prune_names='README.md DESKTOP_MANUAL_SMOKE_CHECKLIST.md DESKTOP_SIGNATURES.md AMO_SIGNING_STATUS.txt metadata.json Info.plist CodeResources icon.icns kalderashield control.tar.gz data.tar.gz manifest.json SHA256SUMS.txt'
           for name in $prune_names; do
             find linux macos windows android extensions sbom updater -type f \( \
               -name "$name" -o -name "$name.sig" -o -name "$name.pem" -o -name "$name.sigstore.json" \) -delete 2>/dev/null || true
@@ -967,7 +967,7 @@ jobs:
         # Why this exists
         # -------------
         # The website links every download to a versioned path:
-        #   .../releases/download/v7.0.7.0/AegisVault7-7.0.7.0-linux-amd64.deb
+        #   .../releases/download/v7.0.7.0/KalderaShield7-7.0.7.0-linux-amd64.deb
         # That has to be edited by hand in 9 files on every release, and when it
         # is forgotten the site does not break -- it keeps serving the previous
         # version to every visitor, silently. That is what happened between
@@ -976,7 +976,7 @@ jobs:
         # `releases/latest/download/<name>` redirects to the newest release, but
         # only for assets whose name does not change per release. Verified, not
         # assumed: `/releases/latest/download/SHA256SUMS.txt` returns 200 while
-        # `/releases/latest/download/AegisVault7-7.0.7.0-windows-x64-setup.exe`
+        # `/releases/latest/download/KalderaShield7-7.0.7.0-windows-x64-setup.exe`
         # returns 404, because the version is in the filename and the newest
         # release has no such file. So an alias has to exist under a fixed name.
         #
@@ -1031,7 +1031,7 @@ jobs:
             # Record what this function actually wrote. A later `*-latest.*`
             # glob cannot be trusted to rediscover it: `*` does not match an
             # uppercase leading character here, which is exactly how the Linux
-            # aliases (AegisVault7-...) went missing in v7.0.12.0 while the
+            # aliases (KalderaShield7-...) went missing in v7.0.12.0 while the
             # lowercase extension ones were found.
             staged_files+=("${alias}")
             for ext in sig sigstore.json pem; do
@@ -1047,18 +1047,18 @@ jobs:
             return 0
           }
 
-          link_alias 'AegisVault7-latest-linux-amd64.deb' 'AegisVault7-*-linux-amd64.deb'
-          link_alias 'AegisVault7-latest-linux-x64.AppImage' 'AegisVault7-*-linux-x64.AppImage'
-          link_alias 'aegis-vault-7-chrome-latest.zip' 'aegis-vault-7-chrome-*.zip'
-          link_alias 'aegis-vault-7-edge-latest.zip' 'aegis-vault-7-edge-*.zip'
-          link_alias 'aegis-vault-7-firefox-latest.xpi' 'aegis-vault-7-firefox-*.xpi'
-          link_alias 'aegis-vault-7-safari-latest-webextension.zip' 'aegis-vault-7-safari-*-webextension.zip'
+          link_alias 'KalderaShield7-latest-linux-amd64.deb' 'KalderaShield7-*-linux-amd64.deb'
+          link_alias 'KalderaShield7-latest-linux-x64.AppImage' 'KalderaShield7-*-linux-x64.AppImage'
+          link_alias 'KalderaShield-vault-7-chrome-latest.zip' 'KalderaShield-vault-7-chrome-*.zip'
+          link_alias 'KalderaShield-vault-7-edge-latest.zip' 'KalderaShield-vault-7-edge-*.zip'
+          link_alias 'KalderaShield-vault-7-firefox-latest.xpi' 'KalderaShield-vault-7-firefox-*.xpi'
+          link_alias 'KalderaShield-vault-7-safari-latest-webextension.zip' 'KalderaShield-vault-7-safari-*-webextension.zip'
           # No alias for install.sh: it is not published in this release at all
           # (verified against the v7.0.11.0 asset list), so aliasing it would
           # advertise a download that 404s. The site's CLI page links to a
           # versioned path for a file the pipeline does not upload; that is a
           # separate broken link, tracked with the site update.
-          link_alias 'aegis-vault-7-latest-universal.apk' 'app-universal-universal-release.apk'
+          link_alias 'KalderaShield-vault-7-latest-universal.apk' 'app-universal-universal-release.apk'
 
           echo "Staged ${aliased} version-less alias(es)."
           [ "$aliased" -gt 0 ] || { echo "::error::No aliases were staged"; exit 1; }
@@ -1072,18 +1072,18 @@ jobs:
           # unmatched pattern as an informational "🤔 does not match any files"
           # and the step still succeeds, so the run was green while the website
           # served 404s for two of its platforms. `*` did not match the leading
-          # uppercase `A` of `AegisVault7-latest-...`, which is why exactly the
+          # uppercase `A` of `KalderaShield7-latest-...`, which is why exactly the
           # non-extension aliases went missing.
           #
           # The list is built from what link_alias actually wrote, so it cannot
           # drift from what exists, and it cannot silently miss a file.
           {
-            echo 'staged<<AEGIS_ALIAS_EOF'
+            echo 'staged<<KALDERASHIELD_ALIAS_EOF'
             for f in "${staged_files[@]}"; do
               [ -f "$f" ] || { echo "::error::staged alias is missing on disk: $f"; exit 1; }
               echo "release-local/${f}"
             done
-            echo 'AEGIS_ALIAS_EOF'
+            echo 'KALDERASHIELD_ALIAS_EOF'
           } >> "$GITHUB_OUTPUT"
           echo "Handed ${#staged_files[@]} alias file(s) to the publish step."
 
@@ -1174,12 +1174,12 @@ jobs:
             release-local/SHA256SUMS.txt
             ${{ steps.alias.outputs.staged }}
 
-      - name: Publish updater manifest to backup endpoint (update.aegisvault.xyz)
+      - name: Publish updater manifest to backup endpoint (update.KalderaShield.xyz)
         continue-on-error: true
         env:
           UPDATE_HOST: ${{ secrets.UPDATE_ENDPOINT_HOST }}        # e.g. forgejo-update@vps.example.com (sftp-only chroot user)
           UPDATE_SSH_KEY: ${{ secrets.UPDATE_ENDPOINT_SSH_KEY }}  # private key paired with the VPS deploy user
-          UPDATE_KNOWN_HOSTS: ${{ secrets.UPDATE_ENDPOINT_KNOWN_HOSTS }} # output of: ssh-keyscan -H update.aegisvault.xyz
+          UPDATE_KNOWN_HOSTS: ${{ secrets.UPDATE_ENDPOINT_KNOWN_HOSTS }} # output of: ssh-keyscan -H update.KalderaShield.xyz
         run: |
           set -e
           CLEAN_HOST=$(echo "${UPDATE_HOST:-}" | tr -d '\r\n "' | sed -e 's|^https://||' -e 's|^http://||' -e 's|^sftp://||' -e 's|/$||')
@@ -1192,7 +1192,7 @@ jobs:
             printf '%s\n' "$UPDATE_KNOWN_HOSTS" > ~/.ssh/known_hosts
           else
             echo "::warning::UPDATE_ENDPOINT_KNOWN_HOSTS not set — falling back to accept-new (TOFU)."
-            ssh-keyscan -H update.aegisvault.xyz >> ~/.ssh/known_hosts 2>/dev/null || true
+            ssh-keyscan -H update.KalderaShield.xyz >> ~/.ssh/known_hosts 2>/dev/null || true
           fi
           printf '%s\n' "$UPDATE_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519

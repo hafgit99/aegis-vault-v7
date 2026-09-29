@@ -24,7 +24,7 @@ const hostDir = path.resolve(projectRoot, 'native-host-local');
 const registryHelperScript = path.resolve(__dirname, 'register-host-registry.ps1');
 const chromiumHostDir = path.join(hostDir, 'chromium');
 const firefoxHostDir = path.join(hostDir, 'firefox');
-const batPath = path.join(chromiumHostDir, 'aegis-host.bat');
+const batPath = path.join(chromiumHostDir, 'KalderaShield-host.bat');
 const chromeManifestPath = path.join(chromiumHostDir, `${HOST_NAME}.json`);
 const firefoxManifestPath = path.join(firefoxHostDir, `${HOST_NAME}.json`);
 
@@ -40,7 +40,7 @@ const legacyManifestPaths = [
 ];
 
 const isWin = process.platform === 'win32';
-const exeName = isWin ? 'aegis-vault-v7.exe' : 'aegis-vault-v7';
+const exeName = isWin ? 'kalderashield.exe' : 'kalderashield';
 const releaseExe = path.resolve(projectRoot, 'src-tauri/target/release', exeName);
 const debugExe = path.resolve(projectRoot, 'src-tauri/target/debug', exeName);
 
@@ -56,7 +56,7 @@ if (fs.existsSync(releaseExe)) {
   console.warn(`Warning: No compiled binary found at ${releaseExe} or ${debugExe}. Defaulting path to release binary.`);
 }
 
-// 1. Create aegis-host.bat with release-first fallback logic
+// 1. Create KalderaShield-host.bat with release-first fallback logic
 const batContent = `@echo off
 if exist "${releaseExe}" (
   "${releaseExe}" --native-messaging-host %*
@@ -71,10 +71,10 @@ fs.mkdirSync(firefoxHostDir, { recursive: true });
 fs.writeFileSync(batPath, batContent);
 console.log(`Created: ${batPath}`);
 
-// 2. Create com.hafgit99.aegisvault7.json
+// 2. Create com.hafgit99.KalderaShield7.json
 // Note: Chrome/Edge do NOT support wildcards (*) in allowed_origins.
 // We only permit official/configured extension IDs and reject arbitrary placeholders.
-const extensionId = process.argv[2] || process.env.AEGIS_EXTENSION_ID;
+const extensionId = process.argv[2] || process.env.KALDERASHIELD_EXTENSION_ID;
 
 // EXT-B2: migrate origins from legacy manifests (dist-extension*/, release-local)
 // so an existing local registration keeps working after the move to native-host-local/.

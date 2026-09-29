@@ -86,7 +86,7 @@ requestAnimationFrame(() => {
               Application failed to load
             </h1>
             <p className="mt-3 text-sm leading-relaxed text-slate-400">
-              A bundle integrity or network error prevented AegisVault from
+              A bundle integrity or network error prevented KalderaShield from
               starting. Your vault data remains safely stored on this device.
             </p>
             <button

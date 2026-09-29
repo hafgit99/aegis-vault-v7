@@ -259,7 +259,7 @@ export default function SettingsPanel({
         onDatabaseChanged={onDatabaseChanged}
         onNotify={(msg, kind) =>
           onNotify?.({
-            title: 'Aegis Vault',
+            title: 'KalderaShield',
             message: msg,
             type: kind === 'error' ? 'danger' : (kind || 'info'),
           })

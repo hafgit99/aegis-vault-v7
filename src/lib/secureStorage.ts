@@ -1,9 +1,9 @@
 export const secureStorageKeys = {
-  rememberedSecretKey: 'aegis_account_secret_key_remembered',
-  biometricInfo: 'aegis_biometric_info',
-  biometricWrappingSecret: 'aegis_biometric_wrapping_secret',
-  recoveryKeyBundle: 'aegis_recovery_key_bundle',
-  passwordHintWrappingKey: 'aegis_password_hint_key',
+  rememberedSecretKey: 'KalderaShield_account_secret_key_remembered',
+  biometricInfo: 'KalderaShield_biometric_info',
+  biometricWrappingSecret: 'KalderaShield_biometric_wrapping_secret',
+  recoveryKeyBundle: 'KalderaShield_recovery_key_bundle',
+  passwordHintWrappingKey: 'KalderaShield_password_hint_key',
 } as const;
 
 interface AndroidSecureStorageBridge {
@@ -14,13 +14,13 @@ interface AndroidSecureStorageBridge {
 
 declare global {
   interface Window {
-    AegisAndroidSecureStorage?: AndroidSecureStorageBridge;
+    KalderaShieldAndroidSecureStorage?: AndroidSecureStorageBridge;
   }
 }
 
 export function getAndroidSecureStorageBridge(): AndroidSecureStorageBridge | null {
   if (typeof window === 'undefined') return null;
-  const bridge = window.AegisAndroidSecureStorage;
+  const bridge = window.KalderaShieldAndroidSecureStorage;
   if (!bridge) return null;
 
   if (

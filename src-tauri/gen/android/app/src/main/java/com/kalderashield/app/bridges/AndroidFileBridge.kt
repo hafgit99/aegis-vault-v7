@@ -1,8 +1,8 @@
-package com.hafgit99.aegisvault7.bridges
+ackage com.kalderashield.app.bridges
 
 import android.content.Intent
 import android.webkit.JavascriptInterface
-import com.hafgit99.aegisvault7.MainActivity
+import com.kalderashield.app.MainActivity
 
 class AndroidFileBridge(
     private val activity: MainActivity,

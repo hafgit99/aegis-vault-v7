@@ -7,7 +7,7 @@
  *
  *   v7.0.12.0 -- the publish step rediscovered the aliases with a
  *     `release-local/*-latest.*` glob, and `*` does not match a leading
- *     uppercase `A`, so `AegisVault7-latest-linux-amd64.deb` and the Android and
+ *     uppercase `A`, so `KalderaShield7-latest-linux-amd64.deb` and the Android and
  *     Safari aliases were never uploaded. The step still succeeded, so the
  *     release shipped three of seven and the website served 404s.
  *
@@ -34,27 +34,27 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 const WORKFLOW = path.resolve('.github/workflows/release-desktop.yml');
 
 const ALIAS_STEP_HEADER = '      - name: Stage version-less aliases for stable download URLs';
-const ALIAS_OUTPUT_DELIMITER = 'AEGIS_ALIAS_EOF';
+const ALIAS_OUTPUT_DELIMITER = 'KALDERASHIELD_ALIAS_EOF';
 
 /** What a full release stages, and what each artifact is signed with. */
 const FIXTURE_FILES = [
   // Linux: Tauri-signed, so a .sig and no .sigstore.json. This pairing is what
   // broke v7.0.13.0.
-  'linux/AegisVault7-7.0.13.0-linux-amd64.deb',
-  'linux/AegisVault7-7.0.13.0-linux-amd64.deb.sig',
-  'linux/AegisVault7-7.0.13.0-linux-x64.AppImage',
-  'linux/AegisVault7-7.0.13.0-linux-x64.AppImage.sig',
+  'linux/KalderaShield7-7.0.13.0-linux-amd64.deb',
+  'linux/KalderaShield7-7.0.13.0-linux-amd64.deb.sig',
+  'linux/KalderaShield7-7.0.13.0-linux-x64.AppImage',
+  'linux/KalderaShield7-7.0.13.0-linux-x64.AppImage.sig',
   // Android and the extensions: cosign-signed, the opposite pairing.
   'android/app-universal-universal-release.apk',
   'android/app-universal-universal-release.apk.sigstore.json',
-  'extensions/chrome/aegis-vault-7-chrome-v7.0.13.0.zip',
-  'extensions/chrome/aegis-vault-7-chrome-v7.0.13.0.zip.sigstore.json',
-  'extensions/edge/aegis-vault-7-edge-v7.0.13.0.zip',
-  'extensions/edge/aegis-vault-7-edge-v7.0.13.0.zip.sigstore.json',
-  'extensions/firefox/aegis-vault-7-firefox-v7.0.13.0.xpi',
-  'extensions/firefox/aegis-vault-7-firefox-v7.0.13.0.xpi.sigstore.json',
-  'extensions/safari/aegis-vault-7-safari-v7.0.13.0-webextension.zip',
-  'extensions/safari/aegis-vault-7-safari-v7.0.13.0-webextension.zip.sigstore.json',
+  'extensions/chrome/KalderaShield-vault-7-chrome-v7.0.13.0.zip',
+  'extensions/chrome/KalderaShield-vault-7-chrome-v7.0.13.0.zip.sigstore.json',
+  'extensions/edge/KalderaShield-vault-7-edge-v7.0.13.0.zip',
+  'extensions/edge/KalderaShield-vault-7-edge-v7.0.13.0.zip.sigstore.json',
+  'extensions/firefox/KalderaShield-vault-7-firefox-v7.0.13.0.xpi',
+  'extensions/firefox/KalderaShield-vault-7-firefox-v7.0.13.0.xpi.sigstore.json',
+  'extensions/safari/KalderaShield-vault-7-safari-v7.0.13.0-webextension.zip',
+  'extensions/safari/KalderaShield-vault-7-safari-v7.0.13.0-webextension.zip.sigstore.json',
   // Never distributable. A staged list that widened to "everything in the
   // root" would start publishing these.
   'README.md',
@@ -62,20 +62,20 @@ const FIXTURE_FILES = [
 ];
 
 const EXPECTED_STAGED = [
-  'release-local/AegisVault7-latest-linux-amd64.deb',
-  'release-local/AegisVault7-latest-linux-amd64.deb.sig',
-  'release-local/AegisVault7-latest-linux-x64.AppImage',
-  'release-local/AegisVault7-latest-linux-x64.AppImage.sig',
-  'release-local/aegis-vault-7-chrome-latest.zip',
-  'release-local/aegis-vault-7-chrome-latest.zip.sigstore.json',
-  'release-local/aegis-vault-7-edge-latest.zip',
-  'release-local/aegis-vault-7-edge-latest.zip.sigstore.json',
-  'release-local/aegis-vault-7-firefox-latest.xpi',
-  'release-local/aegis-vault-7-firefox-latest.xpi.sigstore.json',
-  'release-local/aegis-vault-7-safari-latest-webextension.zip',
-  'release-local/aegis-vault-7-safari-latest-webextension.zip.sigstore.json',
-  'release-local/aegis-vault-7-latest-universal.apk',
-  'release-local/aegis-vault-7-latest-universal.apk.sigstore.json',
+  'release-local/KalderaShield7-latest-linux-amd64.deb',
+  'release-local/KalderaShield7-latest-linux-amd64.deb.sig',
+  'release-local/KalderaShield7-latest-linux-x64.AppImage',
+  'release-local/KalderaShield7-latest-linux-x64.AppImage.sig',
+  'release-local/KalderaShield-vault-7-chrome-latest.zip',
+  'release-local/KalderaShield-vault-7-chrome-latest.zip.sigstore.json',
+  'release-local/KalderaShield-vault-7-edge-latest.zip',
+  'release-local/KalderaShield-vault-7-edge-latest.zip.sigstore.json',
+  'release-local/KalderaShield-vault-7-firefox-latest.xpi',
+  'release-local/KalderaShield-vault-7-firefox-latest.xpi.sigstore.json',
+  'release-local/KalderaShield-vault-7-safari-latest-webextension.zip',
+  'release-local/KalderaShield-vault-7-safari-latest-webextension.zip.sigstore.json',
+  'release-local/KalderaShield-vault-7-latest-universal.apk',
+  'release-local/KalderaShield-vault-7-latest-universal.apk.sigstore.json',
 ];
 
 /** The `run:` body of the alias step, taken from the workflow itself. */
@@ -155,7 +155,7 @@ let stdout;
 const ALIAS_SETUP_TIMEOUT_MS = 60_000;
 
 beforeAll(() => {
-  root = mkdtempSync(path.join(tmpdir(), 'aegis-alias-'));
+  root = mkdtempSync(path.join(tmpdir(), 'KalderaShield-alias-'));
   for (const rel of FIXTURE_FILES) {
     const full = path.join(root, 'release-local', rel);
     mkdirSync(path.dirname(full), { recursive: true });
@@ -182,13 +182,13 @@ describe('release alias staging', () => {
     // make every assertion below vacuously true.
     const script = extractAliasScript(readFileSync(WORKFLOW, 'utf8'));
     expect(script).toContain('link_alias');
-    expect(script).toContain('AEGIS_ALIAS_EOF');
+    expect(script).toContain('KALDERASHIELD_ALIAS_EOF');
   });
 
   it('completes under set -euo pipefail', () => {
     // The v7.0.13.0 failure. Reaching this line at all is the assertion: the
     // script used to exit 1 right after the first `aliased` line.
-    expect(stdout).toContain('AegisVault7-latest-linux-amd64.deb');
+    expect(stdout).toContain('KalderaShield7-latest-linux-amd64.deb');
     expect(stdout).toContain('Staged 7 version-less alias(es).');
   });
 
@@ -203,7 +203,7 @@ describe('release alias staging', () => {
   it('keeps a .sig next to an alias that has no .sigstore.json', () => {
     // The exact v7.0.13.0 regression: the second loop iteration's test failed,
     // and a trailing `test && append` under `set -e` ended the step.
-    expect(staged).toContain('release-local/AegisVault7-latest-linux-amd64.deb.sig');
+    expect(staged).toContain('release-local/KalderaShield7-latest-linux-amd64.deb.sig');
   });
 
   it('lists only files that exist', () => {

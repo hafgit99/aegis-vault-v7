@@ -59,11 +59,11 @@ async function deriveArgon2idKeyAsync(password, saltHex, kdfParams = {}) {
 
 function printHelp() {
   console.log(`
-AegisVault v7 CLI Tool (aegis-cli) v${VERSION}
+KalderaShield v7 CLI Tool (kalderashield-cli) v${VERSION}
 Secure Command-Line Credential & Vault Management
 
 USAGE:
-  npx aegis-cli <command> [options]
+  npx kalderashield-cli <command> [options]
 
 COMMANDS:
   generate                               Generate a cryptographically secure password
@@ -72,24 +72,24 @@ COMMANDS:
     --diceware                           Generate a 4-word diceware passphrase
 
   vault list                             Decrypt & list item titles in a vault backup
-    --vault-file <path>                  Path to Aegis encrypted backup file (.aegis or .json)
+    --vault-file <path>                  Path to KalderaShield encrypted backup file (.KalderaShield or .json)
     --password <masterPassword>          (Optional) Master password for decryption
                                          [Notice: If omitted, prompts securely without echoing to shell history]
 
   vault get                              Get details for a specific item
-    --vault-file <path>                  Path to Aegis encrypted backup file (.aegis or .json)
+    --vault-file <path>                  Path to KalderaShield encrypted backup file (.KalderaShield or .json)
     --id <idOrTitle>                     Item ID or exact Title to retrieve
     --password <masterPassword>          (Optional) Master password for decryption
 
 SCOPE NOTES:
-  aegis-cli runs fully offline against exported vault backup files
-  (.aegis / .json, and plain JSON/CSV exports read-only). It never connects
+  kalderashield-cli runs fully offline against exported vault backup files
+  (.KalderaShield / .json, and plain JSON/CSV exports read-only). It never connects
   to the running desktop app and does not use the IPC bridge — the live
   wa-sqlite vault is not read. Envelopes with Argon2id parameters below the
   8192 KiB / 3-iteration floor are refused (anti-downgrade, same as the app).
 
 ENVIRONMENT VARIABLES:
-  AEGIS_PASSWORD                         Pass master password securely via environment variable
+  KALDERASHIELD_PASSWORD                         Pass master password securely via environment variable
 
 OPTIONS:
   --help, -h                             Show this help message
@@ -211,7 +211,7 @@ async function parseVaultEnvelope(filePath, password) {
     return envelope;
   }
 
-  // Aegis Vault encrypted envelope (Argon2id + AES-256-GCM)
+  // KalderaShield encrypted envelope (Argon2id + AES-256-GCM)
   if (typeof envelope === 'object' && envelope !== null) {
     if (!password) {
       throw new Error('Vault file is encrypted. Master password is required for decryption.');
@@ -270,14 +270,14 @@ async function parseVaultEnvelope(filePath, password) {
     }
   }
 
-  throw new Error('Unrecognized Aegis vault backup format.');
+  throw new Error('Unrecognized KalderaShield backup format.');
 }
 
 // ─── Secure Interactive Password Prompt ──────────────────────────────────────
 
 function readPasswordPrompt(promptText = 'Enter Master Password: ') {
-  if (process.env.AEGIS_PASSWORD) {
-    return Promise.resolve(process.env.AEGIS_PASSWORD);
+  if (process.env.KALDERASHIELD_PASSWORD) {
+    return Promise.resolve(process.env.KALDERASHIELD_PASSWORD);
   }
 
   return new Promise((resolve, reject) => {
@@ -343,7 +343,7 @@ async function main() {
   }
 
   if (args.includes('--version') || args.includes('-v')) {
-    console.log(`aegis-cli v${VERSION}`);
+    console.log(`kalderashield-cli v${VERSION}`);
     return;
   }
 
@@ -384,7 +384,7 @@ async function main() {
     }
 
     if (password) {
-      console.warn('[Security Notice] Providing passwords via command-line arguments may expose them in shell history. Consider using interactive prompt or AEGIS_PASSWORD environment variable.');
+      console.warn('[Security Notice] Providing passwords via command-line arguments may expose them in shell history. Consider using interactive prompt or KALDERASHIELD_PASSWORD environment variable.');
     } else {
       password = await readPasswordPrompt('Enter Master Password: ');
     }

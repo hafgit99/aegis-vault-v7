@@ -1,4 +1,4 @@
-package com.hafgit99.aegisvault7
+ackage com.kalderashield.app
 
 import android.app.Activity
 import android.content.Intent
@@ -14,19 +14,19 @@ import android.util.Log
 import android.view.WindowManager
 import android.webkit.WebView
 import androidx.activity.enableEdgeToEdge
-import com.hafgit99.aegisvault7.bridges.AndroidAutofillBridge
-import com.hafgit99.aegisvault7.bridges.AndroidBiometricKeyStoreBridge
-import com.hafgit99.aegisvault7.bridges.AndroidFileBridge
-import com.hafgit99.aegisvault7.bridges.AndroidRuntimeSecurityBridge
-import com.hafgit99.aegisvault7.bridges.AndroidSecureStorageBridge
-import com.hafgit99.aegisvault7.crypto.SecureStorageKeyStore
-import com.hafgit99.aegisvault7.model.AndroidImportFile
-import com.hafgit99.aegisvault7.model.AutofillLaunchRequest
-import com.hafgit99.aegisvault7.model.AutofillSaveCandidate
-import com.hafgit99.aegisvault7.model.PendingSave
-import com.hafgit99.aegisvault7.security.AutofillRequestRegistry
-import com.hafgit99.aegisvault7.security.AutofillSecurityLog
-import com.hafgit99.aegisvault7.security.RuntimeSecurityPosture
+import com.kalderashield.app.bridges.AndroidAutofillBridge
+import com.kalderashield.app.bridges.AndroidBiometricKeyStoreBridge
+import com.kalderashield.app.bridges.AndroidFileBridge
+import com.kalderashield.app.bridges.AndroidRuntimeSecurityBridge
+import com.kalderashield.app.bridges.AndroidSecureStorageBridge
+import com.kalderashield.app.crypto.SecureStorageKeyStore
+import com.kalderashield.app.model.AndroidImportFile
+import com.kalderashield.app.model.AutofillLaunchRequest
+import com.kalderashield.app.model.AutofillSaveCandidate
+import com.kalderashield.app.model.PendingSave
+import com.kalderashield.app.security.AutofillRequestRegistry
+import com.kalderashield.app.security.AutofillSecurityLog
+import com.kalderashield.app.security.RuntimeSecurityPosture
 import org.json.JSONObject
 
 class MainActivity : TauriActivity() {
@@ -35,7 +35,7 @@ class MainActivity : TauriActivity() {
   private var pendingOpenRequestId: String? = null
 
   /**
-   * K-1: opaque registry keys handed over by `AegisAutofillService`, NOT
+   * K-1: opaque registry keys handed over by `KalderaShieldAutofillService`, NOT
    * Autofill request objects. The objects themselves stay in
    * [AutofillRequestRegistry] so nothing about the requesting app can be
    * substituted at the Intent boundary.
@@ -146,11 +146,11 @@ class MainActivity : TauriActivity() {
     // RUST-O4: biometric-bound wrapping key bridge (wrap/unwrap only; opaque handle transport)
     val biometricKeyBridge = AndroidBiometricKeyStoreBridge(this, secureKeyStore, ::evaluateOnWebView)
 
-    webView.addJavascriptInterface(fileBridge, "AegisAndroidFiles")
-    webView.addJavascriptInterface(secureStorageBridge, "AegisAndroidSecureStorage")
-    webView.addJavascriptInterface(autofillBridge, "AegisAndroidAutofill")
-    webView.addJavascriptInterface(securityBridge, "AegisAndroidSecurity")
-    webView.addJavascriptInterface(biometricKeyBridge, "AegisAndroidBiometric")
+    webView.addJavascriptInterface(fileBridge, "KalderaShieldAndroidFiles")
+    webView.addJavascriptInterface(secureStorageBridge, "KalderaShieldAndroidSecureStorage")
+    webView.addJavascriptInterface(autofillBridge, "KalderaShieldAndroidAutofill")
+    webView.addJavascriptInterface(securityBridge, "KalderaShieldAndroidSecurity")
+    webView.addJavascriptInterface(biometricKeyBridge, "KalderaShieldAndroidBiometric")
 
     webView.post {
       notifyAutofillIntent()
@@ -273,7 +273,7 @@ class MainActivity : TauriActivity() {
   }
 
   private fun resolveSave(requestId: String, saved: Boolean, error: String?) {
-    val script = "window.__aegisAndroidFiles && window.__aegisAndroidFiles.resolveSave(" +
+    val script = "window.__KalderaShieldAndroidFiles && window.__KalderaShieldAndroidFiles.resolveSave(" +
       "${JSONObject.quote(requestId)}, $saved, ${jsonStringOrNull(error)})"
     evaluateOnWebView(script)
   }
@@ -287,7 +287,7 @@ class MainActivity : TauriActivity() {
         .put("contents", file.contents)
         .toString()
     }
-    val script = "window.__aegisAndroidFiles && window.__aegisAndroidFiles.resolveOpen(" +
+    val script = "window.__KalderaShieldAndroidFiles && window.__KalderaShieldAndroidFiles.resolveOpen(" +
       "${JSONObject.quote(requestId)}, $payload, ${jsonStringOrNull(error)})"
     evaluateOnWebView(script)
   }
@@ -303,7 +303,7 @@ class MainActivity : TauriActivity() {
    * K-1: the Autofill Intent is now only a routing hint. Everything that
    * matters — `appPackage`, `webDomain`, the `AutofillId` lists, the save
    * candidate and its encrypted payload reference — is read from
-   * [AutofillRequestRegistry], which only `AegisAutofillService` can write.
+   * [AutofillRequestRegistry], which only `KalderaShieldAutofillService` can write.
    *
    * The previous implementation built `AutofillLaunchRequest` /
    * `AutofillSaveCandidate` straight from Intent extras. `MainActivity` used to
@@ -322,22 +322,22 @@ class MainActivity : TauriActivity() {
   @Suppress("NewApi")
   private fun captureAutofillIntent(intent: Intent?) {
     val action = intent?.action ?: return
-    // `AegisAutofillService` extends `AutofillService`, which is API 26+, while
+    // `KalderaShieldAutofillService` extends `AutofillService`, which is API 26+, while
     // minSdk is 24. Lint flags these three references as NewApi.
     //
     // They are safe: every constant used here is a Kotlin `const val`, so the
     // compiler substitutes the literal at the call site and no runtime
-    // reference to `AegisAutofillService` survives in this method. This is
+    // reference to `KalderaShieldAutofillService` survives in this method. This is
     // called on every launch (onCreate/onNewIntent), so an actual class load
     // here would crash every app start on API 24/25 — which is exactly why the
     // inlining is documented rather than left implicit.
     //
     // The manifest keeps the service behind `BIND_AUTOFILL_SERVICE` with
     // `tools:targetApi="o"`, so the framework never binds it below API 26.
-    val requestId = intent.getStringExtra(AegisAutofillService.EXTRA_REQUEST_ID)
+    val requestId = intent.getStringExtra(KalderaShieldAutofillService.EXTRA_REQUEST_ID)
 
     when (action) {
-      AegisAutofillService.ACTION_AUTOFILL_AUTHENTICATE -> {
+      KalderaShieldAutofillService.ACTION_AUTOFILL_AUTHENTICATE -> {
         if (AutofillRequestRegistry.findFillRequest(requestId) == null) {
           // Unknown or expired id: drop the launch and tell JS there is no
           // request, instead of synthesising one from untrusted extras.
@@ -348,7 +348,7 @@ class MainActivity : TauriActivity() {
         pendingAutofillRequestId = requestId
       }
 
-      AegisAutofillService.ACTION_AUTOFILL_SAVE -> {
+      KalderaShieldAutofillService.ACTION_AUTOFILL_SAVE -> {
         if (AutofillRequestRegistry.findSaveCandidate(requestId) == null) {
           AutofillSecurityLog.unroutableIntent(action, requestId)
           pendingAutofillSaveCandidateId = null
@@ -382,13 +382,13 @@ class MainActivity : TauriActivity() {
   private fun notifyAutofillIntent() {
     purgeStaleAutofillRequests()
     val payload = currentAutofillRequest()?.toJson()?.toString() ?: "null"
-    val script = "window.__aegisAndroidAutofill && window.__aegisAndroidAutofill.onRequest($payload)"
+    val script = "window.__KalderaShieldAndroidAutofill && window.__KalderaShieldAndroidAutofill.onRequest($payload)"
     evaluateOnWebView(script)
   }
 
   private fun notifyAutofillSaveCandidate() {
     val payload = currentAutofillSaveCandidate()?.toJson()?.toString() ?: "null"
-    val script = "window.__aegisAndroidAutofill && window.__aegisAndroidAutofill.onSave($payload)"
+    val script = "window.__KalderaShieldAndroidAutofill && window.__KalderaShieldAndroidAutofill.onSave($payload)"
     evaluateOnWebView(script)
   }
 
@@ -534,7 +534,7 @@ class MainActivity : TauriActivity() {
   companion object {
     private const val REQUEST_SAVE_FILE = 7101
     private const val REQUEST_OPEN_FILE = 7102
-    private const val AUTOFILL_LOG_TAG = "AegisAutofill"
+    private const val AUTOFILL_LOG_TAG = "KalderaShieldAutofill"
 
     private const val MAX_SAVE_PAYLOAD_BYTES = 25 * 1024 * 1024
     private const val MAX_OPEN_FILE_BYTES = 25L * 1024 * 1024

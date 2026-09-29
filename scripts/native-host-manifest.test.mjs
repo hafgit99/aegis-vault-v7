@@ -58,13 +58,13 @@ describe('buildAllowedOrigins', () => {
 describe('manifest builders', () => {
   it('builds a Chromium manifest restricted to validated origins only', () => {
     const manifest = buildChromeHostManifest({
-      hostPath: 'C:\\install\\aegis.exe',
+      hostPath: 'C:\\install\\KalderaShield.exe',
       extensionIds: [PRIMARY_CHROME_EXTENSION_ID],
     });
     expect(manifest).toEqual({
-      name: 'com.hafgit99.aegisvault7',
-      description: 'Aegis Vault Native Messaging Host',
-      path: 'C:\\install\\aegis.exe',
+      name: 'com.hafgit99.KalderaShield7',
+      description: 'KalderaShield Native Messaging Host',
+      path: 'C:\\install\\KalderaShield.exe',
       type: 'stdio',
       allowed_origins: [`chrome-extension://${PRIMARY_CHROME_EXTENSION_ID}/`],
     });
@@ -72,8 +72,8 @@ describe('manifest builders', () => {
   });
 
   it('builds a Firefox manifest pinned to the signed Gecko ID', () => {
-    const manifest = buildFirefoxHostManifest({ hostPath: '/usr/bin/aegis' });
-    expect(manifest.allowed_extensions).toEqual(['aegisvault7@hafgit99.com']);
+    const manifest = buildFirefoxHostManifest({ hostPath: '/usr/bin/KalderaShield' });
+    expect(manifest.allowed_extensions).toEqual(['KalderaShield7@hafgit99.com']);
     expect(manifest.allowed_origins).toBeUndefined();
   });
 });

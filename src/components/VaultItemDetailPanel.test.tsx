@@ -11,7 +11,7 @@ import VaultItemDetailPanel from './VaultItemDetailPanel';
 
 const loginItem: VaultItem = {
   id: 'login-1',
-  title: 'Aegis Mail',
+  title: 'KalderaShield Mail',
   username: 'ada@example.com',
   password: 'CorrectHorseBatteryStaple',
   url: 'https://example.com',
@@ -56,7 +56,7 @@ describe('VaultItemDetailPanel', () => {
   it('renders selected item details and side information', () => {
     renderPanel();
 
-    expect(screen.getByText('Aegis Mail')).toBeTruthy();
+    expect(screen.getByText('KalderaShield Mail')).toBeTruthy();
     expect(screen.getByText('ada@example.com')).toBeTruthy();
     expect(screen.getByText('KART DETAYLARI')).toBeTruthy();
     expect(screen.getByText('19 sn kaldı')).toBeTruthy();

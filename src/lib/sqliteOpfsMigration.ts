@@ -8,8 +8,8 @@
  *
  * Migration sources, in order:
  *   1. IndexedDB local fallback mirror (previous SQLite state).
- *   2. Legacy plaintext localStorage keys (`aegis_master_password`,
- *      `aegis_vault_items`, `aegis_is_setup`) — migrated once into
+ *   2. Legacy plaintext localStorage keys (`KalderaShield_master_password`,
+ *      `KalderaShield_vault_items`, `KalderaShield_is_setup`) — migrated once into
  *      encrypted relational rows, then purged (rollback-safe).
  *
  * This module is pure with respect to the repository: it receives the
@@ -75,9 +75,9 @@ export async function migrateLegacyLocalStorage(
   }
 
   // Attempt to seed from standard legacy keys
-  const isSetup = localStorage.getItem('aegis_is_setup') === 'true';
-  const legacyPass = localStorage.getItem('aegis_master_password');
-  const legacyItemsStr = localStorage.getItem('aegis_vault_items');
+  const isSetup = localStorage.getItem('KalderaShield_is_setup') === 'true';
+  const legacyPass = localStorage.getItem('KalderaShield_master_password');
+  const legacyItemsStr = localStorage.getItem('KalderaShield_vault_items');
 
   if (isSetup && legacyPass && legacyItemsStr) {
     try {
@@ -112,9 +112,9 @@ export async function migrateLegacyLocalStorage(
       // These contain base64-encoded master password and unencrypted vault items.
       // Only delete AFTER migration succeeds to preserve rollback safety.
       try {
-        localStorage.removeItem('aegis_master_password');
-        localStorage.removeItem('aegis_vault_items');
-        localStorage.removeItem('aegis_is_setup');
+        localStorage.removeItem('KalderaShield_master_password');
+        localStorage.removeItem('KalderaShield_vault_items');
+        localStorage.removeItem('KalderaShield_is_setup');
         logSecurityEvent(
           securityEventCodes.storageLegacyDataPurged,
           'Legacy plaintext localStorage keys purged after successful migration.',
@@ -155,8 +155,8 @@ export async function migrateLegacyLocalStorage(
  */
 export function purgeStaleLegacyLocalStorageKeys(state: VersionedVaultDatabaseState): void {
   try {
-    const hasLegacyPassword = localStorage.getItem('aegis_master_password');
-    const hasLegacyItems = localStorage.getItem('aegis_vault_items');
+    const hasLegacyPassword = localStorage.getItem('KalderaShield_master_password');
+    const hasLegacyItems = localStorage.getItem('KalderaShield_vault_items');
 
     if (!hasLegacyPassword && !hasLegacyItems) {
       return;
@@ -166,9 +166,9 @@ export function purgeStaleLegacyLocalStorageKeys(state: VersionedVaultDatabaseSt
 
     if (vaultPopulated) {
       // Only purge if we already have vault data in SQLite (i.e., migration happened before)
-      localStorage.removeItem('aegis_master_password');
-      localStorage.removeItem('aegis_vault_items');
-      localStorage.removeItem('aegis_is_setup');
+      localStorage.removeItem('KalderaShield_master_password');
+      localStorage.removeItem('KalderaShield_vault_items');
+      localStorage.removeItem('KalderaShield_is_setup');
       logSecurityEvent(
         securityEventCodes.storageLegacyDataPurged,
         'Stale legacy plaintext localStorage keys purged (post-migration cleanup).',
@@ -181,19 +181,19 @@ export function purgeStaleLegacyLocalStorageKeys(state: VersionedVaultDatabaseSt
     // the original code refused to touch it.
     //
     // The reason it survived is a size asymmetry worth stating plainly:
-    // `aegis_master_password` is a few dozen base64 bytes, `aegis_vault_items`
+    // `KalderaShield_master_password` is a few dozen base64 bytes, `KalderaShield_vault_items`
     // is the entire vault and can be megabytes. Under storage pressure a
     // browser evicts the large key and keeps the small one - so the single key
     // that must never outlive migration is the one most likely to. Once the
     // items blob is gone there is nothing left to migrate and the password
     // cannot unlock anything, yet it sits there in base64 indefinitely.
     //
-    // Gating this on `aegis_vault_items` being present was the bug, not the
+    // Gating this on `KalderaShield_vault_items` being present was the bug, not the
     // safeguard: the condition that made the purge safe was "the password is
     // not the only copy of the data", and the absence of items satisfies that
     // just as well as the presence of a populated store.
     if (hasLegacyPassword && !hasLegacyItems) {
-      localStorage.removeItem('aegis_master_password');
+      localStorage.removeItem('KalderaShield_master_password');
       logSecurityEvent(
         securityEventCodes.storageLegacyDataPurged,
         'Orphaned legacy master password purged (no legacy items remained to migrate).',

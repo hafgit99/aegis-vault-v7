@@ -159,7 +159,7 @@ describe('SettingsRecoverySection', () => {
 
     await waitFor(() => {
       expect(desktopFilesModule.saveDesktopExportFile).toHaveBeenCalledWith(
-        'aegis-vault-recovery-key.txt',
+        'KalderaShield-vault-recovery-key.txt',
         expect.stringContaining('Recovery Words (24):'),
       );
     });

@@ -22,8 +22,8 @@ import {
 } from './androidAutofill';
 
 afterEach(() => {
-  delete window.AegisAndroidAutofill;
-  delete window.__aegisAndroidAutofill;
+  delete window.KalderaShieldAndroidAutofill;
+  delete window.__KalderaShieldAndroidAutofill;
   vi.restoreAllMocks();
 });
 
@@ -37,7 +37,7 @@ describe('android autofill bridge', () => {
 
   it('proxies support, enabled state, and settings opening through the native bridge', () => {
     const openSettings = vi.fn(() => true);
-    window.AegisAndroidAutofill = {
+    window.KalderaShieldAndroidAutofill = {
       isSupported: () => true,
       isEnabled: () => true,
       openSettings,
@@ -53,7 +53,7 @@ describe('android autofill bridge', () => {
   });
 
   it('treats native bridge exceptions as unavailable', () => {
-    window.AegisAndroidAutofill = {
+    window.KalderaShieldAndroidAutofill = {
       isSupported: () => {
         throw new Error('bridge unavailable');
       },
@@ -85,7 +85,7 @@ describe('android autofill bridge', () => {
   it('reads, clears, and completes a pending Android Autofill launch request', () => {
     const clearPendingRequest = vi.fn(() => true);
     const completePendingRequest = vi.fn(() => true);
-    window.AegisAndroidAutofill = {
+    window.KalderaShieldAndroidAutofill = {
       isSupported: () => true,
       isEnabled: () => true,
       openSettings: () => true,
@@ -110,13 +110,13 @@ describe('android autofill bridge', () => {
     expect(androidAutofillTargetLabel(getPendingAndroidAutofillRequest())).toBe('login.example.com');
     expect(clearPendingAndroidAutofillRequest('android-autofill-1')).toBe(true);
     expect(clearPendingRequest).toHaveBeenCalledWith('android-autofill-1');
-    expect(completePendingAndroidAutofillRequest('android-autofill-1', 'ada@example.com', 'secret', 'Aegis Mail')).toBe(true);
-    expect(completePendingRequest).toHaveBeenCalledWith('android-autofill-1', 'ada@example.com', 'secret', 'Aegis Mail');
+    expect(completePendingAndroidAutofillRequest('android-autofill-1', 'ada@example.com', 'secret', 'KalderaShield Mail')).toBe(true);
+    expect(completePendingRequest).toHaveBeenCalledWith('android-autofill-1', 'ada@example.com', 'secret', 'KalderaShield Mail');
   });
 
   it('reads and clears a pending Android Autofill save candidate', () => {
     const clearPendingSaveCandidate = vi.fn(() => true);
-    window.AegisAndroidAutofill = {
+    window.KalderaShieldAndroidAutofill = {
       isSupported: () => true,
       isEnabled: () => true,
       openSettings: () => true,
@@ -190,7 +190,7 @@ describe('android autofill bridge', () => {
   });
 
   it('ignores malformed pending Android Autofill request payloads', () => {
-    window.AegisAndroidAutofill = {
+    window.KalderaShieldAndroidAutofill = {
       isSupported: () => true,
       isEnabled: () => true,
       openSettings: () => true,
@@ -206,7 +206,7 @@ describe('android autofill bridge', () => {
     const listener = vi.fn();
     const unsubscribe = subscribeAndroidAutofillSaveCandidates(listener);
 
-    window.__aegisAndroidAutofill?.onSave({
+    window.__KalderaShieldAndroidAutofill?.onSave({
       requestId: 'android-autofill-save-2',
       createdAt: 67890,
       source: 'android-autofill-save',
@@ -214,7 +214,7 @@ describe('android autofill bridge', () => {
       username: 'ada@example.com',
       password: 'secret',
     });
-    window.__aegisAndroidAutofill?.onSave(null);
+    window.__KalderaShieldAndroidAutofill?.onSave(null);
 
     expect(listener).toHaveBeenCalledTimes(1);
     expect(listener).toHaveBeenCalledWith({
@@ -227,7 +227,7 @@ describe('android autofill bridge', () => {
     });
 
     unsubscribe();
-    window.__aegisAndroidAutofill?.onSave({
+    window.__KalderaShieldAndroidAutofill?.onSave({
       requestId: 'android-autofill-save-3',
       createdAt: 999,
       source: 'android-autofill-save',
@@ -242,12 +242,12 @@ describe('android autofill bridge', () => {
     const listener = vi.fn();
     const unsubscribe = subscribeAndroidAutofillRequests(listener);
 
-    window.__aegisAndroidAutofill?.onRequest({
+    window.__KalderaShieldAndroidAutofill?.onRequest({
       requestId: 'android-autofill-2',
       createdAt: 67890,
       source: 'android-autofill',
     });
-    window.__aegisAndroidAutofill?.onRequest(null);
+    window.__KalderaShieldAndroidAutofill?.onRequest(null);
 
     expect(listener).toHaveBeenCalledTimes(1);
     expect(listener).toHaveBeenCalledWith({
@@ -257,7 +257,7 @@ describe('android autofill bridge', () => {
     });
 
     unsubscribe();
-    window.__aegisAndroidAutofill?.onRequest({
+    window.__KalderaShieldAndroidAutofill?.onRequest({
       requestId: 'android-autofill-3',
       createdAt: 999,
       source: 'android-autofill',
@@ -276,12 +276,12 @@ describe('android autofill bridge', () => {
       url: 'https://example.com',
       appPackage: 'com.android.chrome',
       webDomain: 'example.com',
-      payloadUri: 'content://com.hafgit99.aegisvault7.fileprovider/aegis-autofill-tmp/abcd.aest',
+      payloadUri: 'content://com.hafgit99.KalderaShield7.fileprovider/KalderaShield-autofill-tmp/abcd.aest',
       payloadToken: 'opaque-token',
     };
 
     it('returns null when the native bridge does not implement the resolver', () => {
-      window.AegisAndroidAutofill = {
+      window.KalderaShieldAndroidAutofill = {
         isSupported: () => true,
         isEnabled: () => true,
         openSettings: () => true,
@@ -297,7 +297,7 @@ describe('android autofill bridge', () => {
       const resolveEncryptedSavePayload = vi.fn(() =>
         JSON.stringify({ ...baseCandidate, password: 'Decrypted!Pass1' }),
       );
-      window.AegisAndroidAutofill = {
+      window.KalderaShieldAndroidAutofill = {
         isSupported: () => true,
         isEnabled: () => true,
         openSettings: () => true,
@@ -320,7 +320,7 @@ describe('android autofill bridge', () => {
     });
 
     it('returns null when the native bridge payload fails validation', () => {
-      window.AegisAndroidAutofill = {
+      window.KalderaShieldAndroidAutofill = {
         isSupported: () => true,
         isEnabled: () => true,
         openSettings: () => true,

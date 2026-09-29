@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 
 import { isAndroidRuntime, isDesktopRuntime } from './desktopStorage';
 
-const MANIFEST_PATH = './aegis-integrity.json';
+const MANIFEST_PATH = './KalderaShield-integrity.json';
 // Y-20: the document that decides what runs. Required in the manifest.
 const INDEX_HTML_PATH = 'index.html';
 const MAX_ASSET_COUNT = 256;

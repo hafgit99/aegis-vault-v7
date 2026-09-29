@@ -116,7 +116,7 @@ export async function checkPasswordAgainstHibp(password: string): Promise<HibpPa
   }
 }
 
-export const HIBP_STORAGE_KEY = 'aegis_hibp_audit_enabled';
+export const HIBP_STORAGE_KEY = 'KalderaShield_hibp_audit_enabled';
 
 export function isHibpCheckEnabled(): boolean {
   if (typeof localStorage === 'undefined') return true;

@@ -8,12 +8,12 @@ export interface DesktopImportFile {
 
 declare global {
   interface Window {
-    AegisAndroidFiles?: {
+    KalderaShieldAndroidFiles?: {
       saveTextFile(requestId: string, defaultFilename: string, mimeType: string, contents: string): void;
       saveBase64File(requestId: string, defaultFilename: string, mimeType: string, contentsBase64: string): void;
       openTextFile(requestId: string): void;
     };
-    __aegisAndroidFiles?: {
+    __KalderaShieldAndroidFiles?: {
       resolveSave(requestId: string, saved: boolean, error?: string | null): void;
       resolveOpen(requestId: string, file?: DesktopImportFile | null, error?: string | null): void;
     };
@@ -63,7 +63,7 @@ export function isDesktopFileDialogSupported(): boolean {
 
 function isAndroidFileDialogSupported(): boolean {
   // Only treat the Android native bridge as "supported" when the WryActivity
-  // has actually injected the AegisAndroidFiles bridge object. Previously
+  // has actually injected the KalderaShieldAndroidFiles bridge object. Previously
   // this was only gated on isAndroidTauriRuntime() which made
   // isNativeFileDialogSupported() return true on every Tauri Android build
   // and caused openDesktopImportFile() to take the bridge path even when no
@@ -71,22 +71,22 @@ function isAndroidFileDialogSupported(): boolean {
   // "Android file picker is not available." and the user could not import
   // any backup at all (including CSV) because the HTML <input> fallback
   // was never tried.
-  return isAndroidTauriRuntime() && typeof window !== 'undefined' && Boolean(window.AegisAndroidFiles);
+  return isAndroidTauriRuntime() && typeof window !== 'undefined' && Boolean(window.KalderaShieldAndroidFiles);
 }
 
 export function isNativeFileDialogSupported(): boolean {
   // On Android, also fall back to the HTML <input type="file"> path when the
   // native bridge is missing. WebView's stock document picker (ACTION_OPEN_DOCUMENT)
-  // honours the `accept` attribute and shows .csv / .aegis / .json files just
+  // honours the `accept` attribute and shows .csv / .KalderaShield / .json files just
   // fine, so the user can still select a backup file.
   if (isAndroidTauriRuntime()) return isAndroidFileDialogSupported();
   return isDesktopFileDialogSupported();
 }
 
-function ensureAndroidFileBridge(): NonNullable<Window['AegisAndroidFiles']> | null {
-  if (typeof window === 'undefined' || !window.AegisAndroidFiles) return null;
+function ensureAndroidFileBridge(): NonNullable<Window['KalderaShieldAndroidFiles']> | null {
+  if (typeof window === 'undefined' || !window.KalderaShieldAndroidFiles) return null;
 
-  window.__aegisAndroidFiles = {
+  window.__KalderaShieldAndroidFiles = {
     resolveSave(requestId, saved, error) {
       const pending = androidSaveRequests.get(requestId);
       if (!pending) return;
@@ -111,12 +111,12 @@ function ensureAndroidFileBridge(): NonNullable<Window['AegisAndroidFiles']> | n
     },
   };
 
-  return window.AegisAndroidFiles;
+  return window.KalderaShieldAndroidFiles;
 }
 
 function nextAndroidFileRequestId(): string {
   androidFileRequestCounter += 1;
-  return `aegis-file-${Date.now()}-${androidFileRequestCounter}`;
+  return `KalderaShield-file-${Date.now()}-${androidFileRequestCounter}`;
 }
 
 function createAndroidFileTimeout<T extends { reject: (error: Error) => void; timeout: AndroidRequestTimeout }>(
@@ -133,7 +133,7 @@ function createAndroidFileTimeout<T extends { reject: (error: Error) => void; ti
 
 function mimeTypeForExport(defaultFilename: string): string {
   if (defaultFilename.toLowerCase().endsWith('.json')) return 'application/json';
-  if (defaultFilename.toLowerCase().endsWith('.aegis')) return 'application/octet-stream';
+  if (defaultFilename.toLowerCase().endsWith('.KalderaShield')) return 'application/octet-stream';
   return 'application/octet-stream';
 }
 

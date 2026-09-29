@@ -1,6 +1,6 @@
 /**
  * @file scripts/i18n-audit.cjs
- * @description Automated CI audit script for AegisVault v7 i18n locales.
+ * @description Automated CI audit script for KalderaShield v7 i18n locales.
  * Verifies that all 12 supported language files contain exactly 100% matching translation keys.
  * Also enforces single-quoted key literals as the canonical style across every locale.
  * Exits with code 0 on success, code 1 on key parity mismatch or non-canonical key quoting.
@@ -47,7 +47,7 @@ function extractKeysFromFile(filePath) {
 }
 
 function runAudit() {
-  console.log('🌐 Starting Aegis Vault 7 Multi-Language Key Parity Audit...\n');
+  console.log('🌐 Starting KalderaShield Multi-Language Key Parity Audit...\n');
 
   if (!fs.existsSync(LOCALES_DIR)) {
     console.error(`❌ Error: Locales directory not found at ${LOCALES_DIR}`);

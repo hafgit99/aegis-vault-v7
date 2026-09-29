@@ -51,9 +51,9 @@ import { sqliteOPFSInstance } from './sqlite_opfs';
 import { invoke } from '@tauri-apps/api/core';
 
 const STORAGE_KEYS = {
-  IS_SET_UP: 'aegis_is_setup',
-  SECRET_PROFILE: 'aegis_account_secret_profile',
-  REMEMBERED_SECRET_KEY: 'aegis_account_secret_key_remembered',
+  IS_SET_UP: 'KalderaShield_is_setup',
+  SECRET_PROFILE: 'KalderaShield_account_secret_profile',
+  REMEMBERED_SECRET_KEY: 'KalderaShield_account_secret_key_remembered',
 };
 
 interface AccountSecretProfile {
@@ -167,7 +167,7 @@ export async function initializeStorage(): Promise<void> {
  * Checks if a master password has already been set up in SQLite database.
  */
 export function isMasterPasswordSet(): boolean {
-  const fallback = getIndexedDbItemSync('aegis_sqlite_fallback');
+  const fallback = getIndexedDbItemSync('kalderashield_fallback');
   if (fallback) {
     try {
       const parsed = JSON.parse(fallback);
@@ -242,7 +242,7 @@ function migrateRememberedSecretKeyToSecureStorage(): void {
 }
 
 function resolveVaultCredential(password: string, secretKey?: string | null): string {
-  if (password.startsWith('aegis-vault-v7:')) {
+  if (password.startsWith('kalderashield:')) {
     return password;
   }
   const profile = readSecretProfile();
@@ -273,7 +273,7 @@ async function resolveCurrentVaultCredential(password: string): Promise<string> 
         && passwordBytes.every((byte, index) => backupCredBytes[index] === byte);
       if (!backupMatches) return null;
 
-      const credentialPrefix = new TextEncoder().encode('aegis-vault-v7:');
+      const credentialPrefix = new TextEncoder().encode('kalderashield:');
       const hasCredentialPrefix = masterCredBytes.length >= credentialPrefix.length
         && credentialPrefix.every((byte, index) => masterCredBytes[index] === byte);
       if (!hasCredentialPrefix) return null;
@@ -347,10 +347,10 @@ export async function verifyMasterPassword(password: string, secretKey?: string 
     const isCorrect = await getVaultStorageRepository().verifyPassword(credential);
     if (isCorrect) {
       let rawMasterPassword = password;
-      if (password.startsWith('aegis-vault-v7:')) {
+      if (password.startsWith('kalderashield:')) {
         const separatorIndex = password.indexOf('\0');
         if (separatorIndex !== -1) {
-          rawMasterPassword = password.substring('aegis-vault-v7:'.length, separatorIndex);
+          rawMasterPassword = password.substring('kalderashield:'.length, separatorIndex);
         }
       }
       await openDerivedVaultSession(credential, rawMasterPassword);

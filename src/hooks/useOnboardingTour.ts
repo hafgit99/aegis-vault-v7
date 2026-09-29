@@ -10,10 +10,10 @@ import { useState, useCallback, useMemo } from 'react';
 import type { VaultItem } from '../types';
 
 export const ONBOARDING_STORAGE_KEYS = {
-  DISMISSED: 'aegis_onboarding_dismissed',
-  EXT_EXPLORED: 'aegis_onboarding_ext_explored',
-  EMERGENCY_KIT_DONE: 'aegis_onboarding_emergency_kit_done',
-  AUDIT_DONE: 'aegis_onboarding_audit_done',
+  DISMISSED: 'KalderaShield_onboarding_dismissed',
+  EXT_EXPLORED: 'KalderaShield_onboarding_ext_explored',
+  EMERGENCY_KIT_DONE: 'KalderaShield_onboarding_emergency_kit_done',
+  AUDIT_DONE: 'KalderaShield_onboarding_audit_done',
 } as const;
 
 export interface OnboardingStepState {

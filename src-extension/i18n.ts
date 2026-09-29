@@ -1,6 +1,6 @@
 export const extensionTranslations = {
   tr: {
-    'locked.title': 'Aegis Vault Kilitli',
+    'locked.title': 'KalderaShield Kilitli',
     'locked.description': 'Kasanızın kilidini açmak için lütfen masaüstü uygulamasını kullanın.',
     'btn.openApp': 'Masaüstü Uygulamasını Aç',
     'btn.fill': 'Doldur',
@@ -20,7 +20,7 @@ export const extensionTranslations = {
     'phishing.confusable': '🔤 Yanıltıcı Karakterler Tespit Edildi',
     'phishing.confusable.desc': 'Bu alan adında, latin harflere benzeyen Unicode karakterler kullanılmış.',
     'phishing.autofill.blocked': 'Güvenlik tehdidi nedeniyle otomatik doldurma engellendi.',
-    'phishing.page.title': 'Aegis Vault — Oltalama Uyarısı',
+    'phishing.page.title': 'KalderaShield — Oltalama Uyarısı',
     'phishing.page.desc': 'Bu site şüpheli görünüyor. Giriş bilgilerinizi girmeden önce dikkatli olun.',
     'phishing.page.dismiss': 'Anladım',
     'section.suggested': 'Eşleşen Hesaplar',
@@ -44,7 +44,7 @@ export const extensionTranslations = {
     'insecure.desc': 'Bu sayfa şifrelenmemiş HTTP üzerinden açılıyor. Kimlik bilgileriniz ağdaki saldırganlar tarafından görülebilir. Yine de doldurulsun mu?',
   },
   en: {
-    'locked.title': 'Aegis Vault Locked',
+    'locked.title': 'KalderaShield Locked',
     'locked.description': 'Please use the desktop application to unlock your vault.',
     'btn.openApp': 'Open Desktop App',
     'btn.fill': 'Fill',
@@ -64,7 +64,7 @@ export const extensionTranslations = {
     'phishing.confusable': '🔤 Confusable Characters Detected',
     'phishing.confusable.desc': 'This domain uses Unicode characters that look like Latin letters.',
     'phishing.autofill.blocked': 'Autofill blocked due to a security threat.',
-    'phishing.page.title': 'Aegis Vault — Phishing Warning',
+    'phishing.page.title': 'KalderaShield — Phishing Warning',
     'phishing.page.desc': 'This site looks suspicious. Be careful before entering your credentials.',
     'phishing.page.dismiss': 'Got it',
     'section.suggested': 'Suggested Accounts',
@@ -88,7 +88,7 @@ export const extensionTranslations = {
     'insecure.desc': 'This page is loaded over unencrypted HTTP. Your credentials could be visible to attackers on the network. Fill anyway?',
   },
   de: {
-    'locked.title': 'Aegis Vault Gesperrt',
+    'locked.title': 'KalderaShield Gesperrt',
     'locked.description': 'Bitte verwenden Sie die Desktop-Anwendung, um Ihren Tresor zu entsperren.',
     'btn.openApp': 'Desktop-App öffnen',
     'btn.fill': 'Ausfüllen',
@@ -108,7 +108,7 @@ export const extensionTranslations = {
     'phishing.confusable': '🔤 Verwechselbare Zeichen erkannt',
     'phishing.confusable.desc': 'Diese Domain verwendet Unicode-Zeichen, die wie lateinische Buchstaben aussehen.',
     'phishing.autofill.blocked': 'Automatisches Ausfüllen aufgrund einer Sicherheitsbedrohung blockiert.',
-    'phishing.page.title': 'Aegis Vault — Phishing-Warnung',
+    'phishing.page.title': 'KalderaShield — Phishing-Warnung',
     'phishing.page.desc': 'Diese Seite sieht verdächtig aus. Seien Sie vorsichtig bei der Eingabe von Anmeldedaten.',
     'phishing.page.dismiss': 'Verstanden',
     'section.suggested': 'Vorgeschlagene Konten',
@@ -132,7 +132,7 @@ export const extensionTranslations = {
     'insecure.desc': 'Diese Seite wird über unverschlüsseltes HTTP geladen. Ihre Zugangsdaten könnten für Angreifer im Netzwerk sichtbar sein. Trotzdem ausfüllen?',
   },
   es: {
-    'locked.title': 'Aegis Vault Bloqueado',
+    'locked.title': 'KalderaShield Bloqueado',
     'locked.description': 'Por favor, use la aplicación de escritorio para desbloquear su bóveda.',
     'btn.openApp': 'Abrir App de Escritorio',
     'btn.fill': 'Rellenar',
@@ -152,7 +152,7 @@ export const extensionTranslations = {
     'phishing.confusable': '🔤 Caracteres confusos detectados',
     'phishing.confusable.desc': 'Este dominio utiliza caracteres Unicode que se asemejan a letras latinas.',
     'phishing.autofill.blocked': 'Autocompletado bloqueado por amenaza de seguridad.',
-    'phishing.page.title': 'Aegis Vault — Advertencia de phishing',
+    'phishing.page.title': 'KalderaShield — Advertencia de phishing',
     'phishing.page.desc': 'Este sitio parece sospechoso. Tenga cuidado antes de ingresar sus credenciales.',
     'phishing.page.dismiss': 'Entendido',
     'section.suggested': 'Cuentas sugeridas',
@@ -176,7 +176,7 @@ export const extensionTranslations = {
     'insecure.desc': 'Esta página se carga mediante HTTP sin cifrar. Tus credenciales podrían ser visibles para atacantes en la red. ¿Rellenar de todos modos?',
   },
   fr: {
-    'locked.title': 'Aegis Vault Verrouillé',
+    'locked.title': 'KalderaShield Verrouillé',
     'locked.description': "Veuillez utiliser l'application de bureau pour déverrouiller votre coffre-fort.",
     'btn.openApp': "Ouvrir l'application",
     'btn.fill': 'Remplir',
@@ -196,7 +196,7 @@ export const extensionTranslations = {
     'phishing.confusable': '🔤 Caractères trompeurs détectés',
     'phishing.confusable.desc': 'Ce domaine utilise des caractères Unicode ressemblant à des lettres latines.',
     'phishing.autofill.blocked': 'Remplissage automatique bloqué en raison d’une menace de sécurité.',
-    'phishing.page.title': 'Aegis Vault — Alerte d’hameçonnage',
+    'phishing.page.title': 'KalderaShield — Alerte d’hameçonnage',
     'phishing.page.desc': 'Ce site semble suspect. Soyez prudent avant de saisir vos identifiants.',
     'phishing.page.dismiss': 'Compris',
     'section.suggested': 'Comptes suggérés',
@@ -220,7 +220,7 @@ export const extensionTranslations = {
     'insecure.desc': 'Cette page est chargée en HTTP non chiffré. Vos identifiants pourraient être visibles par des attaquants sur le réseau. Remplir quand même ? ',
   },
   it: {
-    'locked.title': 'Aegis Vault Bloccato',
+    'locked.title': 'KalderaShield Bloccato',
     'locked.description': "Usa l'applicazione desktop per sbloccare la tua cassaforte.",
     'btn.openApp': 'Apri App Desktop',
     'btn.fill': 'Compila',
@@ -240,7 +240,7 @@ export const extensionTranslations = {
     'phishing.confusable': '🔤 Caratteri ingannevoli rilevati',
     'phishing.confusable.desc': 'Questo dominio utilizza caratteri Unicode simili a lettere latine.',
     'phishing.autofill.blocked': 'Compilazione automatica bloccata per minaccia alla sicurezza.',
-    'phishing.page.title': 'Aegis Vault — Avviso phishing',
+    'phishing.page.title': 'KalderaShield — Avviso phishing',
     'phishing.page.desc': 'Questo sito sembra sospetto. Fai attenzione prima di inserire le credenziali.',
     'phishing.page.dismiss': 'Ho capito',
     'section.suggested': 'Account suggeriti',
@@ -264,7 +264,7 @@ export const extensionTranslations = {
     'insecure.desc': 'Questa pagina è caricata tramite HTTP non crittografato. Le tue credenziali potrebbero essere visibili ad attaccanti sulla rete. Compilare comunque?',
   },
   pt: {
-    'locked.title': 'Aegis Vault Bloqueado',
+    'locked.title': 'KalderaShield Bloqueado',
     'locked.description': 'Por favor, use o aplicativo desktop para desbloquear seu cofre.',
     'btn.openApp': 'Abrir App Desktop',
     'btn.fill': 'Preencher',
@@ -284,7 +284,7 @@ export const extensionTranslations = {
     'phishing.confusable': '🔤 Caracteres confusos detectados',
     'phishing.confusable.desc': 'Este domínio usa caracteres Unicode semelhantes a letras latinas.',
     'phishing.autofill.blocked': 'Preenchimento automático bloqueado por ameaça de segurança.',
-    'phishing.page.title': 'Aegis Vault — Aviso de Phishing',
+    'phishing.page.title': 'KalderaShield — Aviso de Phishing',
     'phishing.page.desc': 'Este site parece suspeito. Tenha cuidado antes de inserir suas credenciais.',
     'phishing.page.dismiss': 'Entendi',
     'section.suggested': 'Contas sugeridas',
@@ -308,7 +308,7 @@ export const extensionTranslations = {
     'insecure.desc': 'Esta página é carregada por HTTP não criptografado. Suas credenciais podem ficar visíveis para atacantes na rede. Preencher assim mesmo?',
   },
   ru: {
-    'locked.title': 'Aegis Vault Заблокирован',
+    'locked.title': 'KalderaShield Заблокирован',
     'locked.description': 'Пожалуйста, используйте приложение для рабочего стола, чтобы разблокировать хранилище.',
     'btn.openApp': 'Открыть приложение',
     'btn.fill': 'Заполнить',
@@ -328,7 +328,7 @@ export const extensionTranslations = {
     'phishing.confusable': '🔤 Обнаружены вводящие в заблуждение символы',
     'phishing.confusable.desc': 'В этом домене используются символы Unicode, похожие на латинские буквы.',
     'phishing.autofill.blocked': 'Автозаполнение заблокировано из-за угрозы безопасности.',
-    'phishing.page.title': 'Aegis Vault — Предупреждение о фишинге',
+    'phishing.page.title': 'KalderaShield — Предупреждение о фишинге',
     'phishing.page.desc': 'Этот сайт выглядит подозрительно. Будьте осторожны при вводе данных.',
     'phishing.page.dismiss': 'Понятно',
     'section.suggested': 'Рекомендуемые аккаунты',
@@ -352,7 +352,7 @@ export const extensionTranslations = {
     'insecure.desc': 'Эта страница загружена по незашифрованному HTTP. Ваши учётные данные могут быть видны злоумышленникам в сети. Всё равно заполнить?',
   },
   zh: {
-    'locked.title': 'Aegis Vault 已锁定',
+    'locked.title': 'KalderaShield 已锁定',
     'locked.description': '请使用桌面应用解锁您的保险库。',
     'btn.openApp': '打开桌面客户端',
     'btn.fill': '自动填充',
@@ -372,7 +372,7 @@ export const extensionTranslations = {
     'phishing.confusable': '🔤 检测到混淆字符',
     'phishing.confusable.desc': '此域名使用了看起来像拉丁字母的Unicode字符。',
     'phishing.autofill.blocked': '由于安全威胁，自动填充已被阻止。',
-    'phishing.page.title': 'Aegis Vault — 钓鱼警告',
+    'phishing.page.title': 'KalderaShield — 钓鱼警告',
     'phishing.page.desc': '此网站看起来可疑。在输入凭据之前请谨慎。',
     'phishing.page.dismiss': '知道了',
     'section.suggested': '推荐账户',
@@ -396,7 +396,7 @@ export const extensionTranslations = {
     'insecure.desc': '此页面通过未加密的 HTTP 加载。您的凭据可能被网络上的攻击者窃取。仍要填充吗？',
   },
   ja: {
-    'locked.title': 'Aegis Vault ロック中',
+    'locked.title': 'KalderaShield ロック中',
     'locked.description': '保管庫のロックを解除するには、デスクトップアプリを使用してください。',
     'btn.openApp': 'デスクトップアプリを開く',
     'btn.fill': '入力',
@@ -416,7 +416,7 @@ export const extensionTranslations = {
     'phishing.confusable': '🔤 誤認を招く類似文字が検出されました',
     'phishing.confusable.desc': 'このドメインにはラテン文字に似たUnicode文字が使用されています。',
     'phishing.autofill.blocked': 'セキュリティ上の脅威のため、自動入力がブロックされました。',
-    'phishing.page.title': 'Aegis Vault — フィッシング警告',
+    'phishing.page.title': 'KalderaShield — フィッシング警告',
     'phishing.page.desc': 'このサイトは疑わしいです。資格情報を入力する前に注意してください。',
     'phishing.page.dismiss': '了解',
     'section.suggested': '候補のアカウント',
@@ -440,7 +440,7 @@ export const extensionTranslations = {
     'insecure.desc': 'このページは暗号化されていない HTTP で読み込まれています。ネットワーク上の攻撃者に認証情報が見られる可能性があります。それでも入力しますか？',
   },
   ko: {
-    'locked.title': 'Aegis Vault 잠김',
+    'locked.title': 'KalderaShield 잠김',
     'locked.description': '보관함을 잠금 해제하려면 데스크톱 앱을 사용하세요.',
     'btn.openApp': '데스크톱 앱 열기',
     'btn.fill': '자동완성',
@@ -460,7 +460,7 @@ export const extensionTranslations = {
     'phishing.confusable': '🔤 혼동하기 쉬운 문자 감지됨',
     'phishing.confusable.desc': '이 도메인에는 라틴 문자와 유사한 유니코드 문자가 사용되었습니다.',
     'phishing.autofill.blocked': '보안 위협으로 인해 자동완성이 차단되었습니다.',
-    'phishing.page.title': 'Aegis Vault — 피싱 경고',
+    'phishing.page.title': 'KalderaShield — 피싱 경고',
     'phishing.page.desc': '이 사이트는 의심스럽습니다. 자격 증명을 입력하기 전에 주의하세요.',
     'phishing.page.dismiss': '확인',
     'section.suggested': '추천 계정',
@@ -484,7 +484,7 @@ export const extensionTranslations = {
     'insecure.desc': '이 페이지는 암호화되지 않은 HTTP로 로드됩니다. 네트워크의 공격자에게 자격 증명이 노출될 수 있습니다. 계속 입력하시겠습니까?',
   },
   ar: {
-    'locked.title': 'Aegis Vault مقفل',
+    'locked.title': 'KalderaShield مقفل',
     'locked.description': 'يرجى استخدام تطبيق سطح المكتب لفتح الخزنة.',
     'btn.openApp': 'فتح تطبيق سطح المكتب',
     'btn.fill': 'ملء',
@@ -504,7 +504,7 @@ export const extensionTranslations = {
     'phishing.confusable': '🔤 تم اكتشاف أحرف مضللة',
     'phishing.confusable.desc': 'يستخدم هذا النطاق أحرف Unicode تشبه الحروف اللاتينية.',
     'phishing.autofill.blocked': 'تم حظر الإكمال التلقائي بسبب تهديد أمني.',
-    'phishing.page.title': 'Aegis Vault — تحذير التصيد الاحتيالي',
+    'phishing.page.title': 'KalderaShield — تحذير التصيد الاحتيالي',
     'phishing.page.desc': 'يبدو هذا الموقع مريبًا. توخ الحذر قبل إدخال بيانات الاعتماد الخاصة بك.',
     'phishing.page.dismiss': 'فهمت',
     'section.suggested': 'الحسابات المقترحة',
@@ -567,7 +567,7 @@ export function getPreferredLanguage(): ExtensionLanguage {
   let saved: string | null = null;
   try {
     if (typeof localStorage !== 'undefined') {
-      saved = localStorage.getItem('aegis-extension-language');
+      saved = localStorage.getItem('KalderaShield-extension-language');
     }
   } catch {
     saved = memoryLangStorage;
@@ -596,7 +596,7 @@ export function getPreferredLanguage(): ExtensionLanguage {
 export function savePreferredLanguage(lang: ExtensionLanguage): void {
   try {
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('aegis-extension-language', lang);
+      localStorage.setItem('KalderaShield-extension-language', lang);
     }
   } catch {
     // ignore

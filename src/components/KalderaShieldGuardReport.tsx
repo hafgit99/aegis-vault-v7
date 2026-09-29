@@ -4,11 +4,11 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { APP_SECURITY_BRAND } from '../lib/branding';
 import type { AuditReport } from '../types';
 
-interface AegisGuardReportProps {
+interface KalderaShieldGuardReportProps {
   auditReport: AuditReport;
 }
 
-export default function AegisGuardReport({ auditReport }: AegisGuardReportProps) {
+export default function KalderaShieldGuardReport({ auditReport }: KalderaShieldGuardReportProps) {
   const { t } = useLanguage();
   const isSecure = auditReport.score >= 85;
 

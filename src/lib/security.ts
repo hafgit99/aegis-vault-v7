@@ -202,7 +202,7 @@ export function isUnsecureHttpUrl(url: string | undefined): boolean {
 export function saveAuditScoreToHistory(score: number): void {
   if (typeof localStorage === 'undefined') return;
   try {
-    const historyJson = localStorage.getItem('aegis-vault-v7-audit-history') || '[]';
+    const historyJson = localStorage.getItem('kalderashield-audit-history') || '[]';
     let history: { date: string; score: number }[] = JSON.parse(historyJson);
     if (!Array.isArray(history)) {
       history = [];
@@ -221,7 +221,7 @@ export function saveAuditScoreToHistory(score: number): void {
       history.shift();
     }
     
-    localStorage.setItem('aegis-vault-v7-audit-history', JSON.stringify(history));
+    localStorage.setItem('kalderashield-audit-history', JSON.stringify(history));
   } catch (e) {
     console.error("Failed to save audit history:", e);
   }
@@ -230,7 +230,7 @@ export function saveAuditScoreToHistory(score: number): void {
 export function getAuditScoreHistory(): { date: string; score: number }[] {
   if (typeof localStorage !== 'undefined') {
     try {
-      const historyJson = localStorage.getItem('aegis-vault-v7-audit-history');
+      const historyJson = localStorage.getItem('kalderashield-audit-history');
       if (historyJson) {
         const history = JSON.parse(historyJson);
         if (Array.isArray(history) && history.length > 0) {

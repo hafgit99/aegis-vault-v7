@@ -261,7 +261,7 @@ describe('useSettingsSync', () => {
 
     act(() => {
       result.current.setSyncProvider('s3');
-      result.current.setS3Bucket('aegis-vault');
+      result.current.setS3Bucket('KalderaShield-vault');
     });
 
     await act(async () => {
@@ -269,7 +269,7 @@ describe('useSettingsSync', () => {
     });
 
     expect(syncModule.saveSyncConfig).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 's3', bucket: 'aegis-vault' }),
+      expect.objectContaining({ type: 's3', bucket: 'KalderaShield-vault' }),
       'mock-password-123',
     );
   });

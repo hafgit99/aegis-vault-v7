@@ -1,4 +1,4 @@
-package com.hafgit99.aegisvault7.security
+ackage com.kalderashield.app.security
 
 import android.content.Context
 import android.util.Base64
@@ -203,8 +203,8 @@ class SecureTempFileStorage(private val context: Context) {
   private data class DecodedToken(val key: ByteArray, val iv: ByteArray)
 
   companion object {
-    private const val LOG_TAG = "AegisSecureTmp"
-    private const val CACHE_SUBDIR = "aegis-autofill-tmp"
+    private const val LOG_TAG = "KalderaShieldSecureTmp"
+    private const val CACHE_SUBDIR = "KalderaShield-autofill-tmp"
     private const val FILE_EXTENSION = ".aest"
     private const val TRANSFORMATION = "AES/GCM/NoPadding"
     private const val KEY_LENGTH_BYTES = 32 // AES-256

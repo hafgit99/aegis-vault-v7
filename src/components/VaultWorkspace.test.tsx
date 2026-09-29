@@ -32,7 +32,7 @@ const item = (id: string, title: string, favorite = false): VaultItem => ({
   category: 'login',
 });
 
-const activeItems = [item('mail', 'Aegis Mail', true), item('bank', 'Aegis Bank')];
+const activeItems = [item('mail', 'KalderaShield Mail', true), item('bank', 'KalderaShield Bank')];
 const autofillItems = [
   { ...item('unrelated', 'Unrelated'), url: 'https://unrelated.test' },
   { ...item('target', 'Target Login'), url: 'https://login.example.com' },
@@ -120,9 +120,9 @@ describe('VaultWorkspace', () => {
     renderWorkspace();
 
     expect(screen.getByText('Kişisel Kasa')).toBeTruthy();
-    expect(screen.getByText('Aegis Kontrol Paneli')).toBeTruthy();
-    expect(screen.getAllByText('Aegis Mail').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Aegis Bank').length).toBeGreaterThan(0);
+    expect(screen.getByText('KalderaShield Kontrol Paneli')).toBeTruthy();
+    expect(screen.getAllByText('KalderaShield Mail').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('KalderaShield Bank').length).toBeGreaterThan(0);
     expect(screen.getByText('Kasa Paneli')).toBeTruthy();
     expect(screen.getByText(APP_NAME)).toBeTruthy();
     expect(screen.getByTestId('dashboard-lock-button')).toBeTruthy();
@@ -134,8 +134,8 @@ describe('VaultWorkspace', () => {
 
     fireEvent.click(screen.getByTestId('new-vault-item-button'));
     fireEvent.click(screen.getByText('Favoriler (1)'));
-    fireEvent.click(screen.getByText('Aegis Kontrol Paneli'));
-    fireEvent.click(screen.getAllByText('Aegis Mail')[0]!);
+    fireEvent.click(screen.getByText('KalderaShield Kontrol Paneli'));
+    fireEvent.click(screen.getAllByText('KalderaShield Mail')[0]!);
 
     expect(props.onNewItem).toHaveBeenCalledTimes(1);
     expect(props.onSetFavoritesOnly).toHaveBeenCalledWith(true);
@@ -226,7 +226,7 @@ describe('VaultWorkspace', () => {
     renderWorkspace({}, { language: 'zh' });
 
     expect(screen.getByText('个人保险库')).toBeTruthy();
-    expect(screen.getByText('Aegis 控制面板')).toBeTruthy();
+    expect(screen.getByText('KalderaShield 控制面板')).toBeTruthy();
     expect(screen.getByText('全部 (2)')).toBeTruthy();
     expect(screen.getByText('收藏 (1)')).toBeTruthy();
     expect(screen.getByText((_, element) => element?.tagName === 'P' && element?.textContent?.trim().replace(/\s+/g, ' ') === '2 项已列出')).toBeTruthy();
@@ -304,13 +304,13 @@ describe('VaultWorkspace', () => {
     // M10 Dilim 3: selection state is owned inside the component — driven via UI.
     renderWorkspace();
 
-    fireEvent.click(screen.getAllByText('Aegis Mail')[0]!, { ctrlKey: true });
+    fireEvent.click(screen.getAllByText('KalderaShield Mail')[0]!, { ctrlKey: true });
     const checkboxes = screen.getAllByTestId('bulk-select-checkbox') as HTMLInputElement[];
     expect(checkboxes.length).toBe(2);
     expect(checkboxes[0]!.checked).toBe(true);
     expect(checkboxes[1]!.checked).toBe(false);
 
-    fireEvent.click(screen.getAllByText('Aegis Bank')[0]!);
+    fireEvent.click(screen.getAllByText('KalderaShield Bank')[0]!);
     const checkboxesAfter = screen.getAllByTestId('bulk-select-checkbox') as HTMLInputElement[];
     expect(checkboxesAfter.map((c) => c.checked)).toEqual([true, true]);
   });
@@ -318,8 +318,8 @@ describe('VaultWorkspace', () => {
   it('performs shift range selection from the selected anchor item', () => {
     renderWorkspace();
 
-    fireEvent.click(screen.getAllByText('Aegis Mail')[0]!, { ctrlKey: true });
-    fireEvent.click(screen.getAllByText('Aegis Bank')[0]!, { shiftKey: true });
+    fireEvent.click(screen.getAllByText('KalderaShield Mail')[0]!, { ctrlKey: true });
+    fireEvent.click(screen.getAllByText('KalderaShield Bank')[0]!, { shiftKey: true });
 
     const checkboxes = screen.getAllByTestId('bulk-select-checkbox') as HTMLInputElement[];
     expect(checkboxes.map((c) => c.checked)).toEqual([true, true]);
@@ -328,7 +328,7 @@ describe('VaultWorkspace', () => {
   it('keeps selection mode off when shift-selecting without an anchor', () => {
     renderWorkspace();
 
-    fireEvent.click(screen.getAllByText('Aegis Bank')[0]!, { shiftKey: true });
+    fireEvent.click(screen.getAllByText('KalderaShield Bank')[0]!, { shiftKey: true });
 
     // The fallback calls toggle() but — matching the pre-slice-3 behaviour —
     // plain toggle() does not activate selection mode on its own.
@@ -340,7 +340,7 @@ describe('VaultWorkspace', () => {
 
     expect(screen.queryByTestId('bulk-select-checkbox')).toBeNull();
 
-    fireEvent.click(screen.getAllByText('Aegis Mail')[0]!, { ctrlKey: true });
+    fireEvent.click(screen.getAllByText('KalderaShield Mail')[0]!, { ctrlKey: true });
 
     const checkboxes = screen.getAllByTestId('bulk-select-checkbox') as HTMLInputElement[];
     expect(checkboxes.length).toBe(2);
@@ -352,10 +352,10 @@ describe('VaultWorkspace', () => {
 
     const toggleButton = screen.getByTestId('vault-density-toggle-button');
     fireEvent.click(toggleButton);
-    expect(window.localStorage.getItem('aegis_vault_view_density')).toBe('compact');
+    expect(window.localStorage.getItem('KalderaShield_vault_view_density')).toBe('compact');
 
     fireEvent.click(toggleButton);
-    expect(window.localStorage.getItem('aegis_vault_view_density')).toBe('comfortable');
+    expect(window.localStorage.getItem('KalderaShield_vault_view_density')).toBe('comfortable');
   });
 
   it('paginates the vault list through the load-more sentinel', async () => {
@@ -406,7 +406,7 @@ describe('VaultWorkspace', () => {
   });
 
   it('falls back to regular list rows for secure notes in compact density', () => {
-    window.localStorage.setItem('aegis_vault_view_density', 'compact');
+    window.localStorage.setItem('KalderaShield_vault_view_density', 'compact');
     const noteItem: VaultItem = {
       id: 'note-1',
       title: 'Server Keys',

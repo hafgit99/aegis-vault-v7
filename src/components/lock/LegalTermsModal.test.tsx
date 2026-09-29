@@ -35,7 +35,7 @@ describe('LegalTermsModal', () => {
 
     expect(screen.getByTestId('legal-terms-modal')).toBeTruthy();
     expect(screen.getByText('Yasal Bilgilendirme ve Güvenlik Koşulları')).toBeTruthy();
-    expect(screen.getByText(/Aegis Vault 7, yerel-öncelikli/i)).toBeTruthy();
+    expect(screen.getByText(/KalderaShield, yerel-öncelikli/i)).toBeTruthy();
 
     // Switch to privacy tab
     fireEvent.click(screen.getByTestId('legal-terms-tab-privacy'));
@@ -80,7 +80,7 @@ describe('LegalTermsModal', () => {
     );
 
     expect(screen.getByText('المعلومات القانونية وشروط الأمان')).toBeTruthy();
-    expect(screen.getByText(/Aegis Vault 7 هو مخزن كلمات مرور/i)).toBeTruthy();
+    expect(screen.getByText(/KalderaShield هو مخزن كلمات مرور/i)).toBeTruthy();
     expect(screen.getByText('فهمت وإغلاق')).toBeTruthy();
   });
 });

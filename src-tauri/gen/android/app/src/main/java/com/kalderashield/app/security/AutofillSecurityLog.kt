@@ -1,4 +1,4 @@
-package com.hafgit99.aegisvault7.security
+ackage com.kalderashield.app.security
 
 import android.util.Log
 
@@ -12,14 +12,14 @@ import android.util.Log
  * greps for it when auditing a connected device.
  */
 internal object AutofillSecurityLog {
-    private const val TAG = "AegisAutofill"
+    private const val TAG = "KalderaShieldAutofill"
 
     /** The id resolved to nothing: the Intent was not produced by our service. */
     fun unknownRequest(kind: String, requestId: String?) {
         Log.w(
             TAG,
             "Autofill audit event [REJECTED]: unknown $kind requestId=${requestId.orPlaceholder()} " +
-                "reason=no-registry-entry (intent was not produced by AegisAutofillService)",
+                "reason=no-registry-entry (intent was not produced by KalderaShieldAutofillService)",
         )
     }
 

@@ -43,14 +43,14 @@ export const securityEventCodes = {
 
 export type SecurityEventCode = (typeof securityEventCodes)[keyof typeof securityEventCodes];
 
-export class AegisSecurityError extends Error {
+export class KalderaShieldSecurityError extends Error {
   public readonly code: SecurityEventCode;
   public readonly severity: SecurityEventSeverity;
   public readonly cause?: unknown;
 
   constructor(code: SecurityEventCode, message: string, severity: SecurityEventSeverity = 'warning', cause?: unknown) {
     super(message);
-    this.name = 'AegisSecurityError';
+    this.name = 'KalderaShieldSecurityError';
     this.code = code;
     this.severity = severity;
     this.cause = cause;
@@ -123,7 +123,7 @@ export function logSecurityEvent(
   meta?: Record<string, unknown>,
 ): void {
   const entry = {
-    source: 'AegisSecurity',
+    source: 'KalderaShieldSecurity',
     code,
     severity,
     message: sanitizeSecurityMessage(message),
@@ -169,6 +169,6 @@ export function logSecurityEvent(
 }
 
 export function publicSecurityErrorMessage(): string {
-  return 'A secure operation could not be completed. Please try again or restart Aegis Vault.';
+  return 'A secure operation could not be completed. Please try again or restart KalderaShield.';
 }
 

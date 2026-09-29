@@ -86,7 +86,7 @@ checks.push({
 
 const passed = checks.every((check) => check.result.ok && statusFromOutput(check.result.stdout) === 'PASS');
 const lines = [];
-lines.push('# Aegis Vault 7 Release Readiness Summary');
+lines.push('# KalderaShield Release Readiness Summary');
 lines.push('');
 lines.push(`Generated: ${new Date().toISOString()}`);
 lines.push(`Mode: ${final ? 'final distribution' : 'standard evidence'}`);

@@ -1,6 +1,25 @@
-# Changelog
+ Changelog
 
-All notable Aegis Vault 7 changes are tracked here. The project follows a security-first release style: release notes summarize user-facing changes, while this changelog also records release-gate and validation work.
+All notable KalderaShield changes are tracked here. The project follows a security-first release style: release notes summarize user-facing changes, while this changelog also records release-gate and validation work.
+
+## 7.0.17.0 - Rebrand
+
+### Breaking Changes
+
+- **Product renamed to KalderaShield.** The application identifier is now `com.kalderashield.app`.
+- **Local data directory changed.** Existing vaults live under `%APPDATA%\com.hafgit99.aegisvault7\`. The new release reads and writes `%APPDATA%\com.kalderashield.app\`, so a fresh vault is created on first launch. Back up any existing vault data before updating.
+- **Vault database renamed** to `kalderashield.db` (was `aegis_sqlite.db`).
+- **Sync file names changed.** WebDAV and S3 now store `vault.ks` in a `KalderaShield/` directory (was `vault.aegis` in `AegisVault/`). Point existing sync targets at the new path or re-pair the provider.
+- **Export/import file extension** is now `.ks` (was `.aegis`).
+
+### Preserved for Compatibility
+
+- The browser extension keeps its existing store ID, `aegisvault7@hafgit99.com`, so installed extensions continue to receive updates.
+- The browser extension's native messaging host is registered as `com.kalderashield.app`.
+
+### Security
+
+- The IPC session data key context changed, so a desktop app and browser extension must be updated together. Mismatched versions fail closed rather than falling back to an unauthenticated session.
 
 ## 7.0.7.0 - Code Review Remediation (Unreleased)
 
@@ -72,7 +91,7 @@ All notable Aegis Vault 7 changes are tracked here. The project follows a securi
 
 - Automated "No-JS-Master-String final gate" script to scan source code for forbidden master-password plain string patterns, enforcing a strict count-based allowlist across authorized files.
 - Android evidence-boundary documentation that separates automated release-gate proof from manual device-only claims for Autofill, biometric, document picker, FLAG_SECURE, and mobile UI behavior.
-- Android Autofill save-candidate handling so Android can offer to save newly registered credentials and Aegis opens a prefilled new-login form after user approval.
+- Android Autofill save-candidate handling so Android can offer to save newly registered credentials and KalderaShield opens a prefilled new-login form after user approval.
 - Desktop release gate with lint, version consistency checks, unit tests, web build, extension build, Tauri build, artifact collection, signing report generation, release notes generation, and evidence verification.
 - Desktop release evidence files: `metadata.json`, `SHA256SUMS.txt`, `DESKTOP_MANUAL_SMOKE_CHECKLIST.md`, `DESKTOP_SIGNATURES.md`, `RELEASE_NOTES.md`, and release evidence `README.md`.
 - Desktop signing report support for Windows Authenticode, macOS codesign/spctl checks, and Linux artifact signing policy notes.
@@ -156,6 +175,6 @@ All notable Aegis Vault 7 changes are tracked here. The project follows a securi
 - wa-sqlite can be promoted to the active backend after explicit migration and safety gates pass; fresh installs/default-backend policy remains a separate release decision.
 - Public desktop release artifacts should be signed before distribution. Unsigned artifacts are suitable only for internal diagnostics.
 - Android biometric behavior still requires final validation on supported physical devices before public release claims.
-- Browser Autofill behavior depends on Android/browser provider support and user Autofill provider selection; Chrome may require disabling Google Password Manager Autofill or selecting Aegis as the active provider.
+- Browser Autofill behavior depends on Android/browser provider support and user Autofill provider selection; Chrome may require disabling Google Password Manager Autofill or selecting KalderaShield as the active provider.
 - Sync/WebDAV is not yet treated as a final public release feature.
 - Lost master passwords, lost Account Secret Keys, and lost backup passwords cannot be recovered by the app.

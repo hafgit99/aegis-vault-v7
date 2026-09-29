@@ -1,12 +1,12 @@
-# AegisVault v7 — Aegis CLI Kullanım Kılavuzu (`aegis-cli`)
+ KalderaShield — KalderaShield CLI Kullanım Kılavuzu (`kalderashield-cli`)
 
-`aegis-cli`, AegisVault v7 ekosisteminde geliştiriciler, sistem yöneticileri ve DevOps mühendisleri için tasarlanmış güvenli bir komut satırı aracıdır.
+`kalderashield-cli`, KalderaShield ekosisteminde geliştiriciler, sistem yöneticileri ve DevOps mühendisleri için tasarlanmış güvenli bir komut satırı aracıdır.
 
 ---
 
 ## 🚀 Hızlı Başlangıç
 
-Proje dizininde `aegis-cli` aracını doğrudan `npm` üzerinden çalıştırabilirsiniz:
+Proje dizininde `kalderashield-cli` aracını doğrudan `npm` üzerinden çalıştırabilirsiniz:
 
 ```bash
 # Yardım menüsünü görüntüleme
@@ -19,7 +19,7 @@ npm run cli -- --version
 Eğer paketi global veya npx ile kullanıyorsanız:
 
 ```bash
-npx aegis-cli --help
+npx kalderashield-cli --help
 ```
 
 ---
@@ -45,14 +45,14 @@ Teknik kullanıcılar için akılda kalıcı 4 kelimelik kriptografik diceware p
 
 ```bash
 npm run cli -- generate --diceware
-# Çıktı Örneği: aegis-quantum-horizon-beacon
+# Çıktı Örneği: kalderashield-quantum-horizon-beacon
 ```
 
 ---
 
 ## 📦 2. Şifreli Kasa Yedeklerini Sorgulama (`vault`)
 
-`vault` komutları, AegisVault yedek dosyalarını (`.json`) sıfır-bilgi ilkesiyle çözerek terminalde sorgulamanızı sağlar.
+`vault` komutları, KalderaShield yedek dosyalarını (`.json`) sıfır-bilgi ilkesiyle çözerek terminalde sorgulamanızı sağlar.
 
 ### Kasa Kayıtlarını Listeleme (`vault list`)
 Kasa dosyasındaki tüm başlıkları, kategorileri ve kullanıcı adlarını Argon2id + AES-256-GCM ile çözerek listeler:
@@ -62,7 +62,7 @@ Kasa dosyasındaki tüm başlıkları, kategorileri ve kullanıcı adlarını Ar
 npm run cli -- vault list --vault-file ./my-vault-backup.json
 
 # Ortam değişkeni ile (CI/CD ve Otomasyon için):
-export AEGIS_PASSWORD="MasterPassword123!"
+export KALDERASHIELD_PASSWORD="MasterPassword123!"
 npm run cli -- vault list --vault-file ./my-vault-backup.json
 ```
 
@@ -100,8 +100,8 @@ Notes:    Primary developer account
 ## 🛡️ Güvenlik & CI/CD İpuçları
 
 1. **Gizli Parola İstemi (Masked TTY Prompt):** `--password` parametresi verilmediğinde CLI, terminal üzerinden parolanızı ekrana yansıtmadan (yıldızlı olarak) güvenle ister. Bu sayede parola shell geçmişinize (`.bash_history`, `.zsh_history`) veya `ps aux` işlem listesine asla sızmaz.
-2. **Ortam Değişkeni:** Otomasyon ve betiklerde `AEGIS_PASSWORD` ortam değişkenini kullanabilirsiniz.
-3. **Pipeling (Boru Hattı):** `aegis-cli generate` komutu çıktı olarak sadece üretilen parolayı döndürdüğü için betiklerde (Bash/Python/CI) doğrudan değişkene atanabilir:
+2. **Ortam Değişkeni:** Otomasyon ve betiklerde `KALDERASHIELD_PASSWORD` ortam değişkenini kullanabilirsiniz.
+3. **Pipeling (Boru Hattı):** `KalderaShield-cli generate` komutu çıktı olarak sadece üretilen parolayı döndürdüğü için betiklerde (Bash/Python/CI) doğrudan değişkene atanabilir:
    ```bash
-   NEW_DB_PASS=$(npx aegis-cli generate --length 32 --symbols)
+   NEW_DB_PASS=$(npx kalderashield-cli generate --length 32 --symbols)
    ```

@@ -3,7 +3,7 @@
  * @license SPDX-License-Identifier: Apache-2.0
  *
  * WebView <-> native glue for the biometric-bound AndroidKeyStore wrapping key
- * (RUST-O4). The native bridge (`AegisAndroidBiometric`) only exposes opaque
+ * (RUST-O4). The native bridge (`KalderaShieldAndroidBiometric`) only exposes opaque
  * wrap/unwrap operations, each gated behind a BiometricPrompt + CryptoObject
  * so the OS authentication token is cryptographically bound to the key.
  *
@@ -15,7 +15,7 @@
 /** Opaque JSON handle returned by the native wrap operation. */
 export type AndroidBiometricHandle = string;
 
-interface AegisAndroidBiometricBridge {
+interface KalderaShieldAndroidBiometricBridge {
   wrap: (plaintextB64: string, callbackId: string) => void;
   unwrap: (handleJson: string, callbackId: string) => void;
   isAvailable: () => boolean;
@@ -24,8 +24,8 @@ interface AegisAndroidBiometricBridge {
 
 declare global {
   interface Window {
-    AegisAndroidBiometric?: AegisAndroidBiometricBridge;
-    __aegisBiometric?: {
+    KalderaShieldAndroidBiometric?: KalderaShieldAndroidBiometricBridge;
+    __KalderaShieldBiometric?: {
       resolve: (callbackId: string, value: string) => void;
       reject: (callbackId: string, message: string) => void;
     };
@@ -44,7 +44,7 @@ let receiverInstalled = false;
 function installReceiver(): void {
   if (receiverInstalled) return;
   receiverInstalled = true;
-  window.__aegisBiometric = {
+  window.__KalderaShieldBiometric = {
     resolve: (callbackId, value) => {
       const entry = pendingCallbacks.get(callbackId);
       if (!entry) return;
@@ -62,9 +62,9 @@ function installReceiver(): void {
   };
 }
 
-function getBridge(): AegisAndroidBiometricBridge | null {
+function getBridge(): KalderaShieldAndroidBiometricBridge | null {
   if (typeof window === 'undefined') return null;
-  const bridge = window.AegisAndroidBiometric;
+  const bridge = window.KalderaShieldAndroidBiometric;
   if (!bridge) return null;
   if (typeof bridge.wrap !== 'function' || typeof bridge.unwrap !== 'function') return null;
   return bridge;

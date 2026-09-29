@@ -75,7 +75,7 @@ describe('Y-5: vault integrity ledger', () => {
 
   it('normalises a malformed counter to 0 instead of trusting it', () => {
     writeLedgerRaw(JSON.stringify({
-      appId: 'aegis-vault-v7',
+      appId: 'kalderashield',
       sealed: true,
       highestVersionCounter: 'not a number',
       sealedAt: '',

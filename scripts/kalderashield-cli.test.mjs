@@ -1,5 +1,5 @@
 /**
- * Tests for the aegis-cli vault envelope reader (KDF floor + decryption).
+ * Tests for the kalderashield-cli vault envelope reader (KDF floor + decryption).
  * Runs under vitest (scripts glob picks up this test file).
  */
 import { describe, expect, it } from 'vitest';
@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { deriveArgon2idKeyAsync, parseVaultEnvelope } from './aegis-cli.cjs';
+import { deriveArgon2idKeyAsync, parseVaultEnvelope } from './kalderashield-cli.cjs';
 
 const PASSWORD = 'correct horse battery staple';
 const ITEMS = [{ id: 'i-1', title: 'Mail', username: 'a@b.c' }];
@@ -30,12 +30,12 @@ async function writeEnvelope(kdfParams) {
     checksum: crypto.createHash('sha256').update(payload.toString('base64')).digest('hex'),
   };
 
-  const file = path.join(os.tmpdir(), `aegis-cli-test-${crypto.randomUUID()}.aegis`);
+  const file = path.join(os.tmpdir(), `kalderashield-cli-test-${crypto.randomUUID()}.KalderaShield`);
   fs.writeFileSync(file, JSON.stringify(envelope));
   return file;
 }
 
-describe('aegis-cli parseVaultEnvelope', () => {
+describe('kalderashield-cli parseVaultEnvelope', () => {
   it('decrypts a well-formed backup envelope with floor-respecting KDF params', async () => {
     const file = await writeEnvelope({ memoryKiB: 32768, iterations: 3, parallelism: 1, hashLength: 32 });
     const items = await parseVaultEnvelope(file, PASSWORD);

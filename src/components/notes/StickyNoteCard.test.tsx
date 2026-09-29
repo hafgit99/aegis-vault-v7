@@ -18,7 +18,7 @@ const mockNoteItem: VaultItem = {
   title: 'Server SSH Deployment Keys',
   username: '',
   url: '',
-  notes: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKey root@production-cluster\nDeploy token: aegis_sec_9941',
+  notes: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKey root@production-cluster\nDeploy token: KalderaShield_sec_9941',
   tags: ['production', 'devops'],
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',

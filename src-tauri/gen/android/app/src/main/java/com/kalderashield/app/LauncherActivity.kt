@@ -1,4 +1,4 @@
-package com.hafgit99.aegisvault7
+ackage com.kalderashield.app
 
 import android.app.Activity
 import android.content.Intent
@@ -19,7 +19,7 @@ import android.os.Bundle
  *
  * Moving the LAUNCHER filter here means `MainActivity` can be
  * `android:exported="false"`. The system can still reach it: the Autofill
- * `PendingIntent` and the `startActivity` call in `AegisAutofillService` both
+ * `PendingIntent` and the `startActivity` call in `KalderaShieldAutofillService` both
  * originate inside this app (and the PendingIntent is executed by the system
  * on our behalf), and a non-exported Activity is always launchable by its own
  * application.

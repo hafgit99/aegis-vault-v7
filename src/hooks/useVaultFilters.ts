@@ -51,7 +51,7 @@ export function useVaultFilters() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const onStorage = (event: StorageEvent) => {
-      if (event.key === 'aegis-vault-v7-recent-searches') {
+      if (event.key === 'kalderashield-recent-searches') {
         setRecentSearches(readRecentSearches());
       }
     };

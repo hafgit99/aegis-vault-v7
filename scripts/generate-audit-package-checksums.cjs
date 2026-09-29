@@ -20,7 +20,7 @@ function getArgValue(name) {
 
 function usage() {
   return [
-    'Aegis Vault 7 - Security Audit Package checksum generator',
+    'KalderaShield - Security Audit Package checksum generator',
     '',
     'Generates or verifies SHA256SUMS.txt for the SECURITY_AUDIT_PACKAGE directory.',
     'The manifest uses the portable coreutils format: "<sha256>  <relative-path>".',
@@ -231,7 +231,7 @@ if (rawDir) {
 }
 
 const mode = hasFlag('--verify') ? 'verify' : 'generate';
-console.log('Aegis Vault 7 - Security Audit Package checksum ' + mode);
+console.log('KalderaShield - Security Audit Package checksum ' + mode);
 console.log('Target: ' + path.relative(rootDir, dir));
 console.log('');
 

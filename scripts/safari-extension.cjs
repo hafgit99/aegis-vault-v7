@@ -30,4 +30,4 @@ if (!fs.existsSync(manifestPath)) {
 
 console.log('\n[PASS] Safari WebExtension artifact created at dist-extension-safari/');
 console.log('To generate Xcode Safari App Extension project on macOS, run:');
-console.log('  xcrun safari-web-extension-converter dist-extension-safari --project-name "AegisVaultSafari"\n');
+console.log('  xcrun safari-web-extension-converter dist-extension-safari --project-name "KalderaShieldSafari"\n');

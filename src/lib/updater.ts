@@ -1,6 +1,6 @@
 /**
  * @file updater.ts
- * @description Safe Tauri v2 Auto-Updater service for Aegis Vault 7.
+ * @description Safe Tauri v2 Auto-Updater service for KalderaShield.
  * Provides check, download, verification, and restart routines with fallback for web/mobile.
  *
  * @license Apache-2.0

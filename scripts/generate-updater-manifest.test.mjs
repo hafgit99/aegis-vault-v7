@@ -30,7 +30,7 @@ const rootDir = path.resolve(here, '..');
 //  2. The blast radius. The old `afterEach` did `rm -rf` on the real
 //     `release-local/`, so running the suite mid-release deleted the artifacts the
 //     very next workflow step uploads. A test must not be able to do that.
-const stagingRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aegis-updater-manifest-'));
+const stagingRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'KalderaShield-updater-manifest-'));
 const releaseLocal = path.join(stagingRoot, 'release-local');
 const updaterDir = path.join(releaseLocal, 'updater');
 
@@ -86,7 +86,7 @@ describe('updater manifest generation', () => {
   it('fails when artifacts exist but none carry a signature', () => {
     // Unsigned artifacts must never become an advertised update.
     fs.mkdirSync(path.join(releaseLocal, 'linux'), { recursive: true });
-    fs.writeFileSync(path.join(releaseLocal, 'linux', 'aegis-vault-v7.AppImage'), 'binary');
+    fs.writeFileSync(path.join(releaseLocal, 'linux', 'kalderashield.AppImage'), 'binary');
 
     const result = run();
 
@@ -98,8 +98,8 @@ describe('updater manifest generation', () => {
     // A random file called .sig must not be mistaken for a signature.
     const linuxDir = path.join(releaseLocal, 'linux');
     fs.mkdirSync(linuxDir, { recursive: true });
-    fs.writeFileSync(path.join(linuxDir, 'aegis-vault-v7.AppImage'), 'binary');
-    fs.writeFileSync(path.join(linuxDir, 'aegis-vault-v7.AppImage.sig'), 'not-a-signature');
+    fs.writeFileSync(path.join(linuxDir, 'kalderashield.AppImage'), 'binary');
+    fs.writeFileSync(path.join(linuxDir, 'kalderashield.AppImage.sig'), 'not-a-signature');
 
     const result = run();
 
@@ -110,9 +110,9 @@ describe('updater manifest generation', () => {
   it('succeeds and names the platform when a signed bundle is present', () => {
     const linuxDir = path.join(releaseLocal, 'linux');
     fs.mkdirSync(linuxDir, { recursive: true });
-    fs.writeFileSync(path.join(linuxDir, 'aegis-vault-v7.AppImage'), 'binary');
+    fs.writeFileSync(path.join(linuxDir, 'kalderashield.AppImage'), 'binary');
     fs.writeFileSync(
-      path.join(linuxDir, 'aegis-vault-v7.AppImage.sig'),
+      path.join(linuxDir, 'kalderashield.AppImage.sig'),
       TAURI_SIG_BODY,
     );
 
@@ -123,6 +123,6 @@ describe('updater manifest generation', () => {
       fs.readFileSync(path.join(updaterDir, 'latest.json'), 'utf8'),
     );
     expect(Object.keys(manifest.platforms)).toContain('linux-x86_64');
-    expect(manifest.platforms['linux-x86_64'].url).toMatch(/aegis-vault-v7\.AppImage$/);
+    expect(manifest.platforms['linux-x86_64'].url).toMatch(/kalderashield\.AppImage$/);
   });
 });

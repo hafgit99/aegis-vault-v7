@@ -83,7 +83,7 @@ describe('backup validation fuzz tests', () => {
         (items) => {
           const envelope = {
             version: '7.0',
-            app: 'AegisVault',
+            app: 'KalderaShield',
             exportedAt: new Date().toISOString(),
             items,
             attachments: [],

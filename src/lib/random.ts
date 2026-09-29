@@ -3,7 +3,7 @@ export function secureRandomBytes(length: number): Uint8Array {
   const cryptoApi = globalThis.crypto;
 
   if (!cryptoApi?.getRandomValues) {
-    throw new Error('CSPRNG not available. Aegis Vault requires crypto.getRandomValues.');
+    throw new Error('CSPRNG not available. KalderaShield requires crypto.getRandomValues.');
   }
 
   cryptoApi.getRandomValues(bytes);
@@ -15,7 +15,7 @@ export function secureRandomIndex(max: number): number {
 
   const cryptoApi = globalThis.crypto;
   if (!cryptoApi?.getRandomValues) {
-    throw new Error('CSPRNG not available. Aegis Vault requires crypto.getRandomValues.');
+    throw new Error('CSPRNG not available. KalderaShield requires crypto.getRandomValues.');
   }
 
   const array = new Uint32Array(1);

@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { isDesktopRuntime } from './desktopStorage';
 
 export const DEFAULT_CLIPBOARD_CLEAR_DELAY_MS = 30_000;
-export const CLIPBOARD_HISTORY_OVERWRITE_TEXT = 'Aegis Vault clipboard cleared';
+export const CLIPBOARD_HISTORY_OVERWRITE_TEXT = 'KalderaShield clipboard cleared';
 
 export async function writeClipboardText(text: string): Promise<boolean> {
   if (isDesktopRuntime()) {

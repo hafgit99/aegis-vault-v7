@@ -21,15 +21,15 @@ export const WA_SQLITE_ACTIVE_BACKEND_BLOCKER = 'wa-sqlite-active-backend-not-en
 export const WA_SQLITE_PERSISTENT_VFS_UNAVAILABLE = 'wa-sqlite-persistent-vfs-unavailable';
 
 const DATABASE_NAMES: Record<NativeVaultStorageScope, string> = {
-  'android-app-private': '/aegis-wa-sqlite.android.db',
-  'desktop-app-data': '/aegis-wa-sqlite.desktop.db',
-  'browser-fallback': '/aegis-wa-sqlite.browser.db',
+  'android-app-private': '/KalderaShield-wa-sqlite.android.db',
+  'desktop-app-data': '/KalderaShield-wa-sqlite.desktop.db',
+  'browser-fallback': '/KalderaShield-wa-sqlite.browser.db',
 };
 
 const VFS_NAMES: Record<NativeVaultStorageScope, string> = {
-  'android-app-private': 'aegis-wa-sqlite-android-idb',
-  'desktop-app-data': 'aegis-wa-sqlite-desktop-idb',
-  'browser-fallback': 'aegis-wa-sqlite-browser-idb',
+  'android-app-private': 'KalderaShield-wa-sqlite-android-idb',
+  'desktop-app-data': 'KalderaShield-wa-sqlite-desktop-idb',
+  'browser-fallback': 'KalderaShield-wa-sqlite-browser-idb',
 };
 
 export function isIndexedDbPersistenceAvailable(): boolean {

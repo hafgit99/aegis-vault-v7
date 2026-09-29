@@ -17,12 +17,12 @@ afterEach(() => {
 
 describe('DashboardHeader', () => {
   it('renders dashboard title and profile identity', () => {
-    render(<DashboardHeader profileName="Aegis User" onOpenProfile={vi.fn()} onLock={vi.fn()} />);
+    render(<DashboardHeader profileName="KalderaShield User" onOpenProfile={vi.fn()} onLock={vi.fn()} />);
 
     expect(screen.getByText('Kasa Paneli')).toBeTruthy();
     expect(screen.getByText(APP_NAME)).toBeTruthy();
-    expect(screen.getByText('Aegis User')).toBeTruthy();
-    expect(screen.getByText('A')).toBeTruthy();
+    expect(screen.getByText('KalderaShield User')).toBeTruthy();
+    expect(screen.getByText('K')).toBeTruthy();
     expect(screen.getByTestId('dashboard-lock-button')).toBeTruthy();
   });
 
@@ -49,7 +49,7 @@ describe('DashboardHeader', () => {
 
     render(
       <LanguageProvider>
-        <DashboardHeader profileName="Aegis User" onOpenProfile={vi.fn()} onLock={vi.fn()} />
+        <DashboardHeader profileName="KalderaShield User" onOpenProfile={vi.fn()} onLock={vi.fn()} />
       </LanguageProvider>,
     );
 

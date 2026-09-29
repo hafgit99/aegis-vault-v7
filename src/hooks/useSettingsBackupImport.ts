@@ -2,7 +2,7 @@
  * @file useSettingsBackupImport.ts
  * @description Owns the entire backup/export/import subsystem of the settings
  * panel: encrypted + plaintext exports, universal import pipeline, encrypted
- * .aegis restore, transactional rollback, and the drag-and-drop zone state.
+ * .KalderaShield restore, transactional rollback, and the drag-and-drop zone state.
  * This is the largest orchestration block previously embedded in SettingsPanel.
  *
  * @license SPDX-License-Identifier: Apache-2.0
@@ -212,7 +212,7 @@ export function useSettingsBackupImport({
         items: latestItems,
         attachments,
       };
-      const filename = `aegis_acik_yedek_${currentDateSlug()}.json`;
+      const filename = `KalderaShield_acik_yedek_${currentDateSlug()}.json`;
       const contents = JSON.stringify(envelope, null, 2);
 
       const savedWithDialog = await saveDesktopExportFile(filename, contents);
@@ -251,7 +251,7 @@ export function useSettingsBackupImport({
           attachments,
         };
         const encryptedJsonString = await encryptDataWithPasswordSecure(JSON.stringify(envelope), passwordToUse);
-        const filename = `aegis_guvenli_yedek_${currentDateSlug()}.aegis`;
+        const filename = `KalderaShield_guvenli_yedek_${currentDateSlug()}.KalderaShield`;
         const savedWithDialog = await saveDesktopExportFile(filename, encryptedJsonString);
         if (!savedWithDialog) {
           if (isNativeFileDialogSupported()) {
@@ -472,7 +472,7 @@ export function useSettingsBackupImport({
     return mappedItems.length;
   };
 
-  // Decrypts and unpacks encrypted .aegis uploads
+  // Decrypts and unpacks encrypted .KalderaShield uploads
   const handleDecryptAndImport = async (e?: React.SyntheticEvent) => {
     if (e) {
       e.preventDefault();
@@ -544,7 +544,7 @@ export function useSettingsBackupImport({
 
   const importLabels = {
     errorEmpty: t('settings.import.parser.errorEmpty'),
-    formatAegisJson: t('settings.import.parser.formatAegisJson'),
+    formatKalderaShieldJson: t('settings.import.parser.formatKalderaShieldJson'),
     formatBitwardenJson: t('settings.import.parser.formatBitwardenJson'),
     errorUnsupportedJson: t('settings.import.parser.errorUnsupportedJson'),
     errorJsonPrefix: t('settings.import.parser.errorJsonPrefix'),
@@ -613,7 +613,7 @@ export function useSettingsBackupImport({
           percent: 100,
           message: '',
           errorMsg: null,
-          successMsg: `✓ Aegis JSON Backup ${t('settings.import.detectedSuccessMiddle')} ${count} ${t('settings.import.recordsLoadedSuffix')}`,
+          successMsg: `✓ KalderaShield JSON Backup ${t('settings.import.detectedSuccessMiddle')} ${count} ${t('settings.import.recordsLoadedSuffix')}`,
           pendingEnvelope: null,
         });
 
@@ -628,7 +628,7 @@ export function useSettingsBackupImport({
           throw new Error(scanResult.message);
         }
 
-        if (scanResult.type === 'encrypted_aegis') {
+        if (scanResult.type === 'encrypted_KalderaShield') {
           setImportState({
             status: 'decrypting_pending',
             percent: 0,

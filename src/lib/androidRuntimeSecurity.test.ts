@@ -17,7 +17,7 @@ const validPosture = JSON.stringify({
 
 describe('Android runtime security bridge', () => {
   beforeEach(() => {
-    delete window.AegisAndroidSecurity;
+    delete window.KalderaShieldAndroidSecurity;
   });
 
   it('parses a bounded warning-only posture', () => {
@@ -46,12 +46,12 @@ describe('Android runtime security bridge', () => {
 
   it('returns null when the native bridge is unavailable or throws', () => {
     expect(getAndroidRuntimeSecurityPosture()).toBeNull();
-    window.AegisAndroidSecurity = { getPosture: vi.fn(() => { throw new Error('bridge unavailable'); }) };
+    window.KalderaShieldAndroidSecurity = { getPosture: vi.fn(() => { throw new Error('bridge unavailable'); }) };
     expect(getAndroidRuntimeSecurityPosture()).toBeNull();
   });
 
   it('reads and validates posture from the native bridge', () => {
-    window.AegisAndroidSecurity = { getPosture: vi.fn(() => validPosture) };
+    window.KalderaShieldAndroidSecurity = { getPosture: vi.fn(() => validPosture) };
     expect(getAndroidRuntimeSecurityPosture()?.signals).toEqual(['root_artifact']);
   });
 });

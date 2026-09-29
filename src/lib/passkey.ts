@@ -4,7 +4,7 @@
  *
  * WebAuthn / Passkey authenticator module.
  *
- * Aegis Vault 7 stores WebAuthn-derived passkey material in a recoverable
+ * KalderaShield stores WebAuthn-derived passkey material in a recoverable
  * shape: the public key, credential id, and Relying Party metadata live as
  * normal vault fields, while the private key is wrapped with the active
  * session vault encryption key (HKDF-SHA-256 -> AES-256-GCM). This mirrors
@@ -24,7 +24,7 @@ import { withActiveVaultEncryptionKey } from './vaultSession';
 import { logSecurityEvent, securityEventCodes } from './securityEvents';
 import { verifyPasskeyAssertion } from './passkeyAssertion';
 
-export const PASSKEY_KEY_CONTEXT = 'aegis-vault-v7:passkey-vault-key:v1';
+export const PASSKEY_KEY_CONTEXT = 'kalderashield:passkey-vault-key:v1';
 
 export const passkeyErrorCodes = {
   unsupported: 'passkey.unsupported',
@@ -580,7 +580,7 @@ export async function assertVerifiedPasskeyAssertion(
 }
 
 /**
- * The origin an assertion must claim. Aegis Vault is a local-first app, so the
+ * The origin an assertion must claim. KalderaShield is a local-first app, so the
  * origin is the one the app itself is served from.
  */
 function defaultExpectedOrigin(): string {

@@ -76,21 +76,21 @@ describe('wa-sqlite engine', () => {
     expect(overrideConfig.locateFile('wa-sqlite.wasm', '/assets/')).toBe('/assets/wa-sqlite.wasm');
     expect(overrideConfig.wasmBinary).toBe(wasmBinary);
   });
-  it('opens the database lazily and bootstraps the Aegis schema', async () => {
+  it('opens the database lazily and bootstraps the KalderaShield schema', async () => {
     const runtime = createRuntimeStub();
     const engine = createWaSqliteEngine({
-      databaseName: 'aegis-test.db',
+      databaseName: 'KalderaShield-test.db',
       loadRuntime: vi.fn(async () => runtime),
     });
 
     await expect(engine.initialize()).resolves.toEqual({
       initialized: true,
-      databaseName: 'aegis-test.db',
+      databaseName: 'KalderaShield-test.db',
       tableCount: 3,
       persistenceProfile: createWaSqlitePersistenceProfile('browser-fallback', false),
     });
 
-    expect(runtime.open_v2).toHaveBeenCalledWith('aegis-test.db');
+    expect(runtime.open_v2).toHaveBeenCalledWith('KalderaShield-test.db');
     expect(runtime.exec).toHaveBeenNthCalledWith(1, 42, WA_SQLITE_BOOTSTRAP_SCHEMA);
   });
 
@@ -103,10 +103,10 @@ describe('wa-sqlite engine', () => {
     });
 
     await expect(engine.initialize()).resolves.toMatchObject({
-      databaseName: '/aegis-wa-sqlite.desktop.db',
+      databaseName: '/KalderaShield-wa-sqlite.desktop.db',
       persistenceProfile,
     });
-    expect(runtime.open_v2).toHaveBeenCalledWith('/aegis-wa-sqlite.desktop.db');
+    expect(runtime.open_v2).toHaveBeenCalledWith('/KalderaShield-wa-sqlite.desktop.db');
   });
 
   it('registers and opens the persistent IndexedDB VFS when the profile is ready', async () => {
@@ -117,19 +117,19 @@ describe('wa-sqlite engine', () => {
       persistenceProfile,
       loadRuntime: vi.fn(async () => runtime),
       registerPersistentVfs: vi.fn(async () => ({
-        name: 'aegis-wa-sqlite-android-idb',
+        name: 'KalderaShield-wa-sqlite-android-idb',
         close: closeVfs,
       })),
     });
 
     await expect(engine.initialize()).resolves.toMatchObject({
-      databaseName: '/aegis-wa-sqlite.android.db',
+      databaseName: '/KalderaShield-wa-sqlite.android.db',
       persistenceProfile,
     });
     expect(runtime.open_v2).toHaveBeenCalledWith(
-      '/aegis-wa-sqlite.android.db',
+      '/KalderaShield-wa-sqlite.android.db',
       undefined,
-      'aegis-wa-sqlite-android-idb',
+      'KalderaShield-wa-sqlite-android-idb',
     );
 
     await engine.close();

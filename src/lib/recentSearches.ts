@@ -29,7 +29,7 @@ export interface RecentSearchEntry {
   lastUsedAt: string;
 }
 
-export const RECENT_SEARCHES_STORAGE_KEY = 'aegis-vault-v7-recent-searches';
+export const RECENT_SEARCHES_STORAGE_KEY = 'kalderashield-recent-searches';
 export const MAX_RECENT_SEARCHES = 10;
 
 function isStorageAvailable(): boolean {

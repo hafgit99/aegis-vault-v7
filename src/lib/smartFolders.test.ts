@@ -159,7 +159,7 @@ describe('Smart Folders Library', () => {
   });
 
   it('covers remaining branches', () => {
-    localStorage.setItem('aegis-vault-v7-smart-folders-v1', 'invalid-json-{');
+    localStorage.setItem('kalderashield-smart-folders-v1', 'invalid-json-{');
     const list = readSmartFolders();
     expect(list.some(f => f.id === 'smart-favorites')).toBe(true);
 
@@ -168,7 +168,7 @@ describe('Smart Folders Library', () => {
       name: 'Invalid Rule Folder',
       rules: [{ kind: 'non-existent-rule-kind' }],
     };
-    localStorage.setItem('aegis-vault-v7-smart-folders-v1', JSON.stringify([invalidFolder]));
+    localStorage.setItem('kalderashield-smart-folders-v1', JSON.stringify([invalidFolder]));
     const list2 = readSmartFolders();
     const loadedInvalid = list2.find(f => f.id === 'invalid-folder');
     expect(loadedInvalid!.rules.length).toBe(0);
@@ -389,7 +389,7 @@ describe('Smart Folders Library', () => {
         },
       ];
 
-      localStorage.setItem('aegis-vault-v7-smart-folders-v1', JSON.stringify(corruptedPayload));
+      localStorage.setItem('kalderashield-smart-folders-v1', JSON.stringify(corruptedPayload));
       const loaded = readSmartFolders();
       const folderWithBadRules = loaded.find((f) => f.id === 'ok-3');
       expect(folderWithBadRules).toBeDefined();
@@ -492,7 +492,7 @@ describe('Smart Folders Library', () => {
     });
 
     it('coerces invalid entry field types to safe defaults when parsing stored folders', () => {
-      localStorage.setItem('aegis-vault-v7-smart-folders-v1', JSON.stringify([
+      localStorage.setItem('kalderashield-smart-folders-v1', JSON.stringify([
         {
           id: 'weird-types',
           name: 'Weird Types',
@@ -519,7 +519,7 @@ describe('Smart Folders Library', () => {
 
       // a truthy non-boolean builtIn value coerces to true and hides the
       // entry from the user folder list
-      localStorage.setItem('aegis-vault-v7-smart-folders-v1', JSON.stringify([
+      localStorage.setItem('kalderashield-smart-folders-v1', JSON.stringify([
         { id: 'hidden-user', name: 'Hidden User', builtIn: 'truthy-string', rules: [] },
       ]));
       expect(readSmartFolders().some((f) => f.id === 'hidden-user')).toBe(false);
@@ -565,7 +565,7 @@ describe('Smart Folders Library', () => {
     });
 
     it('treats non-array JSON payloads as an empty library', () => {
-      localStorage.setItem('aegis-vault-v7-smart-folders-v1', JSON.stringify({ not: 'an array' }));
+      localStorage.setItem('kalderashield-smart-folders-v1', JSON.stringify({ not: 'an array' }));
       const userFolders = readSmartFolders().filter((f) => !f.builtIn);
       expect(userFolders).toHaveLength(0);
     });
@@ -578,7 +578,7 @@ describe('Smart Folders Library', () => {
     });
 
     it('rejects malformed newerThanDays rules while keeping valid ones in the same entry', () => {
-      localStorage.setItem('aegis-vault-v7-smart-folders-v1', JSON.stringify([
+      localStorage.setItem('kalderashield-smart-folders-v1', JSON.stringify([
         {
           id: 'mixed-rules',
           name: 'Mixed Rules',

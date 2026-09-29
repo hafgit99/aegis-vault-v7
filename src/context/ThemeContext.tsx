@@ -3,8 +3,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 export type ThemeMode = 'dark' | 'light';
 export type ThemePalette = 'emerald' | 'blue' | 'purple' | 'orange' | 'red';
 
-const THEME_MODE_KEY = 'aegis-theme-mode';
-const THEME_PALETTE_KEY = 'aegis-theme-palette';
+const THEME_MODE_KEY = 'KalderaShield-theme-mode';
+const THEME_PALETTE_KEY = 'KalderaShield-theme-palette';
 
 const VALID_MODES: readonly ThemeMode[] = ['dark', 'light'];
 const VALID_PALETTES: readonly ThemePalette[] = ['emerald', 'blue', 'purple', 'orange', 'red'];

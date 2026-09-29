@@ -25,10 +25,10 @@ val releaseSigningConfigured = listOf(
 
 android {
     compileSdk = 36
-    namespace = "com.hafgit99.aegisvault7"
+    namespace = "com.kalderashield.app"
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
-        applicationId = "com.hafgit99.aegisvault7"
+        applicationId = "com.kalderashield.app"
         minSdk = 24
         targetSdk = 35
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()

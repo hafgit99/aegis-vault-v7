@@ -28,7 +28,7 @@ describe('PrivacyShieldBackdrop', () => {
         <PrivacyShieldBackdrop visible={true} screenRecordingDetected={false} />
       </LanguageProvider>,
     );
-    expect(screen.getByText('Aegis Vault')).toBeDefined();
+    expect(screen.getByText('KalderaShield')).toBeDefined();
     expect(screen.getByText('Secure display shield active')).toBeDefined();
   });
 
@@ -38,6 +38,6 @@ describe('PrivacyShieldBackdrop', () => {
         <PrivacyShieldBackdrop visible={true} screenRecordingDetected={true} />
       </LanguageProvider>,
     );
-    expect(screen.getByText('Aegis Vault')).toBeDefined();
+    expect(screen.getByText('KalderaShield')).toBeDefined();
   });
 });

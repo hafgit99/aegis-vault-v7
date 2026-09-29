@@ -84,7 +84,7 @@ function generateReleaseNotes() {
 
   const checksums = checksumLines(artifacts);
   const notes = [
-    '# Aegis Vault 7 ' + metadata.version + ' Desktop Release Notes',
+    '# KalderaShield ' + metadata.version + ' Desktop Release Notes',
     '',
     'Channel: ' + channel,
     'Platform: ' + metadata.platform,
@@ -116,9 +116,9 @@ function generateReleaseNotes() {
     '',
     '## Recovery And Safety Notes',
     '',
-    '- Aegis Vault 7 cannot recover a lost master password.',
+    '- KalderaShield cannot recover a lost master password.',
     '- Keep the Emergency Kit and Account Secret Key offline and separate from the device.',
-    '- Encrypted `.aegis` backups require the backup password.',
+    '- Encrypted `.KalderaShield` backups require the backup password.',
     '- Plain JSON backups are unsafe and should only be stored offline in a trusted location.',
     '- Local malware, OS compromise, and untrusted builds remain outside the app protection boundary.',
     '',

@@ -1,6 +1,6 @@
 /**
  * @file OnboardingTour.tsx
- * @description Interactive 4-step quick start checklist for new Aegis Vault users.
+ * @description Interactive 4-step quick start checklist for new KalderaShield users.
  *
  * @license Apache-2.0
  */
@@ -30,7 +30,7 @@ export default function OnboardingTour({ tour, onNewItem, onNavigate }: Onboardi
   const handleStep2Click = () => {
     markStepComplete(2);
     // Link or guide to browser extension
-    window.open('https://github.com/hafgit99/aegis-vault-v7#browser-extension', '_blank', 'noopener,noreferrer');
+    window.open('https://github.com/hafgit99/kalderashield#browser-extension', '_blank', 'noopener,noreferrer');
   };
 
   const handleStep3Click = () => {

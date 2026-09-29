@@ -16,7 +16,7 @@ const {
 let tempRoots: string[] = [];
 
 function createTempRepo(): string {
-  const root = mkdtempSync(path.join(tmpdir(), 'aegis-android-artifacts-'));
+  const root = mkdtempSync(path.join(tmpdir(), 'KalderaShield-android-artifacts-'));
   tempRoots.push(root);
   return root;
 }

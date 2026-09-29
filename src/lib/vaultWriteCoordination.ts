@@ -31,8 +31,8 @@ import { readVaultIntegrityLedger, recordVaultSeal } from './vaultIntegrityLedge
  * concurrency. Only a baseline comparison can.
  */
 
-const VAULT_WRITE_LOCK_NAME = 'aegis-vault-write';
-const VAULT_COMMIT_CHANNEL = 'aegis-vault';
+const VAULT_WRITE_LOCK_NAME = 'KalderaShield-vault-write';
+const VAULT_COMMIT_CHANNEL = 'KalderaShield-vault';
 
 /** Why a write was refused. Distinct so the UI can explain the real problem. */
 export const vaultWriteConflictCodes = {

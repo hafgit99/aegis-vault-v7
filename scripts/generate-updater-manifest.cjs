@@ -34,7 +34,7 @@ const version = packageJson.version; // full numeric version, e.g. 7.0.5.0 (tag 
 // the manifest version MUST match it exactly for the update comparison.
 const tauriConf = JSON.parse(fs.readFileSync(path.join(rootDir, 'src-tauri', 'tauri.conf.json'), 'utf8'));
 const updaterVersion = tauriConf.version || version.split('.').slice(0, 3).join('.');
-const repoUrl = packageJson.repository ? packageJson.repository.replace(/\.git$/, '') : 'https://github.com/hafgit99/aegis-vault-v7';
+const repoUrl = packageJson.repository ? packageJson.repository.replace(/\.git$/, '') : 'https://github.com/hafgit99/kalderashield';
 const releaseTag = `v${version}`;
 const downloadBaseUrl = `${repoUrl}/releases/download/${releaseTag}`;
 
@@ -102,7 +102,7 @@ function generateManifest() {
   }
 
   // Load release notes if available
-  let releaseNotes = `Aegis Vault ${version} Release`;
+  let releaseNotes = `KalderaShield ${version} Release`;
   const releaseNotesPath = path.join(releaseLocalDir, 'windows', 'RELEASE_NOTES.md');
   if (fs.existsSync(releaseNotesPath)) {
     try {

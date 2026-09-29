@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🛡️ Aegis Vault 7
+# 🛡️ KalderaShield
 
 **The Offline-First, Zero-Knowledge Security Vault & Password Manager**
 
@@ -8,7 +8,7 @@
 
 <br />
 
-<img src="docs/assets/app-screenshot.png" alt="Aegis Vault 7 — Main Application Interface" width="820" />
+<img src="docs/assets/app-screenshot.png" alt="KalderaShield — Main Application Interface" width="820" />
 
 <br />
 
@@ -22,9 +22,9 @@
 ![i18n](https://img.shields.io/badge/i18n-12_Languages-purple?style=flat-square)
 
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/14390/badge)](https://www.bestpractices.dev/projects/14390)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/hafgit99/aegis-vault-v7/badge)](https://scorecard.dev/viewer/?uri=github.com/hafgit99/aegis-vault-v7)
-[![CodeQL](https://github.com/hafgit99/aegis-vault-v7/actions/workflows/codeql.yml/badge.svg)](https://github.com/hafgit99/aegis-vault-v7/actions/workflows/codeql.yml)
-[![CI](https://github.com/hafgit99/aegis-vault-v7/actions/workflows/ci.yml/badge.svg)](https://github.com/hafgit99/aegis-vault-v7/actions/workflows/ci.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/hafgit99/KalderaShield-vault-v7/badge)](https://scorecard.dev/viewer/?uri=github.com/hafgit99/KalderaShield-vault-v7)
+[![CodeQL](https://github.com/hafgit99/KalderaShield-vault-v7/actions/workflows/codeql.yml/badge.svg)](https://github.com/hafgit99/KalderaShield-vault-v7/actions/workflows/codeql.yml)
+[![CI](https://github.com/hafgit99/KalderaShield-vault-v7/actions/workflows/ci.yml/badge.svg)](https://github.com/hafgit99/KalderaShield-vault-v7/actions/workflows/ci.yml)
 
 [Features](#-key-features) • [Security Architecture](#-security-architecture) • [Security Review Status](#-security-review-and-external-audit-status) • [Platforms](#-platform-matrix) • [Build & Verification](#-build--verification) • [Documentation](#-documentation)
 
@@ -34,15 +34,15 @@
 
 ## 🌟 Overview
 
-**Aegis Vault 7** is a next-generation, local-first password manager engineered for complete data sovereignty. Built with **React 19, TypeScript, Rust (Tauri 2), WebCrypto, wa-sqlite (OPFS), and Manifest V3 WebExtensions**, Aegis Vault guarantees that your master keys, credentials, notes, passkeys, and attachments remain strictly on your device under your complete control.
+**KalderaShield** is a next-generation, local-first password manager engineered for complete data sovereignty. Built with **React 19, TypeScript, Rust (Tauri 2), WebCrypto, wa-sqlite (OPFS), and Manifest V3 WebExtensions**, KalderaShield guarantees that your master keys, credentials, notes, passkeys, and attachments remain strictly on your device under your complete control.
 
-Unlike cloud-dependent password managers vulnerable to server breaches and key-escrow attacks, Aegis Vault uses **at-rest field encryption**, **per-item HKDF key derivation**, **closed Shadow DOM UI isolation**, and **hardware-backed biometric protection**.
+Unlike cloud-dependent password managers vulnerable to server breaches and key-escrow attacks, KalderaShield uses **at-rest field encryption**, **per-item HKDF key derivation**, **closed Shadow DOM UI isolation**, and **hardware-backed biometric protection**.
 
 ---
 
 ## 🛡️ Security Review and External Audit Status
 
-Aegis Vault publishes its threat model, security notes, quality gates, and a scope document prepared for a future independent assessment. **As of September 23, 2026, this repository does not publish a completed independent third-party security audit report.** The scope document is preparation material, not an audit result.
+KalderaShield publishes its threat model, security notes, quality gates, and a scope document prepared for a future independent assessment. **As of September 23, 2026, this repository does not publish a completed independent third-party security audit report.** The scope document is preparation material, not an audit result.
 
 Earlier numerical scores and closure counts were maintainer assessments of older code snapshots. They are not independent ratings, certifications, or a current assessment of release `v7.0.7.0`; they are not presented here as evidence of external assurance. See [Security Review Status](docs/SECURITY_REVIEW_STATUS_2026.md) and the [External Audit Scope](docs/EXTERNAL_AUDIT_SCOPE_EN.md).
 
@@ -57,14 +57,14 @@ Earlier numerical scores and closure counts were maintainer assessments of older
 - **Zero-Knowledge Emergency Recovery**: 24-word BIP-39 Recovery Key generation with offline recovery kit export.
 
 ### 🔌 Dynamic IPC & Browser Extension Companion
-- **Dynamic TCP Port Probe & Discovery**: Native messaging IPC host dynamically probes ports `49155..=49165` (with fallback to OS ephemeral port) and writes active port to `aegis_ipc_port.txt` in secure app data.
+- **Dynamic TCP Port Probe & Discovery**: Native messaging IPC host dynamically probes ports `49155..=49165` (with fallback to OS ephemeral port) and writes active port to `KalderaShield_ipc_port.txt` in secure app data.
 - **eTLD+1 Domain Matching**: Embedded **full Mozilla Public Suffix List** (10k+ rules with wildcard `*.ck` and exception `!www.ck` semantics, SHA-256-pinned snapshot) prevents credential leaks across shared hosting domains.
-- **Closed Shadow DOM UI Isolation**: Extension autofill dropdowns, password generators, and phishing alerts render inside `<aegis-autofill-host>` closed Shadow DOM boundaries, preventing host page JS tampering.
+- **Closed Shadow DOM UI Isolation**: Extension autofill dropdowns, password generators, and phishing alerts render inside `<KalderaShield-autofill-host>` closed Shadow DOM boundaries, preventing host page JS tampering.
 - **Scoped Extension Permissions**: Script matches narrowed strictly to `http://*/*` and `https://*/*`, excluding internal browser schemes (`chrome://`, `about:`).
 
 ### 📱 Android Native Hardware Protection
 - **Hardware-Backed Biometrics**: AndroidKeyStore integration with WebAuthn PRF extension requirement for biometric unlock.
-- **Encrypted Autofill Transport**: Credentials passed to `AegisAutofillService` use hardware AES-256-GCM encrypted `SecureTempFileStorage` + `FileProvider` URIs instead of plain Intent extras.
+- **Encrypted Autofill Transport**: Credentials passed to `KalderaShieldAutofillService` use hardware AES-256-GCM encrypted `SecureTempFileStorage` + `FileProvider` URIs instead of plain Intent extras.
 - **Multi-ABI Native Packaging**: Built with ABI splits supporting `arm64-v8a`, `armeabi-v7a`, and `x86_64`.
 - **Screen Capture Protection**: `FLAG_SECURE` enforced across all Android activities and task switcher previews.
 
@@ -95,7 +95,7 @@ Full localization across 12 languages:
 
 ## 📊 Verification, Testing & Quality Gates
 
-Aegis Vault 7 maintains rigorous automated testing standards with defense-in-depth verification spanning Unit Testing, Component Decomposition Suites, Property-Based Fuzz Testing, Mutation Testing, and Rust Native Test Harnesses.
+KalderaShield maintains rigorous automated testing standards with defense-in-depth verification spanning Unit Testing, Component Decomposition Suites, Property-Based Fuzz Testing, Mutation Testing, and Rust Native Test Harnesses.
 
 ### Test Metrics Summary
 
@@ -186,8 +186,8 @@ Mutation testing introduces deliberate faults (mutants) into source code to veri
 
 ```bash
 # Clone repository
-git clone https://github.com/hafgit99/aegis-vault-v7.git
-cd aegis-vault-v7
+git clone https://github.com/hafgit99/KalderaShield-vault-v7.git
+cd KalderaShield-vault-v7
 
 # Install dependencies
 npm ci
@@ -291,7 +291,7 @@ npm run package:firefox:xpi
 ## 📚 Documentation Index
 
 - 🏗️ [Architecture Review & System Boundaries](docs/ARCHITECTURE_REVIEW.md)
-- 🛠️ [Aegis CLI Usage Guide](CLI_USAGE.md)
+- 🛠️ [KalderaShield CLI Usage Guide](CLI_USAGE.md)
 - 🔑 [Code Signing & Distribution Guide](docs/CODE_SIGNING_GUIDE_2026.md)
 - 🤖 [Android Readiness & Hardware Security](docs/ANDROID_READINESS.md)
 - 🦊 [Firefox XPI Packaging & AMO Guide](FIREFOX_XPI.md)
@@ -301,7 +301,7 @@ npm run package:firefox:xpi
 
 <div align="center">
 
-**Aegis Vault 7** • Built with ❤️ for Zero-Knowledge Security & Privacy.  
+**KalderaShield** • Built with ❤️ for Zero-Knowledge Security & Privacy.  
 *Licensed under Apache License 2.0.*
 
 </div>

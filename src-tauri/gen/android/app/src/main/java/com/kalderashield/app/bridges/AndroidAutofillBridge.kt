@@ -1,4 +1,4 @@
-package com.hafgit99.aegisvault7.bridges
+ackage com.kalderashield.app.bridges
 
 import android.app.Activity
 import android.content.Intent
@@ -11,11 +11,11 @@ import android.view.autofill.AutofillManager
 import android.view.autofill.AutofillValue
 import android.webkit.JavascriptInterface
 import android.widget.RemoteViews
-import com.hafgit99.aegisvault7.MainActivity
-import com.hafgit99.aegisvault7.R
-import com.hafgit99.aegisvault7.model.AutofillLaunchRequest
-import com.hafgit99.aegisvault7.model.AutofillSaveCandidate
-import com.hafgit99.aegisvault7.security.SecureTempFileStorage
+import com.kalderashield.app.MainActivity
+import com.kalderashield.app.R
+import com.kalderashield.app.model.AutofillLaunchRequest
+import com.kalderashield.app.model.AutofillSaveCandidate
+import com.kalderashield.app.security.SecureTempFileStorage
 import java.nio.charset.StandardCharsets
 import org.json.JSONObject
 
@@ -146,7 +146,7 @@ class AndroidAutofillBridge(
 
         // K-1: `requestId` must resolve through the registry. A JS caller (or a
         // forged Intent that somehow reached us) cannot name a request that
-        // AegisAutofillService never registered, so there is no FillResponse
+        // KalderaShieldAutofillService never registered, so there is no FillResponse
         // to hand back to an arbitrary caller.
         val current = getPendingAutofillRequest() ?: run {
             Log.w(
@@ -159,7 +159,7 @@ class AndroidAutofillBridge(
         if (current.passwordIds.isEmpty()) return false
 
         return try {
-            val presentationLabel = label.ifBlank { "Aegis Vault" }
+            val presentationLabel = label.ifBlank { "KalderaShield Vault" }
             val datasetBuilder = Dataset.Builder(createAutofillPresentation(presentationLabel))
             current.usernameIds.forEach { autofillId ->
                 datasetBuilder.setValue(autofillId, AutofillValue.forText(username))
@@ -198,6 +198,6 @@ class AndroidAutofillBridge(
     }
 
     companion object {
-        private const val AUTOFILL_LOG_TAG = "AegisAutofill"
+        private const val AUTOFILL_LOG_TAG = "KalderaShieldAutofill"
     }
 }

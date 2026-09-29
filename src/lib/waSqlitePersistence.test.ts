@@ -16,31 +16,31 @@ import {
 describe('wa-sqlite persistence profile', () => {
   it('uses separate persistent IndexedDB VFS database names for desktop, Android, and browser scopes', () => {
     expect(createWaSqlitePersistenceProfile('desktop-app-data', true)).toEqual({
-      databaseName: '/aegis-wa-sqlite.desktop.db',
+      databaseName: '/KalderaShield-wa-sqlite.desktop.db',
       storageScope: 'desktop-app-data',
       persistenceKind: 'indexeddb-minimal-vfs',
-      vfsName: 'aegis-wa-sqlite-desktop-idb',
+      vfsName: 'KalderaShield-wa-sqlite-desktop-idb',
       persistentVfsReady: true,
       activeBackendReady: false,
       blocker: WA_SQLITE_ACTIVE_BACKEND_BLOCKER,
     });
     expect(createWaSqlitePersistenceProfile('android-app-private', true)).toMatchObject({
-      databaseName: '/aegis-wa-sqlite.android.db',
+      databaseName: '/KalderaShield-wa-sqlite.android.db',
       storageScope: 'android-app-private',
-      vfsName: 'aegis-wa-sqlite-android-idb',
+      vfsName: 'KalderaShield-wa-sqlite-android-idb',
       persistentVfsReady: true,
     });
     expect(createWaSqlitePersistenceProfile('browser-fallback', true)).toMatchObject({
-      databaseName: '/aegis-wa-sqlite.browser.db',
+      databaseName: '/KalderaShield-wa-sqlite.browser.db',
       storageScope: 'browser-fallback',
-      vfsName: 'aegis-wa-sqlite-browser-idb',
+      vfsName: 'KalderaShield-wa-sqlite-browser-idb',
       persistentVfsReady: true,
     });
   });
 
   it('falls back to volatile wasm storage when IndexedDB persistence is unavailable', () => {
     expect(createWaSqlitePersistenceProfile('desktop-app-data', false)).toEqual({
-      databaseName: '/aegis-wa-sqlite.desktop.db',
+      databaseName: '/KalderaShield-wa-sqlite.desktop.db',
       storageScope: 'desktop-app-data',
       persistenceKind: 'volatile-wasm',
       vfsName: null,

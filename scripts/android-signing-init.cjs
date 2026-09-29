@@ -6,7 +6,7 @@ const repoRoot = path.resolve(__dirname, '..');
 const examplePath = path.join(repoRoot, 'docs', 'android-signing.env.example');
 
 // Preferred: outside the repo and outside any cloud-synced (OneDrive etc.) folder.
-const externalDir = path.join(os.homedir(), 'AegisVaultKeys');
+const externalDir = path.join(os.homedir(), 'KalderaShieldKeys');
 const externalTarget = path.join(externalDir, 'android-signing.env');
 
 // Legacy fallback: in-repo .secrets folder.
@@ -43,5 +43,5 @@ try {
   // ACL hardening is best-effort; Unix users can chmod 600 instead.
 }
 console.log('Created local Android signing env: ' + externalTarget);
-console.log('Fill the four AEGIS_ANDROID_* values, then run: npm run android:release:signing:check');
+console.log('Fill the four KALDERASHIELD_ANDROID_* values, then run: npm run android:release:signing:check');
 console.log('Keep this file outside cloud-synced folders (OneDrive, Drive, Dropbox).');

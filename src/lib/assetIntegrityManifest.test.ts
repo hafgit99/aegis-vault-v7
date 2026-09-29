@@ -41,10 +41,10 @@ describe('asset integrity manifest generator', () => {
   });
 
   it('excludes index.html because Tauri rewrites the served bytes', () => {
-    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'aegis-integrity-'));
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'KalderaShield-integrity-'));
     temporaryDirectories.push(directory);
     fs.mkdirSync(path.join(directory, 'assets'));
-    fs.writeFileSync(path.join(directory, 'index.html'), '<main>Aegis</main>');
+    fs.writeFileSync(path.join(directory, 'index.html'), '<main>KalderaShield</main>');
     fs.writeFileSync(path.join(directory, 'assets', 'index.js'), 'export {};');
 
     const { manifest, manifestPath } = generateIntegrityManifest(directory);
@@ -66,7 +66,7 @@ describe('asset integrity manifest generator', () => {
     // this hash, and pretending otherwise here would assert a guarantee the
     // code no longer makes. Catching this is the runtime counter-check's job,
     // and this is the shape of the attack it has to catch.
-    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'aegis-integrity-'));
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'KalderaShield-integrity-'));
     temporaryDirectories.push(directory);
     fs.mkdirSync(path.join(directory, 'assets'));
     fs.writeFileSync(
@@ -87,9 +87,9 @@ describe('asset integrity manifest generator', () => {
   });
 
   it('still excludes the manifest itself and source maps', () => {
-    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'aegis-integrity-'));
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'KalderaShield-integrity-'));
     temporaryDirectories.push(directory);
-    fs.writeFileSync(path.join(directory, 'index.html'), '<main>Aegis</main>');
+    fs.writeFileSync(path.join(directory, 'index.html'), '<main>KalderaShield</main>');
     fs.writeFileSync(path.join(directory, 'app.js'), 'export {};');
     fs.writeFileSync(path.join(directory, 'app.js.map'), '{}');
 
@@ -105,7 +105,7 @@ describe('asset integrity manifest generator', () => {
   });
 
   it('detects a changed production asset', () => {
-    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'aegis-integrity-'));
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'KalderaShield-integrity-'));
     temporaryDirectories.push(directory);
     fs.writeFileSync(path.join(directory, 'index.html'), 'original');
     fs.writeFileSync(path.join(directory, 'assets.js'), 'original');

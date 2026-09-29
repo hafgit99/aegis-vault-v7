@@ -24,7 +24,7 @@ let indexedDb: IndexedDbModule;
 function state(versionCounter: number): VersionedVaultDatabaseState {
   return {
     schemaVersion: 1,
-    appId: 'aegis-vault-v7',
+    appId: 'kalderashield',
     user_secrets: [],
     vault_items: [],
     versionCounter,
@@ -176,14 +176,14 @@ describe('O-2 local fallback mirror staleness', () => {
     // quota. A failed write to a small setup flag is not a stale vault, and the
     // boot-time sync writes all of them in one pass, so this is a real path
     // rather than a synthetic one.
-    await indexedDb.setIndexedDbItem('aegis_is_setup', 'true');
+    await indexedDb.setIndexedDbItem('KalderaShield_is_setup', 'true');
     await indexedDb.setIndexedDbItem(
       persistence.LOCAL_FALLBACK_KEY,
       JSON.stringify(state(5)),
     );
     persistence.writeLocalFallbackMirror(state(5), JSON.stringify(state(5)), false);
 
-    failWritesFor('aegis_is_setup');
+    failWritesFor('KalderaShield_is_setup');
     await indexedDb.initializeIndexedDbStorage();
     vi.restoreAllMocks();
 
@@ -315,19 +315,19 @@ describe('O-2 local fallback mirror staleness', () => {
     // quota. A failed write to a small setup flag is not a stale vault, and the
     // boot-time sync writes all of them in one pass, so this is a real path
     // rather than a synthetic one.
-    await indexedDb.setIndexedDbItem('aegis_is_setup', 'true');
+    await indexedDb.setIndexedDbItem('KalderaShield_is_setup', 'true');
     await indexedDb.setIndexedDbItem(
       persistence.LOCAL_FALLBACK_KEY,
       JSON.stringify(state(5)),
     );
     persistence.writeLocalFallbackMirror(state(5), JSON.stringify(state(5)), false);
 
-    failWritesFor('aegis_is_setup');
+    failWritesFor('KalderaShield_is_setup');
     await indexedDb.initializeIndexedDbStorage();
     vi.restoreAllMocks();
 
     // The small flag failed; the mirror refreshed fine.
-    expect(indexedDb.didLocalMirrorWriteFail('aegis_is_setup')).toBe(true);
+    expect(indexedDb.didLocalMirrorWriteFail('KalderaShield_is_setup')).toBe(true);
     expect(indexedDb.didLocalMirrorWriteFail(persistence.LOCAL_FALLBACK_KEY)).toBe(false);
     expect(persistence.inspectLocalFallbackMirror().stale).toBe(false);
   });

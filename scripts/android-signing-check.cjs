@@ -6,10 +6,10 @@ const { loadAndroidSigningEnv } = require('./android-signing-env.cjs');
 
 const repoRoot = path.resolve(__dirname, '..');
 const required = [
-  'AEGIS_ANDROID_KEYSTORE_PATH',
-  'AEGIS_ANDROID_KEY_ALIAS',
-  'AEGIS_ANDROID_KEYSTORE_PASSWORD',
-  'AEGIS_ANDROID_KEY_PASSWORD',
+  'KALDERASHIELD_ANDROID_KEYSTORE_PATH',
+  'KALDERASHIELD_ANDROID_KEY_ALIAS',
+  'KALDERASHIELD_ANDROID_KEYSTORE_PASSWORD',
+  'KALDERASHIELD_ANDROID_KEY_PASSWORD',
 ];
 
 function env(name) {
@@ -35,12 +35,12 @@ function detectStoreType(file) {
 }
 
 function validateKeystore(resolved) {
-  const alias = env('AEGIS_ANDROID_KEY_ALIAS');
-  const storePassword = env('AEGIS_ANDROID_KEYSTORE_PASSWORD');
+  const alias = env('KALDERASHIELD_ANDROID_KEY_ALIAS');
+  const storePassword = env('KALDERASHIELD_ANDROID_KEYSTORE_PASSWORD');
   if (!alias || !storePassword || !fs.existsSync(resolved)) return;
 
   // Pass password safely via environment variable reference to avoid exposing secrets in process lists
-  const args = ['-list', '-keystore', resolved, '-storepass:env', 'AEGIS_ANDROID_KEYSTORE_PASSWORD', '-alias', alias];
+  const args = ['-list', '-keystore', resolved, '-storepass:env', 'KALDERASHIELD_ANDROID_KEYSTORE_PASSWORD', '-alias', alias];
   const storeType = detectStoreType(resolved);
   if (storeType) args.push('-storetype', storeType);
 
@@ -50,7 +50,7 @@ function validateKeystore(resolved) {
       encoding: 'utf8',
       env: {
         ...process.env,
-        AEGIS_ANDROID_KEYSTORE_PASSWORD: storePassword,
+        KALDERASHIELD_ANDROID_KEYSTORE_PASSWORD: storePassword,
       },
       stdio: ['pipe', 'pipe', 'pipe'],
       maxBuffer: 1024 * 1024,
@@ -59,7 +59,7 @@ function validateKeystore(resolved) {
   } catch (error) {
     const output = String(error.stderr || error.stdout || error.message || '');
     if (/password was incorrect|Keystore was tampered|Password verification failed|keystore password was incorrect/i.test(output)) {
-      fail('keystore password could not open the signing store; update AEGIS_ANDROID_KEYSTORE_PASSWORD');
+      fail('keystore password could not open the signing store; update KALDERASHIELD_ANDROID_KEYSTORE_PASSWORD');
     } else if (/Alias .* does not exist|Cannot find alias/i.test(output)) {
       fail(`key alias was not found in the keystore: ${alias}`);
     } else {
@@ -91,7 +91,7 @@ for (const name of required) {
   }
 }
 
-const keystorePath = env('AEGIS_ANDROID_KEYSTORE_PATH');
+const keystorePath = env('KALDERASHIELD_ANDROID_KEYSTORE_PATH');
 if (keystorePath) {
   const resolved = path.resolve(keystorePath);
   if (fs.existsSync(resolved)) {
@@ -124,9 +124,9 @@ for (const pattern of ['.secrets/', '*.keystore', '*.jks', '*.p12', '*.pfx', 'ke
 }
 
 if (
-  env('AEGIS_ANDROID_KEYSTORE_PASSWORD') &&
-  env('AEGIS_ANDROID_KEY_PASSWORD') &&
-  env('AEGIS_ANDROID_KEYSTORE_PASSWORD') === env('AEGIS_ANDROID_KEY_PASSWORD')
+  env('KALDERASHIELD_ANDROID_KEYSTORE_PASSWORD') &&
+  env('KALDERASHIELD_ANDROID_KEY_PASSWORD') &&
+  env('KALDERASHIELD_ANDROID_KEYSTORE_PASSWORD') === env('KALDERASHIELD_ANDROID_KEY_PASSWORD')
 ) {
   warn('key password matches keystore password; this is valid, but separate passwords are preferable for public release keys');
 }

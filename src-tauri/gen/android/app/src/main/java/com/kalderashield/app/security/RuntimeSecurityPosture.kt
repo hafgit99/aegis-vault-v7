@@ -1,10 +1,10 @@
-package com.hafgit99.aegisvault7.security
+ackage com.kalderashield.app.security
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.os.Build
 import android.os.Debug
-import com.hafgit99.aegisvault7.BuildConfig
+import com.kalderashield.app.BuildConfig
 import org.json.JSONArray
 import org.json.JSONObject
 

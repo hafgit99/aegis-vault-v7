@@ -171,7 +171,7 @@ function countOccurrences(content, pattern) {
 }
 
 function runScan() {
-  console.log('Starting Aegis Vault 7 No-JS-Master-String Security Scan...');
+  console.log('Starting KalderaShield No-JS-Master-String Security Scan...');
   let hasFailed = false;
   const currentCounts = {};
 

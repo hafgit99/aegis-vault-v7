@@ -11,12 +11,12 @@ const packageJson = require(path.join(rootDir, 'package.json'));
 
 const args = new Set(process.argv.slice(2));
 const skipBuild = args.has('--skip-build');
-const zipName = `aegis-vault-7-chrome-v${packageJson.version}.zip`;
-const edgeZipName = `aegis-vault-7-edge-v${packageJson.version}.zip`;
+const zipName = `KalderaShield-vault-7-chrome-v${packageJson.version}.zip`;
+const edgeZipName = `KalderaShield-vault-7-edge-v${packageJson.version}.zip`;
 
 const excludedNames = new Set([
-  'aegis-host.bat',
-  'com.hafgit99.aegisvault7.json',
+  'KalderaShield-host.bat',
+  'com.hafgit99.KalderaShield7.json',
   'chromium-extension.rar',
 ]);
 

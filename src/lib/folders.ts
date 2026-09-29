@@ -18,7 +18,7 @@
 
 import type { FolderIconKey, TagColorKey, VaultFolder } from '../types';
 
-export const FOLDER_LIBRARY_STORAGE_KEY = 'aegis-vault-v7-folder-library-v1';
+export const FOLDER_LIBRARY_STORAGE_KEY = 'kalderashield-folder-library-v1';
 export const ROOT_FOLDER_ID = '__root__';
 export const MAX_FOLDER_DEPTH = 8;
 export const MAX_FOLDER_ENTRIES = 500;

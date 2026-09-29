@@ -1,7 +1,7 @@
-package com.hafgit99.aegisvault7
+ackage com.kalderashield.app
 
-import com.hafgit99.aegisvault7.model.AutofillLaunchRequest
-import com.hafgit99.aegisvault7.model.AutofillSaveCandidate
+import com.kalderashield.app.model.AutofillLaunchRequest
+import com.kalderashield.app.model.AutofillSaveCandidate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -46,7 +46,7 @@ class AutofillModelsTest {
             url = "https://example.com",
             appPackage = "com.example",
             webDomain = "example.com",
-            payloadUri = "content://aegis/tmp/123",
+            payloadUri = "content://kalderashield/tmp/123",
             payloadToken = "token-123"
         )
 

@@ -36,7 +36,7 @@ import {
   setIndexedDbItemSync,
 } from './indexedDbStorage';
 
-const HINT_STORAGE_KEY = 'aegis_password_hint';
+const HINT_STORAGE_KEY = 'KalderaShield_password_hint';
 
 describe('passwordHint', () => {
   beforeEach(() => {

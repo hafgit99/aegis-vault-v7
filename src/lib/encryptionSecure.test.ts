@@ -30,7 +30,7 @@ describe('secure encrypted backup envelope', () => {
       version: '1.2',
       kdf: 'Argon2id',
       kdfImplementation: 'argon2-browser',
-      kdfProfile: 'aegis-backup-cross-platform-v2',
+      kdfProfile: 'KalderaShield-backup-cross-platform-v2',
       cipher: 'WebCrypto AES-256-GCM',
       kdfParams: BACKUP_KDF_PROFILE,
     });

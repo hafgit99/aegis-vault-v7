@@ -5,10 +5,10 @@ const activeLanguage = getPreferredLanguage();
 
 // CSS injected dynamically for the inline overlay, icon, and premium banner
 const inlineStyle = `
-  .aegis-input-container {
+  .KalderaShield-input-container {
     position: relative !important;
   }
-  .aegis-icon-btn {
+  .KalderaShield-icon-btn {
     position: absolute !important;
     right: 8px !important;
     top: 50% !important;
@@ -31,11 +31,11 @@ const inlineStyle = `
     opacity: 0.7 !important;
     transition: opacity 0.2s, transform 0.2s !important;
   }
-  .aegis-icon-btn:hover {
+  .KalderaShield-icon-btn:hover {
     opacity: 1 !important;
     transform: translateY(-50%) scale(1.1) !important;
   }
-  .aegis-dropdown {
+  .KalderaShield-dropdown {
     position: absolute !important;
     background: rgba(15, 23, 42, 0.95) !important;
     backdrop-filter: blur(8px) !important;
@@ -49,9 +49,9 @@ const inlineStyle = `
     font-family: 'Inter', sans-serif !important;
     padding: 6px !important;
     margin-top: 4px !important;
-    animation: aegis-fade-in 0.2s ease-out !important;
+    animation: KalderaShield-fade-in 0.2s ease-out !important;
   }
-  .aegis-dropdown-item {
+  .KalderaShield-dropdown-item {
     padding: 8px 10px !important;
     border-radius: 6px !important;
     color: #f8fafc !important;
@@ -62,23 +62,23 @@ const inlineStyle = `
     gap: 2px !important;
     transition: background 0.15s !important;
   }
-  .aegis-dropdown-item:hover {
+  .KalderaShield-dropdown-item:hover {
     background: rgba(255, 255, 255, 0.08) !important;
   }
-  .aegis-dropdown-title {
+  .KalderaShield-dropdown-title {
     font-weight: 600 !important;
   }
-  .aegis-dropdown-user {
+  .KalderaShield-dropdown-user {
     color: #94a3b8 !important;
     font-size: 10px !important;
   }
-  .aegis-dropdown-locked {
+  .KalderaShield-dropdown-locked {
     padding: 10px !important;
     color: #94a3b8 !important;
     font-size: 11px !important;
     text-align: center !important;
   }
-  .aegis-banner {
+  .KalderaShield-banner {
     position: fixed !important;
     top: -100px !important;
     left: 50% !important;
@@ -100,16 +100,16 @@ const inlineStyle = `
     font-family: 'Inter', system-ui, sans-serif !important;
     transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
   }
-  .aegis-banner.show {
+  .KalderaShield-banner.show {
     top: 16px !important;
   }
-  .aegis-banner-info {
+  .KalderaShield-banner-info {
     display: flex !important;
     align-items: center !important;
     gap: 12px !important;
     flex: 1 !important;
   }
-  .aegis-banner-logo {
+  .KalderaShield-banner-logo {
     width: 32px !important;
     height: 32px !important;
     background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%) !important;
@@ -121,26 +121,26 @@ const inlineStyle = `
     font-weight: bold !important;
     font-size: 16px !important;
   }
-  .aegis-banner-text {
+  .KalderaShield-banner-text {
     display: flex !important;
     flex-direction: column !important;
     gap: 2px !important;
     text-align: left !important;
   }
-  .aegis-banner-title {
+  .KalderaShield-banner-title {
     color: #ffffff !important;
     font-weight: 700 !important;
     font-size: 13px !important;
   }
-  .aegis-banner-desc {
+  .KalderaShield-banner-desc {
     color: #94a3b8 !important;
     font-size: 11px !important;
   }
-  .aegis-banner-actions {
+  .KalderaShield-banner-actions {
     display: flex !important;
     gap: 8px !important;
   }
-  .aegis-banner-btn {
+  .KalderaShield-banner-btn {
     padding: 6px 14px !important;
     border-radius: 6px !important;
     font-size: 12px !important;
@@ -149,30 +149,30 @@ const inlineStyle = `
     border: none !important;
     transition: background 0.15s, transform 0.1s !important;
   }
-  .aegis-banner-btn:active {
+  .KalderaShield-banner-btn:active {
     transform: scale(0.96) !important;
   }
-  .aegis-banner-btn-save {
+  .KalderaShield-banner-btn-save {
     background: #10b981 !important;
     color: white !important;
   }
-  .aegis-banner-btn-save:hover {
+  .KalderaShield-banner-btn-save:hover {
     background: #059669 !important;
   }
-  .aegis-banner-btn-dismiss {
+  .KalderaShield-banner-btn-dismiss {
     background: rgba(255, 255, 255, 0.08) !important;
     color: #cbd5e1 !important;
   }
-  .aegis-banner-btn-dismiss:hover {
+  .KalderaShield-banner-btn-dismiss:hover {
     background: rgba(255, 255, 255, 0.15) !important;
   }
-  @keyframes aegis-fade-in {
+  @keyframes KalderaShield-fade-in {
     from { opacity: 0; transform: translateY(-4px); }
     to { opacity: 1; transform: translateY(0); }
   }
 
   /* Phishing Alert Banner Styles */
-  .aegis-phishing-alert-banner {
+  .KalderaShield-phishing-alert-banner {
     position: fixed !important;
     top: -180px !important;
     left: 50% !important;
@@ -194,34 +194,34 @@ const inlineStyle = `
     font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
     transition: top 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
   }
-  .aegis-phishing-alert-banner.show {
+  .KalderaShield-phishing-alert-banner.show {
     top: 24px !important;
   }
-  .aegis-phishing-alert-icon {
+  .KalderaShield-phishing-alert-icon {
     font-size: 28px !important;
     flex-shrink: 0 !important;
-    animation: aegis-wiggle 1s ease-in-out infinite alternate !important;
+    animation: KalderaShield-wiggle 1s ease-in-out infinite alternate !important;
   }
-  .aegis-phishing-alert-info {
+  .KalderaShield-phishing-alert-info {
     display: flex !important;
     flex-direction: column !important;
     gap: 4px !important;
     flex: 1 !important;
     text-align: left !important;
   }
-  .aegis-phishing-alert-title {
+  .KalderaShield-phishing-alert-title {
     color: #ffffff !important;
     font-weight: 800 !important;
     font-size: 15px !important;
     letter-spacing: 0.3px !important;
   }
-  .aegis-phishing-alert-desc {
+  .KalderaShield-phishing-alert-desc {
     color: #fee2e2 !important;
     font-size: 12px !important;
     line-height: 1.4 !important;
     opacity: 0.95 !important;
   }
-  .aegis-phishing-alert-domain {
+  .KalderaShield-phishing-alert-domain {
     font-family: monospace !important;
     font-size: 11px !important;
     color: #fef08a !important;
@@ -233,7 +233,7 @@ const inlineStyle = `
     margin-top: 4px !important;
     word-break: break-all !important;
   }
-  .aegis-phishing-alert-btn {
+  .KalderaShield-phishing-alert-btn {
     padding: 8px 18px !important;
     border-radius: 8px !important;
     font-size: 12px !important;
@@ -245,15 +245,15 @@ const inlineStyle = `
     box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
     transition: background 0.15s, transform 0.1s, box-shadow 0.15s !important;
   }
-  .aegis-phishing-alert-btn:hover {
+  .KalderaShield-phishing-alert-btn:hover {
     background: #fecaca !important;
     transform: translateY(-1px) !important;
     box-shadow: 0 6px 12px rgba(0,0,0,0.15) !important;
   }
-  .aegis-phishing-alert-btn:active {
+  .KalderaShield-phishing-alert-btn:active {
     transform: translateY(0) !important;
   }
-  @keyframes aegis-wiggle {
+  @keyframes KalderaShield-wiggle {
     0% { transform: rotate(-8deg); }
     100% { transform: rotate(8deg); }
   }
@@ -377,7 +377,7 @@ const EXTENSION_SHADOW_STYLES = `
     all: initial !important;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
   }
-  .aegis-dropdown {
+  .KalderaShield-dropdown {
     position: absolute !important;
     z-index: 2147483647 !important;
     background: #0f172a !important;
@@ -395,7 +395,7 @@ const EXTENSION_SHADOW_STYLES = `
     color: #f8fafc !important;
     box-sizing: border-box !important;
   }
-  .aegis-dropdown-item {
+  .KalderaShield-dropdown-item {
     padding: 8px 10px !important;
     border-radius: 6px !important;
     cursor: pointer !important;
@@ -405,10 +405,10 @@ const EXTENSION_SHADOW_STYLES = `
     transition: background 0.15s ease !important;
     color: #f8fafc !important;
   }
-  .aegis-dropdown-item:hover {
+  .KalderaShield-dropdown-item:hover {
     background: rgba(255, 255, 255, 0.08) !important;
   }
-  .aegis-dropdown-title {
+  .KalderaShield-dropdown-title {
     font-weight: 600 !important;
     color: #f8fafc !important;
     font-size: 13px !important;
@@ -416,20 +416,20 @@ const EXTENSION_SHADOW_STYLES = `
     overflow: hidden !important;
     text-overflow: ellipsis !important;
   }
-  .aegis-dropdown-user {
+  .KalderaShield-dropdown-user {
     font-size: 11px !important;
     color: #94a3b8 !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
   }
-  .aegis-dropdown-locked {
+  .KalderaShield-dropdown-locked {
     padding: 10px !important;
     text-align: center !important;
     color: #94a3b8 !important;
     font-size: 12px !important;
   }
-  .aegis-phishing-alert-banner {
+  .KalderaShield-phishing-alert-banner {
     position: fixed !important;
     top: 12px !important;
     left: 50% !important;
@@ -450,30 +450,30 @@ const EXTENSION_SHADOW_STYLES = `
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
     box-sizing: border-box !important;
   }
-  .aegis-phishing-alert-banner.show {
+  .KalderaShield-phishing-alert-banner.show {
     transform: translateX(-50%) translateY(0) !important;
     opacity: 1 !important;
   }
-  .aegis-phishing-alert-icon {
+  .KalderaShield-phishing-alert-icon {
     font-size: 24px !important;
     flex-shrink: 0 !important;
   }
-  .aegis-phishing-alert-info {
+  .KalderaShield-phishing-alert-info {
     display: flex !important;
     flex-direction: column !important;
     gap: 2px !important;
     flex: 1 !important;
   }
-  .aegis-phishing-alert-title {
+  .KalderaShield-phishing-alert-title {
     font-weight: 700 !important;
     font-size: 14px !important;
     color: #ffffff !important;
   }
-  .aegis-phishing-alert-desc {
+  .KalderaShield-phishing-alert-desc {
     font-size: 12px !important;
     color: #fecdd3 !important;
   }
-  .aegis-phishing-alert-domain {
+  .KalderaShield-phishing-alert-domain {
     font-family: monospace !important;
     background: rgba(0, 0, 0, 0.2) !important;
     padding: 2px 6px !important;
@@ -483,7 +483,7 @@ const EXTENSION_SHADOW_STYLES = `
     display: inline-block !important;
     margin-top: 4px !important;
   }
-  .aegis-phishing-alert-btn {
+  .KalderaShield-phishing-alert-btn {
     background: rgba(255, 255, 255, 0.2) !important;
     border: 1px solid rgba(255, 255, 255, 0.4) !important;
     color: #ffffff !important;
@@ -494,10 +494,10 @@ const EXTENSION_SHADOW_STYLES = `
     cursor: pointer !important;
     flex-shrink: 0 !important;
   }
-  .aegis-phishing-alert-btn:hover {
+  .KalderaShield-phishing-alert-btn:hover {
     background: rgba(255, 255, 255, 0.3) !important;
   }
-  .aegis-banner {
+  .KalderaShield-banner {
     position: fixed !important;
     top: 12px !important;
     right: 12px !important;
@@ -516,16 +516,16 @@ const EXTENSION_SHADOW_STYLES = `
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
     box-sizing: border-box !important;
   }
-  .aegis-banner.show {
+  .KalderaShield-banner.show {
     transform: translateY(0) !important;
     opacity: 1 !important;
   }
-  .aegis-banner-info {
+  .KalderaShield-banner-info {
     display: flex !important;
     align-items: center !important;
     gap: 12px !important;
   }
-  .aegis-banner-logo {
+  .KalderaShield-banner-logo {
     width: 28px !important;
     height: 28px !important;
     background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%) !important;
@@ -537,25 +537,25 @@ const EXTENSION_SHADOW_STYLES = `
     color: white !important;
     font-size: 14px !important;
   }
-  .aegis-banner-text {
+  .KalderaShield-banner-text {
     display: flex !important;
     flex-direction: column !important;
     gap: 2px !important;
   }
-  .aegis-banner-title {
+  .KalderaShield-banner-title {
     font-weight: 700 !important;
     font-size: 13px !important;
     color: #f8fafc !important;
   }
-  .aegis-banner-desc {
+  .KalderaShield-banner-desc {
     font-size: 11px !important;
     color: #94a3b8 !important;
   }
-  .aegis-banner-actions {
+  .KalderaShield-banner-actions {
     display: flex !important;
     gap: 8px !important;
   }
-  .aegis-banner-btn {
+  .KalderaShield-banner-btn {
     padding: 6px 12px !important;
     border-radius: 6px !important;
     font-size: 12px !important;
@@ -563,27 +563,27 @@ const EXTENSION_SHADOW_STYLES = `
     cursor: pointer !important;
     border: none !important;
   }
-  .aegis-banner-btn-save {
+  .KalderaShield-banner-btn-save {
     background: #10b981 !important;
     color: white !important;
   }
-  .aegis-banner-btn-save:hover {
+  .KalderaShield-banner-btn-save:hover {
     background: #059669 !important;
   }
-  .aegis-banner-btn-dismiss {
+  .KalderaShield-banner-btn-dismiss {
     background: rgba(255, 255, 255, 0.1) !important;
     color: #94a3b8 !important;
   }
-  .aegis-banner-btn-dismiss:hover {
+  .KalderaShield-banner-btn-dismiss:hover {
     background: rgba(255, 255, 255, 0.15) !important;
     color: #f8fafc !important;
   }
 `;
 
-function getAegisShadowRoot(): ShadowRoot {
+function getKalderaShieldShadowRoot(): ShadowRoot {
   if (!shadowHost || !shadowHost.isConnected) {
-    shadowHost = document.createElement('aegis-autofill-host');
-    shadowHost.id = 'aegis-root-host';
+    shadowHost = document.createElement('KalderaShield-autofill-host');
+    shadowHost.id = 'KalderaShield-root-host';
     shadowHost.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; width: 0 !important; height: 0 !important; z-index: 2147483647 !important; pointer-events: none !important; border: none !important; margin: 0 !important; padding: 0 !important;';
     
     shadowRootRef = shadowHost.attachShadow({ mode: 'closed' });
@@ -598,24 +598,24 @@ function getAegisShadowRoot(): ShadowRoot {
 }
 
 function showInPagePhishingBanner(result: any) {
-  const root = getAegisShadowRoot();
-  if (root.querySelector('.aegis-phishing-alert-banner')) return;
+  const root = getKalderaShieldShadowRoot();
+  if (root.querySelector('.KalderaShield-phishing-alert-banner')) return;
 
   const banner = document.createElement('div');
-  banner.className = 'aegis-phishing-alert-banner';
+  banner.className = 'KalderaShield-phishing-alert-banner';
   banner.style.pointerEvents = 'auto';
 
   const icon = document.createElement('div');
-  icon.className = 'aegis-phishing-alert-icon';
+  icon.className = 'KalderaShield-phishing-alert-icon';
   icon.textContent = result.threatType === 'homograph' ? '🛡️' : 
                      result.threatType === 'confusable' ? '🔤' :
                      result.threatType === 'typosquat' ? '🎯' : '⚠️';
 
   const info = document.createElement('div');
-  info.className = 'aegis-phishing-alert-info';
+  info.className = 'KalderaShield-phishing-alert-info';
 
   const title = document.createElement('span');
-  title.className = 'aegis-phishing-alert-title';
+  title.className = 'KalderaShield-phishing-alert-title';
   
   let titleKey = 'phishing.warning';
   let descKey = 'phishing.warning';
@@ -633,7 +633,7 @@ function showInPagePhishingBanner(result: any) {
   title.textContent = translate(titleKey as any, activeLanguage);
 
   const desc = document.createElement('span');
-  desc.className = 'aegis-phishing-alert-desc';
+  desc.className = 'KalderaShield-phishing-alert-desc';
   let descText = translate(descKey as any, activeLanguage);
   if (result.matchedDomain && (result.threatType === 'typosquat' || result.threatType === 'confusable')) {
     descText += ` ${result.matchedDomain}`;
@@ -645,13 +645,13 @@ function showInPagePhishingBanner(result: any) {
 
   if (result.details) {
     const details = document.createElement('span');
-    details.className = 'aegis-phishing-alert-domain';
+    details.className = 'KalderaShield-phishing-alert-domain';
     details.textContent = result.details;
     info.appendChild(details);
   }
 
   const dismissBtn = document.createElement('button');
-  dismissBtn.className = 'aegis-phishing-alert-btn';
+  dismissBtn.className = 'KalderaShield-phishing-alert-btn';
   dismissBtn.textContent = translate('phishing.page.dismiss', activeLanguage);
   dismissBtn.addEventListener('click', () => {
     banner.classList.remove('show');
@@ -735,12 +735,12 @@ function closeDropdown() {
 }
 
 function showSecurityToast(message: string): void {
-  const root = getAegisShadowRoot();
-  const existing = root.querySelector('.aegis-security-toast');
+  const root = getKalderaShieldShadowRoot();
+  const existing = root.querySelector('.KalderaShield-security-toast');
   if (existing) existing.remove();
 
   const toast = document.createElement('div');
-  toast.className = 'aegis-security-toast';
+  toast.className = 'KalderaShield-security-toast';
   toast.style.cssText = `
     position: fixed !important; top: 20px !important; right: 20px !important; z-index: 2147483647 !important;
     background: #ef4444 !important; color: #ffffff !important; padding: 12px 18px !important; border-radius: 8px !important;
@@ -775,7 +775,7 @@ chrome.runtime.onMessage.addListener((message) => {
     if (target) {
       fillPageCredentials(target, message.username, message.password);
     }
-  } else if (message.action === 'aegis_phishing_alert') {
+  } else if (message.action === 'KalderaShield_phishing_alert') {
     activePhishingThreat = {
       isSuspicious: true,
       threatType: message.threatType,
@@ -894,19 +894,19 @@ function scanAndInject() {
     if (!isLoginInput(input)) return;
     
     // Avoid double injection
-    if (input.getAttribute('data-aegis-injected') === 'true') return;
-    input.setAttribute('data-aegis-injected', 'true');
+    if (input.getAttribute('data-KalderaShield-injected') === 'true') return;
+    input.setAttribute('data-KalderaShield-injected', 'true');
 
     const parent = input.parentElement;
     if (!parent) return;
 
-    parent.classList.add('aegis-input-container');
+    parent.classList.add('KalderaShield-input-container');
 
     const iconBtn = document.createElement('button');
-    iconBtn.className = 'aegis-icon-btn';
+    iconBtn.className = 'KalderaShield-icon-btn';
     iconBtn.textContent = 'A';
     iconBtn.type = 'button';
-    iconBtn.title = 'Aegis Vault Auto-fill';
+    iconBtn.title = 'KalderaShield Auto-fill';
 
     iconBtn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -956,7 +956,7 @@ function showDropdown(targetInput: HTMLInputElement, response: any) {
 
   const rect = targetInput.getBoundingClientRect();
   const dropdown = document.createElement('div');
-  dropdown.className = 'aegis-dropdown';
+  dropdown.className = 'KalderaShield-dropdown';
   dropdown.style.pointerEvents = 'auto';
   
   // Set floating styles and absolute coordinates relative to the page viewport bounds
@@ -970,14 +970,14 @@ function showDropdown(targetInput: HTMLInputElement, response: any) {
 
   if (activePhishingThreat) {
     const warningMsg = document.createElement('div');
-    warningMsg.className = 'aegis-dropdown-locked';
+    warningMsg.className = 'KalderaShield-dropdown-locked';
     warningMsg.style.color = '#ef4444';
     warningMsg.style.fontWeight = 'bold';
     warningMsg.textContent = translate('phishing.autofill.blocked', activeLanguage);
     dropdown.appendChild(warningMsg);
   } else if (!response || response.locked) {
     const lockedMsg = document.createElement('div');
-    lockedMsg.className = 'aegis-dropdown-locked';
+    lockedMsg.className = 'KalderaShield-dropdown-locked';
     lockedMsg.textContent = translate('locked.title', activeLanguage);
     dropdown.appendChild(lockedMsg);
   } else {
@@ -985,15 +985,15 @@ function showDropdown(targetInput: HTMLInputElement, response: any) {
     if (credentials.length > 0) {
       credentials.forEach((item: any) => {
         const option = document.createElement('div');
-        option.className = 'aegis-dropdown-item';
+        option.className = 'KalderaShield-dropdown-item';
         
         const title = document.createElement('span');
-        title.className = 'aegis-dropdown-title';
+        title.className = 'KalderaShield-dropdown-title';
         title.textContent = item.title;
         option.appendChild(title);
 
         const user = document.createElement('span');
-        user.className = 'aegis-dropdown-user';
+        user.className = 'KalderaShield-dropdown-user';
         user.textContent = item.username || '---';
         option.appendChild(user);
 
@@ -1007,7 +1007,7 @@ function showDropdown(targetInput: HTMLInputElement, response: any) {
       });
     } else {
       const emptyMsg = document.createElement('div');
-      emptyMsg.className = 'aegis-dropdown-locked';
+      emptyMsg.className = 'KalderaShield-dropdown-locked';
       emptyMsg.textContent = translate('no.matching', activeLanguage);
       dropdown.appendChild(emptyMsg);
     }
@@ -1020,13 +1020,13 @@ function showDropdown(targetInput: HTMLInputElement, response: any) {
   dropdown.appendChild(genDivider);
 
   const genOption = document.createElement('div');
-  genOption.className = 'aegis-dropdown-item';
+  genOption.className = 'KalderaShield-dropdown-item';
   genOption.style.background = 'rgba(16, 185, 129, 0.1)';
   genOption.style.border = '1px dashed rgba(16, 185, 129, 0.3)';
   genOption.style.marginTop = '4px';
 
   const genTitle = document.createElement('span');
-  genTitle.className = 'aegis-dropdown-title';
+  genTitle.className = 'KalderaShield-dropdown-title';
   genTitle.style.color = '#10b981';
   genTitle.style.fontWeight = 'bold';
   genTitle.style.display = 'flex';
@@ -1088,7 +1088,7 @@ function copyToClipboardWithAutoClear(text: string, timeoutMs = 30000) {
 
   dropdown.appendChild(genOption);
 
-  const root = getAegisShadowRoot();
+  const root = getKalderaShieldShadowRoot();
   root.appendChild(dropdown);
   activeDropdown = dropdown;
 }
@@ -1233,29 +1233,29 @@ interface VaultQueryCredential {
 
 // Show premium glassmorphic top prompt banner inside isolated Shadow DOM
 function showSavePromptBanner(cred: CapturedCredentialPayload) {
-  const root = getAegisShadowRoot();
-  if (root.querySelector('.aegis-banner')) return;
+  const root = getKalderaShieldShadowRoot();
+  if (root.querySelector('.KalderaShield-banner')) return;
 
   const banner = document.createElement('div');
-  banner.className = 'aegis-banner';
+  banner.className = 'KalderaShield-banner';
   banner.style.pointerEvents = 'auto';
   
   const info = document.createElement('div');
-  info.className = 'aegis-banner-info';
+  info.className = 'KalderaShield-banner-info';
   
   const logo = document.createElement('div');
-  logo.className = 'aegis-banner-logo';
+  logo.className = 'KalderaShield-banner-logo';
   logo.textContent = 'A';
   
   const text = document.createElement('div');
-  text.className = 'aegis-banner-text';
+  text.className = 'KalderaShield-banner-text';
   
   const title = document.createElement('span');
-  title.className = 'aegis-banner-title';
+  title.className = 'KalderaShield-banner-title';
   title.textContent = translate('banner.saveTitle', activeLanguage);
   
   const desc = document.createElement('span');
-  desc.className = 'aegis-banner-desc';
+  desc.className = 'KalderaShield-banner-desc';
   desc.textContent = translate('banner.saveDesc', activeLanguage) + (cred.username ? ` (${cred.username})` : '');
   
   text.appendChild(title);
@@ -1264,10 +1264,10 @@ function showSavePromptBanner(cred: CapturedCredentialPayload) {
   info.appendChild(text);
   
   const actions = document.createElement('div');
-  actions.className = 'aegis-banner-actions';
+  actions.className = 'KalderaShield-banner-actions';
   
   const saveBtn = document.createElement('button');
-  saveBtn.className = 'aegis-banner-btn aegis-banner-btn-save';
+  saveBtn.className = 'KalderaShield-banner-btn KalderaShield-banner-btn-save';
   saveBtn.textContent = translate('banner.saveBtn', activeLanguage);
   saveBtn.addEventListener('click', () => {
     chrome.runtime.sendMessage({
@@ -1286,7 +1286,7 @@ function showSavePromptBanner(cred: CapturedCredentialPayload) {
   });
   
   const dismissBtn = document.createElement('button');
-  dismissBtn.className = 'aegis-banner-btn aegis-banner-btn-dismiss';
+  dismissBtn.className = 'KalderaShield-banner-btn KalderaShield-banner-btn-dismiss';
   dismissBtn.textContent = translate('banner.dismissBtn', activeLanguage);
   dismissBtn.addEventListener('click', () => {
     chrome.runtime.sendMessage({ action: 'clear_pending_credential' }, () => {

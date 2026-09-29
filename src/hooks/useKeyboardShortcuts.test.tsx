@@ -72,12 +72,12 @@ describe('useKeyboardShortcuts', () => {
 
   it('dispatchFocusSearchShortcut emits the DOM event consumed by the search input', () => {
     const listener = vi.fn();
-    window.addEventListener('aegis-focus-search', listener);
+    window.addEventListener('KalderaShield-focus-search', listener);
     try {
       dispatchFocusSearchShortcut();
       expect(listener).toHaveBeenCalledTimes(1);
     } finally {
-      window.removeEventListener('aegis-focus-search', listener);
+      window.removeEventListener('KalderaShield-focus-search', listener);
     }
   });
 });

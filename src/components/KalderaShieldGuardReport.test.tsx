@@ -8,17 +8,17 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { LanguageProvider } from '../i18n/LanguageContext';
 import { languageStorageKey } from '../i18n/translations';
 import { APP_SECURITY_BRAND } from '../lib/branding';
-import AegisGuardReport from './AegisGuardReport';
+import KalderaShieldGuardReport from './KalderaShieldGuardReport';
 
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
 });
 
-describe('AegisGuardReport', () => {
+describe('KalderaShieldGuardReport', () => {
   it('renders the secure report when the audit score is high', () => {
     render(
-      <AegisGuardReport
+      <KalderaShieldGuardReport
         auditReport={{
           score: 95,
           weakCount: 0,
@@ -35,7 +35,7 @@ describe('AegisGuardReport', () => {
 
   it('renders the risky report with weak and reused counts', () => {
     render(
-      <AegisGuardReport
+      <KalderaShieldGuardReport
         auditReport={{
           score: 42,
           weakCount: 3,
@@ -55,7 +55,7 @@ describe('AegisGuardReport', () => {
 
     render(
       <LanguageProvider>
-        <AegisGuardReport
+        <KalderaShieldGuardReport
           auditReport={{
             score: 42,
             weakCount: 3,

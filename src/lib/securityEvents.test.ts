@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  AegisSecurityError,
+  KalderaShieldSecurityError,
   logSecurityEvent,
   publicSecurityErrorMessage,
   securityEventCodes,
@@ -13,7 +13,7 @@ describe('security event taxonomy', () => {
 
   it('creates structured security errors with stable codes and severity', () => {
     const cause = new Error('disk failure');
-    const error = new AegisSecurityError(
+    const error = new KalderaShieldSecurityError(
       securityEventCodes.storageDesktopReadFailed,
       'Could not read desktop vault payload.',
       'critical',
@@ -21,7 +21,7 @@ describe('security event taxonomy', () => {
     );
 
     expect(error).toBeInstanceOf(Error);
-    expect(error.name).toBe('AegisSecurityError');
+    expect(error.name).toBe('KalderaShieldSecurityError');
     expect(error.code).toBe(securityEventCodes.storageDesktopReadFailed);
     expect(error.severity).toBe('critical');
     expect(error.cause).toBe(cause);
@@ -29,7 +29,7 @@ describe('security event taxonomy', () => {
   });
 
   it('uses warning severity by default for structured security errors', () => {
-    const error = new AegisSecurityError(securityEventCodes.networkBlocked, 'Blocked outbound request.');
+    const error = new KalderaShieldSecurityError(securityEventCodes.networkBlocked, 'Blocked outbound request.');
 
     expect(error.severity).toBe('warning');
   });
@@ -49,7 +49,7 @@ describe('security event taxonomy', () => {
 
     expect(warnSpy).toHaveBeenCalledTimes(1);
     expect(warnSpy.mock.calls[0]![0]).toEqual({
-      source: 'AegisSecurity',
+      source: 'KalderaShieldSecurity',
       code: securityEventCodes.storageLocalFallbackUsed,
       severity: 'warning',
       message: 'Loaded fallback mirror.',
@@ -99,7 +99,7 @@ describe('security event taxonomy', () => {
 
     expect(warnSpy).toHaveBeenCalledWith(expect.objectContaining({ meta: undefined }));
     expect(publicSecurityErrorMessage()).toBe(
-      'A secure operation could not be completed. Please try again or restart Aegis Vault.',
+      'A secure operation could not be completed. Please try again or restart KalderaShield.',
     );
   });
 

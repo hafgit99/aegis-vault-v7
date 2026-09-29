@@ -18,7 +18,7 @@
 
 import type { TagColorKey, TagDefinition } from '../types';
 
-export const TAG_LIBRARY_STORAGE_KEY = 'aegis-vault-v7-tag-library-v1';
+export const TAG_LIBRARY_STORAGE_KEY = 'kalderashield-tag-library-v1';
 export const MAX_TAG_LIBRARY_ENTRIES = 200;
 
 /**

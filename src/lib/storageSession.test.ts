@@ -34,7 +34,7 @@ const disableBiometric = vi.hoisted(() => vi.fn());
 const hydrateBiometric = vi.hoisted(() => vi.fn(async () => undefined));
 const runWaSqliteActiveBackendMigration = vi.hoisted(() => vi.fn());
 const clearPersistedActiveVaultStorageBackend = vi.hoisted(() => vi.fn(() => {
-  localStorage.removeItem('aegis_vault_storage_active_backend');
+  localStorage.removeItem('KalderaShield_vault_storage_active_backend');
 }));
 const getVaultStorageRepository = vi.hoisted(() => vi.fn(() => sqliteOPFSInstance));
 const restoreOrActivateDefaultVaultStorageBackend = vi.hoisted(() => vi.fn(async () => 'kept-legacy-opfs'));
@@ -69,11 +69,11 @@ vi.mock('./indexedDbStorage', () => ({
   setIndexedDbItemSync: vi.fn((key: string, value: string) => localStorage.setItem(key, value)),
   removeIndexedDbItemSync: vi.fn((key: string) => localStorage.removeItem(key)),
   clearAllSetupFlagsSync: vi.fn(() => {
-    localStorage.removeItem('aegis_is_setup');
-    localStorage.removeItem('aegis_sqlite_fallback');
-    localStorage.removeItem('aegis_account_secret_profile');
-    localStorage.removeItem('aegis_account_secret_key_remembered');
-    localStorage.removeItem('aegis_vault_storage_active_backend');
+    localStorage.removeItem('KalderaShield_is_setup');
+    localStorage.removeItem('kalderashield_fallback');
+    localStorage.removeItem('KalderaShield_account_secret_profile');
+    localStorage.removeItem('KalderaShield_account_secret_key_remembered');
+    localStorage.removeItem('KalderaShield_vault_storage_active_backend');
   }),
 }));
 
@@ -132,7 +132,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   closeVaultSession();
-  delete window.AegisAndroidSecureStorage;
+  delete window.KalderaShieldAndroidSecureStorage;
   delete (window as any).__TAURI_INTERNALS__;
   localStorage.clear();
   sessionStorage.clear();
@@ -144,7 +144,7 @@ afterEach(() => {
 describe('vault session storage', () => {
   it('initializes restored active storage, biometric state, and secure-storage migration in order', async () => {
     const secureValues = new Map<string, string>();
-    window.AegisAndroidSecureStorage = {
+    window.KalderaShieldAndroidSecureStorage = {
       getItem: vi.fn((key) => secureValues.get(key) ?? null),
       setItem: vi.fn((key, value) => {
         secureValues.set(key, value);
@@ -152,7 +152,7 @@ describe('vault session storage', () => {
       }),
       removeItem: vi.fn((key) => secureValues.delete(key)),
     };
-    localStorage.setItem('aegis_account_secret_key_remembered', 'A3-LEGACY-SECRET');
+    localStorage.setItem('KalderaShield_account_secret_key_remembered', 'A3-LEGACY-SECRET');
 
     await initializeStorage();
 
@@ -167,11 +167,11 @@ describe('vault session storage', () => {
     // so we only assert both were called (no strict ordering).
     expect(sqliteOPFSInstance.hydrate).toHaveBeenCalledTimes(1);
     expect(hydrateBiometric).toHaveBeenCalledTimes(1);
-    expect(window.AegisAndroidSecureStorage.setItem).toHaveBeenCalledWith(
-      'aegis_account_secret_key_remembered',
+    expect(window.KalderaShieldAndroidSecureStorage.setItem).toHaveBeenCalledWith(
+      'KalderaShield_account_secret_key_remembered',
       'A3-LEGACY-SECRET',
     );
-    expect(localStorage.getItem('aegis_account_secret_key_remembered')).toBeNull();
+    expect(localStorage.getItem('KalderaShield_account_secret_key_remembered')).toBeNull();
   });
 
   it('hydrates the repository restored by the persisted wa-sqlite marker during initialization', async () => {
@@ -241,14 +241,14 @@ describe('vault session storage', () => {
 
     expect(sqliteOPFSInstance.setupMaster).toHaveBeenCalledWith('master-pass');
     expect(hasActiveMasterPassword()).toBe(true);
-    expect(sessionStorage.getItem('aegis_session_master_pass')).toBeNull();
-    expect(localStorage.getItem('aegis_is_setup')).toBe('true');
+    expect(sessionStorage.getItem('KalderaShield_session_master_pass')).toBeNull();
+    expect(localStorage.getItem('KalderaShield_is_setup')).toBe('true');
     expect(sqliteOPFSInstance.reseedDemoWithKey).not.toHaveBeenCalled();
   });
 
   it('sets up a secret-key protected vault and can remember the second key locally', async () => {
     const storageMap = new Map<string, string>();
-    window.AegisAndroidSecureStorage = {
+    window.KalderaShieldAndroidSecureStorage = {
       getItem: vi.fn((key) => storageMap.get(key) ?? null),
       setItem: vi.fn((key, val) => { storageMap.set(key, val); return true; }),
       removeItem: vi.fn((key) => { storageMap.delete(key); return true; }),
@@ -261,32 +261,32 @@ describe('vault session storage', () => {
     );
 
     expect(sqliteOPFSInstance.setupMaster).toHaveBeenCalledWith(
-      'aegis-vault-v7:master-pass\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
+      'kalderashield:master-pass\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
     );
     expect(isAccountSecretKeyRequired()).toBe(true);
     expect(getRememberedAccountSecretKey()).toBe('A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567');
     expect(hasActiveMasterPassword()).toBe(true);
     expect(hasActiveBackupPassword()).toBe(true);
-    expect(localStorage.getItem('aegis_is_setup')).toBe('true');
+    expect(localStorage.getItem('KalderaShield_is_setup')).toBe('true');
     expect(sqliteOPFSInstance.reseedDemoWithKey).not.toHaveBeenCalled();
   });
 
   it('refuses to store remembered secret keys in device storage when hardware secure bridge is absent (R-5)', () => {
-    delete (window as any).AegisAndroidSecureStorage;
+    delete (window as any).KalderaShieldAndroidSecureStorage;
 
     const stored = rememberAccountSecretKey('  a3-abcd-efgh-ijkl-mnop-qrst-uvwx-yz23-4567  ');
 
     expect(stored).toBe(false);
-    expect(localStorage.getItem('aegis_account_secret_key_remembered')).toBeNull();
+    expect(localStorage.getItem('KalderaShield_account_secret_key_remembered')).toBeNull();
     expect(getRememberedAccountSecretKey()).toBeNull();
   });
 
   it('removes remembered secret keys from both secure storage and the legacy fallback', () => {
     const secureValues = new Map<string, string>([[
-      'aegis_account_secret_key_remembered',
+      'KalderaShield_account_secret_key_remembered',
       'A3-SECURE-SECRET',
     ]]);
-    window.AegisAndroidSecureStorage = {
+    window.KalderaShieldAndroidSecureStorage = {
       getItem: vi.fn((key) => secureValues.get(key) ?? null),
       setItem: vi.fn((key, value) => {
         secureValues.set(key, value);
@@ -294,20 +294,20 @@ describe('vault session storage', () => {
       }),
       removeItem: vi.fn((key) => secureValues.delete(key)),
     };
-    localStorage.setItem('aegis_account_secret_key_remembered', 'A3-LEGACY-SECRET');
+    localStorage.setItem('KalderaShield_account_secret_key_remembered', 'A3-LEGACY-SECRET');
 
     forgetRememberedAccountSecretKey();
 
-    expect(window.AegisAndroidSecureStorage.removeItem).toHaveBeenCalledWith(
-      'aegis_account_secret_key_remembered',
+    expect(window.KalderaShieldAndroidSecureStorage.removeItem).toHaveBeenCalledWith(
+      'KalderaShield_account_secret_key_remembered',
     );
-    expect(localStorage.getItem('aegis_account_secret_key_remembered')).toBeNull();
+    expect(localStorage.getItem('KalderaShield_account_secret_key_remembered')).toBeNull();
     expect(getRememberedAccountSecretKey()).toBeNull();
   });
 
   it('stores remembered secret keys in Android secure storage when the bridge is available', async () => {
     const secureValues = new Map<string, string>();
-    window.AegisAndroidSecureStorage = {
+    window.KalderaShieldAndroidSecureStorage = {
       getItem: vi.fn((key) => secureValues.get(key) ?? null),
       setItem: vi.fn((key, value) => {
         secureValues.set(key, value);
@@ -322,17 +322,17 @@ describe('vault session storage', () => {
       true,
     );
 
-    expect(window.AegisAndroidSecureStorage.setItem).toHaveBeenCalledWith(
-      'aegis_account_secret_key_remembered',
+    expect(window.KalderaShieldAndroidSecureStorage.setItem).toHaveBeenCalledWith(
+      'KalderaShield_account_secret_key_remembered',
       'A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
     );
-    expect(localStorage.getItem('aegis_account_secret_key_remembered')).toBeNull();
+    expect(localStorage.getItem('KalderaShield_account_secret_key_remembered')).toBeNull();
     expect(getRememberedAccountSecretKey()).toBe('A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567');
   });
 
   it('migrates legacy remembered secret keys into Android secure storage during initialization', async () => {
     const secureValues = new Map<string, string>();
-    window.AegisAndroidSecureStorage = {
+    window.KalderaShieldAndroidSecureStorage = {
       getItem: vi.fn((key) => secureValues.get(key) ?? null),
       setItem: vi.fn((key, value) => {
         secureValues.set(key, value);
@@ -340,16 +340,16 @@ describe('vault session storage', () => {
       }),
       removeItem: vi.fn((key) => secureValues.delete(key)),
     };
-    localStorage.setItem('aegis_account_secret_key_remembered', 'A3-LEGACY-SECRET');
+    localStorage.setItem('KalderaShield_account_secret_key_remembered', 'A3-LEGACY-SECRET');
     sqliteOPFSInstance.verifyPassword.mockResolvedValue(false);
 
     await verifyMasterPassword('wrong-pass');
 
-    expect(window.AegisAndroidSecureStorage.setItem).toHaveBeenCalledWith(
-      'aegis_account_secret_key_remembered',
+    expect(window.KalderaShieldAndroidSecureStorage.setItem).toHaveBeenCalledWith(
+      'KalderaShield_account_secret_key_remembered',
       'A3-LEGACY-SECRET',
     );
-    expect(localStorage.getItem('aegis_account_secret_key_remembered')).toBeNull();
+    expect(localStorage.getItem('KalderaShield_account_secret_key_remembered')).toBeNull();
     expect(getRememberedAccountSecretKey()).toBe('A3-LEGACY-SECRET');
   });
 
@@ -360,11 +360,11 @@ describe('vault session storage', () => {
 
     expect(hasActiveMasterPassword()).toBe(true);
     expect(migrateLegacyAttachmentsToAesGcm).toHaveBeenCalledTimes(1);
-    expect(sessionStorage.getItem('aegis_session_master_pass')).toBeNull();
+    expect(sessionStorage.getItem('KalderaShield_session_master_pass')).toBeNull();
   });
 
   it('verifies secret-key protected vaults with the combined credential', async () => {
-    localStorage.setItem('aegis_account_secret_profile', JSON.stringify({
+    localStorage.setItem('KalderaShield_account_secret_profile', JSON.stringify({
       enabled: true,
       fingerprint: '3456-7',
     }));
@@ -376,7 +376,7 @@ describe('vault session storage', () => {
     )).resolves.toBe(true);
 
     expect(sqliteOPFSInstance.verifyPassword).toHaveBeenCalledWith(
-      'aegis-vault-v7:master-pass\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
+      'kalderashield:master-pass\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
     );
     expect(hasActiveMasterPassword()).toBe(true);
     expect(hasActiveBackupPassword()).toBe(true);
@@ -403,18 +403,18 @@ describe('vault session storage', () => {
   });
 
   it('rotates only the master password portion for secret-key protected vaults', async () => {
-    localStorage.setItem('aegis_account_secret_profile', JSON.stringify({
+    localStorage.setItem('KalderaShield_account_secret_profile', JSON.stringify({
       enabled: true,
       fingerprint: '3456-7',
     }));
     sqliteOPFSInstance.verifyPassword.mockResolvedValueOnce(true);
-    openVaultSession('aegis-vault-v7:old-master-pass\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567', 'old-master-pass', testVaultKey);
+    openVaultSession('kalderashield:old-master-pass\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567', 'old-master-pass', testVaultKey);
 
     await changeMasterPassword('old-master-pass', 'new-master-pass-12');
 
-    const newCredential = 'aegis-vault-v7:new-master-pass-12\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567';
+    const newCredential = 'kalderashield:new-master-pass-12\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567';
     expect(sqliteOPFSInstance.changeMasterPassword).toHaveBeenCalledWith(
-      'aegis-vault-v7:old-master-pass\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
+      'kalderashield:old-master-pass\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567',
       newCredential,
     );
     expect(hasActiveMasterPassword()).toBe(true);
@@ -455,7 +455,7 @@ describe('vault session storage', () => {
       expect(warnSpy).toHaveBeenCalledWith(expect.objectContaining({
         code: 'attachment.legacyMigration.failed',
         severity: 'warning',
-        source: 'AegisSecurity',
+        source: 'KalderaShieldSecurity',
         meta: expect.objectContaining({ error: 'migration failed' }),
       }));
     } finally {
@@ -474,13 +474,13 @@ describe('vault session storage', () => {
 
   it('clears the in-memory session when the system is reset', async () => {
     openVaultSession('master-pass', 'master-pass', testVaultKey);
-    localStorage.setItem('aegis_vault_storage_active_backend', JSON.stringify({ backend: 'wa-sqlite' }));
+    localStorage.setItem('KalderaShield_vault_storage_active_backend', JSON.stringify({ backend: 'wa-sqlite' }));
 
     await resetSystem();
 
     expect(hasActiveMasterPassword()).toBe(false);
     expect(clearPersistedActiveVaultStorageBackend).toHaveBeenCalledTimes(1);
-    expect(localStorage.getItem('aegis_vault_storage_active_backend')).toBeNull();
+    expect(localStorage.getItem('KalderaShield_vault_storage_active_backend')).toBeNull();
   });
   it('requires an active session before running wa-sqlite active backend migration', async () => {
     await expect(migrateActiveVaultStorageToWaSqlite()).rejects.toThrow(
@@ -497,14 +497,14 @@ describe('vault session storage', () => {
       readinessReport: { status: 'ready', issues: [] },
       smokeResult: {
         status: 'passed',
-        databaseName: '/aegis-wa-sqlite.desktop.db',
-        vfsName: 'aegis-wa-sqlite-desktop-idb',
+        databaseName: '/KalderaShield-wa-sqlite.desktop.db',
+        vfsName: 'KalderaShield-wa-sqlite-desktop-idb',
       },
       dryRunResult: null,
       persistentMigrationCandidateResult: null,
       promotionResult: null,
     });
-    localStorage.removeItem('aegis_is_setup');
+    localStorage.removeItem('KalderaShield_is_setup');
     openVaultSession('master-pass', 'master-pass', testVaultKey);
 
     await expect(migrateActiveVaultStorageToWaSqlite()).resolves.toMatchObject({
@@ -513,7 +513,7 @@ describe('vault session storage', () => {
     });
 
     expect(runWaSqliteActiveBackendMigration).toHaveBeenCalledWith('master-pass');
-    expect(localStorage.getItem('aegis_is_setup')).toBe('true');
+    expect(localStorage.getItem('KalderaShield_is_setup')).toBe('true');
   });
 
   // ─── Y-12: promotion must not leave the pre-migration key in the session ───
@@ -544,8 +544,8 @@ describe('vault session storage', () => {
       readinessReport: { status: 'ready', issues: [] },
       smokeResult: {
         status: 'passed',
-        databaseName: '/aegis-wa-sqlite.desktop.db',
-        vfsName: 'aegis-wa-sqlite-desktop-idb',
+        databaseName: '/KalderaShield-wa-sqlite.desktop.db',
+        vfsName: 'KalderaShield-wa-sqlite-desktop-idb',
       },
       dryRunResult: null,
       persistentMigrationCandidateResult: null,
@@ -556,7 +556,7 @@ describe('vault session storage', () => {
   it('Y-12: replaces the pre-migration session key with the promoted repository key', async () => {
     mockPromotedMigration();
     sqliteOPFSInstance.deriveEncryptionKey.mockResolvedValueOnce(expectedPromotedKey());
-    localStorage.removeItem('aegis_is_setup');
+    localStorage.removeItem('KalderaShield_is_setup');
     // The session still holds the OLD OP's key at promotion time.
     openVaultSession('master-pass', 'master-pass', preMigrationVaultKey);
 
@@ -571,7 +571,7 @@ describe('vault session storage', () => {
   it('Y-12: derives from the promoted repository even when a session key is already held', async () => {
     mockPromotedMigration();
     sqliteOPFSInstance.deriveEncryptionKey.mockResolvedValueOnce(expectedPromotedKey());
-    localStorage.removeItem('aegis_is_setup');
+    localStorage.removeItem('KalderaShield_is_setup');
     openVaultSession('master-pass', 'master-pass', preMigrationVaultKey);
 
     await migrateActiveVaultStorageToWaSqlite();
@@ -585,13 +585,13 @@ describe('vault session storage', () => {
       status: 'blocked',
       issues: ['wa-sqlite-promotion-blocked'],
       readinessReport: { status: 'blocked', issues: ['wa-sqlite-promotion-blocked'] },
-      smokeResult: { status: 'passed', databaseName: '/aegis-wa-sqlite.desktop.db', vfsName: 'aegis-wa-sqlite-desktop-idb' },
+      smokeResult: { status: 'passed', databaseName: '/KalderaShield-wa-sqlite.desktop.db', vfsName: 'KalderaShield-wa-sqlite-desktop-idb' },
       dryRunResult: null,
       persistentMigrationCandidateResult: null,
       promotionResult: null,
     });
     sqliteOPFSInstance.deriveEncryptionKey.mockClear();
-    localStorage.removeItem('aegis_is_setup');
+    localStorage.removeItem('KalderaShield_is_setup');
     openVaultSession('master-pass', 'master-pass', preMigrationVaultKey);
 
     await migrateActiveVaultStorageToWaSqlite();
@@ -606,7 +606,7 @@ describe('vault session storage', () => {
     sqliteOPFSInstance.deriveEncryptionKey.mockRejectedValueOnce(
       new Error('derive-from-promoted-repository-failed'),
     );
-    localStorage.removeItem('aegis_is_setup');
+    localStorage.removeItem('KalderaShield_is_setup');
     openVaultSession('master-pass', 'master-pass', preMigrationVaultKey);
 
     // Failing loudly matters: silently retaining the pre-migration key is
@@ -620,7 +620,7 @@ describe('vault session storage', () => {
     mockPromotedMigration();
     const derived = expectedPromotedKey();
     sqliteOPFSInstance.deriveEncryptionKey.mockResolvedValueOnce(derived);
-    localStorage.removeItem('aegis_is_setup');
+    localStorage.removeItem('KalderaShield_is_setup');
     openVaultSession('master-pass', 'master-pass', preMigrationVaultKey);
 
     await migrateActiveVaultStorageToWaSqlite();
@@ -632,7 +632,7 @@ describe('vault session storage', () => {
   });
 
   it('preserves secret-key combined credentials during wa-sqlite active backend migration', async () => {
-    const combinedCredential = 'aegis-vault-v7:master-pass\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567';
+    const combinedCredential = 'kalderashield:master-pass\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567';
     runWaSqliteActiveBackendMigration.mockResolvedValueOnce({
       status: 'blocked',
       issues: ['wa-sqlite-promotion-dry-run-not-run'],
@@ -642,14 +642,14 @@ describe('vault session storage', () => {
       },
       smokeResult: {
         status: 'passed',
-        databaseName: '/aegis-wa-sqlite.desktop.db',
-        vfsName: 'aegis-wa-sqlite-desktop-idb',
+        databaseName: '/KalderaShield-wa-sqlite.desktop.db',
+        vfsName: 'KalderaShield-wa-sqlite-desktop-idb',
       },
       dryRunResult: null,
       persistentMigrationCandidateResult: null,
       promotionResult: null,
     });
-    localStorage.removeItem('aegis_is_setup');
+    localStorage.removeItem('KalderaShield_is_setup');
     openVaultSession(combinedCredential, 'master-pass');
 
     await expect(migrateActiveVaultStorageToWaSqlite()).resolves.toMatchObject({
@@ -658,7 +658,7 @@ describe('vault session storage', () => {
     });
 
     expect(runWaSqliteActiveBackendMigration).toHaveBeenCalledWith(combinedCredential);
-    expect(localStorage.getItem('aegis_is_setup')).toBeNull();
+    expect(localStorage.getItem('KalderaShield_is_setup')).toBeNull();
   });
 
   it('Y-13: surfaces an unavailable wa-sqlite backend instead of continuing with an empty vault', async () => {
@@ -738,28 +738,28 @@ describe('vault session storage', () => {
   });
 
   it('detects setup from the versioned sqlite fallback before using the legacy setup flag', () => {
-    localStorage.setItem('aegis_sqlite_fallback', JSON.stringify({
+    localStorage.setItem('kalderashield_fallback', JSON.stringify({
       user_secrets: [{ username: 'owner', argon_hash: '$argon2id$salt$hash' }],
     }));
 
     expect(isMasterPasswordSet()).toBe(true);
 
-    localStorage.setItem('aegis_sqlite_fallback', '{not json');
+    localStorage.setItem('kalderashield_fallback', '{not json');
     expect(isMasterPasswordSet()).toBe(false);
 
-    localStorage.setItem('aegis_is_setup', 'true');
+    localStorage.setItem('KalderaShield_is_setup', 'true');
     expect(isMasterPasswordSet()).toBe(true);
   });
 
 
   it('does not treat empty or malformed fallback user secret arrays as setup', () => {
-    localStorage.setItem('aegis_sqlite_fallback', JSON.stringify({ user_secrets: [] }));
+    localStorage.setItem('kalderashield_fallback', JSON.stringify({ user_secrets: [] }));
     expect(isMasterPasswordSet()).toBe(false);
 
-    localStorage.setItem('aegis_sqlite_fallback', JSON.stringify({ user_secrets: null }));
+    localStorage.setItem('kalderashield_fallback', JSON.stringify({ user_secrets: null }));
     expect(isMasterPasswordSet()).toBe(false);
 
-    localStorage.setItem('aegis_sqlite_fallback', JSON.stringify({ records: [{ id: 'secret' }] }));
+    localStorage.setItem('kalderashield_fallback', JSON.stringify({ records: [{ id: 'secret' }] }));
     expect(isMasterPasswordSet()).toBe(false);
   });
 
@@ -996,15 +996,15 @@ describe('vault session storage', () => {
   it('ignores missing, disabled, or malformed account secret-key profiles', () => {
     expect(isAccountSecretKeyRequired()).toBe(false);
 
-    localStorage.setItem('aegis_account_secret_profile', JSON.stringify({ enabled: false, fingerprint: '3456-7' }));
+    localStorage.setItem('KalderaShield_account_secret_profile', JSON.stringify({ enabled: false, fingerprint: '3456-7' }));
     expect(isAccountSecretKeyRequired()).toBe(false);
 
-    localStorage.setItem('aegis_account_secret_profile', '{not json');
+    localStorage.setItem('KalderaShield_account_secret_profile', '{not json');
     expect(isAccountSecretKeyRequired()).toBe(false);
   });
 
   it('falls back to the raw master password when a secret-key profile has no usable key', async () => {
-    localStorage.setItem('aegis_account_secret_profile', JSON.stringify({
+    localStorage.setItem('KalderaShield_account_secret_profile', JSON.stringify({
       enabled: true,
       fingerprint: '3456-7',
     }));
@@ -1017,7 +1017,7 @@ describe('vault session storage', () => {
   });
 
   it('accepts already combined credentials while keeping the raw master password as backup', async () => {
-    const combinedCredential = 'aegis-vault-v7:master-pass\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567';
+    const combinedCredential = 'kalderashield:master-pass\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567';
     sqliteOPFSInstance.verifyPassword.mockResolvedValueOnce(true);
 
     await expect(verifyMasterPassword(combinedCredential)).resolves.toBe(true);
@@ -1044,11 +1044,11 @@ describe('vault session storage', () => {
       await expect(setupMasterPassword('master-pass')).resolves.toBeUndefined();
 
       expect(sqliteOPFSInstance.setupMaster).toHaveBeenCalledWith('master-pass');
-      expect(localStorage.getItem('aegis_is_setup')).toBe('true');
+      expect(localStorage.getItem('KalderaShield_is_setup')).toBe('true');
       expect(warnSpy).toHaveBeenCalledWith(expect.objectContaining({
         code: 'attachment.legacyMigration.failed',
         severity: 'warning',
-        source: 'AegisSecurity',
+        source: 'KalderaShieldSecurity',
         meta: expect.objectContaining({ error: 'setup migration failed' }),
       }));
     } finally {
@@ -1068,11 +1068,11 @@ describe('vault session storage', () => {
         false,
       )).resolves.toBeUndefined();
 
-      expect(localStorage.getItem('aegis_is_setup')).toBe('true');
+      expect(localStorage.getItem('KalderaShield_is_setup')).toBe('true');
       expect(warnSpy).toHaveBeenCalledWith(expect.objectContaining({
         code: 'attachment.legacyMigration.failed',
         severity: 'warning',
-        source: 'AegisSecurity',
+        source: 'KalderaShieldSecurity',
         meta: expect.objectContaining({ error: 'secret setup migration failed' }),
       }));
     } finally {
@@ -1081,7 +1081,7 @@ describe('vault session storage', () => {
   });
 
   it('forgets any remembered secret key when setup chooses not to remember this device', async () => {
-    localStorage.setItem('aegis_account_secret_key_remembered', 'A3-OLD-SECRET');
+    localStorage.setItem('KalderaShield_account_secret_key_remembered', 'A3-OLD-SECRET');
 
     await setupMasterPasswordWithSecretKey(
       'master-pass',
@@ -1089,7 +1089,7 @@ describe('vault session storage', () => {
       false,
     );
 
-    expect(localStorage.getItem('aegis_account_secret_key_remembered')).toBeNull();
+    expect(localStorage.getItem('KalderaShield_account_secret_key_remembered')).toBeNull();
     expect(getRememberedAccountSecretKey()).toBeNull();
   });
 
@@ -1121,20 +1121,20 @@ describe('vault session storage', () => {
   });
 
   it('removes setup, fallback, and secret-key markers when the vault is reset', async () => {
-    localStorage.setItem('aegis_is_setup', 'true');
-    localStorage.setItem('aegis_sqlite_fallback', '{"user_secrets":[{}]}');
-    localStorage.setItem('aegis_account_secret_profile', '{"enabled":true}');
-    localStorage.setItem('aegis_account_secret_key_remembered', 'A3-OLD-SECRET');
+    localStorage.setItem('KalderaShield_is_setup', 'true');
+    localStorage.setItem('kalderashield_fallback', '{"user_secrets":[{}]}');
+    localStorage.setItem('KalderaShield_account_secret_profile', '{"enabled":true}');
+    localStorage.setItem('KalderaShield_account_secret_key_remembered', 'A3-OLD-SECRET');
     openVaultSession('master-pass', 'master-pass', testVaultKey);
 
     await resetSystem();
 
     expect(sqliteOPFSInstance.resetAll).toHaveBeenCalledTimes(1);
     expect(hasActiveMasterPassword()).toBe(false);
-    expect(localStorage.getItem('aegis_is_setup')).toBeNull();
-    expect(localStorage.getItem('aegis_sqlite_fallback')).toBeNull();
-    expect(localStorage.getItem('aegis_account_secret_profile')).toBeNull();
-    expect(localStorage.getItem('aegis_account_secret_key_remembered')).toBeNull();
+    expect(localStorage.getItem('KalderaShield_is_setup')).toBeNull();
+    expect(localStorage.getItem('kalderashield_fallback')).toBeNull();
+    expect(localStorage.getItem('KalderaShield_account_secret_profile')).toBeNull();
+    expect(localStorage.getItem('KalderaShield_account_secret_key_remembered')).toBeNull();
   });
 
   it('returns an empty item list when reads happen without an active session', async () => {

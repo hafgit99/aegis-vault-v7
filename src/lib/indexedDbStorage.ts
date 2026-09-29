@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-const DB_NAME = 'aegis_setup_db';
-const STORE_NAME = 'aegis_setup_store';
+const DB_NAME = 'KalderaShield_setup_db';
+const STORE_NAME = 'KalderaShield_setup_store';
 const DB_VERSION = 1;
 
 const inMemoryCache: Record<string, string | null> = {};
@@ -15,7 +15,7 @@ const inMemoryCache: Record<string, string | null> = {};
  * Every localStorage write in this module is wrapped in `catch {}`, because a
  * full quota or a locked-down storage policy must not break IndexedDB, which is
  * the real store. That is the right behaviour and it hid the finding: the vault
- * mirror (`aegis_sqlite_fallback`) is megabytes, it is the one value here large
+ * mirror (`kalderashield_fallback`) is megabytes, it is the one value here large
  * enough to hit the quota, and when its write failed the mirror silently fell
  * behind the authoritative copy. A "recovery mirror" that is quietly out of date
  * is worse than no mirror, because it is offered to the user as a backup.
@@ -159,11 +159,11 @@ export async function clearAllSetupFlags(): Promise<void> {
 }
 
 export const SETUP_STORAGE_KEYS = [
-  'aegis_is_setup',
-  'aegis_account_secret_profile',
-  'aegis_account_secret_key_remembered',
-  'aegis_sqlite_fallback',
-  'aegis_vault_storage_active_backend'
+  'KalderaShield_is_setup',
+  'KalderaShield_account_secret_profile',
+  'KalderaShield_account_secret_key_remembered',
+  'kalderashield_fallback',
+  'KalderaShield_vault_storage_active_backend'
 ];
 
 /**

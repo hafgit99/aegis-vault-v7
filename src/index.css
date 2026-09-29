@@ -9,7 +9,7 @@
   --font-display: "Outfit", sans-serif;
   --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
-  /* Custom Aegis Vault 7 theme colors mapping to CSS custom properties */
+  /* Custom KalderaShield theme colors mapping to CSS custom properties */
   --color-surface-lowest: var(--surface-lowest);
   --color-surface-low: var(--surface-low);
   --color-brand-bg: var(--brand-bg);

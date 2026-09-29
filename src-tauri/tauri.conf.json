@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Aegis Vault 7",
-  "version": "7.0.16",
-  "identifier": "com.hafgit99.aegisvault7",
+  "productName": "KalderaShield",
+  "version": "7.0.17",
+  "identifier": "com.kalderashield.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:3000",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Aegis Vault 7",
+        "title": "KalderaShield",
         "width": 1280,
         "height": 800,
         "minWidth": 960,

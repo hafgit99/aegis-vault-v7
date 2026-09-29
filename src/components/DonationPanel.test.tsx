@@ -32,7 +32,7 @@ describe('DonationPanel', () => {
   it('renders crypto donation addresses', () => {
     renderDonationPanel();
 
-    expect(screen.getByText('Aegis Vault 7 Bağışları')).toBeTruthy();
+    expect(screen.getByText('KalderaShield Bağışları')).toBeTruthy();
     expect(screen.getAllByText('BTC')).toHaveLength(2);
     expect(screen.getByText('Ethereum / ERC-20')).toBeTruthy();
     expect(screen.getByText('bc1qqsuljwzs32ckkqdrsdus7wgqzuetty3g0x47l7')).toBeTruthy();

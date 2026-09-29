@@ -47,7 +47,7 @@ export function LegalTermsModal({
                 {t('lock.terms.modal.title')}
               </h2>
               <span className="text-[11px] text-on-surface-variant/70 font-mono">
-                Aegis Vault 7 • Zero-Knowledge Security
+                KalderaShield • Zero-Knowledge Security
               </span>
             </div>
           </div>

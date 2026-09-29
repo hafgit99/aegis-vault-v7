@@ -1,4 +1,4 @@
-package com.hafgit99.aegisvault7
+ackage com.kalderashield.app
 
 import android.app.PendingIntent
 import android.content.Intent
@@ -19,15 +19,15 @@ import android.app.assist.AssistStructure
 import android.widget.RemoteViews
 import androidx.annotation.RequiresApi
 import androidx.core.content.FileProvider
-import com.hafgit99.aegisvault7.model.AutofillLaunchRequest
-import com.hafgit99.aegisvault7.model.AutofillSaveCandidate
-import com.hafgit99.aegisvault7.security.AutofillRequestRegistry
-import com.hafgit99.aegisvault7.security.SecureTempFileStorage
+import com.kalderashield.app.model.AutofillLaunchRequest
+import com.kalderashield.app.model.AutofillSaveCandidate
+import com.kalderashield.app.security.AutofillRequestRegistry
+import com.kalderashield.app.security.SecureTempFileStorage
 import java.util.UUID
 import org.json.JSONObject
 
 @RequiresApi(Build.VERSION_CODES.O)
-class AegisAutofillService : AutofillService() {
+class KalderaShieldAutofillService : AutofillService() {
   private val requestCodeCounter = java.util.concurrent.atomic.AtomicInteger(1000)
   override fun onFillRequest(
     request: FillRequest,
@@ -117,12 +117,12 @@ class AegisAutofillService : AutofillService() {
       startActivity(intent)
       Log.i(
         AUTOFILL_LOG_TAG,
-        "SaveRequest forwarded to Aegis package=${candidate.appPackage ?: "unknown"} " +
+        "SaveRequest forwarded to KalderaShield package=${candidate.appPackage ?: "unknown"} " +
           "domain=${candidate.webDomain ?: "unknown"} payload=encrypted requestId=$requestId",
       )
     } catch (error: Exception) {
       AutofillRequestRegistry.consumeSaveCandidate(requestId)
-      Log.w(AUTOFILL_LOG_TAG, "SaveRequest could not launch Aegis: ${error.message ?: "unknown"}")
+      Log.w(AUTOFILL_LOG_TAG, "SaveRequest could not launch KalderaShield: ${error.message ?: "unknown"}")
     }
 
     callback.onSuccess()
@@ -387,12 +387,12 @@ class AegisAutofillService : AutofillService() {
     var appPackage: String? = null,
     var webDomain: String? = null,
   ) {
-    fun title(): String = webDomain ?: appPackage ?: "Aegis Login"
+    fun title(): String = webDomain ?: appPackage ?: "KalderaShield Login"
     fun url(): String = webDomain?.let { if (it.startsWith("http")) it else "https://$it" }.orEmpty()
   }
 
   companion object {
-    private const val AUTOFILL_LOG_TAG = "AegisAutofill"
+    private const val AUTOFILL_LOG_TAG = "KalderaShieldAutofill"
     private const val MAX_TRAVERSAL_DEPTH = 50
     private const val FILL_REQUEST_PREFIX = "android-autofill"
     private const val SAVE_REQUEST_PREFIX = "android-autofill-save"
@@ -408,8 +408,8 @@ class AegisAutofillService : AutofillService() {
      * `android:exported="false"`, so only the system — executing a
      * `PendingIntent` this service created — can deliver them.
      */
-    const val ACTION_AUTOFILL_AUTHENTICATE = "com.hafgit99.aegisvault7.action.AUTOFILL_AUTHENTICATE"
-    const val ACTION_AUTOFILL_SAVE = "com.hafgit99.aegisvault7.action.AUTOFILL_SAVE"
+    const val ACTION_AUTOFILL_AUTHENTICATE = "com.kalderashield.app.action.AUTOFILL_AUTHENTICATE"
+    const val ACTION_AUTOFILL_SAVE = "com.kalderashield.app.action.AUTOFILL_SAVE"
 
     /**
      * The ONLY extras the Autofill Intents carry. Both are routing metadata:
@@ -425,7 +425,7 @@ class AegisAutofillService : AutofillService() {
      * plaintext password from an Intent is an attack surface, not a
      * compatibility feature.
      */
-    const val EXTRA_REQUEST_ID = "com.hafgit99.aegisvault7.extra.AUTOFILL_REQUEST_ID"
-    const val EXTRA_REQUEST_CREATED_AT = "com.hafgit99.aegisvault7.extra.AUTOFILL_CREATED_AT"
+    const val EXTRA_REQUEST_ID = "com.kalderashield.app.extra.AUTOFILL_REQUEST_ID"
+    const val EXTRA_REQUEST_CREATED_AT = "com.kalderashield.app.extra.AUTOFILL_CREATED_AT"
   }
 }

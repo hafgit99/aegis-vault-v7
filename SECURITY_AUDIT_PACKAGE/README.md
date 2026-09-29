@@ -1,6 +1,6 @@
-# Aegis Vault 7 - Security Audit Package
+# KalderaShield - Security Audit Package
 
-This directory contains key documentation and configuration artifacts prepared for third-party security audits. Aegis Vault 7 implements a local-first, zero-materialization security architecture designed to prevent the exposure of master credentials in runtime memory or application logs.
+This directory contains key documentation and configuration artifacts prepared for third-party security audits. KalderaShield implements a local-first, zero-materialization security architecture designed to prevent the exposure of master credentials in runtime memory or application logs.
 
 ## Package Contents
 
@@ -51,7 +51,7 @@ Both exit non-zero on any missing file or hash mismatch. If the auditor requires
 
 ## Key Control: No-JS-Master-String Final Gate
 
-To guarantee that the plain-text master password string does not materialize during routine application flows (CRUD, settings panel dashboard, or attachment retrieval), Aegis Vault 7 uses an automated gate:
+To guarantee that the plain-text master password string does not materialize during routine application flows (CRUD, settings panel dashboard, or attachment retrieval), KalderaShield uses an automated gate:
 
 - **Scan Target**: Recursively scans all source files (`.ts`, `.tsx`, `.js`, `.jsx`) in the `src/` directory.
 - **Forbidden Patterns**:

@@ -8,9 +8,9 @@ import {
   loadDicewareWords,
   parseVaultEnvelope,
   deriveArgon2idKeyAsync,
-} from '../../scripts/aegis-cli.cjs';
+} from '../../scripts/kalderashield-cli.cjs';
 
-describe('aegis-cli module', () => {
+describe('kalderashield-cli module', () => {
   it('generateRandomPassword produces expected length and characters', () => {
     const pw1 = generateRandomPassword(16, false);
     expect(pw1.length).toBe(16);
@@ -90,7 +90,7 @@ describe('aegis-cli module', () => {
 
     const envelope = {
       version: '1.2',
-      generator: 'Aegis Secure Core',
+      generator: 'KalderaShield Secure Core',
       kdf: 'Argon2id',
       kdfImplementation: 'argon2-browser',
       kdfParams,

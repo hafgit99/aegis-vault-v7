@@ -14,9 +14,9 @@ vi.mock('./indexedDbStorage', () => ({
 // Mock secureStorage (returns null — forces IndexedDB fallback)
 vi.mock('./secureStorage', () => ({
   secureStorageKeys: {
-    rememberedSecretKey: 'aegis_account_secret_key_remembered',
-    biometricInfo: 'aegis_biometric_info',
-    recoveryKeyBundle: 'aegis_recovery_key_bundle',
+    rememberedSecretKey: 'KalderaShield_account_secret_key_remembered',
+    biometricInfo: 'KalderaShield_biometric_info',
+    recoveryKeyBundle: 'KalderaShield_recovery_key_bundle',
   },
   getSecureStorageItem: vi.fn(() => null),
   setSecureStorageItem: vi.fn(() => false),
@@ -172,15 +172,15 @@ describe('recoveryKey', () => {
     await expect(recoverWithRecoveryKey(['not', 'enough', 'words'])).rejects.toThrow('Invalid recovery words');
 
     // 2. Corrupted JSON in storage
-    store.set('aegis_recovery_key_bundle', 'not valid json');
+    store.set('KalderaShield_recovery_key_bundle', 'not valid json');
     expect(isRecoveryKeySetup()).toBe(false);
     expect(getRecoveryKeyCreatedAt()).toBeNull();
 
     // 3. Version mismatch or missing bundle
-    store.set('aegis_recovery_key_bundle', JSON.stringify({ version: 99, bundle: 'xyz' }));
+    store.set('KalderaShield_recovery_key_bundle', JSON.stringify({ version: 99, bundle: 'xyz' }));
     expect(isRecoveryKeySetup()).toBe(false);
 
-    store.set('aegis_recovery_key_bundle', JSON.stringify({ version: 1 }));
+    store.set('KalderaShield_recovery_key_bundle', JSON.stringify({ version: 1 }));
     expect(isRecoveryKeySetup()).toBe(false);
   });
 

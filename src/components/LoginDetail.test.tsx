@@ -12,7 +12,7 @@ import LoginDetail from './LoginDetail';
 
 const loginItem: VaultItem = {
   id: 'login-1',
-  title: 'Aegis Mail',
+  title: 'KalderaShield Mail',
   username: 'ada@example.com',
   password: 'CorrectHorseBatteryStaple',
   url: 'https://example.com',
@@ -121,7 +121,7 @@ describe('LoginDetail', () => {
 
     render(
       <LoginDetail
-        item={{ ...loginItem, totpSecret: 'otpauth://totp/Aegis:test@example.com?secret=JBSWY3DPEHPK3PXP&digits=10' }}
+        item={{ ...loginItem, totpSecret: 'otpauth://totp/KalderaShield:test@example.com?secret=JBSWY3DPEHPK3PXP&digits=10' }}
         copiedField={null}
         isPasswordRevealed={false}
         totpCountdown={30}

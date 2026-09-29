@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const readVaultIntegrityLedger = vi.hoisted(() => vi.fn((): any => null));
 const recordVaultSeal = vi.hoisted(() => vi.fn((versionCounter: number) => ({
-  appId: 'aegis-vault-db',
+  appId: 'KalderaShield-vault-db',
   sealed: true,
   highestVersionCounter: versionCounter,
   sealedAt: new Date().toISOString(),
@@ -161,7 +161,7 @@ describe('vaultWriteCoordination (Y-15)', () => {
 
       const result = await withVaultWriteLock(async () => 'done');
 
-      expect(request).toHaveBeenCalledWith('aegis-vault-write', { mode: 'exclusive' }, expect.any(Function));
+      expect(request).toHaveBeenCalledWith('KalderaShield-vault-write', { mode: 'exclusive' }, expect.any(Function));
       expect(result).toBe('done');
     });
 
@@ -200,7 +200,7 @@ describe('vaultWriteCoordination (Y-15)', () => {
       const unsubscribe = subscribeVaultCommits(listener);
 
       // A different tab commits.
-      new FakeBroadcastChannel('aegis-vault').postMessage({ type: 'commit', versionCounter: 21 });
+      new FakeBroadcastChannel('KalderaShield-vault').postMessage({ type: 'commit', versionCounter: 21 });
 
       expect(listener).toHaveBeenCalledWith(21);
       unsubscribe();
@@ -211,7 +211,7 @@ describe('vaultWriteCoordination (Y-15)', () => {
       const unsubscribe = subscribeVaultCommits(listener);
       unsubscribe();
 
-      new FakeBroadcastChannel('aegis-vault').postMessage({ type: 'commit', versionCounter: 22 });
+      new FakeBroadcastChannel('KalderaShield-vault').postMessage({ type: 'commit', versionCounter: 22 });
 
       expect(listener).not.toHaveBeenCalled();
     });
@@ -220,7 +220,7 @@ describe('vaultWriteCoordination (Y-15)', () => {
       const listener = vi.fn();
       const unsubscribe = subscribeVaultCommits(listener);
 
-      const other = new FakeBroadcastChannel('aegis-vault');
+      const other = new FakeBroadcastChannel('KalderaShield-vault');
       other.postMessage({ type: 'something-else', versionCounter: 5 });
       other.postMessage({ type: 'commit', versionCounter: 'not-a-number' });
       other.postMessage(null);

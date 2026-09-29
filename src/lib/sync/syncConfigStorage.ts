@@ -12,7 +12,7 @@ import type { Argon2idOptions } from '../argon2id';
 import { secureRandomBytes } from '../random';
 import { isPrivateOrLoopbackHostname } from '../airgapNetworkPolicy';
 
-const CONFIG_STORAGE_KEY = 'aegis_sync_config_v1';
+const CONFIG_STORAGE_KEY = 'KalderaShield_sync_config_v1';
 
 /**
  * SEC-B2: sync configuration envelopes carry live WebDAV/S3 credentials, so
@@ -22,7 +22,7 @@ const CONFIG_STORAGE_KEY = 'aegis_sync_config_v1';
  * stores a per-save random salt plus the exact KDF parameters used, matching
  * the full vault KDF profile.
  */
-const LEGACY_V1_SALT_HEX = toHex(new TextEncoder().encode('aegis-sync-config-v1'));
+const LEGACY_V1_SALT_HEX = toHex(new TextEncoder().encode('KalderaShield-sync-config-v1'));
 
 const LEGACY_V1_KDF: Argon2idOptions = {
   memoryKiB: 16 * 1024,
@@ -202,17 +202,17 @@ export async function loadSyncConfig(masterPassword: string): Promise<SyncConfig
 /** Remove all sync configuration from local storage. */
 export function clearSyncConfig(): void {
   localStorage.removeItem(CONFIG_STORAGE_KEY);
-  localStorage.removeItem('aegis_sync_last_at');
+  localStorage.removeItem('KalderaShield_sync_last_at');
 }
 
 /** Persist the timestamp of the last successful sync run. */
 export function saveLastSyncTime(isoString: string): void {
-  localStorage.setItem('aegis_sync_last_at', isoString);
+  localStorage.setItem('KalderaShield_sync_last_at', isoString);
 }
 
 /** Returns the ISO-8601 timestamp of the last successful sync, or null. */
 export function getLastSyncTime(): string | null {
-  return localStorage.getItem('aegis_sync_last_at');
+  return localStorage.getItem('KalderaShield_sync_last_at');
 }
 
 /** Returns true if a sync configuration (non-disabled) is currently stored. */
