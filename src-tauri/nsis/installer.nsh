@@ -1,10 +1,12 @@
-; Aegis Vault 7 NSIS Custom Hooks
-; Cleans up application data (vault database) on uninstall so reinstall starts fresh.
-
-!macro NSIS_HOOK_PREUNINSTALL
-  ; Remove vault database from Roaming AppData
-  RMDir /r "$APPDATA\com.hafgit99.aegisvault7"
-  
-  ; Remove vault database from Local AppData (WebView2 cache, OPFS, etc.)
-  RMDir /r "$LOCALAPPDATA\com.hafgit99.aegisvault7"
-!macroend
+; KalderaShield NSIS Custom Hooks
+;
+; Intentionally empty.
+;
+; A previous revision removed the user's vault directory on uninstall without
+; consent. For a password manager that is unrecoverable data loss: the vault is
+; the only copy, and a user who uninstalls to reinstall, to free disk space, or
+; to upgrade can silently destroy every credential they own. Uninstalling an
+; application must never delete user data.
+;
+; Vault data lives under %APPDATA%\com.kalderashield.desktop and is left intact
+; on uninstall. Users who want to remove it can delete the directory manually.
