@@ -9,7 +9,10 @@ const SCHEMA_VERSION: u64 = 1;
 const ALGORITHM: &str = "SHA-256";
 
 fn is_hex64(value: &str) -> bool {
-    value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
+    // `chars()`, not `bytes()`: the latter indexes a [u8] as if it were a
+    // [char], which is what clippy::byte_char_slices rejects, and CI runs
+    // clippy with -D warnings over build scripts.
+    value.len() == 64 && value.chars().all(|character| character.is_ascii_hexdigit())
 }
 
 /// The root the manifest claims, without checking it against anything.
@@ -107,7 +110,11 @@ fn unlisted_files_on_disk(listed: &[String]) -> Vec<String> {
         let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
             continue;
         };
-        if name == MANIFEST_FILENAME || name == "index.html" || name.ends_with(".html") || name.ends_with(".map") {
+        if name == MANIFEST_FILENAME
+            || name == "index.html"
+            || name.ends_with(".html")
+            || name.ends_with(".map")
+        {
             continue;
         }
         if !listed.iter().any(|candidate| candidate == name) {

@@ -1337,10 +1337,8 @@ mod tests {
         // the other side of the boundary and this is the half that can be
         // broken silently.
         assert_eq!(
-            sanitize_asset_integrity_reason(
-                "asset-size-mismatch-2-vs-4-icon-showcase-html"
-            )
-            .as_deref(),
+            sanitize_asset_integrity_reason("asset-size-mismatch-2-vs-4-icon-showcase-html")
+                .as_deref(),
             Some("asset-size-mismatch-2-vs-4-icon-showcase-html")
         );
         assert_eq!(
