@@ -19,6 +19,8 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:chromium": "playwright test --project=chromium",
+    "icon:apply": "node scripts/apply-icon.cjs",
+    "site:preview": "node scripts/serve-site.cjs",
     "tauri": "tauri",
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build",

@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KalderaShield - Yeni İkon Tasarımları & Önizleme</title>
+  <link rel="icon" type="image/png" href="/favicon-32x32.png">
+  <style>
+    :root {
+      --bg: #090c10;
+      --card-bg: rgba(18, 24, 38, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --accent-cyan: #00f2fe;
+      --accent-orange: #ff5722;
+      --text: #f0f6fc;
+      --text-muted: #8b949e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(circle at 50% 0%, #151d2f 0%, var(--bg) 70%);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      padding: 40px 20px 80px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 50px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, rgba(255, 87, 34, 0.2), rgba(0, 242, 254, 0.2));
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 999px;
+      margin-bottom: 16px;
+      color: #ffab91;
+    }
+    h1 {
+      font-size: 2.75rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #ffffff 40%, #00f2fe 80%, #ff5722 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 12px;
+    }
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 1.15rem;
+      max-width: 650px;
+      margin: 0 auto;
+    }
+    .grid-options {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+      gap: 32px;
+      margin-bottom: 60px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 32px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      transition: transform 0.25s ease, border-color 0.25s ease;
+      display: flex;
+      flex-direction: column;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(0, 242, 254, 0.3);
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    .card-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+    .pill {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+    .pill-active {
+      background: #00f2fe22;
+      color: var(--accent-cyan);
+      border: 1px solid #00f2fe55;
+    }
+    .pill-vector {
+      background: #ff572222;
+      color: var(--accent-orange);
+      border: 1px solid #ff572255;
+    }
+    .icon-hero-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 30px;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 18px;
+      margin-bottom: 24px;
+      min-height: 280px;
+    }
+    .icon-hero-img {
+      width: 200px;
+      height: 200px;
+      filter: drop-shadow(0 15px 30px rgba(0, 0, 0, 0.7));
+      transition: transform 0.3s ease;
+    }
+    .icon-hero-img:hover {
+      transform: scale(1.05);
+    }
+    .specs-list {
+      list-style: none;
+      margin-bottom: 24px;
+      flex-grow: 1;
+    }
+    .specs-list li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      color: #c9d1d9;
+      margin-bottom: 10px;
+    }
+    .check-icon {
+      color: var(--accent-cyan);
+      font-weight: bold;
+    }
+    .command-box {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 13px;
+      color: #58a6ff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: all;
+    }
+
+    /* Size Comparison Row */
+    .sizes-section {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 36px;
+      margin-bottom: 50px;
+    }
+    .section-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .section-desc {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 30px;
+    }
+    .sizes-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 32px;
+      padding: 24px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 16px;
+      margin-bottom: 24px;
+    }
+    .size-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .size-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: monospace;
+    }
+
+    /* Windows & Dock Mockups */
+    .mockup-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+      gap: 24px;
+    }
+    .mockup-card {
+      background: #06090e;
+      border: 1px solid #1c2128;
+      border-radius: 16px;
+      padding: 20px;
+    }
+    .mockup-title {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+    .taskbar {
+      height: 54px;
+      background: rgba(22, 27, 34, 0.85);
+      backdrop-filter: blur(12px);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 0 20px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .taskbar-item {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.04);
+      position: relative;
+    }
+    .taskbar-item.active::after {
+      content: '';
+      position: absolute;
+      bottom: -6px;
+      width: 16px;
+      height: 3px;
+      background: var(--accent-cyan);
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="badge">Rebrand Identity System</div>
+      <h1>KalderaShield İkon Seti</h1>
+      <p class="subtitle">Eski "AegisVault 7" logosu tamamen temizlendi. Yeni marka kimliğine özel olarak üretilen modern ve profesyonel ikon alternatifleri.</p>
+    </header>
+
+    <div class="grid-options">
+      <!-- Option 1: Glassmorphism Shield -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">1. Cyberpunk Frosted Glass Shield</h2>
+          <span class="pill pill-active">Şu Anda Aktif</span>
+        </div>
+        <div class="icon-hero-wrapper">
+          <img class="icon-hero-img" src="/assets/KalderaShield-app-icon-true.png" alt="Cyberpunk Frosted Glass Shield">
+        </div>
+        <ul class="specs-list">
+          <li><span class="check-icon">✓</span> <strong>Tasarım Dili:</strong> 3D Frosted Glassmorphism, Neon Cyan & Purple Rim Light</li>
+          <li><span class="check-icon">✓</span> <strong>Detay:</strong> Yarı saydam fasetli zırh plakaları ve parlayan siber asma kilit</li>
+          <li><span class="check-icon">✓</span> <strong>Platform Uyumu:</strong> Windows 11 Fluent Design & macOS Sequoia koyu temalarıyla kusursuz uyum</li>
+          <li><span class="check-icon">✓</span> <strong>Durum:</strong> <code>src-tauri/icons/</code> (.ico, .icns, tüm PNG'ler) olarak derlendi</li>
+        </ul>
+        <div class="command-box">
+          <code>npm run icon:apply</code>
+        </div>
+      </div>
+
+      <!-- Option 2: Volcanic Caldera & Obsidian -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">2. Volcanic Caldera & Cyber Armor</h2>
+          <span class="pill pill-vector">Özel Vektörel (SVG)</span>
+        </div>
+        <div class="icon-hero-wrapper">
+          <img class="icon-hero-img" src="/assets/KalderaShield-vector-icon.png" alt="Volcanic Caldera Obsidian Shield">
+        </div>
+        <ul class="specs-list">
+          <li><span class="check-icon">✓</span> <strong>Tasarım Dili:</strong> "Kaldera" (Magma & Geotermal Enerji) + "Shield" (Titanyum Zırh)</li>
+          <li><span class="check-icon">✓</span> <strong>Detay:</strong> Obsidyen fasetler, akkor magma çekirdeği, siber deflektör ağı ve krom kilit kemeri</li>
+          <li><span class="check-icon">✓</span> <strong>Çözünürlük:</strong> Saf vektör SVG, 16px'ten 4K'ya kadar kayıpsız netlik</li>
+          <li><span class="check-icon">✓</span> <strong>Kaynak:</strong> <code>src-tauri/icon-source/kalderashield-icon.svg</code></li>
+        </ul>
+        <div class="command-box">
+          <code>npm run icon:apply -- --vector</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scalability Section -->
+    <div class="sizes-section">
+      <h2 class="section-title">Farklı Boyutlarda Görsel Ölçeklenebilirlik</h2>
+      <p class="section-desc">Masaüstü, bildirim tepsisi (system tray), web favicon ve uygulama marketleri için çözünürlük testi:</p>
+      
+      <div class="sizes-row">
+        <div class="size-item">
+          <img src="/assets/KalderaShield-app-icon-true.png" width="128" height="128" style="border-radius: 28px;">
+          <span class="size-label">128x128</span>
+        </div>
+        <div class="size-item">
+          <img src="/assets/KalderaShield-app-icon-true.png" width="64" height="64" style="border-radius: 14px;">
+          <span class="size-label">64x64</span>
+        </div>
+        <div class="size-item">
+          <img src="/assets/KalderaShield-app-icon-true.png" width="48" height="48" style="border-radius: 10px;">
+          <span class="size-label">48x48</span>
+        </div>
+        <div class="size-item">
+          <img src="/assets/KalderaShield-app-icon-true.png" width="32" height="32" style="border-radius: 7px;">
+          <span class="size-label">32x32</span>
+        </div>
+        <div class="size-item">
+          <img src="/assets/KalderaShield-app-icon-true.png" width="16" height="16" style="border-radius: 4px;">
+          <span class="size-label">16x16 (Tray)</span>
+        </div>
+      </div>
+
+      <div class="sizes-row">
+        <div class="size-item">
+          <img src="/assets/KalderaShield-vector-icon.png" width="128" height="128" style="border-radius: 28px;">
+          <span class="size-label">128x128</span>
+        </div>
+        <div class="size-item">
+          <img src="/assets/KalderaShield-vector-icon.png" width="64" height="64" style="border-radius: 14px;">
+          <span class="size-label">64x64</span>
+        </div>
+        <div class="size-item">
+          <img src="/assets/KalderaShield-vector-icon.png" width="48" height="48" style="border-radius: 10px;">
+          <span class="size-label">48x48</span>
+        </div>
+        <div class="size-item">
+          <img src="/assets/KalderaShield-vector-icon.png" width="32" height="32" style="border-radius: 7px;">
+          <span class="size-label">32x32</span>
+        </div>
+        <div class="size-item">
+          <img src="/assets/KalderaShield-vector-icon.png" width="16" height="16" style="border-radius: 4px;">
+          <span class="size-label">16x16 (Tray)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Real-world Mockups -->
+    <div class="mockup-grid">
+      <div class="mockup-card">
+        <div class="mockup-title">Windows 11 Görev Çubuğu Simülasyonu</div>
+        <div class="taskbar">
+          <div class="taskbar-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#00adef"><path d="M0 0h11v11H0zM13 0h11v11H13zM0 13h11v11H0zM13 13h11v11H13z"/></svg>
+          </div>
+          <div class="taskbar-item active">
+            <img src="/assets/KalderaShield-app-icon-true.png" width="28" height="28" style="border-radius: 6px;">
+          </div>
+          <div class="taskbar-item">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="#ffb900"><path d="M19 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm-7 12l-4-4h8l-4 4z"/></svg>
+          </div>
+          <div class="taskbar-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#60cdff"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="mockup-card">
+        <div class="mockup-title">Tarayıcı Sekmesi & Favicon Simülasyonu</div>
+        <div style="background: #161b22; border-radius: 10px; padding: 10px 16px; display: inline-flex; align-items: center; gap: 10px; border-bottom: 2px solid #58a6ff;">
+          <img src="/favicon-32x32.png" width="16" height="16" style="border-radius: 3px;">
+          <span style="font-size: 13px; font-weight: 500; color: #f0f6fc;">KalderaShield | Local-First Secure Vault</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
