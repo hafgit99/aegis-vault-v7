@@ -164,7 +164,8 @@
   "overrides": {
     "qs": "6.16.0",
     "adm-zip": "0.6.1",
-    "fast-uri": "3.1.6",
-    "shell-quote": "1.10.0"
+    "fast-uri": "3.1.8",
+    "shell-quote": "1.10.0",
+    "undici": "8.11.2"
   }
 }
