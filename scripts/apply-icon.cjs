@@ -1,4 +1,4 @@
-const { execSync, execFileSync } = require('child_process');
+const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
@@ -20,14 +20,35 @@ if (!fs.existsSync(sourceIcon)) {
   process.exit(1);
 }
 
-  // 1. Run tauri icon generator
-  console.log('[1/4] Generating multi-platform desktop/mobile icons with Tauri CLI...');
-  try {
-    execSync(`npx tauri icon "${sourceIcon}"`, { cwd: root, stdio: 'inherit' });
-  } catch (e) {
-    console.error('Failed to run tauri icon:', e.message);
-    process.exit(1);
-  }
+// 1. Run tauri icon generator
+console.log('[1/4] Generating multi-platform desktop/mobile icons with Tauri CLI...');
+try {
+  // Argument array, never an interpolated shell string. sourceIcon can come from
+  // argv (line 12), so the old `npx tauri icon "${sourceIcon}"` handed a path
+  // straight to the shell -- apply-icon.cjs "a.png; <command>" would have run
+  // that command. CodeQL reported it as js/indirect-command-line-injection.
+  //
+  // The obvious fix, execFileSync('npx', [...]), does not work on Windows:
+  // npx is npx.cmd, and since Node 20.12 spawning a .cmd without a shell is
+  // refused, precisely to stop this class of injection. Passing shell: true
+  // would satisfy the runtime and undo the fix.
+  //
+  // So the CLI's JavaScript entry point is run by node directly. Read from the
+  // package's bin field rather than hardcoded, so a CLI major that moves the
+  // file does not silently break icon regeneration. No shell anywhere.
+  const cliPkg = require.resolve('@tauri-apps/cli/package.json', { paths: [root] });
+  const cliBin = require(cliPkg).bin.tauri;
+  const cliEntry = path.resolve(path.dirname(cliPkg), cliBin);
+
+  execFileSync(process.execPath, [cliEntry, 'icon', sourceIcon], {
+    cwd: root,
+    stdio: 'inherit',
+    shell: false,
+  });
+} catch (e) {
+  console.error('Failed to run tauri icon:', e.message);
+  process.exit(1);
+}
 
   // 2. Ensure public web assets are synchronized
   console.log('[2/4] Updating public web & favicon assets...');
