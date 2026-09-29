@@ -46,17 +46,37 @@ let skipped = [];
 
 for (const page of PAGES) {
   const file = path.join(ROOT, page);
-  if (!fs.existsSync(file)) {
-    skipped.push(`${page}: missing`);
+  // Read in a try rather than testing existsSync first. Checking and then
+  // opening is a time-of-check to time-of-use gap -- CodeQL reports it as
+  // js/file-system-race -- and here the two calls sit four lines apart doing
+  // the same work. The catch also tells the two failures apart, which the
+  // existsSync version could not.
+  let html;
+  try {
+    html = fs.readFileSync(file, 'utf8');
+  } catch (error) {
+    if (error && error.code === 'ENOENT') {
+      skipped.push(`${page}: missing`);
+    } else {
+      skipped.push(`${page}: unreadable (${error && error.code})`);
+    }
     continue;
   }
-  const html = fs.readFileSync(file, 'utf8');
   if (!OLD.test(html)) {
     if (html.includes('class="theme"')) {
       skipped.push(`${page}: already patched`);
       continue;
     }
     skipped.push(`${page}: no language block found`);
+    continue;
+  }
+  // OLD matches any <details class="lang"> block, including one this script
+  // already produced, so re-running it re-indented the header on all four pages
+  // and undid the alignment -- a script that damages the tree when you check
+  // whether it still works is worse than no script. A page already carrying the
+  // theme control and the keyed labels is done, whatever its indentation.
+  if (html.includes('theme-switch-label') && html.includes('data-lang-code')) {
+    skipped.push(`${page}: already patched`);
     continue;
   }
   fs.writeFileSync(file, html.replace(OLD, NEW), 'utf8');

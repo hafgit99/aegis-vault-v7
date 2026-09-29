@@ -74,21 +74,58 @@ const NEUTRAL_TOKENS = [
   'HTML', 'CSS', 'URL', 'URI', 'DNS', 'TLS', 'SSL', 'PWA', 'OR', 'AND',
 ];
 
-// HTML and URL structure, removed before the script check.
-const MARKUP = /<[^>]*>|https?:\/\/[^"'\s)]*|\b[a-z]+-[a-z0-9-]+\.[a-z.]{2,}\b/gi;
-
 // Any letter, in any script. Used to tell a translation from a placeholder.
 const LETTER = /\p{L}/u;
 
-function stripNeutral(value) {
-  let out = value;
-  for (const token of NEUTRAL_TOKENS) out = out.split(token).join(' ');
-  out = out.replace(MARKUP, ' ');
-  return out;
-}
-
+/* Which writing systems a value uses, ignoring the parts that are legitimately
+ * in another one.
+ *
+ * Not "strip the neutral parts, then run a regex over what's left". That is the
+ * shape CodeQL reports as js/incomplete-multi-character-sanitization, and the
+ * objection is fair even though this is a lint rather than a trust boundary: a
+ * partial strip cannot be proven complete, and if a neutral token ever carried a
+ * Cyrillic character the check would miss it. Walking the string instead means
+ * no claim is made about what was removed, so the check is only ever as good as
+ * the token list, which is the actual limitation and belongs in one place.
+ */
 function scriptsIn(value) {
-  return Object.keys(SCRIPTS).filter((name) => SCRIPTS[name].test(value));
+  const found = new Set();
+  const text = String(value);
+  const lower = text.toLowerCase();
+  let index = 0;
+
+  const isNeutralAt = (position) => {
+    for (const token of NEUTRAL_TOKENS) {
+      if (lower.startsWith(token.toLowerCase(), position)) return token.length;
+    }
+    return 0;
+  };
+
+  while (index < text.length) {
+    // Markup, URLs and host-like names: skip to the closing delimiter.
+    if (text[index] === '<') {
+      const close = text.indexOf('>', index);
+      index = close === -1 ? text.length : close + 1;
+      continue;
+    }
+    if (text.startsWith('http://', index) || text.startsWith('https://', index)) {
+      let end = index;
+      while (end < text.length && !/[\s"')]/.test(text[end])) end++;
+      index = end;
+      continue;
+    }
+    const neutral = isNeutralAt(index);
+    if (neutral) {
+      index += neutral;
+      continue;
+    }
+    for (const [name, pattern] of Object.entries(SCRIPTS)) {
+      if (pattern.test(text[index])) found.add(name);
+    }
+    index += 1;
+  }
+
+  return [...found];
 }
 
 function tagsIn(value) {
@@ -159,7 +196,7 @@ for (const code of codes) {
     // string, Hangul inside a Japanese one, Han inside a Russian one. That is
     // the signature of text pasted in from the wrong language, and it is what
     // caught three of the six corrupted legal strings.
-    const nonLatin = scriptsIn(stripNeutral(value)).filter((name) => name !== 'latin');
+    const nonLatin = scriptsIn(value).filter((name) => name !== 'latin');
     const stray = nonLatin.filter((name) => !expectedScripts.includes(name));
     if (stray.length) {
       findings.push({ kind: 'cross-script', code, key, detail: stray.join('+') });
