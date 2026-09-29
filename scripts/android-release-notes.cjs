@@ -113,7 +113,7 @@ function generateNotes() {
   const checklist = checklistStats(checklistPath, ANDROID_CHECKLIST_FIELDS);
   const biometricMatrix = biometricMatrixStats(checklistPath);
   const reportVersion = firstMatch(report, [/version: ([^\r\n]+)/i, /versionName[:=]\s*([^\r\n]+)/i], packageJson.version);
-  const packageName = firstMatch(report, [/package(?: name)?: ([^\r\n]+)/i, /applicationId[:=]\s*([^\r\n]+)/i], metadata.signed ? 'com.hafgit99.KalderaShield7' : 'com.hafgit99.KalderaShield7.debug');
+  const packageName = firstMatch(report, [/package(?: name)?: ([^\r\n]+)/i, /applicationId[:=]\s*([^\r\n]+)/i], metadata.signed ? 'com.kalderashield.desktop' : 'com.kalderashield.desktop.debug');
   const mode = firstMatch(report, /Mode: ([^\r\n]+)/i, metadata.signed ? 'release candidate artifacts only' : 'debug candidate artifacts only');
 
   if (reportVersion !== packageJson.version) fail('Android report version mismatch: ' + reportVersion + ' !== ' + packageJson.version);
@@ -197,4 +197,4 @@ function generateNotes() {
 }
 
 if (hasFlag(args, '--help')) { console.log(usage()); process.exit(0); }
-generateNotes();
+generateNotes();

@@ -17,7 +17,7 @@ const xpiName = `kalderashield-firefox-v${packageJson.version}.xpi`;
 
 const excludedNames = new Set([
   'KalderaShield-host.bat',
-  'com.hafgit99.KalderaShield.json',
+  'com.kalderashield.desktop.json',
 ]);
 
 function maskCommandArgs(cmdArgs) {
@@ -94,8 +94,8 @@ function assertFirefoxManifest() {
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   const geckoId = manifest.browser_specific_settings?.gecko?.id;
 
-  if (geckoId !== 'KalderaShield@hafgit99.com') {
-    throw new Error('Firefox manifest must include browser_specific_settings.gecko.id = KalderaShield@hafgit99.com');
+  if (geckoId !== 'kalderashield@hafgit99.com') {
+    throw new Error('Firefox manifest must include browser_specific_settings.gecko.id = kalderashield@hafgit99.com');
   }
 
   if (manifest.background?.service_worker) {
@@ -190,4 +190,4 @@ if (shouldSign) {
   ]);
 }
 
-console.log(`\nFirefox artifact output: ${artifactsDir}`);
+console.log(`\nFirefox artifact output: ${artifactsDir}`);

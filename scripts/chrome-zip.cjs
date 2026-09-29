@@ -16,7 +16,7 @@ const edgeZipName = `kalderashield-edge-v${packageJson.version}.zip`;
 
 const excludedNames = new Set([
   'KalderaShield-host.bat',
-  'com.hafgit99.KalderaShield.json',
+  'com.kalderashield.desktop.json',
   'chromium-extension.rar',
 ]);
 
@@ -152,4 +152,4 @@ createZip(stagingDir, chromeZipPath);
 fs.copyFileSync(chromeZipPath, edgeZipPath);
 
 console.log(`\nChrome Web Store package ready: ${chromeZipPath}`);
-console.log(`Microsoft Edge Addons package ready: ${edgeZipPath}`);
+console.log(`Microsoft Edge Addons package ready: ${edgeZipPath}`);

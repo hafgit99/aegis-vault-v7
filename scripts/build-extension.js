@@ -13,7 +13,7 @@ const srcDir = path.resolve(projectRoot, 'src-extension');
 const isDebugBuild = process.argv.includes('--debug');
 
 // EXT-B2: Native messaging host registration files (KalderaShield-host.bat,
-// com.hafgit99.KalderaShield.json) embed machine-specific absolute paths and are
+// com.kalderashield.desktop.json) embed machine-specific absolute paths and are
 // generated at registration time by scripts/register-host.js into
 // native-host-local/ — they are intentionally NOT produced by this build.
 
@@ -145,4 +145,4 @@ async function build() {
 build().catch((err) => {
   console.error('Extension build failed:', err);
   process.exit(1);
-});
+});
