@@ -1,5 +1,6 @@
 use serde_json::Value;
 use sha2::{Digest, Sha256};
+use std::fmt::Write as _;
 use std::{env, fs, path::Path};
 
 const MANIFEST_PATH: &str = "../dist/KalderaShield-integrity.json";
@@ -66,25 +67,28 @@ fn recomputed_root() -> Option<String> {
         }
         rows.push((path, digest, size));
     }
-    // The webview sorts by path with a byte comparison before hashing.
-    rows.sort_by(|left, right| left.0.cmp(&right.0));
+    // The webview sorts by path with a byte comparison before hashing, so the
+    // order here has to be by path alone and not by the whole tuple: a
+    // duplicate path would order differently, and the runtime refuses a manifest
+    // carrying one anyway.
+    rows.sort_by_key(|(path, _, _)| path.clone());
 
     let mut hasher = Sha256::new();
     for (path, digest, size) in rows {
         hasher.update(path.as_bytes());
-        hasher.update([0u8]);
+        hasher.update(b"\0");
         hasher.update(digest.as_bytes());
-        hasher.update([0u8]);
+        hasher.update(b"\0");
         hasher.update(size.to_string().as_bytes());
-        hasher.update([b'\n']);
+        hasher.update(b"\n");
     }
-    // Encoded by hand rather than with `{:x}`. sha2 0.11's Output is a
-    // generic-array, and LowerHex is not implemented for it; this also does
-    // not change shape if the digest crate is swapped later.
-    let digest = hasher.finalize();
+    // Encoded by hand rather than with `{:x}`, which sha2 0.11's Output does
+    // not implement, and through `write!` rather than a `format!` per byte.
     let mut root = String::with_capacity(64);
-    for byte in digest.iter() {
-        root.push_str(&format!("{byte:02x}"));
+    for byte in hasher.finalize().iter() {
+        // write! to a String is infallible, so the Result is deliberately
+        // dropped rather than unwrapped.
+        let _ = write!(root, "{byte:02x}");
     }
     Some(root)
 }
