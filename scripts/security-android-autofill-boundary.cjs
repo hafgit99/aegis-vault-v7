@@ -712,13 +712,24 @@ function checkLintIsWired() {
         'AndroidManifest.xml: a LEANBACK_LAUNCHER filter requires touchscreen to be explicitly optional',
       );
     }
+    // The file name is all lowercase, and it has to be. aapt2 only accepts
+    // [a-z0-9_.] in resource file names, so `KalderaShield_tv_banner.png`
+    // would fail the Android build outright rather than merely missing the
+    // banner. The gate carried the capitalised spelling and only ever passed
+    // on Windows, where the filesystem folds case: NTFS resolved
+    // KalderaShield_tv_banner.png to the lowercase file, and Linux CI -- the
+    // only place that checks out the tree the way a build machine does --
+    // reported all five densities as missing.
+    //
+    // The reference in AndroidManifest.xml is @drawable/kalderashield_tv_banner.
+    const bannerResource = 'kalderashield_tv_banner.png';
     for (const density of ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']) {
       const banner = path.join(
         rootDir, 'src-tauri', 'gen', 'android', 'app', 'src', 'main', 'res',
-        `drawable-${density}`, 'KalderaShield_tv_banner.png',
+        `drawable-${density}`, bannerResource,
       );
       if (!fs.existsSync(banner)) {
-        fail(`res/drawable-${density}/KalderaShield_tv_banner.png: missing TV banner asset`);
+        fail(`res/drawable-${density}/${bannerResource}: missing TV banner asset`);
       }
     }
   }
