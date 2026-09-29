@@ -527,5 +527,9 @@
   "win-store-title": "Microsoft Store で公開予定",
   "win-store-desc": "Store がパッケージを独自の誌明書で再署名します。SmartScreen の警告なしでインストールでき、コード署名証明書を購入する必要はありません。",
   "win-store-cta": "このページの公開予定をご確認ください",
-  "win-pinned-note": "この Windows パッケージは未署名です。コード署名証明書がないため、インストール時に Windows が SmartScreen の警告を表示することがあります。SHA-256 のチェックサムで、変更されていないことを確認できます。"
+  "win-pinned-note": "この Windows パッケージは未署名です。コード署名証明書がないため、インストール時に Windows が SmartScreen の警告を表示することがあります。SHA-256 のチェックサムで、変更されていないことを確認できます。",
+  "privacy-eyebrow": "法務",
+  "privacy-title": "プライバシーポリシー",
+  "terms-eyebrow": "法務",
+  "terms-title": "利用規約"
 }

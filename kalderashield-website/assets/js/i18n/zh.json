@@ -527,5 +527,9 @@
   "win-store-title": "即将登陆 Microsoft Store",
   "win-store-desc": "Store 会使用自己的证书重新签名该包。您无需任何代码签名证书，也不会看到 SmartScreen 警告即可完成安装。",
   "win-store-cta": "请关注此页面",
-  "win-pinned-note": "这个 Windows 安装包未签名：因为没有代码签名证书，安装时 Windows 可能会显示 SmartScreen 警告。您可以通过 SHA-256 校验和确认文件未被修改。"
+  "win-pinned-note": "这个 Windows 安装包未签名：因为没有代码签名证书，安装时 Windows 可能会显示 SmartScreen 警告。您可以通过 SHA-256 校验和确认文件未被修改。",
+  "privacy-eyebrow": "法律",
+  "privacy-title": "隐私政策",
+  "terms-eyebrow": "法律",
+  "terms-title": "使用条款"
 }

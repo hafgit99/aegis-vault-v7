@@ -527,5 +527,9 @@
   "win-store-title": "Microsoft Store 출시 예정",
   "win-store-desc": "Store는 자신 인증번로 패키지를 다시 서명합니다. SmartScreen 경고 없이 설치하거나 코드 서명 인증서를 구매할 필은 없습니다.",
   "win-store-cta": "이 페이지의 출시 정보를 확인해 주세요",
-  "win-pinned-note": "이 Windows 패키지는 서명하지 않습니다. 코드 서명 인증서가 없어 Windows가 설치 시 SmartScreen 경고를 표시할 수있어요. SHA-256 체산사로 파일이 변경도버리었을 확인할 수있습니다."
+  "win-pinned-note": "이 Windows 패키지는 서명하지 않습니다. 코드 서명 인증서가 없어 Windows가 설치 시 SmartScreen 경고를 표시할 수있어요. SHA-256 체산사로 파일이 변경도버리었을 확인할 수있습니다.",
+  "privacy-eyebrow": "법적 고지",
+  "privacy-title": "개인정보 처리방침",
+  "terms-eyebrow": "법적 고지",
+  "terms-title": "이용약관"
 }
