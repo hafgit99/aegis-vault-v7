@@ -262,3 +262,76 @@ beforeAll(() => {
     expect(aliasIdx).toBeLessThan(shaIdx);
   });
 });
+
+/**
+ * The ordering test above passed while v7.0.18.0 shipped a SHA256SUMS.txt that
+ * listed only versioned filenames. A visitor who downloaded
+ * KalderaShield-latest-linux-x64.AppImage and ran `sha256sum -c` got
+ * "No such file or directory" for every download the site links to, and the
+ * Linux installer aborted because it had no digest to compare against.
+ *
+ * Ordering was necessary but not sufficient. The step ran two separate `find`
+ * invocations and attached the pipe only to the second, so the root-level
+ * `find . -maxdepth 1` -- the one that finds the version-less aliases -- was
+ * printed to the log and discarded, and the manifest was written from the
+ * subdirectory output alone.
+ *
+ * These assertions are structural rather than a bash fork on purpose. Passing a
+ * multi-line script to `bash -c` through execFileSync does not survive the
+ * Windows argv quoting: the newlines are lost, the whole step collapses onto
+ * one line, and the checks above this block were reported as passing while the
+ * shell they exercise never ran. A structural assertion cannot rot that way, and
+ * it runs identically on the runner and on a Windows dev box.
+ */
+describe('release checksum manifest', () => {
+  const SHA_STEP_HEADER = '      - name: Generate global SHA256SUMS.txt';
+
+  let step;
+
+  beforeAll(() => {
+    const workflow = readFileSync(WORKFLOW, 'utf8');
+    const start = workflow.indexOf(SHA_STEP_HEADER);
+    expect(start, 'the checksum step is missing from the workflow').toBeGreaterThan(-1);
+    const afterName = workflow.indexOf('        run: |', start);
+    const lines = workflow.slice(afterName).split('\n');
+    const body = [];
+    for (let i = 1; i < lines.length; i++) {
+      if (lines[i].trim() === '' && body.length > 0) { body.push(''); continue; }
+      if (!lines[i].startsWith('          ')) break;
+      body.push(lines[i].slice(10).replace(/\r$/, ''));
+    }
+    step = body.join('\n');
+  });
+
+  it('finds the root-level files, not only the staging subdirectories', () => {
+    expect(step).toMatch(/find\s+\.\s+-maxdepth\s+1\b/);
+  });
+
+  it('feeds the root-level find into the manifest, not just the log', () => {
+    // The regression. The root-level find has to sit inside the same group as
+    // the subdirectory find, with a single pipe carrying both into
+    // SHA256SUMS.txt. A bare `find . -maxdepth 1 ... -exec sha256sum {} \;`
+    // on its own line hashes the aliases, prints them, and throws them away.
+    const grouped = /\{\s*\n\s*find\s+\.\s+-maxdepth\s+1[\s\S]*?\n\s*find\s+linux[\s\S]*?\n\s*\}\s*\\\s*\n\s*\|/;
+    expect(step, 'the two find invocations are not grouped into one pipe').toMatch(grouped);
+
+    // And nothing may re-introduce a second, ungrouped invocation after the
+    // group closes.
+    const afterGroup = step.slice(step.indexOf('| sort'));
+    expect(afterGroup).not.toMatch(/find\s+\.\s+-maxdepth\s+1/);
+  });
+
+  it('writes the manifest rather than only printing it', () => {
+    expect(step).toMatch(/\|\s*sort(?:\s+-u)?\s*>\s*SHA256SUMS\.txt/);
+  });
+
+  it('fails the release when a published alias has no checksum entry', () => {
+    // Ordering was not the only thing that had to be true. The step now checks
+    // the aliases it staged against the manifest it just wrote, so a future
+    // change that stops hashing the root directory stops the release instead of
+    // shipping a manifest nobody can verify against.
+    expect(step).toContain('steps.alias.outputs.staged');
+    expect(step).toMatch(/missing=1/);
+    expect(step).toMatch(/exit 1/);
+  });
+});

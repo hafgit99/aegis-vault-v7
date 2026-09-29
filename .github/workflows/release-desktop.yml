@@ -1095,13 +1095,40 @@ jobs:
           # leaves the website telling users to verify a file it cannot find an
           # entry for. `-maxdepth 1` keeps this from descending into the
           # subdirectories the explicit paths already cover.
-          find . -maxdepth 1 -type f ! -name 'SHA256SUMS.txt' ! -name 'metadata.json' ! -name 'README.md' \
-            -exec sha256sum {} \;
-          find linux macos windows android extensions sbom updater -type f ! -name 'metadata.json' ! -name 'README.md' \
-            -exec sha256sum {} \; \
+          #
+          # Both finds are wrapped in a group so a single pipe carries their
+          # combined output into the manifest. They used to be two separate
+          # commands with the pipe attached only to the second, so the first
+          # one's output went to the log and never reached the file: the
+          # aliases were hashed, printed, and discarded. Every published
+          # `*-latest.*` download was therefore absent from SHA256SUMS.txt and
+          # `sha256sum -c` could not verify a single file the site links to.
+          {
+            find . -maxdepth 1 -type f ! -name 'SHA256SUMS.txt' ! -name 'metadata.json' ! -name 'README.md' \
+              -exec sha256sum {} \;
+            find linux macos windows android extensions sbom updater -type f ! -name 'metadata.json' ! -name 'README.md' \
+              -exec sha256sum {} \;
+          } \
             | awk '{ n=split($2, p, "/"); printf "%s  %s\n", $1, p[n] }' \
-            | sort > SHA256SUMS.txt
+            | sort -u > SHA256SUMS.txt
           cat SHA256SUMS.txt
+
+          # Every staged alias must be verifiable. The site links the stable
+          # `*-latest.*` names, so a manifest without them is not a manifest
+          # anyone can use.
+          missing=0
+          while IFS= read -r staged; do
+            base="$(basename "$staged")"
+            if ! grep -qF "  ${base}" SHA256SUMS.txt; then
+              echo "::error::${base} is published but missing from SHA256SUMS.txt"
+              missing=1
+            fi
+          done <<< "${{ steps.alias.outputs.staged }}"
+          if [ "$missing" -ne 0 ]; then
+            echo "::error::The published checksum manifest cannot verify its own downloads"
+            exit 1
+          fi
+          echo "Every staged alias has a checksum entry."
 
       - name: Install cosign
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v3.10.1 (SHA-pinned)

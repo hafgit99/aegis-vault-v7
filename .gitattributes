@@ -1,0 +1,16 @@
+# Release pipeline shell must be LF on every checkout, including Windows.
+#
+# The workflows contain inline bash that GitHub Actions executes, and the
+# release tests fork a real bash to run that same shell. A CRLF script fails on
+# its first line, so with core.autocrlf=true the extracted step never ran on a
+# Windows dev box and the tests that fork bash were reported as skipped rather
+# than as passing. .gitattributes makes the working tree agree with the Linux
+# runner instead of relying on each developer's autocrlf setting.
+
+.github/workflows/*.yml text eol=lf
+*.sh text eol=lf
+
+# The site's install.sh is fetched with curl and piped to sh by a stranger on a
+# Linux box. A CRLF checkout here would ship it with carriage returns, and
+# /bin/sh rejects the first line.
+kalderashield-website/install.sh text eol=lf
