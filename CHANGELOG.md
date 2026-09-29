@@ -2,7 +2,7 @@
 
 All notable KalderaShield changes are tracked here. The project follows a security-first release style: release notes summarize user-facing changes, while this changelog also records release-gate and validation work.
 
-## 7.0.17.0 - Rebrand
+## 7.0.18.0 - Rebrand
 
 ### Breaking Changes
 
@@ -30,6 +30,19 @@ and can break notarisation.
 ### Security
 
 - The IPC session data key context changed, so a desktop app and browser extension must be updated together. Mismatched versions fail closed rather than falling back to an unauthenticated session.
+- **Uninstalling no longer deletes the vault.** The NSIS pre-uninstall hook removed the application data directory, which for a password manager meant losing every stored credential with no warning and no backup. Vault data under `%APPDATA%\com.kalderashield.desktop` now survives an uninstall.
+
+### Fixed
+
+- **Android release signing was reading the wrong environment variable names** and would have published every release APK unsigned. The workflow exports `KALDERASHIELD_ANDROID_*`; Gradle was reading `AEGIS_ANDROID_*`, so `releaseSigningConfigured` was always false and the failure was only a log warning.
+- **The Android target did not compile.** A rebrand rename had truncated the `package` declaration to `ckage` in all 15 Kotlin sources, the Gradle namespace disagreed with the `R` class the autofill bridge imports, the manifest referenced a style resource that no longer existed, and the ProGuard keep rules still named the pre-rebrand package, which would have stripped the autofill service and the JavaScript bridges from minified builds.
+- **The updater reads only from GitHub Releases.** The `update.aegisvault.xyz` endpoint is gone from the configuration and from both content security policies.
+- The Turkish Android strings had been written with corrupted multi-byte characters and no longer parsed as valid Turkish.
+
+### Signing
+
+- Android release artifacts are signed with a JKS keystore whose certificate subject is `CN=KalderaShield, O=KalderaShield, C=TR`, valid until 2054. JKS is used instead of PKCS12 because PKCS12 cannot hold a key password that differs from the store password, so a PKCS12 keystore has one password guarding both. The keystore, its two passwords, and the base64 form used by CI are new; the previous identity was never published, so no installed app is stranded by it.
+- Installs signed with the previous certificate cannot be updated by this one and must be removed first.
 
 ## 7.0.7.0 - Code Review Remediation (Unreleased)
 

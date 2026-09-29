@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "KalderaShield",
-  "version": "7.0.17",
+  "version": "7.0.18",
   "identifier": "com.kalderashield.desktop",
   "build": {
     "frontendDist": "../dist",
