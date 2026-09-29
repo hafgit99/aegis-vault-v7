@@ -42,8 +42,19 @@
       <a href="/download/" data-i18n="nav-download">İndir</a>
 
       <details class="lang">
-        <summary aria-label="Language / Dil">🌐 12</summary>
-        <div class="lang-menu" id="lang-menu" role="menu"></div>
+        <summary data-i18n-attr="aria-label:lang-switch-label">
+          <span class="lang-code" data-lang-code>TR</span>
+          <span data-lang-current>Türkçe</span>
+        </summary>
+        <div class="lang-menu" id="lang-menu"></div>
+      </details>
+
+      <details class="theme">
+        <summary data-i18n-attr="aria-label:theme-switch-label">
+          <span class="theme-glyph" aria-hidden="true">◐</span>
+          <span class="theme-current" data-theme-current data-i18n="theme-system">Sistem</span>
+        </summary>
+        <div class="theme-menu" id="theme-menu"></div>
       </details>
     </nav>
   </div>
@@ -57,7 +68,7 @@
     <p class="muted prose" data-i18n="dl-desc">Platformunuzu seçin ve uçtan uca şifrelenmiş çevrimdışı kasanızı saniyeler içinde kurun.</p>
 
     <div class="notice prose">
-      <p><strong>Not:</strong> <span data-i18n="dl-desc">İndirmeler GitHub Releases üzerinden sunulur.</span> Windows ve macOS paketleri aşağıda belirtilen nedenlerle henüz yayımlanmıyor.</p>
+      <p><strong data-i18n="dl-notice-label">Not:</strong> <span data-i18n="dl-notice-releases">İndirmeler GitHub Releases üzerinden sunulur.</span> <span data-i18n="dl-notice-platforms">Windows ve macOS paketleri aşağıda belirtilen nedenlerle henüz yayımlanmıyor.</span></p>
     </div>
   </div>
 

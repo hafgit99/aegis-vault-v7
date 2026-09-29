@@ -42,8 +42,19 @@
       <a href="/download/" data-i18n="nav-download">İndir</a>
 
       <details class="lang">
-        <summary aria-label="Language / Dil">🌐 12</summary>
-        <div class="lang-menu" id="lang-menu" role="menu"></div>
+        <summary data-i18n-attr="aria-label:lang-switch-label">
+          <span class="lang-code" data-lang-code>TR</span>
+          <span data-lang-current>Türkçe</span>
+        </summary>
+        <div class="lang-menu" id="lang-menu"></div>
+      </details>
+
+      <details class="theme">
+        <summary data-i18n-attr="aria-label:theme-switch-label">
+          <span class="theme-glyph" aria-hidden="true">◐</span>
+          <span class="theme-current" data-theme-current data-i18n="theme-system">Sistem</span>
+        </summary>
+        <div class="theme-menu" id="theme-menu"></div>
       </details>
     </nav>
   </div>
@@ -73,8 +84,8 @@
   <section id="platforms">
     <div class="wrap">
       <span class="eyebrow" data-i18n="platforms-eyebrow">Platformlar</span>
-      <h2 data-i18n="dl-title">Hemen Başlayın</h2>
-      <p class="prose muted" data-i18n="dl-desc">İndirmeler GitHub Releases üzerinden sunulur; her sürüm SHA-256 özeti ve imzalarla birlikte yayımlanır.</p>
+      <h2 data-i18n="dl-eyebrow">Hemen Başlayın</h2>
+      <p class="prose muted" data-i18n="dl-release-note">İndirmeler GitHub Releases üzerinden sunulur; her sürüm SHA-256 özeti ve imzalarla birlikte yayımlanır.</p>
 
       <div class="grid grid-3" style="margin-top:1.6rem">
         <article class="card">
@@ -250,7 +261,7 @@
   <section id="get-started">
     <div class="wrap">
       <h2 data-i18n="dlhub-title">KalderaShield'i İndirin</h2>
-      <p class="prose muted" data-i18n="dl-desc">İndirmeler GitHub Releases üzerinden sunulur; her sürüm SHA-256 özeti ve imzalarla birlikte yayımlanır.</p>
+      <p class="prose muted" data-i18n="dl-release-note">İndirmeler GitHub Releases üzerinden sunulur; her sürüm SHA-256 özeti ve imzalarla birlikte yayımlanır.</p>
       <p style="margin-top:1.4rem"><a class="btn btn-primary" href="/download/" data-i18n="nav-cta">İndir</a></p>
     </div>
   </section>
