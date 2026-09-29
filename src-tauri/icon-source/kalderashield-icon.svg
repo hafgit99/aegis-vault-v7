@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
-  <title id="title">Aegis Vault 7 icon</title>
-  <desc id="desc">A dark rounded square with an Aegis shield, vault dial, and stylized seven mark.</desc>
+  <title id="title">KalderaShield icon</title>
+  <desc id="desc">A dark rounded square with a shield, vault dial, and stylized seven mark.</desc>
   <defs>
     <linearGradient id="bg" x1="132" y1="92" x2="892" y2="932" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#1a211d"/>

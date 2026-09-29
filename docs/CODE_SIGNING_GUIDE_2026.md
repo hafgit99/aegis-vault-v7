@@ -22,7 +22,7 @@ This guide documents the procedures for signing desktop (Windows EV Authenticode
 - **Certificate:** Developer ID Application.
 - **Commands:**
   ```bash
-  codesign --deep --force --verify --verbose --sign "Developer ID Application: Aegis (TEAMID)" "src-tauri/target/release/bundle/macos/KalderaShield.app"
+  codesign --deep --force --verify --verbose --sign "Developer ID Application: KalderaShield (TEAMID)" "src-tauri/target/release/bundle/macos/KalderaShield.app"
   xcrun notarytool submit "src-tauri/target/release/bundle/macos/KalderaShield.dmg" --keychain-profile "AC_NOTARY" --wait
   xcrun stapler staple "src-tauri/target/release/bundle/macos/KalderaShield.dmg"
   ```
@@ -31,7 +31,7 @@ This guide documents the procedures for signing desktop (Windows EV Authenticode
 
 ## 3. Android Release Signing
 
-- **Keystore:** PKCS12 Keystore (`aegis-release-key.jks`) using AES-256 / RSA 4096.
+- **Keystore:** PKCS12 Keystore (`kalderashield-release-key.jks`) using AES-256 / RSA 4096.
 - **Commands:**
   ```bash
   npm run android:release:signing:check

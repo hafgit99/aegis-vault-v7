@@ -1,4 +1,4 @@
-# Aegis Vault 7 â€” 7.0.1.0 Release Candidate Release Notes
+# KalderaShield â€” 7.0.1.0 Release Candidate Release Notes
 
 - **Version:** 7.0.1.0
 - **Channel:** Release Candidate (internal validation)
@@ -9,7 +9,7 @@
 
 ## Overview
 
-Aegis Vault 7 7.0.1.0 is the Release Candidate hardening milestone. It closes the major security and Android smoke work and adds repeatable release gates, evidence collection, and an audit-ready security package. Aegis Vault 7 is a local-first password manager and secure vault built with React, TypeScript, WebCrypto, SQLite/OPFS, and Tauri, with an Android release candidate path in active validation.
+KalderaShield 7.0.1.0 is the Release Candidate hardening milestone. It closes the major security and Android smoke work and adds repeatable release gates, evidence collection, and an audit-ready security package. KalderaShield is a local-first password manager and secure vault built with React, TypeScript, WebCrypto, SQLite/OPFS, and Tauri, with an Android release candidate path in active validation.
 
 These notes consolidate the desktop, Android, security gate, wa-sqlite, and known-limitation status into a single user- and auditor-facing document. Per-platform evidence notes are still generated under `release-local/<platform>/` by the release gates.
 
@@ -29,11 +29,11 @@ These notes consolidate the desktop, Android, security gate, wa-sqlite, and know
   - APK size: 12.99 MiB
   - APK SHA-256: `d5ac727a75b13e8c88f08265d74a60f966fa2ad153c6188a51597e7e3395da9c`
 - Validated flows: Autofill fill + save, `FLAG_SECURE` screenshot/task-switcher protection, document picker (Emergency Kit, encrypted backup export, plain JSON export, encrypted import, attachment download), safe-area mobile UI, app-private vault persistence via Tauri app-data, and Android Keystore-backed secure storage for remembered Secret Key / biometric metadata.
-- Android remains an **internal candidate**: the completed checklist and biometric/device-regression claims must stay current for each candidate, and Autofill behavior remains browser/provider-dependent (Chrome may require disabling Google Password Manager Autofill or selecting Aegis as the active provider).
+- Android remains an **internal candidate**: the completed checklist and biometric/device-regression claims must stay current for each candidate, and Autofill behavior remains browser/provider-dependent (Chrome may require disabling Google Password Manager Autofill or selecting KalderaShield as the active provider).
 
 ## Security Gate â€” No-JS-Master-String Final Gate
 
-Aegis Vault 7 enforces a strict, automated boundary so the plain-text master password string does not materialize during routine flows (CRUD, settings, attachment retrieval).
+KalderaShield enforces a strict, automated boundary so the plain-text master password string does not materialize during routine flows (CRUD, settings, attachment retrieval).
 
 - **Scan target:** recursively scans all source files (`.ts`, `.tsx`, `.js`, `.jsx`) in `src/`.
 - **Forbidden patterns:** `withActiveMasterPassword`, `getActiveMasterPassword`, `masterPasswordPlain`, `passwordPlain`, `deriveEncryptionKey`.
@@ -77,9 +77,9 @@ Aegis Vault 7 enforces a strict, automated boundary so the plain-text master pas
 
 ## Recovery & Safety Notes
 
-- Aegis Vault 7 cannot recover a lost master password.
+- KalderaShield cannot recover a lost master password.
 - Keep the Emergency Kit and Account Secret Key offline and separate from the device.
-- Encrypted `.aegis` backups require the backup password; keep at least one backup off-device.
+- Encrypted `.ks` backups require the backup password; keep at least one backup off-device.
 - Plain JSON backups are unsafe and should only be stored offline in a trusted location.
 - Use only trusted, verified builds.
 

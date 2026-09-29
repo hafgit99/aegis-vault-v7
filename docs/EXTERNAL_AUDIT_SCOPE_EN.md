@@ -1,12 +1,12 @@
-# Aegis Vault 7 — Independent Security Audit Scope and Preparation Document
+# KalderaShield — Independent Security Audit Scope and Preparation Document
 
-**Document Version:** 2.1.0 · **Date:** September 23, 2026 · **Target Version:** Aegis Vault 7.0.7.0
+**Document Version:** 2.1.0 · **Date:** September 23, 2026 · **Target Version:** KalderaShield.0.7.0
 
 ---
 
 ## 1. Introduction and Purpose
 
-Aegis Vault 7 is a modern password manager with a local-first and zero-knowledge architecture. This document is the official audit scope guide prepared for independent third-party cybersecurity and code audit firms (e.g., Cure53, Trail of Bits, NCC Group, Doyensec, OSTIF-affiliated auditors).
+KalderaShield is a modern password manager with a local-first and zero-knowledge architecture. This document is the official audit scope guide prepared for independent third-party cybersecurity and code audit firms (e.g., Cure53, Trail of Bits, NCC Group, Doyensec, OSTIF-affiliated auditors).
 
 **Distribution channels in scope:** Windows/macOS/Linux desktop apps (Tauri), Android app (Tauri), and Chromium/Firefox/Safari browser extension — all produced by a single reproducible CI release pipeline with Sigstore (cosign) keyless signatures, Tauri minisign updater signatures, and per-release CycloneDX SBOMs.
 

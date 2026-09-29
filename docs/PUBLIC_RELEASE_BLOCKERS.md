@@ -1,6 +1,6 @@
 # Public Release Blockers
 
-This document tracks the current blockers that keep Aegis Vault 7 artifacts in internal release-candidate status instead of public distribution status.
+This document tracks the current blockers that keep KalderaShield artifacts in internal release-candidate status instead of public distribution status.
 
 Generated from:
 

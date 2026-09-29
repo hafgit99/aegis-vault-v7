@@ -1,6 +1,6 @@
 # Quality Gates
 
-This document tracks the automated test gates for Aegis Vault 7. The goal is to raise confidence in small, measurable steps without making early development brittle.
+This document tracks the automated test gates for KalderaShield. The goal is to raise confidence in small, measurable steps without making early development brittle.
 
 ## Current Unit Coverage Baseline
 
@@ -76,11 +76,11 @@ npm run test:fuzz
 
 Current fuzz scope:
 
-- `src/lib/importer.fuzz.test.ts`: arbitrary import text, arbitrary JSON-compatible values, native Aegis JSON array normalization, native Aegis JSON export/import round-trips, and CSV parser row-shape invariants.
+- `src/lib/importer.fuzz.test.ts`: arbitrary import text, arbitrary JSON-compatible values, native KalderaShield JSON array normalization, native KalderaShield JSON export/import round-trips, and CSV parser row-shape invariants.
 - `src/lib/encryption.fuzz.test.ts`: malformed encrypted backup envelopes, weak/malformed KDF parameters, and malformed JSON error taxonomy.
 - `src/lib/attachments.fuzz.test.ts`: unsupported attachment algorithms, missing AES-GCM metadata, and arbitrary authenticated-decryption metadata boundaries.
 
-This gate already caught and fixed a native Aegis JSON import hardening issue where non-string fields such as `password: true` could be carried into normalized vault item data. Native Aegis JSON array imports now coerce credential fields through explicit string guards, and exported vault items now have a property-based round-trip guard that verifies supported fields survive JSON export/import normalization. The desktop release gate, Android release gate, local release script, and wa-sqlite final gate now run `npm run test:fuzz` as a visible release step instead of leaving it implicit inside the full unit suite.
+This gate already caught and fixed a native KalderaShield JSON import hardening issue where non-string fields such as `password: true` could be carried into normalized vault item data. Native KalderaShield JSON array imports now coerce credential fields through explicit string guards, and exported vault items now have a property-based round-trip guard that verifies supported fields survive JSON export/import normalization. The desktop release gate, Android release gate, local release script, and wa-sqlite final gate now run `npm run test:fuzz` as a visible release step instead of leaving it implicit inside the full unit suite.
 
 ## Current Mutation Gate
 
@@ -437,11 +437,11 @@ Current smoke scope:
 - Show and clear the vault empty state when search has no matches.
 - Navigate across vault, audit, generator, settings, and trash workspaces.
 - Switch the interface language between English and Chinese from Settings.
-- Export an encrypted `.aegis` backup download.
+- Export an encrypted `.ks` backup download.
 - Import a plain JSON backup file and verify the imported item appears in the vault.
-- Import an encrypted `.aegis` backup file with the master password and verify the imported item appears in the vault.
-- Reject encrypted `.aegis` import when the backup password is wrong.
-- Cancel encrypted `.aegis` import before decrypting.
+- Import an encrypted `.ks` backup file with the master password and verify the imported item appears in the vault.
+- Reject encrypted `.ks` import when the backup password is wrong.
+- Cancel encrypted `.ks` import before decrypting.
 
 Recently improved:
 
@@ -453,7 +453,7 @@ Recently improved:
 - `src/lib/sqlite_opfs.ts`: covered master setup/verification, encrypted row persistence, desktop payload hydration, OPFS file hydration, missing OPFS file initialization, OPFS write failures, desktop read fallback, legacy localStorage migration, read-only SQL console behavior, row update/defaults, reseed/delete/reset flows, query log subscriptions, localStorage fallback hydration, missing-key decryption guards, and master-password rotation rollback when persistence cannot be written, and single/bulk vault-item save rollback, permanent-delete rollback, bulk-delete rollback, demo-reseed rollback when persistence cannot be written, and native reset fail-closed behavior when desktop/app-private reset cannot be confirmed.
 - Storage backend contract: introduced `src/lib/vaultStorageRepository.ts` so the current OPFS-backed engine and a future real SQLite/wa-sqlite backend must expose the same persistence, migration, reset, SQL-console, and encrypted-item operations.
 - Storage backend provider: routed `src/lib/storage.ts` through `src/lib/vaultStorageProvider.ts` so OPFS and future SQLite repositories can be swapped behind the same tested contract without changing app workflows.
-- Storage migration dry-run: added fail-closed `VITE_AEGIS_STORAGE_BACKEND` parsing and a read-only wa-sqlite dry-run planner that validates unlockability and item identity integrity without writing to the vault.
+- Storage migration dry-run: added fail-closed `VITE_KALDERASHIELD_STORAGE_BACKEND` parsing and a read-only wa-sqlite dry-run planner that validates unlockability and item identity integrity without writing to the vault.
 - wa-sqlite migration mirror: added a read-only `ReadOnlyWaSqliteVaultStorageAdapter` behind the provider dry-run target so future SQLite work can exercise the repository contract without allowing writes or changing production OPFS behavior.
 - wa-sqlite engine bootstrap: added the real `wa-sqlite` dependency, a Vite-safe WASM loader, schema bootstrap, normalized query execution, close handling, and a Node WASM smoke path using `wasmBinary` which established the path from the read-only mirror to the current active backend safely.
 - wa-sqlite read-only query gate: added `executeReadOnly` and `selectObjects` helpers so future adapter reads can map SQLite rows safely while blocking mutating SQL before it reaches the engine.
@@ -466,7 +466,7 @@ Recently improved:
 - wa-sqlite persistence smoke: added a reusable write-close-reopen-read smoke verifier with deterministic tests for pass, unavailable VFS, write failure, and mismatch paths so desktop/Android runtime checks can prove persistence before the backend is promoted.
 - wa-sqlite migration preflight: `runVaultStorageMigration` now requires a passing persistent-target smoke check before the wa-sqlite target is hydrated, reset, or written, blocks promotion when the VFS cannot prove write-close-reopen-read durability, and sanitizes target write/rollback errors before they become migration report issues.
 - wa-sqlite promotion readiness: added a single readiness report that keeps active backend promotion blocked until persistent VFS, smoke, dry-run, persistent migration candidate, backend direction, profile parity, and dry-run/migration item-count parity checks have all passed and surfaces blocker codes for release review.
-- wa-sqlite active selection gate: active `VITE_AEGIS_STORAGE_BACKEND=wa-sqlite` requests now fail closed with structured blocker codes unless promotion readiness is ready and the active provider switch is explicitly enabled. Active repository creation now has a provider-level factory that returns OPFS by default and requires an explicitly active-ready persistent wa-sqlite profile before constructing the real wa-sqlite repository. Controlled migration repository creation also returns a same-profile reopen factory, and the persistent migration candidate runner now wires OPFS source, wa-sqlite write target, smoke preflight, and close/reopen parity into one promotion-ready call without accidentally switching database scopes. Migration write-target repository creation also requires a persistent wa-sqlite VFS profile so volatile WASM storage cannot become the destination for a real migration. A dedicated active backend promotion plan now combines readiness evidence, active wa-sqlite backend selection, and the verified active-ready persistence profile before the provider can construct the promoted repository; forged or blocked plans fail closed. The provider can now promote the singleton active repository from a verified plan with an explicit restore handle, failed promotion validation leaves the current OPFS repository untouched, and hydrate-first promotion waits for `repository.hydrate()` before swapping the active repository so hydrate failures also leave the existing active repository untouched.
+- wa-sqlite active selection gate: active `VITE_KALDERASHIELD_STORAGE_BACKEND=wa-sqlite` requests now fail closed with structured blocker codes unless promotion readiness is ready and the active provider switch is explicitly enabled. Active repository creation now has a provider-level factory that returns OPFS by default and requires an explicitly active-ready persistent wa-sqlite profile before constructing the real wa-sqlite repository. Controlled migration repository creation also returns a same-profile reopen factory, and the persistent migration candidate runner now wires OPFS source, wa-sqlite write target, smoke preflight, and close/reopen parity into one promotion-ready call without accidentally switching database scopes. Migration write-target repository creation also requires a persistent wa-sqlite VFS profile so volatile WASM storage cannot become the destination for a real migration. A dedicated active backend promotion plan now combines readiness evidence, active wa-sqlite backend selection, and the verified active-ready persistence profile before the provider can construct the promoted repository; forged or blocked plans fail closed. The provider can now promote the singleton active repository from a verified plan with an explicit restore handle, failed promotion validation leaves the current OPFS repository untouched, and hydrate-first promotion waits for `repository.hydrate()` before swapping the active repository so hydrate failures also leave the existing active repository untouched.
 - wa-sqlite active migration orchestration: added `runWaSqliteActiveBackendMigration`, a shared desktop/Android promotion runner that performs persistent VFS smoke, OPFS-to-wa-sqlite persistent migration, close/reopen dry-run parity, readiness-plan creation, and hydrate-first active repository promotion in one fail-closed sequence. Smoke, source unlock, migration, dry-run, or readiness failures return blocker evidence and never call active promotion.
 - wa-sqlite storage integration seam: added `migrateActiveVaultStorageToWaSqlite()` in the storage/session layer so desktop and Android UI can trigger the shared active migration runner with the already-unlocked session credential, including Secret Key combined credentials. The wrapper fails closed without an active session and only refreshes the setup marker after a promoted result.
 - Sync metadata freshness: sync envelopes now publish the newest item timestamp as remote metadata freshness so near-simultaneous remote writes cannot be skipped because the envelope build time is equal to or older than local item timestamps.
@@ -484,7 +484,7 @@ Recently improved:
 - `src/components/LockScreen.tsx` and `src/components/DashboardHeader.tsx`: covered selected-language rendering for the expanded Turkish, English, and Chinese i18n surface.
 - `src/components/VaultWorkspace.tsx` and `src/components/FloatingVaultAction.tsx`: covered selected-language rendering for vault list controls and new-item actions.
 - Dashboard summary components: covered selected-language rendering for quick actions, security score copy, and category summary labels.
-- Dashboard information panels: covered selected-language rendering for recent items, cryptology shield details, and Aegis Guard report copy.
+- Dashboard information panels: covered selected-language rendering for recent items, cryptology shield details, and KalderaShield Guard report copy.
 - Vault row components: covered selected-language rendering for strength badges and recent-item copy controls.
 - Vault detail shell components: covered selected-language rendering for header actions, security assessment, metadata labels, categories, and empty notes.
 - Login detail panel: covered selected-language rendering for username/password labels, empty-password fallback, TOTP status, and copy/reveal controls.
@@ -546,7 +546,7 @@ Recently improved:
 - `src/lib/airgapNetworkPolicy.ts`: covered policy installation guards for fetch, XMLHttpRequest, WebSocket, sendBeacon, and EventSource so unexpected outbound channels fail closed while same-origin, Tauri IPC, and HIBP range requests remain allowed.
 - Android Autofill helpers: covered missing-target matching, malformed host normalization, deceptive suffix rejection, requested/cancelled security logs, diagnostic field redaction, and completed/failed event routing.
 - `src/hooks/useVaultData.ts`: covered large-dataset progressive refresh and persisted favorite-selection behavior so UI selection follows normalized storage rows instead of stale optimistic objects.
-- `src/lib/importer.ts`: covered sparse Aegis JSON defaults, sparse and unknown Bitwarden JSON types, numeric Bitwarden CSV categories/favorites, LastPass optional-column fallbacks, universal CSV fallback defaults, stable default/localized format labels, encrypted-envelope guards, and empty/error states. CSV delimiter parsing, label defaults, and file decoding were split into `src/lib/csvParser.ts`, `src/lib/importerLabels.ts`, and `src/lib/fileDecoder.ts`; importer mutation score now reports 80.35%.
+- `src/lib/importer.ts`: covered sparse KalderaShield JSON defaults, sparse and unknown Bitwarden JSON types, numeric Bitwarden CSV categories/favorites, LastPass optional-column fallbacks, universal CSV fallback defaults, stable default/localized format labels, encrypted-envelope guards, and empty/error states. CSV delimiter parsing, label defaults, and file decoding were split into `src/lib/csvParser.ts`, `src/lib/importerLabels.ts`, and `src/lib/fileDecoder.ts`; importer mutation score now reports 80.35%.
 - Importer helpers: expanded CSV parser and file decoder edge coverage for empty exports, CR-only row separators, closing-quote whitespace, malformed quoted fields, blank records, short UTF-16 samples, incomplete BOM prefixes, and tied UTF-16 null-byte votes; the dedicated helper gate now reports 87.85% with a break threshold of 85.
 - `src/lib/legacyCrypto.ts`: covered the removed-legacy fail-closed boundary and asserted that custom legacy decrypt/KDF/HMAC helpers are no longer exported.
 - `src/lib/attachments.ts`: covered AES-GCM metadata validation, legacy records without explicit algorithms, binary MIME fallback, unreadable FileReader results, FileReader errors, and stored-record decrypt failures so attachment branch coverage now reports full coverage.

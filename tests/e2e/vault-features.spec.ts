@@ -3,7 +3,7 @@ import { setupVault } from './helpers';
 
 const masterPassword = 'master-pass-features-e2e';
 
-test.describe('Aegis Vault Features & Workflows E2E', () => {
+test.describe('KalderaShield Features & Workflows E2E', () => {
   test('creates, masks, reveals, and persists a payment card item', async ({ page }) => {
     await setupVault(page, masterPassword);
 

@@ -31,7 +31,7 @@ ignore = [
     # `urlpattern` 0.6.0 (which drops rust-unic) exists, but tauri-utils 2.x
     # pins `urlpattern = "0.3"`, so the only upgrade path is Tauri 3 (alpha).
     # Impact: unmaintained, NOT a vulnerability. rust-unic performs Unicode
-    # identifier lookups while parsing URLPattern at build time; AegisVault
+    # identifier lookups while parsing URLPattern at build time; KalderaShield
     # does not accept URLPattern input from untrusted sources at runtime.
     # Revisit when tauri-utils moves to urlpattern 0.6+.
     "RUSTSEC-2025-0075", # unic-char-range

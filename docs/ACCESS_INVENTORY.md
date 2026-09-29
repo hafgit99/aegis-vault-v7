@@ -1,6 +1,6 @@
 # Access Inventory
 
-Per the [OSTIF/Least Authority Security Best Practices Guide, Chapter 6](https://github.com/ostif-org/best-practices-guide/blob/main/06-kb.md), this document records who and what has privileged access to Aegis Vault 7's release and security surfaces. Reviewed at each major release (latest review: v7.0.4).
+Per the [OSTIF/Least Authority Security Best Practices Guide, Chapter 6](https://github.com/ostif-org/best-practices-guide/blob/main/06-kb.md), this document records who and what has privileged access to KalderaShield's release and security surfaces. Reviewed at each major release (latest review: v7.0.4).
 
 > **Principle:** this is a public file. It deliberately documents *what* has access, never *where secrets live* or their values.
 
@@ -8,7 +8,7 @@ Per the [OSTIF/Least Authority Security Best Practices Guide, Chapter 6](https:/
 
 | Surface | Access | Holder |
 | --- | --- | --- |
-| GitHub repository `hafgit99/aegis-vault-v7` | Admin (owner) | Project maintainer (solo) |
+| GitHub repository `hafgit99/kalderashield` | Admin (owner) | Project maintainer (solo) |
 | Branch protection on `main` | Configuration | Classic protection: 1 approval, required checks, up-to-date branches, linear history; solo merges use the documented bypass checkbox |
 | Code scanning / CodeQL, Dependabot, Private Vulnerability Reporting | Admin-only configuration | Project maintainer |
 
@@ -17,7 +17,7 @@ Per the [OSTIF/Least Authority Security Best Practices Guide, Chapter 6](https:/
 | Credential | Type | Notes |
 | --- | --- | --- |
 | `GITHUB_TOKEN` | Ephemeral, per-job | Least-privilege `permissions:` blocks per job; `contents: write` only where required (release publish) |
-| `ANDROID_KEYSTORE_BASE64`, `AEGIS_ANDROID_KEY_ALIAS`, `AEGIS_ANDROID_KEYSTORE_PASSWORD`, `AEGIS_ANDROID_KEY_PASSWORD` | GitHub Actions secrets | Used only by the Android build job; not printed in logs |
+| `ANDROID_KEYSTORE_BASE64`, `KALDERASHIELD_ANDROID_KEY_ALIAS`, `KALDERASHIELD_ANDROID_KEYSTORE_PASSWORD`, `KALDERASHIELD_ANDROID_KEY_PASSWORD` | GitHub Actions secrets | Used only by the Android build job; not printed in logs |
 | Android signing keystore | Maintainer-local backup, **outside any cloud-synced folder** | Restorable by the maintainer only; GitHub secrets are the sole CI copy |
 | Sigstore / cosign (keyless) | **No stored secret** | OIDC-based ephemeral certificates tied to the repository identity; nothing to rotate or leak |
 | Tauri updater minisign key | If applicable, maintainer-held | Verifies auto-updates independently of the release pipeline |

@@ -1,4 +1,4 @@
-# Aegis Vault 7 — Rust Dependency Upgrade Plan (2026)
+# KalderaShield — Rust Dependency Upgrade Plan (2026)
 
 ## Overview
 

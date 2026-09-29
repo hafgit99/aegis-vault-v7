@@ -1,6 +1,6 @@
-# Aegis Vault 7 — Third Party Licenses
+# KalderaShield — Third Party Licenses
 
-This document contains license notices for third-party open-source components used by Aegis Vault 7.
+This document contains license notices for third-party open-source components used by KalderaShield.
 
 ---
 

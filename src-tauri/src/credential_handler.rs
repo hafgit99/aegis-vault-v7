@@ -743,7 +743,7 @@ mod tests {
         };
 
         const GOLDEN_PHC: &str =
-            "$argon2id$v=19$m=32,t=1,p=1$AgICAgICAgICAgICAgICAg$GJsoyDAQFNCICzYmOVGV4M6jznJXRfccXuQEVAbm9dc";
+            "$argon2id$v=19$m=32,t=1,p=1$AgAAAAAAAAAAAAAAAAAAAA$wbpbqf50JxPQS25YzDJacA/BwzLMpOIEw0CgcpsqGfA";
 
         let parsed = PasswordHash::new(GOLDEN_PHC).expect("golden PHC must parse");
         let argon2 = Argon2::new(
@@ -753,7 +753,7 @@ mod tests {
         );
         // Correct password verifies.
         assert!(argon2
-            .verify_password(b"aegis-golden-password", &parsed)
+            .verify_password(b"kalderashield-golden-password", &parsed)
             .is_ok());
         // Wrong password rejects.
         assert!(argon2.verify_password(b"wrong-password", &parsed).is_err());

@@ -1,4 +1,4 @@
-# Aegis Vault 7 — Security Review and External Audit Status
+# KalderaShield — Security Review and External Audit Status
 
 **Status date:** September 23, 2026
 

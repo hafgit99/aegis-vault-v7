@@ -4,7 +4,7 @@
   "version": "7.0.17.0",
   "type": "module",
   "bin": {
-    "aegis-cli": "./scripts/aegis-cli.cjs"
+    "kalderashield-cli": "./scripts/kalderashield-cli.cjs"
   },
   "scripts": {
     "dev": "vite --port=3000",
@@ -64,7 +64,7 @@
     "extension:safari": "node scripts/safari-extension.cjs",
     "package:firefox:xpi": "node scripts/firefox-xpi.cjs",
     "sign:firefox:xpi": "node scripts/firefox-xpi.cjs --sign",
-    "cli": "node scripts/aegis-cli.cjs",
+    "cli": "node scripts/kalderashield-cli.cjs",
     "register:extension": "node scripts/register-host.js",
     "test:mutation": "stryker run stryker.conf.mjs",
     "test:mutation:dry": "stryker run stryker.conf.mjs --dryRunOnly",

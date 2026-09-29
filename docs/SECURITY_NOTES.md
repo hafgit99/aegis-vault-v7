@@ -69,7 +69,7 @@ This project is a password vault, so security claims must stay conservative unti
 - Android biometric registration can use the Tauri biometric plugin path only when the Android Keystore-backed secure storage bridge is present and exposes the expected API shape. Production-grade biometric wording is blocked until the Pixel/Samsung/Xiaomi and Android 12/13/14/15 approval matrix is completed and verified with `--require-biometric-matrix`.
 - Android Autofill public claims remain browser-dependent and must be backed by current per-candidate manual evidence even though fill/save flows are implemented.
 - Android root/debugger/instrumentation detection is defense-in-depth telemetry, not a trust boundary. It can produce false positives or be bypassed by a privileged attacker, so it remains warning-only and must not be advertised as tamper prevention.
-- OS-level clipboard history managers, Universal Clipboard, cloud clipboard sync, enterprise DLP agents, and privileged local malware may retain copied secrets before Aegis can clear them; product copy must describe clipboard clearing as best-effort, not guaranteed history erasure.
+- OS-level clipboard history managers, Universal Clipboard, cloud clipboard sync, enterprise DLP agents, and privileged local malware may retain copied secrets before KalderaShield can clear them; product copy must describe clipboard clearing as best-effort, not guaranteed history erasure.
 
 ## Near-Term Security Plan
 

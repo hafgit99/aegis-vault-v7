@@ -1,6 +1,6 @@
 # Incident Response Runbook
 
-This document is the internal operating procedure for handling reported vulnerabilities and active security incidents affecting Aegis Vault 7. It follows the recommendations in the [OSTIF/Least Authority Security Best Practices Guide, Chapter 3](https://github.com/ostif-org/best-practices-guide/blob/main/03-response.md) and the public disclosure SLAs defined in [SECURITY.md](../SECURITY.md).
+This document is the internal operating procedure for handling reported vulnerabilities and active security incidents affecting KalderaShield. It follows the recommendations in the [OSTIF/Least Authority Security Best Practices Guide, Chapter 3](https://github.com/ostif-org/best-practices-guide/blob/main/03-response.md) and the public disclosure SLAs defined in [SECURITY.md](../SECURITY.md).
 
 > **Maintainer note:** This is a living document. Re-read it at every release and after every real incident. Solo-maintainer reality: every "team" role below defaults to you; document any external helper (e.g. a triaging contributor) explicitly.
 
@@ -8,12 +8,12 @@ This document is the internal operating procedure for handling reported vulnerab
 
 This runbook activates on any of the following:
 
-- A private vulnerability report (GitHub Private Vulnerability Reporting or `admin@aegisvault.xyz`)
-- A public disclosure of an unpatched Aegis Vault 7 vulnerability
+- A private vulnerability report (GitHub Private Vulnerability Reporting or `admin@KalderaShield.xyz`)
+- A public disclosure of an unpatched KalderaShield vulnerability
 - A vulnerability disclosure in a dependency (npm, crates.io, Tauri, GTK stack) with plausible reach into this codebase
 - A supply-chain event: suspicious dependency update, typosquatting, compromised CI action, malicious commit in a pinned upstream
 - A maintainer-account or release-integrity compromise (unexpected release, altered assets, anomalous `latest.json`)
-- A compromise of the project's internet-facing infrastructure (VPS hosting `aegisvault.xyz`)
+- A compromise of the project's internet-facing infrastructure (the release web server or download host)
 
 Out of scope: user-side misuse, issues in downstream forks, findings in third-party extensions not published under this repository's release pipeline.
 

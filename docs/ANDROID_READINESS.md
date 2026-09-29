@@ -4,7 +4,7 @@ This document tracks the Android preparation path for KalderaShield. Android is 
 
 ## Current Status
 
-- Android Autofill now covers both fill and save flows: fill requests still require vault unlock, domain/package review, and explicit approval; save requests open Aegis with a prefilled new-login form for review before storing anything.
+- Android Autofill now covers both fill and save flows: fill requests still require vault unlock, domain/package review, and explicit approval; save requests open KalderaShield with a prefilled new-login form for review before storing anything.
 - Latest signed Android release gate evidence passed on a physical device with `--signed --device --fresh-install --evidence`; evidence folder: `release-local/android/2026-07-01T12-41-48-852Z`, commit `1df341ec15938da9dad2a8304181dc902013b242`, APK size 12.99 MiB, SHA-256 `d5ac727a75b13e8c88f08265d74a60f966fa2ad153c6188a51597e7e3395da9c`.
 - Tauri Android CLI is available through `@tauri-apps/cli`.
 - Android bundle metadata exists in `src-tauri/tauri.conf.json`.
@@ -21,7 +21,7 @@ This document tracks the Android preparation path for KalderaShield. Android is 
 - Android remembered Secret Key state and biometric metadata now prefer an Android Keystore AES-GCM secure storage bridge, with browser storage kept as fallback and migration source.
 - Android native biometric registration requires the Android Keystore-backed secure storage bridge and will not fall back to IndexedDB for native wrapping metadata.
 - Android vault database persistence uses the Tauri app-data command path, which resolves to app-private storage on Android. When this native write succeeds, localStorage keeps only a desktop/mobile-managed setup marker instead of the encrypted row payload.
-- Android Autofill is registered through a native `AutofillService` and a WebView bridge. The service detects likely login forms from non-secret field metadata, presents an authenticated Aegis entry point, prioritizes package/domain matches, requires explicit user approval, and returns credentials only through the active Android Autofill session.
+- Android Autofill is registered through a native `AutofillService` and a WebView bridge. The service detects likely login forms from non-secret field metadata, presents an authenticated KalderaShield entry point, prioritizes package/domain matches, requires explicit user approval, and returns credentials only through the active Android Autofill session.
 - Desktop storage uses Tauri app-data persistence plus a local fallback marker.
 - Browser/mobile web storage still relies on IndexedDB/localStorage/OPFS-style APIs.
 - Native file dialogs are implemented for Windows desktop, while Android uses its generated project bridge and Android document intents.
@@ -38,7 +38,7 @@ Android release decisions use two kinds of evidence:
 | Signed APK integrity | `android:release:gate -- --signed --evidence`, artifact hashes, metadata, strict report | Install the exact APK from the evidence folder on a target phone | Candidate artifact is reproducible and internally shareable |
 | Fresh install and app-private storage | `--device --fresh-install`, `android:device:doctor`, package data-dir checks | Complete first-run setup and restart/unlock on device | Vault state survives restart without using public/shared storage |
 | Backup, import, attachments, Emergency Kit | Unit coverage plus Android bridge/report checks | Choose real save/open destinations and confirm created files are visible/readable | File flows are valid only for candidates with a completed checklist |
-| Autofill fill/save | Service declaration, active-provider doctor check, bridge/unit coverage | Chrome, Aloha, and Vivaldi/login-site behavior with Aegis as active provider | Browser support is device/browser dependent and must be recorded per candidate |
+| Autofill fill/save | Service declaration, active-provider doctor check, bridge/unit coverage | Chrome, Aloha, and Vivaldi/login-site behavior with KalderaShield as active provider | Browser support is device/browser dependent and must be recorded per candidate |
 | FLAG_SECURE and privacy shield | Native activity configuration and `android:device:security` output | Screenshot, screen recording, and task-switcher preview checks on target device | Supported Android surfaces block sensitive previews |
 | Release runtime hardening | Strict manifest/R8/WebView/ELF-section gate plus installed-package debuggable and `run-as` checks | Confirm normal launch/unlock and warning-only behavior on rooted/test devices when available | Hardening raises analysis cost but is not described as tamper-proof |
 | Biometric and secure storage | Keystore bridge checks, unsupported-path tests, and release evidence matrix validation | Pixel, Samsung, Xiaomi plus Android 12/13/14/15 enrollment, unlock, cancel, and disable checks | Public biometric claims require `--require-biometric-matrix` evidence approval |
@@ -73,7 +73,7 @@ npm run android:device:smoke
 npm run android:device:security
 ```
 
-On this Windows workstation, Android builds also require the Android Studio JBR, SDK, and NDK environment variables to be available before invoking the build scripts. When OneDrive denies Rust build-script cleanup under `src-tauri/target`, set `CARGO_TARGET_DIR` to a local non-synchronized path such as `C:\tmp\aegis-vault-v7-android-target`.
+On this Windows workstation, Android builds also require the Android Studio JBR, SDK, and NDK environment variables to be available before invoking the build scripts. When OneDrive denies Rust build-script cleanup under `src-tauri/target`, set `CARGO_TARGET_DIR` to a local non-synchronized path such as `C:\tmp\kalderashield-vault-v7-android-target`.
 
 Use `android:build:apk:debug:aarch64` for normal phone smoke tests. The generic `android:build:apk:debug` command creates a universal debug APK that bundles `arm64-v8a`, `armeabi-v7a`, `x86`, and `x86_64` native libraries; it is useful for broad compatibility checks but is expected to be much larger.
 
@@ -84,23 +84,23 @@ npm run security:release-hardening:android` after APK/AAB builds to record artif
 
 Use `npm run android:device:doctor` before device testing to diagnose SDK/ADB setup, authorized USB devices, APK presence, installed package state, app-private data directory, and active Autofill provider status. Add `-- --enable-autofill` on a local debug device when the test reinstall resets the active Android Autofill provider; some OEM Android builds reject shell activation and still require manual provider selection.
 
-Use `npm run android:release:gate` for the normal internal release candidate gate. It runs lint, version consistency checks, web build, target-specific Android debug APK build, and strict artifact reporting against the latest candidate artifact. Add `-- --device` when a USB-debugging device is connected and the candidate should also be diagnosed, installed, launched, smoke-tested, and checked with the Android device security doctor. Add `-- --device --fresh-install` when the candidate must first uninstall the selected package and prove the first-run setup flow from a clean app-data state. Add `-- --evidence` to copy APK/AAB artifacts, SHA-256 sums, metadata, and the strict report under `release-local/android/<timestamp>/`. Evidence mode now immediately runs `android:release:evidence:verify`, which checks metadata cleanliness, artifact hashes/sizes, report/checklist consistency, and required device/fresh-install/signed evidence when those gate flags are used. When `--device --evidence` are used together, the evidence folder also includes `android-device-doctor.txt` and `android-device-security.txt` after the install/launch smoke step. Add `-- --device --evidence --enable-autofill` for local Autofill regression passes; if Android rejects shell activation, manually select Aegis as the Autofill provider after install and rerun `npm run android:device:doctor`.
+Use `npm run android:release:gate` for the normal internal release candidate gate. It runs lint, version consistency checks, web build, target-specific Android debug APK build, and strict artifact reporting against the latest candidate artifact. Add `-- --device` when a USB-debugging device is connected and the candidate should also be diagnosed, installed, launched, smoke-tested, and checked with the Android device security doctor. Add `-- --device --fresh-install` when the candidate must first uninstall the selected package and prove the first-run setup flow from a clean app-data state. Add `-- --evidence` to copy APK/AAB artifacts, SHA-256 sums, metadata, and the strict report under `release-local/android/<timestamp>/`. Evidence mode now immediately runs `android:release:evidence:verify`, which checks metadata cleanliness, artifact hashes/sizes, report/checklist consistency, and required device/fresh-install/signed evidence when those gate flags are used. When `--device --evidence` are used together, the evidence folder also includes `android-device-doctor.txt` and `android-device-security.txt` after the install/launch smoke step. Add `-- --device --evidence --enable-autofill` for local Autofill regression passes; if Android rejects shell activation, manually select KalderaShield as the Autofill provider after install and rerun `npm run android:device:doctor`.
 
 Shareable evidence requires a clean working tree. For local experiments only, `npm run android:release:gate -- --evidence --allow-dirty` records dirty status in `metadata.json` and still writes the evidence folder. Evidence metadata also records whether the candidate was tested with `--fresh-install`.
 
 Every evidence folder includes only the latest candidate APK/AAB for the active build type plus a candidate-prefilled copy of `docs/ANDROID_MANUAL_SMOKE_CHECKLIST.md`. Complete that copy for backup/import, attachment, biometric, Autofill, safe-area, and mobile UI release checks. To audit an existing evidence folder later, run `npm run android:release:evidence:verify -- --dir release-local/android/<timestamp>` and add `--require-device`, `--require-fresh-install`, `--require-signed`, `--require-completed-checklist`, or `--require-biometric-matrix` when reviewing final candidate evidence. Use `npm run android:release:evidence:summary -- --dir release-local/android/<timestamp>` for a human-readable PASS/BLOCKED release summary, and add `--final` to require signed, device, fresh-install, completed-checklist, and biometric production matrix evidence together. Use `npm run android:release:notes -- --dir release-local/android/<timestamp> --signed --final` to generate `ANDROID_RELEASE_NOTES.md` after final evidence passes; add `--biometric-claim` only after the biometric matrix is approved.
 
-Use `npm run android:release:signing:check` before public release builds. Release signing is configured from environment variables so private keys and passwords never need to be committed. For repeatable local builds, run `npm run android:release:signing:init` or copy `docs/android-signing.env.example` to `%USERPROFILE%\AegisVaultKeys\android-signing.env` (outside the repo and outside cloud-synced folders such as OneDrive), then fill it locally; `android:release:signing:check` and `android:release:gate -- --signed` load that file automatically (override the location with `AEGIS_SIGNING_ENV_FILE`, or keep a legacy `.secrets/android-signing.env` as fallback) without overriding variables already set in the shell.
+Use `npm run android:release:signing:check` before public release builds. Release signing is configured from environment variables so private keys and passwords never need to be committed. For repeatable local builds, run `npm run android:release:signing:init` or copy `docs/android-signing.env.example` to `%USERPROFILE%\KalderaShieldKeys\android-signing.env` (outside the repo and outside cloud-synced folders such as OneDrive), then fill it locally; `android:release:signing:check` and `android:release:gate -- --signed` load that file automatically (override the location with `KALDERASHIELD_SIGNING_ENV_FILE`, or keep a legacy `.secrets/android-signing.env` as fallback) without overriding variables already set in the shell.
 
 The signing check also opens the configured keystore with `keytool` and verifies that the configured alias is present, so incorrect store passwords or alias typos fail before the slower Gradle package step.
 
 Manual shell setup is still supported:
 
 ```powershell
-$env:AEGIS_ANDROID_KEYSTORE_PATH='C:\secure\aegis-vault-release.jks'
-$env:AEGIS_ANDROID_KEY_ALIAS='aegis-vault'
-$env:AEGIS_ANDROID_KEYSTORE_PASSWORD='REPLACE_WITH_KEYSTORE_PASSWORD'
-$env:AEGIS_ANDROID_KEY_PASSWORD='REPLACE_WITH_KEY_PASSWORD'
+$env:KALDERASHIELD_ANDROID_KEYSTORE_PATH='C:\secure\kalderashield-release.jks'
+$env:KALDERASHIELD_ANDROID_KEY_ALIAS='kalderashield'
+$env:KALDERASHIELD_ANDROID_KEYSTORE_PASSWORD='REPLACE_WITH_KEYSTORE_PASSWORD'
+$env:KALDERASHIELD_ANDROID_KEY_PASSWORD='REPLACE_WITH_KEY_PASSWORD'
 ```
 
 The keystore file should preferably live outside the repository. If you keep it in a local `.secrets/` folder for convenience, keep that folder ignored, never stage it, and back it up separately in a password manager or offline storage. The repository ignores `.secrets/` and common Android signing files such as `.jks`, `.keystore`, `.p12`, `.pfx`, `keystore.properties`, and `key.properties`.
@@ -108,9 +108,9 @@ The keystore file should preferably live outside the repository. If you keep it 
 Create a local release keystore outside the repository with Android Studio JBR `keytool`:
 
 ```powershell
-$secureDir = "$env:USERPROFILE\AegisVaultKeys"
+$secureDir = "$env:USERPROFILE\KalderaShieldKeys"
 New-Item -ItemType Directory -Force -Path $secureDir | Out-Null
-& "$env:JAVA_HOME\bin\keytool.exe" -genkeypair -v -storetype PKCS12 -keystore "$secureDir\aegis-vault-release.p12" -alias aegis-vault -keyalg RSA -keysize 4096 -validity 10000
+& "$env:JAVA_HOME\bin\keytool.exe" -genkeypair -v -storetype PKCS12 -keystore "$secureDir\kalderashield-release.p12" -alias kalderashield -keyalg RSA -keysize 4096 -validity 10000
 ```
 
 Use unique, saved passwords for the keystore and key. Losing this keystore means future Android updates cannot be signed with the same identity.
@@ -163,14 +163,14 @@ Manual smoke checklist for the first debug APK:
 - Create, edit, favorite, search, and delete a login item.
 - Move an item to trash and restore it.
 - Add an attachment, download/open it, delete it, then verify the card metadata updates.
-- Export encrypted `.aegis` backup.
-- Import encrypted `.aegis` backup.
+- Export encrypted `.ks` backup.
+- Import encrypted `.ks` backup.
 - Change master password and verify existing items and attachments remain readable.
 - Auto-lock clears the active session.
 - Clipboard copy/clear behavior works under Android WebView.
 - Turkish, English, and Chinese UI remain readable on phone-sized screens.
-- Android settings can open the system Autofill provider selection screen and list Aegis Vault Autofill as a selectable service on Android 8.0+.
-- Android Autofill can recognize login-like forms, show an Aegis authentication option, promote matching vault records, require approval, and fill supported browsers/apps.
+- Android settings can open the system Autofill provider selection screen and list KalderaShield Autofill as a selectable service on Android 8.0+.
+- Android Autofill can recognize login-like forms, show an KalderaShield authentication option, promote matching vault records, require approval, and fill supported browsers/apps.
 
 ## Android Release Candidate Checklist
 
@@ -200,7 +200,7 @@ npm run security:release-hardening:android -- --strict --signed`.
 - Verify requested permissions stay minimal. Current expected runtime permission surface: `android.permission.INTERNET`.
 - Verify `android:usesCleartextTraffic` is `false` for release builds.
 - Verify `android:allowBackup="false"` and `android:fullBackupContent="false"` remain present.
-- Verify `AegisAutofillService` remains protected by `android.permission.BIND_AUTOFILL_SERVICE`.
+- Verify `KalderaShieldAutofillService` remains protected by `android.permission.BIND_AUTOFILL_SERVICE`.
 - Verify `FileProvider` remains `exported="false"` and `grantUriPermissions="true"`.
 
 ### Device Security
@@ -216,9 +216,9 @@ npm run security:release-hardening:android -- --strict --signed`.
 ### Backup, Import, And Attachments
 
 - Emergency Kit download opens Android document picker and lets the user choose the destination.
-- Encrypted `.aegis` export opens Android document picker and lets the user choose the destination.
+- Encrypted `.ks` export opens Android document picker and lets the user choose the destination.
 - Plain `.json` export requires explicit confirmation and opens Android document picker.
-- Import opens Android document picker, handles cancellation cleanly, and imports a valid encrypted `.aegis` backup.
+- Import opens Android document picker, handles cancellation cleanly, and imports a valid encrypted `.ks` backup.
 - Attachment download opens Android document picker and writes a readable file.
 - Attachment delete updates the vault card and survives app restart.
 
@@ -231,10 +231,10 @@ npm run security:release-hardening:android -- --strict --signed`.
 
 ### Autofill
 
-- New-site registration save prompt: after Android asks to save a username/password, approving Aegis should open the vault new-login form with title, username, password, and URL prefilled for review.
-- Aegis Vault Autofill appears as a selectable Android Autofill provider.
-- Aloha/browser baseline: Aegis prompt appears, matching record is promoted, approval fills username/password.
-- Chrome baseline: if Google Password Manager has priority, switch Chrome to fill with another app; verify Aegis prompt then appears and fills.
+- New-site registration save prompt: after Android asks to save a username/password, approving KalderaShield should open the vault new-login form with title, username, password, and URL prefilled for review.
+- KalderaShield Autofill appears as a selectable Android Autofill provider.
+- Aloha/browser baseline: KalderaShield prompt appears, matching record is promoted, approval fills username/password.
+- Chrome baseline: if Google Password Manager has priority, switch Chrome to fill with another app; verify KalderaShield prompt then appears and fills.
 - Mismatched records require the second confirmation before filling.
 - Stale Autofill requests expire and do not fill credentials.
 
