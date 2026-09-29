@@ -1,4 +1,4 @@
-ckage com.kalderashield.desktop.bridges
+package com.kalderashield.desktop.bridges
 
 import android.webkit.JavascriptInterface
 import com.kalderashield.desktop.security.RuntimeSecurityPosture

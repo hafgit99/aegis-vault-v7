@@ -1,4 +1,4 @@
-ckage com.kalderashield.desktop.bridges
+package com.kalderashield.desktop.bridges
 
 import android.util.Base64
 import android.util.Log

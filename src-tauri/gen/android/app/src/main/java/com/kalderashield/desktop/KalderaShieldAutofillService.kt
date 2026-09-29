@@ -1,4 +1,4 @@
-ckage com.kalderashield.desktop
+package com.kalderashield.desktop
 
 import android.app.PendingIntent
 import android.content.Intent

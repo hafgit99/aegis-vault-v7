@@ -1,4 +1,4 @@
-ckage com.kalderashield.desktop.security
+package com.kalderashield.desktop.security
 
 import android.content.Context
 import android.util.Base64

@@ -1,4 +1,4 @@
-ckage com.kalderashield.desktop.security
+package com.kalderashield.desktop.security
 
 import com.kalderashield.desktop.model.AutofillLaunchRequest
 import com.kalderashield.desktop.model.AutofillSaveCandidate

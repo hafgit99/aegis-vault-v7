@@ -19,12 +19,12 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
-# Keep Aegis main activity, services, and JS bridge interfaces intact
--keep class com.hafgit99.aegisvault7.** { *; }
--keepclassmembers class com.hafgit99.aegisvault7.MainActivity$*Bridge {
+# Keep KalderaShield main activity, services, and JS bridge interfaces intact
+-keep class com.kalderashield.desktop.** { *; }
+-keepclassmembers class com.kalderashield.desktop.MainActivity$*Bridge {
     @android.webkit.JavascriptInterface <methods>;
 }
--keepclassmembers class com.hafgit99.aegisvault7.bridges.Android*Bridge {
+-keepclassmembers class com.kalderashield.desktop.bridges.Android*Bridge {
     @android.webkit.JavascriptInterface <methods>;
 }
 

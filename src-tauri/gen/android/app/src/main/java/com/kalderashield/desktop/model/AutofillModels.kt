@@ -1,4 +1,4 @@
-ckage com.kalderashield.desktop.model
+package com.kalderashield.desktop.model
 
 import android.view.autofill.AutofillId
 import org.json.JSONObject

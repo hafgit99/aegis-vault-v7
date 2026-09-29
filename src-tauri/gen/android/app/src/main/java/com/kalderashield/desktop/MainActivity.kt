@@ -1,4 +1,4 @@
-ckage com.kalderashield.desktop
+package com.kalderashield.desktop
 
 import android.app.Activity
 import android.content.Intent

@@ -1,4 +1,4 @@
-ckage com.kalderashield.desktop.bridges
+package com.kalderashield.desktop.bridges
 
 import android.app.Activity
 import android.content.Intent
