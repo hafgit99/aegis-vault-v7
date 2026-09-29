@@ -158,7 +158,7 @@
     "globals": "^17.11.0",
     "jsdom": "^30.1.1",
     "tailwindcss": "^4.3.3",
-    "tsx": "^4.21.0",
+    "tsx": "^4.23.15",
     "typescript-eslint": "^8.70.1",
     "vite": "^8.2.2",
     "vitest": "^4.1.11"
