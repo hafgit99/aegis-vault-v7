@@ -7,30 +7,53 @@ const MANIFEST_FILENAME = 'KalderaShield-integrity.json';
 const SCHEMA_VERSION = 1;
 const ALGORITHM = 'SHA-256';
 
-// Y-20, revisited. index.html was in the manifest so that the document which
-// decides what runs could not be rewritten to add a `<script src>`, and that is
-// still the right instinct. But putting it in the manifest made every release
-// build fail, and it is worth being precise about why, because the earlier
-// comment here was wrong about the mechanism:
+// Y-20, revisited, twice.
 //
-//   It claimed Tauri "does not rewrite the file on disk". That is true, and it
-//   is not what the runtime compares. The check `fetch`es the document and
-//   hashes what the WebView is *served*. Tauri v2 applies `app.security.csp`
-//   to the served bytes, merging it with the CSP <meta> already in the
-//   document -- in this project those two strings genuinely differ (tauri.conf
-//   adds the updater and release hosts to connect-src), so the served document
-//   is longer than the file on disk. Result: `asset-size-mismatch` on every
-//   release build, on every machine, with nothing wrong with the build.
+// index.html was in the manifest so that the document which decides what runs
+// could not be rewritten to add a `<script src>`, and that is still the right
+// instinct. But putting it in the manifest made every release build fail, and
+// the first explanation offered for that here was wrong about the mechanism. It
+// claimed Tauri "does not rewrite the file on disk". That is true, and it is not
+// what the runtime compares. The check `fetch`es each asset and measures what
+// the WebView is *served*.
 //
-// So index.html is excluded from the hashed set. What replaces it is not less
-// checking of the same kind: the Y-20 counter-check (findUnlistedAssetReferences)
-// still parses the served document and still fails closed on any reference the
-// manifest cannot vouch for. That is the property the exclusion was for, and an
-// attacker who adds a script to index.html is caught by it. What is given up
-// is only byte-level integrity for the document itself -- which was never
-// actually enforced, since the bytes were always compared against a manifest
-// that could not match them.
+// The actual mechanism, from tauri 2.11.5 src/manager/mod.rs `get_asset`:
+//
+//     let is_html = asset_path.as_ref().ends_with(".html");
+//     let final_data = if is_html {
+//       let mut asset = String::from_utf8_lossy(&asset_response).into_owned();
+//       if let Some(csp) = self.csp() {
+//         let mut csp_map = set_csp(&mut asset, &self.assets, &asset_path, self, csp);
+//         ...
+//       }
+//       asset.into_bytes()
+//     } else {
+//       asset_response.into_owned()
+//     };
+//
+// Tauri rewrites the bytes of *every* asset whose path ends in `.html`, not
+// only the main frame, merging app.security.csp into the document. Non-HTML
+// assets are passed through untouched.
+//
+// Excluding only index.html therefore fixed the document and left a trap. Any
+// other .html in the bundle -- public/icon-showcase.html, added with the icon
+// set -- is hashed here, served longer by Tauri, and fails as
+// `asset-size-mismatch` on every machine, with a warning that tells the user
+// their installation may be tampered with. That is exactly what happened:
+// v7.0.18.0 shipped with only public/splash.css and verified clean, and every
+// build since the icon set has reported a false integrity failure.
+//
+// So the rule is now the one Tauri actually imposes: no .html file is hashed.
+// What replaces byte-level integrity for documents is not less checking of the
+// same kind -- the Y-20 counter-check (findUnlistedAssetReferences) still parses
+// the served index.html and still fails closed on any reference the manifest
+// cannot vouch for, and with every .html unlisted a document reference to one
+// is now unlisted by construction and fails closed too. An attacker who adds a
+// script to index.html is caught either way. What is given up is byte-level
+// integrity for documents, which was never actually enforced: the bytes were
+// always compared against a manifest that could not match them.
 const INDEX_HTML_PATH = 'index.html';
+const isTauriRewrittenHtml = (assetPath) => assetPath.toLowerCase().endsWith('.html');
 
 function walkFiles(dir, output = []) {
   if (!fs.existsSync(dir)) return output;
@@ -59,8 +82,16 @@ function createAssetEntries(distDir) {
       file,
       path: path.relative(distDir, file).replace(/\\/g, '/'),
     }))
-    // See INDEX_HTML_PATH above. The document is still checked, just not hashed.
-    .filter((entry) => entry.path !== MANIFEST_FILENAME && entry.path !== INDEX_HTML_PATH && !entry.path.endsWith('.map'))
+    // See the Tauri `get_asset` excerpt above. Every .html is excluded because
+    // every .html is rewritten; the manifest and the served bytes could never
+    // agree, so hashing one can only ever produce a false failure.
+    .filter(
+      (entry) =>
+        entry.path !== MANIFEST_FILENAME &&
+        entry.path !== INDEX_HTML_PATH &&
+        !isTauriRewrittenHtml(entry.path) &&
+        !entry.path.endsWith('.map')
+    )
     .map((entry) => {
       const contents = fs.readFileSync(entry.file);
       return {
@@ -115,11 +146,13 @@ if (require.main === module) {
 
 module.exports = {
   ALGORITHM,
+  INDEX_HTML_PATH,
   MANIFEST_FILENAME,
   SCHEMA_VERSION,
   buildIntegrityManifest,
   canonicalAssetPayload,
   createAssetEntries,
   generateIntegrityManifest,
+  isTauriRewrittenHtml,
   validateIntegrityManifest,
 };

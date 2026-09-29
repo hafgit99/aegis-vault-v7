@@ -49,10 +49,18 @@ const ASSET_INTEGRITY_RESULT_FILENAME: &str = "kalderashield_asset_integrity_res
 /// real reasons use (`manifest-unavailable`, `asset-hash-mismatch`, ...) survive,
 /// and the result is length-capped.
 ///
-/// Returns `None` when nothing usable is left, so the caller can refuse to
-/// write rather than write an empty file that reads like a verdict.
+/// The allowlist is deliberately narrow. It was once widened to admit `.`, `/`
+/// and mixed case so an asset path could be recorded verbatim, which is what
+/// makes the file useful -- but that also let `../../etc/passwd` through intact,
+/// and the traversal test caught it. The filter stays strict instead: the
+/// webview encodes the asset path into the same code alphabet (lowercased, with
+/// separators flattened to `-`) before it gets here, so a path is still recorded
+/// and the result is still not usable as a path.
+///
+/// The cap is the one thing that had to move, because a reason now carries an
+/// asset name. 64 truncated the filename before the interesting part of it.
 fn sanitize_asset_integrity_reason(reason: &str) -> Option<String> {
-    const MAX_REASON_LEN: usize = 64;
+    const MAX_REASON_LEN: usize = 128;
     let sanitized: String = reason
         .chars()
         .filter(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || *c == '-')
@@ -1309,10 +1317,38 @@ mod tests {
         let long = "a".repeat(500);
         let sanitized =
             sanitize_asset_integrity_reason(&long).expect("a long code is still usable");
+        // 128 rather than 64: a reason may now carry the name of the asset that
+        // failed, so the longest realistic value is a hashed Vite filename. The
+        // cap still exists to bound a file written from webview input, and the
+        // real reasons are two orders of magnitude shorter.
         assert_eq!(
             sanitized.len(),
-            64,
+            128,
             "recorded reason should be length-capped"
+        );
+    }
+
+    #[test]
+    fn sanitize_asset_integrity_reason_keeps_a_webview_encoded_asset_path() {
+        // The webview flattens an asset path into this alphabet before sending
+        // it, and the result is what makes the diagnostic file actionable: a
+        // report that says which of the bundled assets failed, rather than only
+        // that something did. Pinned end to end because the encoding lives on
+        // the other side of the boundary and this is the half that can be
+        // broken silently.
+        assert_eq!(
+            sanitize_asset_integrity_reason(
+                "asset-size-mismatch-2-vs-4-icon-showcase-html"
+            )
+            .as_deref(),
+            Some("asset-size-mismatch-2-vs-4-icon-showcase-html")
+        );
+        assert_eq!(
+            sanitize_asset_integrity_reason(
+                "asset-size-mismatch-1139398-vs-1140471-assets-wa-sqlite-async-dy3-ptqa-wasm"
+            )
+            .as_deref(),
+            Some("asset-size-mismatch-1139398-vs-1140471-assets-wa-sqlite-async-dy3-ptqa-wasm")
         );
     }
 }

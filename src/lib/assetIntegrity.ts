@@ -3,11 +3,53 @@ import { invoke } from '@tauri-apps/api/core';
 import { isAndroidRuntime, isDesktopRuntime } from './desktopStorage';
 
 const MANIFEST_PATH = './KalderaShield-integrity.json';
-// Y-20: the document that decides what runs. Required in the manifest.
+// Y-20: the document that decides what runs. Never in the manifest -- Tauri
+// rewrites the bytes of every .html it serves.
 const INDEX_HTML_PATH = 'index.html';
 const MAX_ASSET_COUNT = 256;
 const MAX_TOTAL_BYTES = 64 * 1024 * 1024;
 const SHA256_HEX = /^[a-f0-9]{64}$/;
+
+/**
+ * The set of asset paths whose served bytes Tauri does not serve verbatim.
+ *
+ * Must stay in step with `isTauriRewrittenHtml` in
+ * scripts/generate-asset-integrity-manifest.cjs, which is the half that builds
+ * the manifest. Case-insensitive to match the generator.
+ */
+export function isTauriRewrittenHtml(assetPath: string): boolean {
+  return assetPath.toLowerCase().endsWith('.html');
+}
+
+/**
+ * A failure reason that names the asset responsible.
+ *
+ * The bare reason codes were the reason this took as long as it did to
+ * diagnose: a release build reports `asset-size-mismatch` and nothing else, so
+ * a support report says only that some asset of nineteen was wrong.
+ *
+ * The name has to survive the trip through the native side, which is a
+ * deliberate security boundary: `sanitize_asset_integrity_reason` whitelists
+ * lowercase letters, digits and `-`, drops everything else, and caps the
+ * result. It has to stay that narrow -- an earlier attempt to let `/` and `.`
+ * through so paths could be recorded verbatim also let `../../etc/passwd`
+ * through, and the traversal test in lib.rs caught it. So the path is encoded
+ * into that alphabet here instead: lowercased, with every separator flattened
+ * to `-` and any `..` run collapsed, which means the native filter is a no-op
+ * and the value is still not usable as a path.
+ */
+function encodeAssetPath(assetPath: string): string {
+  return assetPath
+    .toLowerCase()
+    .replace(/\.\.+/g, 'dotdot')
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+function assetReason(reason: string, assetPath: string): string {
+  return `${reason}-${encodeAssetPath(assetPath)}`;
+}
 
 export interface AssetIntegrityEntry {
   path: string;
@@ -185,15 +227,27 @@ export async function verifyRuntimeAssetIntegrity(): Promise<AssetIntegrityResul
   }
   if (!manifest) return { status: 'failed', reason: 'manifest-invalid' };
 
-  // index.html is deliberately NOT in the manifest, so this is not a check that
-  // it is there. It is a check that the exclusion has not been used to smuggle
-  // the document out of verification: if index.html is present, the generator's
-  // filter changed and every hash below is about files the document merely
-  // references, so the counter-check at the end would reason about a document
-  // that was never verified. Refuse rather than silently half-verify.
-  const indexIsListed = manifest.assets.some((asset) => asset.path === INDEX_HTML_PATH);
-  if (indexIsListed) {
-    return { status: 'failed', reason: 'index-html-unlisted' };
+  // No .html may be in the manifest, and this is not a check that index.html is
+  // there. Tauri rewrites the served bytes of every .html asset (it merges
+  // app.security.csp into the document), so a manifest entry for one could
+  // never match what the app is served -- the build would fail closed on every
+  // machine, reporting a tampered installation that never existed. Excluding
+  // only index.html was not enough: it left every other bundled .html hashed
+  // against bytes the app never sees, which is how a public/icon-showcase.html
+  // turned a correct build into a false integrity warning. See
+  // scripts/generate-asset-integrity-manifest.cjs for the tauri source excerpt.
+  //
+  // This is the fail-closed half. If the generator's exclusion were ever
+  // narrowed back to index.html, a document would be hashed against
+  // unmatchable bytes again; refuse rather than half-verify. It also means a
+  // document reference to any .html is unlisted by construction, so
+  // findUnlistedAssetReferences rejects it below.
+  const listedHtml = manifest.assets.filter((asset) => isTauriRewrittenHtml(asset.path));
+  if (listedHtml.length > 0) {
+    return {
+      status: 'failed',
+      reason: `html-asset-listed-${listedHtml.length}`,
+    };
   }
 
   const canonicalRoot = await sha256Hex(new TextEncoder().encode(canonicalAssetPayload(manifest.assets)));
@@ -206,11 +260,19 @@ export async function verifyRuntimeAssetIntegrity(): Promise<AssetIntegrityResul
   try {
     for (const asset of manifest.assets) {
       const response = await fetch('./' + asset.path, { cache: 'no-store', credentials: 'same-origin' });
-      if (!response.ok) return { status: 'failed', reason: 'asset-unavailable' };
+      if (!response.ok) return { status: 'failed', reason: assetReason('asset-unavailable', asset.path) };
       const contents = await response.arrayBuffer();
-      if (contents.byteLength !== asset.size) return { status: 'failed', reason: 'asset-size-mismatch' };
+      // Name the asset, and its two sizes, rather than only the verdict. These
+      // numbers are what distinguishes a Tauri-side rewrite from a genuinely
+      // altered file, and a bare code cannot.
+      if (contents.byteLength !== asset.size) {
+        return {
+          status: 'failed',
+          reason: assetReason(`asset-size-mismatch-${asset.size}-vs-${contents.byteLength}`, asset.path),
+        };
+      }
       if (await sha256Hex(contents) !== asset.sha256) {
-        return { status: 'failed', reason: 'asset-hash-mismatch' };
+        return { status: 'failed', reason: assetReason('asset-hash-mismatch', asset.path) };
       }
     }
 
