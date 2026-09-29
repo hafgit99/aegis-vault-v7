@@ -1557,7 +1557,10 @@ mod tests {
             "example.co.uk"
         );
         assert_eq!(extract_etld_plus_one("sub.domain.com.tr"), "domain.com.tr");
-        assert_eq!(extract_etld_plus_one("www.KalderaShield.org"), "KalderaShield.org");
+        assert_eq!(
+            extract_etld_plus_one("www.kalderashield.org"),
+            "kalderashield.org"
+        );
         assert_eq!(
             extract_etld_plus_one("login.portal.com.tn"),
             "portal.com.tn"
@@ -1858,7 +1861,10 @@ mod tests {
     /// A scratch token path, so the rotation tests exercise the real file write
     /// without touching the app data directory.
     fn scratch_token_path(label: &str) -> PathBuf {
-        std::env::temp_dir().join(format!("KalderaShield-revoke-test-{label}-{}", generate_token()))
+        std::env::temp_dir().join(format!(
+            "KalderaShield-revoke-test-{label}-{}",
+            generate_token()
+        ))
     }
 
     #[test]
@@ -1960,8 +1966,10 @@ mod tests {
         // A path whose parent is a regular *file* cannot be created, so the
         // write fails. (Pointing at a path inside a directory would not do:
         // `write_pairing_token_file` creates parents, and would succeed.)
-        let not_a_directory =
-            std::env::temp_dir().join(format!("KalderaShield-revoke-test-file-{}", generate_token()));
+        let not_a_directory = std::env::temp_dir().join(format!(
+            "KalderaShield-revoke-test-file-{}",
+            generate_token()
+        ));
         fs::write(&not_a_directory, b"not a directory").expect("scratch file");
 
         let result = rotate_pairing_token_now(

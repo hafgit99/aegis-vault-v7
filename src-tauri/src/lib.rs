@@ -989,7 +989,11 @@ mod tests {
 
     fn temp_path(name: &str) -> std::path::PathBuf {
         let mut dir = std::env::temp_dir();
-        dir.push(format!("kalderashield-import-test-{}-{}", std::process::id(), name));
+        dir.push(format!(
+            "kalderashield-import-test-{}-{}",
+            std::process::id(),
+            name
+        ));
         dir
     }
 

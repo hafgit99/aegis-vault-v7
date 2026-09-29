@@ -753,7 +753,7 @@ mod tests {
         );
         // Correct password verifies.
         assert!(argon2
-            .verify_password(b"KalderaShield-golden-password", &parsed)
+            .verify_password(b"aegis-golden-password", &parsed)
             .is_ok());
         // Wrong password rejects.
         assert!(argon2.verify_password(b"wrong-password", &parsed).is_err());
