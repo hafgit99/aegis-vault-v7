@@ -31,7 +31,7 @@ const tauriConfig = readJson(tauriConfigPath);
 const packageVersion = packageJson.version;
 const tauriVersion = tauriConfig.version;
 const cargoTomlVersion = readCargoPackageVersion(cargoTomlPath);
-const cargoLockVersion = readCargoLockPackageVersion(cargoLockPath, 'aegis-vault-v7');
+const cargoLockVersion = readCargoLockPackageVersion(cargoLockPath, 'kalderashield');
 
 const versions = [
   ['package.json', packageVersion],

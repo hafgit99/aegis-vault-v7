@@ -2,8 +2,8 @@ import { APP_NAME } from './branding';
 import { isNativeFileDialogSupported, saveDesktopExportFile, saveDesktopBinaryFile } from './desktopFiles';
 import { isAccountSecretKeyFormatValid, normalizeAccountSecretKey } from './secretKey';
 
-export const EMERGENCY_KIT_FILENAME = 'aegis-vault-emergency-kit.txt';
-export const EMERGENCY_KIT_PDF_FILENAME = 'aegis-vault-emergency-kit.pdf';
+export const EMERGENCY_KIT_FILENAME = 'KalderaShield-vault-emergency-kit.txt';
+export const EMERGENCY_KIT_PDF_FILENAME = 'KalderaShield-vault-emergency-kit.pdf';
 
 interface EmergencyKitOptions {
   generatedAt?: Date;

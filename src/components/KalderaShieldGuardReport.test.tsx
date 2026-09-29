@@ -1,0 +1,74 @@
+/**
+ * @vitest-environment jsdom
+ */
+
+import { cleanup, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
+
+import { LanguageProvider } from '../i18n/LanguageContext';
+import { languageStorageKey } from '../i18n/translations';
+import { APP_SECURITY_BRAND } from '../lib/branding';
+import KalderaShieldGuardReport from './KalderaShieldGuardReport';
+
+afterEach(() => {
+  cleanup();
+  window.localStorage.clear();
+});
+
+describe('KalderaShieldGuardReport', () => {
+  it('renders the secure report when the audit score is high', () => {
+    render(
+      <KalderaShieldGuardReport
+        auditReport={{
+          score: 95,
+          weakCount: 0,
+          reusedCount: 0,
+          secureCount: 8,
+          totalCount: 8,
+        }}
+      />,
+    );
+
+    expect(screen.getByText(`${APP_SECURITY_BRAND} Güvenlik Raporu`)).toBeTruthy();
+    expect(screen.getByText(/Hiçbir riskli nokta tespit edilemedi/)).toBeTruthy();
+  });
+
+  it('renders the risky report with weak and reused counts', () => {
+    render(
+      <KalderaShieldGuardReport
+        auditReport={{
+          score: 42,
+          weakCount: 3,
+          reusedCount: 2,
+          secureCount: 1,
+          totalCount: 6,
+        }}
+      />,
+    );
+
+    expect(screen.getByText(/3 adet zayıf/)).toBeTruthy();
+    expect(screen.getByText(/2 adet çift kullanılmış/)).toBeTruthy();
+  });
+
+  it('renders the report in the selected language', () => {
+    window.localStorage.setItem(languageStorageKey, 'en');
+
+    render(
+      <LanguageProvider>
+        <KalderaShieldGuardReport
+          auditReport={{
+            score: 42,
+            weakCount: 3,
+            reusedCount: 2,
+            secureCount: 1,
+            totalCount: 6,
+          }}
+        />
+      </LanguageProvider>,
+    );
+
+    expect(screen.getByText(`${APP_SECURITY_BRAND} Security Report`)).toBeTruthy();
+    expect(screen.getByText(/3 weak/)).toBeTruthy();
+    expect(screen.getByText(/2 reused passwords/)).toBeTruthy();
+  });
+});

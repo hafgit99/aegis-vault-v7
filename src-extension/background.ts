@@ -1,6 +1,6 @@
 import { extractRegistrableDomainFromUrl } from './psl-utils';
 
-const HOST_NAME = 'com.hafgit99.aegisvault7';
+const HOST_NAME = 'com.kalderashield.desktop';
 
 export interface ExtensionDraftCredential {
   title?: string;
@@ -271,7 +271,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // transport exposes credentials to network-level observers.
         if (tabUrl.startsWith('http://') && !request.userConfirmedMismatch) {
           console.warn(
-            '[AegisVault Security] Autofill into insecure HTTP page blocked by background service worker:',
+            '[KalderaShield Security] Autofill into insecure HTTP page blocked by background service worker:',
             `tab=${tabUrl}`
           );
           sendResponse({ status: 'blocked', reason: 'insecure_connection' });
@@ -285,14 +285,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (!credDomain || (tabDomain && credDomain && tabDomain !== credDomain)) {
             if (!request.userConfirmedMismatch) {
               console.warn(
-                '[AegisVault Security] Autofill domain mismatch blocked by background service worker:',
+                '[KalderaShield Security] Autofill domain mismatch blocked by background service worker:',
                 `tab=${tabDomain}, credential=${credDomain || '(empty)'}`
               );
               sendResponse({ status: 'blocked', reason: 'domain_mismatch' });
               return;
             }
             console.warn(
-              '[AegisVault Security] Autofill domain mismatch allowed with explicit user confirmation:',
+              '[KalderaShield Security] Autofill domain mismatch allowed with explicit user confirmation:',
               `tab=${tabDomain}, credential=${credDomain || '(empty)'}`
             );
         }

@@ -11,7 +11,7 @@ import React from 'react';
 import type { VaultItem } from '../types';
 
 vi.mock('../lib/share', () => ({
-  generateShareUrl: vi.fn().mockResolvedValue('https://app.aegisvault.org/#share=encrypted_data&s=salt'),
+  generateShareUrl: vi.fn().mockResolvedValue('https://app.KalderaShield.org/#share=encrypted_data&s=salt'),
   MIN_SHARE_PASSWORD_LENGTH: 4,
 }));
 
@@ -102,7 +102,7 @@ describe('ShareModal', () => {
     await waitFor(() => {
       const copyBtn = screen.getByTestId('share-modal-copy-button');
       fireEvent.click(copyBtn);
-      expect(writeText).toHaveBeenCalledWith('https://app.aegisvault.org/#share=encrypted_data&s=salt');
+      expect(writeText).toHaveBeenCalledWith('https://app.KalderaShield.org/#share=encrypted_data&s=salt');
     });
   });
 

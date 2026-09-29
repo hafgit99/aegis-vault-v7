@@ -28,7 +28,7 @@ export const PrivacyShieldBackdrop: React.FC<PrivacyShieldBackdropProps> = ({
             <Check size={24} className="text-[#a3e635]" />
           )}
         </div>
-        <p className="text-sm font-semibold tracking-[0.18em] uppercase">Aegis Vault</p>
+        <p className="text-sm font-semibold tracking-[0.18em] uppercase">KalderaShield</p>
         <p className="mt-2 text-xs text-[#aeb5aa]">
           {screenRecordingDetected
             ? t('security.screenCaptureDetected')

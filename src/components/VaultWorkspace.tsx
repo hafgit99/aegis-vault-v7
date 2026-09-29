@@ -15,7 +15,7 @@ import { isAndroidAutofillTargetMatch, sortAndroidAutofillMatches } from '../lib
 import type { AuditReport, TagDefinition, VaultFolder, VaultItem } from '../types';
 import { useBulkSelection } from '../hooks/useOrganisation';
 import type { BulkActionDescriptor } from './BulkActionBar';
-import AegisGuardReport from './AegisGuardReport';
+import KalderaShieldGuardReport from './KalderaShieldGuardReport';
 import CryptoShieldPanel from './CryptoShieldPanel';
 import DashboardCategoryStats from './DashboardCategoryStats';
 import DashboardHeader from './DashboardHeader';
@@ -153,7 +153,7 @@ export function VaultWorkspaceContent({
   const [dragOverCategory, setDragOverCategory] = useState<VaultCategoryFilter | null>(null);
   const [density, setDensity] = useState<ViewDensity>(() => {
     if (typeof window !== 'undefined') {
-      return (localStorage.getItem('aegis_vault_view_density') as ViewDensity) || 'comfortable';
+      return (localStorage.getItem('KalderaShield_vault_view_density') as ViewDensity) || 'comfortable';
     }
     return 'comfortable';
   });
@@ -162,7 +162,7 @@ export function VaultWorkspaceContent({
     setDensity((prev) => {
       const next: ViewDensity = prev === 'comfortable' ? 'compact' : 'comfortable';
       if (typeof window !== 'undefined') {
-        localStorage.setItem('aegis_vault_view_density', next);
+        localStorage.setItem('KalderaShield_vault_view_density', next);
       }
       return next;
     });
@@ -633,7 +633,7 @@ export function VaultWorkspaceContent({
               <CryptoShieldPanel />
             </div>
 
-            <AegisGuardReport auditReport={auditReport} />
+            <KalderaShieldGuardReport auditReport={auditReport} />
           </div>
         )}
       </section>

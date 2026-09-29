@@ -45,7 +45,7 @@ const renderComponent = (records: PasskeyRecord[] = []) => {
 };
 
 beforeEach(() => {
-  openVaultSession('aegis-test-master', 'aegis-test-master', new Uint8Array(32).fill(5));
+  openVaultSession('KalderaShield-test-master', 'KalderaShield-test-master', new Uint8Array(32).fill(5));
 
   // jsdom does not expose PublicKeyCredential by default.
   Object.defineProperty(globalThis, 'PublicKeyCredential', {

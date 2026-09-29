@@ -11,7 +11,7 @@ describe('psl-utils (Public Suffix List domain extractor)', () => {
       expect(extractRegistrableDomain('example.com')).toBe('example.com');
       expect(extractRegistrableDomain('www.example.com')).toBe('example.com');
       expect(extractRegistrableDomain('login.sub.example.org')).toBe('example.org');
-      expect(extractRegistrableDomain('vault.aegis.app')).toBe('aegis.app');
+      expect(extractRegistrableDomain('vault.KalderaShield.app')).toBe('kalderashield.app');
     });
 
     it('correctly handles multi-part ccTLDs (.co.uk, .com.tr, .org.au, etc.)', () => {

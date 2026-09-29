@@ -1,6 +1,6 @@
 # Master String Reference Classification
 
-This document records the current Aegis Vault 7 no-JS-master-string boundary.
+This document records the current KalderaShield no-JS-master-string boundary.
 
 ## Current Gate Result
 

@@ -144,7 +144,7 @@ function inspectArtifact(artifact) {
 
 function writeReport(metadata, results) {
   const lines = [
-    '# Aegis Vault 7 Desktop Signing Report',
+    '# KalderaShield Desktop Signing Report',
     '',
     'Version: ' + metadata.version,
     'Platform: ' + metadata.platform,

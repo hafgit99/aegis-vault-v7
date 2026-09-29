@@ -54,7 +54,7 @@ function scanProductionBundle() {
 
   const secretPatterns = [
     { label: 'private-key material', regex: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/ },
-    { label: 'Android signing password variable', regex: /AEGIS_ANDROID_(?:KEYSTORE|KEY)_PASSWORD/ },
+    { label: 'Android signing password variable', regex: /KALDERASHIELD_ANDROID_(?:KEYSTORE|KEY)_PASSWORD/ },
     { label: 'AMO signing secret variable', regex: /(?:AMO_JWT_SECRET|WEB_EXT_API_SECRET)/ },
     { label: 'GitHub access token', regex: /gh(?:p|o|u|s|r)_[A-Za-z0-9]{36,}/ },
     { label: 'AWS access key', regex: /AKIA[0-9A-Z]{16}/ },
@@ -146,11 +146,11 @@ function scanSourceConfiguration() {
     fail('package.json: asset integrity manifest generation is not part of npm run build');
   }
   const rustBuild = readText('src-tauri/build.rs');
-  if (!rustBuild.includes('AEGIS_ASSET_INTEGRITY_ROOT') || !rustBuild.includes('aegis-integrity.json')) {
+  if (!rustBuild.includes('KALDERASHIELD_ASSET_INTEGRITY_ROOT') || !rustBuild.includes('KalderaShield-integrity.json')) {
     fail('src-tauri/build.rs: asset integrity root is not embedded in the native release binary');
   }
   const rustLib = readText('src-tauri/src/lib.rs');
-  if (!rustLib.includes('get_asset_integrity_anchor') || !rustLib.includes('AEGIS_ASSET_INTEGRITY_ROOT')) {
+  if (!rustLib.includes('get_asset_integrity_anchor') || !rustLib.includes('KALDERASHIELD_ASSET_INTEGRITY_ROOT')) {
     fail('src-tauri/src/lib.rs: native asset integrity anchor command is missing');
   }
   const extensionBuildPath = 'scripts/build-extension.js';
@@ -207,12 +207,12 @@ function scanSourceConfiguration() {
   if (!/android:usesCleartextTraffic="\$\{usesCleartextTraffic\}"/.test(manifest)) {
     fail(`${manifestPath}: cleartext traffic must be controlled by the release-safe manifest placeholder`);
   }
-  const mainActivityPath = 'src-tauri/gen/android/app/src/main/java/com/hafgit99/aegisvault7/MainActivity.kt';
+  const mainActivityPath = 'src-tauri/gen/android/app/src/main/java/com/kalderashield/desktop/MainActivity.kt';
   const mainActivity = readText(mainActivityPath);
   if (!/WebView\.setWebContentsDebuggingEnabled\(BuildConfig\.DEBUG\)/.test(mainActivity)) {
     fail(`${mainActivityPath}: WebView debugging must be tied to BuildConfig.DEBUG`);
   }
-  if (!/addJavascriptInterface\((?:AndroidRuntimeSecurityBridge\(.*?\)|securityBridge),\s*"AegisAndroidSecurity"\)/.test(mainActivity)) {
+  if (!/addJavascriptInterface\((?:AndroidRuntimeSecurityBridge\(.*?\)|securityBridge),\s*"KalderaShieldAndroidSecurity"\)/.test(mainActivity)) {
     fail(`${mainActivityPath}: warning-only Android runtime security bridge is missing`);
   }
 

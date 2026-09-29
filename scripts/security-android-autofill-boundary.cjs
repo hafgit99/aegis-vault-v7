@@ -18,7 +18,7 @@
  *      to a `LauncherActivity` trampoline that forwards nothing.
  *   2. Autofill Intents are only a routing hint carrying an opaque registry
  *      id. The authoritative request lives in `AutofillRequestRegistry`, which
- *      only `AegisAutofillService` may write.
+ *      only `KalderaShieldAutofillService` may write.
  *
  * A gate that only checked the manifest would still pass if someone re-added
  * `intent.getStringExtra(EXTRA_..._WEB_DOMAIN)` to the Activity, so this script
@@ -35,7 +35,7 @@ const path = require('path');
 
 const rootDir = path.resolve(__dirname, '..');
 const androidMainDir = path.join(rootDir, 'src-tauri', 'gen', 'android', 'app', 'src', 'main');
-const kotlinDir = path.join(androidMainDir, 'java', 'com', 'hafgit99', 'aegisvault7');
+const kotlinDir = path.join(androidMainDir, 'java', 'com', 'kalderashield', 'desktop');
 const manifestPath = path.join(androidMainDir, 'AndroidManifest.xml');
 
 const findings = [];
@@ -263,14 +263,14 @@ function findTagEnd(xml, start) {
  * the intended behaviour, not a limitation.
  */
 const ROUTING_EXTRA_ALLOWLIST = new Set([
-  'com.hafgit99.aegisvault7.extra.AUTOFILL_REQUEST_ID',
-  'com.hafgit99.aegisvault7.extra.AUTOFILL_CREATED_AT',
+    'com.kalderashield.desktop.extra.AUTOFILL_REQUEST_ID',
+    'com.kalderashield.desktop.extra.AUTOFILL_CREATED_AT',
 ]);
 
 /**
  * Every Autofill extra name mentioned in `source`, in both spellings:
  *   - the Kotlin constant, e.g. `EXTRA_AUTOFILL_WEB_DOMAIN`
- *   - the fully qualified extra name, e.g. `"com.hafgit99.aegisvault7.extra.AUTOFILL_WEB_DOMAIN"`
+ *   - the fully qualified extra name, e.g. `"com.kalderashield.desktop.extra.AUTOFILL_WEB_DOMAIN"`
  */
 function collectAutofillExtraReferences(source) {
   const references = new Set();
@@ -286,7 +286,7 @@ function collectAutofillExtraReferences(source) {
 /**
  * Maps a reference to the extra name as it actually appears in the Intent, so
  * the two spellings compare equal. The constant table is parsed from
- * `AegisAutofillService` itself rather than hardcoded here, so the map cannot
+ * `KalderaShieldAutofillService` itself rather than hardcoded here, so the map cannot
  * drift from the app.
  */
 function buildExtraConstantMap(serviceCode) {
@@ -299,9 +299,9 @@ function buildExtraConstantMap(serviceCode) {
 
 /**
  * Reduces a reference to the literal extra name that crosses the Intent
- * boundary. `AegisAutofillService.EXTRA_REQUEST_ID` and
- * `"com.hafgit99.aegisvault7.extra.AUTOFILL_REQUEST_ID"` both resolve to
- * `com.hafgit99.aegisvault7.extra.AUTOFILL_REQUEST_ID`.
+ * boundary. `KalderaShieldAutofillService.EXTRA_REQUEST_ID` and
+ * `"com.kalderashield.desktop.extra.AUTOFILL_REQUEST_ID"` both resolve to
+ * `com.kalderashield.desktop.extra.AUTOFILL_REQUEST_ID`.
  */
 function resolveExtraName(reference, constantMap) {
   const cleaned = reference.replace(/^["']|["']$/g, '');
@@ -388,12 +388,12 @@ if (manifest === null) {
     .map((entry) => entry.name);
 
   const unexpectedExported = exportedActivities.filter(
-    (name) => name !== '.LauncherActivity' && name !== '.AegisAutofillService',
+    (name) => name !== '.LauncherActivity' && name !== '.KalderaShieldAutofillService',
   );
   if (unexpectedExported.length > 0) {
     fail(
       `Unexpected exported activities: ${unexpectedExported.join(', ')}. ` +
-      'Only LauncherActivity and AegisAutofillService (which is guarded by ' +
+      'Only LauncherActivity and KalderaShieldAutofillService (which is guarded by ' +
       'android:permission="android.permission.BIND_AUTOFILL_SERVICE") may be exported.'
     );
   } else {
@@ -403,17 +403,17 @@ if (manifest === null) {
   // The AutofillService must keep its system-only permission guard. It is the
   // one component that legitimately has to be exported (the system binds it),
   // but only the system may bind it.
-  const serviceElement = extractManifestElement(manifest, 'service', '.AegisAutofillService');
+  const serviceElement = extractManifestElement(manifest, 'service', '.KalderaShieldAutofillService');
   if (serviceElement === null) {
-    fail('AndroidManifest.xml no longer declares the .AegisAutofillService element');
+    fail('AndroidManifest.xml no longer declares the .KalderaShieldAutofillService element');
   } else if (!/android:permission="android\.permission\.BIND_AUTOFILL_SERVICE"/.test(serviceElement)) {
     fail(
-      'AegisAutofillService lost android:permission="android.permission.BIND_AUTOFILL_SERVICE". ' +
+      'KalderaShieldAutofillService lost android:permission="android.permission.BIND_AUTOFILL_SERVICE". ' +
       'It is exported so the system can bind it, and that permission is the only thing stopping any ' +
       'other app from instantiating our Autofill service.'
     );
   } else {
-    pass('AegisAutofillService keeps the system-only BIND_AUTOFILL_SERVICE guard');
+    pass('KalderaShieldAutofillService keeps the system-only BIND_AUTOFILL_SERVICE guard');
   }
 
   // The registry is in-memory, so a secondary process would silently break it.
@@ -438,7 +438,7 @@ if (kotlinFiles.length === 0) {
   const readWithoutComments = (absolute) => stripKotlinComments(fs.readFileSync(absolute, 'utf8'));
 
   const mainActivityPath = path.join(kotlinDir, 'MainActivity.kt');
-  const servicePath = path.join(kotlinDir, 'AegisAutofillService.kt');
+  const servicePath = path.join(kotlinDir, 'KalderaShieldAutofillService.kt');
   const registryPath = path.join(kotlinDir, 'security', 'AutofillRequestRegistry.kt');
   const launcherPath = path.join(kotlinDir, 'LauncherActivity.kt');
 
@@ -512,31 +512,31 @@ if (kotlinFiles.length === 0) {
     const disallowed = putExtras.filter((name) => !ROUTING_EXTRA_ALLOWLIST.has(name));
     if (disallowed.length > 0) {
       fail(
-        `AegisAutofillService puts non-routing extras on the Intent: ${[...new Set(disallowed)].join(', ')}. ` +
+        `KalderaShieldAutofillService puts non-routing extras on the Intent: ${[...new Set(disallowed)].join(', ')}. ` +
         'K-1: only the opaque request id and the audit timestamp may cross the Intent boundary.'
       );
     } else {
-      pass('AegisAutofillService puts only routing metadata on the Intent');
+      pass('KalderaShieldAutofillService puts only routing metadata on the Intent');
     }
 
     if (!/AutofillRequestRegistry\.register(FillRequest|SaveCandidate)/.test(code)) {
-      fail('AegisAutofillService no longer registers requests in AutofillRequestRegistry');
+      fail('KalderaShieldAutofillService no longer registers requests in AutofillRequestRegistry');
     } else {
-      pass('AegisAutofillService registers both fill and save requests in the registry');
+      pass('KalderaShieldAutofillService registers both fill and save requests in the registry');
     }
 
     if (!/AutofillRequestRegistry\.registerFillRequest/.test(code) || !/AutofillRequestRegistry\.registerSaveCandidate/.test(code)) {
-      fail('AegisAutofillService must register BOTH the fill request and the save candidate');
+      fail('KalderaShieldAutofillService must register BOTH the fill request and the save candidate');
     }
 
     // Predictable ids let a leaked/logged id be replayed.
     if (/requestId\s*=\s*"android-autofill[^"]*\$\{?(createdAt|System\.currentTimeMillis)/.test(code)) {
       fail(
-        'AegisAutofillService derives the request id from a timestamp. K-1: ids must be unpredictable ' +
+        'KalderaShieldAutofillService derives the request id from a timestamp. K-1: ids must be unpredictable ' +
         '(UUID.randomUUID()) so a leaked or logged id cannot be guessed.'
       );
     } else if (!/UUID\.randomUUID\(\)/.test(code)) {
-      fail('AegisAutofillService does not use UUID.randomUUID() for request ids')
+      fail('KalderaShieldAutofillService does not use UUID.randomUUID() for request ids')
     } else {
       pass('Autofill request ids are 128-bit random (UUID.randomUUID)');
     }
@@ -594,13 +594,13 @@ if (kotlinFiles.length === 0) {
       if (new RegExp(`AutofillRequestRegistry\\.${mutator}\\s*\\(`).test(code)) {
         fail(
           `${path.relative(rootDir, file)} calls AutofillRequestRegistry.${mutator}(). Only ` +
-          'AegisAutofillService may write the registry; anything else can plant a request.'
+          'KalderaShieldAutofillService may write the registry; anything else can plant a request.'
         );
       }
     }
   }
   if (!findings.some((f) => f.includes('may write the registry'))) {
-    pass('AutofillRequestRegistry is written only by AegisAutofillService');
+    pass('AutofillRequestRegistry is written only by KalderaShieldAutofillService');
   }
 }
 
@@ -692,9 +692,9 @@ function checkLintIsWired() {
 
   // AutofillService is API 26+ while minSdk is 24. The requirement must be
   // declared, not left for a reader to infer.
-  const serviceBlock = manifest.match(/<service[\s\S]*?AegisAutofillService[\s\S]*?>/);
+  const serviceBlock = manifest.match(/<service[\s\S]*?KalderaShieldAutofillService[\s\S]*?>/);
   if (!serviceBlock) {
-    fail('AndroidManifest.xml: AegisAutofillService is not declared');
+    fail('AndroidManifest.xml: KalderaShieldAutofillService is not declared');
   } else if (!/tools:targetApi="o"/.test(serviceBlock[0])) {
     fail(
       'AndroidManifest.xml: the autofill service needs tools:targetApi="o" — it is API 26+ while minSdk is 24',
@@ -712,13 +712,24 @@ function checkLintIsWired() {
         'AndroidManifest.xml: a LEANBACK_LAUNCHER filter requires touchscreen to be explicitly optional',
       );
     }
+    // The file name is all lowercase, and it has to be. aapt2 only accepts
+    // [a-z0-9_.] in resource file names, so `KalderaShield_tv_banner.png`
+    // would fail the Android build outright rather than merely missing the
+    // banner. The gate carried the capitalised spelling and only ever passed
+    // on Windows, where the filesystem folds case: NTFS resolved
+    // KalderaShield_tv_banner.png to the lowercase file, and Linux CI -- the
+    // only place that checks out the tree the way a build machine does --
+    // reported all five densities as missing.
+    //
+    // The reference in AndroidManifest.xml is @drawable/kalderashield_tv_banner.
+    const bannerResource = 'kalderashield_tv_banner.png';
     for (const density of ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']) {
       const banner = path.join(
         rootDir, 'src-tauri', 'gen', 'android', 'app', 'src', 'main', 'res',
-        `drawable-${density}`, 'aegis_tv_banner.png',
+        `drawable-${density}`, bannerResource,
       );
       if (!fs.existsSync(banner)) {
-        fail(`res/drawable-${density}/aegis_tv_banner.png: missing TV banner asset`);
+        fail(`res/drawable-${density}/${bannerResource}: missing TV banner asset`);
       }
     }
   }

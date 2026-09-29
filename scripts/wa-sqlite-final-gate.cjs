@@ -85,7 +85,7 @@ function run(command, commandArgs) {
 }
 
 function printPlan(steps) {
-  console.log('Aegis Vault 7 wa-sqlite final gate');
+  console.log('KalderaShield wa-sqlite final gate');
   console.log('Dry run: ' + (dryRun ? 'yes' : 'no'));
   console.log('E2E: ' + (skipE2e ? 'skipped' : 'included'));
   console.log('Steps:');

@@ -18,7 +18,7 @@ describe('AppSplashLoader', () => {
       </LanguageProvider>
     );
 
-    expect(screen.getByText('Aegis Vault 7')).toBeDefined();
+    expect(screen.getByText('KalderaShield')).toBeDefined();
     expect(screen.getByText('Güvenli Kasa Başlatılıyor...')).toBeDefined();
   });
 });

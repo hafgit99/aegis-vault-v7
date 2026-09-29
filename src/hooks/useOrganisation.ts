@@ -53,7 +53,7 @@ export function useTagLibrary() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const onStorage = (event: StorageEvent) => {
-      if (event.key === 'aegis-vault-v7-tag-library-v1') {
+      if (event.key === 'kalderashield-tag-library-v1') {
         setTags(readTagLibrary());
       }
     };
@@ -101,7 +101,7 @@ export function useVaultFolders() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const onStorage = (event: StorageEvent) => {
-      if (event.key === 'aegis-vault-v7-folder-library-v1') {
+      if (event.key === 'kalderashield-folder-library-v1') {
         setFolders(readFolderLibrary());
       }
     };
@@ -153,7 +153,7 @@ export function useSmartFolders(items: VaultItem[]) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const onStorage = (event: StorageEvent) => {
-      if (event.key === 'aegis-vault-v7-smart-folders-v1') {
+      if (event.key === 'kalderashield-smart-folders-v1') {
         setFolders(readSmartFolders());
       }
     };

@@ -1,4 +1,4 @@
-# Aegis Vault 7 — Code Signing & Artifact Signing Guide (2026)
+#KalderaShield — Code Signing & Artifact Signing Guide (2026)
 
 ## Overview
 
@@ -12,7 +12,7 @@ This guide documents the procedures for signing desktop (Windows EV Authenticode
 - **Tool:** `signtool.exe` or `azure-code-signing-action`.
 - **Command:**
   ```powershell
-  signtool sign /tr http://timestamp.digicert.com /td sha256 /fd sha256 /sha1 <CERT_THUMBPRINT> "src-tauri/target/release/bundle/nsis/Aegis Vault 7_7.0.1_x64-setup.exe"
+  signtool sign /tr http://timestamp.digicert.com /td sha256 /fd sha256 /sha1 <CERT_THUMBPRINT> "src-tauri/target/release/bundle/nsis/KalderaShield_7.0.1_x64-setup.exe"
   ```
 
 ---
@@ -22,16 +22,16 @@ This guide documents the procedures for signing desktop (Windows EV Authenticode
 - **Certificate:** Developer ID Application.
 - **Commands:**
   ```bash
-  codesign --deep --force --verify --verbose --sign "Developer ID Application: Aegis (TEAMID)" "src-tauri/target/release/bundle/macos/Aegis Vault 7.app"
-  xcrun notarytool submit "src-tauri/target/release/bundle/macos/Aegis Vault 7.dmg" --keychain-profile "AC_NOTARY" --wait
-  xcrun stapler staple "src-tauri/target/release/bundle/macos/Aegis Vault 7.dmg"
+  codesign --deep --force --verify --verbose --sign "Developer ID Application: KalderaShield (TEAMID)" "src-tauri/target/release/bundle/macos/KalderaShield.app"
+  xcrun notarytool submit "src-tauri/target/release/bundle/macos/KalderaShield.dmg" --keychain-profile "AC_NOTARY" --wait
+  xcrun stapler staple "src-tauri/target/release/bundle/macos/KalderaShield.dmg"
   ```
 
 ---
 
 ## 3. Android Release Signing
 
-- **Keystore:** PKCS12 Keystore (`aegis-release-key.jks`) using AES-256 / RSA 4096.
+- **Keystore:** JKS Keystore (`kalderashield-release.jks`) using RSA 4096 / SHA256withRSA, with the store password and key password kept distinct. PKCS12 is not usable here because it forces both passwords to be the same.
 - **Commands:**
   ```bash
   npm run android:release:signing:check
@@ -83,9 +83,9 @@ publishable, rather than an unsigned one shipping.
 | Secret | Purpose |
 |---|---|
 | `ANDROID_KEYSTORE_BASE64` | base64-encoded release keystore |
-| `AEGIS_ANDROID_KEYSTORE_PASSWORD` | keystore password |
-| `AEGIS_ANDROID_KEY_ALIAS` | key alias |
-| `AEGIS_ANDROID_KEY_PASSWORD` | key password |
+| `KALDERASHIELD_ANDROID_KEYSTORE_PASSWORD` | keystore password |
+| `KALDERASHIELD_ANDROID_KEY_ALIAS` | key alias |
+| `KALDERASHIELD_ANDROID_KEY_PASSWORD` | key password |
 
 ### Tauri updater bundles
 

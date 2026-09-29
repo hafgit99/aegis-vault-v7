@@ -23,7 +23,7 @@ import { createWaSqliteVaultStorageRepository } from './waSqliteVaultStorageRepo
 import { getIndexedDbItemSync, setIndexedDbItemSync, removeIndexedDbItemSync } from './indexedDbStorage';
 import { isDesktopRuntime } from './desktopStorage';
 
-export const ACTIVE_VAULT_STORAGE_BACKEND_KEY = 'aegis_vault_storage_active_backend';
+export const ACTIVE_VAULT_STORAGE_BACKEND_KEY = 'KalderaShield_vault_storage_active_backend';
 
 const SUPPORTED_WA_SQLITE_STORAGE_SCOPES = new Set([
   'android-app-private',
@@ -238,9 +238,9 @@ function persistWaSqliteDefaultActiveBackend(profile: WaSqlitePersistenceProfile
 }
 
 function hasLegacyOpfsVaultData(): boolean {
-  if (getIndexedDbItemSync('aegis_is_setup') === 'true') return true;
+  if (getIndexedDbItemSync('KalderaShield_is_setup') === 'true') return true;
 
-  const fallback = getIndexedDbItemSync('aegis_sqlite_fallback');
+  const fallback = getIndexedDbItemSync('kalderashield_fallback');
   if (!fallback) return false;
 
   try {

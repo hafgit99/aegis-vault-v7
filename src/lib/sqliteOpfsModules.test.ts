@@ -117,7 +117,7 @@ describe('sqliteOpfsShared helpers', () => {
   it('pins the crypto constants', () => {
     expect(ENCRYPTED_MARKER).toBe('[encrypted: aes-256-gcm]');
     expect(VAULT_ITEM_KDF).toBe('argon2-browser');
-    expect(LEGACY_VAULT_ITEM_KDF_SALT).toBe('aegis_vault_v7_db_encryption_salt');
+    expect(LEGACY_VAULT_ITEM_KDF_SALT).toBe('kalderashield_db_encryption_salt');
     expect(LEGACY_VAULT_ITEM_KDF_PARAMS).toEqual({ memoryKiB: 32768, iterations: 3, parallelism: 1, hashLength: 32 });
     expect(NEW_VAULT_ITEM_KDF_PARAMS.memoryKiB).toBeGreaterThan(LEGACY_VAULT_ITEM_KDF_PARAMS.memoryKiB);
   });
@@ -223,13 +223,13 @@ describe('createDesktopManagedSetupMarker / writeLocalFallbackMirror', () => {
   it('marks the state as desktop-managed with masked hashes', () => {
     const state = createEmptyVaultDatabaseState();
     state.schemaVersion = 7;
-    state.appId = 'aegis-test';
+    state.appId = 'KalderaShield-test';
     state.user_secrets = [{ username: 'owner', argon_hash: '$argon2id$realsecret' }];
 
     const marker = JSON.parse(createDesktopManagedSetupMarker(state));
     expect(marker).toEqual({
       schemaVersion: 7,
-      appId: 'aegis-test',
+      appId: 'KalderaShield-test',
       desktopManaged: true,
       user_secrets: [{ username: 'owner', argon_hash: '[stored-in-desktop-app-data]' }],
       vault_items: [],
@@ -520,10 +520,10 @@ describe('migrateLegacyLocalStorage', () => {
   });
 
   it('migrates plaintext legacy localStorage items and purges the keys afterwards', async () => {
-    localStorage.setItem('aegis_is_setup', 'true');
-    localStorage.setItem('aegis_master_password', btoa('legacy-pass'));
+    localStorage.setItem('KalderaShield_is_setup', 'true');
+    localStorage.setItem('KalderaShield_master_password', btoa('legacy-pass'));
     localStorage.setItem(
-      'aegis_vault_items',
+      'KalderaShield_vault_items',
       JSON.stringify([sampleItem(), sampleItem({ id: 'item-2', favorite: false })]),
     );
     const migrationDeps = deps();
@@ -538,9 +538,9 @@ describe('migrateLegacyLocalStorage', () => {
     expect(result.vault_items[0]!.title).toBe(ENCRYPTED_MARKER);
     expect(migrationDeps.logQuery).toHaveBeenCalledWith(expect.stringContaining('CREATE TABLE vault_items'), 'SUCCESS', 2);
     // Security fix Y3: plaintext sources are gone after success.
-    expect(localStorage.getItem('aegis_master_password')).toBeNull();
-    expect(localStorage.getItem('aegis_vault_items')).toBeNull();
-    expect(localStorage.getItem('aegis_is_setup')).toBeNull();
+    expect(localStorage.getItem('KalderaShield_master_password')).toBeNull();
+    expect(localStorage.getItem('KalderaShield_vault_items')).toBeNull();
+    expect(localStorage.getItem('KalderaShield_is_setup')).toBeNull();
     expect(logSecurityEvent).toHaveBeenCalledWith(
       securityEventCodes.storageLegacyDataPurged,
       'Legacy plaintext localStorage keys purged after successful migration.',
@@ -549,9 +549,9 @@ describe('migrateLegacyLocalStorage', () => {
   });
 
   it('requires all three legacy seeding flags before attempting a migration', async () => {
-    localStorage.setItem('aegis_is_setup', 'true');
-    localStorage.setItem('aegis_master_password', btoa('pass'));
-    // aegis_vault_items is missing → migration must NOT run.
+    localStorage.setItem('KalderaShield_is_setup', 'true');
+    localStorage.setItem('KalderaShield_master_password', btoa('pass'));
+    // KalderaShield_vault_items is missing → migration must NOT run.
     const populated = createEmptyVaultDatabaseState();
     populated.user_secrets = [{ username: 'owner', argon_hash: 'existing' }];
     const migrationDeps = deps();
@@ -564,13 +564,13 @@ describe('migrateLegacyLocalStorage', () => {
       expect.anything(),
     );
     // Instead the stale-purge cleanup handles the leftovers.
-    expect(localStorage.getItem('aegis_master_password')).toBeNull();
+    expect(localStorage.getItem('KalderaShield_master_password')).toBeNull();
   });
 
   it('keeps the exact failure message when the migration fails (rollback safety)', async () => {
-    localStorage.setItem('aegis_is_setup', 'true');
-    localStorage.setItem('aegis_master_password', btoa('legacy-pass'));
-    localStorage.setItem('aegis_vault_items', '{broken json');
+    localStorage.setItem('KalderaShield_is_setup', 'true');
+    localStorage.setItem('KalderaShield_master_password', btoa('legacy-pass'));
+    localStorage.setItem('KalderaShield_vault_items', '{broken json');
 
     const result = await migrateLegacyLocalStorage(createEmptyVaultDatabaseState(), deps());
 
@@ -581,8 +581,8 @@ describe('migrateLegacyLocalStorage', () => {
       expect.objectContaining({ error: expect.any(String) }),
     );
     // Rollback safety: plaintext sources survive a failed migration.
-    expect(localStorage.getItem('aegis_master_password')).not.toBeNull();
-    expect(localStorage.getItem('aegis_vault_items')).not.toBeNull();
+    expect(localStorage.getItem('KalderaShield_master_password')).not.toBeNull();
+    expect(localStorage.getItem('KalderaShield_vault_items')).not.toBeNull();
     // Pre-existing quirk: the verification hash is written before the
     // item parse fails, so the partial hash survives the rollback.
     expect(result.user_secrets).toHaveLength(1);
@@ -590,12 +590,12 @@ describe('migrateLegacyLocalStorage', () => {
   });
 
   it('purges stale plaintext keys only when the SQLite store is already populated', () => {
-    localStorage.setItem('aegis_master_password', btoa('old'));
-    localStorage.setItem('aegis_vault_items', '[]');
+    localStorage.setItem('KalderaShield_master_password', btoa('old'));
+    localStorage.setItem('KalderaShield_vault_items', '[]');
 
     const empty = createEmptyVaultDatabaseState();
     purgeStaleLegacyLocalStorageKeys(empty);
-    expect(localStorage.getItem('aegis_master_password')).not.toBeNull();
+    expect(localStorage.getItem('KalderaShield_master_password')).not.toBeNull();
 
     const populated = createEmptyVaultDatabaseState();
     populated.vault_items = [
@@ -608,7 +608,7 @@ describe('migrateLegacyLocalStorage', () => {
       }),
     ];
     purgeStaleLegacyLocalStorageKeys(populated);
-    expect(localStorage.getItem('aegis_master_password')).toBeNull();
+    expect(localStorage.getItem('KalderaShield_master_password')).toBeNull();
     expect(logSecurityEvent).toHaveBeenCalledWith(
       securityEventCodes.storageLegacyDataPurged,
       'Stale legacy plaintext localStorage keys purged (post-migration cleanup).',
@@ -617,7 +617,7 @@ describe('migrateLegacyLocalStorage', () => {
   });
 
   it('purges when only the items key remains and the store is populated', () => {
-    localStorage.setItem('aegis_vault_items', '[]');
+    localStorage.setItem('KalderaShield_vault_items', '[]');
     const populated = createEmptyVaultDatabaseState();
     populated.vault_items = [
       buildVaultItemRow({
@@ -630,30 +630,30 @@ describe('migrateLegacyLocalStorage', () => {
     ];
 
     purgeStaleLegacyLocalStorageKeys(populated);
-    expect(localStorage.getItem('aegis_vault_items')).toBeNull();
+    expect(localStorage.getItem('KalderaShield_vault_items')).toBeNull();
   });
 
   it('purges when only user_secrets are populated even without rows', () => {
-    localStorage.setItem('aegis_master_password', btoa('old'));
+    localStorage.setItem('KalderaShield_master_password', btoa('old'));
     const populated = createEmptyVaultDatabaseState();
     populated.user_secrets = [{ username: 'owner', argon_hash: 'h' }];
 
     purgeStaleLegacyLocalStorageKeys(populated);
-    expect(localStorage.getItem('aegis_master_password')).toBeNull();
+    expect(localStorage.getItem('KalderaShield_master_password')).toBeNull();
   });
 
   // ─── O-3: the orphaned password, not just the populated-store case ────────
 
   it('O-3: purges a legacy password whose items blob is gone', () => {
-    // The browser evicted `aegis_vault_items` (megabytes) and kept
-    // `aegis_master_password` (dozens of bytes) - which is exactly the order
+    // The browser evicted `KalderaShield_vault_items` (megabytes) and kept
+    // `KalderaShield_master_password` (dozens of bytes) - which is exactly the order
     // a quota eviction goes in. Nothing is left to migrate, so the password is
     // inert residue that must not survive.
-    localStorage.setItem('aegis_master_password', btoa('orphaned-pass'));
+    localStorage.setItem('KalderaShield_master_password', btoa('orphaned-pass'));
 
     purgeStaleLegacyLocalStorageKeys(createEmptyVaultDatabaseState());
 
-    expect(localStorage.getItem('aegis_master_password')).toBeNull();
+    expect(localStorage.getItem('KalderaShield_master_password')).toBeNull();
     expect(logSecurityEvent).toHaveBeenCalledWith(
       securityEventCodes.storageLegacyDataPurged,
       'Orphaned legacy master password purged (no legacy items remained to migrate).',
@@ -664,13 +664,13 @@ describe('migrateLegacyLocalStorage', () => {
   it('O-3: still keeps a legacy password while an items blob could still be migrated', () => {
     // Rollback safety is unchanged: with items present and the store empty,
     // this is an un-migrated vault and the plaintext sources are the only copy.
-    localStorage.setItem('aegis_master_password', btoa('live-pass'));
-    localStorage.setItem('aegis_vault_items', '[]');
+    localStorage.setItem('KalderaShield_master_password', btoa('live-pass'));
+    localStorage.setItem('KalderaShield_vault_items', '[]');
 
     purgeStaleLegacyLocalStorageKeys(createEmptyVaultDatabaseState());
 
-    expect(localStorage.getItem('aegis_master_password')).not.toBeNull();
-    expect(localStorage.getItem('aegis_vault_items')).not.toBeNull();
+    expect(localStorage.getItem('KalderaShield_master_password')).not.toBeNull();
+    expect(localStorage.getItem('KalderaShield_vault_items')).not.toBeNull();
   });
 
   it('O-3: cleans up the orphaned password on the fallback-mirror early return too', async () => {
@@ -679,15 +679,15 @@ describe('migrateLegacyLocalStorage', () => {
     // base64 password indefinitely.
     localStorage.setItem(LOCAL_FALLBACK_KEY, JSON.stringify({
       schemaVersion: 1,
-      appId: 'aegis',
+      appId: 'KalderaShield',
       user_secrets: [],
       vault_items: [],
     }));
-    localStorage.setItem('aegis_master_password', btoa('orphaned-pass'));
+    localStorage.setItem('KalderaShield_master_password', btoa('orphaned-pass'));
 
     await migrateLegacyLocalStorage(createEmptyVaultDatabaseState(), deps());
 
-    expect(localStorage.getItem('aegis_master_password')).toBeNull();
+    expect(localStorage.getItem('KalderaShield_master_password')).toBeNull();
   });
 });
 

@@ -39,11 +39,11 @@ vi.mock('./indexedDbStorage', () => ({
   setIndexedDbItemSync: vi.fn((key: string, value: string) => localStorage.setItem(key, value)),
   removeIndexedDbItemSync: vi.fn((key: string) => localStorage.removeItem(key)),
   clearAllSetupFlagsSync: vi.fn(() => {
-    localStorage.removeItem('aegis_is_setup');
-    localStorage.removeItem('aegis_sqlite_fallback');
-    localStorage.removeItem('aegis_account_secret_profile');
-    localStorage.removeItem('aegis_account_secret_key_remembered');
-    localStorage.removeItem('aegis_vault_storage_active_backend');
+    localStorage.removeItem('KalderaShield_is_setup');
+    localStorage.removeItem('kalderashield_fallback');
+    localStorage.removeItem('KalderaShield_account_secret_profile');
+    localStorage.removeItem('KalderaShield_account_secret_key_remembered');
+    localStorage.removeItem('KalderaShield_vault_storage_active_backend');
   }),
 }));
 
@@ -259,7 +259,7 @@ describe('SQLite OPFS persistence engine', () => {
       deleted: false,
     });
 
-    const persisted = JSON.parse(localStorage.getItem('aegis_sqlite_fallback') ?? '{}');
+    const persisted = JSON.parse(localStorage.getItem('kalderashield_fallback') ?? '{}');
     expect(persisted.encryption_salt).toMatch(/^[0-9a-f]{32}$/);
     expect(persisted.vault_items[0]).toMatchObject({
       id: 'item-login-1',
@@ -324,12 +324,12 @@ describe('SQLite OPFS persistence engine', () => {
     const sqlite = await freshSqliteInstance();
     await sqlite.setupMaster('master-pass');
     await sqlite.saveVaultItem(sampleItem({ id: 'reset-protected', title: 'Reset Protected' }), 'master-pass');
-    const before = localStorage.getItem('aegis_sqlite_fallback');
+    const before = localStorage.getItem('kalderashield_fallback');
     resetDesktopVaultDatabase.mockResolvedValueOnce(false);
 
     await expect(sqlite.resetAll()).rejects.toThrow('vault-reset-native-persist-failed');
 
-    expect(localStorage.getItem('aegis_sqlite_fallback')).toBe(before);
+    expect(localStorage.getItem('kalderashield_fallback')).toBe(before);
     await expect(sqlite.verifyPassword('master-pass')).resolves.toBe(true);
     await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual([
       expect.objectContaining({ id: 'reset-protected', title: 'Reset Protected' }),
@@ -350,7 +350,7 @@ describe('SQLite OPFS persistence engine', () => {
       user_secrets: [{ username: 'owner', argon_hash: '$argon2id$salt$master-pass' }],
     };
 
-    localStorage.setItem('aegis_sqlite_fallback', JSON.stringify(state));
+    localStorage.setItem('kalderashield_fallback', JSON.stringify(state));
 
     const sqlite = await freshSqliteInstance();
 
@@ -372,7 +372,7 @@ describe('SQLite OPFS persistence engine', () => {
     const sqlite = await freshSqliteInstance();
 
     await expect(sqlite.verifyPassword('master-pass')).resolves.toBe(true);
-    expect(JSON.parse(localStorage.getItem('aegis_sqlite_fallback') ?? '{}')).toMatchObject({
+    expect(JSON.parse(localStorage.getItem('kalderashield_fallback') ?? '{}')).toMatchObject({
       desktopManaged: true,
       user_secrets: [{ username: 'owner', argon_hash: '[stored-in-desktop-app-data]' }],
       vault_items: [],
@@ -380,7 +380,7 @@ describe('SQLite OPFS persistence engine', () => {
     expect(sqlite.getQueryLogs()).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          query: 'sqlite3_open("desktop-app-data:///aegis_sqlite.db")',
+          query: 'sqlite3_open("desktop-app-data:///kalderashield.db")',
           status: 'SUCCESS',
         }),
       ]),
@@ -402,7 +402,7 @@ describe('SQLite OPFS persistence engine', () => {
     expect(sqlite.getQueryLogs()).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          query: 'sqlite3_open("android-app-private:///aegis_sqlite.db")',
+          query: 'sqlite3_open("android-app-private:///kalderashield.db")',
           status: 'SUCCESS',
         }),
       ]),
@@ -440,14 +440,14 @@ describe('SQLite OPFS persistence engine', () => {
     const sqlite = await freshSqliteInstance();
 
     await expect(sqlite.verifyPassword('master-pass')).resolves.toBe(true);
-    expect(getFileHandle).toHaveBeenCalledWith('aegis_sqlite.db');
-    expect(getFileHandle).toHaveBeenCalledWith('aegis_sqlite.db', { create: true });
+    expect(getFileHandle).toHaveBeenCalledWith('kalderashield.db');
+    expect(getFileHandle).toHaveBeenCalledWith('kalderashield.db', { create: true });
     expect(writable.write).toHaveBeenCalledWith(expect.stringContaining('"user_secrets"'));
     expect(writable.close).toHaveBeenCalled();
     expect(sqlite.getQueryLogs()).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          query: 'sqlite3_open("opfs:///aegis_sqlite.db")',
+          query: 'sqlite3_open("opfs:///kalderashield.db")',
           status: 'SUCCESS',
         }),
       ]),
@@ -471,7 +471,7 @@ describe('SQLite OPFS persistence engine', () => {
       return { createWritable: vi.fn(async () => writable) };
     });
 
-    localStorage.setItem('aegis_sqlite_fallback', JSON.stringify(state));
+    localStorage.setItem('kalderashield_fallback', JSON.stringify(state));
     Object.defineProperty(navigator, 'storage', {
       configurable: true,
       value: {
@@ -494,14 +494,14 @@ describe('SQLite OPFS persistence engine', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
     readDesktopVaultDatabase.mockRejectedValueOnce(new Error('desktop read failed'));
-    localStorage.setItem('aegis_sqlite_fallback', JSON.stringify(state));
+    localStorage.setItem('kalderashield_fallback', JSON.stringify(state));
 
     const sqlite = await freshSqliteInstance();
 
     await expect(sqlite.verifyPassword('master-pass')).resolves.toBe(true);
     expect(warn).toHaveBeenCalledWith(expect.objectContaining({
       code: 'storage.desktop.readFailed',
-      source: 'AegisSecurity',
+      source: 'KalderaShieldSecurity',
     }));
   });
 
@@ -528,15 +528,15 @@ describe('SQLite OPFS persistence engine', () => {
     await expect(sqlite.verifyPassword('master-pass')).resolves.toBe(true);
     expect(error).toHaveBeenCalledWith(expect.objectContaining({
       code: 'storage.desktop.writeFailed',
-      source: 'AegisSecurity',
+      source: 'KalderaShieldSecurity',
     }));
   });
 
   it('migrates legacy localStorage vault data into encrypted SQLite rows', async () => {
-    localStorage.setItem('aegis_is_setup', 'true');
-    localStorage.setItem('aegis_master_password', btoa('master-pass'));
+    localStorage.setItem('KalderaShield_is_setup', 'true');
+    localStorage.setItem('KalderaShield_master_password', btoa('master-pass'));
     localStorage.setItem(
-      'aegis_vault_items',
+      'KalderaShield_vault_items',
       JSON.stringify([
         sampleItem({
           id: 'legacy-login',
@@ -560,7 +560,7 @@ describe('SQLite OPFS persistence engine', () => {
       }),
     ]);
 
-    const persisted = JSON.parse(localStorage.getItem('aegis_sqlite_fallback') ?? '{}');
+    const persisted = JSON.parse(localStorage.getItem('kalderashield_fallback') ?? '{}');
     expect(persisted.vault_items[0]).toMatchObject({
       id: 'legacy-login',
       notes_db: '',
@@ -581,7 +581,7 @@ describe('SQLite OPFS persistence engine', () => {
     await sqlite.setupMaster('master-pass');
     await sqlite.saveVaultItem(sampleItem({ id: 'static-salt-row' }), 'master-pass');
 
-    const persisted = JSON.parse(localStorage.getItem('aegis_sqlite_fallback') ?? '{}');
+    const persisted = JSON.parse(localStorage.getItem('kalderashield_fallback') ?? '{}');
     delete persisted.encryption_salt;
     // K-3: a genuine pre-v2 database cannot carry a v2 tag. Leaving
     // `integrityHmac` in place while deleting a signed field is exactly the
@@ -589,12 +589,12 @@ describe('SQLite OPFS persistence engine', () => {
     // to drop the tag too.
     delete persisted.integrityHmac;
     delete persisted.sealedAtVersionCounter;
-    localStorage.setItem('aegis_sqlite_fallback', JSON.stringify(persisted));
+    localStorage.setItem('kalderashield_fallback', JSON.stringify(persisted));
     // Y-5: a genuine legacy vault also predates the integrity ledger. Without
     // clearing it, the ledger still says "this vault has been sealed", and a
     // missing tag is then (correctly) treated as tag blanking rather than as an
     // unsealed vault — which is precisely the protection under test elsewhere.
-    localStorage.removeItem('aegis_vault_integrity_ledger');
+    localStorage.removeItem('KalderaShield_vault_integrity_ledger');
 
     const legacyStaticSaltSqlite = await freshSqliteInstance();
 
@@ -603,7 +603,7 @@ describe('SQLite OPFS persistence engine', () => {
       expect.objectContaining({ id: 'static-salt-row', password: 'secret-password' }),
     ]);
 
-    const migrated = JSON.parse(localStorage.getItem('aegis_sqlite_fallback') ?? '{}');
+    const migrated = JSON.parse(localStorage.getItem('kalderashield_fallback') ?? '{}');
     expect(migrated.encryption_salt).toMatch(/^[0-9a-f]{32}$/);
   });
 
@@ -738,7 +738,7 @@ category: undefined,
       ],
     };
 
-    localStorage.setItem('aegis_sqlite_fallback', JSON.stringify(state));
+    localStorage.setItem('kalderashield_fallback', JSON.stringify(state));
     const sqlite = await freshSqliteInstance();
 
     await expect(sqlite.deriveEncryptionKey('master-pass')).resolves.toBeInstanceOf(Uint8Array);
@@ -762,7 +762,7 @@ category: undefined,
     await sqlite.setupMaster('master-pass');
     await sqlite.saveVaultItem(sampleItem(), 'master-pass');
 
-    const mirror = JSON.parse(localStorage.getItem('aegis_sqlite_fallback') ?? '{}');
+    const mirror = JSON.parse(localStorage.getItem('kalderashield_fallback') ?? '{}');
     expect(mirror).toMatchObject({
       desktopManaged: true,
       user_secrets: [{ username: 'owner', argon_hash: '[stored-in-desktop-app-data]' }],
@@ -795,14 +795,14 @@ category: undefined,
     const sqlite = await freshSqliteInstance();
     await sqlite.setupMaster('master-pass');
     await sqlite.saveVaultItem(sampleItem({ id: 'protected-row' }), 'master-pass');
-    const before = localStorage.getItem('aegis_sqlite_fallback');
+    const before = localStorage.getItem('kalderashield_fallback');
     writeDesktopVaultDatabase.mockClear();
 
     await expect(sqlite.changeMasterPassword('wrong-pass', 'new-master-pass')).rejects.toThrow(
       'current-master-password-invalid',
     );
 
-    expect(localStorage.getItem('aegis_sqlite_fallback')).toBe(before);
+    expect(localStorage.getItem('kalderashield_fallback')).toBe(before);
     expect(writeDesktopVaultDatabase).not.toHaveBeenCalled();
     await expect(sqlite.verifyPassword('master-pass')).resolves.toBe(true);
     await expect(sqlite.verifyPassword('new-master-pass')).resolves.toBe(false);
@@ -842,8 +842,8 @@ category: undefined,
   });
 
   it('rotates secret-key combined credentials and decrypts rows after caches are cleared', async () => {
-    const oldCredential = 'aegis-vault-v7:master-pass\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567';
-    const newCredential = 'aegis-vault-v7:new-master-pass\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567';
+    const oldCredential = 'kalderashield:master-pass\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567';
+    const newCredential = 'kalderashield:new-master-pass\0A3-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567';
     const sqlite = await freshSqliteInstance();
     await sqlite.setupMaster(oldCredential);
     await sqlite.saveVaultItem(sampleItem({ id: 'secret-rotated-row', title: 'Secret Rotated Row' }), oldCredential);
@@ -867,7 +867,7 @@ category: undefined,
     const sqlite = await freshSqliteInstance();
     await sqlite.setupMaster('master-pass');
     await sqlite.saveVaultItem(sampleItem({ id: 'rollback-row', title: 'Rollback Row' }), 'master-pass');
-    const before = localStorage.getItem('aegis_sqlite_fallback');
+    const before = localStorage.getItem('kalderashield_fallback');
     writeDesktopVaultDatabase.mockClear();
     const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('quota exceeded');
@@ -878,7 +878,7 @@ category: undefined,
     );
 
     setItemSpy.mockRestore();
-    expect(localStorage.getItem('aegis_sqlite_fallback')).toBe(before);
+    expect(localStorage.getItem('kalderashield_fallback')).toBe(before);
     await expect(sqlite.verifyPassword('master-pass')).resolves.toBe(true);
     await expect(sqlite.verifyPassword('new-master-pass')).resolves.toBe(false);
     await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual([
@@ -902,7 +902,7 @@ category: undefined,
   it('rolls back a single vault item save when persistence cannot be written', async () => {
     const sqlite = await freshSqliteInstance();
     await sqlite.setupMaster('master-pass');
-    const before = localStorage.getItem('aegis_sqlite_fallback');
+    const before = localStorage.getItem('kalderashield_fallback');
     const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('quota exceeded');
     });
@@ -912,7 +912,7 @@ category: undefined,
     );
 
     setItemSpy.mockRestore();
-    expect(localStorage.getItem('aegis_sqlite_fallback')).toBe(before);
+    expect(localStorage.getItem('kalderashield_fallback')).toBe(before);
     await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual([]);
     expect(sqlite.getQueryLogs()).toEqual(
       expect.arrayContaining([
@@ -929,7 +929,7 @@ category: undefined,
     const sqlite = await freshSqliteInstance();
     await sqlite.setupMaster('master-pass');
     await sqlite.saveVaultItem(sampleItem({ id: 'existing-row', title: 'Existing Row' }), 'master-pass');
-    const before = localStorage.getItem('aegis_sqlite_fallback');
+    const before = localStorage.getItem('kalderashield_fallback');
     const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('quota exceeded');
     });
@@ -940,7 +940,7 @@ category: undefined,
     ], 'master-pass')).rejects.toThrow('vault-items-persist-failed');
 
     setItemSpy.mockRestore();
-    expect(localStorage.getItem('aegis_sqlite_fallback')).toBe(before);
+    expect(localStorage.getItem('kalderashield_fallback')).toBe(before);
     await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual([
       expect.objectContaining({
         id: 'existing-row',
@@ -965,7 +965,7 @@ category: undefined,
       sampleItem({ id: 'delete-keep', title: 'Keep Row' }),
       sampleItem({ id: 'delete-target', title: 'Delete Target' }),
     ], 'master-pass');
-    const before = localStorage.getItem('aegis_sqlite_fallback');
+    const before = localStorage.getItem('kalderashield_fallback');
     const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('quota exceeded');
     });
@@ -975,7 +975,7 @@ category: undefined,
     );
 
     setItemSpy.mockRestore();
-    expect(localStorage.getItem('aegis_sqlite_fallback')).toBe(before);
+    expect(localStorage.getItem('kalderashield_fallback')).toBe(before);
     await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual([
       expect.objectContaining({ id: 'delete-keep', title: 'Keep Row' }),
       expect.objectContaining({ id: 'delete-target', title: 'Delete Target' }),
@@ -989,7 +989,7 @@ category: undefined,
       sampleItem({ id: 'batch-delete-1', title: 'Batch Delete 1' }),
       sampleItem({ id: 'batch-delete-2', title: 'Batch Delete 2' }),
     ], 'master-pass');
-    const before = localStorage.getItem('aegis_sqlite_fallback');
+    const before = localStorage.getItem('kalderashield_fallback');
     const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('quota exceeded');
     });
@@ -999,7 +999,7 @@ category: undefined,
     );
 
     setItemSpy.mockRestore();
-    expect(localStorage.getItem('aegis_sqlite_fallback')).toBe(before);
+    expect(localStorage.getItem('kalderashield_fallback')).toBe(before);
     await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual([
       expect.objectContaining({ id: 'batch-delete-1', title: 'Batch Delete 1' }),
       expect.objectContaining({ id: 'batch-delete-2', title: 'Batch Delete 2' }),
@@ -1010,7 +1010,7 @@ category: undefined,
     const sqlite = await freshSqliteInstance();
     await sqlite.setupMaster('master-pass');
     await sqlite.saveVaultItem(sampleItem({ id: 'existing-before-reseed', title: 'Existing Before Reseed' }), 'master-pass');
-    const before = localStorage.getItem('aegis_sqlite_fallback');
+    const before = localStorage.getItem('kalderashield_fallback');
     const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('quota exceeded');
     });
@@ -1020,7 +1020,7 @@ category: undefined,
     ])).rejects.toThrow('vault-reseed-persist-failed');
 
     setItemSpy.mockRestore();
-    expect(localStorage.getItem('aegis_sqlite_fallback')).toBe(before);
+    expect(localStorage.getItem('kalderashield_fallback')).toBe(before);
     await expect(sqlite.getVaultItems('master-pass')).resolves.toEqual([
       expect.objectContaining({ id: 'existing-before-reseed', title: 'Existing Before Reseed' }),
     ]);

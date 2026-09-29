@@ -123,7 +123,7 @@ export function SettingsRecoverySection({ masterPassword }: SettingsRecoverySect
 
   const handleDownloadWords = async () => {
     const content = [
-      'Aegis Vault 7 Recovery Key',
+      'KalderaShield Recovery Key',
       '',
       `Generated: ${new Date().toISOString()}`,
       '',
@@ -132,10 +132,10 @@ export function SettingsRecoverySection({ masterPassword }: SettingsRecoverySect
       '',
       'Keep this file OFFLINE and OUTSIDE the vault.',
       'You need these 24 words to recover your master password.',
-      'Aegis Vault 7 cannot recover these words for you.',
+      'KalderaShield cannot recover these words for you.',
     ].join('\n');
 
-    const filename = 'aegis-vault-recovery-key.txt';
+    const filename = 'KalderaShield-vault-recovery-key.txt';
 
     try {
       const savedWithNativeDialog = await saveDesktopExportFile(filename, content);

@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+
+# The site is a single static page plus its translations. Nothing here is worth
+# crawling except the pages a visitor might land on from a search result, and
+# there is no server-side content to index.

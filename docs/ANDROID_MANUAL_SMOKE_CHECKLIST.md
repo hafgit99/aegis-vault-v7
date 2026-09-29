@@ -66,9 +66,9 @@ Evidence boundary:
 
 ## Backup And Import
 
-- [ ] Export encrypted `.aegis` backup through Android document picker.
-- [ ] Exported `.aegis` file is visible at the chosen destination.
-- [ ] Import a valid encrypted `.aegis` backup.
+- [ ] Export encrypted `.ks` backup through Android document picker.
+- [ ] Exported `.ks` file is visible at the chosen destination.
+- [ ] Import a valid encrypted `.ks` backup.
 - [ ] Import cancellation returns cleanly with no crash.
 - [ ] Wrong backup password is rejected.
 - [ ] Plain `.json` export requires explicit warning/confirmation.
@@ -87,7 +87,7 @@ Evidence boundary:
 - [ ] `npm run android:device:security -- --release` confirms the installed package is non-debuggable and `run-as` is denied.
 - [ ] Release WebView does not appear as a debuggable target in Chrome `chrome://inspect`.
 - [ ] A normal trusted device shows no Android device-integrity warning.
-- [ ] If a rooted/test-key/instrumented test device is available, Aegis shows one localized warning but does not lock or block the vault.
+- [ ] If a rooted/test-key/instrumented test device is available, KalderaShield shows one localized warning but does not lock or block the vault.
 
 ## Biometric And Secret Storage
 
@@ -125,17 +125,17 @@ Required biometric matrix checks:
 
 ## Autofill
 
-- [ ] Aegis appears in Android Autofill provider settings.
-- [ ] Aegis is selected as the active Autofill provider.
+- [ ] KalderaShield appears in Android Autofill provider settings.
+- [ ] KalderaShield is selected as the active Autofill provider.
 - [ ] `npm run android:device:doctor` reports active Autofill provider as PASS.
-- [ ] Aloha/browser login form shows Aegis fill prompt.
-- [ ] Chrome login form shows Aegis fill prompt after Google Password Manager priority is disabled.
+- [ ] Aloha/browser login form shows KalderaShield fill prompt.
+- [ ] Chrome login form shows KalderaShield fill prompt after Google Password Manager priority is disabled.
 - [ ] Matching vault record is promoted.
 - [ ] Mismatched record requires second confirmation.
 - [ ] Approved fill writes username and password into the target form.
 - [ ] Stale Autofill request does not fill credentials.
-- [ ] New-site registration save prompt opens Aegis with title, username, password, and URL prefilled for review.
-- [ ] If Chrome does not show Aegis, Chrome/Android password manager priority was changed and the result is recorded in Notes.
+- [ ] New-site registration save prompt opens KalderaShield with title, username, password, and URL prefilled for review.
+- [ ] If Chrome does not show KalderaShield, Chrome/Android password manager priority was changed and the result is recorded in Notes.
 - [ ] Vivaldi behavior is recorded as PASS, FAIL, or N/A with reason.
 
 ## Mobile UI

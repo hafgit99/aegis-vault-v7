@@ -1,12 +1,12 @@
-# Aegis Vault 7 — Bağımsız Dış Güvenlik Denetimi Kapsam ve Hazırlık Dokümanı
+# KalderaShield — Bağımsız Dış Güvenlik Denetimi Kapsam ve Hazırlık Dokümanı
 
-**Doküman Sürümü:** 2.1.0 · **Tarih:** 23 Eylül 2026 · **Hedef Sürüm:** Aegis Vault 7.0.7.0
+**Doküman Sürümü:** 2.1.0 · **Tarih:** 23 Eylül 2026 · **Hedef Sürüm:** KalderaShield.0.7.0
 
 ---
 
 ## 1. Giriş ve Amaç
 
-Aegis Vault 7, yerel-öncelikli (local-first) ve sıfır-bilgi (zero-knowledge) mimarisine sahip modern bir parola yöneticisidir. Bu doküman, bağımsız üçüncü taraf siber güvenlik ve kod denetim firmalarına (örneğin Cure53, Trail of Bits, NCC Group, Doyensec, OSTIF bağlantılı denetçiler vb.) sunulmak üzere hazırlanmış resmi denetim kapsam kılavuzudur.
+KalderaShield, yerel-öncelikli (local-first) ve sıfır-bilgi (zero-knowledge) mimarisine sahip modern bir parola yöneticisidir. Bu doküman, bağımsız üçüncü taraf siber güvenlik ve kod denetim firmalarına (örneğin Cure53, Trail of Bits, NCC Group, Doyensec, OSTIF bağlantılı denetçiler vb.) sunulmak üzere hazırlanmış resmi denetim kapsam kılavuzudur.
 
 **Kapsamdaki dağıtım kanalları:** Windows/macOS/Linux masaüstü uygulamaları (Tauri), Android uygulaması (Tauri) ve Chromium/Firefox/Safari tarayıcı eklentisi — tümü tek bir yeniden üretilebilir CI release hattından üretilir; Sigstore (cosign) keyless imzaları, Tauri minisign updater imzaları ve sürüm başına CycloneDX SBOM'ları ile birlikte.
 

@@ -7,7 +7,7 @@ import { secureRandomBytes } from './random';
 import { deriveArgon2idKey, MIN_ARGON2ID_MEMORY_KIB } from './argon2id';
 import { webCryptoAesGcmDecrypt, webCryptoAesGcmEncrypt, generateSafeIv } from './webcrypto';
 
-// Aegis Vault 7 cross-platform secure backup KDF profile.
+// KalderaShield cross-platform secure backup KDF profile.
 //
 // memoryKiB is intentionally capped at 32 MiB so that the bundled
 // argon2-browser WASM can always satisfy the allocation in WebView2
@@ -23,7 +23,7 @@ export const BACKUP_KDF_PROFILE = {
   hashLength: 32,
 } as const;
 
-// Legacy high-memory fallback removed. Earlier Aegis Vault 7.0.0.x
+// Legacy high-memory fallback removed. Earlier KalderaShield.0.0.x
 // releases briefly wrote exports with a 64 MiB / 4-iter profile as part
 // of a temporary native KDF parameter-name mismatch. Those exports are
 // no longer in circulation: every current build writes the 32 MiB /
@@ -78,10 +78,10 @@ export async function encryptDataWithPasswordSecure(rawData: string, password: s
   return JSON.stringify(
     {
       version: '1.2',
-      generator: 'Aegis Secure Core',
+      generator: 'KalderaShield Secure Core',
       kdf: 'Argon2id',
       kdfImplementation: 'argon2-browser',
-      kdfProfile: 'aegis-backup-cross-platform-v2',
+      kdfProfile: 'KalderaShield-backup-cross-platform-v2',
       kdfParams,
       cipher: 'WebCrypto AES-256-GCM',
       salt: saltHex,
@@ -118,7 +118,7 @@ export async function decryptDataWithPasswordSecure(envelopeJsonStr: string, pas
   }
 
   // Validate KDF params to mitigate downgrade KDF attacks (Z-10).
-  // Aegis Vault 7 strictly enforces a cryptographic floor of 8 MiB (MIN_ARGON2ID_MEMORY_KIB = 8192)
+  // KalderaShield strictly enforces a cryptographic floor of 8 MiB (MIN_ARGON2ID_MEMORY_KIB = 8192)
   // and at least 3 iterations. This guarantees compliance with the OWASP password storage
   // guidelines and RFC 9106 while ensuring portable execution across WASM runtimes.
   if (!parsed.kdfParams || typeof parsed.kdfParams !== 'object') {

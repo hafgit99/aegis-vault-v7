@@ -1,6 +1,6 @@
 /**
  * @file recoveryKey.ts
- * @description Recovery Key module for AegisVault v7.
+ * @description Recovery Key module for KalderaShield v7.
  *
  * Generates a 24-word BIP-39 mnemonic (256-bit entropy) that encrypts the
  * master password with AES-256-GCM + Argon2id KDF. When the user forgets
@@ -28,7 +28,7 @@ import {
   removeIndexedDbItemSync,
 } from './indexedDbStorage';
 
-const RECOVERY_STORAGE_KEY = 'aegis_recovery_key_bundle';
+const RECOVERY_STORAGE_KEY = 'KalderaShield_recovery_key_bundle';
 
 /** KDF profile for recovery key derivation — matches backup profile. */
 const RECOVERY_KDF_PROFILE = {

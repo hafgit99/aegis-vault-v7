@@ -142,7 +142,7 @@ function main() {
   // updater, extension and release-endpoint secrets which belong in other
   // documents, and demanding they appear here would be noise.
   const SIGNING_SECRET_PATTERN =
-    /(APPLE_[A-Z0-9_]+|WINDOWS_SIGNING_[A-Z0-9_]+|ANDROID_KEYSTORE_BASE64|AEGIS_ANDROID_[A-Z0-9_]+|TAURI_SIGNING_[A-Z0-9_]+)/;
+    /(APPLE_[A-Z0-9_]+|WINDOWS_SIGNING_[A-Z0-9_]+|ANDROID_KEYSTORE_BASE64|KALDERASHIELD_ANDROID_[A-Z0-9_]+|TAURI_SIGNING_[A-Z0-9_]+)/;
   const referenced = new Set();
   for (const match of workflow.matchAll(/secrets\.([A-Z0-9_]+)/g)) {
     if (SIGNING_SECRET_PATTERN.test(match[1])) referenced.add(match[1]);

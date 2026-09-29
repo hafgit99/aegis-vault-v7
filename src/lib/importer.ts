@@ -12,12 +12,12 @@ export { parseCSV } from './csvParser';
 
 export type ImportResult = 
   | { type: 'success'; items: Partial<VaultItem>[]; formatName: string }
-  | { type: 'encrypted_aegis'; envelope: Record<string, unknown> }
+  | { type: 'encrypted_KalderaShield'; envelope: Record<string, unknown> }
   | { type: 'error'; message: string };
 
 export interface ImportLabels {
   errorEmpty: string;
-  formatAegisJson: string;
+  formatKalderaShieldJson: string;
   formatBitwardenJson: string;
   errorUnsupportedJson: string;
   errorJsonPrefix: string;
@@ -105,14 +105,14 @@ export function parseUniversalImport(fileContent: string, labels: Partial<Import
     try {
       const parsed = JSON.parse(trimmed);
 
-      // 1. Encrypted Aegis Backup File
+      // 1. Encrypted KalderaShield Backup File
       if ((parsed.version === "1.1" || parsed.kdf === "Argon2id" || parsed.encrypted) && parsed.salt && parsed.payload) {
-        return { type: 'encrypted_aegis', envelope: parsed };
+        return { type: 'encrypted_KalderaShield', envelope: parsed };
       }
 
-      // 2. Multi-record Aegis JSON array
+      // 2. Multi-record KalderaShield JSON array
       if (Array.isArray(parsed)) {
-        // Double check if typical Aegis JSON format
+        // Double check if typical KalderaShield JSON format
         const items: Partial<VaultItem>[] = parsed.map(x => {
           const username = normalizeImportString(x.username);
           const url = normalizeImportString(x.url);
@@ -141,7 +141,7 @@ export function parseUniversalImport(fileContent: string, labels: Partial<Import
             passkeyPublicId: normalizeOptionalImportString(x.passkeyPublicId),
           };
         });
-        return { type: 'success', items, formatName: copy.formatAegisJson };
+        return { type: 'success', items, formatName: copy.formatKalderaShieldJson };
       }
 
       // 3. Bitwarden JSON structure

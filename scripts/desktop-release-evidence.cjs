@@ -112,7 +112,7 @@ function verifyCompletedChecklist(file) {
 function verifyReleaseNotes(file, metadata) {
   const contents = fs.readFileSync(file, 'utf8');
   for (const expected of [
-    '# Aegis Vault 7 ' + metadata.version + ' Desktop Release Notes',
+    '# KalderaShield ' + metadata.version + ' Desktop Release Notes',
     'Platform: ' + metadata.platform,
     'Commit: ' + metadata.commit,
     '## SHA-256 Checksums',
@@ -127,7 +127,7 @@ function verifyReleaseNotes(file, metadata) {
 function verifySigningReport(file, metadata, artifacts) {
   const contents = fs.readFileSync(file, 'utf8');
   for (const expected of [
-    '# Aegis Vault 7 Desktop Signing Report',
+    '# KalderaShield Desktop Signing Report',
     'Version: ' + metadata.version,
     'Platform: ' + metadata.platform,
     'Commit: ' + metadata.commit,

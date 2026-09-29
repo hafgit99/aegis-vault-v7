@@ -9,7 +9,7 @@ const releaseMode = args.has('--release');
 const buildType = releaseMode ? 'release' : 'debug';
 const sdkRoot = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || '';
 const adb = sdkRoot ? path.join(sdkRoot, 'platform-tools', process.platform === 'win32' ? 'adb.exe' : 'adb') : 'adb';
-const packageName = releaseMode ? 'com.hafgit99.aegisvault7' : 'com.hafgit99.aegisvault7.debug';
+const packageName = releaseMode ? 'com.kalderashield.desktop' : 'com.kalderashield.desktop.debug';
 const mainActivitySource = path.join(
   repoRoot,
   'src-tauri',
@@ -21,7 +21,7 @@ const mainActivitySource = path.join(
   'java',
   'com',
   'hafgit99',
-  'aegisvault7',
+  'KalderaShield',
   'MainActivity.kt',
 );
 let failed = false;
@@ -99,21 +99,21 @@ function summarizeRelevantLogcat() {
       line.includes(packageName) ||
       line.includes('FATAL EXCEPTION') ||
       line.includes('AndroidRuntime') ||
-      line.includes('AegisAutofill') ||
+      line.includes('KalderaShieldAutofill') ||
       line.includes('Tauri')
     ))
     .slice(-80);
 
   if (relevant.length === 0) {
-    pass('no recent crash/runtime log lines for Aegis package');
+    pass('no recent crash/runtime log lines for KalderaShield package');
     return;
   }
 
   const fatal = relevant.some((line) => line.includes('FATAL EXCEPTION') || line.includes('AndroidRuntime'));
   if (fatal) {
-    fail('recent AndroidRuntime/FATAL log lines found for Aegis package');
+    fail('recent AndroidRuntime/FATAL log lines found for KalderaShield package');
   } else {
-    pass('recent Aegis runtime log excerpt contains no fatal crash marker');
+    pass('recent KalderaShield runtime log excerpt contains no fatal crash marker');
   }
 
   console.log('INFO recent-logcat-begin');
@@ -203,9 +203,9 @@ if (devices.length > 0) {
     .filter((line) => line.includes('mCurrentFocus=') || line.includes('mFocusedApp=') || line.includes(packageName));
   const isForeground = focusLines.some((line) => line.includes(packageName));
   if (isForeground) {
-    pass('Aegis package is visible in current window focus dump');
+    pass('KalderaShield package is visible in current window focus dump');
   } else {
-    warn('Aegis package is not visible in current window focus dump; run after android:device:smoke or pass --launch');
+    warn('KalderaShield package is not visible in current window focus dump; run after android:device:smoke or pass --launch');
   }
 
   console.log('INFO window-focus-begin');
@@ -230,4 +230,4 @@ if (devices.length > 0) {
 
 if (failed) {
   process.exit(1);
-}
+}

@@ -17,9 +17,9 @@ import {
   validateRemoteSyncMetadata,
 } from './syncTypes';
 
-const VAULT_FILE = 'vault.aegis';
+const VAULT_FILE = 'vault.ks';
 const METADATA_FILE = 'metadata.json';
-const AEGIS_DIR = 'AegisVault';
+const KALDERASHIELD_DIR = 'KalderaShield';
 
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
@@ -39,14 +39,14 @@ function ensureTrailingSlash(url: string): string {
 }
 
 function buildFileUrl(baseUrl: string, filename: string): string {
-  return `${ensureTrailingSlash(baseUrl)}${AEGIS_DIR}/${filename}`;
+  return `${ensureTrailingSlash(baseUrl)}${KALDERASHIELD_DIR}/${filename}`;
 }
 
 /**
  * WebDAV sync provider.
  *
- * Stores two files in `{baseUrl}/AegisVault/`:
- *   - `vault.aegis`    — Argon2id + AES-256-GCM encrypted vault blob
+ * Stores two files in `{baseUrl}/KalderaShield/`:
+ *   - `vault.ks`    — Argon2id + AES-256-GCM encrypted vault blob
  *   - `metadata.json`  — lightweight snapshot descriptor (unencrypted JSON)
  *
  * The metadata file is written *after* a successful vault upload so that
@@ -100,7 +100,7 @@ export class WebDavSyncProvider implements SyncProvider {
   }
 
   private async ensureDirectory(): Promise<void> {
-    const dirUrl = `${this.baseUrl}${AEGIS_DIR}/`;
+    const dirUrl = `${this.baseUrl}${KALDERASHIELD_DIR}/`;
     const res = await fetch(dirUrl, {
       method: 'MKCOL',
       headers: this.defaultHeaders(),
@@ -109,7 +109,7 @@ export class WebDavSyncProvider implements SyncProvider {
     if (!res.ok && res.status !== 405 && res.status !== 301) {
       throw new SyncError(
         syncErrorCodes.connectionFailed,
-        `Failed to create AegisVault directory: HTTP ${res.status}`,
+        `Failed to create KalderaShield directory: HTTP ${res.status}`,
       );
     }
   }

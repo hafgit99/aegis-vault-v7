@@ -41,9 +41,9 @@ Candidate:
 
 ## Backup, Import, And Attachments
 
-- [ ] Export encrypted `.aegis` backup through the native save dialog.
-- [ ] Exported `.aegis` file is visible at the chosen destination.
-- [ ] Import a valid encrypted `.aegis` backup through the native open dialog.
+- [ ] Export encrypted `.ks` backup through the native save dialog.
+- [ ] Exported `.ks` file is visible at the chosen destination.
+- [ ] Import a valid encrypted `.ks` backup through the native open dialog.
 - [ ] Wrong backup password is rejected.
 - [ ] Plain `.json` export requires explicit warning/confirmation.
 - [ ] Attachment add, download/save, open, delete, and restart persistence work.

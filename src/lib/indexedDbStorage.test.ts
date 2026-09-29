@@ -36,34 +36,34 @@ describe('indexedDbStorage', () => {
   });
 
   it('stores, reads, removes, and clears setup flags through IndexedDB', async () => {
-    await setIndexedDbItem('aegis_is_setup', 'true');
-    expect(await getIndexedDbItem('aegis_is_setup')).toBe('true');
+    await setIndexedDbItem('KalderaShield_is_setup', 'true');
+    expect(await getIndexedDbItem('KalderaShield_is_setup')).toBe('true');
 
-    await removeIndexedDbItem('aegis_is_setup');
-    expect(await getIndexedDbItem('aegis_is_setup')).toBeNull();
+    await removeIndexedDbItem('KalderaShield_is_setup');
+    expect(await getIndexedDbItem('KalderaShield_is_setup')).toBeNull();
 
-    await setIndexedDbItem('aegis_account_secret_profile', 'profile');
-    await setIndexedDbItem('aegis_sqlite_fallback', 'payload');
+    await setIndexedDbItem('KalderaShield_account_secret_profile', 'profile');
+    await setIndexedDbItem('kalderashield_fallback', 'payload');
     await clearAllSetupFlags();
-    expect(await getIndexedDbItem('aegis_account_secret_profile')).toBeNull();
-    expect(await getIndexedDbItem('aegis_sqlite_fallback')).toBeNull();
+    expect(await getIndexedDbItem('KalderaShield_account_secret_profile')).toBeNull();
+    expect(await getIndexedDbItem('kalderashield_fallback')).toBeNull();
   });
 
   it('migrates known localStorage keys into IndexedDB and synchronous cache', async () => {
-    localStorage.setItem('aegis_is_setup', 'true');
-    localStorage.setItem('aegis_account_secret_key_remembered', 'secret');
+    localStorage.setItem('KalderaShield_is_setup', 'true');
+    localStorage.setItem('KalderaShield_account_secret_key_remembered', 'secret');
 
     await initializeIndexedDbStorage();
 
-    expect(getIndexedDbItemSync('aegis_is_setup')).toBe('true');
-    expect(getIndexedDbItemSync('aegis_account_secret_key_remembered')).toBe('secret');
-    expect(localStorage.getItem('aegis_is_setup')).toBe('true');
-    expect(await getIndexedDbItem('aegis_is_setup')).toBe('true');
+    expect(getIndexedDbItemSync('KalderaShield_is_setup')).toBe('true');
+    expect(getIndexedDbItemSync('KalderaShield_account_secret_key_remembered')).toBe('secret');
+    expect(localStorage.getItem('KalderaShield_is_setup')).toBe('true');
+    expect(await getIndexedDbItem('KalderaShield_is_setup')).toBe('true');
   });
 
   it('hydrates null values for missing known keys during initialization', async () => {
     await initializeIndexedDbStorage();
-    expect(getIndexedDbItemSync('aegis_vault_storage_active_backend')).toBeNull();
+    expect(getIndexedDbItemSync('KalderaShield_vault_storage_active_backend')).toBeNull();
   });
 
   it('keeps synchronous cache in step with async writes and deletes', async () => {
@@ -158,7 +158,7 @@ describe('indexedDbStorage', () => {
     try {
       await expect(initializeIndexedDbStorage()).resolves.toBeUndefined();
 
-      expect(getIndexedDbItemSync('aegis_is_setup')).toBeNull();
+      expect(getIndexedDbItemSync('KalderaShield_is_setup')).toBeNull();
       expect(console.error).toHaveBeenCalled();
     } finally {
       if (originalIndexedDb) {

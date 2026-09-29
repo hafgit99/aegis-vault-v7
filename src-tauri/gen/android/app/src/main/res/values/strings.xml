@@ -1,6 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Aegis Vault 7</string>
-    <string name="main_activity_title">Aegis Vault 7</string>
-    <string name="autofill_service_label">Aegis Vault Autofill</string>
-    <string name="autofill_unlock_prompt">Open Aegis Vault to fill this login</string>
+    <string name="app_name">KalderaShield</string>
+    <string name="main_activity_title">KalderaShield</string>
+    <string name="autofill_service_label">KalderaShield Otomatik Doldurma</string>
+    <string name="autofill_unlock_prompt">Bu girişi doldurmak için KalderaShield uygulamasını açın</string>
 </resources>

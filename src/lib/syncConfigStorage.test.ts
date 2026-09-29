@@ -60,7 +60,7 @@ import {
 import type { SyncError } from './sync/syncTypes';
 import { syncErrorCodes, type SyncConfig } from './sync/syncTypes';
 
-const legacySaltHex = Array.from(new TextEncoder().encode('aegis-sync-config-v1'))
+const legacySaltHex = Array.from(new TextEncoder().encode('KalderaShield-sync-config-v1'))
   .map((b) => b.toString(16).padStart(2, '0'))
   .join('');
 
@@ -89,14 +89,14 @@ describe('syncConfigStorage', () => {
   it('round-trips encrypted WebDAV config and never stores plaintext credentials', async () => {
     const config: SyncConfig = {
       type: 'webdav',
-      url: 'https://cloud.example.com/remote.php/dav/files/aegis',
+      url: 'https://cloud.example.com/remote.php/dav/files/KalderaShield',
       username: 'alice',
       password: 'app-token',
     };
 
     await saveSyncConfig(config, 'master-password');
 
-    const raw = localStorage.getItem('aegis_sync_config_v1');
+    const raw = localStorage.getItem('KalderaShield_sync_config_v1');
     expect(raw).toBeTruthy();
     expect(raw).not.toContain('app-token');
     expect(raw).not.toContain('alice');
@@ -116,7 +116,7 @@ describe('syncConfigStorage', () => {
 
     await saveSyncConfig(config, 'master-password');
 
-    const raw = localStorage.getItem('aegis_sync_config_v1');
+    const raw = localStorage.getItem('KalderaShield_sync_config_v1');
     expect(raw).toBeTruthy();
     expect(raw).not.toContain('AKIA1234567890');
     expect(raw).not.toContain('secretKey1234567890');
@@ -133,22 +133,22 @@ describe('syncConfigStorage', () => {
   it('returns disabled for missing, malformed, or unsupported envelopes', async () => {
     expect(await loadSyncConfig('master-password')).toEqual({ type: 'disabled' });
 
-    localStorage.setItem('aegis_sync_config_v1', '{bad json');
+    localStorage.setItem('KalderaShield_sync_config_v1', '{bad json');
     expect(await loadSyncConfig('master-password')).toEqual({ type: 'disabled' });
 
-    localStorage.setItem('aegis_sync_config_v1', JSON.stringify({ version: 99, payload: {} }));
+    localStorage.setItem('KalderaShield_sync_config_v1', JSON.stringify({ version: 99, payload: {} }));
     expect(await loadSyncConfig('master-password')).toEqual({ type: 'disabled' });
 
-    localStorage.setItem('aegis_sync_config_v1', JSON.stringify({ version: 2, payload: {} }));
+    localStorage.setItem('KalderaShield_sync_config_v1', JSON.stringify({ version: 2, payload: {} }));
     expect(await loadSyncConfig('master-password')).toEqual({ type: 'disabled' });
 
     localStorage.setItem(
-      'aegis_sync_config_v1',
+      'KalderaShield_sync_config_v1',
       JSON.stringify({ version: 2, payload: {}, kdf: { salt: 'zz', memoryKiB: 32768, iterations: 3, parallelism: 1, hashLength: 32 } }),
     );
     expect(await loadSyncConfig('master-password')).toEqual({ type: 'disabled' });
 
-    localStorage.setItem('aegis_sync_config_v1', JSON.stringify({ version: 1 }));
+    localStorage.setItem('KalderaShield_sync_config_v1', JSON.stringify({ version: 1 }));
     expect(await loadSyncConfig('master-password')).toEqual({ type: 'disabled' });
   });
 
@@ -186,7 +186,7 @@ describe('syncConfigStorage', () => {
     };
 
     await saveSyncConfig(config, 'master-password');
-    const first = JSON.parse(localStorage.getItem('aegis_sync_config_v1')!);
+    const first = JSON.parse(localStorage.getItem('KalderaShield_sync_config_v1')!);
     expect(first.version).toBe(2);
     expect(first.kdf.salt).toMatch(/^[0-9a-f]{32}$/);
     expect(first.kdf.iterations).toBeGreaterThanOrEqual(3);
@@ -194,7 +194,7 @@ describe('syncConfigStorage', () => {
     expect(first.kdf.hashLength).toBe(32);
 
     await saveSyncConfig(config, 'master-password');
-    const second = JSON.parse(localStorage.getItem('aegis_sync_config_v1')!);
+    const second = JSON.parse(localStorage.getItem('KalderaShield_sync_config_v1')!);
     expect(second.version).toBe(2);
     // Security: the salt must differ on every save (no fixed/precomputed salt).
     expect(second.kdf.salt).not.toBe(first.kdf.salt);
@@ -209,9 +209,9 @@ describe('syncConfigStorage', () => {
     };
     await saveSyncConfig(config, 'right-password');
 
-    const envelope = JSON.parse(localStorage.getItem('aegis_sync_config_v1')!);
+    const envelope = JSON.parse(localStorage.getItem('KalderaShield_sync_config_v1')!);
     envelope.kdf.memoryKiB = 16384; // attacker tries to substitute a cheaper KDF profile
-    localStorage.setItem('aegis_sync_config_v1', JSON.stringify(envelope));
+    localStorage.setItem('KalderaShield_sync_config_v1', JSON.stringify(envelope));
 
     await expect(loadSyncConfig('right-password')).rejects.toMatchObject({
       code: syncErrorCodes.authFailed,
@@ -226,12 +226,12 @@ describe('syncConfigStorage', () => {
       password: 'legacy-token',
     };
 
-    localStorage.setItem('aegis_sync_config_v1', await buildLegacyV1Envelope(config, 'master-password'));
+    localStorage.setItem('KalderaShield_sync_config_v1', await buildLegacyV1Envelope(config, 'master-password'));
 
     await expect(loadSyncConfig('master-password')).resolves.toEqual(config);
 
     // Transparent upgrade: the stored envelope is now version 2 and loads cleanly.
-    const upgraded = JSON.parse(localStorage.getItem('aegis_sync_config_v1')!);
+    const upgraded = JSON.parse(localStorage.getItem('KalderaShield_sync_config_v1')!);
     expect(upgraded.version).toBe(2);
     expect(upgraded.kdf.salt).toMatch(/^[0-9a-f]{32}$/);
     await expect(loadSyncConfig('master-password')).resolves.toEqual(config);
@@ -244,7 +244,7 @@ describe('syncConfigStorage', () => {
       username: 'alice',
       password: 'legacy-token',
     };
-    localStorage.setItem('aegis_sync_config_v1', await buildLegacyV1Envelope(config, 'right-password'));
+    localStorage.setItem('KalderaShield_sync_config_v1', await buildLegacyV1Envelope(config, 'right-password'));
 
     await expect(loadSyncConfig('wrong-password')).rejects.toMatchObject({
       code: syncErrorCodes.authFailed,

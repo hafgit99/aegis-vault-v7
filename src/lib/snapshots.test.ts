@@ -83,7 +83,7 @@ describe('Vault Snapshot History (snapshots.ts)', () => {
     {
       id: 'item-1',
       title: 'GitHub',
-      username: 'dev@aegisvault.xyz',
+      username: 'dev@KalderaShield.xyz',
       password: 'password123!',
       url: 'https://github.com',
       notes: '',
@@ -94,7 +94,7 @@ describe('Vault Snapshot History (snapshots.ts)', () => {
     {
       id: 'item-2',
       title: 'ProtonMail',
-      username: 'admin@aegisvault.xyz',
+      username: 'admin@KalderaShield.xyz',
       password: 'proton-secret-key',
       url: 'https://proton.me',
       notes: '',
@@ -215,7 +215,7 @@ describe('Vault Snapshot History (snapshots.ts)', () => {
     const result = await exportVaultSnapshotToFile(snap);
     expect(result).toBe(true);
     expect(desktopFiles.saveDesktopExportFile).toHaveBeenCalledWith(
-      expect.stringMatching(/^aegis_snapshot_/),
+      expect.stringMatching(/^KalderaShield_snapshot_/),
       snap.encryptedPayload,
     );
   });

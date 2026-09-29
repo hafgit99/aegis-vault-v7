@@ -14,10 +14,10 @@ describe('S3SyncProvider', () => {
     type: 's3',
     endpoint: 'https://s3.us-east-1.amazonaws.com',
     region: 'us-east-1',
-    bucket: 'my-aegis-bucket',
+    bucket: 'my-KalderaShield-bucket',
     accessKeyId: 'AKIAIOSFODNN7EXAMPLE',
     secretAccessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
-    prefix: 'AegisVault',
+    prefix: 'KalderaShield',
   };
 
   const originalFetch = globalThis.fetch;
@@ -87,9 +87,9 @@ describe('S3SyncProvider', () => {
 
     await provider.uploadVault('encrypted-blob-content', metadata);
 
-    expect(mockFetch).toHaveBeenCalledTimes(2); // 1. vault.aegis, 2. metadata.json
-    expect(mockFetch.mock.calls[0]![0]).toContain('my-aegis-bucket/AegisVault/vault.aegis');
-    expect(mockFetch.mock.calls[1]![0]).toContain('my-aegis-bucket/AegisVault/metadata.json');
+    expect(mockFetch).toHaveBeenCalledTimes(2); // 1. vault.KalderaShield, 2. metadata.json
+    expect(mockFetch.mock.calls[0]![0]).toContain('my-KalderaShield-bucket/KalderaShield/vault.KalderaShield');
+    expect(mockFetch.mock.calls[1]![0]).toContain('my-KalderaShield-bucket/KalderaShield/metadata.json');
     provider.dispose();
   });
 

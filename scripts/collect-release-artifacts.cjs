@@ -125,12 +125,12 @@ function allMatches(predicate) {
 }
 
 function normalizeName(kind, ext) {
-  return `AegisVault7-${version}-${platform}-${kind}${ext}`;
+  return `KalderaShield-${version}-${platform}-${kind}${ext}`;
 }
 
 function collectWindows() {
   const artifacts = [];
-  const releaseExe = path.join(targetDir, 'release', 'aegis-vault-v7.exe');
+  const releaseExe = path.join(targetDir, 'release', 'kalderashield.exe');
   const msi = newestMatch(file => file.includes(`${path.sep}release${path.sep}bundle${path.sep}msi${path.sep}`) && file.toLowerCase().endsWith('.msi'));
   const setup = newestMatch(file => file.includes(`${path.sep}release${path.sep}bundle${path.sep}nsis${path.sep}`) && file.toLowerCase().endsWith('.exe'));
 
@@ -226,7 +226,7 @@ function copyBrowserExtensions() {
       .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs)[0];
 
     if (xpi) {
-      artifacts.push(copyFile(xpi, `AegisVault7-${version}-firefox-signed.xpi`));
+      artifacts.push(copyFile(xpi, `KalderaShield-${version}-firefox-signed.xpi`));
     }
   }
 
@@ -300,7 +300,7 @@ function completedManualChecklist(contents, metadata) {
 }
 
 function readAssetIntegrityEvidence() {
-  const manifestPath = path.join(rootDir, 'dist', 'aegis-integrity.json');
+  const manifestPath = path.join(rootDir, 'dist', 'KalderaShield-integrity.json');
   if (!fs.existsSync(manifestPath)) throw new Error('Production asset integrity manifest is missing. Run npm run build first.');
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   if (
@@ -351,7 +351,7 @@ function writeReleaseMetadata(artifacts) {
   fs.writeFileSync(
     path.join(outputDir, 'README.md'),
     [
-      '# Aegis Vault 7 Desktop Release Evidence',
+      '# KalderaShield Desktop Release Evidence',
       '',
       'Created: ' + metadata.createdAt,
       'Version: ' + metadata.version,

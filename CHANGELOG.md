@@ -1,6 +1,48 @@
-# Changelog
+ Changelog
 
-All notable Aegis Vault 7 changes are tracked here. The project follows a security-first release style: release notes summarize user-facing changes, while this changelog also records release-gate and validation work.
+All notable KalderaShield changes are tracked here. The project follows a security-first release style: release notes summarize user-facing changes, while this changelog also records release-gate and validation work.
+
+## 7.0.18.0 - Rebrand
+
+### Breaking Changes
+
+- **Product renamed to KalderaShield.** The application identifier is now `com.kalderashield.desktop`.
+- **Local data directory changed.** Existing vaults live under `%APPDATA%\com.hafgit99.aegisvault7\`. The new release reads and writes `%APPDATA%\com.kalderashield.desktop\`, so a fresh vault is created on first launch. Back up any existing vault data before updating.
+- **Vault database renamed** to `kalderashield.db` (was `aegis_sqlite.db`).
+- **Sync file names changed.** WebDAV and S3 now store `vault.ks` in a `KalderaShield/` directory (was `vault.aegis` in `AegisVault/`). Point existing sync targets at the new path or re-pair the provider.
+- **Export/import file extension** is now `.ks` (was `.aegis`).
+- **Browser extension ID changed** to `kalderashield@hafgit99.com` (was `aegisvault7@hafgit99.com`). Extensions already installed under the old ID will not be updated by the store; remove the old copy before installing this release.
+
+### Renamed Identifiers
+
+| Item | Previous | Current |
+| --- | --- | --- |
+| Application identifier | `com.hafgit99.aegisvault7` | `com.kalderashield.desktop` |
+| Browser extension ID | `aegisvault7@hafgit99.com` | `kalderashield@hafgit99.com` |
+| Native messaging host | `com.hafgit99.aegisvault7` | `com.kalderashield.desktop` |
+| Android package | `com.hafgit99.aegisvault7` | `com.kalderashield.desktop` |
+| GitHub repository | `hafgit99/aegis-vault-v7` | `hafgit99/kalderashield` |
+
+The `.desktop` suffix is deliberate: Tauri warns when a bundle identifier ends
+in `.app`, because that collides with the macOS application bundle extension
+and can break notarisation.
+
+### Security
+
+- The IPC session data key context changed, so a desktop app and browser extension must be updated together. Mismatched versions fail closed rather than falling back to an unauthenticated session.
+- **Uninstalling no longer deletes the vault.** The NSIS pre-uninstall hook removed the application data directory, which for a password manager meant losing every stored credential with no warning and no backup. Vault data under `%APPDATA%\com.kalderashield.desktop` now survives an uninstall.
+
+### Fixed
+
+- **Android release signing was reading the wrong environment variable names** and would have published every release APK unsigned. The workflow exports `KALDERASHIELD_ANDROID_*`; Gradle was reading `AEGIS_ANDROID_*`, so `releaseSigningConfigured` was always false and the failure was only a log warning.
+- **The Android target did not compile.** A rebrand rename had truncated the `package` declaration to `ckage` in all 15 Kotlin sources, the Gradle namespace disagreed with the `R` class the autofill bridge imports, the manifest referenced a style resource that no longer existed, and the ProGuard keep rules still named the pre-rebrand package, which would have stripped the autofill service and the JavaScript bridges from minified builds.
+- **The updater reads only from GitHub Releases.** The `update.aegisvault.xyz` endpoint is gone from the configuration and from both content security policies.
+- The Turkish Android strings had been written with corrupted multi-byte characters and no longer parsed as valid Turkish.
+
+### Signing
+
+- Android release artifacts are signed with a JKS keystore whose certificate subject is `CN=KalderaShield, O=KalderaShield, C=TR`, valid until 2054. JKS is used instead of PKCS12 because PKCS12 cannot hold a key password that differs from the store password, so a PKCS12 keystore has one password guarding both. The keystore, its two passwords, and the base64 form used by CI are new; the previous identity was never published, so no installed app is stranded by it.
+- Installs signed with the previous certificate cannot be updated by this one and must be removed first.
 
 ## 7.0.7.0 - Code Review Remediation (Unreleased)
 
@@ -72,7 +114,7 @@ All notable Aegis Vault 7 changes are tracked here. The project follows a securi
 
 - Automated "No-JS-Master-String final gate" script to scan source code for forbidden master-password plain string patterns, enforcing a strict count-based allowlist across authorized files.
 - Android evidence-boundary documentation that separates automated release-gate proof from manual device-only claims for Autofill, biometric, document picker, FLAG_SECURE, and mobile UI behavior.
-- Android Autofill save-candidate handling so Android can offer to save newly registered credentials and Aegis opens a prefilled new-login form after user approval.
+- Android Autofill save-candidate handling so Android can offer to save newly registered credentials and KalderaShield opens a prefilled new-login form after user approval.
 - Desktop release gate with lint, version consistency checks, unit tests, web build, extension build, Tauri build, artifact collection, signing report generation, release notes generation, and evidence verification.
 - Desktop release evidence files: `metadata.json`, `SHA256SUMS.txt`, `DESKTOP_MANUAL_SMOKE_CHECKLIST.md`, `DESKTOP_SIGNATURES.md`, `RELEASE_NOTES.md`, and release evidence `README.md`.
 - Desktop signing report support for Windows Authenticode, macOS codesign/spctl checks, and Linux artifact signing policy notes.
@@ -156,6 +198,6 @@ All notable Aegis Vault 7 changes are tracked here. The project follows a securi
 - wa-sqlite can be promoted to the active backend after explicit migration and safety gates pass; fresh installs/default-backend policy remains a separate release decision.
 - Public desktop release artifacts should be signed before distribution. Unsigned artifacts are suitable only for internal diagnostics.
 - Android biometric behavior still requires final validation on supported physical devices before public release claims.
-- Browser Autofill behavior depends on Android/browser provider support and user Autofill provider selection; Chrome may require disabling Google Password Manager Autofill or selecting Aegis as the active provider.
+- Browser Autofill behavior depends on Android/browser provider support and user Autofill provider selection; Chrome may require disabling Google Password Manager Autofill or selecting KalderaShield as the active provider.
 - Sync/WebDAV is not yet treated as a final public release feature.
 - Lost master passwords, lost Account Secret Keys, and lost backup passwords cannot be recovered by the app.

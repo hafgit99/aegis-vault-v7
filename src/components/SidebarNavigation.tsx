@@ -3,7 +3,7 @@ import { Clock, HeartHandshake, KeyRound, Lock, Settings, ShieldCheck, Trash2 } 
 import { useLanguage } from '../i18n/LanguageContext';
 import { APP_NAME } from '../lib/branding';
 import type { ActiveTab } from '../types';
-import aegisLogo from '../../src-tauri/icons/icon.png';
+import KalderaShieldLogo from '../../src-tauri/icons/icon.png';
 
 interface SidebarNavigationProps {
   activeTab: ActiveTab;
@@ -38,7 +38,7 @@ export default function SidebarNavigation({
     >
       <div className="mb-5 sm:mb-7 px-1.5 flex items-center gap-3 shrink-0">
         <div className="w-9 h-9 rounded-lg bg-brand-primary/5 border border-brand-primary/10 flex items-center justify-center shadow-inner overflow-hidden shrink-0">
-          <img src={aegisLogo} alt="Aegis Logo" className="w-7 h-7 object-contain" />
+          <img src={KalderaShieldLogo} alt="KalderaShield Logo" className="w-7 h-7 object-contain" />
         </div>
         <div>
           <h1 className="font-display text-[19px] font-bold text-brand-primary leading-tight">{APP_NAME}</h1>

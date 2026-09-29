@@ -4,7 +4,7 @@
  */
 
 /**
- * Lightweight fuzzy / typo-tolerant search helpers for the Aegis Vault
+ * Lightweight fuzzy / typo-tolerant search helpers for the KalderaShield
  * advanced search feature.
  *
  * The matcher is intentionally dependency-free and fast — the vault can

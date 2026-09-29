@@ -20,7 +20,7 @@ import { logSecurityEvent, securityEventCodes } from './securityEvents';
 import { saveDesktopExportFile, isNativeFileDialogSupported } from './desktopFiles';
 import type { VaultItem } from '../types';
 
-export const SNAPSHOT_DB_NAME = 'aegis_snapshots_db';
+export const SNAPSHOT_DB_NAME = 'KalderaShield_snapshots_db';
 export const SNAPSHOT_STORE_NAME = 'snapshots';
 export const SNAPSHOT_DB_VERSION = 1;
 export const MAX_SNAPSHOTS_DEFAULT = 30;
@@ -119,7 +119,7 @@ export async function createVaultSnapshot(
 
         const envelope = {
           version: 7,
-          generator: 'Aegis Vault Snapshot Engine',
+          generator: 'KalderaShield Snapshot Engine',
           createdAt: new Date().toISOString(),
           items,
           attachments,
@@ -332,11 +332,11 @@ function downloadTextBlob(filename: string, contents: string): void {
 }
 
 /**
- * Exports a snapshot record as a standalone encrypted .aegis file.
+ * Exports a snapshot record as a standalone encrypted .KalderaShield file.
  */
 export async function exportVaultSnapshotToFile(snapshot: VaultSnapshotRecord): Promise<boolean> {
   const dateStr = snapshot.createdAt.split('T')[0] || 'snapshot';
-  const filename = 'aegis_snapshot_' + dateStr + '_' + snapshot.id.slice(-6) + '.aegis';
+  const filename = 'KalderaShield_snapshot_' + dateStr + '_' + snapshot.id.slice(-6) + '.KalderaShield';
 
   const saved = await saveDesktopExportFile(filename, snapshot.encryptedPayload);
   if (!saved) {
@@ -358,7 +358,7 @@ export interface SnapshotSettings {
   lastAutoSnapshotTime: string | null;
 }
 
-export const SNAPSHOT_SETTINGS_STORAGE_KEY = 'aegis_snapshot_settings';
+export const SNAPSHOT_SETTINGS_STORAGE_KEY = 'KalderaShield_snapshot_settings';
 
 export const DEFAULT_SNAPSHOT_SETTINGS: SnapshotSettings = {
   autoEnabled: true,

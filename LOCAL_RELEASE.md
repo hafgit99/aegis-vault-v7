@@ -65,13 +65,13 @@ release-local/macos/
 Final desktop artifacts use this naming convention:
 
 ```text
-AegisVault7-<version>-windows-x64-portable.exe
-AegisVault7-<version>-windows-x64.msi
-AegisVault7-<version>-windows-x64-setup.exe
-AegisVault7-<version>-linux-amd64.deb
-AegisVault7-<version>-linux-x64.AppImage
-AegisVault7-<version>-macos-universal.dmg
-AegisVault7-<version>-macos-universal.app
+KalderaShield-<version>-windows-x64-portable.exe
+KalderaShield-<version>-windows-x64.msi
+KalderaShield-<version>-windows-x64-setup.exe
+KalderaShield-<version>-linux-amd64.deb
+KalderaShield-<version>-linux-x64.AppImage
+KalderaShield-<version>-macos-universal.dmg
+KalderaShield-<version>-macos-universal.app
 SHA256SUMS.txt
 ```
 

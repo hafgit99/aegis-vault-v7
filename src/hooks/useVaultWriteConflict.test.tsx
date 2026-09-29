@@ -64,7 +64,7 @@ class FakeBroadcastChannel {
 
 /** Emits a commit as if another tab had saved. */
 function emitCommitFromAnotherTab(versionCounter: number) {
-  new FakeBroadcastChannel('aegis-vault').postMessage({ type: 'commit', versionCounter });
+  new FakeBroadcastChannel('KalderaShield-vault').postMessage({ type: 'commit', versionCounter });
 }
 
 const translations: Record<string, string> = {

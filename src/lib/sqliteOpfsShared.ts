@@ -15,7 +15,7 @@ export const ENCRYPTED_MARKER = '[encrypted: aes-256-gcm]' as const;
 
 export const VAULT_ITEM_KDF = 'argon2-browser' as const;
 
-export const LEGACY_VAULT_ITEM_KDF_SALT = 'aegis_vault_v7_db_encryption_salt';
+export const LEGACY_VAULT_ITEM_KDF_SALT = 'kalderashield_db_encryption_salt';
 
 export const LEGACY_VAULT_ITEM_KDF_PARAMS = {
   memoryKiB: 32 * 1024,

@@ -230,9 +230,9 @@ pub struct RustRotationResult {
 fn resolve_backup_password(password: &str, explicit_backup: Option<String>) -> String {
     if let Some(bp) = explicit_backup {
         bp
-    } else if password.starts_with("aegis-vault-v7:") {
+    } else if password.starts_with("kalderashield:") {
         if let Some(sep_idx) = password.find('\0') {
-            password["aegis-vault-v7:".len()..sep_idx].to_string()
+            password["kalderashield:".len()..sep_idx].to_string()
         } else {
             password.to_string()
         }
@@ -723,7 +723,7 @@ mod tests {
             "explicit-bp"
         );
         assert_eq!(
-            resolve_backup_password("aegis-vault-v7:my-pass\0A3-SECRET-KEY", None),
+            resolve_backup_password("kalderashield:my-pass\0A3-SECRET-KEY", None),
             "my-pass"
         );
     }
@@ -743,7 +743,7 @@ mod tests {
         };
 
         const GOLDEN_PHC: &str =
-            "$argon2id$v=19$m=32,t=1,p=1$AgICAgICAgICAgICAgICAg$GJsoyDAQFNCICzYmOVGV4M6jznJXRfccXuQEVAbm9dc";
+            "$argon2id$v=19$m=32,t=1,p=1$AgAAAAAAAAAAAAAAAAAAAA$wbpbqf50JxPQS25YzDJacA/BwzLMpOIEw0CgcpsqGfA";
 
         let parsed = PasswordHash::new(GOLDEN_PHC).expect("golden PHC must parse");
         let argon2 = Argon2::new(
@@ -753,7 +753,7 @@ mod tests {
         );
         // Correct password verifies.
         assert!(argon2
-            .verify_password(b"aegis-golden-password", &parsed)
+            .verify_password(b"kalderashield-golden-password", &parsed)
             .is_ok());
         // Wrong password rejects.
         assert!(argon2.verify_password(b"wrong-password", &parsed).is_err());

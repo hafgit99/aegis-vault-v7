@@ -5,7 +5,7 @@
  * Unit tests for the WebAuthn / Passkey authenticator module.
  *
  * The platform PublicKeyCredential API is not available in jsdom, so we
- * stub it through Object.defineProperty. Coverage focuses on Aegis-side
+ * stub it through Object.defineProperty. Coverage focuses on KalderaShield-side
  * concerns: capability detection, encoding helpers, the no-master-string
  * wrap/unwrap cycle, vault field serialization, and validation.
  */
@@ -170,7 +170,7 @@ describe('passkey module - credential id encoding', () => {
 
 describe('passkey module - registration lifecycle', () => {
   beforeEach(() => {
-    openVaultSession('aegis-test-master', 'aegis-test-master', new Uint8Array(32).fill(5));
+    openVaultSession('KalderaShield-test-master', 'KalderaShield-test-master', new Uint8Array(32).fill(5));
   });
 
   afterEach(() => {
@@ -281,7 +281,7 @@ describe('passkey module - registration lifecycle', () => {
 
 describe('passkey module - registration validation', () => {
   beforeEach(() => {
-    openVaultSession('aegis-test-master', 'aegis-test-master', new Uint8Array(32).fill(5));
+    openVaultSession('KalderaShield-test-master', 'KalderaShield-test-master', new Uint8Array(32).fill(5));
   });
 
   afterEach(() => {
@@ -500,7 +500,7 @@ describe('passkey module - authentication lifecycle', () => {
 });
 describe('passkey module - recovery (no-JS-master-string boundary)', () => {
   beforeEach(() => {
-    openVaultSession('aegis-test-master', 'aegis-test-master', new Uint8Array(32).fill(5));
+    openVaultSession('KalderaShield-test-master', 'KalderaShield-test-master', new Uint8Array(32).fill(5));
   });
 
   afterEach(() => {

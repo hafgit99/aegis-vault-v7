@@ -195,7 +195,7 @@ beforeEach(() => {
     status: 'promoted',
     issues: [],
     readinessReport: { status: 'ready', issues: [] },
-    smokeResult: { status: 'passed', databaseName: '/aegis-wa-sqlite.desktop.db', vfsName: 'aegis-wa-sqlite-desktop-idb' },
+    smokeResult: { status: 'passed', databaseName: '/KalderaShield-wa-sqlite.desktop.db', vfsName: 'KalderaShield-wa-sqlite-desktop-idb' },
     dryRunResult: null,
     persistentMigrationCandidateResult: null,
     promotionResult: null,
@@ -252,16 +252,16 @@ describe('SettingsPanel import/export', () => {
     expect(screen.getByText('Open Android Autofill Settings')).toBeTruthy();
     expect(screen.getByText('Emergency Kit')).toBeTruthy();
     expect(screen.getByText('Save Kit')).toBeTruthy();
-    expect(screen.queryByText(/Chrome may hide Aegis suggestions/)).toBeNull();
+    expect(screen.queryByText(/Chrome may hide KalderaShield suggestions/)).toBeNull();
     expect(screen.getByText('Encrypted Backup Export')).toBeTruthy();
     expect(screen.getByText(/Convert all vault records/)).toBeTruthy();
     expect(screen.getByText('Use my vault master password as the backup password')).toBeTruthy();
-    expect(screen.getByText('Encrypted .aegis Backup')).toBeTruthy();
+    expect(screen.getByText('Encrypted .KalderaShield Backup')).toBeTruthy();
     expect(screen.getByText('Plain Text .json Backup')).toBeTruthy();
     expect(screen.getByText('Universal Import System')).toBeTruthy();
     expect(screen.getByText(/Alongside your own encrypted/)).toBeTruthy();
     expect(screen.getByText('Click to Select or Drag a File')).toBeTruthy();
-    expect(screen.getByText('SUPPORTED: .JSON / .CSV / .AEGIS')).toBeTruthy();
+    expect(screen.getByText('SUPPORTED: .JSON / .CSV / .KS')).toBeTruthy();
     expect(screen.getByText('DANGER ZONE')).toBeTruthy();
     expect(screen.getByText(/permanently deletes every saved password/)).toBeTruthy();
     expect(screen.getByText('Permanently Reset Entire Vault')).toBeTruthy();
@@ -272,7 +272,7 @@ describe('SettingsPanel import/export', () => {
     expect(screen.getByPlaceholderText('Enter a custom backup password with at least 12 characters')).toBeTruthy();
   });
 
-  it('exports an encrypted .aegis backup with the active master session without sessionStorage', async () => {
+  it('exports an encrypted .KalderaShield backup with the active master session without sessionStorage', async () => {
     openVaultSession('master-pass');
     const { container } = renderSettings();
 
@@ -284,11 +284,11 @@ describe('SettingsPanel import/export', () => {
         'master-pass'
       );
     });
-    expect(saveDesktopExportFile).toHaveBeenCalledWith(expect.stringMatching(/\.aegis$/), expect.stringContaining('"encrypted":true'));
-    expect(sessionStorage.getItem('aegis_session_master_pass')).toBeNull();
+    expect(saveDesktopExportFile).toHaveBeenCalledWith(expect.stringMatching(/\.KalderaShield$/), expect.stringContaining('"encrypted":true'));
+    expect(sessionStorage.getItem('KalderaShield_session_master_pass')).toBeNull();
   });
 
-  it('exports an encrypted .aegis backup with a custom password', async () => {
+  it('exports an encrypted .KalderaShield backup with a custom password', async () => {
     const { container } = renderSettings();
 
     fireEvent.click(container.querySelector('#useMasterCheck') as HTMLInputElement);
@@ -394,7 +394,7 @@ describe('SettingsPanel import/export', () => {
     expect(props.onDatabaseChanged).toHaveBeenCalledTimes(1);
   });
 
-  it('decrypts an encrypted .aegis import before saving normalized items', async () => {
+  it('decrypts an encrypted .KalderaShield import before saving normalized items', async () => {
     vi.mocked(decryptDataWithPasswordSecure).mockResolvedValueOnce(
       JSON.stringify([
         {
@@ -418,7 +418,7 @@ describe('SettingsPanel import/export', () => {
           tag: 'tag',
         }),
       ],
-      'secure.aegis',
+      'secure.KalderaShield',
       { type: 'application/json' },
     );
 
@@ -612,7 +612,7 @@ describe('SettingsPanel account and safety controls', () => {
     window.__TAURI_INTERNALS__ = {};
     Object.defineProperty(window.navigator, 'userAgent', {
       configurable: true,
-      value: 'Mozilla/5.0 (Linux; Android 15) AegisVault',
+      value: 'Mozilla/5.0 (Linux; Android 15) KalderaShield',
     });
     renderSettingsWithLanguage('en');
 
@@ -1080,7 +1080,7 @@ describe('SettingsPanel import interaction states', () => {
     vi.mocked(isNativeFileDialogSupported).mockReturnValue(false);
     Object.defineProperty(window.navigator, 'userAgent', {
       configurable: true,
-      value: 'Mozilla/5.0 (Linux; Android 14) AegisVault',
+      value: 'Mozilla/5.0 (Linux; Android 14) KalderaShield',
     });
     vi.useFakeTimers();
     const { container } = renderSettings();
@@ -1135,7 +1135,7 @@ describe('SettingsPanel import interaction states', () => {
           tag: 'tag',
         }),
       ],
-      'secure.aegis',
+      'secure.KalderaShield',
       { type: 'application/json' },
     );
 
@@ -1165,7 +1165,7 @@ describe('SettingsPanel import interaction states', () => {
           tag: 'tag',
         }),
       ],
-      'secure.aegis',
+      'secure.KalderaShield',
       { type: 'application/json' },
     );
 
@@ -1197,7 +1197,7 @@ describe('SettingsPanel import interaction states', () => {
           tag: 'tag',
         }),
       ],
-      'secure.aegis',
+      'secure.KalderaShield',
       { type: 'application/json' },
     );
 
@@ -1268,7 +1268,7 @@ describe('SettingsPanel import interaction states', () => {
           tag: 'tag',
         }),
       ],
-      'secure.aegis',
+      'secure.KalderaShield',
       { type: 'application/json' },
     );
 

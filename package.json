@@ -1,10 +1,10 @@
 {
-  "name": "aegis-vault-v7",
+  "name": "kalderashield",
   "private": true,
-  "version": "7.0.12.0",
+  "version": "7.0.18.0",
   "type": "module",
   "bin": {
-    "aegis-cli": "./scripts/aegis-cli.cjs"
+    "kalderashield-cli": "./scripts/kalderashield-cli.cjs"
   },
   "scripts": {
     "dev": "vite --port=3000",
@@ -15,9 +15,12 @@
     "lint": "eslint \"src/**/*.{ts,tsx}\" \"tests/**/*.ts\" \"scripts/**/*.cjs\"",
     "i18n:audit": "node scripts/i18n-audit.cjs",
     "test:unit": "vitest run",
+    "test:release": "vitest run --config vitest.release.config.ts",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:chromium": "playwright test --project=chromium",
+    "icon:apply": "node scripts/apply-icon.cjs",
+    "site:preview": "node scripts/serve-site.cjs",
     "tauri": "tauri",
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build",
@@ -63,7 +66,7 @@
     "extension:safari": "node scripts/safari-extension.cjs",
     "package:firefox:xpi": "node scripts/firefox-xpi.cjs",
     "sign:firefox:xpi": "node scripts/firefox-xpi.cjs --sign",
-    "cli": "node scripts/aegis-cli.cjs",
+    "cli": "node scripts/kalderashield-cli.cjs",
     "register:extension": "node scripts/register-host.js",
     "test:mutation": "stryker run stryker.conf.mjs",
     "test:mutation:dry": "stryker run stryker.conf.mjs --dryRunOnly",
@@ -163,7 +166,8 @@
   "overrides": {
     "qs": "6.16.0",
     "adm-zip": "0.6.1",
-    "fast-uri": "3.1.6",
-    "shell-quote": "1.10.0"
+    "fast-uri": "3.1.8",
+    "shell-quote": "1.10.0",
+    "undici": "8.11.2"
   }
 }

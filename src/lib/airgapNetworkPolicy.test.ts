@@ -39,7 +39,7 @@ describe('air-gap network policy', () => {
       );
       expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({
         code: 'network.blocked',
-        source: 'AegisSecurity',
+        source: 'KalderaShieldSecurity',
       }));
     } finally {
       errorSpy.mockRestore();
@@ -59,7 +59,7 @@ describe('air-gap network policy', () => {
     expect(() => fetch('https://telemetry.example.test/collect')).toThrow('air-gap policy');
     expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({
       code: 'network.blocked',
-      source: 'AegisSecurity',
+      source: 'KalderaShieldSecurity',
     }));
   });
 
@@ -76,7 +76,7 @@ describe('air-gap network policy', () => {
     expect(() => xhr.open('POST', 'https://telemetry.example.test/collect')).toThrow('air-gap policy');
     expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({
       code: 'network.blocked',
-      source: 'AegisSecurity',
+      source: 'KalderaShieldSecurity',
     }));
   });
 
@@ -95,7 +95,7 @@ describe('air-gap network policy', () => {
     expect(WebSocket.prototype).toBe(NativeWebSocket.prototype);
     expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({
       code: 'network.blocked',
-      source: 'AegisSecurity',
+      source: 'KalderaShieldSecurity',
     }));
   });
 
@@ -116,7 +116,7 @@ describe('air-gap network policy', () => {
     expect(() => window.navigator.sendBeacon('https://telemetry.example.test/collect')).toThrow('air-gap policy');
     expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({
       code: 'network.blocked',
-      source: 'AegisSecurity',
+      source: 'KalderaShieldSecurity',
     }));
   });
 
@@ -136,7 +136,7 @@ describe('air-gap network policy', () => {
     expect(() => new EventSource('https://events.example.test/stream')).toThrow('air-gap policy');
     expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({
       code: 'network.blocked',
-      source: 'AegisSecurity',
+      source: 'KalderaShieldSecurity',
     }));
   });
 
@@ -152,7 +152,7 @@ describe('air-gap network policy', () => {
     expect(NativeRTCPeerConnection).not.toHaveBeenCalled();
     expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({
       code: 'network.blocked',
-      source: 'AegisSecurity',
+      source: 'KalderaShieldSecurity',
     }));
   });
 

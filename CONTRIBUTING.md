@@ -1,6 +1,6 @@
-# Contributing to Aegis Vault 7
+#Contributing to KalderaShield
 
-Thank you for your interest in contributing! Aegis Vault 7 is a local-first, zero-knowledge password manager, so contributions here are held to a **high security bar**. This document explains how to get started and what we expect.
+Thank you for your interest in contributing! KalderaShield is a local-first, zero-knowledge password manager, so contributions here are held to a **high security bar**. This document explains how to get started and what we expect.
 
 ## Security Issues — Do NOT Open a Public Issue
 
@@ -13,8 +13,8 @@ See [SECURITY.md](SECURITY.md) for the responsible disclosure policy and the ack
 Prerequisites: Node.js v20+ (v22 recommended), npm v10+, Rust stable toolchain (for the Tauri backend).
 
 ```bash
-git clone https://github.com/hafgit99/aegis-vault-v7.git
-cd aegis-vault-v7
+git clone https://github.com/hafgit99/kalderashield.git
+cd kalderashield
 npm ci
 ```
 

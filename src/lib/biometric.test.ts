@@ -40,7 +40,7 @@ function bytesToBase64(bytes: Uint8Array): string {
 
 async function getStoredBiometricFromDB(): Promise<any> {
   const db = await new Promise<IDBDatabase>((resolve, reject) => {
-    const request = indexedDB.open('aegis_biometric_db', 1);
+    const request = indexedDB.open('KalderaShield_biometric_db', 1);
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
@@ -56,7 +56,7 @@ async function getStoredBiometricFromDB(): Promise<any> {
 
 async function putStoredBiometricIntoDB(info: any): Promise<void> {
   const db = await new Promise<IDBDatabase>((resolve, reject) => {
-    const request = indexedDB.open('aegis_biometric_db', 1);
+    const request = indexedDB.open('KalderaShield_biometric_db', 1);
     request.onupgradeneeded = () => {
       request.result.createObjectStore('biometric_info');
     };
@@ -74,7 +74,7 @@ async function putStoredBiometricIntoDB(info: any): Promise<void> {
 
 function deleteBiometricDatabase(): Promise<void> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.deleteDatabase('aegis_biometric_db');
+    const request = indexedDB.deleteDatabase('KalderaShield_biometric_db');
     request.onsuccess = () => resolve();
     request.onerror = () => reject(request.error);
     request.onblocked = () => resolve();
@@ -118,8 +118,8 @@ beforeEach(async () => {
 
 afterEach(async () => {
   localStorage.clear();
-  delete window.AegisAndroidSecureStorage;
-  delete (window as any).AegisAndroidBiometric;
+  delete window.KalderaShieldAndroidSecureStorage;
+  delete (window as any).KalderaShieldAndroidBiometric;
   delete window.__TAURI_INTERNALS__;
   Object.defineProperty(navigator, 'userAgent', { configurable: true, value: originalUserAgent });
   await deleteBiometricDatabase();
@@ -138,7 +138,7 @@ const originalUserAgent = navigator.userAgent;
  */
 function installAndroidBridgeMock(opts?: { unwrapError?: string; wrapError?: string }) {
   const storageMap = new Map<string, string>();
-  (window as any).AegisAndroidSecureStorage = {
+  (window as any).KalderaShieldAndroidSecureStorage = {
     isBiometricAvailable: vi.fn(() => true),
     authenticateBiometric: vi.fn(() => true),
     setItem: vi.fn((key: string, val: string) => { storageMap.set(key, val); return true; }),
@@ -149,24 +149,24 @@ function installAndroidBridgeMock(opts?: { unwrapError?: string; wrapError?: str
   const wrap = vi.fn((plaintextB64: string, callbackId: string) => {
     setTimeout(() => {
       if (opts?.wrapError) {
-        window.__aegisBiometric!.reject(callbackId, opts.wrapError);
+        window.__KalderaShieldBiometric!.reject(callbackId, opts.wrapError);
         return;
       }
-      window.__aegisBiometric!.resolve(callbackId, JSON.stringify({ v: 2, iv: 'aXY=', ct: plaintextB64 }));
+      window.__KalderaShieldBiometric!.resolve(callbackId, JSON.stringify({ v: 2, iv: 'aXY=', ct: plaintextB64 }));
     }, 0);
   });
   const unwrap = vi.fn((handleJson: string, callbackId: string) => {
     setTimeout(() => {
       if (opts?.unwrapError) {
-        window.__aegisBiometric!.reject(callbackId, opts.unwrapError);
+        window.__KalderaShieldBiometric!.reject(callbackId, opts.unwrapError);
         return;
       }
       const handle = JSON.parse(handleJson);
-      window.__aegisBiometric!.resolve(callbackId, handle.ct);
+      window.__KalderaShieldBiometric!.resolve(callbackId, handle.ct);
     }, 0);
   });
 
-  (window as any).AegisAndroidBiometric = { wrap, unwrap, isAvailable: () => true, clear: () => true };
+  (window as any).KalderaShieldAndroidBiometric = { wrap, unwrap, isAvailable: () => true, clear: () => true };
   return { storageMap, wrap, unwrap };
 }
 
@@ -225,14 +225,14 @@ describe('biometric master password wrapper', () => {
     expect(stored.credentialId).toBe(bytesToBase64(new Uint8Array(rawId)));
     expect(stored.pbkdf2Iterations).toBe(BIOMETRIC_PBKDF2_ITERATIONS);
     expect(creationOptions.publicKey).toMatchObject({
-      rp: { name: 'Aegis Vault 7' },
+      rp: { name: 'KalderaShield' },
       authenticatorSelection: {
         authenticatorAttachment: 'platform',
         userVerification: 'required',
       },
       timeout: 60000,
     });
-    expect(creationOptions.publicKey?.user.displayName).toBe('Aegis Vault User');
+    expect(creationOptions.publicKey?.user.displayName).toBe('KalderaShield User');
   });
 
   it('can disable a stored biometric bundle', async () => {
@@ -331,7 +331,7 @@ describe('biometric master password wrapper', () => {
     });
     Object.defineProperty(window.navigator, 'userAgent', {
       configurable: true,
-      value: 'Mozilla/5.0 (Linux; Android 14) AegisVault',
+      value: 'Mozilla/5.0 (Linux; Android 14) KalderaShield',
     });
     window.__TAURI_INTERNALS__ = {};
 
@@ -358,10 +358,10 @@ describe('biometric master password wrapper', () => {
     });
     Object.defineProperty(window.navigator, 'userAgent', {
       configurable: true,
-      value: 'Mozilla/5.0 (Linux; Android 14) AegisVault',
+      value: 'Mozilla/5.0 (Linux; Android 14) KalderaShield',
     });
     window.__TAURI_INTERNALS__ = {};
-    window.AegisAndroidSecureStorage = {
+    window.KalderaShieldAndroidSecureStorage = {
       getItem: vi.fn((key) => secureValues.get(key) ?? null),
       setItem: vi.fn((key, value) => {
         secureValues.set(key, value);
@@ -373,12 +373,12 @@ describe('biometric master password wrapper', () => {
     await registerBiometric('master-pass');
 
     expect(nativeAuthenticate).toHaveBeenCalledTimes(1);
-    expect(window.AegisAndroidSecureStorage.setItem).toHaveBeenCalledWith(
-      'aegis_biometric_wrapping_secret',
+    expect(window.KalderaShieldAndroidSecureStorage.setItem).toHaveBeenCalledWith(
+      'KalderaShield_biometric_wrapping_secret',
       expect.any(String),
     );
     expect(await getStoredBiometricFromDB()).toBeNull();
-    const storedInfo = JSON.parse(secureValues.get('aegis_biometric_info') ?? '{}');
+    const storedInfo = JSON.parse(secureValues.get('KalderaShield_biometric_info') ?? '{}');
     expect(storedInfo).toMatchObject({
       version: 3,
       provider: 'Tauri Native Biometric',
@@ -386,7 +386,7 @@ describe('biometric master password wrapper', () => {
     });
     // wrappingSecret must NOT be present in the bundle
     expect(storedInfo.wrappingSecret).toBeUndefined();
-    expect(secureValues.get('aegis_biometric_wrapping_secret')).toBeDefined();
+    expect(secureValues.get('KalderaShield_biometric_wrapping_secret')).toBeDefined();
     expect(isBiometricEnabled()).toBe(true);
   });
 
@@ -401,10 +401,10 @@ describe('biometric master password wrapper', () => {
     });
     Object.defineProperty(window.navigator, 'userAgent', {
       configurable: true,
-      value: 'Mozilla/5.0 (Linux; Android 14) AegisVault',
+      value: 'Mozilla/5.0 (Linux; Android 14) KalderaShield',
     });
     window.__TAURI_INTERNALS__ = {};
-    window.AegisAndroidSecureStorage = {
+    window.KalderaShieldAndroidSecureStorage = {
       getItem: vi.fn(() => null),
       setItem: vi.fn(() => false),
       removeItem: vi.fn(() => false),
@@ -499,7 +499,7 @@ describe('biometric master password wrapper', () => {
 
   it('registers and authenticates native biometrics (version 3)', async () => {
     const storageMap = new Map<string, string>();
-    (window as any).AegisAndroidSecureStorage = {
+    (window as any).KalderaShieldAndroidSecureStorage = {
       isBiometricAvailable: vi.fn(() => true),
       authenticateBiometric: vi.fn(() => true),
       setItem: vi.fn((key, val) => { storageMap.set(key, val); return true; }),
@@ -515,12 +515,12 @@ describe('biometric master password wrapper', () => {
 
   it('throws integrityMismatch when biometric bundle is corrupted', async () => {
     disableBiometric();
-    (window as any).AegisAndroidSecureStorage = {
+    (window as any).KalderaShieldAndroidSecureStorage = {
       isBiometricAvailable: vi.fn(() => true),
       authenticateBiometric: vi.fn(() => true),
       setItem: vi.fn(),
       getItem: vi.fn((key) => {
-        if (key === 'aegis_biometric_info') {
+        if (key === 'KalderaShield_biometric_info') {
           return JSON.stringify({
             version: 3,
             provider: 'Tauri Native Biometric',
@@ -551,7 +551,7 @@ describe('biometric master password wrapper', () => {
     expect(nativeAuthenticate).not.toHaveBeenCalled();
     expect(wrap).toHaveBeenCalledTimes(1);
 
-    const storedHandle = storageMap.get('aegis_biometric_wrapping_secret');
+    const storedHandle = storageMap.get('KalderaShield_biometric_wrapping_secret');
     expect(storedHandle).toBeDefined();
     expect(JSON.parse(storedHandle!)).toMatchObject({ v: 2, iv: expect.any(String), ct: expect.any(String) });
 
@@ -594,7 +594,7 @@ describe('biometric master password wrapper', () => {
     const salt = crypto.getRandomValues(new Uint8Array(16));
     const wrappingKey = await derivePbkdf2KeyForTest(secret, salt, 1000);
     const bundle = await webCryptoAesGcmEncrypt('legacy-pass', wrappingKey, generateSafeIv());
-    storageMap.set('aegis_biometric_info', JSON.stringify({
+    storageMap.set('KalderaShield_biometric_info', JSON.stringify({
       version: 3,
       provider: 'Tauri Native Biometric',
       kdf: 'WebCrypto PBKDF2-SHA256',
@@ -604,7 +604,7 @@ describe('biometric master password wrapper', () => {
       pbkdf2Iterations: 1000,
     }));
     const legacyRawSecret = bytesToBase64(secret);
-    storageMap.set('aegis_biometric_wrapping_secret', legacyRawSecret);
+    storageMap.set('KalderaShield_biometric_wrapping_secret', legacyRawSecret);
 
     resetBiometricCacheForTesting();
     await hydrateBiometric();
@@ -614,7 +614,7 @@ describe('biometric master password wrapper', () => {
     expect(nativeAuthenticate).toHaveBeenCalledTimes(1);
     expect(wrap).toHaveBeenCalledTimes(1);
 
-    const rotated = storageMap.get('aegis_biometric_wrapping_secret')!;
+    const rotated = storageMap.get('KalderaShield_biometric_wrapping_secret')!;
     expect(() => JSON.parse(rotated)).not.toThrow();
     expect(JSON.parse(rotated)).toMatchObject({ v: 2, iv: expect.any(String), ct: expect.any(String) });
 
@@ -634,7 +634,7 @@ describe('biometric master password wrapper', () => {
     const salt = crypto.getRandomValues(new Uint8Array(16));
     const wrappingKey = await derivePbkdf2KeyForTest(secret, salt, 1000);
     const bundle = await webCryptoAesGcmEncrypt('legacy-pass', wrappingKey, generateSafeIv());
-    storageMap.set('aegis_biometric_info', JSON.stringify({
+    storageMap.set('KalderaShield_biometric_info', JSON.stringify({
       version: 3,
       provider: 'Tauri Native Biometric',
       kdf: 'WebCrypto PBKDF2-SHA256',
@@ -644,7 +644,7 @@ describe('biometric master password wrapper', () => {
       pbkdf2Iterations: 1000,
     }));
     const legacyRawSecret = bytesToBase64(secret);
-    storageMap.set('aegis_biometric_wrapping_secret', legacyRawSecret);
+    storageMap.set('KalderaShield_biometric_wrapping_secret', legacyRawSecret);
 
     resetBiometricCacheForTesting();
     await hydrateBiometric();
@@ -652,7 +652,7 @@ describe('biometric master password wrapper', () => {
     await expect(authenticateBiometric()).resolves.toBe('legacy-pass');
     expect(wrap).toHaveBeenCalledTimes(1);
     // The legacy raw secret is retained so rotation is retried on the next unlock.
-    expect(storageMap.get('aegis_biometric_wrapping_secret')).toBe(legacyRawSecret);
+    expect(storageMap.get('KalderaShield_biometric_wrapping_secret')).toBe(legacyRawSecret);
   });
 });
 

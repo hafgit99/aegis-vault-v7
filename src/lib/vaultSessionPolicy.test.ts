@@ -109,7 +109,7 @@ describe('vaultSession comprehensive lifecycle and byte callbacks', () => {
 
   it('handles fallback credential session and withActive* byte callbacks', async () => {
     const key = new Uint8Array(32).fill(11);
-    openVaultSession('aegis-vault-v7:master\0secret123', 'backupPass456', key);
+    openVaultSession('kalderashield:master\0secret123', 'backupPass456', key);
 
     expect(hasActiveVaultSession()).toBe(true);
     expect(hasActiveMasterPassword()).toBe(true);
@@ -157,13 +157,13 @@ describe('vaultSession comprehensive lifecycle and byte callbacks', () => {
     // SEC-B3: withActiveSessionSecrets is now bytes-only — no string decoding
     // happens inside the session callback boundary itself.
     await withActiveSessionSecrets((m, b) => {
-      expect(new TextDecoder().decode(m)).toBe('aegis-vault-v7:master\0secret123');
+      expect(new TextDecoder().decode(m)).toBe('kalderashield:master\0secret123');
       expect(new TextDecoder().decode(b)).toBe('backupPass456');
     });
   });
 
   it('zeroizes withActiveSessionSecrets byte clones on callback exit (SEC-B3)', async () => {
-    openVaultSession('aegis-vault-v7:master\0secret123', 'backupPass456', new Uint8Array(32).fill(5));
+    openVaultSession('kalderashield:master\0secret123', 'backupPass456', new Uint8Array(32).fill(5));
     let capturedMaster: Uint8Array | null = null;
     let capturedBackup: Uint8Array | null = null;
     await withActiveSessionSecrets((m, b) => {
@@ -189,7 +189,7 @@ describe('vaultSession comprehensive lifecycle and byte callbacks', () => {
 
   it('handles error throwing inside withActive* callbacks safely', async () => {
     const key = new Uint8Array(32).fill(7);
-    openVaultSession('aegis-vault-v7:master\0secret', 'backup', key);
+    openVaultSession('kalderashield:master\0secret', 'backup', key);
 
     expect(() => {
       withActiveVaultEncryptionKey(() => {

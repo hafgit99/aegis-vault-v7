@@ -38,11 +38,11 @@ vi.mock('./indexedDbStorage', () => ({
   setIndexedDbItemSync: vi.fn((key: string, value: string) => localStorage.setItem(key, value)),
   removeIndexedDbItemSync: vi.fn((key: string) => localStorage.removeItem(key)),
   clearAllSetupFlagsSync: vi.fn(() => {
-    localStorage.removeItem('aegis_is_setup');
-    localStorage.removeItem('aegis_sqlite_fallback');
-    localStorage.removeItem('aegis_account_secret_profile');
-    localStorage.removeItem('aegis_account_secret_key_remembered');
-    localStorage.removeItem('aegis_vault_storage_active_backend');
+    localStorage.removeItem('KalderaShield_is_setup');
+    localStorage.removeItem('kalderashield_fallback');
+    localStorage.removeItem('KalderaShield_account_secret_profile');
+    localStorage.removeItem('KalderaShield_account_secret_key_remembered');
+    localStorage.removeItem('KalderaShield_vault_storage_active_backend');
   }),
 }));
 
@@ -434,7 +434,7 @@ describe('vault storage provider', () => {
       backend: 'wa-sqlite',
       persistenceProfile: {
         ...validProfile,
-        databaseName: '/aegis-wa-sqlite.android.db',
+        databaseName: '/KalderaShield-wa-sqlite.android.db',
       },
       promotedAt: '2026-06-28T00:00:00.000Z',
     }));
@@ -447,7 +447,7 @@ describe('vault storage provider', () => {
       backend: 'wa-sqlite',
       persistenceProfile: {
         ...validProfile,
-        vfsName: 'aegis-wa-sqlite-android-idb',
+        vfsName: 'KalderaShield-wa-sqlite-android-idb',
       },
       promotedAt: '2026-06-28T00:00:00.000Z',
     }));

@@ -56,7 +56,7 @@ const pod = commandExists('pod', ['--version']);
 addCheck('cocoapods', pod.ok, pod.ok ? `CocoaPods ${pod.output.split(/\s+/)[0]}` : 'CocoaPods missing. Install on macOS with: brew install cocoapods');
 
 addCheck('tauri-cli-ios-script', Boolean(packageJson.scripts && packageJson.scripts['ios:init'] && packageJson.scripts['ios:build']), 'package.json exposes ios:init and ios:build scripts.');
-addCheck('bundle-identifier', /^com\.hafgit99\.aegisvault7$/.test(tauriConf.identifier), `Bundle identifier: ${tauriConf.identifier}`);
+  addCheck('bundle-identifier', /^com\.kalderashield\.desktop$/.test(tauriConf.identifier), `Bundle identifier: ${tauriConf.identifier}`);
 addCheck('biometric-plugin-js', Boolean(packageJson.dependencies && packageJson.dependencies['@tauri-apps/plugin-biometric']), '@tauri-apps/plugin-biometric dependency is present.');
 addCheck('biometric-plugin-rust', /tauri-plugin-biometric/.test(cargoToml), 'tauri-plugin-biometric Rust crate is present.');
 addCheck('biometric-capability', /biometric:default/.test(capabilities), 'biometric:default capability is present.');
@@ -69,7 +69,7 @@ addCheck('ios-signing-material', hasAutomaticSigning || hasManualSigning, hasAut
 const passedRequired = checks.filter((check) => check.required).every((check) => check.ok);
 const passedAll = checks.every((check) => check.ok);
 
-console.log('Aegis Vault 7 iOS readiness check');
+console.log('KalderaShield iOS readiness check');
 console.log(`Status: ${passedRequired ? 'PASS' : 'BLOCKED'}`);
 console.log(`Host: ${process.platform}`);
 console.log(`Required status: ${passedRequired ? 'PASS' : 'BLOCKED'}`);

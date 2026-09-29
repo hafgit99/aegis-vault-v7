@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const rootDir = path.resolve(__dirname, '..');
-const MANIFEST_FILENAME = 'aegis-integrity.json';
+const MANIFEST_FILENAME = 'KalderaShield-integrity.json';
 const SCHEMA_VERSION = 1;
 const ALGORITHM = 'SHA-256';
 

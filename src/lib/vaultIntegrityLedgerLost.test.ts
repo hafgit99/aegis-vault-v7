@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { clearVaultIntegrityLedger, recordVaultSeal } from './vaultIntegrityLedger';
 import { detectLostIntegrityLedger } from './sqlite_opfs';
 
-const LEDGER_KEY = 'aegis_vault_integrity_ledger';
+const LEDGER_KEY = 'KalderaShield_vault_integrity_ledger';
 
 beforeEach(() => {
   localStorage.clear();

@@ -18,9 +18,9 @@ import {
   validateRemoteSyncMetadata,
 } from './syncTypes';
 
-const VAULT_FILE = 'vault.aegis';
+const VAULT_FILE = 'vault.KalderaShield';
 const METADATA_FILE = 'metadata.json';
-const DEFAULT_AEGIS_DIR = 'AegisVault';
+const DEFAULT_KALDERASHIELD_DIR = 'KalderaShield';
 
 // ─── WebCrypto SigV4 Helpers ──────────────────────────────────────────────────
 
@@ -101,7 +101,7 @@ export class S3SyncProvider implements SyncProvider {
     this.bucket = config.bucket.trim();
     this.accessKeyId = config.accessKeyId.trim();
     this.secretAccessKey = config.secretAccessKey.trim();
-    this.prefix = (config.prefix?.trim() || DEFAULT_AEGIS_DIR).replace(/^\//, '').replace(/\/$/, '');
+    this.prefix = (config.prefix?.trim() || DEFAULT_KALDERASHIELD_DIR).replace(/^\//, '').replace(/\/$/, '');
     this.origin = parsedUrl.origin;
 
     // O-21: take a lease rather than a bare whitelist entry, so this origin can

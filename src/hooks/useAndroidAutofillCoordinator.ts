@@ -201,7 +201,7 @@ export function useAndroidAutofillCoordinator({
       pendingAutofillRequest.requestId,
       item.username ?? '',
       item.password ?? '',
-      item.title || 'Aegis Vault',
+      item.title || 'KalderaShield',
     );
 
     if (!completed) {

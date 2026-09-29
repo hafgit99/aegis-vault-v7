@@ -1,6 +1,6 @@
 # Firefox XPI Packaging and Signing
 
-Aegis Vault's Firefox extension is built from `src-extension/` into `dist-extension-firefox/`, then packaged or signed from a clean staging folder.
+KalderaShield's Firefox extension is built from `src-extension/` into `dist-extension-firefox/`, then packaged or signed from a clean staging folder.
 
 ## Unsigned Local XPI
 
@@ -13,7 +13,7 @@ npm run package:firefox:xpi
 Output:
 
 ```text
-release-local/firefox/aegis-vault-7-firefox-v<version>.xpi
+release-local/firefox/kalderashield-firefox-v<version>.xpi
 ```
 
 Firefox Release and Beta require Mozilla signing for persistent installation. Unsigned XPI files are mainly for Developer Edition, Nightly, ESR with signature checks disabled, or temporary debugging.
@@ -66,7 +66,7 @@ npm run sign:firefox:xpi
 - Never commit AMO API keys.
 - Never paste AMO API keys into issue comments, docs, or chat.
 - Use environment variables or a local secret manager.
-- The XPI package excludes native messaging host registration files such as `aegis-host.bat` and `com.hafgit99.aegisvault7.json`; those belong to the desktop installer/registration flow, not inside the browser extension package.
+- The XPI package excludes native messaging host registration files such as `KalderaShield-host.bat` and `com.kalderashield.desktop.json`; those belong to the desktop installer/registration flow, not inside the browser extension package.
 
 ## Native Host Requirement
 
@@ -79,4 +79,4 @@ npm run register:extension
 
 On Windows, this writes the Firefox native messaging manifest to both registry and the Mozilla NativeMessagingHosts directory.
 
-Host manifests are generated at registration time (never committed or shipped in build outputs). They live in the gitignored `native-host-local/` directory: `chromium/com.hafgit99.aegisvault7.json` for Chrome/Edge and `firefox/com.hafgit99.aegisvault7.json` for Firefox. Additional Chromium extension IDs can be added with `npm run register:extension <extension-id>`; entries are validated and migrated from previously generated manifests automatically.
+Host manifests are generated at registration time (never committed or shipped in build outputs). They live in the gitignored `native-host-local/` directory: `chromium/com.kalderashield.desktop.json` for Chrome/Edge and `firefox/com.kalderashield.desktop.json` for Firefox. Additional Chromium extension IDs can be added with `npm run register:extension <extension-id>`; entries are validated and migrated from previously generated manifests automatically.

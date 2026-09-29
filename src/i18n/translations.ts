@@ -1,6 +1,6 @@
 /**
  * @file translations.ts
- * @description Central modular i18n translations exporter for AegisVault v7.
+ * @description Central modular i18n translations exporter for KalderaShield v7.
  * Imports modular locale dictionaries from `./locales/*.ts`.
  *
  * @license SPDX-License-Identifier: Apache-2.0

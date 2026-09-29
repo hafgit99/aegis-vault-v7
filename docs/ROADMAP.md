@@ -1,4 +1,4 @@
-# Aegis Vault 7 Roadmap
+# KalderaShield Roadmap
 
 ## Phase 1: Repository and Desktop Foundation
 
@@ -229,4 +229,4 @@
 
 ## Passkey And WebAuthn Roadmap
 
-Aegis Vault 7 now includes a platform WebAuthn passkey management surface: capability detection, strict RP ID validation, platform/cross-platform credential registration, vault metadata storage, localized UI, create/authenticate/delete actions, last-used/sign-count persistence, and unit/component coverage. This does not yet make Aegis a browser credential provider or Android Credential Provider. The next experimental phase should focus on Chrome/Edge Web Authentication Proxy integration, native/Rust signing boundaries, explicit user approval, RP-origin mediation, and separate Android Credential Provider research before any broad "Aegis fills passkeys on websites" claim.
+KalderaShield now includes a platform WebAuthn passkey management surface: capability detection, strict RP ID validation, platform/cross-platform credential registration, vault metadata storage, localized UI, create/authenticate/delete actions, last-used/sign-count persistence, and unit/component coverage. This does not yet make KalderaShield a browser credential provider or Android Credential Provider. The next experimental phase should focus on Chrome/Edge Web Authentication Proxy integration, native/Rust signing boundaries, explicit user approval, RP-origin mediation, and separate Android Credential Provider research before any broad "KalderaShield fills passkeys on websites" claim.

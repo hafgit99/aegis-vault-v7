@@ -56,7 +56,7 @@ describe('ThemeProvider', () => {
     expect(screen.getByTestId('mode').textContent).toBe('light');
     expect(document.documentElement.classList.contains('light')).toBe(true);
     expect(document.documentElement.classList.contains('dark')).toBe(false);
-    expect(window.localStorage.getItem('aegis-theme-mode')).toBe('light');
+    expect(window.localStorage.getItem('KalderaShield-theme-mode')).toBe('light');
   });
 
   it('updates and persists the palette', () => {
@@ -70,12 +70,12 @@ describe('ThemeProvider', () => {
 
     expect(screen.getByTestId('palette').textContent).toBe('blue');
     expect(document.documentElement.classList.contains('palette-blue')).toBe(true);
-    expect(window.localStorage.getItem('aegis-theme-palette')).toBe('blue');
+    expect(window.localStorage.getItem('KalderaShield-theme-palette')).toBe('blue');
   });
 
   it('restores persisted mode and palette on mount', () => {
-    window.localStorage.setItem('aegis-theme-mode', 'light');
-    window.localStorage.setItem('aegis-theme-palette', 'red');
+    window.localStorage.setItem('KalderaShield-theme-mode', 'light');
+    window.localStorage.setItem('KalderaShield-theme-palette', 'red');
 
     render(
       <ThemeProvider>

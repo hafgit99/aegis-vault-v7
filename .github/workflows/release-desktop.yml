@@ -1,4 +1,4 @@
-# Desktop + Android + Extensions Release — tag-gated, signed, reproducible release pipeline
+#Desktop + Android + Extensions Release — tag-gated, signed, reproducible release pipeline
 #
 # Flow: push tag `v*` (package.json version MUST match the tag)
 #   1. Build Linux / macOS / Windows packages, signed Android APKs and browser
@@ -166,7 +166,7 @@ jobs:
       - name: Upload Linux release artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
         with:
-          name: aegis-vault-v7-linux
+          name: kalderashield-linux
           if-no-files-found: error
           retention-days: 14
           path: release-local/linux/**
@@ -340,7 +340,7 @@ jobs:
       - name: Upload macOS release artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
         with:
-          name: aegis-vault-v7-macos
+          name: kalderashield-macos
           if-no-files-found: error
           retention-days: 14
           path: release-local/macos/**
@@ -394,7 +394,7 @@ jobs:
           WINDOWS_SIGNING_CERT_PASSWORD: ${{ secrets.WINDOWS_SIGNING_CERT_PASSWORD }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $pfxPath = Join-Path $env:RUNNER_TEMP 'aegis-signing.pfx'
+          $pfxPath = Join-Path $env:RUNNER_TEMP 'KalderaShield-signing.pfx'
           [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:WINDOWS_SIGNING_CERT_BASE64))
 
           $secure = ConvertTo-SecureString -String $env:WINDOWS_SIGNING_CERT_PASSWORD -AsPlainText -Force
@@ -465,7 +465,7 @@ jobs:
       - name: Upload Windows release artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
         with:
-          name: aegis-vault-v7-windows
+          name: kalderashield-windows
           if-no-files-found: error
           retention-days: 14
           path: release-local/windows/**
@@ -523,27 +523,27 @@ jobs:
       - name: Verify and decode Android signing secrets
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          KEY_ALIAS: ${{ secrets.AEGIS_ANDROID_KEY_ALIAS }}
-          KEYSTORE_PASSWORD: ${{ secrets.AEGIS_ANDROID_KEYSTORE_PASSWORD }}
-          KEY_PASSWORD: ${{ secrets.AEGIS_ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KALDERASHIELD_ANDROID_KEY_ALIAS }}
+          KEYSTORE_PASSWORD: ${{ secrets.KALDERASHIELD_ANDROID_KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KALDERASHIELD_ANDROID_KEY_PASSWORD }}
         run: |
           missing=0
           for v in KEYSTORE_B64 KEY_ALIAS KEYSTORE_PASSWORD KEY_PASSWORD; do
             if [ -z "${!v}" ]; then
-              echo "::error::Missing Android signing secret: $v (add ANDROID_KEYSTORE_BASE64, AEGIS_ANDROID_KEY_ALIAS, AEGIS_ANDROID_KEYSTORE_PASSWORD, AEGIS_ANDROID_KEY_PASSWORD as repository secrets)"
+              echo "::error::Missing Android signing secret: $v (add ANDROID_KEYSTORE_BASE64, KALDERASHIELD_ANDROID_KEY_ALIAS, KALDERASHIELD_ANDROID_KEYSTORE_PASSWORD, KALDERASHIELD_ANDROID_KEY_PASSWORD as repository secrets)"
               missing=1
             fi
           done
           if [ "$missing" -ne 0 ]; then exit 1; fi
-          echo "$KEYSTORE_B64" | base64 -d > "${RUNNER_TEMP}/aegis-release.keystore"
-          echo "Keystore decoded to ${RUNNER_TEMP}/aegis-release.keystore"
+          echo "$KEYSTORE_B64" | base64 -d > "${RUNNER_TEMP}/KalderaShield-release.keystore"
+          echo "Keystore decoded to ${RUNNER_TEMP}/KalderaShield-release.keystore"
 
       - name: Build Android release APKs (all ABIs)
         env:
-          AEGIS_ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/aegis-release.keystore
-          AEGIS_ANDROID_KEY_ALIAS: ${{ secrets.AEGIS_ANDROID_KEY_ALIAS }}
-          AEGIS_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.AEGIS_ANDROID_KEYSTORE_PASSWORD }}
-          AEGIS_ANDROID_KEY_PASSWORD: ${{ secrets.AEGIS_ANDROID_KEY_PASSWORD }}
+          KALDERASHIELD_ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/KalderaShield-release.keystore
+          KALDERASHIELD_ANDROID_KEY_ALIAS: ${{ secrets.KALDERASHIELD_ANDROID_KEY_ALIAS }}
+          KALDERASHIELD_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.KALDERASHIELD_ANDROID_KEYSTORE_PASSWORD }}
+          KALDERASHIELD_ANDROID_KEY_PASSWORD: ${{ secrets.KALDERASHIELD_ANDROID_KEY_PASSWORD }}
         run: npx tauri android build --apk
 
       - name: Collect Android release artifacts
@@ -562,7 +562,7 @@ jobs:
       - name: Upload Android release artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
         with:
-          name: aegis-vault-v7-android
+          name: kalderashield-android
           if-no-files-found: error
           retention-days: 14
           path: release-local/android/**
@@ -628,7 +628,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p release-local/firefox
-          XPI="release-local/firefox/$(node -p "'aegis-vault-7-firefox-v' + require('./package.json').version + '.xpi'")"
+          XPI="release-local/firefox/$(node -p "'kalderashield-firefox-v' + require('./package.json').version + '.xpi'")"
           echo "signed-by-amo=true" > release-local/firefox/AMO_SIGNING_STATUS.txt
           if [ -n "$WEB_EXT_API_KEY" ] && [ -n "$WEB_EXT_API_SECRET" ]; then
             if npm run sign:firefox:xpi -- --skip-build; then
@@ -655,13 +655,13 @@ jobs:
           npm run extension:safari
           mkdir -p release-local/safari
           VERSION=$(node -p "require('./package.json').version")
-          zip -qr "release-local/safari/aegis-vault-7-safari-v${VERSION}-webextension.zip" dist-extension-safari
+          zip -qr "release-local/safari/kalderashield-safari-v${VERSION}-webextension.zip" dist-extension-safari
           echo "Safari WebExtension bundle zipped (native Safari app wrapper still requires Xcode conversion on macOS)."
 
       - name: Upload extension artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
         with:
-          name: aegis-vault-v7-extensions
+          name: kalderashield-extensions
           if-no-files-found: error
           retention-days: 14
           path: |
@@ -725,14 +725,57 @@ jobs:
       - name: Upload SBOM artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
         with:
-          name: aegis-vault-v7-sbom
+          name: kalderashield-sbom
           if-no-files-found: error
           retention-days: 14
           path: release-local/sbom/*.json
 
+  verify-release-scripts:
+    name: Verify release scripts
+    needs: [plan]
+    # The alias staging step is shell, and shell in a workflow is only tested by
+    # a failing release. It failed three in a row: v7.0.12.0 published three of
+    # seven aliases (a `*-latest.*` glob cannot match `KalderaShield-`), v7.0.13.0
+    # died on a `test && append` under `set -e`, and v7.0.14.0 ran the test
+    # itself with bare `node` so vitest was missing.
+    #
+    # Its own job rather than a step in `publish`, because `publish` never runs
+    # `npm ci` -- it is deliberately a shell-only job, and its one node step
+    # (`generate-updater-manifest.cjs`) has no dependencies. Adding the test
+    # there meant it failed with "vitest: not found", which is the same class of
+    # error as the two before it: a release lost to the test harness rather than
+    # to the code. This job installs dependencies once, runs the check, and
+    # `publish` waits for it.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (SHA-pinned)
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.7 (SHA-pinned)
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Extracts the alias step's script from the workflow and runs it against a
+      # staged tree, so the shell under test is the shell that ships. Also
+      # asserts the publish wiring: that the publish step consumes the list
+      # rather than a glob, and that the aliases are staged before the checksum
+      # manifest is built.
+      - name: Verify release alias staging
+        run: npm run test:release
+
   publish:
     name: Sign and publish GitHub Release
-    needs: [plan, build-linux, build-macos, build-windows, build-android, build-extensions, generate-sbom]
+    needs: [plan, build-linux, build-macos, build-windows, build-android, build-extensions, generate-sbom, verify-release-scripts]
     # Same reasoning as generate-sbom: `always()` so a skipped optional platform
     # does not skip the release, plus explicit success checks so a *failed*
     # platform still blocks it. The difference between "skipped" and "failed" is
@@ -741,6 +784,7 @@ jobs:
       always() && !cancelled() &&
       needs.plan.result == 'success' &&
       needs.generate-sbom.result == 'success' &&
+      needs.verify-release-scripts.result == 'success' &&
       needs.build-linux.result == 'success' &&
       needs.build-android.result == 'success' &&
       needs.build-extensions.result == 'success' &&
@@ -774,7 +818,7 @@ jobs:
       - name: Download Linux artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v6.0.0 (SHA-pinned)
         with:
-          name: aegis-vault-v7-linux
+          name: kalderashield-linux
           path: release-local/linux
 
       - name: Download macOS artifacts
@@ -784,32 +828,32 @@ jobs:
         if: needs.plan.outputs.macos == 'true'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v6.0.0 (SHA-pinned)
         with:
-          name: aegis-vault-v7-macos
+          name: kalderashield-macos
           path: release-local/macos
 
       - name: Download Windows artifacts
         if: needs.plan.outputs.windows == 'true'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v6.0.0 (SHA-pinned)
         with:
-          name: aegis-vault-v7-windows
+          name: kalderashield-windows
           path: release-local/windows
 
       - name: Download Android artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v6.0.0 (SHA-pinned)
         with:
-          name: aegis-vault-v7-android
+          name: kalderashield-android
           path: release-local/android
 
       - name: Download extension artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v6.0.0 (SHA-pinned)
         with:
-          name: aegis-vault-v7-extensions
+          name: kalderashield-extensions
           path: release-local/extensions
 
       - name: Download SBOM artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v6.0.0 (SHA-pinned)
         with:
-          name: aegis-vault-v7-sbom
+          name: kalderashield-sbom
           path: release-local/sbom
 
       - name: Generate Tauri updater manifest (latest.json)
@@ -892,7 +936,7 @@ jobs:
           # file, not a distributable. It was missing from this list, so it
           # survived the prune and the cosign step below tried to sign it (and
           # publish it) as if it were a release artifact.
-          prune_names='README.md DESKTOP_MANUAL_SMOKE_CHECKLIST.md DESKTOP_SIGNATURES.md AMO_SIGNING_STATUS.txt metadata.json Info.plist CodeResources icon.icns aegis-vault-v7 control.tar.gz data.tar.gz manifest.json SHA256SUMS.txt'
+          prune_names='README.md DESKTOP_MANUAL_SMOKE_CHECKLIST.md DESKTOP_SIGNATURES.md AMO_SIGNING_STATUS.txt metadata.json Info.plist CodeResources icon.icns kalderashield control.tar.gz data.tar.gz manifest.json SHA256SUMS.txt'
           for name in $prune_names; do
             find linux macos windows android extensions sbom updater -type f \( \
               -name "$name" -o -name "$name.sig" -o -name "$name.pem" -o -name "$name.sigstore.json" \) -delete 2>/dev/null || true
@@ -916,14 +960,175 @@ jobs:
           echo "Prune + dedupe complete."
           find linux macos windows android extensions sbom updater -type f | wc -l
 
+      - name: Stage version-less aliases for stable download URLs
+        id: alias
+        # Verified by the verify-release-scripts job before this one starts; the
+        # step's own shell is the thing that test exercises.
+        # Why this exists
+        # -------------
+        # The website links every download to a versioned path:
+        #   .../releases/download/v7.0.7.0/KalderaShield-7.0.7.0-linux-amd64.deb
+        # That has to be edited by hand in 9 files on every release, and when it
+        # is forgotten the site does not break -- it keeps serving the previous
+        # version to every visitor, silently. That is what happened between
+        # 7.0.7.0 and 7.0.11.0.
+        #
+        # `releases/latest/download/<name>` redirects to the newest release, but
+        # only for assets whose name does not change per release. Verified, not
+        # assumed: `/releases/latest/download/SHA256SUMS.txt` returns 200 while
+        # `/releases/latest/download/KalderaShield-7.0.7.0-windows-x64-setup.exe`
+        # returns 404, because the version is in the filename and the newest
+        # release has no such file. So an alias has to exist under a fixed name.
+        #
+        # These copies are byte-identical to the versioned artifacts and are
+        # published alongside them -- the versioned download keeps working, and
+        # is what a user who wants to pin a specific version should use. The
+        # alias is for "give me the current release" links, which is what a
+        # website needs and cannot know the answer to.
+        #
+        # Deliberately not created for every artifact: only for the ones the
+        # site links to. An alias for an artifact that does not exist in this
+        # release must not appear, or a stale file from a previous tag would
+        # keep resolving through /latest/ and serve the wrong build.
+        run: |
+          set -euo pipefail
+          cd release-local
+          aliased=0
+          staged_files=()
+          link_alias() {
+            # $1 = alias basename, remaining args = candidate glob patterns
+            local alias="$1"; shift
+            local src=""
+            for pattern in "$@"; do
+              # Exactly one match or none: two matches means the alias would be
+              # ambiguous, and picking the first would make the link silently
+              # platform-dependent.
+              local matches=()
+              while IFS= read -r -d '' f; do matches+=("$f"); done \
+                < <(find . -type f -name "$pattern" ! -name '*.sig' ! -name '*.sigstore.json' ! -name '*.pem' -print0)
+              if [ "${#matches[@]}" -eq 0 ]; then
+                continue
+              fi
+              if [ "${#matches[@]}" -gt 1 ]; then
+                echo "::error::Alias ${alias} is ambiguous: ${matches[*]}"
+                exit 1
+              fi
+              src="${matches[0]}"
+              break
+            done
+            if [ -z "$src" ]; then
+              echo "no match for alias ${alias} (not published in this release)"
+              return 0
+            fi
+            cp "$src" "$alias"
+            # The signature has to follow the alias, or the site would tell users
+            # to verify a file that has no signature next to it.
+            for ext in sig sigstore.json pem; do
+              if [ -f "${src}.${ext}" ]; then cp "${src}.${ext}" "${alias}.${ext}"; fi
+            done
+            echo "aliased ${src} -> ${alias}"
+            aliased=$((aliased + 1))
+            # Record what this function actually wrote. A later `*-latest.*`
+            # glob cannot be trusted to rediscover it: `*` does not match an
+            # uppercase leading character here, which is exactly how the Linux
+            # aliases (KalderaShield-...) went missing in v7.0.12.0 while the
+            # lowercase extension ones were found.
+            staged_files+=("${alias}")
+            for ext in sig sigstore.json pem; do
+              # `if`, not `&&`: with `set -e` a trailing `[ -f ] && ...` whose
+              # test fails makes the loop's last command return non-zero, and the
+              # function exits there. The .deb alias has a .sig and no
+              # .sigstore.json, so the second iteration is a failing test and the
+              # step died one line after the first "aliased" message.
+              if [ -f "${alias}.${ext}" ]; then
+                staged_files+=("${alias}.${ext}")
+              fi
+            done
+            return 0
+          }
+
+          link_alias 'KalderaShield-latest-linux-amd64.deb' 'KalderaShield-*-linux-amd64.deb'
+          link_alias 'KalderaShield-latest-linux-x64.AppImage' 'KalderaShield-*-linux-x64.AppImage'
+          link_alias 'kalderashield-chrome-latest.zip' 'kalderashield-chrome-*.zip'
+          link_alias 'kalderashield-edge-latest.zip' 'kalderashield-edge-*.zip'
+          link_alias 'kalderashield-firefox-latest.xpi' 'kalderashield-firefox-*.xpi'
+          link_alias 'kalderashield-safari-latest-webextension.zip' 'kalderashield-safari-*-webextension.zip'
+          # No alias for install.sh: it is not published in this release at all
+          # (verified against the v7.0.11.0 asset list), so aliasing it would
+          # advertise a download that 404s. The site's CLI page links to a
+          # versioned path for a file the pipeline does not upload; that is a
+          # separate broken link, tracked with the site update.
+          link_alias 'kalderashield-latest-universal.apk' 'app-universal-universal-release.apk'
+
+          echo "Staged ${aliased} version-less alias(es)."
+          [ "$aliased" -gt 0 ] || { echo "::error::No aliases were staged"; exit 1; }
+
+          # Hand the exact list to the publish step instead of letting it
+          # rediscover the files through a `*-latest.*` glob.
+          #
+          # The glob approach silently dropped four of the seven aliases in
+          # v7.0.12.0. The Linux (.deb, .AppImage), Android and Safari copies
+          # were never uploaded and nothing failed: action-gh-release reports an
+          # unmatched pattern as an informational "🤔 does not match any files"
+          # and the step still succeeds, so the run was green while the website
+          # served 404s for two of its platforms. `*` did not match the leading
+          # uppercase `A` of `KalderaShield-latest-...`, which is why exactly the
+          # non-extension aliases went missing.
+          #
+          # The list is built from what link_alias actually wrote, so it cannot
+          # drift from what exists, and it cannot silently miss a file.
+          {
+            echo 'staged<<KALDERASHIELD_ALIAS_EOF'
+            for f in "${staged_files[@]}"; do
+              [ -f "$f" ] || { echo "::error::staged alias is missing on disk: $f"; exit 1; }
+              echo "release-local/${f}"
+            done
+            echo 'KALDERASHIELD_ALIAS_EOF'
+          } >> "$GITHUB_OUTPUT"
+          echo "Handed ${#staged_files[@]} alias file(s) to the publish step."
+
       - name: Generate global SHA256SUMS.txt
         run: |
           cd release-local
-          find linux macos windows android extensions sbom updater -type f ! -name 'metadata.json' ! -name 'README.md' \
-            -exec sha256sum {} \; \
+          # `.` as well as the named subdirectories: the version-less aliases
+          # live at the root of release-local, and a manifest that omits them
+          # leaves the website telling users to verify a file it cannot find an
+          # entry for. `-maxdepth 1` keeps this from descending into the
+          # subdirectories the explicit paths already cover.
+          #
+          # Both finds are wrapped in a group so a single pipe carries their
+          # combined output into the manifest. They used to be two separate
+          # commands with the pipe attached only to the second, so the first
+          # one's output went to the log and never reached the file: the
+          # aliases were hashed, printed, and discarded. Every published
+          # `*-latest.*` download was therefore absent from SHA256SUMS.txt and
+          # `sha256sum -c` could not verify a single file the site links to.
+          {
+            find . -maxdepth 1 -type f ! -name 'SHA256SUMS.txt' ! -name 'metadata.json' ! -name 'README.md' \
+              -exec sha256sum {} \;
+            find linux macos windows android extensions sbom updater -type f ! -name 'metadata.json' ! -name 'README.md' \
+              -exec sha256sum {} \;
+          } \
             | awk '{ n=split($2, p, "/"); printf "%s  %s\n", $1, p[n] }' \
-            | sort > SHA256SUMS.txt
+            | sort -u > SHA256SUMS.txt
           cat SHA256SUMS.txt
+
+          # Every staged alias must be verifiable. The site links the stable
+          # `*-latest.*` names, so a manifest without them is not a manifest
+          # anyone can use.
+          missing=0
+          while IFS= read -r staged; do
+            base="$(basename "$staged")"
+            if ! grep -qF "  ${base}" SHA256SUMS.txt; then
+              echo "::error::${base} is published but missing from SHA256SUMS.txt"
+              missing=1
+            fi
+          done <<< "${{ steps.alias.outputs.staged }}"
+          if [ "$missing" -ne 0 ]; then
+            echo "::error::The published checksum manifest cannot verify its own downloads"
+            exit 1
+          fi
+          echo "Every staged alias has a checksum entry."
 
       - name: Install cosign
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v3.10.1 (SHA-pinned)
@@ -980,88 +1185,6 @@ jobs:
             echo "No pre-existing release for tag $TAG — clean."
           fi
 
-      - name: Stage version-less aliases for stable download URLs
-        # Why this exists
-        # -------------
-        # The website links every download to a versioned path:
-        #   .../releases/download/v7.0.7.0/AegisVault7-7.0.7.0-linux-amd64.deb
-        # That has to be edited by hand in 9 files on every release, and when it
-        # is forgotten the site does not break -- it keeps serving the previous
-        # version to every visitor, silently. That is what happened between
-        # 7.0.7.0 and 7.0.11.0.
-        #
-        # `releases/latest/download/<name>` redirects to the newest release, but
-        # only for assets whose name does not change per release. Verified, not
-        # assumed: `/releases/latest/download/SHA256SUMS.txt` returns 200 while
-        # `/releases/latest/download/AegisVault7-7.0.7.0-windows-x64-setup.exe`
-        # returns 404, because the version is in the filename and the newest
-        # release has no such file. So an alias has to exist under a fixed name.
-        #
-        # These copies are byte-identical to the versioned artifacts and are
-        # published alongside them -- the versioned download keeps working, and
-        # is what a user who wants to pin a specific version should use. The
-        # alias is for "give me the current release" links, which is what a
-        # website needs and cannot know the answer to.
-        #
-        # Deliberately not created for every artifact: only for the ones the
-        # site links to. An alias for an artifact that does not exist in this
-        # release must not appear, or a stale file from a previous tag would
-        # keep resolving through /latest/ and serve the wrong build.
-        run: |
-          set -euo pipefail
-          cd release-local
-          aliased=0
-          link_alias() {
-            # $1 = alias basename, remaining args = candidate glob patterns
-            local alias="$1"; shift
-            local src=""
-            for pattern in "$@"; do
-              # Exactly one match or none: two matches means the alias would be
-              # ambiguous, and picking the first would make the link silently
-              # platform-dependent.
-              local matches=()
-              while IFS= read -r -d '' f; do matches+=("$f"); done \
-                < <(find . -type f -name "$pattern" ! -name '*.sig' ! -name '*.sigstore.json' ! -name '*.pem' -print0)
-              if [ "${#matches[@]}" -eq 0 ]; then
-                continue
-              fi
-              if [ "${#matches[@]}" -gt 1 ]; then
-                echo "::error::Alias ${alias} is ambiguous: ${matches[*]}"
-                exit 1
-              fi
-              src="${matches[0]}"
-              break
-            done
-            if [ -z "$src" ]; then
-              echo "no match for alias ${alias} (not published in this release)"
-              return 0
-            fi
-            cp "$src" "$alias"
-            # The signature has to follow the alias, or the site would tell users
-            # to verify a file that has no signature next to it.
-            for ext in sig sigstore.json pem; do
-              if [ -f "${src}.${ext}" ]; then cp "${src}.${ext}" "${alias}.${ext}"; fi
-            done
-            echo "aliased ${src} -> ${alias}"
-            aliased=$((aliased + 1))
-          }
-
-          link_alias 'AegisVault7-latest-linux-amd64.deb' 'AegisVault7-*-linux-amd64.deb'
-          link_alias 'AegisVault7-latest-linux-x64.AppImage' 'AegisVault7-*-linux-x64.AppImage'
-          link_alias 'aegis-vault-7-chrome-latest.zip' 'aegis-vault-7-chrome-*.zip'
-          link_alias 'aegis-vault-7-edge-latest.zip' 'aegis-vault-7-edge-*.zip'
-          link_alias 'aegis-vault-7-firefox-latest.xpi' 'aegis-vault-7-firefox-*.xpi'
-          link_alias 'aegis-vault-7-safari-latest-webextension.zip' 'aegis-vault-7-safari-*-webextension.zip'
-          # No alias for install.sh: it is not published in this release at all
-          # (verified against the v7.0.11.0 asset list), so aliasing it would
-          # advertise a download that 404s. The site's CLI page links to a
-          # versioned path for a file the pipeline does not upload; that is a
-          # separate broken link, tracked with the site update.
-          link_alias 'aegis-vault-7-latest-universal.apk' 'app-universal-universal-release.apk'
-
-          echo "Staged ${aliased} version-less alias(es)."
-          [ "$aliased" -gt 0 ] || { echo "::error::No aliases were staged"; exit 1; }
-
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v2.4.2 (SHA-pinned)
         with:
@@ -1076,20 +1199,14 @@ jobs:
             release-local/sbom/**
             release-local/updater/latest.json
             release-local/SHA256SUMS.txt
-            # Version-less aliases, staged by the step above. Listed
-            # explicitly: the `**` patterns only match inside the named
-            # directories, and these sit at the root of release-local.
-            release-local/*-latest.*
-            release-local/*-latest.*.sig
-            release-local/*-latest.*.sigstore.json
-            release-local/*-latest.*.pem
+            ${{ steps.alias.outputs.staged }}
 
-      - name: Publish updater manifest to backup endpoint (update.aegisvault.xyz)
+      - name: Publish updater manifest to backup endpoint (update.KalderaShield.xyz)
         continue-on-error: true
         env:
           UPDATE_HOST: ${{ secrets.UPDATE_ENDPOINT_HOST }}        # e.g. forgejo-update@vps.example.com (sftp-only chroot user)
           UPDATE_SSH_KEY: ${{ secrets.UPDATE_ENDPOINT_SSH_KEY }}  # private key paired with the VPS deploy user
-          UPDATE_KNOWN_HOSTS: ${{ secrets.UPDATE_ENDPOINT_KNOWN_HOSTS }} # output of: ssh-keyscan -H update.aegisvault.xyz
+          UPDATE_KNOWN_HOSTS: ${{ secrets.UPDATE_ENDPOINT_KNOWN_HOSTS }} # output of: ssh-keyscan -H update.KalderaShield.xyz
         run: |
           set -e
           CLEAN_HOST=$(echo "${UPDATE_HOST:-}" | tr -d '\r\n "' | sed -e 's|^https://||' -e 's|^http://||' -e 's|^sftp://||' -e 's|/$||')
@@ -1102,7 +1219,7 @@ jobs:
             printf '%s\n' "$UPDATE_KNOWN_HOSTS" > ~/.ssh/known_hosts
           else
             echo "::warning::UPDATE_ENDPOINT_KNOWN_HOSTS not set — falling back to accept-new (TOFU)."
-            ssh-keyscan -H update.aegisvault.xyz >> ~/.ssh/known_hosts 2>/dev/null || true
+            ssh-keyscan -H update.KalderaShield.xyz >> ~/.ssh/known_hosts 2>/dev/null || true
           fi
           printf '%s\n' "$UPDATE_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519

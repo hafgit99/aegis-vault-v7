@@ -67,7 +67,7 @@ describe('Folders Library', () => {
       icon: 'folder' as const,
       createdAt: '2026-07-07',
     }));
-    localStorage.setItem('aegis-vault-v7-folder-library-v1', JSON.stringify(largeLibrary));
+    localStorage.setItem('kalderashield-folder-library-v1', JSON.stringify(largeLibrary));
     expect(() => {
       createFolder({ name: 'Overflow', parentId: null });
     }).toThrow(FolderLimitError);
@@ -169,7 +169,7 @@ describe('Folders Library', () => {
     const written = writeFolderLibrary([initial]);
     expect(written).toEqual([initial]);
 
-    localStorage.setItem('aegis-vault-v7-folder-library-v1', 'invalid-json-{');
+    localStorage.setItem('kalderashield-folder-library-v1', 'invalid-json-{');
     const list = readFolderLibrary();
     expect(list).toEqual([]);
   });

@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const readVaultIntegrityLedger = vi.hoisted(() => vi.fn((): any => null));
 const recordVaultSeal = vi.hoisted(() => vi.fn((versionCounter: number) => ({
-  appId: 'aegis-vault-db',
+  appId: 'KalderaShield-vault-db',
   sealed: true,
   highestVersionCounter: versionCounter,
   sealedAt: new Date().toISOString(),
@@ -17,7 +17,7 @@ vi.mock('./vaultIntegrityLedger', () => ({
   readVaultIntegrityLedger,
   recordVaultSeal,
   clearVaultIntegrityLedger: vi.fn(),
-  VAULT_INTEGRITY_LEDGER_KEY: 'aegis_vault_integrity_ledger',
+  VAULT_INTEGRITY_LEDGER_KEY: 'KalderaShield_vault_integrity_ledger',
 }));
 
 import {

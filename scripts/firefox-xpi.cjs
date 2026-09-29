@@ -13,11 +13,11 @@ const shouldSign = args.has('--sign');
 const skipBuild = args.has('--skip-build');
 const channel = process.env.AMO_CHANNEL || 'unlisted';
 const approvalTimeout = process.env.AMO_APPROVAL_TIMEOUT || process.env.WEB_EXT_APPROVAL_TIMEOUT;
-const xpiName = `aegis-vault-7-firefox-v${packageJson.version}.xpi`;
+const xpiName = `kalderashield-firefox-v${packageJson.version}.xpi`;
 
 const excludedNames = new Set([
-  'aegis-host.bat',
-  'com.hafgit99.aegisvault7.json',
+  'KalderaShield-host.bat',
+  'com.kalderashield.desktop.json',
 ]);
 
 function maskCommandArgs(cmdArgs) {
@@ -94,8 +94,8 @@ function assertFirefoxManifest() {
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   const geckoId = manifest.browser_specific_settings?.gecko?.id;
 
-  if (geckoId !== 'aegisvault7@hafgit99.com') {
-    throw new Error('Firefox manifest must include browser_specific_settings.gecko.id = aegisvault7@hafgit99.com');
+  if (geckoId !== 'kalderashield@hafgit99.com') {
+    throw new Error('Firefox manifest must include browser_specific_settings.gecko.id = kalderashield@hafgit99.com');
   }
 
   if (manifest.background?.service_worker) {
@@ -153,7 +153,7 @@ if (shouldSign) {
   run('npx', signArgs, { env: signEnv });
 
   // `web-ext sign` has no --filename (that flag is `build`-only), so AMO names
-  // the download from the add-on slug: aegis_vault_7-<version>.xpi. Left alone,
+  // the download from the add-on slug: KalderaShield_vault_7-<version>.xpi. Left alone,
   // the unsigned xpiName from the packaging step would sit next to it and both
   // would be uploaded and cosign-signed. Replace the unsigned one.
   const signedXpis = fs
@@ -190,4 +190,4 @@ if (shouldSign) {
   ]);
 }
 
-console.log(`\nFirefox artifact output: ${artifactsDir}`);
+console.log(`\nFirefox artifact output: ${artifactsDir}`);

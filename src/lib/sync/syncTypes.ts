@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -231,7 +231,7 @@ export interface S3SyncConfig {
   accessKeyId: string;
   /** Secret access key — stored encrypted */
   secretAccessKey: string;
-  /** Optional custom path prefix inside bucket, e.g. "aegis-backup" */
+  /** Optional custom path prefix inside bucket, e.g. "kalderashield-backup" */
   prefix?: string;
 }
 

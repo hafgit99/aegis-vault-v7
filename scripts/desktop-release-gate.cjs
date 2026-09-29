@@ -13,7 +13,7 @@ if (
   !process.env.CARGO_TARGET_DIR &&
   rootDir.toLowerCase().includes(`${path.sep}onedrive${path.sep}`)
 ) {
-  process.env.CARGO_TARGET_DIR = path.join(os.tmpdir(), 'aegis-vault-v7-tauri-target');
+  process.env.CARGO_TARGET_DIR = path.join(os.tmpdir(), 'kalderashield-tauri-target');
   console.log('Using a local Cargo target directory to avoid OneDrive build locks: ' + process.env.CARGO_TARGET_DIR);
 }
 
@@ -108,7 +108,7 @@ function killRunningProcessesOnWindows() {
       const { spawnSync } = require('child_process');
       spawnSync(
         'powershell',
-        ['-NoProfile', '-NonInteractive', '-Command', "Get-Process -Name 'aegis-vault-v7' -ErrorAction SilentlyContinue | Stop-Process -Force"],
+        ['-NoProfile', '-NonInteractive', '-Command', "Get-Process -Name 'kalderashield' -ErrorAction SilentlyContinue | Stop-Process -Force"],
         { stdio: 'ignore' },
       );
     } catch (_) {}
@@ -169,7 +169,7 @@ function run(command, commandArgs) {
 }
 
 function printPlan(steps) {
-  console.log('Aegis Vault 7 desktop release gate');
+  console.log('KalderaShield desktop release gate');
   console.log('Platform: ' + platform);
   console.log('Host: ' + process.platform);
   console.log('Dry run: ' + (dryRun ? 'yes' : 'no'));

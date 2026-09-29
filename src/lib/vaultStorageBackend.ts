@@ -29,7 +29,7 @@ export class VaultStorageBackendSelectionError extends Error {
   }
 }
 
-const STORAGE_BACKEND_ENV_KEY = 'VITE_AEGIS_STORAGE_BACKEND';
+const STORAGE_BACKEND_ENV_KEY = 'VITE_KALDERASHIELD_STORAGE_BACKEND';
 const DEFAULT_SELECTION: VaultStorageBackendSelection = {
   active: 'opfs',
   target: null,

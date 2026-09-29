@@ -1,5 +1,5 @@
 export const CURRENT_VAULT_DB_SCHEMA_VERSION = 3;
-export const VAULT_DB_APP_ID = 'aegis-vault-v7';
+export const VAULT_DB_APP_ID = 'kalderashield';
 
 export interface VaultDatabaseUserSecret {
   username: string;
@@ -277,12 +277,12 @@ async function deriveIntegrityKey(vaultEncryptionKey: Uint8Array, label: string)
 
 /** Current (v2) integrity key. The label version keeps the two domains disjoint. */
 export function deriveVaultHmacKey(vaultEncryptionKey: Uint8Array): Promise<Uint8Array> {
-  return deriveIntegrityKey(vaultEncryptionKey, 'aegis-vault-db-integrity-hmac-v2');
+  return deriveIntegrityKey(vaultEncryptionKey, 'KalderaShield-vault-db-integrity-hmac-v2');
 }
 
 /** Legacy (v1) integrity key. Used only to verify pre-v2 states for migration. */
 export function deriveVaultHmacKeyV1(vaultEncryptionKey: Uint8Array): Promise<Uint8Array> {
-  return deriveIntegrityKey(vaultEncryptionKey, 'aegis-vault-db-integrity-hmac-v1');
+  return deriveIntegrityKey(vaultEncryptionKey, 'KalderaShield-vault-db-integrity-hmac-v1');
 }
 
 /**

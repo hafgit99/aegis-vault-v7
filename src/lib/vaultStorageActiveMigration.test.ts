@@ -251,8 +251,8 @@ describe('wa-sqlite active backend migration orchestration', () => {
     expect(result.status).toBe('blocked');
     expect(result.smokeResult).toEqual({
       status: 'failed',
-      databaseName: '/aegis-wa-sqlite.desktop.db',
-      vfsName: 'aegis-wa-sqlite-desktop-idb',
+      databaseName: '/KalderaShield-wa-sqlite.desktop.db',
+      vfsName: 'KalderaShield-wa-sqlite-desktop-idb',
       issue: 'pair failed &lt;script_secret_/script_',
     });
     expect(result.issues).toEqual([
@@ -278,8 +278,8 @@ describe('wa-sqlite active backend migration orchestration', () => {
       migrationPair: createMigrationPair(targetRepository),
       verifyPersistentTarget: vi.fn(async (): Promise<WaSqlitePersistenceSmokeResult> => ({
         status: 'failed',
-        databaseName: '/aegis-wa-sqlite.test.db',
-        vfsName: 'aegis-wa-sqlite-test-idb',
+        databaseName: '/KalderaShield-wa-sqlite.test.db',
+        vfsName: 'KalderaShield-wa-sqlite-test-idb',
         issue: 'wa-sqlite-persistence-smoke-mismatch',
       })),
       promoteRepository,

@@ -11,12 +11,12 @@ const packageJson = require(path.join(rootDir, 'package.json'));
 
 const args = new Set(process.argv.slice(2));
 const skipBuild = args.has('--skip-build');
-const zipName = `aegis-vault-7-chrome-v${packageJson.version}.zip`;
-const edgeZipName = `aegis-vault-7-edge-v${packageJson.version}.zip`;
+const zipName = `kalderashield-chrome-v${packageJson.version}.zip`;
+const edgeZipName = `kalderashield-edge-v${packageJson.version}.zip`;
 
 const excludedNames = new Set([
-  'aegis-host.bat',
-  'com.hafgit99.aegisvault7.json',
+  'KalderaShield-host.bat',
+  'com.kalderashield.desktop.json',
   'chromium-extension.rar',
 ]);
 
@@ -152,4 +152,4 @@ createZip(stagingDir, chromeZipPath);
 fs.copyFileSync(chromeZipPath, edgeZipPath);
 
 console.log(`\nChrome Web Store package ready: ${chromeZipPath}`);
-console.log(`Microsoft Edge Addons package ready: ${edgeZipPath}`);
+console.log(`Microsoft Edge Addons package ready: ${edgeZipPath}`);

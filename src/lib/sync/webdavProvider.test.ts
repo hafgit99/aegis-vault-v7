@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -143,7 +143,7 @@ describe('WebDavSyncProvider.uploadVault', () => {
     const seen: Array<Record<string, string>> = [];
     mockFetch((url, opts) => {
       const method = (opts?.method ?? 'GET').toUpperCase();
-      if (method === 'PUT' && String(url).endsWith('vault.aegis')) {
+      if (method === 'PUT' && String(url).endsWith('vault.ks')) {
         seen.push(opts?.headers as Record<string, string>);
       }
       return makeResponse(200);
@@ -160,7 +160,7 @@ describe('WebDavSyncProvider.uploadVault', () => {
     const seen: Array<Record<string, string>> = [];
     mockFetch((url, opts) => {
       const method = (opts?.method ?? 'GET').toUpperCase();
-      if (method === 'PUT' && String(url).endsWith('vault.aegis')) {
+      if (method === 'PUT' && String(url).endsWith('vault.ks')) {
         seen.push(opts?.headers as Record<string, string>);
       }
       return makeResponse(200);
@@ -177,7 +177,7 @@ describe('WebDavSyncProvider.uploadVault', () => {
     let vaultPutIndex = 0;
     mockFetch((url, opts) => {
       const method = (opts?.method ?? 'GET').toUpperCase();
-      if (method === 'PUT' && String(url).endsWith('vault.aegis')) {
+      if (method === 'PUT' && String(url).endsWith('vault.ks')) {
         vaultPuts.push(status);
         vaultPutIndex++;
       }
@@ -197,7 +197,7 @@ describe('WebDavSyncProvider.uploadVault', () => {
     const seen: Array<Record<string, string>> = [];
     mockFetch((url, opts) => {
       const method = (opts?.method ?? 'GET').toUpperCase();
-      if (method === 'PUT' && String(url).endsWith('vault.aegis')) {
+      if (method === 'PUT' && String(url).endsWith('vault.ks')) {
         seen.push(opts?.headers as Record<string, string>);
       }
       return makeResponse(200);

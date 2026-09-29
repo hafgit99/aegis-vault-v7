@@ -5,7 +5,7 @@
 
 declare global {
   interface Window {
-    AegisAndroidSecurity?: {
+    KalderaShieldAndroidSecurity?: {
       getPosture(): string;
     };
   }
@@ -56,10 +56,10 @@ export function parseAndroidRuntimeSecurityPosture(payload: string | null): Andr
 }
 
 export function getAndroidRuntimeSecurityPosture(): AndroidRuntimeSecurityPosture | null {
-  if (typeof window === 'undefined' || !window.AegisAndroidSecurity) return null;
+  if (typeof window === 'undefined' || !window.KalderaShieldAndroidSecurity) return null;
 
   try {
-    return parseAndroidRuntimeSecurityPosture(window.AegisAndroidSecurity.getPosture());
+    return parseAndroidRuntimeSecurityPosture(window.KalderaShieldAndroidSecurity.getPosture());
   } catch {
     return null;
   }

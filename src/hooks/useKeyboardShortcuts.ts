@@ -44,5 +44,5 @@ export function useKeyboardShortcuts({ enabled, onFocusSearch, onNewItem, onLock
 }
 
 export function dispatchFocusSearchShortcut(): void {
-  window.dispatchEvent(new CustomEvent('aegis-focus-search'));
+  window.dispatchEvent(new CustomEvent('KalderaShield-focus-search'));
 }

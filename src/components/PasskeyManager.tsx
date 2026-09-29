@@ -2,11 +2,11 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  *
- * Passkey management surface for Aegis Vault 7. Surfaces the WebAuthn
+ * Passkey management surface for KalderaShield. Surfaces the WebAuthn
  * capability detected in the current platform, lets the user register a
  * new passkey through the platform authenticator, and lists the registered
  * records stored as vault items. All UI strings are localized through the
- * Aegis i18n key catalog (TR / EN / ZH).
+ * KalderaShield i18n key catalog (TR / EN / ZH).
  */
 
 import { useEffect, useMemo, useState } from 'react';

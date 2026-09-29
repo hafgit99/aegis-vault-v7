@@ -16,7 +16,7 @@ test('downloads an emergency kit during first-run setup', async ({ page }) => {
   const download = await downloadPromise;
   const downloadPath = await download.path();
 
-  expect(download.suggestedFilename()).toBe('aegis-vault-emergency-kit.txt');
+  expect(download.suggestedFilename()).toBe('KalderaShield-vault-emergency-kit.txt');
   expect(downloadPath).toBeTruthy();
 });
 
@@ -76,8 +76,8 @@ test('reveals and copies login detail fields', async ({ page }) => {
 });
 
 test('adds, persists, and downloads a vault item attachment', async ({ page }) => {
-  const attachmentName = 'aegis-e2e-attachment.txt';
-  const attachmentText = 'Aegis Vault attachment E2E proof.\nLine two stays encrypted at rest.';
+  const attachmentName = 'kalderashield-e2e-attachment.txt';
+  const attachmentText = 'KalderaShield attachment E2E proof.\nLine two stays encrypted at rest.';
 
   await setupVault(page, masterPassword);
 
@@ -436,7 +436,7 @@ test('downloads an emergency kit from settings after unlock', async ({ page }) =
   const download = await downloadPromise;
   const downloadPath = await download.path();
 
-  expect(download.suggestedFilename()).toBe('aegis-vault-emergency-kit.txt');
+  expect(download.suggestedFilename()).toBe('KalderaShield-vault-emergency-kit.txt');
   expect(downloadPath).toBeTruthy();
   await expect(page.getByTestId('settings-emergency-kit-success')).toBeVisible();
   await expect(page.getByTestId('settings-emergency-kit-error')).toBeHidden();
@@ -523,7 +523,7 @@ test('exports a confirmed plain JSON backup download', async ({ page }) => {
   const download = await downloadPromise;
   const downloadPath = await download.path();
 
-  expect(download.suggestedFilename()).toMatch(/^aegis_acik_yedek_\d{4}-\d{2}-\d{2}\.json$/);
+  expect(download.suggestedFilename()).toMatch(/^KalderaShield_acik_yedek_\d{4}-\d{2}-\d{2}\.json$/);
   expect(downloadPath).toBeTruthy();
 
   const exportedItems = JSON.parse(await fs.readFile(downloadPath!, 'utf8'));
@@ -544,7 +544,7 @@ test('imports a plain JSON backup file', async ({ page }) => {
   await openSettings(page);
 
   await page.getByTestId('import-file-input').setInputFiles({
-    name: 'aegis-e2e-import.json',
+    name: 'kalderashield-e2e-import.json',
     mimeType: 'application/json',
     buffer: Buffer.from(JSON.stringify([
       {
@@ -576,7 +576,7 @@ test('imports a plain JSON backup file', async ({ page }) => {
   await expect(page.getByTestId('login-username-value')).toContainText('imported-user');
 });
 
-test('imports an encrypted aegis backup file', async ({ page }) => {
+test('imports an encrypted KalderaShield backup file', async ({ page }) => {
   await setupVault(page, masterPassword);
   await createLoginItem(page, 'E2E Encrypted Import');
   await openSettings(page);
@@ -604,7 +604,7 @@ test('imports an encrypted aegis backup file', async ({ page }) => {
   await expect(page.getByTestId('login-username-value')).toContainText('ada-e2e');
 });
 
-test('rejects encrypted aegis import with a wrong password', async ({ page }) => {
+test('rejects encrypted KalderaShield import with a wrong password', async ({ page }) => {
   await setupVault(page, masterPassword);
   await createLoginItem(page, 'E2E Wrong Password Import');
   await openSettings(page);
@@ -620,7 +620,7 @@ test('rejects encrypted aegis import with a wrong password', async ({ page }) =>
   await expect(page.getByTestId('import-success-message')).toBeHidden();
 });
 
-test('cancels encrypted aegis import before decrypting', async ({ page }) => {
+test('cancels encrypted KalderaShield import before decrypting', async ({ page }) => {
   await setupVault(page, masterPassword);
   await createLoginItem(page, 'E2E Cancel Import');
   await openSettings(page);

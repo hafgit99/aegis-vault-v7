@@ -53,7 +53,7 @@ describe('OnboardingTour', () => {
     );
 
     expect(screen.getByTestId('onboarding-tour-panel')).toBeTruthy();
-    expect(screen.getByText('Aegis Vault Hızlı Başlangıç Rehberi')).toBeTruthy();
+    expect(screen.getByText('KalderaShield Hızlı Başlangıç Rehberi')).toBeTruthy();
     expect(screen.getByTestId('tour-step-1')).toBeTruthy();
     expect(screen.getByTestId('tour-step-2')).toBeTruthy();
     expect(screen.getByTestId('tour-step-3')).toBeTruthy();

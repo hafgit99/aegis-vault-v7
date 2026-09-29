@@ -18,7 +18,7 @@ describe('useProfileSettings', () => {
   it('loads default profile settings when storage is empty', () => {
     const { result } = renderHook(() => useProfileSettings());
 
-    expect(result.current.profileName).toBe('Aegis Kullanıcısı');
+    expect(result.current.profileName).toBe('KalderaShield Kullanıcısı');
     expect(result.current.profileAvatar).toContain('data:image/svg+xml;base64,');
     expect(result.current.isProfileModalOpen).toBe(false);
   });
@@ -40,7 +40,7 @@ describe('useProfileSettings', () => {
       wrapper: ({ children }) => <LanguageProvider>{children}</LanguageProvider>,
     });
 
-    expect(result.current.profileName).toBe('Aegis User');
+    expect(result.current.profileName).toBe('KalderaShield User');
   });
 
   it('opens and closes the profile modal', () => {

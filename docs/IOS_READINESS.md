@@ -1,6 +1,6 @@
-# Aegis Vault 7 iOS / iPadOS Readiness Plan
+# KalderaShield iOS / iPadOS Readiness Plan
 
-Aegis Vault 7 should start iOS support as a staged platform enablement effort, not as an immediate public release. Tauri 2 supports mobile targets, but iOS builds require a macOS host, full Xcode, iOS Rust targets, CocoaPods, and Apple signing/provisioning material.
+KalderaShield should start iOS support as a staged platform enablement effort, not as an immediate public release. Tauri 2 supports mobile targets, but iOS builds require a macOS host, full Xcode, iOS Rust targets, CocoaPods, and Apple signing/provisioning material.
 
 ## Current Position
 
@@ -55,7 +55,7 @@ Checklist:
 - Run `npm run ios:readiness:strict`.
 - Run `npm run ios:init` and review generated files under `src-tauri/gen/ios`.
 - Keep generated iOS project changes small and reviewable.
-- Confirm app identifier remains `com.hafgit99.aegisvault7` or intentionally decide a separate iOS identifier.
+- Confirm app identifier remains `com.kalderashield.desktop` or intentionally decide a separate iOS identifier.
 
 ## Phase 2: Runtime Compatibility
 

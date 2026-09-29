@@ -20,10 +20,10 @@ key.properties
 # time by scripts/register-host.js; contain machine-specific absolute paths and must
 # never be committed or shipped in build outputs)
 native-host-local/
-dist-extension*/com.hafgit99.aegisvault7.json
-dist-extension*/aegis-host.bat
-release-local/**/com.hafgit99.aegisvault7.json
-release-local/**/aegis-host.bat
+dist-extension*/com.kalderashield.desktop.json
+dist-extension*/KalderaShield-host.bat
+release-local/**/com.kalderashield.desktop.json
+release-local/**/KalderaShield-host.bat
 
 # Local tool states
 .commandcode/

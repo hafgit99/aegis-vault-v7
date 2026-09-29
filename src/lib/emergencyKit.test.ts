@@ -32,14 +32,14 @@ describe('emergencyKit', () => {
     const kit = buildEmergencyKitText(secretKey, { generatedAt: new Date('2026-06-20T12:00:00.000Z') });
 
     expect(kit.split('\n')).toEqual([
-      'Aegis Vault 7 Emergency Kit',
+      'KalderaShield Emergency Kit',
       '',
       'Generated: 2026-06-20T12:00:00.000Z',
       `Account Secret Key: ${secretKey}`,
       '',
       'Keep this file offline and outside the vault.',
       'You need this secret key together with your master password to unlock this vault on a new device.',
-      'Aegis Vault 7 cannot recover the secret key or master password for you.',
+      'KalderaShield cannot recover the secret key or master password for you.',
     ]);
     expect(kit).not.toContain('Master Password:');
   });
@@ -65,7 +65,7 @@ describe('emergencyKit', () => {
   });
 
   it('falls back to a browser download when no native file dialog is available', async () => {
-    const createdUrl = 'blob:aegis-emergency-kit';
+    const createdUrl = 'blob:KalderaShield-emergency-kit';
     const appendSpy = vi.spyOn(document.body, 'appendChild');
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
     const removeSpy = vi.spyOn(HTMLAnchorElement.prototype, 'remove').mockImplementation(() => undefined);
@@ -107,7 +107,7 @@ describe('emergencyKit', () => {
     const text = new TextDecoder().decode(bytes);
 
     expect(text).toContain('%PDF-1.4');
-    expect(text).toContain('Aegis Vault 7 Emergency Kit');
+    expect(text).toContain('KalderaShield Emergency Kit');
     expect(text).toContain(`Account Secret Key: ${secretKey}`);
     expect(text).toContain('%%EOF');
   });
@@ -126,7 +126,7 @@ describe('emergencyKit', () => {
   });
 
   it('falls back to browser download for PDF saving when native dialog is not supported', async () => {
-    const createdUrl = 'blob:aegis-emergency-kit-pdf';
+    const createdUrl = 'blob:KalderaShield-emergency-kit-pdf';
     const appendSpy = vi.spyOn(document.body, 'appendChild');
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
     const removeSpy = vi.spyOn(HTMLAnchorElement.prototype, 'remove').mockImplementation(() => undefined);

@@ -105,7 +105,7 @@ function gitValue(args, fallbackValue) {
 }
 
 function readAssetIntegrityEvidence() {
-  const manifestPath = path.join(repoRoot, 'dist', 'aegis-integrity.json');
+  const manifestPath = path.join(repoRoot, 'dist', 'KalderaShield-integrity.json');
   if (!fs.existsSync(manifestPath)) throw new Error('Production asset integrity manifest is missing. Run npm run build first.');
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   if (

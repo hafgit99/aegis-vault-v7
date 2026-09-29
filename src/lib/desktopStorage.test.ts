@@ -24,7 +24,7 @@ vi.mock('@tauri-apps/api/core', () => ({
 const items: VaultItem[] = [
   {
     id: '1',
-    title: 'Aegis Mail',
+    title: 'KalderaShield Mail',
     username: 'ada@example.com',
     password: 'secret-pass',
     url: 'https://mail.example.com',
@@ -83,7 +83,7 @@ describe('desktopStorage', () => {
   it('treats Android Tauri WebView storage as app-private native persistence', async () => {
     window.__TAURI_INTERNALS__ = {};
     vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(
-      'Mozilla/5.0 (Linux; Android 14; Aegis Vault) AppleWebKit/537.36',
+      'Mozilla/5.0 (Linux; Android 14; KalderaShield) AppleWebKit/537.36',
     );
     invoke.mockResolvedValueOnce('android-db-payload').mockResolvedValueOnce(undefined);
 
@@ -108,7 +108,7 @@ describe('desktopStorage', () => {
       credentials: [
         {
           id: '1',
-          title: 'Aegis Mail',
+          title: 'KalderaShield Mail',
           username: 'ada@example.com',
           password: 'secret-pass',
           url: 'https://mail.example.com',

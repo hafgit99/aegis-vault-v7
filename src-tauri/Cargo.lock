@@ -19,32 +19,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "aegis-vault-v7"
-version = "7.0.12"
-dependencies = [
- "argon2",
- "base64 0.23.1",
- "chacha20poly1305",
- "getrandom 0.4.3",
- "hmac",
- "log",
- "objc2",
- "objc2-app-kit",
- "serde",
- "serde_json",
- "sha2 0.11.0",
- "subtle",
- "tauri",
- "tauri-build",
- "tauri-plugin-biometric",
- "tauri-plugin-log",
- "tauri-plugin-updater",
- "tokio",
- "windows-sys 0.61.2",
- "zeroize",
-]
-
-[[package]]
 name = "aho-corasick"
 version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1988,6 +1962,32 @@ checksum = "5dea2b27dd239b2556ed7a25ba842fe47fd602e7fc7433c2a8d6106d4d9edd70"
 dependencies = [
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "kalderashield"
+version = "7.0.18"
+dependencies = [
+ "argon2",
+ "base64 0.23.1",
+ "chacha20poly1305",
+ "getrandom 0.4.3",
+ "hmac",
+ "log",
+ "objc2",
+ "objc2-app-kit",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "subtle",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-biometric",
+ "tauri-plugin-log",
+ "tauri-plugin-updater",
+ "tokio",
+ "windows-sys 0.61.2",
+ "zeroize",
 ]
 
 [[package]]

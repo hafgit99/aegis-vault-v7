@@ -63,8 +63,8 @@ saveVaultItem: vi.fn(async (candidate: VaultItem) => {
 function passingSmoke() {
   return vi.fn(async () => ({
     status: 'passed' as const,
-    databaseName: '/aegis-wa-sqlite.test.db',
-    vfsName: 'aegis-wa-sqlite-test-idb',
+    databaseName: '/KalderaShield-wa-sqlite.test.db',
+    vfsName: 'KalderaShield-wa-sqlite-test-idb',
   }));
 }
 

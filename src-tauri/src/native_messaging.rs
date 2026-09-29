@@ -22,9 +22,9 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 
 type HmacSha256 = Hmac<Sha256>;
 
-pub const TOKEN_FILENAME: &str = "aegis_ipc_token.bin";
-pub const PORT_FILENAME: &str = "aegis_ipc_port.txt";
-pub const IPC_DATA_KEY_INFO: &[u8] = b"aegis-ipc-session-data-key-v2";
+pub const TOKEN_FILENAME: &str = "kalderashield_ipc_token.bin";
+pub const PORT_FILENAME: &str = "kalderashield_ipc_port.txt";
+pub const IPC_DATA_KEY_INFO: &[u8] = b"kalderashield-ipc-session-data-key-v2";
 
 /// IPC frame protocol version (RUST-Y1: AEAD frame format).
 /// Frame layout: `[4-byte BE ciphertext length][1-byte version][24-byte nonce][ciphertext||16-byte tag]`.
@@ -238,7 +238,7 @@ pub fn get_app_data_dir() -> Option<PathBuf> {
     {
         std::env::var("APPDATA")
             .ok()
-            .map(|appdata| PathBuf::from(appdata).join("com.hafgit99.aegisvault7"))
+            .map(|appdata| PathBuf::from(appdata).join("com.kalderashield.desktop"))
     }
     #[cfg(target_os = "macos")]
     {
@@ -246,7 +246,7 @@ pub fn get_app_data_dir() -> Option<PathBuf> {
             PathBuf::from(home)
                 .join("Library")
                 .join("Application Support")
-                .join("com.hafgit99.aegisvault7")
+                .join("com.kalderashield.desktop")
         })
     }
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
@@ -254,7 +254,7 @@ pub fn get_app_data_dir() -> Option<PathBuf> {
         std::env::var("HOME").ok().map(|home| {
             PathBuf::from(home)
                 .join(".config")
-                .join("com.hafgit99.aegisvault7")
+                .join("com.kalderashield.desktop")
         })
     }
 }
@@ -308,7 +308,7 @@ pub fn write_pairing_token_file(path: &PathBuf, token: &str) -> io::Result<()> {
                             "Failed to restrict pairing token ACL (fail-closed): {}",
                             String::from_utf8_lossy(&out.stderr)
                         );
-                        eprintln!("[Aegis IPC Error] {}", err_msg);
+                        eprintln!("[KalderaShield IPC Error] {}", err_msg);
                         return Err(io::Error::new(io::ErrorKind::PermissionDenied, err_msg));
                     }
                 } else {
@@ -941,12 +941,12 @@ fn handle_client(
             Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break, // Bağlantı kapandı
             Err(e) if e.kind() == io::ErrorKind::ConnectionAborted => {
                 // Not corruption: this session was revoked while it was connected.
-                log::info!("[Aegis IPC] refused a request from a revoked session");
+                log::info!("[KalderaShield IPC] refused a request from a revoked session");
                 return Err("Session revoked".into());
             }
             Err(_) => {
                 log::warn!(
-                    "[Aegis IPC] AEAD frame decryption failed! Terminating corrupted connection."
+                    "[KalderaShield IPC] AEAD frame decryption failed! Terminating corrupted connection."
                 );
                 return Err("Message authentication failed".into());
             }
@@ -1097,7 +1097,7 @@ fn handle_client(
                     // sessions are gone either way. Log rather than fail the response — the
                     // caller asked to be disconnected and that is still being honoured.
                     log::warn!(
-                        "[Aegis IPC] revoke could not persist the new token: {}",
+                        "[KalderaShield IPC] revoke could not persist the new token: {}",
                         error
                     );
                 }
@@ -1227,7 +1227,7 @@ pub fn run_host() {
             };
 
             if write_authenticated_frame(s, data_key, &msg_bytes).is_err() {
-                log::error!("[Aegis Host] Failed to write AEAD request frame.");
+                log::error!("[KalderaShield Host] Failed to write AEAD request frame.");
                 break;
             }
 
@@ -1240,7 +1240,7 @@ pub fn run_host() {
                 Ok(bytes) => bytes,
                 Err(_) => {
                     log::error!(
-                        "[Aegis Host] Response AEAD authentication failed! Dropping response."
+                        "[KalderaShield Host] Response AEAD authentication failed! Dropping response."
                     );
                     break;
                 }
@@ -1557,7 +1557,10 @@ mod tests {
             "example.co.uk"
         );
         assert_eq!(extract_etld_plus_one("sub.domain.com.tr"), "domain.com.tr");
-        assert_eq!(extract_etld_plus_one("www.aegis.org"), "aegis.org");
+        assert_eq!(
+            extract_etld_plus_one("www.kalderashield.org"),
+            "kalderashield.org"
+        );
         assert_eq!(
             extract_etld_plus_one("login.portal.com.tn"),
             "portal.com.tn"
@@ -1858,7 +1861,10 @@ mod tests {
     /// A scratch token path, so the rotation tests exercise the real file write
     /// without touching the app data directory.
     fn scratch_token_path(label: &str) -> PathBuf {
-        std::env::temp_dir().join(format!("aegis-revoke-test-{label}-{}", generate_token()))
+        std::env::temp_dir().join(format!(
+            "KalderaShield-revoke-test-{label}-{}",
+            generate_token()
+        ))
     }
 
     #[test]
@@ -1960,8 +1966,10 @@ mod tests {
         // A path whose parent is a regular *file* cannot be created, so the
         // write fails. (Pointing at a path inside a directory would not do:
         // `write_pairing_token_file` creates parents, and would succeed.)
-        let not_a_directory =
-            std::env::temp_dir().join(format!("aegis-revoke-test-file-{}", generate_token()));
+        let not_a_directory = std::env::temp_dir().join(format!(
+            "KalderaShield-revoke-test-file-{}",
+            generate_token()
+        ));
         fs::write(&not_a_directory, b"not a directory").expect("scratch file");
 
         let result = rotate_pairing_token_now(

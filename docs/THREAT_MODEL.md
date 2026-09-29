@@ -1,6 +1,6 @@
-# Aegis Vault 7 Desktop Threat Model
+# KalderaShield Desktop Threat Model
 
-This document defines the current desktop security model for Aegis Vault 7. It is intentionally conservative: product copy and release claims must not promise more than this model supports.
+This document defines the current desktop security model for KalderaShield. It is intentionally conservative: product copy and release claims must not promise more than this model supports.
 
 ## Scope
 
@@ -48,7 +48,7 @@ Out of scope for the current phase:
 
 Defended against:
 
-- Someone who obtains a copied encrypted `.aegis` backup file but does not know the backup password.
+- Someone who obtains a copied encrypted `.ks` backup file but does not know the backup password.
 - Someone who reads the persisted vault database payload while the app is locked.
 - Someone who tampers with AES-GCM encrypted backup or attachment payloads.
 - Someone who imports malformed backup or CSV/JSON files.
@@ -101,7 +101,7 @@ Vault database:
 
 Backups:
 
-- Secure `.aegis` exports use vetted Argon2id key derivation and WebCrypto AES-GCM.
+- Secure `.ks` exports use vetted Argon2id key derivation and WebCrypto AES-GCM.
 - AES-GCM tags protect encrypted backup payload integrity.
 - Wrong-password and tampered-tag regression tests cover the secure backup envelope.
 - Plaintext JSON exports require an explicit warning and typed `EXPORT` confirmation because the resulting file is readable by design.
@@ -122,14 +122,14 @@ Biometric unlock:
 Import:
 
 - Universal imports normalize supported CSV/JSON formats before saving.
-- Encrypted Aegis imports require the correct decrypt password.
+- Encrypted KalderaShield imports require the correct decrypt password.
 - Android import/export/download flows use the system document picker bridge so the user explicitly chooses save and open locations.
 
 Extension bridge IPC channel:
 
-- **Loopback Transport & Port Binding:** The native messaging bridge connects the browser extension host process (`aegis-host`) to the running Aegis desktop instance over local loopback TCP (`127.0.0.1:49155..49165`). Network interfaces beyond loopback are never bound.
+- **Loopback Transport & Port Binding:** The native messaging bridge connects the browser extension host process (`KalderaShield-host`) to the running KalderaShield desktop instance over local loopback TCP (`127.0.0.1:49155..49165`). Network interfaces beyond loopback are never bound.
 - **Authentication & Pairing Token:** Authentication uses a 256-bit CSPRNG pairing token stored in an OS-protected file with strict permissions (fail-closed Windows `icacls` grant-only ACLs, and Unix `0o600` mode). Token validation uses constant-time comparison (`subtle::ConstantTimeEq`).
-- **Session Key Derivation & Confidentiality + Authentication (AEAD, RUST-Y1):** After successful handshake, both endpoints derive a 32-byte AEAD session data key from the pairing token using HKDF-SHA256 (`derive_session_data_key`, info `aegis-ipc-session-data-key-v2`). Every request and response frame is encrypted and authenticated with XChaCha20-Poly1305 using a fresh 24-byte CSPRNG nonce per frame (`[4-byte len][version][24-byte nonce][ciphertext||16-byte tag]`, protocol version `0x02`). AEAD provides confidentiality, integrity and authentication in a single layer, so an unprivileged process on loopback can no longer read frame contents. Any structurally invalid, version-mismatched or unauthenticated frame causes immediate fail-closed connection termination.
+- **Session Key Derivation & Confidentiality + Authentication (AEAD, RUST-Y1):** After successful handshake, both endpoints derive a 32-byte AEAD session data key from the pairing token using HKDF-SHA256 (`derive_session_data_key`, info `kalderashield-ipc-session-data-key-v2`). Every request and response frame is encrypted and authenticated with XChaCha20-Poly1305 using a fresh 24-byte CSPRNG nonce per frame (`[4-byte len][version][24-byte nonce][ciphertext||16-byte tag]`, protocol version `0x02`). AEAD provides confidentiality, integrity and authentication in a single layer, so an unprivileged process on loopback can no longer read frame contents. Any structurally invalid, version-mismatched or unauthenticated frame causes immediate fail-closed connection termination.
 - **Session Revocation (RUST-Y1):** A `revoke` action wipes the in-memory credential lease, rotates the pairing token (persisted to the OS-protected token file) and terminates that connection. All previously issued session keys are invalidated, so the browser bridge can be force-locked remotely.
 - **Credential Lease & Memory Zeroization:** Credentials in the IPC cache are bound to a strict 5-minute lease TTL (`EXTENSION_CREDENTIAL_LEASE_MS`), zeroized upon expiry via `Zeroize` and `ZeroizeOnDrop`, and connections are rate-limited to 5 per second.
 - **Metadata Protection:** Unauthenticated or broad credential queries (`list_credentials` without active URL) return sanitized metadata with empty password strings to prevent single-message bulk credential exfiltration.
@@ -148,7 +148,7 @@ Network:
 Supported recovery paths:
 
 - Unlock with the master password.
-- Restore from a valid encrypted `.aegis` backup when the user knows its backup password.
+- Restore from a valid encrypted `.ks` backup when the user knows its backup password.
 - Restore from a plaintext JSON backup if the user intentionally created one.
 - Reset the vault and start over.
 
@@ -162,8 +162,8 @@ Unsupported recovery paths:
 Required user-facing recovery rules:
 
 - The user must store the master password outside the vault.
-- The user should keep at least one encrypted `.aegis` backup outside the device.
-- The backup password should not be stored only inside Aegis Vault 7.
+- The user should keep at least one encrypted `.ks` backup outside the device.
+- The backup password should not be stored only inside KalderaShield.
 - Plaintext JSON backups are high risk and should be discouraged or gated before release.
 
 ## Residual Risk Register
@@ -190,10 +190,10 @@ Required user-facing recovery rules:
 Dependency advisories are continuously monitored via the Dependabot `cargo` ecosystem (weekly) and validated in CI. Every advisory is individually classified against this threat model before it is accepted or fixed:
 
 1. **Fix** — the advisory affects a crate reachable from a trust-boundary path and a patched version exists: the update is merged through the Dependabot PR pipeline with full CI validation.
-2. **Accept** — the advisory is *informational* (unmaintained/soundness with no known exploit), the crate is transitive (not a direct dependency), the affected API is not reachable from Aegis Vault 7's code, and no maintained drop-in alternative exists. Accepted advisories must be re-evaluated on every release and whenever an upstream update changes the dependency tree.
+2. **Accept** — the advisory is *informational* (unmaintained/soundness with no known exploit), the crate is transitive (not a direct dependency), the affected API is not reachable from KalderaShield's code, and no maintained drop-in alternative exists. Accepted advisories must be re-evaluated on every release and whenever an upstream update changes the dependency tree.
 3. **Document** — the acceptance rationale is recorded here so an external auditor can review each decision instead of re-deriving it.
 
-The scorecard "Vulnerabilities" check currently reports these accepted advisories. None of the seventeen is a known exploitable vulnerability in Aegis Vault 7's own code; the register below states the basis for each acceptance.
+The scorecard "Vulnerabilities" check currently reports these accepted advisories. None of the seventeen is a known exploitable vulnerability in KalderaShield's own code; the register below states the basis for each acceptance.
 
 ### Accepted advisories
 
@@ -201,7 +201,7 @@ The scorecard "Vulnerabilities" check currently reports these accepted advisorie
 `RUSTSEC-2024-0411` (`gdkwayland-sys`), `RUSTSEC-2024-0412` (`gdk`), `RUSTSEC-2024-0413` (`atk`), `RUSTSEC-2024-0414` (`gdkx11-sys`), `RUSTSEC-2024-0415` (`gtk`), `RUSTSEC-2024-0416` (`atk-sys`), `RUSTSEC-2024-0417` (`gdkx11`), `RUSTSEC-2024-0418` (`gdk-sys`), `RUSTSEC-2024-0419` (`gtk3-macros`), `RUSTSEC-2024-0420` (`gtk-sys`)
 
 - **Class:** informational (no longer maintained) — no known vulnerability is claimed by the advisory.
-- **Reachability:** transitive dependencies of the Linux windowing stack (`tao`/`wry` → WebKitGTK → GTK3) used by Tauri; none is a direct dependency of Aegis Vault 7, and none appears in the vault, crypto, or IPC trust-boundary paths.
+- **Reachability:** transitive dependencies of the Linux windowing stack (`tao`/`wry` → WebKitGTK → GTK3) used by Tauri; none is a direct dependency of KalderaShield, and none appears in the vault, crypto, or IPC trust-boundary paths.
 - **Why accepted:** the GTK3 binding stack is the current upstream default for Tauri on Linux; no maintained drop-in replacement exists in the Tauri ecosystem. The exposure is an ecosystem-maintenance risk, not an exploitable path.
 - **Re-evaluation:** revisit on every Tauri/wry major update; migrate if upstream ships a GTK4-based backend or an audit demonstrates an exploitable path.
 
@@ -215,12 +215,12 @@ The scorecard "Vulnerabilities" check currently reports these accepted advisorie
 
 - **Class:** informational (no longer maintained) — no known vulnerability.
 - **Reachability:** transitive text-processing dependencies pulled in by the Linux UI/toolchain stack; not direct dependencies and not part of the trust boundary.
-- **Why accepted:** unmaintained status alone, with no vulnerability claim and no Aegis Vault 7 code path through the affected APIs.
+- **Why accepted:** unmaintained status alone, with no vulnerability claim and no KalderaShield code path through the affected APIs.
 
 **Group D — glib soundness note (1 advisory):** `RUSTSEC-2024-0429`
 
 - **Class:** soundness in `glib::VariantStrIter` (a niche `Iterator`/`DoubleEndedIterator` implementation) — not a remotely exploitable vulnerability by itself.
-- **Reachability:** Aegis Vault 7 does not call `VariantStrIter` directly; exploiting the unsoundness requires malformed `GVariant` input reaching that API through an IPC/D-Bus surface, which the application does not expose (the threat model's IPC boundary is the Tauri IPC and native messaging loopback channel, not GVariant).
+- **Reachability:** KalderaShield does not call `VariantStrIter` directly; exploiting the unsoundness requires malformed `GVariant` input reaching that API through an IPC/D-Bus surface, which the application does not expose (the threat model's IPC boundary is the Tauri IPC and native messaging loopback channel, not GVariant).
 - **Why accepted:** no reachable path from untrusted input to the affected API inside the documented trust boundaries.
 - **Re-evaluation:** track glib updates; the GTK3→GTK4 migration trigger from Group A applies here as well.
 

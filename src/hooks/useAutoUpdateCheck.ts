@@ -15,7 +15,7 @@ import {
 } from '../lib/updater';
 import { isDesktopAppUpdaterSupported } from '../lib/environment';
 
-const LAST_CHECK_KEY = 'aegis_last_auto_update_check';
+const LAST_CHECK_KEY = 'KalderaShield_last_auto_update_check';
 const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const STARTUP_DELAY_MS = 5000; // 5 seconds grace period after unlock
 

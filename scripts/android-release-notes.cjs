@@ -113,7 +113,7 @@ function generateNotes() {
   const checklist = checklistStats(checklistPath, ANDROID_CHECKLIST_FIELDS);
   const biometricMatrix = biometricMatrixStats(checklistPath);
   const reportVersion = firstMatch(report, [/version: ([^\r\n]+)/i, /versionName[:=]\s*([^\r\n]+)/i], packageJson.version);
-  const packageName = firstMatch(report, [/package(?: name)?: ([^\r\n]+)/i, /applicationId[:=]\s*([^\r\n]+)/i], metadata.signed ? 'com.hafgit99.aegisvault7' : 'com.hafgit99.aegisvault7.debug');
+  const packageName = firstMatch(report, [/package(?: name)?: ([^\r\n]+)/i, /applicationId[:=]\s*([^\r\n]+)/i], metadata.signed ? 'com.kalderashield.desktop' : 'com.kalderashield.desktop.debug');
   const mode = firstMatch(report, /Mode: ([^\r\n]+)/i, metadata.signed ? 'release candidate artifacts only' : 'debug candidate artifacts only');
 
   if (reportVersion !== packageJson.version) fail('Android report version mismatch: ' + reportVersion + ' !== ' + packageJson.version);
@@ -126,7 +126,7 @@ function generateNotes() {
   }
 
   const notes = [
-    '# Aegis Vault 7 ' + packageJson.version + ' Android Release Notes',
+    '# KalderaShield ' + packageJson.version + ' Android Release Notes',
     '',
     'Channel: ' + channel,
     'Package: ' + packageName,
@@ -174,9 +174,9 @@ function generateNotes() {
     '',
     '## Recovery And Safety Notes',
     '',
-    '- Aegis Vault 7 cannot recover a lost master password or lost Account Secret Key.',
+    '- KalderaShield cannot recover a lost master password or lost Account Secret Key.',
     '- Keep Emergency Kit material offline and separate from the phone.',
-    '- Encrypted `.aegis` backups require the backup password.',
+    '- Encrypted `.KalderaShield` backups require the backup password.',
     '- Plain JSON exports are unsafe and should only be used offline in a trusted location.',
     '- Local malware, OS compromise, rooted devices, and untrusted APK sources remain outside the app protection boundary.',
     '',
@@ -197,4 +197,4 @@ function generateNotes() {
 }
 
 if (hasFlag(args, '--help')) { console.log(usage()); process.exit(0); }
-generateNotes();
+generateNotes();

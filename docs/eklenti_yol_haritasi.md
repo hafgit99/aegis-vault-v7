@@ -1,13 +1,13 @@
-# 🧭 Aegis Vault v7 — Tarayıcı Eklentisi Yol Haritası & Tasarım Raporu
+# 🧭 KalderaShield v7 — Tarayıcı Eklentisi Yol Haritası & Tasarım Raporu
 *Chrome, Firefox ve Edge için Çevrimdışı (Offline-First) Mimari ve Premium Özellikler*
 
 ## 1. Giriş ve Stratejik Vizyon
-Aegis Vault v7, sıfır-bulut bağımlılığı ve yerel-ilk (local-first) prensipleriyle çalışan, yüksek güvenlikli ve performanslı bir şifre yöneticisidir. Masaüstü uygulamasının sunduğu bu güçlü çevrimdışı mimariyi, kullanıcıların günlük internet deneyimiyle buluşturacak bir **tarayıcı eklentisi (Browser Extension)** tasarlanması hedeflenmektedir.
+KalderaShield v7, sıfır-bulut bağımlılığı ve yerel-ilk (local-first) prensipleriyle çalışan, yüksek güvenlikli ve performanslı bir şifre yöneticisidir. Masaüstü uygulamasının sunduğu bu güçlü çevrimdışı mimariyi, kullanıcıların günlük internet deneyimiyle buluşturacak bir **tarayıcı eklentisi (Browser Extension)** tasarlanması hedeflenmektedir.
 
 Bu yol haritası, eklentinin hem güvenlik hem de kullanıcı deneyimi (UX) açısından **1Password**, **Bitwarden** ve **KeePassXC** gibi devleri geride bırakacak yenilikçi yönlerini ve adım adım teknik yol haritasını içerir.
 
 ### Neden 1Password ve Diğerlerinden Daha İleri?
-1. **Tam Çevrimdışı Güvenlik:** 1Password ve Bitwarden, verileri bulutta eşzamanlar. Aegis Vault ise verilerinizi yalnızca sizin kontrolünüzdeki cihazlarda tutar. Eklenti, tarayıcınızın dış dünyaya bağlanmasına gerek kalmadan, doğrudan yerel masaüstü uygulaması ile kriptografik olarak güvenli bir şekilde konuşur.
+1. **Tam Çevrimdışı Güvenlik:** 1Password ve Bitwarden, verileri bulutta eşzamanlar. KalderaShield ise verilerinizi yalnızca sizin kontrolünüzdeki cihazlarda tutar. Eklenti, tarayıcınızın dış dünyaya bağlanmasına gerek kalmadan, doğrudan yerel masaüstü uygulaması ile kriptografik olarak güvenli bir şekilde konuşur.
 2. **Native Messaging Entegrasyonu:** WebSocket kullanan rakiplerin aksine (KeePassXC gibi), yerel işletim sistemi yetkilendirmesiyle (Native Messaging) doğrudan Tauri Rust katmanına bağlanarak port açma riskini ve ağ dinleme saldırılarını tamamen engeller.
 3. **Modern Cam Efektli (Glassmorphism) Estetik:** Rakiplerin sıkıcı ve eski arayüzleri yerine, modern tarayıcıların tasarım dilleriyle tam uyumlu, akıcı mikro animasyonlara sahip ve göz yormayan premium bir arayüz sunar.
 
@@ -25,7 +25,7 @@ graph TD
     subgraph İşletim Sistemi
         NM[Native Messaging Host]
     end
-    subgraph Aegis Vault Masaüstü Tauri
+    subgraph KalderaShield Masaüstü Tauri
         Rust[Tauri Rust Core] <--> DB[(SQL veritabanı OPFS/IndexedDB)]
         Rust <--> Bio[Windows Hello / Touch ID]
     end
@@ -49,43 +49,43 @@ Tauri (Rust) uygulamamız, sisteme kurulurken tarayıcıların Native Messaging 
 
 ## 3. Rakipleri Geride Bırakacak Premium Özellikler (Killer Features)
 
-Aegis Vault eklentisini, 1Password ve diğer rakiplerin önüne geçirecek 6 ana odak noktası belirlenmiştir:
+KalderaShield eklentisini, 1Password ve diğer rakiplerin önüne geçirecek 6 ana odak noktası belirlenmiştir:
 
 ### 3.1 Gelişmiş Homograf ve Oltalama (Phishing) Algılama Motoru
 *   **Sorun:** Oltalama siteleri, Unicode karakterleri kullanarak gerçek sitelerin alan adlarını taklit eder (örn. `paypaⅠ.com` içindeki `Ⅰ` harfi Latin "l" değil, Roma rakamı 1'dir). Standart şifre yöneticileri bu sitelerde de şifre doldurmayı önerebilir.
-*   **Aegis Çözümü:** Eklenti, doldurma yapmadan önce alan adını **Punycode** dönüşümünden geçirir ve homograf saldırısı olup olmadığını analiz eder. Görsel benzerlik algılama motoru sayesinde, taklit sitelerde kullanıcıyı uyarır ve otomatik doldurmayı engeller.
+*   **KalderaShield Çözümü:** Eklenti, doldurma yapmadan önce alan adını **Punycode** dönüşümünden geçirir ve homograf saldırısı olup olmadığını analiz eder. Görsel benzerlik algılama motoru sayesinde, taklit sitelerde kullanıcıyı uyarır ve otomatik doldurmayı engeller.
 
 ### 3.2 Bağlam Duyarlı Akıllı Form Doldurucu (Context-Aware Smart Autofill)
 *   **Sorun:** Birçok modern web sitesi (Google, Microsoft vb.) aşamalı giriş formu kullanır (önce e-posta istenir, sonra şifre ekranı gelir). Geleneksel eklentiler bu formları doldururken hata verebilir veya kullanıcıyı tekrar tıklamaya zorlar.
-*   **Aegis Çözümü:** Eklenti, web sayfasının DOM yapısını anlık olarak tarayan hafif bir yapay zeka/kural tabanlı form analiz motoru içerir. Tek sayfalı uygulamalardaki (SPA) dinamik form değişikliklerini, görünmez (hidden) alanları ve özel (custom) kayıt/giriş formlarını hatasız tanır.
+*   **KalderaShield Çözümü:** Eklenti, web sayfasının DOM yapısını anlık olarak tarayan hafif bir yapay zeka/kural tabanlı form analiz motoru içerir. Tek sayfalı uygulamalardaki (SPA) dinamik form değişikliklerini, görünmez (hidden) alanları ve özel (custom) kayıt/giriş formlarını hatasız tanır.
 
 ### 3.3 Yerel Biyometrik Doğrulama Köprüsü (Local Biometric Bridge)
 *   **Sorun:** Tarayıcı eklentileri tarayıcının sandbox engelleri nedeniyle cihazın biyometrik sensörlerine (Windows Hello, Touch ID) doğrudan erişemez. Bu durum kullanıcının her seferinde eklenti için master şifre girmesine sebep olur.
-*   **Aegis Çözümü:** Eklenti kilitlendiğinde, kilit açma isteğini Native Messaging kanalı üzerinden Tauri masaüstü uygulamasına gönderir. Masaüstü uygulaması yerel Windows Hello veya Touch ID arayüzünü tetikler, doğrulama başarılı olunca kriptografik el sıkışma ile eklentinin oturum anahtarını çözer.
+*   **KalderaShield Çözümü:** Eklenti kilitlendiğinde, kilit açma isteğini Native Messaging kanalı üzerinden Tauri masaüstü uygulamasına gönderir. Masaüstü uygulaması yerel Windows Hello veya Touch ID arayüzünü tetikler, doğrulama başarılı olunca kriptografik el sıkışma ile eklentinin oturum anahtarını çözer.
 
 ### 3.4 Çevrimdışı Tek Kullanımlık Şifre (TOTP) ve Passkey Entegrasyonu
 *   **Sorun:** İki adımlı doğrulama (2FA) kodları veya Geçiş Anahtarları (Passkeys/WebAuthn) mobil cihazlarda veya ayrı uygulamalarda kaldığında kullanıcı deneyimi kesintiye uğrar.
-*   **Aegis Çözümü:**
+*   **KalderaShield Çözümü:**
     *   **TOTP:** Giriş formu doldurulduğunda, eklenti ilgili hesabın 2FA kodunu arka planda panoya kopyalar veya doğrudan 2FA alanına otomatik doldurur.
         *   **G?venli Anahtarlar:** Mevcut s?r?m API tokenlar?, kripto anahtarlar?, SSH s?rlar?, manuel y?netilen g?venli kimlikleri ve platform WebAuthn passkey kay?tlar?n? saklar. Ger?ek taray?c? credential-provider/proxy ve Android Credential Provider deste?i ayr? bir ara?t?rma a?amas?d?r.
 
 ### 3.5 Geliştiriciler İçin "Localhost & Dev-Friendly" Doldurucu
 *   **Sorun:** Yazılım geliştiriciler gün içinde yüzlerce kez yerel test ortamlarında (`localhost:3000`, `127.0.0.1:8000`) test hesaplarıyla giriş yaparlar. Ancak şifre yöneticileri genellikle localhost adreslerini karıştırır veya her port için ayrı şifre kaydetmeye çalışır.
-*   **Aegis Çözümü:** Geliştiricilere özel, port ve alt klasör bazlı eşleştirme kuralları. Tek tıklamayla test şifreleri (örneğin admin/admin veya test kullanıcısı profilleri) üretip doldurabilen "Dev-Profiles" arayüzü.
+*   **KalderaShield Çözümü:** Geliştiricilere özel, port ve alt klasör bazlı eşleştirme kuralları. Tek tıklamayla test şifreleri (örneğin admin/admin veya test kullanıcısı profilleri) üretip doldurabilen "Dev-Profiles" arayüzü.
 
 ---
 
 ## 4. Kullanıcı Arayüzü & Tasarım Estetiği (Modern UI/UX)
 
-Aegis Vault eklentisi, sadece işlevselliğiyle değil, premium tasarımıyla da kullanıcıları büyülemelidir.
+KalderaShield eklentisi, sadece işlevselliğiyle değil, premium tasarımıyla da kullanıcıları büyülemelidir.
 
 ### 4.1 Cam Efektli Arayüz (Glassmorphism Popup)
 *   **Görsel Dil:** Arka planı hafifçe bulanıklaştıran buzlu cam efekti (`backdrop-filter: blur()`), ince parıltılı sınırlar (`border: 1px solid rgba(255, 255, 255, 0.1)`) ve derin gölgeler.
-*   **Renk Paleti:** Koyu mod için derin obsidian siyahı (`#0B0F19`) ve gece mavisi tonları, aydınlık mod için temiz, yumuşak kar beyazı ve açık gri tonları. Vurgu rengi olarak canlı ancak göz yormayan Aegis koruma yeşili/mavisi gradyanları.
+*   **Renk Paleti:** Koyu mod için derin obsidian siyahı (`#0B0F19`) ve gece mavisi tonları, aydınlık mod için temiz, yumuşak kar beyazı ve açık gri tonları. Vurgu rengi olarak canlı ancak göz yormayan KalderaShield koruma yeşili/mavisi gradyanları.
 *   **Tipografi:** Modern, okunaklılığı yüksek ve premium hissettiren *Inter* veya *Outfit* yazı tipi ailesi.
 
 ### 4.2 Sayfa İçi Form Arayüzü (Inline Autofill Menu)
-Kullanıcı giriş alanına tıkladığında, tarayıcının çirkin standart doldurma menüsü yerine giriş kutusunun hemen altında şık, yüzen bir Aegis menüsü belirir. Bu menü:
+Kullanıcı giriş alanına tıkladığında, tarayıcının çirkin standart doldurma menüsü yerine giriş kutusunun hemen altında şık, yüzen bir KalderaShield menüsü belirir. Bu menü:
 *   Kullanıcıya o siteyle eşleşen hesapları liste halinde gösterir.
 *   Şifre üreticiye hızlı erişim sağlar.
 *   Akıcı ve gecikmesiz bir sönme-belirme (fade-in) animasyonu ile açılır.
@@ -98,7 +98,7 @@ Eklenti projesinin hayata geçirilmesi 5 ana faza bölünmüştür:
 
 ```mermaid
 gantt
-    title Aegis Vault Eklentisi Geliştirme Yol Haritası
+    title KalderaShield Eklentisi Geliştirme Yol Haritası
     dateFormat  YYYY-MM-DD
     section Faz 1: Altyapı
     Mimari Tasarım ve Protokol Belirleme :active, des1, 2026-07-01, 15d
@@ -163,4 +163,4 @@ Eklenti tamamen yerel çalışsa da, tarayıcı ortamları XSS (Cross-Site Scrip
 
 ---
 
-Bu yol haritası, Aegis Vault v7'yi sadece güvenli bir yerel şifre yöneticisi olmaktan çıkarıp, tarayıcıda kullanıcıyı koruyan, hızlı ve premium bir siber güvenlik asistanına dönüştürecektir.
+Bu yol haritası, KalderaShield v7'yi sadece güvenli bir yerel şifre yöneticisi olmaktan çıkarıp, tarayıcıda kullanıcıyı koruyan, hızlı ve premium bir siber güvenlik asistanına dönüştürecektir.

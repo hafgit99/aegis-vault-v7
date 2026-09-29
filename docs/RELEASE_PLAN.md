@@ -1,6 +1,6 @@
-# Aegis Vault 7 Release Checklist and Signed Build Plan
+# KalderaShield Release Checklist and Signed Build Plan
 
-This document defines the minimum release gate for Aegis Vault 7 desktop and Android release candidates. It is intentionally conservative because Aegis Vault 7 handles local secrets.
+This document defines the minimum release gate for KalderaShield desktop and Android release candidates. It is intentionally conservative because KalderaShield handles local secrets.
 
 ## Release Scope
 
@@ -60,8 +60,8 @@ The release owner must also verify:
 
 - The app can create a new vault.
 - The app can unlock an existing vault after restart.
-- A `.aegis` encrypted export can be created through the native save dialog.
-- The `.aegis` export can be imported through the native open dialog.
+- A `.ks` encrypted export can be created through the native save dialog.
+- The `.ks` export can be imported through the native open dialog.
 - Wrong backup password is rejected.
 - Manual lock clears the active session and sensitive reveal state.
 - Auto-lock clears the active session after the configured timeout.
@@ -82,9 +82,9 @@ Use `npm run release:readiness` to aggregate the latest Android evidence plus Wi
 
 For each release, collect:
 
-- `src-tauri/target/release/bundle/nsis/Aegis Vault 7_<version>_x64-setup.exe`
-- `src-tauri/target/release/bundle/msi/Aegis Vault 7_<version>_x64_en-US.msi`
-- `src-tauri/target/release/aegis-vault-v7.exe`
+- `src-tauri/target/release/bundle/nsis/KalderaShield_<version>_x64-setup.exe`
+- `src-tauri/target/release/bundle/msi/KalderaShield_<version>_x64_en-US.msi`
+- `src-tauri/target/release/kalderashield.exe`
 - SHA-256 checksums for each artifact.
 - `release-local/<platform>/metadata.json` with version, commit, dirty status, artifact sizes, and hashes.
 - `release-local/<platform>/README.md` as the human-readable release evidence summary.
@@ -154,7 +154,7 @@ Manual signing fallback:
 
 Required user-facing warnings:
 
-- Aegis Vault 7 cannot recover a lost master password.
+- KalderaShield cannot recover a lost master password.
 - Encrypted backup files require the backup password.
 - Plaintext JSON backups are unsafe and should be stored only in a secure offline location.
 - Local malware or OS compromise is outside the app's protection boundary.
@@ -186,16 +186,16 @@ Android is now an active signed release-candidate path, not a future-only target
 - Fresh install, setup, unlock, lock, background lock, and restart persistence.
 - Backup export/import through the Android document picker.
 - Attachment download through the document picker.
-- Autofill behavior on the tested browsers, including Chrome after selecting Aegis as the active Autofill provider.
+- Autofill behavior on the tested browsers, including Chrome after selecting KalderaShield as the active Autofill provider.
 - FLAG_SECURE screenshot/task-switcher protection.
 - Emergency Kit save flow.
 - Biometric behavior only on devices where support is actually available and tested.
 
-Required Android signing material stays outside the repository and is loaded from `%USERPROFILE%\AegisVaultKeys\android-signing.env` (outside cloud-synced folders — preferred) or equivalent local environment variables:
+Required Android signing material stays outside the repository and is loaded from `%USERPROFILE%\KalderaShieldKeys\android-signing.env` (outside cloud-synced folders — preferred) or equivalent local environment variables:
 
-- `AEGIS_ANDROID_KEYSTORE_PATH`
-- `AEGIS_ANDROID_KEY_ALIAS`
-- `AEGIS_ANDROID_KEYSTORE_PASSWORD`
-- `AEGIS_ANDROID_KEY_PASSWORD`
+- `KALDERASHIELD_ANDROID_KEYSTORE_PATH`
+- `KALDERASHIELD_ANDROID_KEY_ALIAS`
+- `KALDERASHIELD_ANDROID_KEYSTORE_PASSWORD`
+- `KALDERASHIELD_ANDROID_KEY_PASSWORD`
 
 If the checklist is incomplete or the tested browser/device matrix is stale, publish the APK as an internal candidate only.

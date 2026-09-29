@@ -35,7 +35,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   override componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
-    console.error('[Aegis Vault ErrorBoundary] Caught render error in unlocked tree:', error, errorInfo);
+    console.error('[KalderaShield ErrorBoundary] Caught render error in unlocked tree:', error, errorInfo);
 
     logSecurityEvent(
       securityEventCodes.securityLegacyCryptoWarning,
@@ -49,7 +49,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       try {
         this.props.onLock();
       } catch (lockErr) {
-        console.error('[Aegis Vault ErrorBoundary] Failed to trigger auto-lock on crash:', lockErr);
+        console.error('[KalderaShield ErrorBoundary] Failed to trigger auto-lock on crash:', lockErr);
       }
     }
   }

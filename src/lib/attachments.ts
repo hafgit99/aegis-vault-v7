@@ -7,10 +7,10 @@ import { withActiveVaultEncryptionKey } from './vaultSession';
 import { webCryptoAesGcmDecryptBytes, webCryptoAesGcmEncryptBytes, generateSafeIv } from './webcrypto';
 import { logSecurityEvent, securityEventCodes } from './securityEvents';
 
-const DB_NAME = 'aegis_attachments_db';
+const DB_NAME = 'KalderaShield_attachments_db';
 const STORE_NAME = 'attachments';
 const DB_VERSION = 1;
-const ATTACHMENT_KEY_CONTEXT = 'aegis-vault-v7:attachment-key';
+const ATTACHMENT_KEY_CONTEXT = 'kalderashield:attachment-key';
 
 export const attachmentErrorCodes = {
   missingVaultSession: 'attachment.missingVaultSession',
@@ -74,12 +74,12 @@ export interface AttachmentRecord {
 /**
  * Legacy XOR attachment fallback has been permanently removed (security hardening).
  * XOR with a hardcoded key is obfuscation, not encryption. Records must be migrated
- * from a previous Aegis Vault version before upgrading.
+ * from a previous KalderaShield version before upgrading.
  */
 function rejectLegacyXorRecord(): never {
   logSecurityEvent(
     securityEventCodes.attachmentLegacyMigrationFailed,
-    'Rejected legacy XOR-obfuscated attachment. This format is no longer supported. Migrate from a previous Aegis Vault version first.',
+    'Rejected legacy XOR-obfuscated attachment. This format is no longer supported. Migrate from a previous KalderaShield version first.',
     'critical',
   );
   throw new AttachmentError(attachmentErrorCodes.xorLegacyRemoved);

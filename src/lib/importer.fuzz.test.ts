@@ -68,7 +68,7 @@ const exportedVaultItem = fc.record({
   attachmentType: fc.option(vaultString, { nil: undefined }),
 }, { requiredKeys: ['id', 'title', 'username', 'url', 'createdAt', 'updatedAt', 'category'] }) as fc.Arbitrary<VaultItem>;
 
-const aegisLikeItem = fc.record({
+const KalderaShieldLikeItem = fc.record({
   title: itemFieldValue,
   username: itemFieldValue,
   password: itemFieldValue,
@@ -181,7 +181,7 @@ function expectValidImportResult(content: string): void {
     return;
   }
 
-  if (result.type === 'encrypted_aegis') {
+  if (result.type === 'encrypted_KalderaShield') {
     expect(result.envelope).toEqual(expect.any(Object));
     return;
   }
@@ -210,9 +210,9 @@ describe('universal importer fuzz boundaries', () => {
     );
   });
 
-  it('normalizes native Aegis array backups without leaking non-string defaults', () => {
+  it('normalizes native KalderaShield array backups without leaking non-string defaults', () => {
     fc.assert(
-      fc.property(fc.array(aegisLikeItem, { maxLength: 12 }), (items) => {
+      fc.property(fc.array(KalderaShieldLikeItem, { maxLength: 12 }), (items) => {
         const result = parseUniversalImport(JSON.stringify(items));
 
         expect(result.type).toBe('success');
@@ -233,7 +233,7 @@ describe('universal importer fuzz boundaries', () => {
     );
   });
 
-  it('round-trips native Aegis JSON exports through the universal importer without losing supported fields', () => {
+  it('round-trips native KalderaShield JSON exports through the universal importer without losing supported fields', () => {
     fc.assert(
       fc.property(fc.array(exportedVaultItem, { maxLength: 24 }), (items) => {
         const exportedJson = JSON.stringify(items);

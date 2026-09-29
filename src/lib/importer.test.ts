@@ -93,7 +93,7 @@ describe('universal importer', () => {
   it('uses localized labels across every default label boundary', () => {
     const labels = {
       errorEmpty: 'empty-x',
-      formatAegisJson: 'aegis-x',
+      formatKalderaShieldJson: 'KalderaShield-x',
       formatBitwardenJson: 'bitwarden-json-x',
       errorUnsupportedJson: 'unsupported-json-x',
       errorJsonPrefix: 'json-prefix-x',
@@ -115,7 +115,7 @@ describe('universal importer', () => {
     };
 
     expect(parseUniversalImport('', labels)).toEqual({ type: 'error', message: 'empty-x' });
-    expect(parseSuccess('[{}]').formatName).toBe('aegis-x');
+    expect(parseSuccess('[{}]').formatName).toBe('KalderaShield-x');
     expect(parseSuccess('{"items":[]}').formatName).toBe('bitwarden-json-x');
     expect(parseUniversalImport('{"unknown":true}', labels)).toEqual({ type: 'error', message: 'unsupported-json-x' });
     const malformed = parseUniversalImport('{"items": [', labels);
@@ -162,8 +162,8 @@ describe('universal importer', () => {
 
 
   it('reports stable default format names for all supported import formats', () => {
-    const aegis = parseUniversalImport('[{}]');
-    expect(aegis.type === 'success' ? aegis.formatName : '').toBe('Aegis Secure JSON Backup');
+    const KalderaShield = parseUniversalImport('[{}]');
+    expect(KalderaShield.type === 'success' ? KalderaShield.formatName : '').toBe('KalderaShield Secure JSON Backup');
 
     const bitwardenJson = parseUniversalImport('{"items":[]}');
     expect(bitwardenJson.type === 'success' ? bitwardenJson.formatName : '').toBe('Bitwarden Password Manager (JSON)');
@@ -184,7 +184,7 @@ describe('universal importer', () => {
     expect(universal.type === 'success' ? universal.formatName : '').toBe('Universal Column-Compatible CSV');
   });
 
-  it('parses native Aegis JSON array backups', () => {
+  it('parses native KalderaShield JSON array backups', () => {
     const result = parseUniversalImport(
       JSON.stringify([
         {
@@ -204,7 +204,7 @@ describe('universal importer', () => {
 
     expect(result.type).toBe('success');
     if (result.type !== 'success') return;
-    expect(result.formatName).toContain('Aegis');
+    expect(result.formatName).toContain('KalderaShield');
     expect(result.items[0]).toMatchObject({
       title: 'Card',
       category: 'card',
@@ -217,7 +217,7 @@ describe('universal importer', () => {
     });
   });
 
-  it('applies safe defaults for sparse native Aegis JSON items', () => {
+  it('applies safe defaults for sparse native KalderaShield JSON items', () => {
     const result = parseUniversalImport(JSON.stringify([{}]));
 
     expect(result.type).toBe('success');
@@ -551,7 +551,7 @@ describe('universal importer', () => {
     expect(result.message).toBeTruthy();
   });
 
-  it('detects encrypted Aegis backup envelopes', () => {
+  it('detects encrypted KalderaShield backup envelopes', () => {
     const result = parseUniversalImport(
       JSON.stringify({
         version: '1.1',
@@ -561,13 +561,13 @@ describe('universal importer', () => {
       }),
     );
 
-    expect(result.type).toBe('encrypted_aegis');
+    expect(result.type).toBe('encrypted_KalderaShield');
   });
 
-  it('requires encrypted Aegis envelopes to include salt and payload', () => {
+  it('requires encrypted KalderaShield envelopes to include salt and payload', () => {
     expect(parseUniversalImport(JSON.stringify({ version: '1.1', salt: 'abc' })).type).toBe('error');
     expect(parseUniversalImport(JSON.stringify({ kdf: 'Argon2id', payload: 'encrypted' })).type).toBe('error');
-    expect(parseUniversalImport(JSON.stringify({ encrypted: true, salt: 'abc', payload: 'encrypted' })).type).toBe('encrypted_aegis');
+    expect(parseUniversalImport(JSON.stringify({ encrypted: true, salt: 'abc', payload: 'encrypted' })).type).toBe('encrypted_KalderaShield');
   });
 
   it('returns a readable error for unsupported files', () => {

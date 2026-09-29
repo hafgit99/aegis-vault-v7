@@ -21,7 +21,7 @@ interface WaSqlitePersistenceSmokeOptions {
   smokeValue?: string;
 }
 
-const SMOKE_TABLE = 'aegis_persistence_smoke';
+const SMOKE_TABLE = 'KalderaShield_persistence_smoke';
 
 export async function verifyWaSqlitePersistentVfsSmoke(
   options: WaSqlitePersistenceSmokeOptions = {},

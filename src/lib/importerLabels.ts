@@ -7,7 +7,7 @@ import type { ImportLabels } from './importer';
 
 export const defaultImportLabels: ImportLabels = {
   errorEmpty: 'File content is empty.',
-  formatAegisJson: 'Aegis Secure JSON Backup',
+  formatKalderaShieldJson: 'KalderaShield Secure JSON Backup',
   formatBitwardenJson: 'Bitwarden Password Manager (JSON)',
   errorUnsupportedJson: 'Unsupported or unrecognized JSON structure.',
   errorJsonPrefix: 'JSON format error',

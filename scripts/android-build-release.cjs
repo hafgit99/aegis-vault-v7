@@ -6,10 +6,10 @@ const { loadAndroidSigningEnv } = require('./android-signing-env.cjs');
 
 const repoRoot = path.resolve(__dirname, '..');
 const required = [
-  'AEGIS_ANDROID_KEYSTORE_PATH',
-  'AEGIS_ANDROID_KEY_ALIAS',
-  'AEGIS_ANDROID_KEYSTORE_PASSWORD',
-  'AEGIS_ANDROID_KEY_PASSWORD',
+  'KALDERASHIELD_ANDROID_KEYSTORE_PATH',
+  'KALDERASHIELD_ANDROID_KEY_ALIAS',
+  'KALDERASHIELD_ANDROID_KEYSTORE_PASSWORD',
+  'KALDERASHIELD_ANDROID_KEY_PASSWORD',
 ];
 
 loadAndroidSigningEnv();
@@ -20,7 +20,7 @@ for (const name of required) {
   }
 }
 
-const keystorePath = path.resolve(process.env.AEGIS_ANDROID_KEYSTORE_PATH);
+const keystorePath = path.resolve(process.env.KALDERASHIELD_ANDROID_KEYSTORE_PATH);
 if (!fs.existsSync(keystorePath)) {
   throw new Error(`Android signing keystore does not exist: ${keystorePath}`);
 }

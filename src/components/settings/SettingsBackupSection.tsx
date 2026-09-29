@@ -88,7 +88,7 @@ export function SettingsBackupSection({
             <span>{t('settings.export.title')}</span>
           </h3>
           <p className="hidden sm:block text-xs text-on-surface-variant leading-relaxed">
-            {t('settings.export.descriptionPrefix')} <b className="text-brand-tertiary">.aegis</b> {t('settings.export.descriptionSuffix')}
+            {t('settings.export.descriptionPrefix')} <b className="text-brand-tertiary">.KalderaShield</b> {t('settings.export.descriptionSuffix')}
           </p>
 
           <form onSubmit={onExportEncrypted} className="space-y-3 pt-1">
@@ -224,7 +224,7 @@ export function SettingsBackupSection({
             <span>{t('settings.import.title')}</span>
           </h3>
           <p className="hidden sm:block text-xs text-on-surface-variant leading-relaxed">
-            {t('settings.import.descriptionPrefix')} <u className="text-brand-primary">.aegis</u> {t('settings.import.descriptionMiddle')} <b>Bitwarden (JSON/CSV)</b>, <b>LastPass (CSV)</b>, <b>Chrome (CSV)</b> {t('settings.import.providerJoin')} <b>1Password (CSV)</b> {t('settings.import.descriptionSuffix')}
+            {t('settings.import.descriptionPrefix')} <u className="text-brand-primary">.KalderaShield</u> {t('settings.import.descriptionMiddle')} <b>Bitwarden (JSON/CSV)</b>, <b>LastPass (CSV)</b>, <b>Chrome (CSV)</b> {t('settings.import.providerJoin')} <b>1Password (CSV)</b> {t('settings.import.descriptionSuffix')}
           </p>
 
           {/* Show progress bar during import */}
@@ -334,7 +334,7 @@ export function SettingsBackupSection({
                 ref={fileInputRef}
                 onChange={handleFileSelect}
                 onClick={(e) => e.stopPropagation()}
-                accept=".json,.csv,.aegis,.tsv,.txt,application/json,text/csv,text/comma-separated-values,text/tab-separated-values,text/plain"
+                accept=".json,.csv,.KalderaShield,.tsv,.txt,application/json,text/csv,text/comma-separated-values,text/tab-separated-values,text/plain"
                 className="hidden"
               />
               <Upload className="w-8 h-8 mx-auto text-on-surface-variant/50 mb-2" />

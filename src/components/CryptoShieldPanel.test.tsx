@@ -34,7 +34,7 @@ describe('CryptoShieldPanel', () => {
     expect(screen.getByText('WebCrypto AES-256-GCM')).toBeTruthy();
     expect(screen.getByText('Yerel Zero-Knowledge')).toBeTruthy();
     expect(screen.getByText('Argon2id: 64 MiB, 4 geçiş')).toBeTruthy();
-    expect(screen.getByText('Aegis Kalkanı Koruyor')).toBeTruthy();
+    expect(screen.getByText('KalderaShield Kalkanı Koruyor')).toBeTruthy();
   });
 
   it('renders encryption details in the selected language', () => {
@@ -50,7 +50,7 @@ describe('CryptoShieldPanel', () => {
     expect(screen.getByText('状态：已启用')).toBeTruthy();
     expect(screen.getByText('WebCrypto AES-256-GCM')).toBeTruthy();
     expect(screen.getByText('Argon2id：64 MiB，4 次传递')).toBeTruthy();
-    expect(screen.getByText('Aegis 防护正在保护')).toBeTruthy();
+    expect(screen.getByText('KalderaShield 防护正在保护')).toBeTruthy();
   });
 
   it('hides the degradation warning while the KDF runs at full profile', () => {

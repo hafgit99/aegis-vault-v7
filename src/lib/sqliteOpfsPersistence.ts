@@ -27,8 +27,8 @@ import { isTestEnv } from './environment';
 import { isArgon2WriteBlocked } from './argon2id';
 import { readVaultIntegrityLedger } from './vaultIntegrityLedger';
 
-export const DB_FILENAME = 'aegis_sqlite.db';
-export const LOCAL_FALLBACK_KEY = 'aegis_sqlite_fallback';
+export const DB_FILENAME = 'kalderashield.db';
+export const LOCAL_FALLBACK_KEY = 'kalderashield_fallback';
 
 /**
  * O-2: bookkeeping for the localStorage mirror, kept in its own tiny key.
@@ -45,7 +45,7 @@ export const LOCAL_FALLBACK_KEY = 'aegis_sqlite_fallback';
  * `writtenAtMs` is still recorded, but only so the warning can tell the user
  * how old the mirror is, not to decide whether it is stale.
  */
-export const LOCAL_FALLBACK_META_KEY = 'aegis_sqlite_fallback_meta';
+export const LOCAL_FALLBACK_META_KEY = 'kalderashield_fallback_meta';
 
 export interface LocalFallbackMirrorMeta {
   /** The vault `versionCounter` this mirror was meant to hold. */

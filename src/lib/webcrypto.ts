@@ -200,7 +200,7 @@ export function generateSafeIv(): Uint8Array {
 
 /**
  * Derives an isolated per-item key using HKDF-SHA256.
- * HKDF(masterKey, salt=itemId, info="aegis-item-key-v7") -> 32-byte per-item AES key
+ * HKDF(masterKey, salt=itemId, info="KalderaShield-item-key-v7") -> 32-byte per-item AES key
  */
 export async function derivePerItemKey(
   masterKey: Uint8Array,
@@ -208,7 +208,7 @@ export async function derivePerItemKey(
 ): Promise<Uint8Array> {
   const ikm = await crypto.subtle.importKey('raw', masterKey, 'HKDF', false, ['deriveBits']);
   const salt = new TextEncoder().encode(itemId);
-  const info = new TextEncoder().encode('aegis-item-key-v7');
+  const info = new TextEncoder().encode('KalderaShield-item-key-v7');
 
   const bits = await crypto.subtle.deriveBits(
     {

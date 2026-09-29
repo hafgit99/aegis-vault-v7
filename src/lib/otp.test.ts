@@ -52,7 +52,7 @@ describe('otp helpers', () => {
   });
 
   it('parses otpauth TOTP URIs with SHA-512 options', async () => {
-    const uri = `otpauth://totp/Aegis:test@example.com?secret=${rfcSha512Secret}&issuer=Aegis&algorithm=SHA512&digits=8&period=30`;
+    const uri = `otpauth://totp/KalderaShield:test@example.com?secret=${rfcSha512Secret}&issuer=KalderaShield&algorithm=SHA512&digits=8&period=30`;
 
     expect(
       await generateTOTP(uri, {
@@ -63,7 +63,7 @@ describe('otp helpers', () => {
   });
 
   it('returns a safe placeholder for unsupported otpauth algorithms', async () => {
-    const uri = `otpauth://totp/Aegis:test@example.com?secret=${rfcSha1Secret}&algorithm=MD5`;
+    const uri = `otpauth://totp/KalderaShield:test@example.com?secret=${rfcSha1Secret}&algorithm=MD5`;
 
     expect(await generateTOTP(uri)).toBe('000 000');
   });
@@ -121,7 +121,7 @@ describe('otp helpers', () => {
   });
 
   it('uses URI period values when calculating the TOTP step', async () => {
-    const uri = `otpauth://totp/Aegis:test@example.com?secret=${rfcSha1Secret}&issuer=Aegis&period=45`;
+    const uri = `otpauth://totp/KalderaShield:test@example.com?secret=${rfcSha1Secret}&issuer=KalderaShield&period=45`;
 
     expect(await generateTOTP(uri, { timestampMs: 44_000, formatted: false })).not.toBe(
       await generateTOTP(uri, { timestampMs: 45_000, formatted: false }),
@@ -129,8 +129,8 @@ describe('otp helpers', () => {
   });
 
   it('rejects unsupported otpauth URI types and empty URI secrets safely', async () => {
-    expect(await generateTOTP(`otpauth://hotp/Aegis:test@example.com?secret=${rfcSha1Secret}`)).toBe('000 000');
-    expect(await generateTOTP('otpauth://totp/Aegis:test@example.com')).toBe('000 000');
+    expect(await generateTOTP(`otpauth://hotp/KalderaShield:test@example.com?secret=${rfcSha1Secret}`)).toBe('000 000');
+    expect(await generateTOTP('otpauth://totp/KalderaShield:test@example.com')).toBe('000 000');
   });
 
   it('throws explicit validation errors for unsupported digit and period options', async () => {
@@ -144,10 +144,10 @@ describe('otp helpers', () => {
 
   it('throws explicit validation errors for unsupported otpauth digit and period parameters', async () => {
     await expect(
-      generateTOTP(`otpauth://totp/Aegis:test@example.com?secret=${rfcSha1Secret}&digits=10`),
+      generateTOTP(`otpauth://totp/KalderaShield:test@example.com?secret=${rfcSha1Secret}&digits=10`),
     ).rejects.toThrow(TOTPValidationError);
     await expect(
-      generateTOTP(`otpauth://totp/Aegis:test@example.com?secret=${rfcSha1Secret}&period=abc`),
+      generateTOTP(`otpauth://totp/KalderaShield:test@example.com?secret=${rfcSha1Secret}&period=abc`),
     ).rejects.toThrow(TOTPValidationError);
   });
 

@@ -49,7 +49,7 @@ export async function exportEncryptedBackup(page: Page) {
   const download = await downloadPromise;
   const downloadPath = await download.path();
 
-  expect(download.suggestedFilename()).toMatch(/^aegis_guvenli_yedek_\d{4}-\d{2}-\d{2}\.aegis$/);
+  expect(download.suggestedFilename()).toMatch(/^KalderaShield_guvenli_yedek_\d{4}-\d{2}-\d{2}\.KalderaShield$/);
   expect(downloadPath).toBeTruthy();
 
   return downloadPath!;

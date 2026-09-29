@@ -32,7 +32,7 @@ function main() {
   const lock = require(path.join(rootDir, 'package-lock.json'));
   const version = normalizeVersion(pkg.version);
 
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aegis-sbom-'));
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'KalderaShield-sbom-'));
   try {
     const normalizedPkg = { ...pkg, version };
     fs.writeFileSync(

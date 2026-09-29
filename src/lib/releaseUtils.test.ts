@@ -204,7 +204,7 @@ describe('release-utils', () => {
   describe('sha256', () => {
     it('computes a 64-char hex digest for a file', () => {
       const file = path.join(tmpdir(), 'release-utils-sha256.txt');
-      fs.writeFileSync(file, 'aegis');
+      fs.writeFileSync(file, 'KalderaShield');
       expect(sha256(file)).toMatch(/^[a-f0-9]{64}$/);
       fs.rmSync(file);
     });

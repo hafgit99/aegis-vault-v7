@@ -21,8 +21,8 @@ describe('desktopFiles', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     delete (window as any).__TAURI_INTERNALS__;
-    delete (window as any).AegisAndroidFiles;
-    delete (window as any).__aegisAndroidFiles;
+    delete (window as any).KalderaShieldAndroidFiles;
+    delete (window as any).__KalderaShieldAndroidFiles;
   });
 
   it('returns false for desktop file dialog when not in Tauri environment', () => {
@@ -53,10 +53,10 @@ describe('desktopFiles', () => {
     vi.mocked(invoke).mockResolvedValueOnce(true);
 
     const bytes = new Uint8Array([1, 2, 3, 4]);
-    const saved = await saveDesktopBinaryFile('backup.aegis', bytes);
+    const saved = await saveDesktopBinaryFile('backup.KalderaShield', bytes);
     expect(saved).toBe(true);
     expect(invoke).toHaveBeenCalledWith('save_binary_file', {
-      defaultFilename: 'backup.aegis',
+      defaultFilename: 'backup.KalderaShield',
       contentsBase64: expect.any(String),
     });
   });
@@ -72,7 +72,7 @@ describe('desktopFiles', () => {
 
   it('returns null/false when saving or opening on unsupported non-Tauri runtime', async () => {
     expect(await saveDesktopExportFile('test.json', '{}')).toBe(false);
-    expect(await saveDesktopBinaryFile('test.aegis', new Uint8Array())).toBe(false);
+    expect(await saveDesktopBinaryFile('test.KalderaShield', new Uint8Array())).toBe(false);
     expect(await openDesktopImportFile()).toBeNull();
   });
 
@@ -80,21 +80,21 @@ describe('desktopFiles', () => {
     (window as any).__TAURI_INTERNALS__ = {};
     const saveMock = vi.fn((requestId) => {
       setTimeout(() => {
-        window.__aegisAndroidFiles?.resolveSave(requestId, true);
+        window.__KalderaShieldAndroidFiles?.resolveSave(requestId, true);
       }, 10);
     });
     const saveBase64Mock = vi.fn((requestId) => {
       setTimeout(() => {
-        window.__aegisAndroidFiles?.resolveSave(requestId, true);
+        window.__KalderaShieldAndroidFiles?.resolveSave(requestId, true);
       }, 10);
     });
     const openMock = vi.fn((requestId) => {
       setTimeout(() => {
-        window.__aegisAndroidFiles?.resolveOpen(requestId, { name: 'android.json', contents: '{"a":1}' });
+        window.__KalderaShieldAndroidFiles?.resolveOpen(requestId, { name: 'android.json', contents: '{"a":1}' });
       }, 10);
     });
 
-    (window as any).AegisAndroidFiles = {
+    (window as any).KalderaShieldAndroidFiles = {
       saveTextFile: saveMock,
       saveBase64File: saveBase64Mock,
       openTextFile: openMock,
@@ -108,7 +108,7 @@ describe('desktopFiles', () => {
     expect(savedText).toBe(true);
     expect(saveMock).toHaveBeenCalled();
 
-    const savedBinary = await saveDesktopBinaryFile('backup.aegis', new Uint8Array([10, 20]));
+    const savedBinary = await saveDesktopBinaryFile('backup.KalderaShield', new Uint8Array([10, 20]));
     expect(savedBinary).toBe(true);
     expect(saveBase64Mock).toHaveBeenCalled();
 
@@ -119,7 +119,7 @@ describe('desktopFiles', () => {
 
   it('rejects oversized payloads on Android file bridge', async () => {
     (window as any).__TAURI_INTERNALS__ = {};
-    (window as any).AegisAndroidFiles = {
+    (window as any).KalderaShieldAndroidFiles = {
       saveTextFile: vi.fn(),
       saveBase64File: vi.fn(),
       openTextFile: vi.fn(),
@@ -131,21 +131,21 @@ describe('desktopFiles', () => {
 
     // We test binary save
     const largeBytes = new Uint8Array(MAX_ANDROID_PAYLOAD_BYTES + 100);
-    await expect(saveDesktopBinaryFile('huge.aegis', largeBytes)).rejects.toThrow(/exceeds/i);
+    await expect(saveDesktopBinaryFile('huge.KalderaShield', largeBytes)).rejects.toThrow(/exceeds/i);
   });
 
   it('handles bridge errors properly', async () => {
     (window as any).__TAURI_INTERNALS__ = {};
-    (window as any).AegisAndroidFiles = {
+    (window as any).KalderaShieldAndroidFiles = {
       saveTextFile: vi.fn((requestId) => {
         setTimeout(() => {
-          window.__aegisAndroidFiles?.resolveSave(requestId, false, 'Disk full');
+          window.__KalderaShieldAndroidFiles?.resolveSave(requestId, false, 'Disk full');
         }, 10);
       }),
       saveBase64File: vi.fn(),
       openTextFile: vi.fn((requestId) => {
         setTimeout(() => {
-          window.__aegisAndroidFiles?.resolveOpen(requestId, null, 'Cancelled');
+          window.__KalderaShieldAndroidFiles?.resolveOpen(requestId, null, 'Cancelled');
         }, 10);
       }),
     };
@@ -157,7 +157,7 @@ describe('desktopFiles', () => {
 
   it('handles bridge synchronous exceptions', async () => {
     (window as any).__TAURI_INTERNALS__ = {};
-    (window as any).AegisAndroidFiles = {
+    (window as any).KalderaShieldAndroidFiles = {
       saveTextFile: vi.fn(),
       saveBase64File: vi.fn(() => {
         throw new Error('Bridge broken');

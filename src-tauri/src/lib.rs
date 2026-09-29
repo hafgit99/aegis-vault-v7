@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use tauri::{AppHandle, Manager, WebviewWindow};
 use zeroize::Zeroize;
 
-const VAULT_DATABASE_FILENAME: &str = "aegis_sqlite.db";
+const VAULT_DATABASE_FILENAME: &str = "kalderashield.db";
 #[allow(dead_code)]
 const FILE_DIALOG_BUFFER_LEN: usize = 32768;
 const MAX_VAULT_FILE_BYTES: u64 = 25 * 1024 * 1024; // 25 MB
@@ -39,7 +39,7 @@ struct AssetIntegrityAnchor {
 
 /// Diagnostic file written by `record_asset_integrity_result`. Read this when
 /// the app reports an asset integrity failure in a release build.
-const ASSET_INTEGRITY_RESULT_FILENAME: &str = "aegis_asset_integrity_result.txt";
+const ASSET_INTEGRITY_RESULT_FILENAME: &str = "kalderashield_asset_integrity_result.txt";
 
 /// Reduces a caller-supplied reason code to a safe, bounded token.
 ///
@@ -70,7 +70,7 @@ fn get_asset_integrity_anchor() -> AssetIntegrityAnchor {
     AssetIntegrityAnchor {
         schema_version: 1,
         algorithm: "SHA-256",
-        root_sha256: option_env!("AEGIS_ASSET_INTEGRITY_ROOT").unwrap_or(""),
+        root_sha256: option_env!("KALDERASHIELD_ASSET_INTEGRITY_ROOT").unwrap_or(""),
         production: !cfg!(debug_assertions),
     }
 }
@@ -558,7 +558,7 @@ fn wide_null(_value: &str) -> Vec<u16> {
 
 #[cfg(target_os = "windows")]
 fn dialog_filter() -> Vec<u16> {
-    "Supported vault files (*.aegis;*.json;*.csv)\0*.aegis;*.json;*.csv\0Aegis backups (*.aegis)\0*.aegis\0JSON backups (*.json)\0*.json\0CSV imports (*.csv)\0*.csv\0All files (*.*)\0*.*\0\0"
+    "Supported vault files (*.KalderaShield;*.json;*.csv)\0*.KalderaShield;*.json;*.csv\0KalderaShield backups (*.KalderaShield)\0*.KalderaShield\0JSON backups (*.json)\0*.json\0CSV imports (*.csv)\0*.csv\0All files (*.*)\0*.*\0\0"
     .encode_utf16()
     .collect()
 }
@@ -690,7 +690,7 @@ fn save_export_file(default_filename: String, contents: String) -> Result<bool, 
         if default_filename.ends_with(".json") {
             wide_null("json")
         } else {
-            wide_null("aegis")
+            wide_null("KalderaShield")
         },
     )?
     else {
@@ -874,8 +874,8 @@ pub fn run() {
     let is_native_host = args.iter().any(|arg| {
         arg == "--native-messaging-host"
             || arg.starts_with("chrome-extension://")
-            || arg.ends_with("com.hafgit99.aegisvault7.json")
-            || arg == "aegisvault7@hafgit99.com"
+            || arg.ends_with("com.kalderashield.desktop.json")
+            || arg == "kalderashield@hafgit99.com"
             || (arg.ends_with(".json") && args.iter().any(|a| a.contains('@')))
     });
 
@@ -989,7 +989,11 @@ mod tests {
 
     fn temp_path(name: &str) -> std::path::PathBuf {
         let mut dir = std::env::temp_dir();
-        dir.push(format!("aegis-import-test-{}-{}", std::process::id(), name));
+        dir.push(format!(
+            "kalderashield-import-test-{}-{}",
+            std::process::id(),
+            name
+        ));
         dir
     }
 
@@ -1160,7 +1164,7 @@ mod tests {
             .expect("system clock should be after unix epoch")
             .as_nanos();
         std::env::temp_dir().join(format!(
-            "aegis-vault-v7-{name}-{}-{nanos}",
+            "kalderashield-{name}-{}-{nanos}",
             std::process::id()
         ))
     }

@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "Aegis Vault Extension",
+  "name": "KalderaShield Extension",
   "version": "7.0.7.0",
-  "description": "Browser companion for Aegis Vault 7 offline-first password manager.",
+  "description": "Browser companion for KalderaShield offline-first password manager.",
   "browser_specific_settings": {
     "gecko": {
-      "id": "aegisvault7@hafgit99.com",
+      "id": "kalderashield@hafgit99.com",
       "strict_min_version": "142.0",
       "data_collection_permissions": {
         "required": [

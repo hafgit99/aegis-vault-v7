@@ -72,14 +72,14 @@ focusAppBtn.addEventListener('click', () => {
 });
 
 // Initialize theme
-const currentTheme = localStorage.getItem('aegis-extension-theme') || 'dark';
+const currentTheme = localStorage.getItem('KalderaShield-extension-theme') || 'dark';
 document.body.className = currentTheme;
 themeToggle.textContent = currentTheme === 'dark' ? '☀️' : '🌙';
 
 themeToggle.addEventListener('click', () => {
   const newTheme = document.body.className === 'dark' ? 'light' : 'dark';
   document.body.className = newTheme;
-  localStorage.setItem('aegis-extension-theme', newTheme);
+  localStorage.setItem('KalderaShield-extension-theme', newTheme);
   themeToggle.textContent = newTheme === 'dark' ? '☀️' : '🌙';
 });
 
@@ -473,7 +473,7 @@ function renderPhishingBanner(result: PhishingResult) {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     if (tabs[0]?.id) {
       chrome.tabs.sendMessage(tabs[0].id, {
-        action: 'aegis_phishing_alert',
+        action: 'KalderaShield_phishing_alert',
         threatType: result.threatType,
         matchedDomain: result.matchedDomain,
         details: result.details
@@ -870,26 +870,60 @@ function showDomainMismatchWarning(item: CredentialItem, tabDomain: string, cred
 /**
  * Sends the autofill message to background, which forwards to the active tab's content script.
  * Includes the credential's target domain and confirmation state for background-side validation.
+ *
+ * `item` comes from `list_credentials`, which the native host answers with an empty
+ * password on purpose: the popup list is unfiltered, so shipping every stored secret
+ * in one message would let a compromised popup dump the whole vault. Fill therefore
+ * asks for the single entry's password first, via `query_credentials`, which the host
+ * only answers for a URL it can match.
  */
 function sendAutofillMessage(item: CredentialItem, userConfirmedMismatch = false): void {
   const credDomain = item.url ? extractRegistrableDomainFromUrl(
     item.url.startsWith('http') ? item.url : `https://${item.url}`
   ) : '';
 
-  chrome.runtime.sendMessage(
-    {
-      action: 'autofill_page',
-      username: item.username,
-      password: item.password || '',
-      targetDomain: credDomain,
-      userConfirmedMismatch,
-    },
-    (response: { status?: string; reason?: string } | undefined) => {
-      if (response && response.status === 'blocked') {
-        showToast('⚠️ Autofill blocked: domain mismatch confirmation required.');
+  const dispatch = (username: string, password: string) => {
+    chrome.runtime.sendMessage(
+      {
+        action: 'autofill_page',
+        username,
+        password: password || '',
+        targetDomain: credDomain,
+        userConfirmedMismatch,
+      },
+      (response: { status?: string; reason?: string } | undefined) => {
+        if (response && response.status === 'blocked') {
+          showToast('⚠️ Autofill blocked: domain mismatch confirmation required.');
+        }
       }
+    );
+  };
+
+  if (item.password) {
+    dispatch(item.username, item.password);
+    return;
+  }
+
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const pageUrl = tabs[0]?.url || '';
+    if (!pageUrl) {
+      dispatch(item.username, '');
+      return;
     }
-  );
+
+    chrome.runtime.sendMessage(
+      { action: 'query_credentials', url: pageUrl },
+      (response: { locked?: boolean; credentials?: CredentialItem[]; error?: string } | undefined) => {
+        if (!response || response.locked || !response.credentials?.length) {
+          showToast('⚠️ Could not retrieve the password for this entry.');
+          return;
+        }
+        const match =
+          response.credentials.find((c) => c.id === item.id) || response.credentials[0]!;
+        dispatch(match.username ?? item.username, match.password ?? '');
+      }
+    );
+  });
 }
 
 // Initial load

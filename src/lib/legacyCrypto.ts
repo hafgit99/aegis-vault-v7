@@ -8,7 +8,7 @@
  * 
  * Legacy custom cryptography has been removed from production code.
  *
- * Older Aegis builds used pure-JS compatibility primitives for backup and
+ * Older KalderaShield builds used pure-JS compatibility primitives for backup and
  * database migration. Those primitives are intentionally no longer shipped: no
  * SHA/HMAC/HKDF/simulated-Argon2id/AES fallback remains in this module. Users
  * with pre-hardening exports must re-export from an earlier migration build

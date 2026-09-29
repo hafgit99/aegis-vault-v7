@@ -152,7 +152,7 @@ describe('wa-sqlite promotion readiness', () => {
       persistenceProfile: createWaSqlitePersistenceProfile('desktop-app-data', false),
       smokeResult: {
         status: 'failed',
-        databaseName: '/aegis-wa-sqlite.test.db',
+        databaseName: '/KalderaShield-wa-sqlite.test.db',
         vfsName: null,
         issue: 'wa-sqlite-persistent-vfs-unavailable',
       },
@@ -205,8 +205,8 @@ describe('wa-sqlite promotion readiness', () => {
       persistenceProfile: persistentProfile,
       smokeResult: {
         status: 'passed',
-        databaseName: '/aegis-wa-sqlite.android.db',
-        vfsName: 'aegis-wa-sqlite-android-idb',
+        databaseName: '/KalderaShield-wa-sqlite.android.db',
+        vfsName: 'KalderaShield-wa-sqlite-android-idb',
       },
       dryRunResult: readyDryRun,
       persistentMigrationCandidateResult: migratedCandidate,

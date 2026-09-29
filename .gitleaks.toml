@@ -1,4 +1,4 @@
-# Gitleaks configuration for Aegis Vault 7.
+# Gitleaks configuration for KalderaShield.
 # Extends the default rules; allows the deliberate test fixtures that tripped
 # the generic-api-key heuristics during the full-history scan (2026-08-29).
 # Run: gitleaks git -v --config .gitleaks.toml

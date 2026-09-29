@@ -12,10 +12,10 @@ val tauriProperties = Properties().apply {
         propFile.inputStream().use { load(it) }
     }
 }
-val releaseKeystorePath = System.getenv("AEGIS_ANDROID_KEYSTORE_PATH").orEmpty()
-val releaseKeyAlias = System.getenv("AEGIS_ANDROID_KEY_ALIAS").orEmpty()
-val releaseKeystorePassword = System.getenv("AEGIS_ANDROID_KEYSTORE_PASSWORD").orEmpty()
-val releaseKeyPassword = System.getenv("AEGIS_ANDROID_KEY_PASSWORD").orEmpty()
+val releaseKeystorePath = System.getenv("KALDERASHIELD_ANDROID_KEYSTORE_PATH").orEmpty()
+val releaseKeyAlias = System.getenv("KALDERASHIELD_ANDROID_KEY_ALIAS").orEmpty()
+val releaseKeystorePassword = System.getenv("KALDERASHIELD_ANDROID_KEYSTORE_PASSWORD").orEmpty()
+val releaseKeyPassword = System.getenv("KALDERASHIELD_ANDROID_KEY_PASSWORD").orEmpty()
 val releaseSigningConfigured = listOf(
     releaseKeystorePath,
     releaseKeyAlias,
@@ -25,10 +25,10 @@ val releaseSigningConfigured = listOf(
 
 android {
     compileSdk = 36
-    namespace = "com.hafgit99.aegisvault7"
+    namespace = "com.kalderashield.desktop"
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
-        applicationId = "com.hafgit99.aegisvault7"
+        applicationId = "com.kalderashield.desktop"
         minSdk = 24
         targetSdk = 35
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
@@ -44,7 +44,7 @@ android {
     }
     signingConfigs {
         if (releaseSigningConfigured) {
-            create("aegisRelease") {
+            create("kalderaShieldRelease") {
                 storeFile = file(releaseKeystorePath)
                 storePassword = releaseKeystorePassword
                 keyAlias = releaseKeyAlias
@@ -84,7 +84,7 @@ android {
                 debugSymbolLevel = "NONE"
             }
             if (releaseSigningConfigured) {
-                signingConfig = signingConfigs.getByName("aegisRelease")
+                signingConfig = signingConfigs.getByName("kalderaShieldRelease")
             } else {
                 logger.warn("Release signing environment variables are missing. Build output will be unsigned.")
             }

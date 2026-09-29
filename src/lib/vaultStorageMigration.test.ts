@@ -28,15 +28,15 @@ function item(overrides: Partial<VaultItem> = {}): VaultItem {
 function passingSmoke() {
   return vi.fn(async () => ({
     status: 'passed' as const,
-    databaseName: '/aegis-wa-sqlite.test.db',
-    vfsName: 'aegis-wa-sqlite-test-idb',
+    databaseName: '/KalderaShield-wa-sqlite.test.db',
+    vfsName: 'KalderaShield-wa-sqlite-test-idb',
   }));
 }
 
 function failingSmoke(issue = 'wa-sqlite-persistent-vfs-not-ready') {
   return vi.fn(async () => ({
     status: 'failed' as const,
-    databaseName: '/aegis-wa-sqlite.test.db',
+    databaseName: '/KalderaShield-wa-sqlite.test.db',
     vfsName: null,
     issue,
   }));
