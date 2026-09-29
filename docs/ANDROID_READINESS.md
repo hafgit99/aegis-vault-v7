@@ -110,10 +110,14 @@ Create a local release keystore outside the repository with Android Studio JBR `
 ```powershell
 $secureDir = "$env:USERPROFILE\KalderaShieldKeys"
 New-Item -ItemType Directory -Force -Path $secureDir | Out-Null
-& "$env:JAVA_HOME\bin\keytool.exe" -genkeypair -v -storetype PKCS12 -keystore "$secureDir\kalderashield-release.p12" -alias kalderashield -keyalg RSA -keysize 4096 -validity 10000
+& "$env:JAVA_HOME\bin\keytool.exe" -genkeypair -v -storetype JKS -keystore "$secureDir\kalderashield-release.jks" -alias kalderashield -keyalg RSA -keysize 4096 -sigalg SHA256withRSA -validity 10000 -dname "CN=KalderaShield, O=KalderaShield, C=TR"
 ```
 
-Use unique, saved passwords for the keystore and key. Losing this keystore means future Android updates cannot be signed with the same identity.
+Use JKS, not PKCS12. PKCS12 cannot hold a key password that differs from the store password, so with PKCS12 a single leaked store password hands over the private key as well. JKS keeps the two separate.
+
+Use unique, saved passwords for the keystore and the key, and make them different from each other. Losing this keystore means future Android updates cannot be signed with the same identity, and it cannot be reissued: the certificate, not the keystore, is what Android and the Play Store match on.
+
+`-dname` is permanent. Whatever you put in the common name is visible to anyone who inspects the APK signature, and changing it later requires a new certificate, which breaks update compatibility for every existing install. Set it before the first public release.
 
 For a signed APK candidate, set the signing environment and run:
 

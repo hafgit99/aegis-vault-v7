@@ -31,7 +31,12 @@ function keytoolExecutable() {
 
 function detectStoreType(file) {
   const ext = path.extname(file).toLowerCase();
-  return ext === '.p12' || ext === '.pfx' ? 'PKCS12' : undefined;
+  if (ext === '.p12' || ext === '.pfx') return 'PKCS12';
+  // JKS is what the release keystore uses: it is the only widely supported
+  // keystore format that keeps the store password and the key password
+  // separate, so leaking one does not hand over the other.
+  if (ext === '.jks' || ext === '.keystore') return 'JKS';
+  return undefined;
 }
 
 function validateKeystore(resolved) {

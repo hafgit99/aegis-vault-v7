@@ -31,7 +31,7 @@ This guide documents the procedures for signing desktop (Windows EV Authenticode
 
 ## 3. Android Release Signing
 
-- **Keystore:** PKCS12 Keystore (`kalderashield-release-key.jks`) using AES-256 / RSA 4096.
+- **Keystore:** JKS Keystore (`kalderashield-release.jks`) using RSA 4096 / SHA256withRSA, with the store password and key password kept distinct. PKCS12 is not usable here because it forces both passwords to be the same.
 - **Commands:**
   ```bash
   npm run android:release:signing:check
