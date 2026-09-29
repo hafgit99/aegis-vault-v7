@@ -287,14 +287,23 @@ for (const page of HTML_PAGES) {
   }
   const html = fs.readFileSync(file, 'utf8');
   const referenced = new Set();
-  // Captures the element's own fallback text, for the conflict check. The
+  // Captures the element's own fallback content, for the conflict check. The
   // capture stops at the first closing tag, which is enough to tell two
   // sentences apart and is stable for a key used with the same markup twice.
   const fallbacks = html.matchAll(/\bdata-i18n="([^"]+)"[^>]*>([\s\S]{0,400}?)<\//g);
   for (const match of fallbacks) {
     const key = match[1].trim();
     if (!key) continue;
-    const fallback = match[2].replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+    // Whitespace is collapsed; the inline markup is left alone.
+    //
+    // An earlier version stripped tags with a regex first, which is where
+    // CodeQL's js/incomplete-multi-character-sanitization came from: /<[^>]*>/
+    // cannot claim to have removed a tag that never closes, so the result "may
+    // still contain <script". Nothing here needs the tags gone -- the check
+    // only asks whether two uses of one key carry the same content, and two
+    // sentences differ whether or not they are wrapped in the same <strong> --
+    // so the string is kept whole and no sanitization is claimed.
+    const fallback = match[2].replace(/\s+/g, ' ').trim();
     if (!fallback) continue;
     if (!fallbackByKey.has(key)) fallbackByKey.set(key, []);
     fallbackByKey.get(key).push({ page, fallback });
@@ -336,7 +345,10 @@ for (const [key, sites] of fallbackByKey) {
       kind: 'key-conflict',
       code: '-',
       key,
-      detail: distinct.map((text) => `${text.slice(0, 34)}`).join(' | '),
+      // JSON.stringify because the compared value is the element's raw content
+      // and may contain markup or a control character. The report is read in a
+      // terminal, and a raw tag in a diagnostic is a bad time to find out.
+      detail: distinct.map((text) => JSON.stringify(text.slice(0, 34))).join(' | '),
     });
   }
   void sites;
