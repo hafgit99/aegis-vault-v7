@@ -83,3 +83,7 @@ deploy/
 # Local testing and debug configs
 args/
 src-tauri/tauri.dev.conf.json
+
+# Windows Sandbox staging area. Holds a staged copy of the built executable plus
+# the unpacked extension, so it is build output that must not reach the remote.
+.sandbox/

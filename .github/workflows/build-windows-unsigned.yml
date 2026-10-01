@@ -1,0 +1,119 @@
+# Builds Windows artifacts without a code-signing certificate.
+#
+# This is a deliberate exception, not a replacement for the release pipeline.
+# `release-desktop.yml` blocks unsigned Windows releases by design: its
+# `desktop:release:signing:report --require-signed` step fails the job when any
+# `.exe`/`.msi` in the evidence directory is not verified as signed, because a
+# Windows release that reaches users unverified is the one failure mode that
+# cannot be walked back. Nothing here changes that gate.
+#
+# Why this exists: a signing certificate costs money, and until there is one,
+# the only way to get Windows packages out of CI at all is a pipeline that does
+# not claim to be a public release. It also moves the build off the developer's
+# workstation, where antivirus software quarantines freshly linked unsigned Rust
+# executables mid-build and breaks the bundling step.
+#
+# What this workflow does NOT do:
+#   - it does not publish a GitHub Release
+#   - it does not run the signing gate, so nothing here can silently unblock a
+#     public unsigned release
+#   - it is manual only. No tag triggers it, so pushing a version tag cannot
+#     produce an unsigned artifact as a side effect.
+#
+# What to expect from the result: Windows SmartScreen will show
+# "Windows protected your PC" because these files carry no signature and no
+# download reputation. Signing is what removes that; building on CI does not.
+# Publish SHA-256 checksums (the collect step writes SHA256SUMS.txt) and tell
+# users to verify them before running.
+
+name: Windows unsigned build
+
+on:
+  workflow_dispatch:
+
+# Read-only. This workflow must never be able to write a Release, tag, or
+# package. Keeping `contents: read` means that even a mistake in a step below
+# cannot publish anything.
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-unsigned-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-windows-unsigned:
+    name: Build Windows packages (UNSIGNED - not for public release)
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    steps:
+      # If a signing certificate has been configured since this workflow was
+      # added, the release pipeline is the correct path again. Warn loudly
+      # instead of failing: the build is still useful for verifying that
+      # signing works before it blocks a release.
+      - name: Warn if release signing is now available
+        shell: pwsh
+        env:
+          WINDOWS_SIGNING_CERT_BASE64: ${{ secrets.WINDOWS_SIGNING_CERT_BASE64 }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if ($env:WINDOWS_SIGNING_CERT_BASE64 -or $env:TAURI_SIGNING_PRIVATE_KEY) {
+            Write-Host '::warning::Signing secrets are configured. Use the "Desktop release" workflow for published Windows artifacts; this one still produces unsigned output.'
+          }
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (SHA-pinned)
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.1 (SHA-pinned)
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable (SHA-pinned)
+
+      - name: Cache Rust builds
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2 (SHA-pinned)
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      # Same gate the release pipeline applies before it builds anything. A
+      # green tag that produces broken packages is worse than a failed run.
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      # Reuses the audited local release script rather than repeating its steps
+      # here. That is what keeps the bundle/ cleanup and the freshness check
+      # honest: a build that half-failed cannot have its leftover installer
+      # picked up as if it came from this run.
+      #
+      # The script disables `createUpdaterArtifacts` on its own when
+      # TAURI_SIGNING_PRIVATE_KEY is absent, which is always the case here --
+      # updater bundles cannot be produced without that key.
+      - name: Build and collect Windows artifacts
+        run: npm run release:local:skip-tests
+
+      # Same report the release pipeline generates, deliberately without
+      # --require-signed so it records the unsigned state instead of failing.
+      # DESKTOP_SIGNATURES.md ships inside the artifact and states on its face
+      # that nothing was signed.
+      - name: Record the unsigned signing state
+        run: npm run desktop:release:signing:report -- --platform windows --dir release-local/windows
+
+      - name: Upload Windows release artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v5.0.0 (SHA-pinned)
+        with:
+          # Named so an unsigned artifact cannot be mistaken for a release
+          # artifact in the Actions UI or in a download script.
+          name: kalderashield-windows-unsigned
+          if-no-files-found: error
+          retention-days: 14
+          path: release-local/windows/**
