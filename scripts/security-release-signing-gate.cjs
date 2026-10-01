@@ -33,6 +33,44 @@ function check(condition, message) {
   if (!condition) failures.push(message);
 }
 
+/**
+ * YAML with comments removed, so a policy scan cannot be satisfied or tripped
+ * by prose.
+ *
+ * This workflow directory is heavily commented, deliberately: several of these
+ * checks exist because a step was once reordered or deleted, and the reasoning
+ * is worth keeping next to the code. Scanning the raw text meant the unsigned
+ * build workflow failed the `--require-signed` assertion on the comment that
+ * explains why it does not run that flag. A commented-out `npx tauri build` does
+ * not package anything either, so it should not be able to fail the build check
+ * for the same reason.
+ *
+ * Only `#` outside quotes starts a comment, which keeps values such as
+ * `ref: 'v1#2'` intact.
+ */
+function stripYamlComments(source) {
+  return source
+    .split(/\r?\n/)
+    .map((line) => {
+      if (/^\s*#/.test(line)) return '';
+      let quote = null;
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (quote) {
+          if (char === quote) quote = null;
+          continue;
+        }
+        if (char === '"' || char === "'") {
+          quote = char;
+          continue;
+        }
+        if (char === '#' && (i === 0 || /\s/.test(line[i - 1]))) return line.slice(0, i);
+      }
+      return line;
+    })
+    .join('\n');
+}
+
 function main() {
   const workflow = fs.readFileSync(workflowPath, 'utf8');
   const guide = fs.readFileSync(guidePath, 'utf8');
@@ -179,14 +217,82 @@ function main() {
   const otherWorkflows = fs
     .readdirSync(workflowsDir)
     .filter((name) => name.endsWith('.yml') && name !== 'release-desktop.yml');
+
+  /**
+   * Every route to a packaged desktop build, not just the literal command.
+   *
+   * Scanning for `tauri build` alone was enough while the only pipeline spelled
+   * it out. build-windows-unsigned.yml calls `npm run release:local:skip-tests`
+   * instead, which runs the same build one level down, and the text scan reported
+   * a green PASS over a workflow that packages a desktop build. The invariant was
+   * already broken; only the detector had not caught up.
+   *
+   * The npm-script names are here for that reason. If a future wrapper hides the
+   * build one level deeper again, this check has to move with it -- a check that
+   * can be passed by naming the step differently is not a gate.
+   */
+  const packagingRoutes = [
+    /tauri\s+build/,
+    /release:local/,
+    /release:collect/,
+    /desktop:release:gate/,
+    /local-release\.cjs/,
+  ];
+
+  /**
+   * Workflows allowed to build without a certificate, with the reason recorded.
+   *
+   * An entry here is a claim that the workflow cannot turn an unsigned build into
+   * a published one. That claim is verified below rather than trusted, so adding
+   * a name to this list cannot by itself weaken anything: the workflow still has
+   * to prove it can neither publish, nor run with write access, nor remove the
+   * signing gate from the pipeline it shares with the release job.
+   */
+  const UNSIGNED_BUILD_EXCEPTIONS = {
+    'build-windows-unsigned.yml':
+      'manual-only unsigned Windows build; uploads a CI artifact and publishes no release',
+  };
+
   for (const name of otherWorkflows) {
     const contents = fs.readFileSync(path.join(workflowsDir, name), 'utf8');
+    const effective = stripYamlComments(contents);
+    const packages = packagingRoutes.some((route) => route.test(effective));
+    const exception = UNSIGNED_BUILD_EXCEPTIONS[name];
+
+    if (packages && !exception) {
+      check(
+        false,
+        `${name}: must not package a desktop build; release-desktop.yml is the only release pipeline`
+      );
+      continue;
+    }
+
+    if (packages && exception) {
+      // The exception is a permission boundary, not a naming convention. Each
+      // assertion below removes one way the unsigned build could reach a user.
+      check(
+        !/softprops\/action-gh-release|gh\s+release|gh\s+--?create/.test(effective),
+        `${name}: is allowed to build unsigned but must not create a GitHub Release (exception: ${exception})`
+      );
+      check(
+        !/contents:\s*write/.test(effective),
+        `${name}: is allowed to build unsigned but must not request contents: write (exception: ${exception})`
+      );
+      check(
+        !/--require-signed/.test(effective),
+        `${name}: must not run the blocking signing gate itself; that gate belongs to release-desktop.yml`
+      );
+      // Manual only: a tag-triggered run would let a version push produce an
+      // unsigned artifact as a side effect of an ordinary release.
+      check(
+        /workflow_dispatch/.test(effective) && !/^\s*push:/m.test(effective),
+        `${name}: unsigned build workflows must be workflow_dispatch only, never tag- or push-triggered`
+      );
+      notes.push(`unsigned-build exception applied: ${name} (${exception})`);
+    }
+
     check(
-      !/tauri\s+build/.test(contents),
-      `${name}: must not package a desktop build; release-desktop.yml is the only release pipeline`
-    );
-    check(
-      !/APPLE_SIGNING_IDENTITY:\s*"?-/.test(contents),
+      !/APPLE_SIGNING_IDENTITY:\s*"?-/.test(effective),
       `${name}: must not pin macOS to an ad-hoc signing identity (Y-19)`
     );
   }

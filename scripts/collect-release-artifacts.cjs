@@ -128,11 +128,83 @@ function normalizeName(kind, ext) {
   return `KalderaShield-${version}-${platform}-${kind}${ext}`;
 }
 
+/**
+ * When this build started, as written by local-release.cjs right before
+ * `tauri build`. Null when collect is run on its own, which is what CI does.
+ */
+function buildStartedAt() {
+  const stampPath = path.join(targetDir, '.kalderashield-build-stamp');
+  if (!fs.existsSync(stampPath)) return null;
+  try {
+    return fs.statSync(stampPath).mtimeMs;
+  } catch (_) {
+    return null;
+  }
+}
+
+const buildStartMs = buildStartedAt();
+
+/**
+ * Refuses to package an installer that this build did not produce.
+ *
+ * The failure this guards against is silent by construction: an installer left
+ * over from an earlier build carries the same version number, because the
+ * version did not change -- only the code did -- so it passes every name-based
+ * check and gets collected next to a freshly built artifact of another format.
+ * The resulting release contains two different binaries under one version, and
+ * nothing reports it, including the checksum file, which is rewritten from
+ * whatever was collected.
+ *
+ * A partially failed build is how this happens in practice: bundling writes
+ * the MSI, fails on the next step, and leaves the NSIS installer from the
+ * previous run in place.
+ *
+ * Skipped when there is no stamp, because a bare `collect` on a CI runner has
+ * no local build to compare against and refusing there would break the
+ * pipeline. The bundle/ cleanup in local-release.cjs is what makes the stamp
+ * authoritative in the first place.
+ */
+function staleBundledArtifacts(candidates) {
+  if (buildStartMs === null) return [];
+  return candidates.filter(file => {
+    try {
+      return fs.statSync(file).mtimeMs < buildStartMs;
+    } catch (_) {
+      return false;
+    }
+  });
+}
+
+function assertFreshBundledArtifacts(candidates, formatOf) {
+  const stale = staleBundledArtifacts(candidates);
+  if (stale.length === 0) return;
+
+  const builtAt = fs.existsSync(path.join(targetDir, '.kalderashield-build-stamp'))
+    ? fs.readFileSync(path.join(targetDir, '.kalderashield-build-stamp'), 'utf8').trim()
+    : 'unknown';
+
+  const details = stale
+    .map(file => {
+      const stats = fs.statSync(file);
+      return `  - ${formatOf(file)}: ${path.relative(rootDir, file)} (built ${stats.mtime.toISOString()})`;
+    })
+    .join('\n');
+
+  throw new Error(
+    `Refusing to collect ${stale.length} bundled artifact(s) that predate this build ` +
+    `(build started ${builtAt}). A partially failed bundling step leaves earlier installers ` +
+    `behind, and they carry the same version string as the current build.\n${details}\n` +
+    'Delete src-tauri/target/release/bundle and run the release again.'
+  );
+}
+
 function collectWindows() {
   const artifacts = [];
   const releaseExe = path.join(targetDir, 'release', 'kalderashield.exe');
   const msi = newestMatch(file => file.includes(`${path.sep}release${path.sep}bundle${path.sep}msi${path.sep}`) && file.toLowerCase().endsWith('.msi'));
   const setup = newestMatch(file => file.includes(`${path.sep}release${path.sep}bundle${path.sep}nsis${path.sep}`) && file.toLowerCase().endsWith('.exe'));
+
+  assertFreshBundledArtifacts([msi, setup].filter(Boolean), file => (file.toLowerCase().endsWith('.msi') ? 'MSI' : 'NSIS installer'));
 
   if (fs.existsSync(releaseExe)) {
     artifacts.push(copyFile(releaseExe, normalizeName('x64-portable', '.exe')));
@@ -162,6 +234,8 @@ function collectLinux() {
   const debs = allMatches(file => file.includes(`${path.sep}release${path.sep}bundle${path.sep}deb${path.sep}`) && file.toLowerCase().endsWith('.deb'));
   const appImages = allMatches(file => file.includes(`${path.sep}release${path.sep}bundle${path.sep}appimage${path.sep}`) && file.toLowerCase().endsWith('.appimage'));
 
+  assertFreshBundledArtifacts([...debs, ...appImages], file => (file.toLowerCase().endsWith('.deb') ? 'deb' : 'AppImage'));
+
   for (const deb of debs) {
     const destName = normalizeName('amd64', '.deb');
     artifacts.push(copyFile(deb, destName));
@@ -186,6 +260,8 @@ function collectMacos() {
   const artifacts = [];
   const dmgs = allMatches(file => file.includes(`${path.sep}release${path.sep}bundle${path.sep}dmg${path.sep}`) && file.toLowerCase().endsWith('.dmg'));
   const apps = allMatches(file => file.includes(`${path.sep}release${path.sep}bundle${path.sep}macos${path.sep}`) && file.toLowerCase().endsWith('.app'));
+
+  assertFreshBundledArtifacts([...dmgs, ...apps], file => (file.toLowerCase().endsWith('.dmg') ? 'dmg' : 'app'));
 
   for (const dmg of dmgs) {
     const destName = normalizeName('universal', '.dmg');

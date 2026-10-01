@@ -45,9 +45,12 @@
   var STORAGE_KEY = 'kalderashield.site.lang';
   var THEME_STORAGE_KEY = 'kalderashield.site.theme';
   var DEFAULT_LANG = 'tr';
+  /* Dictionary consulted when the active locale has no entry for a key. */
+  var FALLBACK_LANG = 'en';
   var THEMES = ['light', 'dark', 'system'];
 
   var dictionary = {};
+  var fallbackDictionary = {};
   var current = DEFAULT_LANG;
 
   function isKnown(locale) {
@@ -128,9 +131,8 @@
     var summary = document.querySelectorAll('[data-theme-current]');
     var key = 'theme-' + theme;
     for (var j = 0; j < summary.length; j++) {
-      summary[j].textContent = Object.prototype.hasOwnProperty.call(dictionary, key)
-        ? dictionary[key]
-        : THEMES_LABELS_FALLBACK[theme];
+      var label = lookup(key);
+      summary[j].textContent = label !== undefined ? label : THEMES_LABELS_FALLBACK[theme];
     }
   }
 
@@ -187,13 +189,17 @@
     return DEFAULT_LANG;
   }
 
+  function lookup(key) {
+    if (Object.prototype.hasOwnProperty.call(dictionary, key)) return dictionary[key];
+    if (Object.prototype.hasOwnProperty.call(fallbackDictionary, key)) return fallbackDictionary[key];
+    return undefined;
+  }
+
   function translate(root) {
     var nodes = root.querySelectorAll('[data-i18n]');
     for (var i = 0; i < nodes.length; i++) {
-      var key = nodes[i].getAttribute('data-i18n');
-      if (Object.prototype.hasOwnProperty.call(dictionary, key)) {
-        applyText(nodes[i], dictionary[key]);
-      }
+      var value = lookup(nodes[i].getAttribute('data-i18n'));
+      if (value !== undefined) applyText(nodes[i], value);
     }
 
     var attrs = root.querySelectorAll('[data-i18n-attr]');
@@ -204,8 +210,9 @@
         var parts = pairs[k].split(':');
         var attribute = (parts[0] || '').trim();
         var name = (parts[1] || '').trim();
-        if (attribute && name && Object.prototype.hasOwnProperty.call(dictionary, name)) {
-          attrs[j].setAttribute(attribute, dictionary[name]);
+        var attrValue = attribute ? lookup(name) : undefined;
+        if (attribute && attrValue !== undefined) {
+          attrs[j].setAttribute(attribute, attrValue);
         }
       }
     }
@@ -339,17 +346,48 @@
     return new URL('assets/js/i18n/' + locale + '.json', siteRoot()).href;
   }
 
+  // Loaded once per page view. The fallback never changes, so re-fetching it on
+  // every switch would be the double fetch this file went out of its way to
+  // avoid, just spread over the language clicks instead of the initial load.
+  var fallbackLoad = null;
+
+  function loadFallbackDictionary() {
+    if (!fallbackLoad) {
+      fallbackLoad = fetch(localeUrl(FALLBACK_LANG), { credentials: 'omit' })
+        .then(function (response) {
+          if (!response.ok) throw new Error('HTTP ' + response.status);
+          return response.json();
+        })
+        .catch(function () { return {}; });
+    }
+    return fallbackLoad;
+  }
+
   function setLanguage(locale) {
     if (!isKnown(locale)) locale = DEFAULT_LANG;
     current = locale;
 
-    return fetch(localeUrl(locale), { credentials: 'omit' })
+    // English is loaded alongside every other locale as a fallback dictionary.
+    // A key that a translation file does not carry yet then resolves to the
+    // English copy instead of leaving the markup default in place, which is
+    // what kept newly added sections from reading as untranslated markup in
+    // the other ten languages.
+    var primary = fetch(localeUrl(locale), { credentials: 'omit' })
       .then(function (response) {
         if (!response.ok) throw new Error('HTTP ' + response.status);
         return response.json();
       })
-      .then(function (data) {
-        dictionary = data || {};
+      .catch(function () { return {}; });
+
+    var fallback = locale === FALLBACK_LANG
+      ? Promise.resolve({})
+      : loadFallbackDictionary();
+
+    return Promise.all([primary, fallback])
+      .then(function (payloads) {
+        dictionary = payloads[0] || {};
+        fallbackDictionary = payloads[1] || {};
+
         setDocumentLang(current);
         translate(document);
         // The theme buttons are built before the first fetch resolves, so they

@@ -145,10 +145,17 @@ describe('site header controls', () => {
     // failure is invisible: setLanguage catches it and leaves the markup text
     // in place, so the page still looks like a working site in the wrong
     // language.
+    //
+    // English comes along as the fallback dictionary, so a locale the visitor
+    // did not choose is fetched too. The point of the assertion is that both
+    // requests are resolved against the site root and not against the page.
     const harness = await seed(`${ORIGIN}/download/`);
     try {
       expect(harness.document.documentElement.lang).toBe('tr');
-      expect(harness.requests).toEqual([`${ORIGIN}/assets/js/i18n/tr.json`]);
+      expect(harness.requests).toEqual([
+        `${ORIGIN}/assets/js/i18n/tr.json`,
+        `${ORIGIN}/assets/js/i18n/en.json`,
+      ]);
     } finally {
       harness.close();
     }
@@ -165,6 +172,10 @@ describe('site header controls', () => {
 
       await harness.choose('[data-lang="ja"]');
       expect(harness.requests.filter((u) => u.endsWith('/ja.json'))).toHaveLength(1);
+
+      // The English fallback is the same file every time, so it is fetched
+      // once and then held: two switches must not turn it into three requests.
+      expect(harness.requests.filter((u) => u.endsWith('/en.json'))).toHaveLength(1);
     } finally {
       harness.close();
     }
@@ -173,7 +184,10 @@ describe('site header controls', () => {
   it('loads the same locale from the site root', async () => {
     const harness = await seed(`${ORIGIN}/`);
     try {
-      expect(harness.requests).toEqual([`${ORIGIN}/assets/js/i18n/tr.json`]);
+      expect(harness.requests).toEqual([
+        `${ORIGIN}/assets/js/i18n/tr.json`,
+        `${ORIGIN}/assets/js/i18n/en.json`,
+      ]);
     } finally {
       harness.close();
     }

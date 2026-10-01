@@ -28,13 +28,13 @@ export function VaultStaleBanner({ isVisible, onRefresh, onDismiss }: VaultStale
   return (
     <div
       role="alert"
-      className="flex items-center gap-3 px-4 py-2 text-sm bg-warning-surface text-on-surface border-b border-warning"
+      className="flex items-center gap-3 px-4 py-2 text-sm bg-brand-error/10 text-on-surface border-b border-brand-error/30"
     >
       <span className="flex-1 min-w-0">{t('vault.writeConflict.banner')}</span>
       <button
         type="button"
         onClick={onRefresh}
-        className="shrink-0 px-3 py-1 rounded-md font-medium bg-brand-primary text-on-primary hover:opacity-90"
+        className="shrink-0 px-3 py-1 rounded-md text-xs font-bold bg-brand-primary text-brand-on-primary hover:brightness-110"
       >
         {t('vault.writeConflict.refreshNow')}
       </button>

@@ -79,6 +79,42 @@ if (!skipTests) {
 
 run('npm', ['run', 'build:extension']);
 
+/**
+ * `tauri build` does not clear bundle/, it only adds to it. An installer from
+ * an earlier version therefore survives the next build and keeps the same
+ * version string in its own filename, because the version did not change --
+ * only the code did. Nothing downstream could tell the two apart by name, and
+ * release:collect picks the newest match per format, so a release could ship
+ * today's MSI next to last month's NSIS installer: two payloads, one version
+ * number, no error anywhere.
+ *
+ * Deleting the directory first is the only thing that makes "the artifact in
+ * release-local is the one this build produced" true by construction.
+ */
+const cargoTargetDir = process.env.CARGO_TARGET_DIR
+  ? path.resolve(process.env.CARGO_TARGET_DIR)
+  : path.join(rootDir, 'src-tauri', 'target');
+const bundleDir = path.join(cargoTargetDir, 'release', 'bundle');
+
+if (fs.existsSync(bundleDir)) {
+  console.log(`\n> clean ${path.relative(rootDir, bundleDir)}`);
+  fs.rmSync(bundleDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+}
+
+/**
+ * Written before the build and read back by collect-release-artifacts.cjs.
+ *
+ * Comparing an artifact against the bundled executable does not work on its
+ * own: an antivirus that quarantines and restores that executable rewrites its
+ * mtime, so a perfectly good installer ends up looking older than the binary it
+ * contains. The stamp sits outside bundle/ and is never touched by antivirus
+ * remediation, so it records when the build actually started.
+ */
+const buildStampPath = path.join(cargoTargetDir, '.kalderashield-build-stamp');
+fs.mkdirSync(cargoTargetDir, { recursive: true });
+fs.writeFileSync(buildStampPath, new Date().toISOString());
+console.log(`> build stamp ${new Date().toISOString()}`);
+
 const tauriArgs = ['tauri', 'build'];
 if (platform === 'darwin' && macUniversal) {
   tauriArgs.push('--target', 'universal-apple-darwin');
