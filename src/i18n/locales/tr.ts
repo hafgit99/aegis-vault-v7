@@ -304,7 +304,7 @@ export const tr = {
     'vault.mirrorStale.desc': 'Yerel kurtarma aynası son kaydınızdan sonra güncellenemedi, bu yüzden kasanızdan daha eski. Verilerinizi kurtarmak için bu ayna kullanıldı; bu da o noktadan sonra yaptığınız değişikliklerin eksik olabileceği anlamına geliyor. Kasanız bozulmadı; şimdi tekrar kaydederek aynayı güncel hâle getirin.',
     'vault.writeConflict.title': 'Kasa başka sekmede güncellendi',
     'vault.writeConflict.desc': 'Bu sekme güncel olmadığı için değişikliğiniz KAYDEDILMEDİ ve daha yeni olan kasa korundu. Güncel kayıtları almak için sayfayı yenileyin, ardından değişikliğinizi yeniden uygulayın.',
-    'vault.writeConflict.banner': 'Bu sekme güncel olmayan bir kasa gösteriyor. Sayfayı yenileyene kadar yaptığınız değişiklikler kaydedilmeyecek.',
+    'vault.writeConflict.banner': 'Bu sekmede güncel olmayan bir kasa sürümü görüntüleniyor. Sayfayı yenileyene kadar yaptığınız değişiklikler kaydedilmez.',
     'vault.writeConflict.refreshNow': 'Şimdi yenile',
     'airgap.toast.title': 'Ağ İsteği Engellendi',
     'airgap.toast.message': 'Air-gap politikası tarafından dış ağ isteği engellendi: {url}',
