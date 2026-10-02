@@ -207,10 +207,12 @@ for (const code of codes) {
     // in the Japanese privacy body was one -- and since it is still a non-empty
     // string, nothing else catches it.
     //
-    // {{VERSION}} and {{DOMAIN}} are the site's two real placeholders and are
-    // substituted at deploy time, so they are removed before looking. Any other
-    // brace, dollar-brace, bare upper-case token, or a JS value that leaked
-    // into a string is a finding.
+    // {{VERSION}} and {{DOMAIN}} are the site's real placeholders and are
+    // substituted at deploy time, so they are removed before looking. {{TESTCOUNT}}
+    // is the same kind of thing, substituted by site.js from the
+    // <meta name="x-test-count"> that scripts/sync-claims.cjs generates from the
+    // test suite. Any other brace, dollar-brace, bare upper-case token, or a JS
+    // value that leaked into a string is a finding.
     //
     // `null` is deliberately not in this list. It is the German and Dutch word
     // for zero, and de.json contains "null Cloud-Zwang" -- a real sentence about
@@ -220,6 +222,8 @@ for (const code of codes) {
       .split('{{VERSION}}')
       .join(' ')
       .split('{{DOMAIN}}')
+      .join(' ')
+      .split('{{TESTCOUNT}}')
       .join(' ');
     if (/\{|\}|\$\{|_[A-Z]{2,}|\bundefined\b|\bNaN\b/.test(withoutPlaceholders)) {
       findings.push({ kind: 'template-leftover', code, key, detail: value.slice(0, 50) });

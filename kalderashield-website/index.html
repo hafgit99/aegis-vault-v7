@@ -1,8 +1,10 @@
-<!doctype html>
-<html lang="tr" dir="ltr" data-site-version="7.0.18">
-<head>
+<!DOCTYPE html><html lang="tr" dir="ltr" data-site-version="7.0.18"><head>
 <meta charset="utf-8">
+<meta name="x-test-count" content="2213">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#08090e" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#fcfbf9" media="(prefers-color-scheme: light)">
+<link rel="sitemap" href="/sitemap.xml" type="application/xml">
 
 <title>KalderaShield — Yerel Öncelikli Açık Kaynak Şifre Yöneticisi</title>
 <meta name="description" content="KalderaShield, internet bağlantısı veya hesap gerektirmeyen, yerel ve açık kaynaklı şifre yöneticisidir. Verileriniz yalnızca kendi cihazınızda kalır.">
@@ -21,8 +23,54 @@
 <link rel="apple-touch-icon" href="/assets/images/icon-192.png">
 <link rel="manifest" href="/site.webmanifest">
 <link rel="stylesheet" href="/assets/css/site.css">
+<link rel="alternate" hreflang="ar" href="https://{{DOMAIN}}/ar/">
+<link rel="alternate" hreflang="de" href="https://{{DOMAIN}}/de/">
+<link rel="alternate" hreflang="en" href="https://{{DOMAIN}}/en/">
+<link rel="alternate" hreflang="es" href="https://{{DOMAIN}}/es/">
+<link rel="alternate" hreflang="fr" href="https://{{DOMAIN}}/fr/">
+<link rel="alternate" hreflang="it" href="https://{{DOMAIN}}/it/">
+<link rel="alternate" hreflang="ja" href="https://{{DOMAIN}}/ja/">
+<link rel="alternate" hreflang="ko" href="https://{{DOMAIN}}/ko/">
+<link rel="alternate" hreflang="pt" href="https://{{DOMAIN}}/pt/">
+<link rel="alternate" hreflang="ru" href="https://{{DOMAIN}}/ru/">
+<link rel="alternate" hreflang="tr" href="https://{{DOMAIN}}/">
+<link rel="alternate" hreflang="zh" href="https://{{DOMAIN}}/zh/">
+<link rel="alternate" hreflang="x-default" href="https://{{DOMAIN}}/">
+
+<script type="application/ld+json">{
+  "@type": "Organization",
+  "name": "KalderaShield",
+  "url": "https://{{DOMAIN}}/",
+  "logo": "https://{{DOMAIN}}/assets/images/icon-512.png",
+  "sameAs": [
+    "https://github.com/hafgit99/kalderashield"
+  ]
+}</script>
+<script type="application/ld+json">{
+  "@type": "WebSite",
+  "name": "KalderaShield",
+  "url": "https://{{DOMAIN}}/",
+  "inLanguage": "tr"
+}</script>
+<script type="application/ld+json">{
+  "@type": "SoftwareApplication",
+  "name": "KalderaShield",
+  "url": "https://{{DOMAIN}}/",
+  "applicationCategory": "SecurityApplication",
+  "operatingSystem": "Linux, Android",
+  "softwareVersion": "7.0.18",
+  "description": "KalderaShield, internet bağlantısı veya hesap gerektirmeyen, yerel ve açık kaynaklı şifre yöneticisidir. Verileriniz yalnızca kendi cihazınızda kalır.",
+  "license": "https://www.apache.org/licenses/LICENSE-2.0",
+  "codeRepository": "https://github.com/hafgit99/kalderashield",
+  "downloadUrl": "https://github.com/hafgit99/kalderashield/releases/latest",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  }
+}</script>
 </head>
-<body>
+<body class="has-sticky-cta">
 
 <a class="skip-link" href="#main" data-i18n="skip-link">İçeriğe Geç</a>
 
@@ -33,18 +81,49 @@
       Kaldera<span class="brand-accent">Shield</span>
     </a>
 
-    <nav class="site-nav">
+    <nav class="site-nav" id="site-nav">
+      <!-- mega:start -->
       <a href="#features" data-i18n="nav-features">Özellikler</a>
-      <a href="#security" data-i18n="nav-security">Güvenlik</a>
-      <a href="#extensions" data-i18n="nav-extensions">Eklentiler</a>
-      <a href="#comparison" data-i18n="nav-comparison">Karşılaştırma</a>
-      <a href="#audit" data-i18n="nav-audit">Denetim</a>
-      <a href="/download/" data-i18n="nav-download">İndir</a>
 
+      <details class="menu">
+        <summary data-i18n="nav-products">Ürün</summary>
+        <div class="menu-panel">
+          <ul>
+        <li><a href="/urun/password-vault/"><span class="menu-t" data-i18n="menu-password-vault">Şifre kasası</span><span class="menu-d" data-i18n="menu-d-password-vault">Her kayıt kendi anahtarıyla şifrelenir</span></a></li>
+        <li><a href="/urun/passkeys/"><span class="menu-t" data-i18n="menu-passkeys">Passkey</span><span class="menu-d" data-i18n="menu-d-passkeys">Kendi doğrulayıcınıza bağlı WebAuthn</span></a></li>
+        <li><a href="/urun/vault-history/"><span class="menu-t" data-i18n="menu-vault-history">Kasa geçmişi</span><span class="menu-d" data-i18n="menu-d-vault-history">Anlık görüntüler, çöp kutusu ve şifre geçmişi</span></a></li>
+        <li><a href="/urun/security-audit/"><span class="menu-t" data-i18n="menu-security-audit">Güvenlik denetimi</span><span class="menu-d" data-i18n="menu-d-security-audit">Zayıf, tekrarlanan ve sızmış şifreler</span></a></li>
+        <li><a href="/urun/password-generator/"><span class="menu-t" data-i18n="menu-password-generator">Şifre üretici</span><span class="menu-d" data-i18n="menu-d-password-generator">Rastgele karakterler veya Diceware cümleleri</span></a></li>
+        <li><a href="/urun/unlock-and-recovery/"><span class="menu-t" data-i18n="menu-unlock-and-recovery">Kilit açma ve kurtarma</span><span class="menu-d" data-i18n="menu-d-unlock-and-recovery">Biyometri, güvenlik anahtarı ve 24 kelimelik kit</span></a></li>
+        <li><a href="/urun/autofill/"><span class="menu-t" data-i18n="menu-autofill">Otomatik doldurma</span><span class="menu-d" data-i18n="menu-d-autofill">eTLD+1 eşleşmesi, siteler arası sızıntı yok</span></a></li>
+        <li><a href="/urun/attachments/"><span class="menu-t" data-i18n="menu-attachments">Ekler</span><span class="menu-d" data-i18n="menu-d-attachments">Kasa içinde şifreli dosyalar</span></a></li>
+          </ul>
+        </div>
+      </details>
+
+      <a href="/guvenlik/" data-i18n="nav-security">Güvenlik</a>
+      <a href="/eklenti/" data-i18n="nav-extensions">Eklentiler</a>
+      <a href="#comparison" data-i18n="nav-comparison">Karşılaştırma</a>
+      <a href="/guvenlik/denetim-durumu/" data-i18n="nav-audit">Denetim</a>
+      <a href="/sss/" data-i18n="nav-faq">SSS</a>
+
+      <details class="menu">
+        <summary data-i18n="nav-source">Kaynak</summary>
+        <div class="menu-panel menu-panel-sm">
+          <ul>
+            <li><a href="/kaynak-kodu/" data-i18n="footer-link-source">Kaynak Kodları</a></li>
+            <li><a href="https://github.com/hafgit99/kalderashield/issues" rel="noopener noreferrer" data-i18n="footer-link-issues">Hata Bildirimi</a></li>
+            <li><a href="https://github.com/hafgit99/kalderashield/discussions" rel="noopener noreferrer" data-i18n="footer-link-discussions">Tartışmalar</a></li>
+          </ul>
+        </div>
+      </details>
+
+      <a class="nav-cta" href="/download/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5v11"></path><path d="M7.5 10.5l4.5 4.5 4.5-4.5"></path><path d="M4.5 19.5h15"></path></svg><span data-i18n="nav-download">İndir</span></a>
+      <!-- mega:end -->
       <details class="lang">
         <summary data-i18n-attr="aria-label:lang-switch-label">
-          <span class="lang-code" data-lang-code>TR</span>
-          <span data-lang-current>Türkçe</span>
+          <span class="lang-code" data-lang-code="">TR</span>
+          <span data-lang-current="">Türkçe</span>
         </summary>
         <div class="lang-menu" id="lang-menu"></div>
       </details>
@@ -52,40 +131,99 @@
       <details class="theme">
         <summary data-i18n-attr="aria-label:theme-switch-label">
           <span class="theme-glyph" aria-hidden="true">◐</span>
-          <span class="theme-current" data-theme-current data-i18n="theme-system">Sistem</span>
-        </summary>
-        <div class="theme-menu" id="theme-menu"></div>
-      </details>
-
-      <details class="theme">
-        <summary data-i18n-attr="aria-label:theme-switch-label">
-          <span class="theme-glyph" aria-hidden="true">◐</span>
-          <span class="theme-current" data-theme-current data-i18n="theme-system">Sistem</span>
+          <span class="theme-current" data-theme-current="" data-i18n="theme-system">Sistem</span>
         </summary>
         <div class="theme-menu" id="theme-menu"></div>
       </details>
     </nav>
+      <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="site-nav" data-i18n-attr="aria-label:nav-menu-label" aria-label="Menü">
+        <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
+      </button>
   </div>
 </header>
 
 <main id="main">
 
   <section class="hero">
-    <div class="wrap">
-      <p class="eyebrow" data-i18n="hero-badge"><span class="live-dot"></span> Sürüm {{VERSION}} — Yayında</p>
-      <h1 data-i18n="hero-title">Verileriniz Sadece <span class="gradient-text">Sizin Cihazınızda</span> Güvende.</h1>
-      <p class="lead" data-i18n="hero-desc">KalderaShield, internet bağlantısına veya üçüncü taraf bulut sağlayıcılarına ihtiyaç duymayan, sıfır-bilgi (zero-knowledge) güvenlik mimarisine sahip yerel ve açık kaynaklı şifre yöneticisidir.</p>
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow" data-i18n="hero-badge"><span class="live-dot"></span> Sürüm {{VERSION}} — Yayında</p>
+        <h1 data-i18n="hero-title">Verileriniz Sadece <span class="gradient-text">Sizin Cihazınızda</span> Güvende.</h1>
+        <p class="lead" data-i18n="hero-desc">KalderaShield, internet bağlantısına veya üçüncü taraf bulut sağlayıcılarına ihtiyaç duymayan, sıfır-bilgi (zero-knowledge) güvenlik mimarisine sahip yerel ve açık kaynaklı şifre yöneticisidir.</p>
 
-      <div class="cta-row">
-        <a class="btn btn-primary" href="/download/" data-i18n="hero-btn-dl">Yükleyiciyi İndir</a>
-        <a class="btn btn-ghost" href="https://github.com/hafgit99/kalderashield" rel="noopener noreferrer" data-i18n="hero-btn-git">GitHub'da İncele</a>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="/download/" data-i18n="hero-btn-dl">Yükleyiciyi İndir</a>
+          <a class="btn btn-ghost" href="https://github.com/hafgit99/kalderashield" rel="noopener noreferrer" data-i18n="hero-btn-git">GitHub'da İncele</a>
+        </div>
+
+        <ul class="claims">
+          <li data-i18n="hero-tagline-1">Sunucu yok.</li>
+          <li data-i18n="hero-tagline-2">Hesap yok.</li>
+          <li data-i18n="hero-tagline-3">Yerel kontrol.</li>
+        </ul>
       </div>
 
-      <ul class="claims">
-        <li data-i18n="hero-tagline-1">Sunucu yok.</li>
-        <li data-i18n="hero-tagline-2">Hesap yok.</li>
-        <li data-i18n="hero-tagline-3">Yerel kontrol.</li>
+      <figure class="hero-shot">
+        <img src="/assets/images/app-vault.webp" width="1800" height="893" alt="" fetchpriority="high" decoding="async">
+      </figure>
+    </div>
+
+    <div class="wrap">
+      <ul class="trust-bar" aria-label="Güven rozetleri" data-i18n-attr="aria-label:trust-bar-label">
+        <li>
+          <a href="/guvenlik/denetim-durumu/">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3.2v5.2c0 4.6-3 7.9-7 9.6-4-1.7-7-5-7-9.6V6.2L12 3z"></path><path d="M9 12l2 2 4-4.5"></path></svg>
+            <span data-i18n="badge-tests">2.213 test · %90 kapsam</span>
+          </a>
+        </li>
+        <li>
+          <a href="/guvenlik/denetim-durumu/">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M20 20l-4.8-4.8"></path><path d="M8.2 10.5h4.6M10.5 8.2v4.6"></path></svg>
+            <span data-i18n="badge-codeql">CodeQL statik analizi</span>
+          </a>
+        </li>
+        <li>
+          <a href="/guvenlik/denetim-durumu/">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.5 5.1 5.6.8-4 4 1 5.6-5.1-2.7-5.1 2.7 1-5.6-4-4 5.6-.8L12 3.5z"></path></svg>
+            <span data-i18n="badge-scorecard">OpenSSF Scorecard</span>
+          </a>
+        </li>
+        <li>
+          <a href="/guvenlik/">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2"></rect><path d="M8 10.5V7.5a4 4 0 018 0v3"></path></svg>
+            <span data-i18n="badge-crypto">Argon2id · AES-256-GCM</span>
+          </a>
+        </li>
+        <li>
+          <a href="/guvenlik/denetim-durumu/" class="trust-audit">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg>
+            <span data-i18n="badge-audit">Bağımsız denetim: sürüyor</span>
+          </a>
+        </li>
       </ul>
+    </div>
+  </section>
+
+  <section class="stats" aria-label="Kanıtlar" data-i18n-attr="aria-label:stats-label">
+    <div class="wrap">
+      <div class="stats-row">
+        <div class="stat">
+          <span class="stat-num" data-count="2213">0</span>
+          <span class="stat-label" data-i18n="stats-tests">birim testi</span>
+        </div>
+        <div class="stat">
+          <span class="stat-num" data-count="12">0</span>
+          <span class="stat-label" data-i18n="stats-langs">arayüz dili</span>
+        </div>
+        <div class="stat">
+          <span class="stat-num" data-count="5">0</span>
+          <span class="stat-label" data-i18n="stats-platforms">platform</span>
+        </div>
+        <div class="stat">
+          <span class="stat-num">0</span>
+          <span class="stat-label" data-i18n="stats-telemetry">telemetri</span>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -122,8 +260,8 @@
 
         <article class="card">
           <h3 data-i18n="pl-windows-title">Windows</h3>
-          <p data-i18n="pl-soon">Yakında</p>
-          <p class="faint" style="margin-top:.6rem" data-i18n="win-req">Windows 10 64-bit ve üzeri</p>
+          <p data-i18n="pl-windows-desc">Windows 10 64-bit ve üzeri. Kurulum sihirbazı, MSI veya taşınabilir sürüm.</p>
+          <p class="card-action"><a class="btn btn-ghost" href="/platformlar/windows/" data-i18n="pl-dl-now">İndir</a></p>
         </article>
 
         <article class="card">
@@ -168,9 +306,28 @@
       <h2 data-i18n="sec-title">Güvenlik Mimarisi</h2>
       <p class="prose muted" data-i18n="sec-desc">Kasa verileri cihazda şifrelenir. Koruma; ana parola gücüne, kasada kayıtlı KDF parametrelerine, cihazın güvenliğine ve uygulamanın kullanımına bağlıdır. Hiçbir kriptografik tasarım tüm saldırı senaryolarında mutlak koruma vaat etmez.</p>
 
-      <p style="margin-top:1.6rem">
-        <a class="btn btn-ghost" href="/download/#verify" data-i18n="sec-verify-btn">İndirmelerinizi doğrulayın</a>
-      </p>
+      <div class="grid grid-3" style="margin-top:1.6rem">
+        <article class="card">
+          <span class="eyebrow" data-i18n="sec-c1-tag">AEAD Authenticated</span>
+          <h3 data-i18n="sec-c1-title">AES-256-GCM</h3>
+          <p data-i18n="sec-c1-desc">Her kayıt, HKDF-SHA256 ile türetilmiş izole 256-bit AES-GCM anahtarıyla şifrelenir.</p>
+        </article>
+        <article class="card">
+          <span class="eyebrow" data-i18n="sec-c2-tag">Key Derivation</span>
+          <h3 data-i18n="sec-c2-title">Argon2id KDF</h3>
+          <p data-i18n="sec-c2-desc">Argon2id, çevrimdışı parola denemelerinin maliyetini yükseltir. Varsayılanlar: Tauri derlemeleri.</p>
+        </article>
+        <article class="card">
+          <span class="eyebrow" data-i18n="sec-c3-tag">Zero-Knowledge</span>
+          <h3 data-i18n="sec-c3-title">Zero Knowledge</h3>
+          <p data-i18n="sec-c3-desc">Ana parola ve türetilen anahtarlar istemci tarafında işlenir.</p>
+        </article>
+      </div>
+
+      <div class="cta-row" style="margin-top:1.8rem">
+        <a class="btn btn-primary" href="/guvenlik/tehdit-modeli/" data-i18n="p-guvenlik-primary">Tehdit modelini okuyun</a>
+        <a class="btn btn-ghost" href="/guvenlik/dogrulama/" data-i18n="sec-verify-btn">İndirmelerinizi doğrulayın</a>
+      </div>
     </div>
   </section>
 
@@ -200,51 +357,88 @@
     </div>
   </section>
 
+  <section id="how-it-works">
+    <div class="wrap">
+      <span class="eyebrow" data-i18n="how-eyebrow">Nasıl çalışır</span>
+      <h2 data-i18n="how-title">Ana paroladan şifreli kasaya dört adım</h2>
+      <p class="prose muted" data-i18n="how-desc">Buradaki hiçbir adım bir sunucuya bağlanmaz. Her adım, bu sayfayı okuduğunuz cihazda çalışır.</p>
+
+      <ol class="steps">
+        <li class="step">
+          <span class="step-num" aria-hidden="true">1</span>
+          <h3 data-i18n="how-step1-title">Ana parolanızı siz belirlersiniz</h3>
+          <p data-i18n="how-step1-desc">Hiçbir biçimde bu cihazdan çıkmaz ve sıfırlama bağlantısı yoktur, çünkü sıfırlanacak bir hesap yoktur.</p>
+        </li>
+
+        <li class="step">
+          <span class="step-num" aria-hidden="true">2</span>
+          <h3 data-i18n="how-step2-title">Argon2id anahtarı türetir</h3>
+          <p data-i18n="how-step2-desc">Parola Argon2id ile anahtara esnetilir, ardından HKDF-SHA256 ile kayıt başına izole bir anahtara ayrılır.</p>
+        </li>
+
+        <li class="step">
+          <span class="step-num" aria-hidden="true">3</span>
+          <h3 data-i18n="how-step3-title">Her kayıt AES-256-GCM ile mühürlenir</h3>
+          <p data-i18n="how-step3-desc">Diskteki kasa dosyası yalnızca şifreli metni ve doğrulama etiketini içerir. Anahtarsız okuma yanlış değer döndürmek yerine başarısız olur.</p>
+        </li>
+
+        <li class="step">
+          <span class="step-num" aria-hidden="true">4</span>
+          <h3 data-i18n="how-step4-title">Yerelde açarsınız</h3>
+          <p data-i18n="how-step4-desc">Biyometri, güvenlik anahtarı veya 24 kelimelik kurtarma kiti anahtarı yine bu cihazda serbest bırakır. Hiçbir ağ isteği yoktur.</p>
+        </li>
+      </ol>
+
+      <div class="cta-row" style="margin-top:1.9rem">
+        <a class="btn btn-ghost" href="/guvenlik/tehdit-modeli/" data-i18n="how-cta">Tehdit modelini okuyun</a>
+      </div>
+    </div>
+  </section>
+
   <section id="comparison">
     <div class="wrap">
       <span class="eyebrow" data-i18n="comp-eyebrow">Karşılaştırma Matrisi</span>
       <h2 data-i18n="comp-title">Neden KalderaShield Farklı?</h2>
-
       <div style="overflow-x:auto;margin-top:1.4rem">
         <table>
           <thead>
             <tr>
-              <th data-i18n="comp-th-criteria">Ölçüt</th>
+              <th scope="col" data-i18n="comp-th-criteria">Güvenlik &amp; Mimari Kriteri</th>
               <th data-i18n="comp-th-kalderashield">KalderaShield</th>
-              <th data-i18n="comp-th-cloud">Bulut Yöneticileri</th>
-              <th data-i18n="comp-th-offline">Çevrimdışı Araçlar</th>
+              <th data-i18n="comp-th-cloud">Bulut Şifre Yöneticileri</th>
+              <th data-i18n="comp-th-offline">Geleneksel Offline Sistemler</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>Sunucu gereksinimi</td>
-              <td>Yok</td>
-              <td>Zorunlu</td>
-              <td>Yok</td>
+              <th scope="row" data-i18n="comp-row-server">Sunucu gereksinimi</th>
+              <td data-check="yes" data-i18n="comp-val-none">Yok</td>
+              <td data-check="no" data-i18n="comp-val-required">Zorunlu</td>
+              <td data-check="yes" data-i18n="comp-val-none">Yok</td>
             </tr>
             <tr>
-              <td>Hesap zorunluluğu</td>
-              <td>Yok</td>
-              <td>Zorunlu</td>
-              <td>Yok</td>
+              <th scope="row" data-i18n="comp-row-account">Hesap zorunluluğu</th>
+              <td data-check="yes" data-i18n="comp-val-none">Yok</td>
+              <td data-check="no" data-i18n="comp-val-required">Zorunlu</td>
+              <td data-check="yes" data-i18n="comp-val-none">Yok</td>
             </tr>
             <tr>
-              <td>Veri konumu</td>
-              <td>Cihazınızda</td>
-              <td>Satıcının sunucusunda</td>
-              <td>Cihazınızda</td>
+              <th scope="row" data-i18n="comp-row-location">Veri konumu</th>
+              <td data-check="yes" data-i18n="comp-val-device">Cihazınızda</td>
+              <td data-check="no" data-i18n="comp-val-vendor-server">Satıcının sunucusunda</td>
+              <td data-check="yes" data-i18n="comp-val-device">Cihazınızda</td>
             </tr>
             <tr>
-              <td>Ağ olmadan çalışma</td>
-              <td>Tam</td>
-              <td>Hayır</td>
-              <td>Tam</td>
+              <th scope="row" data-i18n="comp-row-offline">Ağ olmadan çalışma</th>
+              <td data-check="yes" data-i18n="comp-val-full">Tam</td>
+              <td data-check="no" data-i18n="comp-val-no">Hayır</td>
+              <td data-check="yes" data-i18n="comp-val-full">Tam</td>
             </tr>
             <tr>
-              <td>Açık kaynak</td>
-              <td>Evet</td>
-              <td>Hayır</td>
-              <td>Değişir</td>
+              <th scope="row" data-i18n="comp-row-opensource">Açık kaynak</th>
+              <td data-check="yes" data-i18n="comp-val-yes">Evet</td>
+              <td data-check="no" data-i18n="comp-val-no">Hayır</td>
+              <td data-check="partial" data-i18n="comp-val-varies">Değişir</td>
             </tr>
           </tbody>
         </table>
@@ -266,16 +460,18 @@
     </div>
   </section>
 
-  <section id="get-started">
+  <section class="final-cta">
     <div class="wrap">
-      <h2 data-i18n="dlhub-title">KalderaShield'i İndirin</h2>
-      <p class="prose muted" data-i18n="dl-release-note">İndirmeler GitHub Releases üzerinden sunulur; her sürüm SHA-256 özeti ve imzalarla birlikte yayımlanır.</p>
-      <p style="margin-top:1.4rem"><a class="btn btn-primary" href="/download/" data-i18n="nav-cta">İndir</a></p>
+      <h2 data-i18n="final-cta-title">Şifrelerinizin Kontrolünü Elinize Alın</h2>
+      <p class="prose muted" data-i18n="final-cta-desc">Ücretsiz, açık kaynak, sunucusuz. İndirin, doğrulayın, kasınızı cihazınızda tutun.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary btn-lg" href="/download/" data-i18n="hero-btn-dl">Yükleyiciyi İndir</a>
+        <a class="btn btn-ghost" href="https://github.com/hafgit99/kalderashield" rel="noopener noreferrer" data-i18n="hero-btn-git">GitHub'da İncele</a>
+      </div>
     </div>
   </section>
 
 </main>
-
 <footer class="site-footer">
   <div class="wrap">
     <div class="cols">
@@ -284,15 +480,17 @@
           <img src="/assets/images/icon-128.png" alt="" width="26" height="26">
           KalderaShield
         </a>
-        <p class="faint" style="margin-top:.7rem" data-i18n="footer-brand-desc">AES-256-GCM ve Argon2id ile güçlendirilmiş, yerel ve açık kaynaklı yeni nesil sifır-bilgi şifre yöneticisi.</p>
+        <p class="faint" style="margin-top:.7rem" data-i18n="footer-brand-desc">AES-256-GCM ve Argon2id ile güçlendirilmiş, yerel ve açık kaynaklı yeni nesil sıfır-bilgi şifre yöneticisi.</p>
       </div>
 
       <div>
         <h2 data-i18n="footer-col1-title">Ürün</h2>
         <ul>
           <li><a href="#features" data-i18n="nav-features">Özellikler</a></li>
-          <li><a href="#security" data-i18n="nav-security">Güvenlik</a></li>
-          <li><a href="#extensions" data-i18n="nav-extensions">Eklentiler</a></li>
+          <li><a href="/guvenlik/" data-i18n="nav-security">Güvenlik</a></li>
+          <li><a href="/eklenti/" data-i18n="nav-extensions">Eklentiler</a></li>
+          <li><a href="/sss/" data-i18n="nav-faq">SSS</a></li>
+          <li><a href="/kaynak-kodu/" data-i18n="footer-link-source">Kaynak Kodları</a></li>
           <li><a href="/download/" data-i18n="nav-download">İndir</a></li>
         </ul>
       </div>
@@ -323,6 +521,18 @@
   </div>
 </footer>
 
+<!--
+  Sticky download bar. Below 768px only, and site.js hides it again as soon as
+  the closing CTA above is on screen, so the two never sit on top of each other.
+  The label reuses hero-btn-dl rather than adding a thirteenth string to twelve
+  dictionaries for a button that says the same thing as the hero's.
+-->
+<div class="sticky-cta">
+  <a class="btn btn-primary" href="/download/" data-i18n="hero-btn-dl">Yükleyiciyi İndir</a>
+</div>
+
+<script src="/assets/js/i18n-apply.js" defer></script>
 <script src="/assets/js/site.js" defer></script>
-</body>
-</html>
+
+
+</body></html>

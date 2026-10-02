@@ -1,0 +1,170 @@
+{
+  "section": "platformlar",
+  "slug": "macos",
+  "i18n": {
+    "en": {
+      "title": "KalderaShield for macOS — KalderaShield",
+      "description": "Install KalderaShield on macOS: a universal build covering Apple Silicon and Intel. Touch ID (Secure Enclave) unlock and SHA-256 verification included.",
+      "eyebrow": "Platforms / macOS",
+      "h1": "KalderaShield on macOS",
+      "lead": "macOS ships as a universal build: one .dmg that installs on Apple Silicon and Intel Macs, built on macOS itself as the platform requires.",
+      "primary": "Download for macOS",
+      "secondary": "Verify the checksum",
+      "primaryHref": "/download/",
+      "whatLabel": "What you get",
+      "whatTitle": "One universal build",
+      "what": [
+        "The .dmg contains a universal application: it runs natively on Apple Silicon and Intel without Rosetta. The bundle is built on macOS, because macOS packages cannot be produced correctly on other platforms.",
+        "macOS-specific protections are active: Touch ID wraps the convenience-unlock payload with a Secure Enclave-backed WebAuthn PRF platform authenticator, and PRF-capable FIDO2 security keys such as a YubiKey 5 can serve as the wrapping authenticator instead.",
+        "Everything else is the same design as every other platform: per-record AES-256-GCM encryption, Argon2id with 64 MiB / 4 iterations / 2 lanes, the air-gap network policy and portable encrypted backups."
+      ],
+      "stepsTitle": "Getting started on macOS",
+      "steps": [
+        {
+          "title": "Download and verify",
+          "desc": "Fetch the .dmg from the download page and compare its SHA-256 hash with SHA256SUMS.txt before mounting it."
+        },
+        {
+          "title": "Create the vault",
+          "desc": "Choose the master password and store the 24-word BIP-39 recovery key outside the application, in a place you control."
+        },
+        {
+          "title": "Optionally add Touch ID",
+          "desc": "Enroll platform unlock so daily access is a fingerprint, backed by the Secure Enclave. The master password remains the root of the vault and the only full recovery path."
+        }
+      ],
+      "secTitle": "macOS specifics you should know",
+      "secLabel": "Signing and Gatekeeper",
+      "secBody": "The application does not carry a Developer ID signature yet, and it is not notarized: the release pipeline blocks macOS artifacts from public release until real Developer ID signing is configured. Until then, a build you obtain outside the pipeline is subject to Gatekeeper's unsigned-application checks — verify the SHA-256 hash against the published checksums, and right-click → Open is the local override for a file you have verified yourself.",
+      "tech": [
+        {
+          "tag": "Universal",
+          "title": "Apple Silicon + Intel",
+          "desc": "One .dmg serves both architectures natively. Built on macOS, as the platform's own packaging rules require."
+        },
+        {
+          "tag": "Secure Enclave",
+          "title": "Touch ID unlock",
+          "desc": "The PRF-derived wrapping key never leaves the secure hardware. Re-enrollment or device replacement degrades convenience only, never vault access."
+        },
+        {
+          "tag": "FIDO2 / YubiKey",
+          "title": "Key-based unlock",
+          "desc": "PRF-capable security keys (YubiKey 5, firmware 5.3+) can wrap the unlock payload; unlocking then requires the physical key."
+        }
+      ],
+      "faqTitle": "macOS questions",
+      "faq": [
+        {
+          "q": "Does the universal build run on both M-series and Intel Macs?",
+          "a": "Yes. The application is compiled for both architectures and macOS picks the right slice automatically. No Rosetta translation is involved."
+        },
+        {
+          "q": "Why does macOS warn about the application?",
+          "a": "Because it is not signed with a Developer ID certificate or notarized yet. Verify the SHA-256 hash against the published checksums first; the verification page explains the whole story."
+        },
+        {
+          "q": "If I lose my Mac, do I lose my vault?",
+          "a": "No. The vault file is never hardware-sealed. Restore an encrypted backup on any other device with the master password — Touch ID wraps convenience, not access."
+        }
+      ],
+      "relatedTitle": "Related pages",
+      "related": [
+        {
+          "href": "/guvenlik/dogrulama/",
+          "label": "Verify your download"
+        },
+        {
+          "href": "/guvenlik/",
+          "label": "Security overview"
+        },
+        {
+          "href": "/platformlar/windows/",
+          "label": "Windows platform page"
+        }
+      ]
+    },
+    "tr": {
+      "title": "macOS için KalderaShield — KalderaShield",
+      "description": "KalderaShield'ı macOS'a kurun: Apple Silicon ve Intel'i kapsayan universal derleme. Touch ID (Secure Enclave) kilit açma ve SHA-256 doğrulama dahil.",
+      "eyebrow": "Platformlar / macOS",
+      "h1": "macOS'ta KalderaShield",
+      "lead": "macOS universal derleme olarak gelir: Apple Silicon ve Intel Mac'lere kurulan tek bir .dmg, platformun gerektirdiği gibi macOS üzerinde derlenir.",
+      "primary": "macOS için indirin",
+      "secondary": "Sağlama toplamını doğrulayın",
+      "primaryHref": "/download/",
+      "whatLabel": "Nedir elde ettiğiniz",
+      "whatTitle": "Tek universal derleme",
+      "what": [
+        ".dmg, universal bir uygulama içerir: Apple Silicon ve Intel'de Rosetta'sız yerel çalışır. Paket macOS üzerinde derlenir, çünkü macOS paketleri başka platformlarda doğru üretilemez.",
+        "macOS'a özgü korumalar etkindir: Touch ID, kolay-kilit-açma yükünü Secure Enclave destekli bir WebAuthn PRF platform doğrulayıcısıyla sarar; ve YubiKey 5 gibi PRF yetenekli FIDO2 güvenlik anahtarları bunun yerine sarma doğrulayıcısı olabilir.",
+        "Gerisi her platformla aynı tasarımdır: kayıt başına AES-256-GCM şifreleme, 64 MiB / 4 iterasyon / 2 hat ile Argon2id, hava boşluğu ağ politikası ve taşınabilir şifreli yedekler."
+      ],
+      "stepsTitle": "macOS'ta başlangıç",
+      "steps": [
+        {
+          "title": "İndirin ve doğrulayın",
+          "desc": ".dmg'yi indirme sayfasından alın ve bağlamadan önce SHA-256 karmasını SHA256SUMS.txt ile karşılaştırın."
+        },
+        {
+          "title": "Kasayı oluşturun",
+          "desc": "Ana parolayı seçin ve 24 kelimelik BIP-39 kurtarma anahtarını, denetiminizde olan uygulama dışı bir yerde saklayın."
+        },
+        {
+          "title": "İsterseniz Touch ID ekleyin",
+          "desc": "Günlük erişim bir parmak izi olsun diye platform kilit açmasını kaydedin, Secure Enclave destekli. Ana parola kasanın kökü ve tek tam kurtarma yolu kalır."
+        }
+      ],
+      "secTitle": "Bilmeniz gereken macOS ayrıntıları",
+      "secLabel": "İmzalama ve Gatekeeper",
+      "secBody": "Uygulama henüz Developer ID imzası taşımıyor ve notarize edilmedi: sürüm boru hattı, gerçek Developer ID imzalama yapılandırılana kadar macOS dosyalarının herkese açık sürüm olarak yayımlanmasını engelliyor. O zamana kadar, boru hattı dışından elde ettiğiniz derleme Gatekeeper'ın imzasız uygulama kontrollerine tabidir — SHA-256 karmasını yayımlanan sağlamalarla doğrulayın; kendinizin doğruladığı bir dosya için sağ tık → Open yerel müdahaledir.",
+      "tech": [
+        {
+          "tag": "Universal",
+          "title": "Apple Silicon + Intel",
+          "desc": "Tek .dmg her iki mimariye de yerel hizmet eder. Platformun kendi paketleme kuralları gereği macOS'ta derlenir."
+        },
+        {
+          "tag": "Secure Enclave",
+          "title": "Touch ID ile açma",
+          "desc": "PRF ile türetilen sarma anahtarı güvenli donanımdan hiç çıkmaz. Yeniden kayıt veya cihaz değişimi yalnızca kolaylığı etkiler, kasa erişimini asla."
+        },
+        {
+          "tag": "FIDO2 / YubiKey",
+          "title": "Anahtarla açma",
+          "desc": "PRF yetenekli güvenlik anahtarları (YubiKey 5, aygıt yazılımı 5.3+) kilit açma yükünü sarabilir; açma sonra fiziksel anahtarı gerektirir."
+        }
+      ],
+      "faqTitle": "macOS soruları",
+      "faq": [
+        {
+          "q": "Universal derleme hem M-serisi hem Intel Mac'lerde çalışır mı?",
+          "a": "Evet. Uygulama her iki mimari için derlenir ve macOS doğru dilimi kendiliğinden seçer. Rosetta çevirisi söz konusu değildir."
+        },
+        {
+          "q": "macOS uygulamaya neden uyarıyor?",
+          "a": "Henüz Developer ID sertifikasıyla imzalanmadığı ve notarize edilmediği için. Önce SHA-256 karmasını yayımlanan sağlamalarla doğrulayın; doğrulama sayfası bütün hikâyeyi anlatır."
+        },
+        {
+          "q": "Mac'imi kaybedersem kasamı kaybeder miyim?",
+          "a": "Hayır. Kasa dosyası asla donanıma mühürlenmez. Şifreli bir yedeği başka herhangi bir cihazda ana parolayla geri yükleyin — Touch ID kolaylığı sarar, erişimi değil."
+        }
+      ],
+      "relatedTitle": "İlgili sayfalar",
+      "related": [
+        {
+          "href": "/guvenlik/dogrulama/",
+          "label": "İndirdiğinizi doğrulayın"
+        },
+        {
+          "href": "/guvenlik/",
+          "label": "Güvenlik genel bakışı"
+        },
+        {
+          "href": "/platformlar/windows/",
+          "label": "Windows platform sayfası"
+        }
+      ]
+    }
+  }
+}

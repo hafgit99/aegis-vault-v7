@@ -1,0 +1,170 @@
+{
+  "section": "guvenlik",
+  "slug": "denetim-durumu",
+  "i18n": {
+    "en": {
+      "title": "Audit Status — KalderaShield",
+      "description": "An independent third-party security audit of KalderaShield has not been completed. This page states that openly and describes today's automated verification.",
+      "eyebrow": "Security / Audit status",
+      "h1": "No independent audit has been completed yet",
+      "lead": "This is the page most security software would leave unwritten. An independent third-party audit of KalderaShield has not been performed. No audit badge on this site corresponds to a completed external review, and none will appear until one exists.",
+      "primary": "See the audit scope",
+      "secondary": "Read the threat model",
+      "primaryHref": "https://github.com/hafgit99/kalderashield/blob/main/docs/EXTERNAL_AUDIT_SCOPE_EN.md",
+      "whatLabel": "Where the claim stands",
+      "whatTitle": "What is verified automatically, and by whom",
+      "what": [
+        "What exists today is automated, reproducible verification: 2204 unit tests across 248 files, a property-based fuzz gate over import parsing, backup envelopes and attachment metadata, mutation testing with Stryker, CodeQL analysis and OpenSSF Scorecard in CI, gitleaks secret scanning, and a dependency policy that fails on any high or critical npm advisory.",
+        "What does not exist is an external, independent expert review of the cryptographic design and implementation. Internal review reports document hundreds of findings and fixes, but they were written by the project itself. That is a different class of assurance and it is not presented as one.",
+        "The plan is an external audit: a draft scope document already exists, listing the components in scope — cryptography, vault persistence, the extension bridge, the Tauri IPC surface — so the work can start as soon as an auditor is engaged. No date is promised before a contract exists."
+      ],
+      "stepsTitle": "The verification you can do without us",
+      "steps": [
+        {
+          "title": "Read the source",
+          "desc": "The entire application is Apache-2.0 open source. The security-critical paths are documented in the threat model, and the code that implements them is on GitHub."
+        },
+        {
+          "title": "Run the gates yourself",
+          "desc": "The test suite, fuzz gate and release-hardening scans run locally with npm and cargo commands that are documented in the repository. Nothing about the pipeline is hidden."
+        },
+        {
+          "title": "Verify the artifact you install",
+          "desc": "Every release publishes SHA-256 checksums, and the updater bundles carry minisign signatures. The verification page gives the exact commands."
+        }
+      ],
+      "secTitle": "Why we say this on a public page",
+      "secLabel": "Honesty is part of the design",
+      "secBody": "An unfinished audit marketed as an achievement is how trust products lose trust. The absence of an external audit is a real limitation: it means no independent expert has hunted for the flaw the automation misses. Stating it plainly lets you weigh the risk yourself, and gives the project a public commitment to be held to.",
+      "tech": [
+        {
+          "tag": "2204 tests",
+          "title": "Unit suite",
+          "desc": "248 test files with coverage thresholds enforced at 90% lines and 80% branches; the measured baseline runs above them."
+        },
+        {
+          "tag": "fast-check",
+          "title": "Fuzz gate",
+          "desc": "Property-based tests throw malformed JSON, CSV, KDF parameters and backup envelopes at the importer and crypto paths on every release run."
+        },
+        {
+          "tag": "CodeQL + Scorecard",
+          "title": "CI analysis",
+          "desc": "GitHub CodeQL analyzes the code weekly, OpenSSF Scorecard grades the supply chain, and gitleaks blocks committed secrets."
+        }
+      ],
+      "faqTitle": "About the audit status",
+      "faq": [
+        {
+          "q": "Does \"no audit\" mean the app is insecure?",
+          "a": "No. It means independent experts have not validated the design. The source is open, the automated gates are strict and public, and the threat model states its limits — you can evaluate all three yourself."
+        },
+        {
+          "q": "When will an external audit happen?",
+          "a": "When an auditor is engaged. The scope document is published so the engagement can start immediately; promising a date without a contract would be another claim this site refuses to make."
+        },
+        {
+          "q": "Will you show the audit results?",
+          "a": "Yes. The full report, or the auditor's own publication of it, will be linked from this page, including findings that are not yet fixed."
+        }
+      ],
+      "relatedTitle": "Related pages",
+      "related": [
+        {
+          "href": "/guvenlik/tehdit-modeli/",
+          "label": "Threat model"
+        },
+        {
+          "href": "/guvenlik/dogrulama/",
+          "label": "Verify your download"
+        },
+        {
+          "href": "/kaynak-kodu/",
+          "label": "Source code and quality gates"
+        }
+      ]
+    },
+    "tr": {
+      "title": "Denetim Durumu — KalderaShield",
+      "description": "KalderaShield'ın bağımsız üçüncü taraf güvenlik denetimi tamamlanmadı. Bu sayfa bunu açıkça yazar ve bugün yerinde olan otomatik doğrulamayı anlatır.",
+      "eyebrow": "Güvenlik / Denetim durumu",
+      "h1": "Bağımsız bir denetim henüz tamamlanmadı",
+      "lead": "Güvenlik yazılımlarının çoğunun yazmayı bıraktığı sayfa budur. KalderaShield'ın bağımsız bir üçüncü taraf denetimi yapılmadı. Bu sitedeki hiçbir denetim rozeti tamamlanmış bir dış incelemeye karşılık gelmez; biri var olduğu anda hiçbiri görünmeyecek.",
+      "primary": "Denetim kapsamına bakın",
+      "secondary": "Tehdit modelini okuyun",
+      "primaryHref": "https://github.com/hafgit99/kalderashield/blob/main/docs/EXTERNAL_AUDIT_SCOPE_EN.md",
+      "whatLabel": "İddia nerede duruyor",
+      "whatTitle": "Neyi otomatik doğruluyoruz ve kim doğruluyor",
+      "what": [
+        "Bugün var olan şey otomatik, yeniden üretilebilir doğrulamadır: 248 dosyada 2204 birim testi, içe aktarma ayrıştırması, yedek zarfları ve ek üst verisi üzerinde özellik-tabanlı fuzz kapısı, Stryker ile mutasyon testi, CI'da CodeQL analizi ve OpenSSF Scorecard, gitleaks sır taraması ve yüksek ya da kritik npm danışmanlığında başarısız olan bağımlılık politikası.",
+        "Var olmayan şey, kriptografik tasarım ve uygulamanın harici, bağımsız uzman incelemesidir. İç inceleme raporları yüzlerce bulgu ve düzeltmeyi belgeler, ama onları projenin kendisi yazdı. Bu, farklı bir güvence sınıfıdır ve öyle sunulmaz.",
+        "Plan bir dış denetimdir: kapsam taslağı zaten yayımlandı ve kapsamdeki bileşenleri — kriptografi, kasa kalıcılığı, eklenti köprüsü, Tauri IPC yüzeyi — listeler; böylece bir denetçiyle anlaşılır anılmaz iş başlayabilir. Sözleşme var olmadan tarih vaat edilmez."
+      ],
+      "stepsTitle": "Bizim olmadığınızda yapabileceğiniz doğrulama",
+      "steps": [
+        {
+          "title": "Kaynağı okuyun",
+          "desc": "Uygulamanın tamamı Apache-2.0 açık kaynak. Güvenlik-kritik yollar tehdit modelinde belgelenmiştir ve onları uygulayan kod GitHub'dadır."
+        },
+        {
+          "title": "Kapıları kendiniz çalıştırın",
+          "desc": "Test paketi, fuzz kapısı ve sürüm-sertleştirme taramaları, depoda belgelenmiş npm ve cargo komutlarıyla yerelde çalışır. Boru hattının gizli bir yanı yoktur."
+        },
+        {
+          "title": "Kurduğunuz dosyayı doğrulayın",
+          "desc": "Her sürüm SHA-256 sağlama toplarını yayımlar ve güncelleme paketleri minisign imzaları taşır. Doğrulama sayfası tam komutları verir."
+        }
+      ],
+      "secTitle": "Bunu herkese açık sayfada neden yazıyoruz",
+      "secLabel": "Dürüstlük tasarımın parçasıdır",
+      "secBody": "Tamamlanmamış bir denetimi başarı gibi pazarlamak, güven ürünlerinin güveni nasıl kaybettiğidir. Dış denetimin yokluğu gerçek bir sınırdır: otomasyonun gözden kaçırdığı kusuru bağımsız bir uzmanın aramadığı anlamına gelir. Bunu açıkça yazmak, riski kendiniz tartışmanızı sağlar ve projeye uyulacak herkese açık bir taahhüt verir.",
+      "tech": [
+        {
+          "tag": "2204 test",
+          "title": "Birim paketi",
+          "desc": "248 test dosyası; kapsam eşikleri %90 satır ve %80 dal olarak uygulanır, ölçülen taban bunların üzerinde çalışır."
+        },
+        {
+          "tag": "fast-check",
+          "title": "Fuzz kapısı",
+          "desc": "Özellik-tabanlı testler, her sürüm çalıştırmasında içe aktarıcıya ve kripto yollarına bozuk JSON, CSV, KDF parametreleri ve yedek zarfları fırlatır."
+        },
+        {
+          "tag": "CodeQL + Scorecard",
+          "title": "CI analizi",
+          "desc": "GitHub CodeQL kodu haftalık analiz eder, OpenSSF Scorecard tedarik zincirini notlandırır, gitleaks commit'lenmiş sırları engeller."
+        }
+      ],
+      "faqTitle": "Denetim durumu hakkında",
+      "faq": [
+        {
+          "q": "\"Denetim yok\" demek uygulama güvensiz demek mi?",
+          "a": "Hayır. Bağımsız uzmanların tasarımı doğrulamadığı anlamına gelir. Kaynak açık, otomatik kapılar sıkı ve herkese açık, tehdit modeli sınırlarını yazar — üçünü de kendiniz değerlendirebilirsiniz."
+        },
+        {
+          "q": "Dış denetim ne zaman olacak?",
+          "a": "Bir denetçiyle anlaşıldığında. Kapsam belgesi yayımlandı, böylece anlaşma bitince hemen başlanabilir; sözleşme olmadan tarih vaat etmek, bu sitenin yapmayı reddettiği bir başka iddia olurdu."
+        },
+        {
+          "q": "Denetim sonuçlarını gösterecek misiniz?",
+          "a": "Evet. Tam rapor ya da denetçinin kendi yayını bu sayfadan bağlanacak; henüz düzeltilmemiş bulgular dahil."
+        }
+      ],
+      "relatedTitle": "İlgili sayfalar",
+      "related": [
+        {
+          "href": "/guvenlik/tehdit-modeli/",
+          "label": "Tehdit modeli"
+        },
+        {
+          "href": "/guvenlik/dogrulama/",
+          "label": "İndirdiğinizi doğrulayın"
+        },
+        {
+          "href": "/kaynak-kodu/",
+          "label": "Kaynak kodu ve kalite kapıları"
+        }
+      ]
+    }
+  }
+}

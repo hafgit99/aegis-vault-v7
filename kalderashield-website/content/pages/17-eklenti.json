@@ -1,0 +1,180 @@
+{
+  "section": "eklenti",
+  "slug": "eklenti",
+  "i18n": {
+    "en": {
+      "title": "Browser Extension — KalderaShield",
+      "description": "The KalderaShield browser extension for Chromium and Firefox: autofill gated per site, native messaging over an encrypted loopback bridge, and a minimal permission set.",
+      "eyebrow": "Product / Browser extension",
+      "h1": "Filling passwords is the riskiest moment. We designed for it.",
+      "lead": "The KalderaShield extension is a Manifest V3 companion for Chromium and Firefox. It fills credentials only on sites it can bind to an existing record, talks to the desktop app over an encrypted loopback bridge, and collects nothing.",
+      "primary": "See how autofill works",
+      "secondary": "Read the threat model",
+      "primaryHref": "/urun/autofill/",
+      "whatLabel": "What it does",
+      "whatTitle": "Autofill with a bouncer at the door",
+      "what": [
+        "The extension injects a content script into http/https pages and offers to fill credentials for the site you are on. Domain matching is validated down to eTLD+1 — lookalike domains on different registrable domains do not receive another site's credentials, and a phishing-alert latch keeps warning once a mismatch is detected.",
+        "It has no broad page powers: the manifest requests nativeMessaging, activeTab and storage, the extension pages' CSP is script-src 'self', and the Firefox build declares data_collection_permissions: none. There is no analytics SDK and no telemetry in the bundle.",
+        "The pairing dialog on the desktop side must be accepted before the bridge works at all, credentials are leased to the bridge for five minutes at a time and zeroized on expiry, and a revoke action wipes the lease and rotates the pairing token immediately."
+      ],
+      "stepsTitle": "How a fill happens",
+      "steps": [
+        {
+          "title": "The site asks, the extension checks",
+          "desc": "The content script finds a login form on the page you are on and asks the background worker. The worker validates the tab URL against the records it may offer — same eTLD+1 or an explicitly saved match."
+        },
+        {
+          "title": "The desktop decides",
+          "desc": "The request travels over the native messaging bridge to the desktop app, which returns only credentials bound to that site — broad queries return sanitized metadata with empty passwords."
+        },
+        {
+          "title": "The fill is bound to the tab",
+          "desc": "Filling is gated by tab-URL validation on the return path. The extension never accepts fill requests from web pages directly: pages cannot reach the extension's channel at all."
+        }
+      ],
+      "heroShot": {
+        "src": "/assets/images/ext-autofill.webp",
+        "w": 540,
+        "h": 510
+      },
+      "secTitle": "What the extension does not do",
+      "secLabel": "The limits, written down",
+      "secBody": "The extension stores no vault: it is a window into the desktop app, and without the paired desktop running it has nothing to give. It does not sync anything to any server, it does not read pages you have not activated it on, and malware with your OS privileges could reach the pairing token file — a residual risk documented in the threat model rather than denied.",
+      "tech": [
+        {
+          "tag": "Manifest V3",
+          "title": "Minimal permissions",
+          "desc": "nativeMessaging, activeTab, storage. No broad host access, no scripts evaluated from remote sources, CSP locked to 'self'."
+        },
+        {
+          "tag": "127.0.0.1",
+          "title": "Loopback-only bridge",
+          "desc": "Native messaging talks to the desktop over loopback TCP only; every frame is XChaCha20-Poly1305-encrypted under an HKDF-derived session key."
+        },
+        {
+          "tag": "Firefox 142+",
+          "title": "Signed for release Firefox",
+          "desc": "The Firefox build ships as a Mozilla-signed XPI (AMO), so it installs persistently on Release and Beta; the Chromium build loads unpacked or through your organization's policy."
+        }
+      ],
+      "faqTitle": "Extension questions",
+      "faq": [
+        {
+          "q": "Can the extension work without the desktop app?",
+          "a": "No, by design. It holds no vault copy, so a stolen laptop with the extension installed still holds nothing. Everything it can offer comes live from the paired, locked-or-unlocked desktop session."
+        },
+        {
+          "q": "What stops a fake website from getting my credentials?",
+          "a": "Domain validation at eTLD+1, a phishing-alert latch, and the fact that fill offers are bound to validated tab URLs. A different registrable domain is a different site, whatever it looks like."
+        },
+        {
+          "q": "Does the extension see what I type on every page?",
+          "a": "No. The content script is active on http/https pages, but it only reacts to login forms and to your explicit requests through the popup or keyboard. There is no keystroke logging."
+        }
+      ],
+      "relatedTitle": "Related pages",
+      "related": [
+        {
+          "href": "/urun/autofill/",
+          "label": "Autofill in detail"
+        },
+        {
+          "href": "/guvenlik/tehdit-modeli/",
+          "label": "Threat model: extension bridge"
+        },
+        {
+          "href": "/download/",
+          "label": "Download the extension"
+        }
+      ]
+    },
+    "tr": {
+      "title": "Tarayıcı Eklentisi — KalderaShield",
+      "description": "Chromium ve Firefox için KalderaShield tarayıcı eklentisi: site bazında kapılı otomatik doldurma, şifreli loopback köprüsü üzerinden native messaging ve minimal izin kümesi.",
+      "eyebrow": "Ürün / Tarayıcı eklentisi",
+      "h1": "Parola doldurmak en riskli andır. Biz bunun için tasarladık.",
+      "lead": "KalderaShield eklentisi, Chromium ve Firefox için bir Manifest V3 yardımcısıdır. Kimlik bilgilerini yalnızca mevcut bir kayda bağlayabildiği sitelerde doldurur, masaüstü uygulamasıyla şifreli bir loopback köprüsü üzerinden konuşur ve hiçbir şey toplamaz.",
+      "primary": "Otomatik doldurma nasıl çalışır",
+      "secondary": "Tehdit modelini okuyun",
+      "primaryHref": "/urun/autofill/",
+      "whatLabel": "Ne yapar",
+      "whatTitle": "Kapıda bekçisi olan otomatik doldurma",
+      "what": [
+        "Eklenti, http/https sayfalara bir content script enjekte eder ve bulunduğunuz site için kimlik bilgilerini doldurmayı önerir. Alan adı eşleşmesi eTLD+1'e kadar doğrulanır — farklı kaydedilebilir alan adlarındaki benzer adlar başka bir sitenin kimlik bilgilerini almaz ve bir uyuşmazlık algılandığında kimlik avı uyarı mandalı uyarı vermeyi sürdürür.",
+        "Geniş sayfa yetkisi yoktur: manifest, nativeMessaging, activeTab ve storage ister; eklenti sayfalarının CSP'si script-src 'self'tir ve Firefox derlemesi data_collection_permissions: none bildirir. Pakette analitik SDK yoktur, telemetri yoktur.",
+        "Köprünün hiç çalışmadan önce masaüstü tarafındaki eşleştirme penceresinin kabul edilmesi gerekir; kimlik bilgileri köprüye birer beş dakikalık dilimler halinde kiralanır ve süre dolunca sıfırlanır; bir revoke eylemi kirayı siler ve eşleştirme jetonunu anında döndürür."
+      ],
+      "stepsTitle": "Bir doldurma nasıl olur",
+      "steps": [
+        {
+          "title": "Site sorar, eklenti denetler",
+          "desc": "Content script, bulunduğunuz sayfada bir giriş formu bulur ve arka plan işçisine sorar. İşçi, sekme URL'sini önerebileceği kayıtlarla doğrular — aynı eTLD+1 ya da açıkça kaydedilmiş eşleşme."
+        },
+        {
+          "title": "Masaüstü karar verir",
+          "desc": "İstek, native messaging köprüsüyle masaüstü uygulamasına gider; uygulama yalnızca o siteye bağlı kimlik bilgilerini döndürür — geniş sorgular boş parolalı temizlenmiş üst veri döndürür."
+        },
+        {
+          "title": "Doldurma sekmeye bağlanır",
+          "desc": "Doldurma, dönüş yolunda sekme URL doğrulamasıyla kapılanır. Eklenti, web sayfalarından doğrudan doldurma isteklerini asla kabul etmez: sayfalar eklentinin kanalına hiç ulaşamaz."
+        }
+      ],
+      "heroShot": {
+        "src": "/assets/images/ext-autofill.webp",
+        "w": 540,
+        "h": 510
+      },
+      "secTitle": "Eklentinin yapmadıkları",
+      "secLabel": "Sınırlar, yazılmış halde",
+      "secBody": "Eklenti kasa tutmaz: masaüstü uygulamasına bir penceredir, eşlenmiş masaüstü çalışmıyorken verebileceği hiçbir şey yoktur. Hiçbir sunucuya hiçbir şey eşitlemez, üzerinde etkin olmadığınız sayfaları okumaz ve OS yetkiniz olan kötü amaçlı yazılım eşleştirme jetonu dosyasına ulaşabilir — tehdit modelinde inkâr edilmeyen, belgelenen bir artık risk.",
+      "tech": [
+        {
+          "tag": "Manifest V3",
+          "title": "Minimal izinler",
+          "desc": "nativeMessaging, activeTab, storage. Geniş host erişimi yok, uzak kaynaklardan çalıştırılan betik yok, CSP 'self'e kilitli."
+        },
+        {
+          "tag": "127.0.0.1",
+          "title": "Yalnızca loopback köprüsü",
+          "desc": "Native messaging, masaüstüyle yalnızca loopback TCP üzerinden konuşur; her çerçeve, HKDF ile türetilen oturum anahtarı altında XChaCha20-Poly1305 ile şifrelenir."
+        },
+        {
+          "tag": "Firefox 142+",
+          "title": "Sürüm Firefox'u için imzalı",
+          "desc": "Firefox derlemesi Mozilla imzalı XPI (AMO) olarak gelir, Release ve Beta'da kalıcı kurulur; Chromium derlemesi açılmamış olarak ya da kuruluşunuzun politikasıyla yüklenir."
+        }
+      ],
+      "faqTitle": "Eklenti soruları",
+      "faq": [
+        {
+          "q": "Eklenti masaüstü uygulaması olmadan çalışabilir mi?",
+          "a": "Tasarım gereği hayır. Kasa kopyası tutmaz; çalınan, eklentisi kurulu bir dizüstü yine de hiçbir şey taşımaz. Sunabileceği her şey, eşlenmiş masaüstü oturumundan canlı gelir."
+        },
+        {
+          "q": "Sahte bir web sitesi kimlik bilgilerimi almasın diye ne var?",
+          "a": "eTLD+1'de alan adı doğrulaması, kimlik avı uyarı mandalı ve doldurma tekliflerinin doğrulanmış sekme URL'lerine bağlı olması. Farklı bir kaydedilebilir alan adı, ne kadar benziyorsa benzesin, farklı bir sitedir."
+        },
+        {
+          "q": "Eklenti her sayfada ne yazdığımı görür mü?",
+          "a": "Hayır. Content script http/https sayfalarda etkindir ama yalnızca giriş formlarına ve popup ya da klavyeyle yapacağınız açık isteklere tepki verir. Tuş kaydı yoktur."
+        }
+      ],
+      "relatedTitle": "İlgili sayfalar",
+      "related": [
+        {
+          "href": "/urun/autofill/",
+          "label": "Ayrıntılı otomatik doldurma"
+        },
+        {
+          "href": "/guvenlik/tehdit-modeli/",
+          "label": "Tehdit modeli: eklenti köprüsü"
+        },
+        {
+          "href": "/download/",
+          "label": "Eklentiyi indirin"
+        }
+      ]
+    }
+  }
+}

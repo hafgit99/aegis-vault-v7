@@ -42,7 +42,11 @@
 
   --text: #e9edf4;
   --text-muted: #9aa5b6;
-  --text-faint: #6d7889;
+  /* Clears 4.5:1 on all three grounds -- 4.84 on --bg, 4.59 on --bg-raised, 4.93 on
+     --bg-sunken. The previous #6d7889 read 4.22 on --bg-raised, which is where
+     every .faint and footer column heading actually sits, so the "quietest text
+     on the page" was the only text failing WCAG AA. */
+  --text-faint: #737e8f;
 
   --accent: #2dd4bf;
   --accent-strong: #5eead4;
@@ -55,10 +59,26 @@
   --warn-bg: #241a10;
   --warn-line: #4d3a1e;
 
+  /* Header download button, dark palette.
+   *
+   * A full-strength accent fill is the brightest surface on a page whose ground
+   * is #08090e: the button glared rather than read as a button, and it pulled
+   * the eye off the h1 it sits next to. Dark mode gets a surface tinted toward
+   * the accent, an accent edge, and accent text instead. Still the only button
+   * in the nav and still unmistakable -- just without the luminance jump.
+   *
+   * Light mode overrides all five with a solid deep-teal fill, which on a cream
+   * ground is calm rather than glaring. See the light blocks below. */
+  --cta-bg: color-mix(in srgb, var(--accent) 13%, var(--bg-raised));
+  --cta-bg-hover: color-mix(in srgb, var(--accent) 20%, var(--bg-raised));
+  --cta-line: color-mix(in srgb, var(--accent) 38%, transparent);
+  --cta-fg: var(--accent);
+  --cta-shadow: color-mix(in srgb, var(--accent) 20%, transparent);
+
   --radius: 12px;
   --radius-lg: 18px;
   --measure: 68ch;
-  --page: 1120px;
+  --page: 1240px;
 
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
     Arial, "Noto Sans", "Noto Sans Arabic", "Noto Sans Hebrew", "Noto Sans JP",
@@ -77,7 +97,10 @@
   --line-strong: #cbc3b9;
   --text: #16120e;
   --text-muted: #57504a;
-  --text-faint: #7d746c;
+  /* 4.91 on --bg, 5.08 on --bg-raised, 4.55 on --bg-sunken. The previous
+     #7d746c read 4.10 on --bg-sunken, which is the ground of the comparison and
+     verification bands. */
+  --text-faint: #756d65;
   --accent: #0f766e;
   --accent-strong: #115e59;
   --accent-text: #0f766e;
@@ -85,6 +108,14 @@
   --warn: #8a5a12;
   --warn-bg: #fdf6e7;
   --warn-line: #e6d3a8;
+
+  /* Solid fill on a cream ground: --accent here is a deep burnt teal, so the
+     button needs no dimming to sit calmly in the header. */
+  --cta-bg: var(--accent);
+  --cta-bg-hover: var(--accent-strong);
+  --cta-line: transparent;
+  --cta-fg: #ffffff;
+  --cta-shadow: color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 @media (prefers-color-scheme: light) {
@@ -98,7 +129,7 @@
     --line-strong: #cbc3b9;
     --text: #16120e;
     --text-muted: #57504a;
-    --text-faint: #7d746c;
+--text-faint: #756d65;
     --accent: #0f766e;
     --accent-strong: #115e59;
     --accent-text: #0f766e;
@@ -106,6 +137,13 @@
     --warn: #8a5a12;
     --warn-bg: #fdf6e7;
     --warn-line: #e6d3a8;
+
+    /* see the --cta-* comment in the :root block */
+    --cta-bg: var(--accent);
+    --cta-bg-hover: var(--accent-strong);
+    --cta-line: transparent;
+    --cta-fg: #ffffff;
+    --cta-shadow: color-mix(in srgb, var(--accent) 30%, transparent);
   }
 }
 
@@ -164,19 +202,29 @@ a:hover {
   border-radius: 4px;
 }
 
+/* Parked with clip-path, not with left: -9999px.
+ *
+ * The negative offset was the usual trick, and in a left-to-right document it
+ * creates no scrollbar -- browsers do not scroll leftwards. In an RTL document
+ * they do: Arabic pages reported a 10,000px horizontal scroll, so a reader could
+ * swipe the whole page sideways into empty space. clip-path hides the box at its
+ * own centre instead of moving it out of the document, and leaves it in the tab
+ * order and the accessibility tree, which is the part a skip link needs. */
 .skip-link {
   position: absolute;
-  left: -9999px;
   top: 0;
+  inset-inline-start: 0;
   background: var(--accent);
   color: #05201c;
   padding: 0.6rem 1rem;
   z-index: 100;
   font-weight: 600;
+  white-space: nowrap;
+  clip-path: inset(50%);
 }
 
 .skip-link:focus {
-  left: 0;
+  clip-path: none;
 }
 
 .wrap {
@@ -196,9 +244,20 @@ a:hover {
   position: sticky;
   top: 0;
   z-index: 40;
+  border-bottom: 1px solid var(--line);
+}
+
+/* The header blur lives on a pseudo-element, not on the header itself: an
+   element with backdrop-filter becomes the containing block for fixed
+   descendants, which would pin the mobile slide-in nav to the 62px header
+   box instead of the viewport. */
+.site-header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
   background: color-mix(in srgb, var(--bg) 88%, transparent);
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--line);
+  z-index: -1;
 }
 
 .site-header .wrap {
@@ -206,6 +265,12 @@ a:hover {
   align-items: center;
   gap: 1.25rem;
   min-height: 62px;
+}
+
+/* When a very long nav row would overflow, the flex line must eat its own
+ * overflow, never squeeze the brand down to the first word. */
+.brand {
+  flex: none;
 }
 
 .brand {
@@ -232,21 +297,48 @@ a:hover {
 
 .site-nav {
   display: flex;
-  gap: 1.15rem;
+  /* Gap scales with the viewport: long locales (ja, ru, ar) need the whole
+   * bar to stay on one line at desktop widths, and a fixed rem gap was what
+   * pushed the pill controls onto a second line. */
+  gap: clamp(0.55rem, 1vw, 1.15rem);
   margin-left: auto;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+/* Below this width the clamped gap can no longer save the row; wrapping back
+ * on is the honest degradation for small windows. */
+@media (max-width: 1199px) {
+  .site-nav {
+    flex-wrap: wrap;
+  }
 }
 
 .site-nav a {
   color: var(--text-muted);
   text-decoration: none;
-  font-size: 0.95rem;
+  font-size: clamp(0.85rem, 0.95vw, 0.95rem);
+  transition: color 0.15s;
+  /* Links must never fold inside themselves (Japanese broke mid-word) and
+   * must never shrink to force a fit: the row manages width by hiding the
+   * two secondary in-page anchors, not by squeezing labels. */
+  white-space: nowrap;
+  flex: none;
 }
 
 .site-nav a:hover {
   color: var(--text);
 }
+
+.site-nav .menu,
+.site-nav .lang,
+.site-nav .theme {
+  flex: none;
+}
+
+/* Which read-links step aside at which width, and the download button that
+ * never does, are declared with the button at the bottom of this file. */
 
 .lang {
   position: relative;
@@ -328,6 +420,106 @@ a:hover {
   padding: 0.4rem 0.55rem;
 }
 
+/* Mega menu on the generated pages. Same dropdown pattern as the language and
+ * theme controls: a pill summary, an absolutely positioned raised panel, and
+ * no third-party behaviour. The summary keeps the browser's triangle hidden
+ * exactly like the other dropdowns. */
+.site-nav .menu {
+  position: relative;
+}
+
+.site-nav .menu > summary {
+  list-style: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.site-nav .menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.site-nav .menu[open] > summary {
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+
+/* Dropdown affordance: a small chevron built from borders, matching the
+ * nav's line weight. It turns over while the panel is open, the same way the
+ * language and theme pills signal their state. */
+.site-nav .menu > summary::after {
+  content: "";
+  width: 0.42em;
+  height: 0.42em;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translate(0, -0.06em);
+  margin-left: 0.1rem;
+  flex: none;
+  transition: transform 0.15s;
+}
+
+.site-nav .menu[open] > summary::after {
+  transform: rotate(225deg) translate(0, -0.06em);
+}
+
+.menu-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.4rem);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.32);
+  padding: 0.35rem;
+  min-width: 340px;
+  max-height: 70vh;
+  overflow-y: auto;
+  z-index: 40;
+}
+
+.menu-panel-sm {
+  min-width: 230px;
+}
+
+.menu-panel ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.1rem;
+}
+
+.menu-panel a {
+  display: block;
+  padding: 0.45rem 0.55rem;
+  border-radius: 7px;
+}
+
+.menu-panel a:hover {
+  background: var(--bg-sunken);
+}
+
+.menu-t {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.menu-d {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 0.1rem;
+}
+
 /* The two-letter code. Fixed width so the endonyms align into a column, and
  * monospaced so the codes do not shift as the active one changes weight. */
 .lang-code {
@@ -393,18 +585,569 @@ a:hover {
   color: var(--text);
 }
 
+/* Icon-only theme control. The round button shows the current mode as a glyph
+ * (◐ system / ☀ light / ☾ dark, updated by site.js); the readable labels live
+ * in the dropdown panel. The text span is hidden rather than removed so the
+ * dictionary-driven label and the summary's aria-label stay meaningful. */
+.theme > summary {
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  justify-content: center;
+  gap: 0;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.theme .theme-current {
+  display: none;
+}
+
+.theme-glyph {
+  font-size: 1.15rem;
+}
+
+/* Narrow desktop: the language pill keeps its two-letter code and drops the
+ * endonym so long locales still fit on one line. */
+@media (max-width: 1449px) {
+  .lang [data-lang-current] {
+    display: none;
+  }
+}
+
 /* ---------- hero ---------- */
 
 .hero {
+  position: relative;
   padding-block: 4.5rem 3.5rem;
   border-bottom: 1px solid var(--line);
+  overflow: hidden;
+}
+
+/* Depth behind the hero, in three passes.
+ *
+ * One teal glow is what this used to be, and it flattened the whole block into
+ * a single tone. The mark carries three hues -- teal deflectors, the magma core
+ * and the violet pan of the rim -- so the background now does too: teal high
+ * and right where the screenshot sits, a violet bloom low and left where the
+ * copy is, and one shallow wash rising from the bottom edge to lift the trust
+ * bar off the ground.
+ *
+ * Both layers still breathe on the same 9-second cycle. This is the only
+ * decorative motion on the page and it is disabled for prefers-reduced-motion,
+ * along with every entrance animation below. */
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: -30% -20% auto;
+  height: 82%;
+  background:
+    radial-gradient(820px 400px at 74% 22%, rgb(45 212 191 / 0.13), transparent 70%),
+    radial-gradient(620px 320px at 24% 68%, rgb(167 139 250 / 0.08), transparent 62%);
+  pointer-events: none;
+  animation: hero-breathe 9s ease-in-out infinite;
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(760px 300px at 50% 118%, rgb(45 212 191 / 0.07), transparent 60%);
+  pointer-events: none;
+}
+
+/* The two glow layers are absolutely positioned without a z-index, so they
+   paint in the positioned-descendants layer alongside the content. Lifting the
+   content one step is what keeps the trust bar -- an in-flow block with no
+   position of its own -- from being tinted by the bottom wash. */
+.hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes hero-breathe {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+.hero-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.92fr);
+  gap: 2.6rem;
+  align-items: center;
+}
+
+@media (max-width: 940px) {
+  .hero-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}
+
+.hero-copy > * {
+  animation: hero-in 0.5s ease-out both;
+}
+
+.hero-copy > :nth-child(2) { animation-delay: 0.07s; }
+.hero-copy > :nth-child(3) { animation-delay: 0.14s; }
+.hero-copy > :nth-child(4) { animation-delay: 0.21s; }
+.hero-copy > :nth-child(5) { animation-delay: 0.28s; }
+
+.hero-shot {
+  margin: 0;
+  animation: hero-in 0.6s ease-out 0.18s both;
+}
+
+/* The hero screenshot in an application window frame: a title bar with three
+   window dots, then the image flush inside it.
+ *
+ * It used to be a bordered image with one drop shadow, which read as a picture
+ * of the app. The frame is the point -- it is what makes the next thing the
+ * reader believes ("this is the product") rather than the last thing ("this is
+ * a marketing asset"). The same treatment is applied to .shot-hero on the
+ * product pages, so the two read as the same window. */
+.hero-shot,
+.shot-hero {
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 32px 80px rgb(0 0 0 / 0.34),
+    0 0 0 1px color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+/* The title bar. Three 4px dots on a 22px pitch, drawn with one repeating
+   radial gradient rather than three elements, so the frame stays a single
+   pseudo-element and the markup stays free of decoration. */
+.hero-shot::before,
+.shot-hero::before {
+  content: "";
+  display: block;
+  height: 34px;
+  background-color: var(--bg-raised);
+  background-image: radial-gradient(circle at 13px 50%, var(--line-strong) 4px, transparent 4.5px);
+  background-size: 22px 34px;
+  background-repeat: repeat-x;
+  background-position: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.hero-shot img,
+.shot-hero img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.shot-hero {
+  margin: 1.6rem 0 0;
+}
+
+@keyframes hero-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero::before,
+  .hero-copy > *,
+  .hero-shot {
+    animation: none;
+  }
+}
+
+/* Trust bar: five evidence badges under the hero. Four state what is
+   verified today; the fifth states what is not (the audit), in a muted
+   dashed pill — the site's honesty rule rendered as a badge. */
+.trust-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 2.4rem 0 0;
+  padding: 0;
+}
+
+.trust-bar a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.42rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.trust-bar a:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+
+.trust-bar svg {
+  width: 15px;
+  height: 15px;
+  color: var(--accent-text);
+  flex: none;
+}
+
+.trust-bar .trust-audit {
+  border-style: dashed;
+}
+
+.trust-bar .trust-audit svg {
+  color: var(--text-faint);
+}
+
+/* Evidence screenshots are clickable: they open enlarged in the lightbox. */
+.shot,
+.hero-shot img {
+  cursor: zoom-in;
+}
+
+/* In-place lightbox: one overlay for every screenshot on the site. The backdrop
+   is a dimmed page; the image is scaled to the largest size that fits inside the
+   stage, in both directions, by site.js. Clicking anywhere outside the image or
+   the × closes it, Escape too.
+
+   The stage exists so the frame can hug the image. Sizing the <img> itself with
+   `object-fit: contain` would scale the bitmap but also stretch the border and
+   the drop shadow across the whole box, drawing a frame around the empty space
+   beside a wide screenshot. A stage the script measures keeps the frame on the
+   picture. */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(5 6 10 / 0.86);
+  backdrop-filter: blur(4px);
+  padding: 2rem;
+}
+
+.lightbox[hidden] {
+  display: none;
+}
+
+.lightbox-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  cursor: zoom-out;
+}
+
+.lightbox-stage img {
+  /* The pre-script fallback, and the size of the image while it is decoding:
+     never wider or taller than the stage. site.js replaces this with a computed
+     pixel size on load so the picture is scaled *up* to the stage as well --
+     a 540x510 screenshot used to open at its own pixel size and read as though
+     the overlay had made it smaller than the page. */
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  box-shadow: 0 32px 96px rgb(0 0 0 / 0.6);
+}
+
+/* On a phone the 2rem gutter costs 16% of the width, which is the width the
+   picture actually needs. */
+@media (max-width: 640px) {
+  .lightbox {
+    padding: 0.75rem;
+  }
+
+  .lightbox-close {
+    top: 0.6rem;
+    inset-inline-end: 0.6rem;
+  }
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 1.2rem;
+  inset-inline-end: 1.4rem;
+  width: 2.4rem;
+  height: 2.4rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--bg-raised);
+  color: var(--text);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.lightbox-close:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ---------- scroll reveals ----------
+ * The .reveal class is ADDED by site.js, never present in markup: with
+ * JavaScript off, nothing is ever hidden. Reduced-motion users get the
+ * content immediately (site.js skips adding the class at all; the override
+ * here is belt and braces). */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ---------- mobile navigation ----------
+ * Below 768px the whole nav becomes a slide-in panel behind the sticky
+ * header; the hamburger morphs into an X while open. RTL pages slide from
+ * the mirrored side. */
+.nav-toggle {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  width: 28px;
+  height: 28px;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-inline-start: 0.25rem;
+  flex: none;
+}
+
+.nav-toggle span {
+  display: block;
+  width: 100%;
+  height: 2px;
+  background: var(--text);
+  border-radius: 2px;
+  transition: transform 0.25s, opacity 0.25s;
+}
+
+.nav-toggle[aria-expanded="true"] span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+
+.nav-toggle[aria-expanded="true"] span:nth-child(2) {
+  opacity: 0;
+}
+
+.nav-toggle[aria-expanded="true"] span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+@media (max-width: 767px) {
+  .nav-toggle {
+    display: flex;
+    margin-inline-start: auto;
+  }
+
+  .site-nav {
+    position: fixed;
+    inset: 62px 0 0;
+    flex-direction: column;
+    align-items: stretch;
+    flex-wrap: nowrap;
+    gap: 0.3rem;
+    padding: 1.4rem;
+    margin: 0;
+    background: var(--bg);
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow-y: auto;
+    z-index: 39;
+  }
+
+  [dir="rtl"] .site-nav {
+    transform: translateX(-100%);
+  }
+
+  .site-nav.is-open,
+  [dir="rtl"] .site-nav.is-open {
+    transform: translateX(0);
+  }
+
+  .site-nav > a {
+    font-size: 1.1rem;
+    padding: 0.6rem 0.25rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .site-nav .menu > summary {
+    justify-content: flex-start;
+    border: none;
+    padding: 0.6rem 0.25rem;
+    font-size: 1.1rem;
+    border-radius: 0;
+  }
+
+  .site-nav .menu-panel {
+    position: static;
+    box-shadow: none;
+    border: none;
+    background: transparent;
+    min-width: 0;
+    max-height: none;
+    padding: 0.2rem 0 0.6rem 0.9rem;
+  }
+
+  .site-nav .lang > summary,
+  .site-nav .theme > summary {
+    justify-content: flex-start;
+    margin-top: 0.4rem;
+  }
+}
+
+/* ---------- evidence stats ----------
+ * Four numbers between the hero and the platforms grid. The numbers count up
+ * once when they enter the viewport (site.js); a reduced-motion user sees the
+ * final values immediately. "0 telemetry" is deliberately not a count-up --
+ * zero is the point, and it is the only number allowed to be static. */
+.stats {
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-raised);
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  padding-block: 1.6rem;
+}
+
+@media (max-width: 760px) {
+  .stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.stat {
+  display: grid;
+  gap: 0.15rem;
+  justify-items: center;
+  text-align: center;
+}
+
+/* Evidence number.
+ *
+ * The ramp is vertical only. site.js counts the number up from zero, so the
+ * element's width changes on every frame of the animation; a 180deg gradient
+ * is invariant to width, so nothing visibly slides. A horizontal ramp would
+ * have shimmered through the digits for the second the counter ran.
+ *
+ * `color` stays as the declared value: it is the fallback for a browser
+ * without background-clip: text, and it is what a forced-colours mode paints,
+ * where the transparent fill would leave the number invisible. */
+.stat-num {
+  font-size: clamp(1.9rem, 3.2vw, 2.6rem);
+  /* Light, but not hairline. system-ui on most platforms resolves a static
+   * 200 to the lightest face it actually ships, and where the font is variable
+   * 200 reads as thin rather than premium at 2.6rem. 250 keeps the air and the
+   * legibility. */
+  font-weight: 250;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  background: linear-gradient(180deg, var(--text) 0%, var(--text-muted) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* The theme fade is folded in here rather than declared on .card below, so the
+   hover lift and the palette change cannot overwrite each other's transition
+   list. Both are the same declaration; see the P2 theme section. */
+.card {
+  transition:
+    transform 0.15s ease,
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    color 0.2s ease;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* Cards answer the pointer with a small lift and an accent edge -- feedback,
+   not decoration, and instant for reduced-motion users. The transition list
+   itself is declared with .stat-num above. */
+
+@media (hover: hover) {
+  .card:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--accent) 35%, var(--line-strong));
+    box-shadow:
+      0 8px 32px rgb(0 0 0 / 0.2),
+      0 0 0 1px color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+  .card:hover {
+    transform: none;
+  }
+}
+
+/* FAQ reveal: the answer slides open over 180ms. The grid-rows trick needs no
+   JS and degrades to instant open/close when motion is reduced. */
+main details[open] > p,
+main details[open] > div {
+  animation: details-in 0.18s ease-out;
+}
+
+@keyframes details-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  main details[open] > p,
+  main details[open] > div {
+    animation: none;
+  }
 }
 
 .hero h1 {
   margin: 0 0 1rem;
-  font-size: clamp(2.1rem, 5.5vw, 3.4rem);
-  line-height: 1.1;
-  letter-spacing: -0.028em;
+  font-size: clamp(2.6rem, 6.5vw, 4.2rem);
+  font-weight: 300;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
   max-width: 20ch;
 }
 
@@ -472,14 +1215,28 @@ a:hover {
   color: #05201c;
 }
 
-/* In light mode --accent is a deep burnt orange, and near-black text on it
-   fails contrast. The dark palette's warm black only works against the bright
-   magma orange, so light mode gets white. */
+/* In light mode --accent is a deep teal, and near-black text on it reads 3.12:1.
+   The dark palette's warm black only works against the bright aqua, so light mode
+   gets white.
+
+   Two separate selectors, because they cover different situations and the site
+   has a theme toggle: the media query catches "the OS asks for light and the
+   visitor never touched the toggle", the data-theme rule catches "the OS asks
+   for dark but the visitor chose light". Covering only the first one -- as this
+   did for .btn-primary -- leaves the toggle path failing. .skip-link is grouped
+   in because it carries the same pair and was the only element still failing. */
 @media (prefers-color-scheme: light) {
-  .btn-primary,
-  .btn-primary:hover {
+  :root:not([data-theme="dark"]) .btn-primary,
+  :root:not([data-theme="dark"]) .btn-primary:hover,
+  :root:not([data-theme="dark"]) .skip-link {
     color: #ffffff;
   }
+}
+
+:root[data-theme="light"] .btn-primary,
+:root[data-theme="light"] .btn-primary:hover,
+:root[data-theme="light"] .skip-link {
+  color: #ffffff;
 }
 
 .btn-ghost {
@@ -575,7 +1332,21 @@ h3 {
  * deliberate; the icon's own gradient belongs in the mark, not in body copy.
  */
 .gradient-text {
+  /* Real gradient, one accent step into lavender. Kept to a 2-3 word span so
+     the clipped fill always reads on a single line. Interactive language
+     stays teal; this is a wordmark-level emphasis only. */
+  background: linear-gradient(135deg, var(--accent) 0%, #60e0d0 45%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
   color: var(--accent);
+}
+
+:root[data-theme="light"] .gradient-text {
+  /* Darker endpoints so the gradient keeps contrast on the light surface. */
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 45%, #6d28d9 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
 }
 
 .muted {
@@ -878,5 +1649,799 @@ th {
   }
   .legal dt {
     margin-top: 0.5rem;
+  }
+}
+
+/* ---------- homepage section rhythm (P1) ----------
+   Two full-width sections on the sunken background: the visual beat that
+   keeps the page from reading as one long sheet of paper. */
+#security,
+#comparison {
+  background: var(--bg-sunken);
+}
+
+/* ---------- comparison table (P1) ----------
+   The KalderaShield column is the claim under test: accent edge, tinted
+   ground, bolder text, so the eye lands there first. */
+#comparison table th:nth-child(2),
+#comparison table td:nth-child(2) {
+  background: color-mix(in srgb, var(--accent) 6%, var(--bg));
+}
+
+#comparison table td:nth-child(2) {
+  font-weight: 600;
+}
+
+#comparison table th:nth-child(2) {
+  color: var(--accent);
+  position: relative;
+}
+
+#comparison table th:nth-child(2)::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 3px 3px 0 0;
+}
+
+/* The marks are the fastest signal in the comparison table, and they are what
+   let a row be read without parsing a sentence: a tick, a cross, or a tilde for
+   the one criterion that genuinely differs by product. */
+#comparison td[data-check="yes"]::before {
+  content: "\2713";
+  color: var(--accent);
+  font-weight: 700;
+  margin-inline-end: 0.4rem;
+}
+
+#comparison td[data-check="no"]::before {
+  content: "\2715";
+  color: var(--text-faint);
+  font-weight: 700;
+  margin-inline-end: 0.4rem;
+}
+
+#comparison td[data-check="partial"]::before {
+  content: "~";
+  color: var(--warn, #d97706);
+  font-weight: 700;
+  margin-inline-end: 0.4rem;
+}
+
+/* ---------- final CTA (P1) ---------- */
+.final-cta {
+  background: linear-gradient(180deg, var(--bg) 0%, var(--bg-sunken) 100%);
+  text-align: center;
+  padding-block: 4.6rem;
+}
+
+.final-cta h2 {
+  max-width: 24ch;
+  margin-inline: auto;
+}
+
+.final-cta .cta-row {
+  justify-content: center;
+  margin-top: 1.6rem;
+}
+
+.btn-lg {
+  padding: 0.95rem 1.9rem;
+  font-size: 1.05rem;
+}
+
+/* =====================================================================
+   P2 - interaction polish
+   The 2026 reference sites answer the pointer before the reader has
+   decided to click. These are the parts of that idea that fit a static,
+   framework-free site: buttons lift, catch a sheen and answer on press,
+   and the palette change is a repaint instead of a cut.
+   ===================================================================== */
+
+/* ---------- button micro-interaction ----------
+   Three states, in the order a pointer reaches them. */
+.btn {
+  position: relative;
+  overflow: hidden;
+  /* The sheen below is painted behind the label but in front of the pill, and
+     only a stacking context of its own makes that order well defined. */
+  isolation: isolate;
+  transition:
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* One sheen sweep across the pill. inset goes negative so the gradient starts
+   fully off the shape; overflow: hidden on .btn clips it at the rounded edge,
+   which is what lets the pseudo-element be a plain rectangle. */
+.btn::after {
+  content: "";
+  position: absolute;
+  inset: -40% -12%;
+  z-index: -1;
+  background: linear-gradient(
+    100deg,
+    transparent 42%,
+    rgb(255 255 255 / 0.22) 50%,
+    transparent 58%
+  );
+  transform: translateX(-130%);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.2s ease;
+}
+
+@media (hover: hover) {
+  .btn:hover {
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+
+  .btn-ghost:hover {
+    box-shadow: 0 6px 18px rgb(0 0 0 / 0.2);
+  }
+
+  .btn:hover::after {
+    opacity: 1;
+    transform: translateX(130%);
+  }
+}
+
+/* Press. The lift is cancelled and the glow cut, so the press is felt rather
+   than read as a second hover. */
+.btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* ---------- theme change ----------
+   Switching palettes used to repaint every colour in the same frame, which on
+   a page this size reads as a flash rather than as a change of theme.
+
+   The transitions are declared on the large surfaces only -- the ones a reader
+   perceives as "the page" turning. Interactive elements keep their own short
+   transitions, so hover feedback is never delayed by half a second. .card and
+   .stat-num fold these three properties into their own lists rather than
+   getting a second rule that would overwrite the lift.
+
+   prefers-reduced-motion needs no rule here. The global block at the top of
+   this file collapses every transition-duration to 0.01ms, which turns each of
+   these into an instant repaint -- the intended behaviour, not a missing one. */
+html,
+body,
+.site-header,
+.site-header::before,
+.site-footer,
+section,
+.stats,
+.notice,
+pre,
+code,
+.menu-panel,
+.lang-menu,
+.theme-menu,
+table th,
+table td {
+  transition-property: background-color, border-color, color;
+  transition-duration: 0.3s, 0.3s, 0.2s;
+  transition-timing-function: ease;
+}
+
+/* ---------- bento feature grids ----------
+   Three equal cards in a row is the shape of every competitor's feature grid,
+   and it is the reason a section nobody has read yet looks skippable.
+
+   One column wide and two narrow, with the lead card spanning both rows, breaks
+   the rhythm and spends the extra width on the claim the page actually wants
+   made: the architecture. The numbers are deliberately two rather than three --
+   a three-column bento with three cards leaves two empty tracks at the bottom
+   right, which is worse than the problem it solves. */
+@media (min-width: 860px) {
+  #features .grid,
+  #extensions .grid {
+    grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  }
+
+  #features .grid > .card:first-child,
+  #extensions .grid > .card:first-child {
+    grid-row: span 2;
+  }
+
+#features .grid > .card:first-child {
+    /* A single accent bloom, anchored to the top-left corner the card now
+       owns. Same hue as the section's eyebrow so the emphasis reads as part of
+       the brand rather than as a highlight somebody drew on. */
+    background:
+      radial-gradient(
+        680px 300px at 14% 0%,
+        color-mix(in srgb, var(--accent) 11%, transparent),
+        transparent 70%
+      ),
+      var(--bg-raised);
+    overflow: hidden;
+  }
+
+  /* Spanning two rows leaves the lead card with real space under its
+     paragraph, and a tall empty box is what the bento was meant to avoid. The
+     product mark sits in it as a watermark: decoration that carries the brand
+     into the largest object on the page instead of leaving a void. It is a
+     pseudo-element rather than markup so it stays out of the accessibility
+     tree and out of the tab order. */
+  #features .grid > .card:first-child::after {
+    content: "";
+    position: absolute;
+    inset-inline-end: -2.5rem;
+    bottom: -2.5rem;
+    width: 15rem;
+    height: 15rem;
+    background: url("/assets/images/icon-512.png") center / contain no-repeat;
+    opacity: 0.13;
+    pointer-events: none;
+  }
+
+  #features .grid > .card:first-child {
+    position: relative;
+  }
+
+  #features .grid > .card:first-child > * {
+    position: relative;
+  }
+
+  #features .grid > .card:first-child h3,
+  #extensions .grid > .card:first-child h3 {
+    font-size: clamp(1.2rem, 1.6vw, 1.42rem);
+    letter-spacing: -0.015em;
+  }
+}
+
+/* =====================================================================
+   P3 - the "how it works" band
+   A four-step timeline between the extensions section and the comparison
+   table: the one part of the story -- password in, ciphertext on disk -- that
+   the page currently only tells in prose.
+   ===================================================================== */
+
+#how-it-works {
+  background: var(--bg-raised);
+  border-top: 1px solid var(--line);
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.6rem 1.2rem;
+  list-style: none;
+  margin: 1.9rem 0 0;
+  padding: 0;
+}
+
+.step {
+  position: relative;
+  /* Clears the 1.9rem node that hangs above the first line of text. */
+  padding-top: 2.6rem;
+}
+
+/* The rule from one node to the next. It hangs on the *following* step and is
+   drawn between the two node centres: a 1.9rem node centred 0.95rem down, plus
+   a 0.25rem breathing space. logical properties do the mirroring for RTL. */
+.step + .step::before {
+  content: "";
+  position: absolute;
+  top: 0.95rem;
+  inset-inline-start: 2.15rem;
+  inset-inline-end: -0.7rem;
+  height: 1px;
+  background: linear-gradient(90deg, var(--line-strong), var(--line));
+}
+
+.step-num {
+  position: absolute;
+  top: 0;
+  inset-inline-start: 0;
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--line));
+  background: var(--bg-sunken);
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+/* The step number is decoration for a sighted reader; the order itself is
+   carried by the <ol>, so hiding it costs nothing in a screen reader. */
+.step h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
+.step p {
+  margin: 0.45rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.97rem;
+}
+
+/* Two-up in the middle. Four columns at 900px leaves roughly 200px per step,
+   which is a column of hyphenated words rather than a sentence. There is no
+   connector here on purpose: a rule that ran from one step to the next would
+   have to cross the gutter and then skip the second column, which reads as a
+   broken line rather than as a sequence. */
+@media (min-width: 600px) and (max-width: 999px) {
+  .steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.6rem 1.4rem;
+  }
+
+  .step + .step::before {
+    content: none;
+  }
+}
+
+/* One column below that, where the rule turns and runs down the left edge
+   instead: a horizontal timeline on a 360px screen is four clipped columns with
+   connectors crossing the text. The vertical offsets are the same node centre
+   (0.95rem) and the same 2.05rem reach -- 1.1rem gap plus the next node centre. */
+@media (max-width: 599px) {
+  .steps {
+    grid-template-columns: 1fr;
+    gap: 1.1rem;
+  }
+
+  .step + .step::before {
+    top: 1.9rem;
+    bottom: -2.05rem;
+    inset-inline-start: 0.95rem;
+    inset-inline-end: auto;
+    width: 1px;
+    height: auto;
+    background: linear-gradient(180deg, var(--line-strong), var(--line));
+  }
+}
+
+/* =====================================================================
+   P3 - sticky download bar (small screens only)
+   The download is two taps away on every page below 768px. It is hidden again
+   as soon as the page's own closing CTA scrolls into view (site.js), so the two
+   never compete for the same corner.
+   ===================================================================== */
+
+.sticky-cta {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .sticky-cta {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    /* Below the mobile nav panel (39) and the header (40): opening the menu has
+       to cover the bar, not the other way round. */
+    z-index: 30;
+    display: flex;
+    justify-content: center;
+    padding: 0.7rem 1rem calc(0.7rem + env(safe-area-inset-bottom));
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--line);
+    transform: translateY(0);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .sticky-cta.is-hidden {
+    transform: translateY(110%);
+  }
+
+  .sticky-cta .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Room for the bar, so it never sits on the footer's last line. Declared on
+     a class the pages carry rather than with :has(), which would silently do
+     nothing on a browser that has not shipped it yet. */
+  body.has-sticky-cta {
+    padding-bottom: 4.6rem;
+  }
+}
+
+/* =====================================================================
+   /download/ -- platform picker
+   The page this replaced was one column of seven identical
+   name/format/indir rows. A reader could not tell which platform they had
+   until they were already inside that platform's rows. These are the pieces
+   that make the choice legible before the first click: a rail that says where
+   they can go, a card per platform with its formats inside the card, and a
+   visibly quieter treatment for the two platforms with nothing to download.
+   ===================================================================== */
+
+/* Anchor targets sit under a 62px sticky header plus the rail, so a jump from
+   the header menu or the homepage's platform grid lands 120px too low without
+   this -- the section heading ends up off-screen. */
+.dl-page [id] {
+  scroll-margin-top: 7.5rem;
+}
+
+.grid-2 {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+@media (min-width: 720px) {
+  .grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ---------- quick download (hero aside) ----------
+   The common case needs no scrolling. Three rows, each one direct release URL,
+   each of them also listed in the card below so the panel is a shortcut and
+   never the only place a format appears. */
+.pick-quick {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--bg-raised);
+  padding: 1.1rem 1.2rem 0.4rem;
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.32);
+}
+
+.pick-quick h2 {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+}
+
+.pick-quick ul {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+
+.pick-quick li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.15rem 0.9rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.pick-quick .n {
+  display: block;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.pick-quick .f {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  color: var(--text-faint);
+}
+
+.pick-quick .btn {
+  padding: 0.42rem 1rem;
+  font-size: 0.85rem;
+}
+
+/* ---------- platform rail ----------
+   Sticky under the header, scrollable on narrow screens. Six platforms plus a
+   verification step is more than fits beside a brand on a phone, so the row
+   scrolls rather than wrapping: a wrapping rail takes two rows of the viewport
+   on exactly the screens that have the least of it. */
+.pick-rail {
+  position: sticky;
+  top: 62px;
+  /* Under the header (40) and under the slide-in mobile nav (39), so opening
+     the menu covers the rail rather than being covered by it. */
+  z-index: 30;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.pick-rail ul {
+  display: flex;
+  gap: 0.45rem;
+  list-style: none;
+  margin: 0;
+  padding: 0.55rem 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.pick-rail a {
+  display: block;
+  white-space: nowrap;
+  padding: 0.34rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.87rem;
+  text-decoration: none;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.pick-rail a:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+/* ---------- platform cards ---------- */
+.pick-grid {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.pick-mark {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  margin-bottom: 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-sunken);
+  color: var(--accent);
+}
+
+.pick-mark svg {
+  width: 20px;
+  height: 20px;
+}
+
+.pick-card h3 {
+  font-size: 1.15rem;
+}
+
+.pick-req {
+  font-size: 0.86rem;
+  color: var(--text-faint) !important;
+}
+
+/* The format list is the card's payload, so it sits on a hairline and every
+   row puts its button on the same vertical line down the page -- the reason
+   the old .dl rows were a grid in the first place. */
+.pick-formats {
+  list-style: none;
+  margin: 1.05rem 0 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+
+.pick-formats li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.pick-formats li:last-child {
+  border-bottom: 0;
+}
+
+.pick-fmt {
+  font-family: var(--mono);
+  font-size: 0.79rem;
+  color: var(--text-muted);
+}
+
+/* The second line of a format cell. Needed where the row is a browser rather
+   than a file: "Mozilla Firefox" alone does not say whether the package is an
+ * unsigned zip or a signed XPI, and that difference is the reason a reader
+   picks one browser over another. */
+.pick-fmt-sub {
+  display: block;
+  font-size: 0.73rem;
+  color: var(--text-faint);
+}
+
+.pick-formats .btn {
+  padding: 0.42rem 1rem;
+  font-size: 0.85rem;
+}
+
+.pick-alt {
+  font-size: 0.82rem;
+  color: var(--text-faint);
+}
+
+/* CLI across the full width at desktop: a three-line shell transcript next to a
+   download button is the wrong shape for a third of a column, and the extra
+   width is what lets the text and the code sit side by side. */
+@media (min-width: 1000px) {
+  .pick-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .pick-card-cli {
+    grid-column: span 3;
+  }
+
+  .pick-cli-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    gap: 0 1.8rem;
+    align-items: start;
+  }
+
+  .pick-cli-body pre {
+    margin-top: 0;
+  }
+}
+
+.pick-cli-body h3 {
+  margin-top: 0;
+}
+
+/* ---------- not published yet ----------
+   Deliberately quieter than the four available platforms: a dashed edge and no
+   download button, so the two cards read as "not here" without a reader having
+   to finish the paragraph to find out. */
+.soon-grid .card {
+  border-style: dashed;
+  background: transparent;
+}
+
+.soon-grid .card h3 {
+  margin-top: 0;
+}
+
+.soon-grid .notice {
+  background: transparent;
+}
+
+/* ---------- verification band ---------- */
+.band-verify {
+  background: var(--bg-sunken);
+}
+
+@media (min-width: 900px) {
+  .verify-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0 2.2rem;
+    align-items: start;
+  }
+
+  .verify-grid pre {
+    margin-top: 0;
+  }
+}
+
+/* =====================================================================
+   The download action in the header
+   Every one of the twenty-four pages now renders this nav from a single
+   function in build-pages.cjs, so the download cannot be missing from one of
+   them. It is also the one item drawn as a button rather than as a link: it is
+   the single action the product exists to offer, and a run of ten identical
+   text links buries it.
+   ===================================================================== */
+
+/* Selector shape matters here, and getting it wrong is invisible in review.
+   `.site-nav a` is (0,1,1). A bare `.nav-cta` is (0,1,0) and loses, so the label
+   rendered in --text-muted grey while the pill behind it took --cta-bg: a grey
+   label on a teal button, in both palettes, and the contrast numbers looked fine
+   because grey on a dark tint is legible -- just not the button anyone designed.
+   Qualifying with .site-nav puts these at (0,2,0) and they win. */
+.site-nav .nav-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  padding: 0.4rem 0.95rem;
+  border-radius: 999px;
+  /* The five --cta-* tokens are what keep this button from glaring in dark
+     mode; see their definition in the :root block. Everything below is the
+     same shape in both palettes. */
+  background: var(--cta-bg);
+  border: 1px solid var(--cta-line);
+  color: var(--cta-fg);
+  font-weight: 600;
+  font-size: clamp(0.85rem, 0.95vw, 0.95rem);
+  text-decoration: none;
+  white-space: nowrap;
+  flex: none;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.site-nav .nav-cta:hover {
+  background: var(--cta-bg-hover);
+  color: var(--cta-fg);
+}
+
+.site-nav .nav-cta svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+
+@media (hover: hover) {
+  .site-nav .nav-cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 16px var(--cta-shadow);
+  }
+}
+
+.site-nav .nav-cta:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* A hairline before the button, so the nav reads as one group of places and
+   then one action. It sits in the flex gap rather than inside the pill. */
+.site-nav .nav-cta::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  inset-inline-start: -0.7rem;
+  width: 1px;
+  height: 1.5em;
+  transform: translateY(-50%);
+  background: var(--line);
+  pointer-events: none;
+}
+
+.site-nav .nav-cta {
+  position: relative;
+  flex: none;
+}
+
+/* The hidden-until-there links. The button is never one of them: it is the item
+   the nav exists to deliver, and hiding it below some width would recreate the
+   problem this fixes. */
+@media (min-width: 1200px) and (max-width: 1849px) {
+  .site-nav a[data-i18n="nav-features"],
+  .site-nav a[data-i18n="nav-comparison"] {
+    display: none;
+  }
+}
+
+/* Between the breakpoint where the row stops fitting and the mobile panel, one
+   more read-link steps aside. Both are also in the footer. */
+@media (min-width: 768px) and (max-width: 1299px) {
+  .site-nav a[data-i18n="nav-comparison"] {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  /* In the slide-in panel this is the only button, so it becomes a full-width
+     block and moves to the top: order -1 is the cheapest way to promote it in a
+     flat nav without duplicating the item. */
+  .site-nav .nav-cta {
+    order: -1;
+    width: 100%;
+    justify-content: center;
+    margin: 0 0 0.6rem;
+    padding: 0.85rem 1.2rem;
+    border-radius: var(--radius);
+    font-size: 1.05rem;
+  }
+
+  .site-nav .nav-cta::after {
+    content: none;
   }
 }

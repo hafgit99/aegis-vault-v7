@@ -1,0 +1,170 @@
+{
+  "section": "platformlar",
+  "slug": "android",
+  "i18n": {
+    "en": {
+      "title": "KalderaShield for Android — KalderaShield",
+      "description": "KalderaShield on Android 7.0 and newer: signed release APK, AndroidKeyStore biometric binding, FLAG_SECURE screen protection and system document-picker import/export.",
+      "eyebrow": "Platforms / Android",
+      "h1": "KalderaShield on Android",
+      "lead": "Android 7.0 (API 24) and newer are supported with a signed release APK: the same local-first vault, with hardware-backed biometric unlock and Android screen-capture protection.",
+      "primary": "Download for Android",
+      "secondary": "Verify the checksum",
+      "primaryHref": "/download/",
+      "whatLabel": "What you get",
+      "whatTitle": "The vault in your pocket",
+      "what": [
+        "The Android app is a full KalderaShield: all five record types, folders, tags, search, encrypted backups and attachments. Release builds are signed, built with R8 shrinking and verified by release-hardening scans that check for debuggable flags, backup exposure and cleartext traffic.",
+        "Biometric unlock is hardware-bound: the wrapping key lives in AndroidKeyStore as an auth-bound, non-exportable key that is invalidated when biometric enrollment changes. Unlock goes through BiometricPrompt with a CryptoObject, so the OS auth token is bound to the key's crypto operation.",
+        "Android sets FLAG_SECURE on the main activity, keeping the app out of screenshots, screen recordings and the recents preview. Import and export go through the system document picker, so every read and write location is one you explicitly chose."
+      ],
+      "stepsTitle": "Getting started on Android",
+      "steps": [
+        {
+          "title": "Install the signed APK",
+          "desc": "Enable installation from your chosen file source, install the APK and verify its SHA-256 hash against the published checksums."
+        },
+        {
+          "title": "Create the vault",
+          "desc": "The same Argon2id parameters as desktop — 64 MiB, 4 iterations, 2 lanes — and the same 24-word BIP-39 recovery key to store safely."
+        },
+        {
+          "title": "Enroll biometric unlock",
+          "desc": "Use BiometricPrompt to wrap daily access with the device's secure hardware. The master password remains the only root of the vault."
+        }
+      ],
+      "secTitle": "Android specifics you should know",
+      "secLabel": "Release status, stated honestly",
+      "secBody": "Android biometric behaviour varies across OEM builds. The public release gating therefore requires explicit device-matrix evidence (Pixel, Samsung, Xiaomi, Android 12–15) before production biometric claims are made, and this page makes none beyond what the platform contract guarantees. The Android Credential Provider passkey filling remains outside the current release boundary.",
+      "tech": [
+        {
+          "tag": "AndroidKeyStore",
+          "title": "Hardware-bound wrapping",
+          "desc": "Auth-bound, non-exportable key with setUserAuthenticationRequired; invalidated automatically when biometrics are re-enrolled."
+        },
+        {
+          "tag": "FLAG_SECURE",
+          "title": "Capture exclusion",
+          "desc": "The main activity is excluded from screenshots, screen recording and the recents preview by the OS."
+        },
+        {
+          "tag": "Document picker",
+          "title": "Explicit file access",
+          "desc": "Import, export and download flows use the system picker bridge; the app never gains broad storage permissions."
+        }
+      ],
+      "faqTitle": "Android questions",
+      "faq": [
+        {
+          "q": "Which Android versions are supported?",
+          "a": "Android 7.0 (API 24) and newer, targeted at API 35. Devices without a biometric sensor still work with the master password alone."
+        },
+        {
+          "q": "What happens if I change my fingerprint?",
+          "a": "The AndroidKeyStore wrapping key is invalidated by design when biometric enrollment changes. You unlock with the master password and re-enroll platform unlock — vault access is never affected."
+        },
+        {
+          "q": "Can I share the vault with my desktop?",
+          "a": "Yes. Export an encrypted .ks backup through the document picker, move it however you like, and restore it on the desktop with the master password."
+        }
+      ],
+      "relatedTitle": "Related pages",
+      "related": [
+        {
+          "href": "/guvenlik/tehdit-modeli/",
+          "label": "Threat model"
+        },
+        {
+          "href": "/guvenlik/dogrulama/",
+          "label": "Verify your download"
+        },
+        {
+          "href": "/platformlar/windows/",
+          "label": "Windows platform page"
+        }
+      ]
+    },
+    "tr": {
+      "title": "Android için KalderaShield — KalderaShield",
+      "description": "Android 7.0 ve üstünde KalderaShield: imzalı sürüm APK, AndroidKeyStore biyometrik bağlama, FLAG_SECURE ekran koruması ve sistem belge seçici içe/dışa aktarma.",
+      "eyebrow": "Platformlar / Android",
+      "h1": "Android'de KalderaShield",
+      "lead": "Android 7.0 (API 24) ve üstü, imzalı bir sürüm APK ile desteklenir: donanım destekli biyometrik kilit açma ve Android ekran yakalama korumasıyla aynı yerel-öncelikli kasa.",
+      "primary": "Android için indirin",
+      "secondary": "Sağlama toplamını doğrulayın",
+      "primaryHref": "/download/",
+      "whatLabel": "Nedir elde ettiğiniz",
+      "whatTitle": "Cebinizdeki kasa",
+      "what": [
+        "Android uygulaması tam bir KalderaShield'dır: beş kayıt türünün tamamı, klasörler, etiketler, arama, şifreli yedekler ve ekler. Sürüm derlemeleri imzalanır, R8 küçültmesiyle üretilir ve debuggable bayrağı, yedek maruziyeti ve açık metin trafiği için denetleyen sürüm-sertleştirme taramalarıyla doğrulanır.",
+        "Biyometrik kilit açma donanıma bağlıdır: sarma anahtarı, biyometrik kayıt değiştiğinde geçersiz kılınan, kimlik doğrulamaya bağlı ve dışa aktarılamayan bir AndroidKeyStore anahtarıdır. Kilit açma, CryptoObject'li BiometricPrompt'tan geçer; böylece OS kimlik jetonu anahtarın kripto işlemine bağlanır.",
+        "Android, ana etkinlikte FLAG_SECURE ayarlar; uygulama ekran görüntülerinden, ekran kayıtlarından ve son kullanılanlar önizlemesinden dışlanır. İçe ve dışa aktarma sistem belge seçicisinden geçer; her okuma ve yazma konumu, sizin açıkça seçtiğiniz konumdur."
+      ],
+      "stepsTitle": "Android'de başlangıç",
+      "steps": [
+        {
+          "title": "İmzalı APK'yı kurun",
+          "desc": "Seçtiğiniz dosya kaynağından kurulumu etkinleştirin, APK'yı kurun ve SHA-256 karmasını yayımlanan sağlamalarla doğrulayın."
+        },
+        {
+          "title": "Kasayı oluşturun",
+          "desc": "Masaüstüyle aynı Argon2id parametreleri — 64 MiB, 4 iterasyon, 2 hat — ve güvenle saklanacak aynı 24 kelimelik BIP-39 kurtarma anahtarı."
+        },
+        {
+          "title": "Biyometrik açmayı kaydedin",
+          "desc": "Günlük erişimi cihazın güvenli donanımıyla sarmalamak için BiometricPrompt kullanın. Ana parola, kasanın tek kökü kalır."
+        }
+      ],
+      "secTitle": "Bilmeniz gereken Android ayrıntıları",
+      "secLabel": "Sürüm durumu, dürüstçe yazılmış",
+      "secBody": "Android biyometrik davranışı OEM derlemeleri arasında değişir. Bu yüzden herkese açık sürüm kapısı, üretim biyometrik iddialarından önce açık cihaz-matrisi kanıtı (Pixel, Samsung, Xiaomi, Android 12–15) ister ve bu sayfa, platform sözleşmesinin garanti ettiğinin ötesinde iddia yapmaz. Android Credential Provider passkey doldurma, geçerli sürüm sınırının dışında kalır.",
+      "tech": [
+        {
+          "tag": "AndroidKeyStore",
+          "title": "Donanıma bağlı sarma",
+          "desc": "setUserAuthenticationRequired ile kimlik doğrulamaya bağlı, dışa aktarılamayan anahtar; biyometrik yeniden kayıtta kendiliğinden geçersiz kılınır."
+        },
+        {
+          "tag": "FLAG_SECURE",
+          "title": "Yakalama dışlaması",
+          "desc": "Ana etkinlik, OS tarafından ekran görüntülerinden, ekran kaydından ve son kullanılanlar önizlemesinden dışlanır."
+        },
+        {
+          "tag": "Belge seçici",
+          "title": "Açık dosya erişimi",
+          "desc": "İçe aktarma, dışa aktarma ve indirme akışları sistem seçici köprüsünü kullanır; uygulama geniş depolama izni asla kazanmaz."
+        }
+      ],
+      "faqTitle": "Android soruları",
+      "faq": [
+        {
+          "q": "Hangi Android sürümleri destekleniyor?",
+          "a": "Android 7.0 (API 24) ve üstü, API 35'i hedefleyerek. Biyometrik sensörü olmayan cihazlar yalnızca ana parolayla da çalışır."
+        },
+        {
+          "q": "Parmak izimi değiştirirsem ne olur?",
+          "a": "AndroidKeyStore sarma anahtarı, biyometrik kayıt değiştiğinde tasarımdan geçersiz kılınır. Ana parolayla açar ve platform açmasını yeniden kaydedersiniz — kasa erişimi asla etkilenmez."
+        },
+        {
+          "q": "Kasayı masaüstümla paylaşabilir miyim?",
+          "a": "Evet. Belge seçicisiyle şifreli bir .ks yedeği dışa aktarın, dilediğiniz gibi taşıyın ve masaüstünde ana parolayla geri yükleyin."
+        }
+      ],
+      "relatedTitle": "İlgili sayfalar",
+      "related": [
+        {
+          "href": "/guvenlik/tehdit-modeli/",
+          "label": "Tehdit modeli"
+        },
+        {
+          "href": "/guvenlik/dogrulama/",
+          "label": "İndirdiğinizi doğrulayın"
+        },
+        {
+          "href": "/platformlar/windows/",
+          "label": "Windows platform sayfası"
+        }
+      ]
+    }
+  }
+}

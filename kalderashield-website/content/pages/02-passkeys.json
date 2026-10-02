@@ -1,0 +1,100 @@
+{
+  "slug": "passkeys",
+  "i18n": {
+    "en": {
+      "menuLabel": "Passkeys",
+      "menuDesc": "WebAuthn bound to your own authenticator",
+      "title": "Passkeys — KalderaShield",
+      "description": "Create and store WebAuthn passkeys in your local vault, bound to your platform authenticator or a FIDO2 security key such as YubiKey.",
+      "eyebrow": "Product / Passkeys",
+      "h1": "Passkeys that never leave your vault",
+      "lead": "Create WebAuthn credentials inside your own vault, bound to the authenticator your device already has. Nothing is registered with a third party.",
+      "primary": "Download KalderaShield",
+      "secondary": "View the source",
+      "whatLabel": "What it does",
+      "whatTitle": "Passwordless sign-in, stored locally",
+      "what": [
+        "A passkey is created through the WebAuthn API of your platform, so the private half of the credential never enters the vault in a usable form and never leaves your device. The vault stores the credential id and its metadata so you can recognise and revoke it later.",
+        "The page reports which authenticator is available before you create anything, and lets you choose the relying party, display name, account and signature algorithm.",
+        "Passkeys sit alongside the rest of the vault rather than in a separate system, so they are encrypted, searchable and restorable in exactly the same way as a password."
+      ],
+      "stepsTitle": "How a passkey is created",
+      "steps": [
+        { "title": "Your device creates the key pair", "desc": "The private key is generated inside the platform authenticator — TPM 2.0, Secure Enclave or AndroidKeyStore — and is not exportable." },
+        { "title": "The vault records the credential", "desc": "Only the credential id and display metadata are saved, encrypted with the rest of the vault." },
+        { "title": "Signing happens in hardware", "desc": "Because the private key is non-exportable, a signature for a site cannot be produced by anything other than the authenticator itself." }
+      ],
+      "heroShot": { "src": "/assets/images/app-passkey.webp", "w": 1800, "h": 793 },
+      "shots": [
+        { "src": "/assets/images/app-security.webp", "w": 1800, "h": 666, "title": "Hardware unlock sits next to it", "desc": "The same settings panel holds the FIDO2 and biometric unlock options, so passkeys and hardware-bound unlocking live together rather than in separate products." }
+      ],
+      "secTitle": "What passkeys do and do not remove",
+      "secLabel": "Passkeys are not a backup plan",
+      "secBody": "A passkey replaces the password at a site; it does not replace your vault. If you lose the device holding your authenticator and have no passkey stored elsewhere, that credential is gone with it. Passkeys also only help at sites that support WebAuthn, which is most large services and a growing share of smaller ones.",
+      "tech": [
+        { "tag": "WebAuthn", "title": "Standard, not a private format", "desc": "Credentials are created through the WebAuthn API, so they are the same kind of object any compliant site expects." },
+        { "tag": "Non-exportable", "title": "The private key stays put", "desc": "Hardware-backed authenticators generate the key pair and never release the private half, so copying your vault does not copy the credential." },
+        { "tag": "AES-256-GCM", "title": "Stored like everything else", "desc": "Credential records are encrypted by the same per-item key scheme as the rest of your vault." }
+      ],
+      "faqTitle": "About passkeys",
+      "faq": [
+        { "q": "Do I still need my master password?", "a": "Yes. The vault itself is unlocked by your master password and secret key. A passkey only replaces the password at the specific sites where you register one." },
+        { "q": "Which authenticators work?", "a": "Any platform authenticator your device exposes: Windows Hello, Touch ID, Face ID, Android biometrics, or a FIDO2 security key such as YubiKey." },
+        { "q": "What if I lose the device?", "a": "That specific passkey is lost with its authenticator. Your vault, its passwords and its backups are unaffected, because those never depended on that device." }
+      ],
+      "relatedTitle": "Related pages",
+      "related": [
+        { "href": "/urun/password-vault/", "label": "Password vault" },
+        { "href": "/#security", "label": "Security architecture" }
+      ]
+    },
+
+    "tr": {
+      "menuLabel": "Passkey",
+      "menuDesc": "Kendi doğrulayıcınıza bağlı WebAuthn",
+      "title": "Passkey — KalderaShield",
+      "description": "WebAuthn passkey'lerini kendi yerel kasanızda oluşturun ve saklayın; platform doğrulayıcınıza veya YubiKey gibi bir FIDO2 güvenlik anahtarına bağlanır.",
+      "eyebrow": "Ürün / Passkey",
+      "h1": "Kasanızdan hiç çıkmayan passkey'ler",
+      "lead": "WebAuthn kimlik bilgilerini kendi kasanızın içinde, cihazınızın zaten sahibi olduğu doğrulayıcıya bağlı olarak oluşturun. Hiçbir şey üçüncü bir tarafa kaydedilmez.",
+      "primary": "KalderaShield'i indirin",
+      "secondary": "Kaynağı görün",
+      "whatLabel": "Ne yapar",
+      "whatTitle": "Yerelde saklanan parolasız giriş",
+      "what": [
+        "Passkey, platformunuzun WebAuthn API'si üzerinden oluşturulur; bu yüzden kimbilğin gizli yarısı kullanılabilir biçimde kasaya hiç girmez ve cihazınızdan hiç çıkmaz. Kasa yalnızca kimlik kimliğini ve üst verisini saklar; böylece sonra tanıyıp iptal edebilirsiniz.",
+        "Sayfa, bir şey oluşturmadan önce hangi doğrulayıcının kullanılabilir olduğunu bildirir; bağımlı taraf, görünen ad, hesap ve imza algoritmasını siz seçersiniz.",
+        "Passkey'ler kasanın geri kalanından ayrı bir sistemde değil, onunla birlikte durur: aynı şekilde şifrelenir, aranır ve geri yüklenir."
+      ],
+      "stepsTitle": "Passkey nasıl oluşturulur",
+      "steps": [
+        { "title": "Cihazınız anahtar çiftini üretir", "desc": "Gizli anahtar, platform doğrulayıcısının — TPM 2.0, Secure Enclave veya AndroidKeyStore — içinde üretilir ve dışa aktarılamaz." },
+        { "title": "Kasa kimbilği kaydeder", "desc": "Yalnızca kimlik kimliği ve görüntüleme üst verisi kaydedilir; bunlar da kasanın geri kalanıyla birlikte şifrelenir." },
+        { "title": "İmza donanımda üretilir", "desc": "Gizli anahtar dışa aktarılamaz olduğu için bir siteye ait imza, yalnızca doğrulayıcının kendisi tarafından üretilebilir." }
+      ],
+      "heroShot": { "src": "/assets/images/app-passkey.webp", "w": 1800, "h": 793 },
+      "shots": [
+        { "src": "/assets/images/app-security.webp", "w": 1800, "h": 666, "title": "Donanım kilidi yanında durur", "desc": "Aynı ayar panelinde FIDO2 ve biyometrik kilit açma seçenekleri de bulunur; böylece passkey'ler ve donanıma bağlı kilit ayrı ürünler değil, aynı yerde durur." }
+      ],
+      "secTitle": "Passkey'lerin kaldırdıkları ve kaldırmadıkları",
+      "secLabel": "Passkey bir yedekleme planı değildir",
+      "secBody": "Passkey bir sitede parolanın yerini alır; kasayın yerini değil. Doğrulayıcınızın bulunduğu cihazı kaybeder ve başka bir yerde saklanmış passkey'iniz yoksa o kimlik cihazla birlikte gider. Ayrıca passkey yalnızca WebAuthn'i destekleyen sitelerde işe yarar; bu, büyük servislerin çoğu ve giderek artan küçük servisler için geçerlidir.",
+      "tech": [
+        { "tag": "WebAuthn", "title": "Özel biçim değil, standart", "desc": "Kimlikler WebAuthn API'si üzerinden oluşturulur; yani uyumlu her sitenin beklediği türden nesnelerdir." },
+        { "tag": "Dışa aktarılamaz", "title": "Gizli anahtar yerinde kalır", "desc": "Donanım destekli doğrulayıcılar anahtar çiftini üretir ve gizli yarıyı asla bırakmaz; kasanızı kopyalamak kimliği kopyalamaz." },
+        { "tag": "AES-256-GCM", "title": "Her şeyle aynı şekilde saklanır", "desc": "Kimlik kayıtları, kasanızın geri kalanıyla aynı kayıt başına anahtar şemasıyla şifrelenir." }
+      ],
+      "faqTitle": "Passkey hakkında",
+      "faq": [
+        { "q": "Hâlâ ana parolama mı ihtiyacım var?", "a": "Evet. Kasanın kendisi ana parolanız ve secret key ile açılır. Passkey yalnızca bir passkey kaydettiğiniz belirli sitelerde parolanın yerini alır." },
+        { "q": "Hangi doğrulayıcılar çalışır?", "a": "Cihazınızın sunduğu her platform doğrulayıcısı: Windows Hello, Touch ID, Face ID, Android biyometrisi veya YubiKey gibi bir FIDO2 güvenlik anahtarı." },
+        { "q": "Cihazı kaybedersem ne olur?", "a": "O belirli passkey, doğrulayıcısıyla birlikte kaybolur. Kasayınız, şifreleriniz ve yedekleriniz etkilenmez; çünkü onlar o cihaza bağlı değildi." }
+      ],
+      "relatedTitle": "İlgili sayfalar",
+      "related": [
+        { "href": "/urun/password-vault/", "label": "Şifre kasası" },
+        { "href": "/#security", "label": "Güvenlik mimarisi" }
+      ]
+    }
+  }
+}

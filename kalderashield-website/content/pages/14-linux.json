@@ -1,0 +1,170 @@
+{
+  "section": "platformlar",
+  "slug": "linux",
+  "i18n": {
+    "en": {
+      "title": "KalderaShield for Linux — KalderaShield",
+      "description": "Install KalderaShield on Linux x64: a .deb package for Debian-based distributions and an AppImage that runs anywhere. Checksums published for every artifact.",
+      "eyebrow": "Platforms / Linux",
+      "h1": "KalderaShield on Linux",
+      "lead": "Linux x64 ships in two shapes: a .deb package for Debian, Ubuntu and their derivatives, and an AppImage that runs on almost any distribution without installation.",
+      "primary": "Download for Linux",
+      "secondary": "Verify the checksum",
+      "primaryHref": "/download/",
+      "whatLabel": "What you get",
+      "whatTitle": "Package manager or single file",
+      "what": [
+        "The .deb package installs through dpkg or your distribution's software center, lands in the applications menu and can be removed through the normal package tools. The AppImage is one executable file: chmod +x and run, nothing else touched on the system.",
+        "Both carry the same application and the same security design: per-record AES-256-GCM encryption, Argon2id key derivation and the air-gap network policy. Vault files and encrypted backups move freely between the two and between Linux machines.",
+        "The Linux build uses the GTK3/WebKitGTK windowing stack that Tauri targets. That stack currently carries upstream unmaintained-binding advisories (documented in the dependency advisory register with the acceptance rationale) — they are ecosystem maintenance risks, not known exploitable paths in KalderaShield code."
+      ],
+      "stepsTitle": "Getting started on Linux",
+      "steps": [
+        {
+          "title": "Download and verify",
+          "desc": "Fetch the .deb or AppImage from the download page and compare its SHA-256 hash with SHA256SUMS.txt before installing or running it."
+        },
+        {
+          "title": "Create the vault",
+          "desc": "Choose the master password and store the 24-word BIP-39 recovery key outside the application. Argon2id parameters are recorded in the vault itself."
+        },
+        {
+          "title": "Install the browser extension",
+          "desc": "The Chromium and Firefox extension builds live next to the desktop artifacts. Desktop pairing runs over a loopback-only IPC bridge with a pairing token."
+        }
+      ],
+      "secTitle": "Linux specifics you should know",
+      "secLabel": "Signatures and the GTK3 stack",
+      "secBody": "Linux has no mandatory Authenticode-style signing, so verification is hash-based: always check the SHA-256 checksums published with the release. The updater bundles are minisign-signed regardless. The dependency advisory register lists every accepted advisory with its reason, and accepts none that is reachable from the vault, crypto or IPC trust boundaries.",
+      "tech": [
+        {
+          "tag": ".deb",
+          "title": "Debian-based systems",
+          "desc": "Installs with dpkg/apt and integrates with the applications menu; removed with the package manager like any other software."
+        },
+        {
+          "tag": "AppImage",
+          "title": "Distribution-neutral",
+          "desc": "A single executable for almost any x64 distribution. No root, no install step, deletable like a document."
+        },
+        {
+          "tag": "WebKitGTK",
+          "title": "Windowing stack",
+          "desc": "The upstream Tauri default on Linux. Its unmaintained GTK3-binding advisories are documented and accepted with rationale, re-evaluated on every Tauri update."
+        }
+      ],
+      "faqTitle": "Linux questions",
+      "faq": [
+        {
+          "q": "AppImage or .deb — which should I use?",
+          "a": "Use .deb on Debian, Ubuntu, Mint and derivatives for menu integration and clean removal. Use the AppImage anywhere else, or when you want a zero-footprint install."
+        },
+        {
+          "q": "Does the Linux version have every desktop feature?",
+          "a": "Yes, minus platform-specific conveniences that have no Linux equivalent, such as Windows Hello or Touch ID. Hardware-wrapped unlock is available through PRF-capable FIDO2 security keys instead."
+        },
+        {
+          "q": "Can I use the same vault on Linux and Windows?",
+          "a": "Yes. Encrypted backups are portable across all desktop platforms. Create the backup on one machine and restore it with the master password on the other."
+        }
+      ],
+      "relatedTitle": "Related pages",
+      "related": [
+        {
+          "href": "/guvenlik/dogrulama/",
+          "label": "Verify your download"
+        },
+        {
+          "href": "/guvenlik/tehdit-modeli/",
+          "label": "Threat model"
+        },
+        {
+          "href": "/eklenti/",
+          "label": "Browser extension"
+        }
+      ]
+    },
+    "tr": {
+      "title": "Linux için KalderaShield — KalderaShield",
+      "description": "KalderaShield'ı Linux x64'e kurun: Debian tabanlı dağıtımlar için .deb paketi ve her yerde çalışan AppImage. Her dosya için sağlama toplamı yayımlanır.",
+      "eyebrow": "Platformlar / Linux",
+      "h1": "Linux'ta KalderaShield",
+      "lead": "Linux x64 iki biçimde gelir: Debian, Ubuntu ve türevleri için .deb paketi ve kurulum gerektirmeden neredeyse her dağıtımda çalışan AppImage.",
+      "primary": "Linux için indirin",
+      "secondary": "Sağlama toplamını doğrulayın",
+      "primaryHref": "/download/",
+      "whatLabel": "Nedir elde ettiğiniz",
+      "whatTitle": "Paket yöneticisi ya da tek dosya",
+      "what": [
+        ".deb paketi dpkg veya dağıtımınızın yazılım merkeziyle kurulur, uygulamalar menüsüne yerleşir ve normal paket araçlarıyla kaldırılabilir. AppImage tek bir çalıştırılabilir dosyadır: chmod +x ve çalıştır; sistemin başka bir şeyine dokunulmaz.",
+        "İkisi de aynı uygulamayı ve aynı güvenlik tasarımını taşır: kayıt başına AES-256-GCM şifreleme, Argon2id anahtar türetme ve hava boşluğu ağ politikası. Kasa dosyaları ve şifreli yedekler, ikisi arasında ve Linux makineleri arasında serbestçe taşınır.",
+        "Linux derlemesi, Tauri'nin hedeflediği GTK3/WebKitGTK pencereleme yığınını kullanır. Bu yığın şu an, üst akımın bakımsız bıraktığı bağlama danışmanlıkları taşır (kabul gerekçeleriyle bağımlılık danışmanlık kaydında belgelenmiştir) — bunlar ekosistem bakım riskleridir, KalderaShield kodunda bilinen istismar edilebilir yollar değildir."
+      ],
+      "stepsTitle": "Linux'ta başlangıç",
+      "steps": [
+        {
+          "title": "İndirin ve doğrulayın",
+          "desc": ".deb veya AppImage'ı indirme sayfasından alın ve kurmadan/çalıştırmadan önce SHA-256 karmasını SHA256SUMS.txt ile karşılaştırın."
+        },
+        {
+          "title": "Kasayı oluşturun",
+          "desc": "Ana parolayı seçin ve 24 kelimelik BIP-39 kurtarma anahtarını uygulamanın dışında saklayın. Argon2id parametreleri kasanın kendisine kaydedilir."
+        },
+        {
+          "title": "Tarayıcı eklentisini kurun",
+          "desc": "Chromium ve Firefox eklenti derlemeleri masaüstü dosyalarının yanında yer alır. Masaüstü eşleştirme, yalnızca loopback olan bir IPC köprüsü üzerinden eşleştirme jetonuyla çalışır."
+        }
+      ],
+      "secTitle": "Bilmeniz gereken Linux ayrıntıları",
+      "secLabel": "İmzalar ve GTK3 yığını",
+      "secBody": "Linux'ta zorunlu Authenticode türü imzalama yoktur; doğrulama karma tabanlıdır: sürümle yayımlanan SHA-256 sağlamalarını her zaman kontrol edin. Güncelleme paketleri buna rağmen minisign imzalıdır. Bağımlılık danışmanlık kaydı, kabul edilen her danışmanlıkla gerekçesini listeler ve kasa, kripto ya da IPC güven sınırlarından erişilebilen hiçbirini kabul etmez.",
+      "tech": [
+        {
+          "tag": ".deb",
+          "title": "Debian tabanlı sistemler",
+          "desc": "dpkg/apt ile kurulur ve uygulamalar menüsüne bütünleşir; diğer her yazılım gibi paket yöneticisiyle kaldırılır."
+        },
+        {
+          "tag": "AppImage",
+          "title": "Dağıtım-bağımsız",
+          "desc": "Neredeyse her x64 dağıtım için tek çalıştırılabilir. Root yok, kurulum adımı yok, belge gibi silinebilir."
+        },
+        {
+          "tag": "WebKitGTK",
+          "title": "Pencereleme yığını",
+          "desc": "Linux'ta üst akım Tauri varsayılanı. Bakımsız GTK3 bağlama danışmanlıkları gerekçeyle belgelenip kabul edilir ve her Tauri güncellemesinde yeniden değerlendirilir."
+        }
+      ],
+      "faqTitle": "Linux soruları",
+      "faq": [
+        {
+          "q": "AppImage mi .deb mi — hangisini kullanmalıyım?",
+          "a": "Debian, Ubuntu, Mint ve türevlerinde menü bütünleşmesi ve temiz kaldırma için .deb kullanın. Başka her yerde, ya da sıfır-izli kurulum istediğinizde AppImage kullanın."
+        },
+        {
+          "q": "Linux sürümünde her masaüstü özelliği var mı?",
+          "a": "Evet; Windows Hello veya Touch ID gibi Linux karşılığı olmayan platforma özgü kolaylıklar hariç. Donanımla sarılı kilit açma, bunun yerine PRF yetenekli FIDO2 güvenlik anahtarlarıyla kullanılabilir."
+        },
+        {
+          "q": "Aynı kasayı Linux'ta ve Windows'ta kullanabilir miyim?",
+          "a": "Evet. Şifreli yedekler bütün masaüstü platformlarında taşınabilirdir. Yedeği bir makinede oluşturun, diğerinde ana parolayla geri yükleyin."
+        }
+      ],
+      "relatedTitle": "İlgili sayfalar",
+      "related": [
+        {
+          "href": "/guvenlik/dogrulama/",
+          "label": "İndirdiğinizi doğrulayın"
+        },
+        {
+          "href": "/guvenlik/tehdit-modeli/",
+          "label": "Tehdit modeli"
+        },
+        {
+          "href": "/eklenti/",
+          "label": "Tarayıcı eklentisi"
+        }
+      ]
+    }
+  }
+}

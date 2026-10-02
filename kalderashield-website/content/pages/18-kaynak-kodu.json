@@ -1,0 +1,170 @@
+{
+  "section": "kaynak-kodu",
+  "slug": "kaynak-kodu",
+  "i18n": {
+    "en": {
+      "title": "Source Code — KalderaShield",
+      "description": "KalderaShield is Apache-2.0 open source. Architecture, real quality-gate numbers - 2204 unit tests, fuzz gate, CodeQL, OpenSSF Scorecard - and how to contribute.",
+      "eyebrow": "Project / Source code",
+      "h1": "The whole thing is on GitHub",
+      "lead": "KalderaShield is Apache-2.0 licensed open source: the desktop app, the Android app, the browser extension, the native messaging host and this site. Every security claim on this website can be traced to code or to a test that runs in public CI.",
+      "primary": "Open the repository",
+      "secondary": "Security policy",
+      "primaryHref": "https://github.com/hafgit99/kalderashield",
+      "whatLabel": "What the codebase is",
+      "whatTitle": "Four projects, one repository",
+      "what": [
+        "The desktop application pairs a React and TypeScript front end with a Rust core through Tauri 2: the UI renders in the system WebView, the native side handles the updater, the extension bridge and platform integrations. Vault persistence runs on wa-sqlite with a versioned schema envelope.",
+        "The browser extension is a Manifest V3 TypeScript build for Chromium and Firefox, and the Android app is a Tauri Android project with AndroidKeyStore biometric binding. The native messaging host and the IPC bridge live in the Rust workspace, where the pairing token, lease and frame-encryption logic are easiest to audit.",
+        "The site itself is plain committed HTML — no build step for deployment — with generator scripts and quality gates checked in next to the pages they produce."
+      ],
+      "stepsTitle": "The gates every change passes",
+      "steps": [
+        {
+          "title": "Typecheck and 2204 unit tests",
+          "desc": "248 test files with enforced coverage thresholds: 90% lines, 90% statements, 85% functions, 80% branches. A regression below the threshold fails the build, not a dashboard."
+        },
+        {
+          "title": "Fuzz, mutation and security gates",
+          "desc": "fast-check property tests hammer importer, backup and attachment paths with malformed input. Stryker mutation testing grades test quality. Dedicated gates check CSP hardening, release artifacts, debug markers and secrets."
+        },
+        {
+          "title": "Supply-chain analysis in CI",
+          "desc": "CodeQL analyzes the code, OpenSSF Scorecard grades the repository posture, gitleaks blocks committed secrets, and the dependency policy fails on any high or critical advisory with documented acceptance for the rest."
+        }
+      ],
+      "secTitle": "What open source here means — and does not",
+      "secLabel": "A claim with its boundary",
+      "secBody": "Open source lets anyone read the code; it does not by itself prove that anyone has. Reading is the whole point: the threat model, the acceptance registers and the audit scope are in the repository so reviewers start from the same map. An independent audit has not been completed — the audit status page says so directly.",
+      "tech": [
+        {
+          "tag": "TypeScript",
+          "title": "Front end and extension",
+          "desc": "React UI, extension and shared vault logic, strictly typed; no React inline styles, enforced by the CSP gate."
+        },
+        {
+          "tag": "Rust",
+          "title": "Native core",
+          "desc": "Tauri 2 commands, native messaging host, loopback IPC bridge and updater plumbing; cargo fmt and focused atomic-write tests gate every release."
+        },
+        {
+          "tag": "Apache-2.0",
+          "title": "License",
+          "desc": "The whole project plus a THIRD-PARTY license file for bundled components. No proprietary blobs in the installers."
+        }
+      ],
+      "faqTitle": "Contributing and reporting",
+      "faq": [
+        {
+          "q": "How do I report a security vulnerability?",
+          "a": "Privately, never as a public issue: GitHub private vulnerability reporting or the email in SECURITY.md. Acknowledgement within 48 hours, triage within 7 days, coordinated disclosure within 90."
+        },
+        {
+          "q": "Can I contribute code?",
+          "a": "Yes — through GitHub pull requests. The gates described above run on every change, so the fastest way to help is a change that keeps them green and includes its own tests."
+        },
+        {
+          "q": "Can I build the installers myself?",
+          "a": "Yes. The local release guide documents the exact commands per platform, and the release script collects artifacts with SHA-256 checksums into release-local/<platform>/."
+        }
+      ],
+      "relatedTitle": "Related pages",
+      "related": [
+        {
+          "href": "/guvenlik/denetim-durumu/",
+          "label": "Audit status"
+        },
+        {
+          "href": "/guvenlik/tehdit-modeli/",
+          "label": "Threat model"
+        },
+        {
+          "href": "/guvenlik/dogrulama/",
+          "label": "Verify your download"
+        }
+      ]
+    },
+    "tr": {
+      "title": "Kaynak Kodu — KalderaShield",
+      "description": "KalderaShield Apache-2.0 açık kaynaktır. Mimari, gerçek kalite-kapısı sayıları — 2204 birim testi, fuzz kapısı, mutasyon testi, CodeQL, OpenSSF Scorecard — ve katkı yolları.",
+      "eyebrow": "Proje / Kaynak kodu",
+      "h1": "Bütün proje GitHub'da",
+      "lead": "KalderaShield Apache-2.0 lisanslı açık kaynaktır: masaüstü uygulaması, Android uygulaması, tarayıcı eklentisi, native messaging host ve bu site. Bu sitedeki her güvenlik iddiası, koda ya da herkese açık CI'da çalışan bir teste kadar izlenebilir.",
+      "primary": "Depoyu açın",
+      "secondary": "Güvenlik politikası",
+      "primaryHref": "https://github.com/hafgit99/kalderashield",
+      "whatLabel": "Kod tabanı nedir",
+      "whatTitle": "Bir depoda dört proje",
+      "what": [
+        "Masaüstü uygulaması, React ve TypeScript ön yüzüyle bir Rust çekirdeğini Tauri 2 üzerinden eşler: arayüz sistem WebView'inde çizilir, yerel taraf güncelleyiciyi, eklenti köprüsünü ve platform bütünleşmelerini yürütür. Kasa kalıcılığı, sürümlü şema zarfıyla wa-sqlite üzerinde çalışır.",
+        "Tarayıcı eklentisi, Chromium ve Firefox için bir Manifest V3 TypeScript derlemesidir; Android uygulaması, AndroidKeyStore biyometrik bağlamalı bir Tauri Android projesidir. Native messaging host ve IPC köprüsü, eşleştirme jetonu, kira ve çerçeve şifreleme mantığının denetlenmesi en kolay olduğu Rust çalışma alanında yaşar.",
+        "Sitenin kendisi de düz, commit'lenmiş HTML'dir — dağıtım için derleme adımı yoktur — üretici betikler ve kalite kapıları, ürettikleri sayfaların yanında tutulur."
+      ],
+      "stepsTitle": "Her değişikliğin geçtiği kapılar",
+      "steps": [
+        {
+          "title": "Tip denetimi ve 2204 birim testi",
+          "desc": "Uygulanan kapsam eşikleriyle 248 test dosyası: %90 satır, %90 ifade, %85 fonksiyon, %80 dal. Eşiğin altına düşen gerileme, panoyu değil derlemeyi düşürür."
+        },
+        {
+          "title": "Fuzz, mutasyon ve güvenlik kapıları",
+          "desc": "fast-check özellik testleri, içe aktarıcıya, yedeklere ve ek yollarına bozuk girdiyle saldırır. Stryker mutasyon testi, test kalitesini notlandırır. Ayrı kapılar CSP sertleştirmesini, sürüm dosyalarını, hata ayıklama izlerini ve sırları denetler."
+        },
+        {
+          "title": "CI'da tedarik zinciri analizi",
+          "desc": "CodeQL kodu analiz eder, OpenSSF Scorecard depo duruşunu notlandırır, gitleaks commit'lenmiş sırları engeller ve bağımlılık politikası yüksek/kritik her danışmanlıkta başarısız olur; kalanlar için belgelenmiş kabul vardır."
+        }
+      ],
+      "secTitle": "Burada açık kaynak ne demek — ne değil",
+      "secLabel": "Sınırıyla bir iddia",
+      "secBody": "Açık kaynak herkese kodu okumayı sağlar; tek başına herkesin okuduğunu kanıtlamaz. Okumak esas noktadır: tehdit modeli, kabul kayıtları ve denetim kapsamı depodadır, böylece inceleyenler aynı haritadan yola çıkar. Bağımsız bir denetim tamamlanmadı — denetim durumu sayfası bunu doğrudan söyler.",
+      "tech": [
+        {
+          "tag": "TypeScript",
+          "title": "Ön yüz ve eklenti",
+          "desc": "React arayüzü, eklenti ve paylaşılan kasa mantığı, katı tipli; React satır içi stilleri yok, CSP kapısı bunu uygular."
+        },
+        {
+          "tag": "Rust",
+          "title": "Yerel çekirdek",
+          "desc": "Tauri 2 komutları, native messaging host, loopback IPC köprüsü ve güncelleyici altyapısı; cargo fmt ve odaklı atomik-yazma testleri her sürümü kapılar."
+        },
+        {
+          "tag": "Apache-2.0",
+          "title": "Lisans",
+          "desc": "Bütün proje ve paketlenen bileşenler için THIRD-PARTY lisans dosyası. Kurucularda sahipli ikili yok."
+        }
+      ],
+      "faqTitle": "Katkı ve bildirim",
+      "faq": [
+        {
+          "q": "Güvenlik açığını nasıl bildiririm?",
+          "a": "Gizli olarak, asla herkese açık bir konu olarak: GitHub özel açık bildirimi ya da SECURITY.md'deki e-posta. 48 saat içinde teyit, 7 gün içinde triyaj, 90 gün içinde koordineli ifşa."
+        },
+        {
+          "q": "Kod katkısı yapabilir miyim?",
+          "a": "Evet — GitHub pull request'leriyle. Yukarıdaki kapılar her değişiklikte çalışır; en hızlı katkı, onları yeşil tutan ve kendi testlerini getiren değişikliktir."
+        },
+        {
+          "q": "Kurucuları kendim derleyebilir miyim?",
+          "a": "Evet. Yerel sürüm kılavuzu platform başına tam komutları belgeler ve sürüm betiği, dosyaları SHA-256 sağlamalarıyla release-local/<platform>/ altında toplar."
+        }
+      ],
+      "relatedTitle": "İlgili sayfalar",
+      "related": [
+        {
+          "href": "/guvenlik/denetim-durumu/",
+          "label": "Denetim durumu"
+        },
+        {
+          "href": "/guvenlik/tehdit-modeli/",
+          "label": "Tehdit modeli"
+        },
+        {
+          "href": "/guvenlik/dogrulama/",
+          "label": "İndirdiğinizi doğrulayın"
+        }
+      ]
+    }
+  }
+}

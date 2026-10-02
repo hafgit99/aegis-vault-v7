@@ -1,0 +1,100 @@
+{
+  "slug": "security-audit",
+  "i18n": {
+    "en": {
+      "menuLabel": "Security audit",
+      "menuDesc": "Weak, reused and breached passwords",
+      "title": "Security Audit — KalderaShield",
+      "description": "A local audit that scores your vault and separates weak passwords, reused passwords, breached passwords, missing second factors, insecure HTTP links and stale records.",
+      "eyebrow": "Product / Security audit",
+      "h1": "Find the passwords that are actually costing you",
+      "lead": "The audit scores your vault and separates each problem: short passwords, passwords shared between accounts, passwords in known breach data, accounts with no second factor, plain HTTP links and records nobody has touched in a year.",
+      "primary": "Download KalderaShield",
+      "secondary": "View the source",
+      "whatLabel": "What it does",
+      "whatTitle": "An audit that runs where your data already is",
+      "what": [
+        "Most password audits tell you a score and stop. This one splits the score into the individual problems that caused it, because \"your vault is weak\" is not actionable while \"this one account has no second factor\" is.",
+        "Weak, reused and breached are tracked separately. The breach check runs against the k-anonymity style range queries used by Have I Been Pwned, so it can compare your passwords against a known corpus without sending the passwords themselves anywhere.",
+        "The same categories are available as built-in smart folders, so you can jump straight from a finding to the item that caused it instead of hunting through the list."
+      ],
+      "stepsTitle": "How an audit runs",
+      "steps": [
+        { "title": "Every record is read locally", "desc": "The vault is decrypted in memory on your device and each item is scored. Nothing about the audit is transmitted." },
+        { "title": "Categories are kept apart", "desc": "Weak, reused, breached, missing second factor, insecure transport and outdated are counted independently rather than folded into one number." },
+        { "title": "Findings lead to the item", "desc": "Each finding links to the record that produced it, so a fix is one click away rather than a manual search." }
+      ],
+      "heroShot": { "src": "/assets/images/app-audit.webp", "w": 1800, "h": 884 },
+      "shots": [
+        { "src": "/assets/images/app-generator.webp", "w": 1800, "h": 889, "title": "Fixing a finding is one step away", "desc": "The built-in generator produces a replacement with the character classes you choose, so a weak password can be replaced without leaving the audit flow." }
+      ],
+      "secTitle": "What the audit can and cannot tell you",
+      "secLabel": "A score is not a guarantee",
+      "secBody": "The audit measures your vault against known heuristics and known breach corpora. It cannot tell you whether a password you still use was exposed somewhere that has never published a dataset, whether a strong password is reused somewhere it could not check, or whether an account you saved is still yours to access. It reports what it can see in your own data, and nothing more.",
+      "tech": [
+        { "tag": "HIBP", "title": "Breach check without sending passwords", "desc": "Passwords are compared using range queries so only a hash prefix leaves the device, and the passwords themselves never do." },
+        { "tag": "Local", "title": "Runs entirely offline", "desc": "Scoring happens against your decrypted vault on the device, so the audit works with no connection at all." },
+        { "tag": "Categories", "title": "Six separate problems", "desc": "Weak, reused, breached, missing 2FA, insecure HTTP and outdated records are counted independently." }
+      ],
+      "faqTitle": "About the audit",
+      "faq": [
+        { "q": "Does the audit send my passwords anywhere?", "a": "No. The scoring runs locally. The breach comparison uses range queries, so only a hash prefix is involved and the password itself never leaves the device." },
+        { "q": "How often should I run it?", "a": "Whenever you add or change records, and after adding a large import from another manager. A large import is the most common reason a strong vault suddenly scores badly." },
+        { "q": "Does a low score mean I was hacked?", "a": "No. The score describes the passwords in your vault, not whether any of them have been exposed. It measures what is recoverable from your own data." }
+      ],
+      "relatedTitle": "Related pages",
+      "related": [
+        { "href": "/urun/password-vault/", "label": "Password vault" },
+        { "href": "/urun/unlock-and-recovery/", "label": "Unlock and recovery" }
+      ]
+    },
+
+    "tr": {
+      "menuLabel": "Güvenlik denetimi",
+      "menuDesc": "Zayıf, tekrarlanan ve sızmış şifreler",
+      "title": "Güvenlik Denetimi — KalderaShield",
+      "description": "Kasayı yerelde puanlayan, zayıf / tekrarlanan / sızmış şifreleri, eksik ikinci faktörleri, güvensiz HTTP bağlantılarını ve bayat kayıtları ayrı ayrı gösteren denetim.",
+      "eyebrow": "Ürün / Güvenlik denetimi",
+      "h1": "Gerçekten size maliyet getiren şifreleri bulun",
+      "lead": "Denetim kasayı puanlar ve her sorunu ayrı listeler: kısa şifreler, hesaplar arasında paylaşılan şifreler, bilinen ihlal verisindeki şifreler, ikinci faktörü olmayan hesaplar, düz HTTP bağlantıları ve bir yıldır dokunulmamış kayıtlar.",
+      "primary": "KalderaShield'i indirin",
+      "secondary": "Kaynağı görün",
+      "whatLabel": "Ne yapar",
+      "whatTitle": "Verinizin zaten bulunduğu yerde çalışan denetim",
+      "what": [
+        "Çoğu parola denetimi bir puan verir ve orada durur. Bu denetim puanı onu doğuran tekil sorunlara böler; çünkü \"kasanız zayıf\" eyleme dönüşmez, \"şu hesapta ikinci faktör yok\" ise dönüşür.",
+        "Zayıf, tekrarlanan ve sızmış şifreler ayrı ayrı tutulur. Sızmış kontrolü, Have I Been Pwned'in k-anonimite tarzında kullandığı aralık sorgularıyla yapılır; böylece şifreleriniz karşılaştırılır ama kendileri hiçbir yere gönderilmez.",
+        "Aynı kategoriler yerleşik akıllı klasörler olarak da kullanılabilir; böylece bir bulgudan onu doğuran kayda doğrudan geçersiniz."
+      ],
+      "stepsTitle": "Denetim nasıl çalışır",
+      "steps": [
+        { "title": "Her kayıt yerelde okunur", "desc": "Kasa cihazınızda belleğe çözülür ve her öğe puanlanır. Denetimle ilgili hiçbir şey aktarılmaz." },
+        { "title": "Kategoriler ayrı tutulur", "desc": "Zayıf, tekrarlanan, sızmış, ikinci faktörü eksik, güvensiz taşıma ve bayat kayıtlar tek bir sayıya katlanmak yerine bağımsız sayılır." },
+        { "title": "Bulgular kayda götürür", "desc": "Her bulgu, onu doğuran kayda bağlanır; böylece düzeltme arama yapmak yerine tek tık uzağınızdadır." }
+      ],
+      "heroShot": { "src": "/assets/images/app-audit.webp", "w": 1800, "h": 884 },
+      "shots": [
+        { "src": "/assets/images/app-generator.webp", "w": 1800, "h": 889, "title": "Bir bulguyu düzeltmek bir adım uzağınızda", "desc": "Yerleşik üretici, seçtiğiniz karakter sınıflarıyla bir yerine koyma üretir; zayıf bir şifre denetim akışından çıkmadan değiştirilebilir." }
+      ],
+      "secTitle": "Denetimin söyleyebileceği ve söyleyemeyeceği şey",
+      "secLabel": "Puan bir güvence değildir",
+      "secBody": "Denetim, kasayı bilinen sezgisel yöntemlere ve bilinen ihlal veri kümelerine karşı ölçer. Hâlâ kullandığınız bir şifrenin hiç veri seti yayımlamamış bir yerde ele geçirilip geçirilmediğini, güçlü bir şifrenin kontrol edemediğiniz bir yerde tekrarlanıp tekrarlanmadığını ya da kaydettiğiniz hesabın hâlâ erişiminizde olup olmadığını söyleyemez. Yalnızca kendi verinizde görebildiklerini raporlar.",
+      "tech": [
+        { "tag": "HIBP", "title": "Şifreyi göndermeden ihlal kontrolü", "desc": "Şifreler aralık sorgularıyla karşılaştırılır; cihazdan yalnızca karma önekin bir kısmı çıkar, şifrenin kendisi asla." },
+        { "tag": "Yerel", "title": "Tamamen çevrimdışı çalışır", "desc": "Puanlama, çözülmüş kasanız üzerinde cihazda yapılır; denetim hiç bağlantı olmadan da çalışır." },
+        { "tag": "Kategoriler", "title": "Altı ayrı sorun", "desc": "Zayıf, tekrarlanan, sızmış, 2FA eksik, güvensiz HTTP ve bayat kayıtlar bağımsız sayılır." }
+      ],
+      "faqTitle": "Denetim hakkında",
+      "faq": [
+        { "q": "Denetim şifrelerimi bir yere gönderiyor mu?", "a": "Hayır. Puanlama yerelde yapılır. İhlal karşılaştırması aralık sorguları kullanır; yalnızca karma önek söz konusudur, şifrenin kendisi cihazdan hiç çıkmaz." },
+        { "q": "Ne sıklıkla çalıştırmalıyım?", "a": "Kayıt eklediğinizde veya değiştirdiğinizde, ve başka bir yöneticiden büyük bir içe aktarım yaptıktan sonra. Büyük içe aktarım, güçlü bir kasanın birden puan düşmesinin en yaygın nedenidir." },
+        { "q": "Düşük puan sızdırıldım demek mi?", "a": "Hayır. Puan, kasanızdaki şifreleri tanımlar; herhangi birinin ele geçirilip geçirilmediğini değil. Yalnızca kendi verinizden geriye kalanı ölçer." }
+      ],
+      "relatedTitle": "İlgili sayfalar",
+      "related": [
+        { "href": "/urun/password-vault/", "label": "Şifre kasası" },
+        { "href": "/urun/unlock-and-recovery/", "label": "Kilit açma ve kurtarma" }
+      ]
+    }
+  }
+}

@@ -1,0 +1,182 @@
+{
+  "section": "guvenlik",
+  "slug": "guvenlik",
+  "i18n": {
+    "en": {
+      "title": "Security Overview — KalderaShield",
+      "description": "How KalderaShield protects your vault: local-first design, per-record AES-256-GCM encryption, Argon2id key derivation and a public threat model.",
+      "eyebrow": "Security / Overview",
+      "h1": "Security that starts on your device",
+      "lead": "KalderaShield is a local-first password manager: your vault lives on your device, encryption happens there, and no account or cloud copy is required. This section explains exactly how that protection works — and where it ends.",
+      "primary": "Read the threat model",
+      "secondary": "See the source",
+      "primaryHref": "/guvenlik/tehdit-modeli/",
+      "whatLabel": "What the design is",
+      "whatTitle": "A vault that has no server to breach",
+      "what": [
+        "There is no KalderaShield account and no server-side vault copy. Your encrypted vault is stored on your device and, if you choose, in encrypted backup files that you move yourself. An attacker cannot breach a server that does not exist.",
+        "Every record is encrypted separately. A unique 256-bit AES-256-GCM key is derived per record through HKDF-SHA256, so decrypting one item never exposes another. Titles, usernames, passwords and notes exist in plaintext only inside the authenticated ciphertext payload.",
+        "The master password is stretched with Argon2id — 64 MiB of memory, 4 iterations and 2 lanes on desktop and Android — and the parameters are stored in the vault, so an existing vault never silently becomes weaker.",
+        "Production builds run behind an air-gap policy: unexpected outbound fetch, WebSocket, WebRTC and similar calls are blocked and logged. The only network traffic is the Have I Been Pwned range check, which sends the first five characters of a SHA-1 hash and never your password."
+      ],
+      "stepsTitle": "How the layers stack",
+      "steps": [
+        {
+          "title": "Your master password is the root",
+          "desc": "Argon2id turns it into the vault key. The master password is never stored in browser sessionStorage; after unlock, session state is a zeroized in-memory byte buffer, not a string the page can read."
+        },
+        {
+          "title": "Hardware wraps convenience only",
+          "desc": "Windows Hello (TPM 2.0), macOS Touch ID (Secure Enclave), Android BiometricPrompt (AndroidKeyStore) and PRF-capable FIDO2 keys wrap the unlock payload. The vault file itself is never hardware-sealed, so a lost device never locks you out."
+        },
+        {
+          "title": "The boundaries are written down",
+          "desc": "The published threat model states which attacks are defended, which are only partially defended, and which are out of scope — including malware running in your own OS session. Product claims are not allowed to promise more."
+        }
+      ],
+      "heroShot": {
+        "src": "/assets/images/app-security.webp",
+        "w": 1800,
+        "h": 666
+      },
+      "secTitle": "What this protection does not cover",
+      "secLabel": "The honest part",
+      "secBody": "No local application can protect a vault on a compromised device: malware running with your OS account while the vault is unlocked, keyloggers, privileged screen capture and memory inspection are all outside this model. Hardware unlock is a convenience wrapper, not a replacement for the master password. An independent third-party audit has not been completed yet — that is stated openly, not hidden.",
+      "tech": [
+        {
+          "tag": "Argon2id",
+          "title": "Memory-hard KDF",
+          "desc": "64 MiB, 4 iterations, 2 lanes for new desktop and Android vaults; 32 MiB, 3 iterations, 1 lane for web builds."
+        },
+        {
+          "tag": "AES-256-GCM",
+          "title": "Per-item isolation",
+          "desc": "HKDF-SHA256 derives a unique key per record and per attachment, with the record id as salt. Tampered ciphertext fails authentication."
+        },
+        {
+          "tag": "Air-gap policy",
+          "title": "Network egress control",
+          "desc": "Unexpected outbound fetch, XHR, WebSocket, sendBeacon, EventSource and WebRTC destinations are blocked and recorded as security events."
+        }
+      ],
+      "faqTitle": "About the security design",
+      "faq": [
+        {
+          "q": "Is my vault ever sent to a server?",
+          "a": "No. There is no account and no server-side vault. Optional sync providers such as WebDAV and S3 upload only the encrypted payload to storage that you configure and own."
+        },
+        {
+          "q": "Can KalderaShield recover my master password?",
+          "a": "No, and no one else can either. Unlock with the master password, unlock with the 24-word BIP-39 recovery key, or restore an encrypted backup. Without one of those, the vault cannot be opened."
+        },
+        {
+          "q": "Has an independent audit been performed?",
+          "a": "Not yet. The audit status page states this openly and describes the automated verification that is in place today. Hiding an unfinished audit would contradict everything else on this site."
+        }
+      ],
+      "relatedTitle": "Go deeper",
+      "related": [
+        {
+          "href": "/guvenlik/tehdit-modeli/",
+          "label": "Threat model"
+        },
+        {
+          "href": "/guvenlik/dogrulama/",
+          "label": "Verify your download"
+        },
+        {
+          "href": "/guvenlik/denetim-durumu/",
+          "label": "Audit status"
+        }
+      ]
+    },
+    "tr": {
+      "title": "Güvenlik Genel Bakışı — KalderaShield",
+      "description": "KalderaShield kasınızı nasıl korur: cihazda-önce tasarım, kayıt başına AES-256-GCM şifreleme, Argon2id anahtar türetme, donanımla sarılmış kolay kilit açma ve herkese açık tehdit modeli.",
+      "eyebrow": "Güvenlik / Genel Bakış",
+      "h1": "Güvenlik cihazınızda başlar",
+      "lead": "KalderaShield yerel-öncelikli bir parola yöneticisidir: kasınız cihazınızda yaşar, şifreleme orada yapılır ve hesap ya da bulut kopyası gerekmez. Bu bölüm o korumanın tam olarak nasıl çalıştığını — ve nerede bittiğini — açıklar.",
+      "primary": "Tehdit modelini okuyun",
+      "secondary": "Kaynağı inceleyin",
+      "primaryHref": "/guvenlik/tehdit-modeli/",
+      "whatLabel": "Tasarım nedir",
+      "whatTitle": "Sızmaya açılacak sunucusu olmayan bir kasa",
+      "what": [
+        "KalderaShield hesabı yoktur, sunucu tarafında kasa kopyası yoktur. Şifreli kasanız cihazınızda ve siz isterseniz kendinizin taşıdığı şifreli yedek dosyalarında saklanır. Saldırgan, var olmayan bir sunucuyu sızamaz.",
+        "Her kayıt ayrı şifrelenir. HKDF-SHA256 ile her kayda özgü 256 bitlik bir AES-256-GCM anahtarı türetilir; bir öğenin çözülmesi başka hiçbir öğeyi ele vermez. Başlıklar, kullanıcı adları, parolalar ve notlar düz metin olarak yalnızca kimliği doğrulanmış şifreli yükün içinde bulunur.",
+        "Ana parola Argon2id ile uzatılır — masaüstünde ve Android'de 64 MiB bellek, 4 iterasyon, 2 hat — ve parametreler kasanın içinde saklanır; böylece mevcut bir kasa sessizce zayıflamaz.",
+        "Üretim derlemeleri hava boşluğu politikası arkasında çalışır: beklenmeyen giden fetch, WebSocket, WebRTC ve benzeri çağrılar engellenir ve günlüğe yazılır. Tek ağ trafiği, SHA-1 karmasının yalnızca ilk beş karakterini gönderen Have I Been Pwned aralık sorgusudur; parolanız asla gönderilmez."
+      ],
+      "stepsTitle": "Katmanlar nasıl üst üste biner",
+      "steps": [
+        {
+          "title": "Ana parolanız köktür",
+          "desc": "Argon2id onu kasa anahtarına dönüştürür. Ana parola tarayıcı sessionStorage'ına asla yazılmaz; kilit açıldıktan sonra oturum durumu, sayfanın okuyabileceği bir dizge değil sıfırlanan bellek içi bayt tamponudur."
+        },
+        {
+          "title": "Donanım yalnızca kolaylığı sarar",
+          "desc": "Windows Hello (TPM 2.0), macOS Touch ID (Secure Enclave), Android BiometricPrompt (AndroidKeyStore) ve PRF yetenekli FIDO2 anahtarları kilit açma yükünü sarmalar. Kasa dosyası asla donanıma mühürlenmez; cihaz kaybı sizi asla kilitler."
+        },
+        {
+          "title": "Sınırlar yazılıdır",
+          "desc": "Yayınlanan tehdit modeli hangi saldırılara karşı savunulduğunu, hangilerine karşı kısmen savunulduğunu ve hangilerinin kapsam dışında olduğunu — kendi OS oturumunuzda çalışan kötü amaçlı yazılım dahil — belirtir. Ürün iddiaları bundan fazlasını vaat edemez."
+        }
+      ],
+      "heroShot": {
+        "src": "/assets/images/app-security.webp",
+        "w": 1800,
+        "h": 666
+      },
+      "secTitle": "Bu koruma nelere kapsamaz",
+      "secLabel": "Dürüst kısım",
+      "secBody": "Hiçbir yerel uygulama, ele geçirilmiş bir cihazdaki kasayı koruyamaz: kasa açıkken OS hesabınızla çalışan kötü amaçlı yazılım, tuş kaydediciler, yetkili ekran yakalama ve bellek incelemesi bu modelin dışındadır. Donanım kilit açma bir kolaylık sarmalayıcısıdır, ana parolanın yerine geçmez. Bağımsız bir üçüncü taraf denetimi henüz tamamlanmadı — bu gizlenmiyor, açıkça yazılıyor.",
+      "tech": [
+        {
+          "tag": "Argon2id",
+          "title": "Bellek sert KDF",
+          "desc": "Yeni masaüstü ve Android kasaları için 64 MiB, 4 iterasyon, 2 hat; web derlemeleri için 32 MiB, 3 iterasyon, 1 hat."
+        },
+        {
+          "tag": "AES-256-GCM",
+          "title": "Öğe başına izolasyon",
+          "desc": "HKDF-SHA256, kayıt kimliğini tuz olarak kullanarak her kayıt ve her ek için özgün bir anahtar türetir. Kurcalanmış şifreli metin kimlik doğrulaması geçemez."
+        },
+        {
+          "tag": "Hava boşluğu politikası",
+          "title": "Ağ çıkış denetimi",
+          "desc": "Beklenmeyen giden fetch, XHR, WebSocket, sendBeacon, EventSource ve WebRTC hedefleri engellenir ve güvenlik olayı olarak kaydedilir."
+        }
+      ],
+      "faqTitle": "Güvenlik tasarımı hakkında",
+      "faq": [
+        {
+          "q": "Kasam hiçbir sunucuya gönderilir mi?",
+          "a": "Hayır. Hesap yoktur, sunucu tarafında kasa yoktur. WebDAV ve S3 gibi isteğe bağlı eşitleme sağlayıcıları yalnızca şifreli yükü, sizin yapılandırıp sahiplendiğiniz depolamaya yükler."
+        },
+        {
+          "q": "KalderaShield ana parolamı geri getirebilir mi?",
+          "a": "Hayır, başkası da getiremez. Ana parolayla açın, 24 kelimelik BIP-39 kurtarma anahtarını kullanın veya şifreli bir yedeği geri yükleyin. Bunlardan biri yoksa kasa açılamaz."
+        },
+        {
+          "q": "Bağımsız bir denetim yapıldı mı?",
+          "a": "Henüz hayır. Denetim durumu sayfası bunu açıkça yazar ve bugün yerinde olan otomatik doğrulamayı anlatır. Tamamlanmamış bir denetimi gizlemek, sitedeki diğer her şeyle çelişirdi."
+        }
+      ],
+      "relatedTitle": "Daha derine inin",
+      "related": [
+        {
+          "href": "/guvenlik/tehdit-modeli/",
+          "label": "Tehdit modeli"
+        },
+        {
+          "href": "/guvenlik/dogrulama/",
+          "label": "İndirdiğinizi doğrulayın"
+        },
+        {
+          "href": "/guvenlik/denetim-durumu/",
+          "label": "Denetim durumu"
+        }
+      ]
+    }
+  }
+}
