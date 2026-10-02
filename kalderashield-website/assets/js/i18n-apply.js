@@ -90,6 +90,22 @@
    * reading "test . 90 kapsam" is wrong, but a page showing the literal text
    * "{{TESTCOUNT}}" is worse, because it looks like a bug to whoever spots it.
    */
+  /* Which tags a dictionary value is allowed to contain.
+ *
+ * The test used to be "does this value contain anything that looks like a tag",
+ * and that is too loose. The answer to "does the release script write the
+ * artifacts to release-local/<platform>/" contains a < and a >, so it was
+ * assigned as innerHTML; the browser then parsed <platform> as an unknown
+ * element and closed it at the end of the sentence, leaving a stray closing tag
+ * in every translated copy and wrapping the rest of the paragraph in an element
+ * nobody asked for.
+ *
+ * Anything outside this list is text. That fixes the path in all twelve
+ * languages at once without touching a word of copy, and it means a future
+ * translation that mentions a tag-shaped token cannot inject one.
+ */
+var ALLOWED_TAGS = /<\/?(?:strong|em|b|i|span|a|br|code|kbd|pre|sup|sub|u|small|ul|ol|li|p|div|mark|abbr)\b[^>]*>/i;
+
   function applyText(doc, node, value, locale) {
     if (typeof value !== 'string') return;
 
@@ -105,7 +121,7 @@
         : value.split('{{TESTCOUNT}}').join(formatTestCount(count, locale));
     }
 
-    if (/<\/?[a-z][\s\S]*>/i.test(value)) {
+    if (ALLOWED_TAGS.test(value)) {
       node.innerHTML = value;
     } else {
       node.textContent = value;

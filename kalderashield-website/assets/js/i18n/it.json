@@ -1376,5 +1376,7 @@
   "dl-android-desc": "Integrazione con Keystore protetto dall’hardware e API biometrica.",
   "d404-title": "La pagina richiesta è stata spostata o non è mai esistita.",
   "d404-desc": "Il link potrebbe contenere un errore di battitura oppure la pagina è stata rinominata. Ecco come tornare indietro.",
-  "d404-home": "Home"
+  "d404-home": "Home",
+  "cta-dl": "Scarica",
+  "cta-src": "Leggi il codice sorgente"
 }

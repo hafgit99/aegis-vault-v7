@@ -77,10 +77,14 @@ const KS = (() => {
  * Which files become pages, and what their addresses are
  * ------------------------------------------------------------------------ */
 
-/* 404.html is not a page: it is noindex and has no address to translate. */
+/* 404.html is noindex and has no address of its own, so it gets no localized
+ * copies: there is no /de/404.html to publish. It is still a page people read,
+ * so it is translated in the source language like the others -- otherwise the
+ * German visitor who mistypes a URL gets an error page in Turkish while the rest
+ * of the site is in German. */
 const SKIP = new Set(['404.html']);
 
-function pages() {
+function pages({ includeNotFound = false } = {}) {
   const out = [];
   const walk = (dir) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -99,7 +103,7 @@ function pages() {
       const rel = path.relative(root, full).replace(/\\/g, '/');
       // Anything under assets/ is a template or a partial, never a page.
       if (rel.startsWith('assets/')) continue;
-      if (SKIP.has(rel)) continue;
+      if (!includeNotFound && SKIP.has(rel)) continue;
       out.push({ rel, file: full });
     }
   };
@@ -350,6 +354,49 @@ function normalise(html) {
   return out;
 }
 
+/* Internal links in a localized page have to carry the locale.
+ *
+ * Every href in the markup is root-relative and unprefixed -- /download/,
+ * /urun/password-vault/ -- because that was correct when there was one URL per
+ * page. In a locale tree it is not: a visitor on /de/download/ who clicks any
+ * internal link lands on the Turkish page, and because the stored language
+ * preference still says German the switcher keeps showing German. The page is
+ * Turkish and the control claims otherwise, which is the exact report this came
+ * from.
+ *
+ * The rewrite is driven by the set of pages that exist rather than by a rule
+ * about the string. That distinguishes /urun/autofill/ (a page, prefix it) from
+ * /assets/css/site.css, /site.webmanifest and /.well-known/security.txt (files,
+ * leave them), without a list of exemptions that would need updating whenever a
+ * new file is added to the site.
+ */
+function prefixInternalLinks(doc, locale, pagePaths) {
+  if (locale === SOURCE) return;
+
+  for (const el of doc.querySelectorAll('[href]')) {
+    const href = el.getAttribute('href');
+    if (!href || !href.startsWith('/')) continue;
+    // Already prefixed, or an in-page anchor.
+    if (href.startsWith('/' + locale + '/') || href === '/' + locale) continue;
+
+    /* Split the path from the fragment and the query before looking it up.
+     *
+     * Matching the whole string against the page list missed every link that
+     * carries a fragment -- "/#comparison", "/download/#linux" -- because
+     * "/#comparison" is not a page. There were 188 of them, and they are the
+     * ones a visitor clicks most: the section links in the header, and the
+     * platform links on the download page. Following any of them from /de/
+     * landed on the Turkish page, which is the report this came from. */
+    const hashAt = href.search(/[#?]/);
+    const path = hashAt === -1 ? href : href.slice(0, hashAt);
+    const suffix = hashAt === -1 ? '' : href.slice(hashAt);
+
+    if (!path || !pagePaths.has(path)) continue;
+
+    el.setAttribute('href', '/' + locale + (path === '/' ? '/' : path) + suffix);
+  }
+}
+
 function render(html, locale, rel, sourceH1) {
   const dom = new JSDOM(html, {
     url: 'https://placeholder.invalid/' + (locale === SOURCE ? '' : locale + '/') + urlPath(rel),
@@ -361,6 +408,7 @@ function render(html, locale, rel, sourceH1) {
 
   const retitled = localiseHead(doc, sourceH1);
   applyHead(doc, rel, locale);
+  prefixInternalLinks(doc, locale, PAGE_PATHS);
 
   // Structured data goes in last, so it is built from the translated document
   // and describes exactly what the page will show. See the module header.
@@ -377,6 +425,11 @@ function render(html, locale, rel, sourceH1) {
 }
 
 const list = pages();
+
+/* Every address the site answers on, so the link rewrite can tell a page from a
+ * file. Built from the unprefixed tree, which is the whole set. */
+const PAGE_PATHS = new Set(list.map(({ rel }) => urlPath(rel)));
+
 let written = 0;
 let retitled = 0;
 const problems = [];
@@ -431,17 +484,31 @@ for (const { rel } of list) {
  * Turkish and at the prefix for the rest. Without it the alternates are a
  * one-way claim: the localized pages would list the Turkish one, and the
  * Turkish one would list nothing.
-
- * They also get their structured data here, in Turkish, built from the Turkish
- * document -- the same code path as every other locale, so the homepage's
- * Organisation block and its questions are the Turkish ones rather than English
- * ones left over from before the locales existed. */
+ *
+ * They are also run through the dictionary, which they previously were not.
+ * Their hand-written Turkish had drifted from tr.json in 24 to 34 places per
+ * page, and the browser corrected the difference a moment after load -- so the
+ * page a visitor read, a crawler reading without scripts, and the dictionary
+ * were three different texts. Applying the dictionary here makes the static
+ * document the one that gets served, which also removes the flash of
+ * untranslated copy on those pages.
+ *
+ * Titles and meta descriptions are deliberately left alone here. The
+ * hand-written ones are already in Turkish and were written for the page;
+ * localiseHead() exists to invent a title where none is translated, and running
+ * it against the source language would replace good copy with one derived from
+ * the heading.
+ */
 let annotated = 0;
-for (const { rel } of list) {
+for (const { rel } of pages({ includeNotFound: true })) {
   const file = path.join(root, rel);
   const html = fs.readFileSync(file, 'utf8');
   const dom = new JSDOM(html, { url: 'https://placeholder.invalid' + urlPath(rel) });
   const doc = dom.window.document;
+
+  KS.setDocumentLang(doc, SOURCE);
+  KS.translate(doc, doc, { dictionary: dicts[SOURCE], fallbackDictionary: {}, locale: SOURCE });
+
   applyHead(doc, rel);
   structuredData.forPage(doc, {
     locale: SOURCE,

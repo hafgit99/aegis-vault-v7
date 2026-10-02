@@ -1376,5 +1376,7 @@
   "dl-android-desc": "Intégration du Keystore adossé au matériel et de l’API biométrique.",
   "d404-title": "La page demandée a été déplacée ou n’a jamais existé.",
   "d404-desc": "Le lien est peut-être mal saisi, ou la page a été renommée. Voici les chemins de retour.",
-  "d404-home": "Accueil"
+  "d404-home": "Accueil",
+  "cta-dl": "Télécharger",
+  "cta-src": "Lire le code source"
 }

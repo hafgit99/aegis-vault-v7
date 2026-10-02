@@ -1376,5 +1376,7 @@
   "dl-android-desc": "集成硬件级 Keystore 与 Biometric API。",
   "d404-title": "您访问的页面已被移动，或从未存在。",
   "d404-desc": "可能是链接拼写有误，或页面已更名。以下是返回的路径。",
-  "d404-home": "首页"
+  "d404-home": "首页",
+  "cta-dl": "下载",
+  "cta-src": "查看源代码"
 }

@@ -1266,7 +1266,7 @@
   "p-kaynak-kodu-faq2-q": "¿Puedo contribuir código?",
   "p-kaynak-kodu-faq2-a": "Sí, mediante pull requests de GitHub. Las compuertas descritas antes se ejecutan en cada cambio, así que la forma más rápida de ayudar es un cambio que las mantenga en verde e incluya sus propias pruebas.",
   "p-kaynak-kodu-faq3-q": "¿Puedo compilar los instaladores por mi cuenta?",
-  "p-kaynak-kodu-faq3-a": "Sí. La guía local de versiones documenta los comandos exactos por plataforma, y el script de versiones recoge los artefactos con sus sumas de verificación SHA-256 en release-local/<plataforma>/.",
+  "p-kaynak-kodu-faq3-a": "Sí. La guía local de versiones documenta los comandos exactos por plataforma, y el script de versiones recoge los artefactos con sus sumas de verificación SHA-256 en release-local/<platform>/.",
   "p-kaynak-kodu-rel-title": "Páginas relacionadas",
   "p-kaynak-kodu-rel1": "Estado de la auditoría",
   "p-kaynak-kodu-rel2": "Modelo de amenazas",
@@ -1376,5 +1376,7 @@
   "dl-android-desc": "Integración con Keystore respaldado por hardware y la API biométrica.",
   "d404-title": "La página solicitada se ha movido o nunca existió.",
   "d404-desc": "Puede que el enlace esté mal escrito o que la página se haya renombrado. Estas son las vías de vuelta.",
-  "d404-home": "Inicio"
+  "d404-home": "Inicio",
+  "cta-dl": "Descargar",
+  "cta-src": "Leer el código fuente"
 }

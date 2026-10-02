@@ -1376,5 +1376,7 @@
   "dl-android-desc": "In Hardware abgesicherte Keystore- und Biometrie-API-Integration.",
   "d404-title": "Die gesuchte Seite wurde verschoben oder hat nie existiert.",
   "d404-desc": "Vielleicht ist der Link falsch geschrieben oder die Seite wurde umbenannt. Hier geht es zurück.",
-  "d404-home": "Startseite"
+  "d404-home": "Startseite",
+  "cta-dl": "Herunterladen",
+  "cta-src": "Quellcode ansehen"
 }

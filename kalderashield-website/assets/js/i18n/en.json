@@ -1376,5 +1376,7 @@
   "dl-android-desc": "Hardware-backed Keystore and Biometric API integration.",
   "d404-title": "The page you asked for has moved, or never existed.",
   "d404-desc": "It may be a mistyped link, or the page may have been renamed. These are the ways back.",
-  "d404-home": "Home"
+  "d404-home": "Home",
+  "cta-dl": "Download",
+  "cta-src": "Read the source"
 }

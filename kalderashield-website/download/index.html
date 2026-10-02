@@ -128,7 +128,7 @@
       <a class="nav-cta" href="/download/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5v11"></path><path d="M7.5 10.5l4.5 4.5 4.5-4.5"></path><path d="M4.5 19.5h15"></path></svg><span data-i18n="nav-download">İndir</span></a>
       <!-- mega:end -->
       <details class="lang">
-        <summary data-i18n-attr="aria-label:lang-switch-label">
+        <summary data-i18n-attr="aria-label:lang-switch-label" aria-label="Dil seç">
           <span class="lang-code" data-lang-code="">TR</span>
           <span data-lang-current="">Türkçe</span>
         </summary>
@@ -136,7 +136,7 @@
       </details>
 
       <details class="theme">
-        <summary data-i18n-attr="aria-label:theme-switch-label">
+        <summary data-i18n-attr="aria-label:theme-switch-label" aria-label="Tema seç">
           <span class="theme-glyph" aria-hidden="true">◐</span>
           <span class="theme-current" data-theme-current="" data-i18n="theme-system">Sistem</span>
         </summary>
@@ -175,7 +175,7 @@
         <p class="lead" data-i18n="dl-desc">Platformunuzu seçin ve uçtan uca şifrelenmiş çevrimdışı kasanızı saniyeler içinde kurun.</p>
         <div class="cta-row">
           <a class="btn btn-primary" href="https://github.com/hafgit99/kalderashield/releases/latest" rel="noopener noreferrer" data-i18n="dl-releases">Tüm sürümler</a>
-          <a class="btn btn-ghost" href="/guvenlik/dogrulama/" data-i18n="sec-verify-btn">İndirmelerinizi doğrulayın</a>
+          <a class="btn btn-ghost" href="/guvenlik/dogrulama/" data-i18n="sec-verify-btn">Doğrulama Rehberini İnceleyin</a>
         </div>
       </div>
 
@@ -304,8 +304,8 @@
           <div class="pick-cli-body">
             <div>
               <span class="pick-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l5 6-5 6"></path><path d="M12.5 18h7.5"></path></svg></span>
-              <h3 data-i18n="dl-cli-header">CLI Hızlı Kurulum</h3>
-              <p data-i18n="dl-cli-desc">Terminal üzerinden tek satırda en güncel sürümü indirin ve kurun.</p>
+              <h3 data-i18n="dl-cli-header">CLI Hızlı Kurulum (Tek Komut)</h3>
+              <p data-i18n="dl-cli-desc">Terminal üzerinden tek satırda en güncel sürümü indirin ve kurun:</p>
               <p class="pick-alt" data-i18n="dl-cli-note">Betik, sürüm numarasını ve SHA-256 özetlerini çalışma anında GitHub Releases üzerinden çeker; özetler SHA256SUMS.txt ile karşılaştırılır ve eşleşmezse kurulum durdurulur.</p>
             </div>
             <pre><code>curl -fsSL https://{{DOMAIN}}/install.sh -o install.sh
@@ -341,7 +341,7 @@ sh install.sh</code></pre>
           <h3 data-i18n="dl-c2-title">macOS</h3>
           <div class="notice">
             <p><strong data-i18n="dl-mac-warn-title">Resmi İmzalı Sürüm Bekleniyor</strong></p>
-            <p data-i18n="dl-mac-warn-msg">Apple Gatekeeper ve kod imzalama (Code Signing) sertifikasyon süreci devam etmektedir. İmzalı resmi sürüm hazır olana kadar macOS kurulum paketi yayımlanmıyor.</p>
+            <p data-i18n="dl-mac-warn-msg">Apple Gatekeeper ve kod imzalama (Code Signing) sertifikasyon süreci devam etmektedir. İmzalı resmi sürüm hazır olana kadar macOS kurulum paketleri geçici olarak sunulmamaktadır.</p>
           </div>
           <p class="card-action"><a class="btn btn-ghost" href="https://github.com/hafgit99/kalderashield/releases" rel="noopener noreferrer" data-i18n="dl-mac-link-gh">Gelişmeleri GitHub'da Takip Et</a></p>
         </article>
@@ -373,7 +373,7 @@ sh install.sh</code></pre>
         <li class="step">
           <span class="step-num" aria-hidden="true">4</span>
           <h3 data-i18n="and-s4-t">Kasanızı oluşturun veya geri yükleyin</h3>
-          <p data-i18n="and-s4-d">Doğrulanan APK’yı yükleyin ve kasanızı oluşturun veya geri yükleyin.</p>
+          <p data-i18n="and-s4-d">Doğrulanmış APK’yı yükleyin ve kasanızı oluşturun veya geri yükleyin.</p>
         </li>
       </ol>
     </div>
@@ -391,8 +391,8 @@ sh install.sh</code></pre>
             <p><strong data-i18n="dl-notice-label">Not:</strong> <span data-i18n="dl-notice-releases">İndirmeler GitHub Releases üzerinden sunulur.</span></p>
           </div>
           <p class="cta-row" style="margin-top:1.2rem">
-            <a class="btn btn-ghost" href="https://github.com/hafgit99/kalderashield/releases/latest/download/SHA256SUMS.txt" rel="noopener noreferrer" data-i18n="dl-sha-note">SHA256SUMS.txt</a>
-            <a class="btn btn-ghost" href="/guvenlik/dogrulama/" data-i18n="sec-verify-btn">İndirmelerinizi doğrulayın</a>
+            <a class="btn btn-ghost" href="https://github.com/hafgit99/kalderashield/releases/latest/download/SHA256SUMS.txt" rel="noopener noreferrer" data-i18n="dl-sha-note">Tüm kurulum dosyalarının SHA-256 özetleri:</a>
+            <a class="btn btn-ghost" href="/guvenlik/dogrulama/" data-i18n="sec-verify-btn">Doğrulama Rehberini İnceleyin</a>
           </p>
         </div>
         <pre><code># indirdiğiniz dosyanın özetini karşılaştırın

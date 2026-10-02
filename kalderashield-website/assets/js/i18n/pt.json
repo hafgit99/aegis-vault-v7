@@ -1376,5 +1376,7 @@
   "dl-android-desc": "Integração com Keystore apoiado por hardware e API biométrica.",
   "d404-title": "A página que você procura foi movida ou nunca existiu.",
   "d404-desc": "O link pode estar escrito incorretamente ou a página pode ter sido renomeada. Estes são os caminhos de volta.",
-  "d404-home": "Início"
+  "d404-home": "Início",
+  "cta-dl": "Baixar",
+  "cta-src": "Ler o código-fonte"
 }

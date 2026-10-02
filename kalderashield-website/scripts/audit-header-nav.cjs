@@ -29,8 +29,18 @@ for (const file of files) {
     continue;
   }
 
-  if (!/class="nav-cta"[^>]*href="\/download\/"/.test(nav[0])) {
-    findings.push(`${rel}: menüde indir butonu yok`);
+  /* The download link has to stay inside the page's own language.
+   *
+   * Accepting both /download/ and /de/download/ was wrong: on a page inside
+   * /de/, a link to /download/ drops the reader into the Turkish page, which is
+   * the bug this check is adjacent to. The expected prefix comes from where the
+   * file lives, so the Turkish pages are checked unprefixed and the other eleven
+   * are checked against their own tree. */
+  const locale = /^\/([a-z]{2})\//.exec('/' + rel);
+  const prefix = locale ? '/' + locale[1] + '/' : '/';
+  const expected = new RegExp(`class="nav-cta"[^>]*href="${prefix.replace(/\//g, '\\/')}download\\/"`);
+  if (!expected.test(nav[0])) {
+    findings.push(`${rel}: menüde indir butonu yok veya ${prefix}download/ degil`);
   }
   // The label has to live in its own element: site.js assigns with textContent
   // when a translation has no markup, which would delete a glyph placed

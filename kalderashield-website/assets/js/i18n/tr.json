@@ -1376,5 +1376,7 @@
   "dl-android-desc": "Donanım destekli Keystore ve Biyometrik API entegrasyonu.",
   "d404-title": "Aradığınız sayfa taşınmış ya da hiç var olmamış olabilir.",
   "d404-desc": "Bağlantı yazım hatası olabilir ya da sayfa yeniden adlandırılmış olabilir. Buradan devam edebilirsiniz.",
-  "d404-home": "Ana sayfa"
+  "d404-home": "Ana sayfa",
+  "cta-dl": "İndir",
+  "cta-src": "Kaynağı incele"
 }

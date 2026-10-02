@@ -134,6 +134,20 @@ jobs:
 
       # The committed locale pages must be what generate-locales.cjs produces
       # now. Regenerating and diffing is the check: the generator is the only
+      # Every page is written in its own language at build time, so a
+      # data-i18n node's text should already be the translated one. This is what
+      # makes the site loadable without scripts and lets the browser fetch a
+      # six-key dictionary instead of the 1378-key one.
+      - name: Every page already carries its own language
+        working-directory: kalderashield-website
+        run: node scripts/audit-static-i18n.cjs
+
+      # The six-key dictionary the browser still needs, derived from the full
+      # ones so the two cannot disagree.
+      - name: Build the runtime dictionary
+        working-directory: kalderashield-website
+        run: node scripts/build-chrome-dictionary.cjs
+
       # The committed HTML, dictionaries, locale pages and sitemap must be
       # exactly what the generators produce.
       #
@@ -154,6 +168,8 @@ jobs:
         run: |
           node scripts/build-pages.cjs
           node scripts/add-comparison-cell-i18n.cjs
+          node scripts/add-cta-i18n.cjs
+          node scripts/fix-faq-path-placeholder.cjs
           node scripts/rewrite-comparison-table.cjs
           node scripts/sync-claims.cjs
           node scripts/sync-head-meta.cjs

@@ -121,7 +121,7 @@
       <a class="nav-cta" href="/download/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5v11"></path><path d="M7.5 10.5l4.5 4.5 4.5-4.5"></path><path d="M4.5 19.5h15"></path></svg><span data-i18n="nav-download">İndir</span></a>
       <!-- mega:end -->
       <details class="lang">
-        <summary data-i18n-attr="aria-label:lang-switch-label">
+        <summary data-i18n-attr="aria-label:lang-switch-label" aria-label="Dil seç">
           <span class="lang-code" data-lang-code="">TR</span>
           <span data-lang-current="">Türkçe</span>
         </summary>
@@ -129,7 +129,7 @@
       </details>
 
       <details class="theme">
-        <summary data-i18n-attr="aria-label:theme-switch-label">
+        <summary data-i18n-attr="aria-label:theme-switch-label" aria-label="Tema seç">
           <span class="theme-glyph" aria-hidden="true">◐</span>
           <span class="theme-current" data-theme-current="" data-i18n="theme-system">Sistem</span>
         </summary>
@@ -147,7 +147,7 @@
   <section class="hero">
     <div class="wrap hero-grid">
       <div class="hero-copy">
-        <p class="eyebrow" data-i18n="hero-badge"><span class="live-dot"></span> Sürüm {{VERSION}} — Yayında</p>
+        <p class="eyebrow" data-i18n="hero-badge"><span class="live-dot"></span> Sürüm 7.0.18 — Yayında</p>
         <h1 data-i18n="hero-title">Verileriniz Sadece <span class="gradient-text">Sizin Cihazınızda</span> Güvende.</h1>
         <p class="lead" data-i18n="hero-desc">KalderaShield, internet bağlantısına veya üçüncü taraf bulut sağlayıcılarına ihtiyaç duymayan, sıfır-bilgi (zero-knowledge) güvenlik mimarisine sahip yerel ve açık kaynaklı şifre yöneticisidir.</p>
 
@@ -229,32 +229,32 @@
 
   <section id="platforms">
     <div class="wrap">
-      <span class="eyebrow" data-i18n="platforms-eyebrow">Platformlar</span>
+      <span class="eyebrow" data-i18n="platforms-eyebrow">Platform Desteği</span>
       <h2 data-i18n="dl-eyebrow">Hemen Başlayın</h2>
-      <p class="prose muted" data-i18n="dl-release-note">İndirmeler GitHub Releases üzerinden sunulur; her sürüm SHA-256 özeti ve imzalarla birlikte yayımlanır.</p>
+      <p class="prose muted" data-i18n="dl-release-note">İndirmeler GitHub Releases üzerinden sunulur; her sürüm SHA-256 özeti ve imzalarıyla birlikte yayımlanır.</p>
 
       <div class="grid grid-3" style="margin-top:1.6rem">
         <article class="card">
           <h3 data-i18n="pl-linux-title">Linux</h3>
-          <p data-i18n="pl-linux-desc">DEB, AppImage veya denetlenebilir, doğrulanabilir CLI betiği. Tüm dağıtımlar.</p>
+          <p data-i18n="pl-linux-desc">DEB, AppImage veya incelenip doğrulanabilen CLI betiği. Tüm dağıtımlar.</p>
           <p class="card-action"><a class="btn btn-ghost" href="/download/#linux" data-i18n="pl-dl-now">İndir</a></p>
         </article>
 
         <article class="card">
           <h3 data-i18n="pl-android-title">Android</h3>
-          <p data-i18n="pl-android-desc">Android 9.0 ve sonrası. Evrensel veya mimariye özel APK.</p>
+          <p data-i18n="pl-android-desc">Android 9.0 ve üzeri. Evrensel veya mimariye özel APK.</p>
           <p class="card-action"><a class="btn btn-ghost" href="/download/#android" data-i18n="pl-dl-now">İndir</a></p>
         </article>
 
         <article class="card">
-          <h3 data-i18n="pl-browser-title">Browser Extensions</h3>
-          <p data-i18n="pl-browser-desc">Chrome, Edge ve Firefox için imzalı eklenti paketleri.</p>
+          <h3 data-i18n="pl-browser-title">Tarayıcı Eklentileri</h3>
+          <p data-i18n="pl-browser-desc">Chrome, Firefox, Edge, Brave ve Safari (MV3 / Native Messaging).</p>
           <p class="card-action"><a class="btn btn-ghost" href="/download/#browser" data-i18n="pl-dl-now">İndir</a></p>
         </article>
 
         <article class="card">
           <h3 data-i18n="pl-cli-title">CLI</h3>
-          <p data-i18n="pl-cli-desc">Önce betiği indirip inceleyin, imzasını doğrulayın, sonra çalıştırın.</p>
+          <p data-i18n="pl-cli-desc">Betik önce indirilir, incelenir ve imzası doğrulanır; ardından çalıştırılır.</p>
           <p class="card-action"><a class="btn btn-ghost" href="/download/#cli" data-i18n="pl-dl-now">İndir</a></p>
         </article>
 
@@ -266,7 +266,7 @@
 
         <article class="card">
           <h3 data-i18n="pl-macos-title">macOS</h3>
-          <p data-i18n="pl-macos-desc">Geliştirme aşamasında — kod imzalama sürüyor.</p>
+          <p data-i18n="pl-macos-desc">Geliştirme aşamasında — kod imzalama süreci devam ediyor.</p>
         </article>
       </div>
     </div>
@@ -282,7 +282,7 @@
         <article class="card">
           <span class="eyebrow" data-i18n="feat-c1-tag">OPFS Sandbox</span>
           <h3 data-i18n="feat-c1-title">Local-First: SQLite &amp; OPFS Sandbox</h3>
-          <p data-i18n="feat-c1-desc">Bilgileriniz uzak sunucularda değil, uygulamanın özel dosya sisteminde doğrudan SQLite veritabanında saklanır. Ağ kopukluklarından etkilenmez.</p>
+          <p data-i18n="feat-c1-desc">Bilgileriniz uzak sunucularda değil, tarayıcınızın veya Tauri nativo escritorio/Android uygulamasının özel sandboxed dosya sisteminde (Origin Private File System) doğrudan SQLite veritabanında saklanır. Ağ kopukluklarından etkilenmez, verileriniz tamamen yereldir.</p>
         </article>
 
         <article class="card">
@@ -294,7 +294,7 @@
         <article class="card">
           <span class="eyebrow" data-i18n="feat-c3-tag">Air-Gap</span>
           <h3 data-i18n="feat-c3-title">Air-Gap Ağ Politikası</h3>
-          <p data-i18n="feat-c3-desc">Ağ politikası beklenmeyen dış bağlantıları sınırlar. İnternetsiz kullanım desteklenir.</p>
+          <p data-i18n="feat-c3-desc">Ağ politikası beklenmeyen dış bağlantıları sınırlar. İnternetsiz kullanım desteklenir; etkin özellikler ve yapılandırma ağ davranışını etkileyebilir.</p>
         </article>
       </div>
     </div>
@@ -308,50 +308,50 @@
 
       <div class="grid grid-3" style="margin-top:1.6rem">
         <article class="card">
-          <span class="eyebrow" data-i18n="sec-c1-tag">AEAD Authenticated</span>
+          <span class="eyebrow" data-i18n="sec-c1-tag">AEAD Korumalı</span>
           <h3 data-i18n="sec-c1-title">AES-256-GCM</h3>
-          <p data-i18n="sec-c1-desc">Her kayıt, HKDF-SHA256 ile türetilmiş izole 256-bit AES-GCM anahtarıyla şifrelenir.</p>
+          <p data-i18n="sec-c1-desc">Her bir veri kaydı, WebCrypto HKDF-SHA256 ile bağımsız türetilen 256-bit AES-GCM anahtarı ile izole şekilde şifrelenir.</p>
         </article>
         <article class="card">
-          <span class="eyebrow" data-i18n="sec-c2-tag">Key Derivation</span>
+          <span class="eyebrow" data-i18n="sec-c2-tag">Anahtar Türetme</span>
           <h3 data-i18n="sec-c2-title">Argon2id KDF</h3>
-          <p data-i18n="sec-c2-desc">Argon2id, çevrimdışı parola denemelerinin maliyetini yükseltir. Varsayılanlar: Tauri derlemeleri.</p>
+          <p data-i18n="sec-c2-desc">Argon2id, çevrimdışı parola tahminlerinin maliyetini artırır. Varsayılanlar: Tauri yerel masaüstü/Android 64 MiB / 4 iterasyon / 2 lane; Web/WASM 32 MiB / 3 iterasyon / 1 lane. Mevcut kasalar kayıtlı parametrelerini kullanır.</p>
         </article>
         <article class="card">
           <span class="eyebrow" data-i18n="sec-c3-tag">Zero-Knowledge</span>
-          <h3 data-i18n="sec-c3-title">Zero Knowledge</h3>
-          <p data-i18n="sec-c3-desc">Ana parola ve türetilen anahtarlar istemci tarafında işlenir.</p>
+          <h3 data-i18n="sec-c3-title">Sıfır Bilgi</h3>
+          <p data-i18n="sec-c3-desc">Ana parola ve türetilen anahtarlar istemci tarafında işlenir. Koruma, uygulamanın çalıştığı cihazın güvenliğine ve kullanıcı ortamına da bağlıdır.</p>
         </article>
       </div>
 
       <div class="cta-row" style="margin-top:1.8rem">
         <a class="btn btn-primary" href="/guvenlik/tehdit-modeli/" data-i18n="p-guvenlik-primary">Tehdit modelini okuyun</a>
-        <a class="btn btn-ghost" href="/guvenlik/dogrulama/" data-i18n="sec-verify-btn">İndirmelerinizi doğrulayın</a>
+        <a class="btn btn-ghost" href="/guvenlik/dogrulama/" data-i18n="sec-verify-btn">Doğrulama Rehberini İnceleyin</a>
       </div>
     </div>
   </section>
 
   <section id="extensions">
     <div class="wrap">
-      <span class="eyebrow" data-i18n="ext-eyebrow">Tarayıcı Entegrasyonu</span>
+      <span class="eyebrow" data-i18n="ext-eyebrow"><span class="dot"></span> Tarayıcı Entegrasyonu</span>
       <h2 data-i18n="ext-title">Tarayıcınızda Sorunsuz Otomatik Doldurma</h2>
       <p class="prose muted" data-i18n="ext-desc">10.000+ kural Mozilla Public Suffix List (PSL) eTLD+1 eşleme ve kapalı Shadow DOM izolasyonu ile form otomatik doldurma.</p>
 
       <div class="grid" style="margin-top:1.6rem">
         <article class="card">
           <h3>Chrome &amp; Edge</h3>
-          <p data-i18n="ext-c1-desc">Yerel geliştirilmiş sürümü veya Chromium mağazasından kurun.</p>
-          <p class="card-action"><a class="btn btn-ghost" href="/download/#browser" data-i18n="ext-c1-btn">İndir</a></p>
+          <p data-i18n="ext-c1-desc">Chrome Web Mağazası üzerinden tek tıkla kurulum. Manifest V3, F6 security hardening.</p>
+          <p class="card-action"><a class="btn btn-ghost" href="/download/#browser" data-i18n="ext-c1-btn">Chromium Eklentisini İndir (.zip)</a></p>
         </article>
         <article class="card">
           <h3>Firefox</h3>
-          <p data-i18n="ext-c2-desc">Mozilla AMO tarafından imzalanmış XPI.</p>
-          <p class="card-action"><a class="btn btn-ghost" href="/download/#browser" data-i18n="ext-c2-btn">İndir</a></p>
+          <p data-i18n="ext-c2-desc">Firefox Eklenti Mağazası (AMO) üzerinden imzalı kurulum. Mozilla'nın katı güvenlik incelemesinden geçti.</p>
+          <p class="card-action"><a class="btn btn-ghost" href="/download/#browser" data-i18n="ext-c2-btn">İmzalı Firefox Eklentisini Yükle (.xpi)</a></p>
         </article>
         <article class="card">
           <h3>Safari</h3>
-          <p data-i18n="ext-c3-desc">WebExtension paketi; yerel uygulama sarmalayıcı Xcode dönüşümü gerektirir.</p>
-          <p class="card-action"><a class="btn btn-ghost" href="/download/#browser" data-i18n="ext-c3-btn">İndir</a></p>
+          <p data-i18n="ext-c3-desc">Safari için native eklenti. macOS Sonoma ve üzeri için optimize edildi. Apple App Store imzalı.</p>
+          <p class="card-action"><a class="btn btn-ghost" href="/download/#browser" data-i18n="ext-c3-btn">Safari Paketini İndir (.zip)</a></p>
         </article>
       </div>
     </div>
@@ -443,19 +443,19 @@
           </tbody>
         </table>
       </div>
-      <p class="faint" style="margin-top:1rem" data-i18n="comp-method-note">Karşılaştırma, kamuya açık özellik belgelerine dayanır.</p>
+      <p class="faint" style="margin-top:1rem" data-i18n="comp-method-note">Bu tablo, 23 Eylül 2026 itibarıyla yayımlanmış proje belgeleri ve kaynak koduna dayalı mimari özettir; bağımsız karşılaştırmalı test değildir. Diğer ürünlerin özellikleri sürüm, plan ve yapılandırmaya göre değişebilir. Üçüncü taraf özellikleri bu tabloda bağımsız olarak doğrulanmamıştır.</p>
     </div>
   </section>
 
   <section id="audit">
     <div class="wrap">
-      <span class="eyebrow" data-i18n="audit-eyebrow">Şeffaflık ve Güven</span>
+      <span class="eyebrow" data-i18n="audit-eyebrow"><span class="dot"></span> Şeffaflık ve Güven</span>
       <h2 data-i18n="audit-title">Güvenlik İncelemesi ve Denetim Durumu</h2>
-      <p class="prose muted" data-i18n="audit-desc">Kaynak kodu, tehdit modeli, bağımlılık taraması ve sürüm imzaları herkese açıktır. Güvenlik açıklarını özel olarak bildirebilirsiniz.</p>
+      <p class="prose muted" data-i18n="audit-desc">Güvenlik belgeleri ve dış denetim kapsamı yayımlanmıştır. Tamamlanmış bağımsız üçüncü taraf denetim raporu henüz yayımlanmamıştır.</p>
 
       <div class="cta-row" style="margin-top:1.4rem">
-        <a class="btn btn-ghost" href="https://github.com/hafgit99/kalderashield/security/advisories/new" rel="noopener noreferrer" data-i18n="audit-lk-disclose">Gizli bildirim</a>
-        <a class="btn btn-ghost" href="https://github.com/hafgit99/kalderashield" rel="noopener noreferrer" data-i18n="audit-lk-commits">Commit geçmişi</a>
+        <a class="btn btn-ghost" href="https://github.com/hafgit99/kalderashield/security/advisories/new" rel="noopener noreferrer" data-i18n="audit-lk-disclose">Zafiyet Bildir</a>
+        <a class="btn btn-ghost" href="https://github.com/hafgit99/kalderashield" rel="noopener noreferrer" data-i18n="audit-lk-commits">İmzalı Commit'ler</a>
       </div>
     </div>
   </section>

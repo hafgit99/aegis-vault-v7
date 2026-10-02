@@ -17,10 +17,6 @@
   var KS = window.KalderaShieldTranslate;
   if (!KS) throw new Error('assets/js/i18n-apply.js yuklenmedi');
 
-  function setDocumentLang(locale) {
-    KS.setDocumentLang(document, locale);
-  }
-
   /* Endonym plus a two-letter code, not a flag.
    *
    * A country flag was the first instinct and it is the wrong answer twice over.
@@ -55,10 +51,12 @@
   var STORAGE_KEY = 'kalderashield.site.lang';
   var THEME_STORAGE_KEY = 'kalderashield.site.theme';
   var DEFAULT_LANG = 'tr';
-  /* Dictionary consulted when the active locale has no entry for a key. */
-  var FALLBACK_LANG = 'en';
   var THEMES = ['light', 'dark', 'system'];
 
+  /* The six-key chrome dictionary, and nothing else. There is no second
+     dictionary to fall back on any more: measure-locale-coverage.cjs refuses to
+     publish a locale with a missing key, so the fallback had nothing left to
+     cover and cost a 130-165 KB fetch on every page view to find out. */
   var dictionary = {};
   var fallbackDictionary = {};
   var current = DEFAULT_LANG;
@@ -208,16 +206,25 @@
     return isKnown(match[1]) ? match[1] : null;
   }
 
+  /* The language of the page, taken from the document itself.
+   *
+   * Every page is written in its own language at build time, so `lang` on <html>
+   * is not a starting point to be refined -- it is the answer. The stored
+   * preference and the browser's language used to be consulted here, and both
+   * are wrong now: a stored "de" with a Turkish page underneath produced a
+   * control showing German over Turkish text, and setDocumentLang() then wrote
+   * lang="de" onto the Turkish document, which is worse than the cosmetic lie
+   * because assistive technology and the hreflang annotations both believe it.
+   *
+   * The stored preference is not discarded -- the switcher uses it to decide
+   * where to send someone who picked a language before. It just no longer
+   * decides what a page is. */
   function pickLanguage() {
+    var declared = document.documentElement.getAttribute('lang');
+    if (declared && isKnown(declared)) return declared;
+
     var fromUrl = localeFromPath();
     if (fromUrl) return fromUrl;
-
-    var saved = storedLang();
-    if (saved && isKnown(saved)) return saved;
-
-    var nav = (navigator.languages && navigator.languages[0]) || navigator.language || '';
-    var short = String(nav).toLowerCase().split('-')[0];
-    if (isKnown(short)) return short;
 
     return DEFAULT_LANG;
   }
@@ -350,66 +357,58 @@
     return new URL('/', window.location.origin + '/').href;
   }
 
-  function localeUrl(locale) {
-    return new URL('assets/js/i18n/' + locale + '.json', siteRoot()).href;
-  }
-
-  // Loaded once per page view. The fallback never changes, so re-fetching it on
-  // every switch would be the double fetch this file went out of its way to
-  // avoid, just spread over the language clicks instead of the initial load.
-  var fallbackLoad = null;
-
-  function loadFallbackDictionary() {
-    if (!fallbackLoad) {
-      fallbackLoad = fetch(localeUrl(FALLBACK_LANG), { credentials: 'omit' })
-        .then(function (response) {
-          if (!response.ok) throw new Error('HTTP ' + response.status);
-          return response.json();
-        })
-        .catch(function () { return {}; });
-    }
-    return fallbackLoad;
+  /* The runtime loads a six-key dictionary, not the page's 1378-key one.
+   *
+   * Every page is now written in its own language by scripts/generate-locales.cjs,
+   * and scripts/audit-static-i18n.cjs asserts it across all of them. There is
+   * therefore no page text left for this file to translate; what it still needs
+   * is the theme labels, because the theme control is built here after load and
+   * those strings are in no document until it runs.
+   *
+   * The twelve dictionaries are 130-165 KB. Fetching the page's locale plus the
+   * English fallback -- which is what this did, so a missing key would resolve
+   * to English -- meant up to about 300 KB per page view to re-apply text that
+   * was already correct. chrome/<locale>.json is 2.5 KB for all twelve.
+   *
+   * The fallback dictionary goes with it. It existed for keys a translation was
+   * missing; measure-locale-coverage.cjs refuses to publish a locale with a
+   * missing key, so there is nothing left for it to cover. */
+  function chromeUrl(locale) {
+    return new URL('assets/js/i18n/chrome/' + locale + '.json', siteRoot()).href;
   }
 
   function setLanguage(locale) {
     if (!isKnown(locale)) locale = DEFAULT_LANG;
     current = locale;
 
-    // English is loaded alongside every other locale as a fallback dictionary.
-    // A key that a translation file does not carry yet then resolves to the
-    // English copy instead of leaving the markup default in place, which is
-    // what kept newly added sections from reading as untranslated markup in
-    // the other ten languages.
-    var primary = fetch(localeUrl(locale), { credentials: 'omit' })
+    // One request, six keys. It resolves in a fraction of what two 130-165 KB
+    // fetches did, and translate(document) now has nothing to do to the page
+    // itself -- which is the point: the page was already written in this
+    // language.
+    //
+    // On failure the theme buttons keep the Turkish fallback text they are
+    // created with. Nothing else on the page depends on this dictionary.
+    return fetch(chromeUrl(locale), { credentials: 'omit' })
       .then(function (response) {
         if (!response.ok) throw new Error('HTTP ' + response.status);
         return response.json();
       })
-      .catch(function () { return {}; });
+      .then(function (payload) {
+        dictionary = payload || {};
+        fallbackDictionary = {};
 
-    var fallback = locale === FALLBACK_LANG
-      ? Promise.resolve({})
-      : loadFallbackDictionary();
-
-    return Promise.all([primary, fallback])
-      .then(function (payloads) {
-        dictionary = payloads[0] || {};
-        fallbackDictionary = payloads[1] || {};
-
-        setDocumentLang(current);
-        translate(document);
-        // The theme buttons are built before the first fetch resolves, so they
-        // need the same pass the rest of the page gets. The control's own
-        // summary label is rebuilt here too: applyTheme ran during start(),
-        // when the dictionary was still empty and it fell back to Turkish.
+        // The theme buttons are built before the fetch resolves, so they need
+        // their own pass: applyTheme ran during start(), when the dictionary
+        // was still empty and the labels fell back to Turkish.
         translate(document.getElementById('theme-menu') || document);
         applyTheme(readTheme());
         markActive(current);
       })
       .catch(function () {
-        // Leave the markup text in place. A visitor still gets a readable
-        // page in the default language rather than a half-translated one.
-        setDocumentLang(current);
+        // The theme buttons keep the fallback text they were created with.
+        // Nothing else on the page depends on this dictionary: the page was
+        // written in its own language before this file loaded, which is also why
+        // `lang` is left exactly as the document has it.
         applyTheme(readTheme());
         markActive(current);
       });
