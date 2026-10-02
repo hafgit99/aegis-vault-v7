@@ -56,6 +56,118 @@ jobs:
       - name: Unit tests
         run: npm run test:unit
 
+  website-gates:
+    name: Website quality gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+
+      # Three of the scripts below are not dependency-free, which the previous
+      # version of this job assumed:
+      #   generate-locales  jsdom, to apply a dictionary to a document offline
+      #   audit-contrast    playwright, to measure rendered text in three themes
+      #   sync-claims       vitest, to read the real test count
+      # The rest are plain Node. Installing the whole tree is the honest option:
+      # the lockfile is already there and these three would otherwise fail on
+      # the first line with a module-not-found that says nothing about the site.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium for the contrast audit
+        run: npx playwright install --with-deps chromium
+
+      - name: Copy and dictionary gates
+        working-directory: kalderashield-website
+        run: |
+          node scripts/audit-copy-drift.cjs
+          node scripts/audit-home-keys.cjs
+          node scripts/audit-header-nav.cjs
+          node scripts/audit-page-packs.cjs
+          node scripts/audit-translation-scripts.cjs
+          node scripts/audit-page-meta.cjs
+
+      # Walks the rendered pages in three theme states -- including a dark OS with
+      # the toggle set to light -- and fails on any text under WCAG AA. Reading
+      # the palette does not catch this: --text-faint passed on --bg and failed on
+      # --bg-raised, which is where the footer headings actually sit.
+      - name: Text contrast meets WCAG AA
+        working-directory: kalderashield-website
+        run: node scripts/audit-contrast.cjs
+
+      # The homepage publishes how many tests the suite has. It used to be a
+      # hardcoded number in the markup and in twelve translation files, and it
+      # had already drifted. This regenerates it from `vitest list` and fails if
+      # the committed copy disagrees, so a new test cannot leave the site
+      # claiming an old number.
+      - name: Published claims match the test suite
+        working-directory: kalderashield-website
+        run: node scripts/sync-claims.cjs --check
+
+      # theme-color as a prefers-color-scheme pair, and the rel="sitemap" link,
+      # on every page. The colours are read from site.css by the script, so a
+      # palette change cannot leave the browser chrome behind it.
+      - name: Head metadata matches the stylesheet
+        working-directory: kalderashield-website
+        run: node scripts/sync-head-meta.cjs --check
+
+      # assets/js/i18n-apply.js has to load before site.js on every page:
+      # site.js throws at start without it, so a page missing it fails in the
+      # browser rather than at build time.
+      - name: Translation core is loaded before the site script
+        working-directory: kalderashield-website
+        run: node scripts/sync-script-tags.cjs --check
+
+      # Which locales may have their own URLs. A dictionary with a missing key
+      # would otherwise publish an address whose page silently falls back to
+      # English -- one indexable URL per language, most of them duplicates.
+      - name: Every locale is complete enough to publish
+        working-directory: kalderashield-website
+        run: node scripts/measure-locale-coverage.cjs
+
+      # The committed locale pages must be what generate-locales.cjs produces
+      # now. Regenerating and diffing is the check: the generator is the only
+      # The committed HTML, dictionaries, locale pages and sitemap must be
+      # exactly what the generators produce.
+      #
+      # This is one step running all of them in order, rather than one step per
+      # generator with its own diff. The generators write the same files:
+      # build-pages produces the unprefixed pages, generate-locales then adds
+      # their hreflang, structured data and per-language copies. Four separate
+      # diff steps therefore depend on execution order -- running build-pages
+      # last leaves the pages without the metadata the earlier step added, and
+      # the diff reports that as drift. A single ordered run plus a single diff
+      # has no such failure mode, and says which file is out of date either way.
+      #
+      # The order matters and is: content -> dictionaries -> markup -> per-page
+      # metadata -> locales -> sitemap. Each script reads what the previous one
+      # wrote.
+      - name: Generated output is reproducible
+        working-directory: kalderashield-website
+        run: |
+          node scripts/build-pages.cjs
+          node scripts/add-comparison-cell-i18n.cjs
+          node scripts/rewrite-comparison-table.cjs
+          node scripts/sync-claims.cjs
+          node scripts/sync-head-meta.cjs
+          node scripts/sync-script-tags.cjs
+          node scripts/generate-locales.cjs
+          node scripts/generate-sitemap.cjs
+          git diff --exit-code \
+            || (echo "::error::generated site output is out of date; run the scripts above in kalderashield-website and commit the result" && git diff --stat && exit 1)
+
+      # check-placeholders is deliberately not in this list: it fails while the
+      # production domain does not exist yet (Faz 6), which is a documented,
+      # time-boxed state rather than a regression. Add it here when the domain
+      # is chosen.
+
   rust-tests:
     name: Rust check and tests
     runs-on: ubuntu-latest
