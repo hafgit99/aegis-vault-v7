@@ -142,6 +142,15 @@ jobs:
         working-directory: kalderashield-website
         run: node scripts/audit-static-i18n.cjs
 
+      # A link inside /de/ that points at /download/ drops the reader into the
+      # Turkish page while the language control still shows German. Two rounds
+      # of this got through before it was caught: first every root-relative link,
+      # then the 188 that carry a fragment, such as /#comparison and
+      # /download/#linux, which are the section and platform links people click.
+      - name: Links stay inside their own language
+        working-directory: kalderashield-website
+        run: node scripts/audit-locale-links.cjs
+
       # The six-key dictionary the browser still needs, derived from the full
       # ones so the two cannot disagree.
       - name: Build the runtime dictionary
