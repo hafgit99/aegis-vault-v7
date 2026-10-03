@@ -69,7 +69,17 @@ let wrote = 0;
 for (const [locale, slice] of Object.entries(out)) {
   const file = path.join(OUT, locale + '.json');
   const body = JSON.stringify(slice, null, 2) + '\n';
-  if (!fs.existsSync(file) || fs.readFileSync(file, 'utf8') !== body) {
+  // Read in a try rather than testing existence first: existsSync() followed by
+  // readFileSync() is a check-then-act pair, and CodeQL is right that the file
+  // can change between the two. The catch covers the same ground -- a file that
+  // is absent and a file that cannot be read both mean "write it".
+  let current = null;
+  try {
+    current = fs.readFileSync(file, 'utf8');
+  } catch {
+    current = null;
+  }
+  if (current !== body) {
     fs.writeFileSync(file, body, 'utf8');
     wrote++;
   }

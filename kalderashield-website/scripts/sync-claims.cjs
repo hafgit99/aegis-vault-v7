@@ -83,9 +83,59 @@ function countTests() {
       'vitest list failed, so the claim cannot be regenerated. Run `npm run test:unit` first and check the output above.'
     );
   }
-  const list = JSON.parse(raw);
-  const files = new Set(list.map((t) => t.file));
-  return { tests: list.length, files: files.size };
+  const counted = trackedTests(JSON.parse(raw));
+  const files = new Set(counted.map((t) => t.file));
+  return { tests: counted.length, files: files.size };
+}
+
+/* `vitest list` walks the working tree, so it counts a test file that is not
+ * committed yet. That is exactly what happened: scripts/verify-icons.test.mjs
+ * existed in the author's tree, added nine tests, and the claim was regenerated
+ * from 2213 -- while CI, which checks out the commit, runs 2204. The site then
+ * published a number no build could reproduce, and `--check` failed on a tree
+ * that was perfectly consistent.
+ *
+ * The claim describes what the repository ships, so it is counted from
+ * `git ls-files`. A test that has not been committed is not part of the claim
+ * until it is committed, at which point the next run counts it.
+ *
+ * Outside a git checkout -- an exported tarball, a release artifact -- there is
+ * nothing to compare against, so the full working-tree count is used rather
+ * than failing the gate over a missing .git. */
+function trackedTests(list) {
+  let tracked;
+  try {
+    tracked = new Set(
+      execFileSync('git', ['ls-files'], {
+        cwd: repoRoot,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+        maxBuffer: 64 * 1024 * 1024,
+      })
+        .split(/\r?\n/)
+        .filter(Boolean)
+        .map((p) => p.replace(/\\/g, '/'))
+    );
+  } catch {
+    return list;
+  }
+  if (tracked.size === 0) return list;
+  // `vitest list` reports absolute paths; git reports paths relative to the
+  // repository root. Compared raw, nothing would ever match and the filter would
+  // silently do nothing -- so both sides are normalised first.
+  const root = repoRoot.replace(/\\/g, '/').replace(/\/$/, '') + '/';
+  const kept = list.filter((t) => {
+    const file = String(t.file).replace(/\\/g, '/');
+    const relative = file.startsWith(root) ? file.slice(root.length) : file;
+    return tracked.has(relative);
+  });
+  if (kept.length === 0) {
+    console.warn(
+      ' uyari: hicbir test dosyasi git ile izlenmiyor gibi gorunuyor; islenmemis sayi kullanilacak.'
+    );
+    return list;
+  }
+  return kept;
 }
 
 /* The threshold the build actually enforces. Read from vitest.config.ts rather

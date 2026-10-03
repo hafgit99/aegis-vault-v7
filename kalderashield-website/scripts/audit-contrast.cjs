@@ -19,9 +19,34 @@ const server = http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]);
   if (p.endsWith('/')) p += 'index.html';
   const file = path.join(root, p);
-  if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); res.end('nf'); return; }
-  res.writeHead(200, { 'content-type': TYPES[path.extname(file)] || 'application/octet-stream' });
-  res.end(fs.readFileSync(file));
+  // Read first, answer from what was read. The previous
+  // existsSync()/statSync()/readFileSync() sequence checked the path three times
+  // and then read it, which is a check-then-act race: the file can be replaced
+  // between the check and the read, and the server would then hand out bytes
+  // from outside `root`. One read, and the containment check on the resolved
+  // path, is both faster and the only version that cannot be raced.
+  if (!file.startsWith(root)) {
+    res.writeHead(404);
+    res.end('nf');
+    return;
+  }
+  let body;
+  try {
+    body = fs.readFileSync(file);
+  } catch {
+    res.writeHead(404);
+    res.end('nf');
+    return;
+  }
+  if (path.extname(file) === '' && !body.subarray(0, 1).toString('utf8').startsWith('<')) {
+    // A directory would have thrown EISDIR above; this only catches a bare
+    // extensionless file that is not a page.
+    res.writeHead(404);
+    res.end('nf');
+    return;
+  }
+  res.writeHead(200, { 'content-type': TYPES[path.extname(file)] || 'text/html; charset=utf-8' });
+  res.end(body);
 });
 
 const PAGES = ['/index.html', '/download/', '/urun/password-vault/', '/guvenlik/tehdit-modeli/', '/sss/', '/platformlar/windows/', '/privacy.html'];

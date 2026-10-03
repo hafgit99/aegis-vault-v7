@@ -38,7 +38,16 @@ for (const file of files) {
    * are checked against their own tree. */
   const locale = /^\/([a-z]{2})\//.exec('/' + rel);
   const prefix = locale ? '/' + locale[1] + '/' : '/';
-  const expected = new RegExp(`class="nav-cta"[^>]*href="${prefix.replace(/\//g, '\\/')}download\\/"`);
+  // Every regex metacharacter is escaped, not just the slashes. The prefix is
+  // built from a path segment, and an unescaped one would match more than it
+  // should -- `/./` would match `/x/`, for instance. localeFromPath() in
+  // site.js only ever yields two lowercase letters, so escaping everything is
+  // free and removes the question.
+  const expected = new RegExp(
+    'class="nav-cta"[^>]*href="' +
+      prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+      'download/"'
+  );
   if (!expected.test(nav[0])) {
     findings.push(`${rel}: menüde indir butonu yok veya ${prefix}download/ degil`);
   }

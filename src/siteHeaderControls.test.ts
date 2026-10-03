@@ -30,6 +30,8 @@ interface Harness {
   window: any;
   document: Document;
   requests: string[];
+  /** Addresses the page asked the browser to go to, in order. */
+  navigations: string[];
   /** Clicks a control and lets the locale fetch settle. */
   choose(selector: string): Promise<void>;
   close(): void;
@@ -52,22 +54,57 @@ interface Harness {
  *     downloaded the same file twice.
  *   - the theme override. Dark on :root with a prefers-color-scheme block for
  *     light means the operating system wins and a visitor cannot overrule it.
+ *
+ * Two of the assertions below describe the per-language address scheme rather
+ * than the previous single-address one:
+ *
+ *   - The language comes from the document. Every page is written in its own
+ *     language by generate-locales.cjs, so <html lang> is the answer; the stored
+ *     preference and navigator.language are not consulted to decide it.
+ *   - A switch navigates. jsdom cannot navigate, and location cannot be
+ *     redefined on it, so the harness shadows window.location with a proxy that
+ *     records the target and forwards everything else. Without that, every
+ *     switch would raise "Not implemented: navigation" and assert nothing.
  */
-const dictionaries = new Map(
+
+/* chrome/<locale>.json is what the runtime fetches: six keys, not the 1378-key
+ * page dictionary. The map is keyed by the exact URL the code builds. */
+const chromeDictionaries = new Map(
   LOCALES.map((locale) => [
-    `${ORIGIN}/assets/js/i18n/${locale}.json`,
-    JSON.parse(readFileSync(join(SITE, 'assets', 'js', 'i18n', `${locale}.json`), 'utf8')),
+    `${ORIGIN}/assets/js/i18n/chrome/${locale}.json`,
+    JSON.parse(readFileSync(join(SITE, 'assets', 'js', 'i18n', 'chrome', `${locale}.json`), 'utf8')),
   ])
 );
 
+interface SeedOptions {
+  /** navigator.language / navigator.languages for the fake browser. */
+  language?: string;
+  /** What is already in localStorage before the page runs. */
+  storage?: Record<string, string>;
+  /* Which generated page to load, relative to the site root. Every language has
+   * its own generated tree, so a German page is de/index.html -- not the Turkish
+   * one with lang rewritten, which would still carry Turkish markup and assert
+   * nothing about what a German visitor sees. */
+  page?: string;
+}
+
 function seed(
   url: string,
-  { language = 'tr-TR', storage = {} as Record<string, string> } = {}
+  {
+    language = 'tr-TR',
+    storage = {} as Record<string, string>,
+    page = 'download/index.html',
+  }: SeedOptions = {}
 ): Promise<Harness> {
   return new Promise((resolve) => {
     const requests: string[] = [];
+    const navigations: string[] = [];
     const virtualConsole = new VirtualConsole();
-    const dom = new JSDOM(readFileSync(join(SITE, 'download', 'index.html'), 'utf8'), {
+    // jsdom reports the navigation it cannot perform. The switcher is supposed
+    // to navigate, so that message is expected here rather than a symptom.
+    virtualConsole.on('jsdomError', () => {});
+    const markup = readFileSync(join(SITE, ...page.split('/')), 'utf8');
+    const dom = new JSDOM(markup, {
       url,
       runScripts: 'outside-only',
       pretendToBeVisual: true,
@@ -95,7 +132,7 @@ function seed(
         window.fetch = vi.fn(async (input: any) => {
           const requested = String(typeof input === 'object' && 'url' in input ? input.url : input);
           requests.push(requested);
-          const body = dictionaries.get(requested);
+          const body = chromeDictionaries.get(requested);
           if (body === undefined) return { ok: false, status: 404, json: async () => ({}) };
           return { ok: true, status: 200, json: async () => body };
         });
@@ -103,12 +140,66 @@ function seed(
     });
 
     const window = dom.window as any;
+
+    /* jsdom cannot navigate, and neither `window.location` nor
+     * `location.assign` can be redefined: the first is non-configurable and the
+     * second is a non-configurable data property, which a Proxy is forbidden to
+     * report differently. So site.js is evaluated with a shadowed `window` --
+     * a Proxy that forwards everything except `location`, which it replaces with
+     * a plain object reading through to the real one and recording `assign`.
+     * Without that, every switch raises "Not implemented: navigation" and the
+     * assertions below would have nothing to look at.
+     */
+    const shadowWindow = new Proxy(window, {
+      get(target, prop) {
+        if (prop === 'location') {
+          const real = target.location;
+          return {
+            get href() { return real.href; },
+            get origin() { return real.origin; },
+            get protocol() { return real.protocol; },
+            get host() { return real.host; },
+            get hostname() { return real.hostname; },
+            get port() { return real.port; },
+            get pathname() { return real.pathname; },
+            get search() { return real.search; },
+            get hash() { return real.hash; },
+            assign: (url: string) => { navigations.push(String(url)); },
+            replace: (url: string) => { navigations.push(String(url)); },
+            reload: () => {},
+            toString() { return real.href; },
+          };
+        }
+        const value = Reflect.get(target, prop, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+      set(target, prop, value) {
+        return Reflect.set(target, prop, value, target);
+      },
+    });
+
+    // The Proxy is handed to the evaluated script through a global, because
+    // window.eval takes no arguments to forward into the wrapped function.
+    (window as any).__kalderashieldProxy = shadowWindow;
+
+    // Loaded the way the markup loads them, and in that order: site.js throws at
+    // start without the translation core, which is what that guard is for.
+    const core = window.document.createElement('script');
+    core.src = `${ORIGIN}/assets/js/i18n-apply.js`;
+    window.document.head.appendChild(core);
+    window.eval(readFileSync(join(SITE, 'assets', 'js', 'i18n-apply.js'), 'utf8'));
+
     // Loaded the way the markup loads it, so document.currentScript resolves
     // the site root from a real /assets/js/ src instead of the fallback.
     const script = window.document.createElement('script');
     script.src = `${ORIGIN}/assets/js/site.js`;
     window.document.head.appendChild(script);
-    window.eval(readFileSync(join(SITE, 'assets', 'js', 'site.js'), 'utf8'));
+    window.eval(
+      'window.__kalderashieldShadow = window.__kalderashieldProxy;\n' +
+        '(function (window) {\n' +
+        readFileSync(join(SITE, 'assets', 'js', 'site.js'), 'utf8') +
+        '\n}).call(window, window.__kalderashieldShadow);'
+    );
 
     const settle = async () => {
       await new Promise((r) => setTimeout(r, 0));
@@ -124,6 +215,7 @@ function seed(
           window,
           document: window.document,
           requests,
+          navigations,
           async choose(selector: string) {
             const node = window.document.querySelector(selector);
             if (!node) throw new Error(`no element matches ${selector}`);
@@ -140,22 +232,19 @@ function seed(
 }
 
 describe('site header controls', () => {
-  it('loads the locale from the site root when opened on /download/', async () => {
-    // The regression. /download/assets/js/i18n/tr.json is a 404, and the
-    // failure is invisible: setLanguage catches it and leaves the markup text
-    // in place, so the page still looks like a working site in the wrong
-    // language.
+  it('loads the dictionary from the site root when opened on /download/', async () => {
+    // The regression. /download/assets/js/i18n/chrome/tr.json is a 404, and the
+    // failure is invisible: setLanguage catches it and leaves the markup text in
+    // place, so the page still looks like a working site.
     //
-    // English comes along as the fallback dictionary, so a locale the visitor
-    // did not choose is fetched too. The point of the assertion is that both
-    // requests are resolved against the site root and not against the page.
+    // One request, resolved against the site root and not against the page.
+    // There is no English fallback any more: measure-locale-coverage.cjs refuses
+    // to publish a locale with a missing key, so a second 130-165 KB dictionary
+    // had nothing left to cover.
     const harness = await seed(`${ORIGIN}/download/`);
     try {
       expect(harness.document.documentElement.lang).toBe('tr');
-      expect(harness.requests).toEqual([
-        `${ORIGIN}/assets/js/i18n/tr.json`,
-        `${ORIGIN}/assets/js/i18n/en.json`,
-      ]);
+      expect(harness.requests).toEqual([`${ORIGIN}/assets/js/i18n/chrome/tr.json`]);
     } finally {
       harness.close();
     }
@@ -165,64 +254,131 @@ describe('site header controls', () => {
     const harness = await seed(`${ORIGIN}/download/`);
     try {
       // One entry, not two: start() must run from DOMContentLoaded alone.
-      expect(harness.requests.filter((u) => u.endsWith('/tr.json'))).toHaveLength(1);
+      expect(harness.requests.filter((u) => u.endsWith('/chrome/tr.json'))).toHaveLength(1);
 
+      // A switch navigates rather than re-rendering in place, so the target
+      // page -- not this one -- is what fetches the new locale.
       await harness.choose('[data-lang="de"]');
-      expect(harness.requests.filter((u) => u.endsWith('/de.json'))).toHaveLength(1);
+      expect(harness.navigations).toEqual(['/de/download/']);
+      expect(harness.requests.filter((u) => u.endsWith('/chrome/de.json'))).toHaveLength(0);
 
       await harness.choose('[data-lang="ja"]');
-      expect(harness.requests.filter((u) => u.endsWith('/ja.json'))).toHaveLength(1);
+      expect(harness.navigations).toEqual(['/de/download/', '/ja/download/']);
+      expect(harness.requests.filter((u) => u.endsWith('/chrome/ja.json'))).toHaveLength(0);
 
-      // The English fallback is the same file every time, so it is fetched
-      // once and then held: two switches must not turn it into three requests.
-      expect(harness.requests.filter((u) => u.endsWith('/en.json'))).toHaveLength(1);
+      // Nothing else was fetched either: no fallback dictionary, and the
+      // repeated switches did not re-request the page's own locale.
+      expect(harness.requests).toEqual([`${ORIGIN}/assets/js/i18n/chrome/tr.json`]);
     } finally {
       harness.close();
     }
   });
 
-  it('loads the same locale from the site root', async () => {
+  it('loads the same dictionary from the site root', async () => {
     const harness = await seed(`${ORIGIN}/`);
     try {
-      expect(harness.requests).toEqual([
-        `${ORIGIN}/assets/js/i18n/tr.json`,
-        `${ORIGIN}/assets/js/i18n/en.json`,
-      ]);
+      expect(harness.requests).toEqual([`${ORIGIN}/assets/js/i18n/chrome/tr.json`]);
     } finally {
       harness.close();
     }
   });
 
-  it('follows the browser language when nothing is stored', async () => {
+  it('takes the language from the document, not from the browser', async () => {
+    // navigator.language is de-DE, and the page is Turkish. The page is the
+    // answer: it was written in Turkish by generate-locales.cjs, and rendering
+    // it in German would leave the address and the text disagreeing.
     const harness = await seed(`${ORIGIN}/`, { language: 'de-DE' });
     try {
+      expect(harness.requests).toEqual([`${ORIGIN}/assets/js/i18n/chrome/tr.json`]);
+      expect(harness.document.documentElement.lang).toBe('tr');
+    } finally {
+      harness.close();
+    }
+  });
+
+  it('does not let a stored choice override the page language', async () => {
+    // The regression this replaced: a stored "ja" over a Turkish page gave a
+    // control showing Japanese over Turkish text, and lang="ja" was then
+    // written onto a Turkish document -- which assistive technology and the
+    // hreflang annotations both believe.
+    const harness = await seed(`${ORIGIN}/`, {
+      language: 'tr-TR',
+      storage: { 'kalderashield.site.lang': 'ja' },
+    });
+    try {
+      expect(harness.requests).toEqual([`${ORIGIN}/assets/js/i18n/chrome/tr.json`]);
+      expect(harness.document.documentElement.lang).toBe('tr');
+    } finally {
+      harness.close();
+    }
+  });
+
+  it('uses the document language of a page generated in another language', async () => {
+    // What a /de/download/ address actually serves.
+    const harness = await seed(`${ORIGIN}/de/download/`, { page: 'de/download/index.html' });
+    try {
+      expect(harness.requests).toEqual([`${ORIGIN}/assets/js/i18n/chrome/de.json`]);
+      // The document's own lang is left exactly as the generator wrote it.
       expect(harness.document.documentElement.lang).toBe('de');
     } finally {
       harness.close();
     }
   });
 
-  it('prefers a stored choice over the browser language', async () => {
-    const harness = await seed(`${ORIGIN}/`, {
-      language: 'de-DE',
-      storage: { 'kalderashield.site.lang': 'ja' },
-    });
+  it('navigates to the same page in the chosen language', async () => {
+    const harness = await seed(`${ORIGIN}/de/download/`, { page: 'de/download/index.html' });
     try {
-      expect(harness.document.documentElement.lang).toBe('ja');
+      // Turkish is the unprefixed address, so switching to it drops the prefix
+      // instead of adding /tr/.
+      await harness.choose('[data-lang="tr"]');
+      expect(harness.navigations).toEqual(['/download/']);
+
+      await harness.choose('[data-lang="fr"]');
+      expect(harness.navigations).toEqual(['/download/', '/fr/download/']);
     } finally {
       harness.close();
     }
   });
 
-  it('sets lang and dir from the chosen locale', async () => {
-    const harness = await seed(`${ORIGIN}/`);
+  it('keeps the query and the fragment across a switch', async () => {
+    // /de/download/#linux is a link people copy. Losing the fragment on a switch
+    // drops the reader on the top of the page instead of the platform they
+    // asked for.
+    const harness = await seed(`${ORIGIN}/de/download/?x=1#linux`, { page: 'de/download/index.html' });
     try {
-      await harness.choose('[data-lang="ar"]');
-      expect(harness.document.documentElement.getAttribute('lang')).toBe('ar');
-      expect(harness.document.documentElement.getAttribute('dir')).toBe('rtl');
-
       await harness.choose('[data-lang="ja"]');
-      expect(harness.document.documentElement.getAttribute('dir')).toBe('ltr');
+      expect(harness.navigations).toEqual(['/ja/download/?x=1#linux']);
+    } finally {
+      harness.close();
+    }
+  });
+
+  it('records the choice for the pages that consult storage', async () => {
+    const harness = await seed(`${ORIGIN}/de/download/`, { page: 'de/download/index.html' });
+    try {
+      await harness.choose('[data-lang="es"]');
+      expect(harness.window.localStorage.getItem('kalderashield.site.lang')).toBe('es');
+    } finally {
+      harness.close();
+    }
+  });
+
+  it('leaves lang and dir exactly as the document declares them', async () => {
+    // setDocumentLang() used to rewrite both from the active locale. On a page
+    // written in one language that produced a control showing one language over
+    // another's text, and lang="ar"/dir="rtl" on a document whose markup is not
+    // right-to-left -- which the browser then lays out wrongly.
+    const harness = await seed(`${ORIGIN}/download/`);
+    try {
+      const before = {
+        lang: harness.document.documentElement.getAttribute('lang'),
+        dir: harness.document.documentElement.getAttribute('dir'),
+      };
+      await harness.choose('[data-lang="ar"]');
+      expect(harness.document.documentElement.getAttribute('lang')).toBe(before.lang);
+      expect(harness.document.documentElement.getAttribute('dir')).toBe(before.dir);
+      // And the switch itself is a navigation, so nothing here was re-rendered.
+      expect(harness.navigations).toEqual(['/ar/download/']);
     } finally {
       harness.close();
     }
@@ -234,9 +390,14 @@ describe('site header controls', () => {
       expect(harness.document.querySelector('[data-lang-current]')?.textContent).toBe(TR.turkce);
       expect(harness.document.querySelector('[data-lang-code]')?.textContent).toBe('TR');
 
-      await harness.choose('[data-lang="ru"]');
-      expect(harness.document.querySelector('[data-lang-current]')?.textContent).toBe('\u0420\u0443\u0441\u0441\u043a\u0438\u0439');
-      expect(harness.document.querySelector('[data-lang-code]')?.textContent).toBe('RU');
+      // A page generated in German names German, with no switch involved.
+      const german = await seed(`${ORIGIN}/de/`, { page: 'de/index.html' });
+      try {
+        expect(german.document.querySelector('[data-lang-current]')?.textContent).toBe(TR.deutsch);
+        expect(german.document.querySelector('[data-lang-code]')?.textContent).toBe('DE');
+      } finally {
+        german.close();
+      }
     } finally {
       harness.close();
     }
@@ -262,13 +423,14 @@ describe('site header controls', () => {
   });
 
   it('marks exactly one language and one theme as current', async () => {
-    const harness = await seed(`${ORIGIN}/`);
+    const harness = await seed(`${ORIGIN}/de/download/`, { page: 'de/download/index.html' });
     try {
-      await harness.choose('[data-lang="es"]');
-        const langs = [...harness.document.querySelectorAll('[data-lang][aria-current="true"]')];
-        expect(langs).toHaveLength(1);
-        expect(langs[0]?.getAttribute('data-lang')).toBe('es');
-        expect(harness.document.querySelectorAll('[data-theme-choice][aria-current="true"]')).toHaveLength(1);
+      // The address decides, so a /de/ page opens with German marked -- there is
+      // no switch to click first.
+      const langs = [...harness.document.querySelectorAll('[data-lang][aria-current="true"]')];
+      expect(langs).toHaveLength(1);
+      expect(langs[0]?.getAttribute('data-lang')).toBe('de');
+      expect(harness.document.querySelectorAll('[data-theme-choice][aria-current="true"]')).toHaveLength(1);
     } finally {
       harness.close();
     }
@@ -340,25 +502,47 @@ describe('site header controls', () => {
     expect(stored['kalderashield.site.lang']).toBe('de');
 
     // A second view, as a returning visitor on a different page, with only what
-    // was persisted available.
+    // was persisted available. The theme survives; the language does not decide
+    // anything, because that page carries its own lang.
     const second = await seed(`${ORIGIN}/privacy.html`, { language: 'en-US', storage: stored });
     try {
       expect(second.document.documentElement.getAttribute('data-theme')).toBe('light');
-      expect(second.document.documentElement.lang).toBe('de');
+      expect(second.requests).toEqual([`${ORIGIN}/assets/js/i18n/chrome/tr.json`]);
     } finally {
       second.close();
     }
   });
 
-  it('translates the header controls into the chosen language', async () => {
+  it('translates the header controls into the page language', async () => {
     const harness = await seed(`${ORIGIN}/`);
     try {
       const summary = harness.document.querySelector('.lang > summary');
       expect(summary?.getAttribute('data-i18n-attr')).toBe('aria-label:lang-switch-label');
 
-      await harness.choose('[data-lang="de"]');
-      expect(summary?.getAttribute('aria-label')).toBe(TR.waehlen);
-      expect(harness.document.querySelector('[data-theme-choice="light"]')?.textContent).toBe(TR.hell);
+      // A German page labels its own controls in German, with no switch: the
+      // chrome dictionary is fetched for the document's language.
+      const german = await seed(`${ORIGIN}/de/`, { page: 'de/index.html' });
+      try {
+        expect(german.document.querySelector('.lang > summary')?.getAttribute('aria-label')).toBe(TR.waehlen);
+        expect(german.document.querySelector('[data-theme-choice="light"]')?.textContent).toBe(TR.hell);
+      } finally {
+        german.close();
+      }
+    } finally {
+      harness.close();
+    }
+  });
+
+  it('keeps the Turkish labels when the dictionary cannot be fetched', async () => {
+    // A 404 here is survivable by design: the page was written in its own
+    // language already, and only the theme labels are missing. The control must
+    // still be usable rather than blank.
+    const harness = await seed(`${ORIGIN}/xx/`, { });
+    try {
+      harness.window.fetch = vi.fn(async () => ({ ok: false, status: 404, json: async () => ({}) }));
+      harness.window.KalderaShieldI18n.set('tr');
+      await new Promise((r) => setTimeout(r, 0));
+      expect(harness.document.querySelector('[data-theme-choice="light"]')?.textContent).toBe(TR.light);
     } finally {
       harness.close();
     }

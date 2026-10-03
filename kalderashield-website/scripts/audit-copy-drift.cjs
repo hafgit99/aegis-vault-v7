@@ -13,12 +13,16 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const en = JSON.parse(fs.readFileSync(path.join(root, 'assets/js/i18n/en.json'), 'utf8'));
 
 function decode(s) {
+  // One pass, and the ampersand is decoded last. Decoding &amp; first would turn
+  // the literal text "&amp;lt;" into "<", so a string that was escaped twice on
+  // the way in came out escaped once too many -- which CodeQL reports as double
+  // unescaping, and which would make two different sources compare equal.
   return s
-    .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&')
     .replace(/\s+/g, ' ')
     .trim();
 }

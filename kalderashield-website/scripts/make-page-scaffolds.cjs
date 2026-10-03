@@ -24,9 +24,16 @@ fs.mkdirSync(OUT, { recursive: true });
 
 for (const lang of LANGS) {
   const file = path.join(OUT, lang + '.json');
-  const own = fs.existsSync(file)
-    ? JSON.parse(fs.readFileSync(file, 'utf8'))
-    : {};
+  // Attempted, not tested for. existsSync() then readFileSync() leaves a window
+  // in which the file can change, which CodeQL reports as a file-system race;
+  // the catch covers a missing file and an unreadable one identically, which is
+  // what the caller wanted anyway -- an empty scaffold to fill in.
+  let own = {};
+  try {
+    own = JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    own = {};
+  }
   const dict = JSON.parse(fs.readFileSync(path.join(I18N, lang + '.json'), 'utf8'));
 
   const scaffold = {};
