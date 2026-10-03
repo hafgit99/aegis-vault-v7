@@ -41,8 +41,14 @@ const LOCALES = ['tr', 'en', 'de', 'fr', 'es', 'it', 'pt', 'ru', 'ja', 'ko', 'zh
  * full stop and comma, the non-breaking variants French and Russian use, and the
  * Arabic thousands mark. A plain space is deliberately NOT in it -- French
  * separates with U+202F, not U+0020, so treating U+0020 as a separator let the
- * match swallow the space that separates the number from the word. */
-const SEP = '[.,\\u00a0\\u202f\\u2009\\u066c]';
+ * match swallow the space that separates the number from the word.
+ *
+ * The entity spellings are in the set because the markup stores them that way:
+ * Russian pages carry `2&nbsp;219`, not a literal U+00A0. Leaving the entity out
+ * stopped the match after the leading `2`, and the rewrite then inserted the new
+ * count in front of the old one -- "2 237&nbsp;219 теста", two numbers in one
+ * badge. */
+const SEP = '[.,\\u00a0\\u202f\\u2009\\u066c]|&nbsp;|&thinsp;|&#0*160;|&#0*8239;';
 /* A run of decimal digits with optional thousands separators.
  *
  * The first character must be a digit; everything after it may be a digit or a
@@ -150,8 +156,38 @@ function coverageFloor() {
   return Number(lines[1]);
 }
 
+/* Mirrors NUMBERING_SYSTEMS in assets/js/i18n-apply.js. Kept as a literal rather
+ * than parsed out of that file because the audit loads it through JSDOM, and a
+ * dependency here would run a browser shim just to read one constant. */
+const NUMBERING_SYSTEMS = { ar: 'arab' };
+
+/* Loaded from assets/js/i18n-apply.js rather than reimplemented.
+ *
+ * This writes the markup that the page's own JavaScript will later overwrite
+ * from the same function, so the two have to agree exactly. Two rules in that
+ * file exist precisely because getting them wrong is easy:
+ *
+ *   - useGrouping is left at "auto", not `true`. Forcing it adds a separator to
+ *     four-digit figures, which is why Spanish and Italian were rendered as
+ *     "2.237" where those languages write "2237".
+ *   - numberingSystem carries 'arab' for Arabic, so the fallback shows the same
+ *     Arabic-Indic digits the dictionary is written in.
+ *
+ * The earlier version here set useGrouping:true and passed no numberingSystem,
+ * so it disagreed with the runtime on four locales -- and the static audit,
+ * which compares the markup against formatTestCount, caught it. */
 function format(locale, n) {
-  return new Intl.NumberFormat(locale, { useGrouping: true }).format(n);
+  try {
+    return new Intl.NumberFormat(locale, {
+      numberingSystem: NUMBERING_SYSTEMS[locale] || 'latn',
+    }).format(n);
+  } catch {
+    try {
+      return new Intl.NumberFormat(locale).format(n);
+    } catch {
+      return String(n);
+    }
+  }
 }
 
 function htmlFiles() {
