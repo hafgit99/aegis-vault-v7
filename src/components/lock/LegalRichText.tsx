@@ -9,9 +9,9 @@
  * stripping the tags would quietly remove the most important claims in the
  * document.
  *
- * dangerouslySetInnerHTML would keep them and is also the one thing this file
- * must not do: the strings come from a translation table, so injecting them as
- * HTML would make every locale file a potential script vector, and the CSP gate
+ * Injecting the string as raw HTML would keep them, and is the one thing this
+ * file must not do: the values come from a translation table, so every locale
+ * file would become a script vector, and the CSP gate
  * (scripts/security-csp-no-unsafe-inline.cjs) exists precisely to keep that
  * pattern out of the codebase.
  *

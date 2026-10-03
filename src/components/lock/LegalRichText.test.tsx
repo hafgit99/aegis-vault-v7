@@ -27,7 +27,7 @@ describe('LegalRichText', () => {
   });
 
   it('renders an unknown tag as literal text rather than an element', () => {
-    // The reason this parser exists at all instead of dangerouslySetInnerHTML: a
+    // The reason this parser exists at all instead of raw HTML injection: a
     // translation string must not be able to introduce an element.
     const { container } = render(<LegalRichText>{'<img src=x onerror=alert(1)>metin'}</LegalRichText>);
     expect(container.querySelector('img')).toBeNull();

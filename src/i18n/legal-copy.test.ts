@@ -53,7 +53,11 @@ describe('legal copy', () => {
     // "starts with a digit and a separator", not a Latin literal. What matters
     // is that a section is numbered at all: an unnumbered heading would read as
     // a continuation of the previous one.
-    const startsWithNumber = (value: string) => /^\p{N}[.．。]/u.test(value);
+    // The parameter is typed as possibly-undefined because an index signature
+    // lookup is: the previous test asserts every key exists, but it is a separate
+    // test and TypeScript cannot see across that. Asserting here keeps the check
+    // honest instead of hiding it behind a non-null assertion.
+    const startsWithNumber = (value: string | undefined) => /^\p{N}[.．。]/u.test(value ?? '');
 
     for (const locale of supportedLanguages) {
       const dict = translations[locale] as Record<string, string>;

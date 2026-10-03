@@ -14,9 +14,9 @@
  * them would leave the app carrying a second, shorter legal text, which is the
  * thing this change exists to end.
  *
- * Inline markup goes through LegalRichText rather than dangerouslySetInnerHTML:
- * the strings come from a translation table, and a locale file must not be able
- * to introduce script into the app.
+ * Inline markup goes through LegalRichText rather than raw HTML injection: the
+ * values come from a translation table, and a locale file must not be able to
+ * introduce script into the app.
  *
  * @license SPDX-License-Identifier: Apache-2.0
  */
