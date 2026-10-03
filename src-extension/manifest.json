@@ -1,6 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "KalderaShield Extension",
+  "name": "KalderaShield",
+  "short_name": "KalderaShield",
   "version": "7.0.7.0",
   "description": "Browser companion for KalderaShield offline-first password manager.",
   "browser_specific_settings": {

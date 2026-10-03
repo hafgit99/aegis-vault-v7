@@ -77,6 +77,27 @@ const COPIED_ICON_FILES = [
 // Browser renders of the master, so freshness is the only signal available.
 const RENDERED_ICON_FILES = ['assets/KalderaShield-app-icon.png', 'public/splash-icon.png'];
 
+/* The browser extension's own icon set.
+ *
+ * These three were committed before the icon pipeline existed and were never
+ * re-rendered from the master, so the extension shipped the retired cool-grey
+ * mark while the desktop, Android and site surfaces all carried the current
+ * magma one. Every other surface in this file was checked, which is precisely
+ * why this one drifted unnoticed: the gate that exists to catch the class could
+ * not see the instance.
+ *
+ * Sizes are the ones manifest.json's `icons` and `action.default_icon` keys ask
+ * for. The filenames say 16/48/128 while the images are 32/64/128 -- the old
+ * names are kept so a pinned build directory keeps resolving, and what the
+ * browser loads is decided by the manifest, not by the file name. `npm run
+ * icon:apply` regenerates all three via scripts/render-extension-icons.cjs.
+ */
+const EXTENSION_ICONS = [
+  { file: 'src-extension/icons/icon16.png', size: 32 },
+  { file: 'src-extension/icons/icon48.png', size: 64 },
+  { file: 'src-extension/icons/icon128.png', size: 128 },
+];
+
 /* Byte comparison, for surfaces that are copied verbatim. Line endings are not
    normalised here on purpose: these are binary-for-binary copies, and a
    difference in the bytes is the drift being looked for. */
@@ -142,6 +163,68 @@ function collectIssues() {
   for (const relPath of FORBIDDEN_ANDROID_RESOURCES) {
     if (fs.existsSync(path.join(genResDir, ...relPath.split('/')))) {
       add(`${rel(genResDir)}/${relPath} is a stale Android Studio template resource; run \`npm run icon:apply\``);
+    }
+  }
+
+  /* The extension's icons, checked for size only.
+   *
+   * Freshness against the master cannot be asserted here: these are PNGs
+   * rasterised in a browser, and re-rendering them here would need the same
+   * Playwright launch the generator uses. What is cheap and catches the real
+   * failure -- a stale icon that survived because nobody looked at this
+   * directory -- is checking that each file exists at the size its manifest key
+   * declares, plus that the manifest still points at files that are there.
+   * scripts/render-extension-icons.cjs is what makes them current. */
+  const extensionManifest = path.join(rootDir, 'src-extension', 'manifest.json');
+  for (const { file, size } of EXTENSION_ICONS) {
+    const full = path.join(rootDir, file);
+    if (!fs.existsSync(full)) {
+      add(`missing ${file}; run \`npm run icon:apply\``);
+      continue;
+    }
+    const dims = pngSize(full);
+    if (!dims) {
+      add(`${file} is not a readable PNG`);
+    } else if (dims.width !== size || dims.height !== size) {
+      add(`${file} is ${dims.width}x${dims.height} but its manifest key is ${size}; run \`npm run icon:apply\``);
+    }
+  }
+
+  if (fs.existsSync(extensionManifest)) {
+    let manifest;
+    try {
+      manifest = JSON.parse(stripComments(readText(extensionManifest)));
+    } catch (error) {
+      add(`src-extension/manifest.json is not valid JSON: ${error.message}`);
+    }
+    if (manifest) {
+      /* Every icon path the manifest names must exist, in both blocks.
+       *
+       * A missing file here is silent in a browser: the toolbar just falls back
+       * to a generated letter tile, which is how the extension came to show a
+       * bare "A". */
+      const referenced = new Set();
+      for (const block of [manifest.icons, manifest.action && manifest.action.default_icon]) {
+        if (!block || typeof block !== 'object') continue;
+        for (const value of Object.values(block)) {
+          if (typeof value === 'string') referenced.add(value);
+        }
+      }
+      for (const target of referenced) {
+        if (!fs.existsSync(path.join(rootDir, 'src-extension', target))) {
+          add(`src-extension/manifest.json references ${target}, which does not exist`);
+        }
+      }
+      /* A name Firefox cannot fit produces a letter tile instead of the icon.
+       * The manifest name is what the toolbar label is derived from, so it has
+       * to start with the brand. */
+      const name = typeof manifest.name === 'string' ? manifest.name : '';
+      if (!/^KalderaShield/i.test(name)) {
+        add(
+          `src-extension/manifest.json name is "${name}"; the browser derives the toolbar label from it, ` +
+            'so it must start with "KalderaShield" or the button shows a letter tile'
+        );
+      }
     }
   }
 

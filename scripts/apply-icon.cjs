@@ -35,7 +35,7 @@ if (!fs.existsSync(sourceIcon)) {
 }
 
 // 1. Run tauri icon generator
-console.log('[1/5] Generating multi-platform desktop/mobile icons with Tauri CLI...');
+console.log('[1/6] Generating multi-platform desktop/mobile icons with Tauri CLI...');
 try {
   // Argument array, never an interpolated shell string. sourceIcon can come from
   // argv (line 26), so the old `npx tauri icon "${sourceIcon}"` handed a path
@@ -70,7 +70,7 @@ try {
   //    src-tauri/gen/android/app/src/main/res. Nothing copied one to the other,
   //    so an icon regeneration used to leave the APK on the previous mark
   //    unless someone remembered to copy by hand.
-  console.log('[2/5] Applying Android launcher icon, adaptive icon and TV banner...');
+  console.log('[2/6] Applying Android launcher icon, adaptive icon and TV banner...');
   try {
     execFileSync(process.execPath, [path.join(__dirname, 'android-icons.cjs')], {
       cwd: root,
@@ -82,7 +82,7 @@ try {
   }
 
   // 3. Ensure public web assets are synchronized
-  console.log('[3/5] Updating public web & favicon assets...');
+  console.log('[3/6] Updating public web & favicon assets...');
   const publicDir = path.join(root, 'public');
   if (!fs.existsSync(publicDir)) {
     fs.mkdirSync(publicDir, { recursive: true });
@@ -101,7 +101,7 @@ try {
   //    but src/components/LockScreen.tsx and index.html import from public/ and
   //    assets/ directly, so the app kept showing the previous mark after every
   //    other surface had changed.
-  console.log('[4/5] Rendering the in-app logos (lock screen, sidebar, splash)...');
+  console.log('[4/6] Rendering the in-app logos (lock screen, sidebar, splash)...');
   try {
     execFileSync(process.execPath, [path.join(__dirname, 'render-app-logo.cjs')], {
       cwd: root,
@@ -112,9 +112,24 @@ try {
     process.exit(1);
   }
 
-  // 5. Prove the result rather than assume it. This is the check that would
+  //    The browser extension's own icons live in src-extension/icons and are not
+  //    touched by `tauri icon`. They sat on the retired cool-grey mark for the
+  //    whole life of the pipeline, so they are rendered here from the same
+  //    master rather than being left to whoever remembers.
+  console.log('[5/6] Rendering the browser extension icons...');
+  try {
+    execFileSync(process.execPath, [path.join(__dirname, 'render-extension-icons.cjs')], {
+      cwd: root,
+      stdio: 'inherit',
+    });
+  } catch (e) {
+    console.error('Failed to render the extension icons:', e.message);
+    process.exit(1);
+  }
+
+  // 6. Prove the result rather than assume it. This is the check that would
   //    have caught every drift above at the point it was introduced.
-  console.log('[5/5] Verifying every icon surface points at the current master...');
+  console.log('[6/6] Verifying every icon surface points at the current master...');
   try {
     execFileSync(process.execPath, [path.join(__dirname, 'verify-icons.cjs')], {
       cwd: root,
