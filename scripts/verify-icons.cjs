@@ -77,8 +77,32 @@ const COPIED_ICON_FILES = [
 // Browser renders of the master, so freshness is the only signal available.
 const RENDERED_ICON_FILES = ['assets/KalderaShield-app-icon.png', 'public/splash-icon.png'];
 
+/* Byte comparison, for surfaces that are copied verbatim. Line endings are not
+   normalised here on purpose: these are binary-for-binary copies, and a
+   difference in the bytes is the drift being looked for. */
 function sha256(file) {
   return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+}
+
+/* The digest of the master, computed the same way render-app-logo.cjs computes
+   * it.
+   *
+   * Normalising line endings is not optional. git stores this file with LF and
+   * checks it out with CRLF on a Windows box under core.autocrlf=true, so hashing
+   * the raw bytes gives one digest locally and another on the Linux runner. The
+   * stamp written on the developer's machine would then disagree with the one
+   * computed in CI, and the gate would report drift on a clean tree -- on the
+   * machine whose entire job is to tell real drift from noise.
+   *
+   * Normalising makes the digest a property of the committed file rather than of
+   * who checked it out. Both sides call this one function, so they cannot drift
+   * apart.
+   */
+function masterDigest() {
+  return crypto
+    .createHash('sha256')
+    .update(readText(masterSvg).replace(/\r\n?/g, '\n'))
+    .digest('hex');
 }
 
 // PNG IHDR: 8-byte signature, then width and height as big-endian uint32.
@@ -201,7 +225,7 @@ function collectIssues() {
    * A missing .icon-source is reported rather than skipped: the stamp is what
    * makes this check possible at all, so a render made before it existed has to
    * be re-made rather than quietly unverified. */
-  const masterDigest = sha256(masterSvg);
+  const masterHash = masterDigest();
   for (const relPath of RENDERED_ICON_FILES) {
     const file = path.join(rootDir, ...relPath.split('/'));
     if (!fs.existsSync(file)) {
@@ -219,7 +243,7 @@ function collectIssues() {
     }
 
     const recorded = readText(stampFile).trim();
-    if (recorded !== masterDigest) {
+    if (recorded !== masterHash) {
       add(
         `${relPath} was rendered from a different ${rel(masterSvg)}; ` +
           'run `npm run icon:apply`'

@@ -33,15 +33,38 @@ const TARGETS = [
   { size: 128, outPath: path.join(root, 'public', 'splash-icon.png'), label: 'splash logo' },
 ];
 
+/* The sha256 of the master, normalised the way git stores it.
+ *
+ * git checks this file out with CRLF line endings on a Windows box with
+ * core.autocrlf=true, while the blob in the repository is LF. Hashing the raw
+ * bytes therefore produces a different digest on every developer machine than on
+ * the Linux runner, and the stamp written here would not match the one the gate
+ * computes there -- the gate would report drift on a tree that has none, on the
+ * exact machine that is supposed to catch drift.
+ *
+ * Normalising CRLF to LF before hashing makes the digest a property of the
+ * committed file rather than of who checked it out. It is the same thing git
+ * does when it decides a file is unchanged.
+ */
+function masterDigest() {
+  return crypto.createHash('sha256').update(normaliseEol(readIconSource(root))).digest('hex');
+}
+
+/* CRLF and lone CR both become LF, so the digest does not depend on how the
+ * working tree happened to be checked out. */
+function normaliseEol(source) {
+  return source.replace(/\r\n?/g, '\n');
+}
+
 /* Written after a successful render, never before: a stamp beside a half-written
  * PNG would let the gate pass on a render that failed. */
-function writeProvenance(outPath, svg) {
-  const digest = crypto.createHash('sha256').update(svg).digest('hex');
+function writeProvenance(outPath, digest) {
   fs.writeFileSync(outPath + '.icon-source', digest + '\n', 'utf8');
 }
 
 (async () => {
   const svg = readIconSource(root);
+  const digest = masterDigest();
 
   for (const { size, outPath, label } of TARGETS) {
     const { size: rendered, kb } = await renderSvgToPng({
@@ -50,7 +73,7 @@ function writeProvenance(outPath, svg) {
       height: size,
       outPath,
     });
-    writeProvenance(outPath, svg);
+    writeProvenance(outPath, digest);
     console.log(`  ${path.relative(root, outPath)} (${rendered}, ${kb} KB) - ${label}`);
   }
 })().catch((error) => {
