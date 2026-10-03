@@ -34,4 +34,19 @@ paths = [
   # Listing the directory rather than one rule keeps the whole class of false
   # positive out instead of chasing the next `"...password": "..."` pair.
   '''(^|/)kalderashield-website/(assets/js/i18n|i18n-pages|content)/''',
+  # The app's own locale dictionaries, for the same reason.
+  #
+  # scripts/sync-legal-copy.cjs copies the published privacy policy and terms of
+  # use into all twelve of these. Section 2 of the terms reads
+  #
+  #   "...you never learn the master password or the keys derived from it."
+  #
+  # which generic-api-key sees as an assignment to a key named "password". The
+  # value is a sentence about password handling, in twelve languages, published
+  # on the website and covered by the parity gate -- it is not key material.
+  #
+  # Without this the very act of telling users that their master password is
+  # never transmitted fails the security build, which is an incentive to leave
+  # the statement out.
+  '''(^|/)src/i18n/locales/''',
 ]

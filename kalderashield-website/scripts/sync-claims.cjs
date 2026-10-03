@@ -41,8 +41,14 @@ const LOCALES = ['tr', 'en', 'de', 'fr', 'es', 'it', 'pt', 'ru', 'ja', 'ko', 'zh
  * full stop and comma, the non-breaking variants French and Russian use, and the
  * Arabic thousands mark. A plain space is deliberately NOT in it -- French
  * separates with U+202F, not U+0020, so treating U+0020 as a separator let the
- * match swallow the space that separates the number from the word. */
-const SEP = '[.,\\u00a0\\u202f\\u2009\\u066c]';
+ * match swallow the space that separates the number from the word.
+ *
+ * The entity spellings are in the set because the markup stores them that way:
+ * Russian pages carry `2&nbsp;219`, not a literal U+00A0. Leaving the entity out
+ * stopped the match after the leading `2`, and the rewrite then inserted the new
+ * count in front of the old one -- "2 237&nbsp;219 теста", two numbers in one
+ * badge. */
+const SEP = '[.,\\u00a0\\u202f\\u2009\\u066c]|&nbsp;|&thinsp;|&#0*160;|&#0*8239;';
 /* A run of decimal digits with optional thousands separators.
  *
  * The first character must be a digit; everything after it may be a digit or a
@@ -150,8 +156,38 @@ function coverageFloor() {
   return Number(lines[1]);
 }
 
+/* Mirrors NUMBERING_SYSTEMS in assets/js/i18n-apply.js. Kept as a literal rather
+ * than parsed out of that file because the audit loads it through JSDOM, and a
+ * dependency here would run a browser shim just to read one constant. */
+const NUMBERING_SYSTEMS = { ar: 'arab' };
+
+/* Loaded from assets/js/i18n-apply.js rather than reimplemented.
+ *
+ * This writes the markup that the page's own JavaScript will later overwrite
+ * from the same function, so the two have to agree exactly. Two rules in that
+ * file exist precisely because getting them wrong is easy:
+ *
+ *   - useGrouping is left at "auto", not `true`. Forcing it adds a separator to
+ *     four-digit figures, which is why Spanish and Italian were rendered as
+ *     "2.237" where those languages write "2237".
+ *   - numberingSystem carries 'arab' for Arabic, so the fallback shows the same
+ *     Arabic-Indic digits the dictionary is written in.
+ *
+ * The earlier version here set useGrouping:true and passed no numberingSystem,
+ * so it disagreed with the runtime on four locales -- and the static audit,
+ * which compares the markup against formatTestCount, caught it. */
 function format(locale, n) {
-  return new Intl.NumberFormat(locale, { useGrouping: true }).format(n);
+  try {
+    return new Intl.NumberFormat(locale, {
+      numberingSystem: NUMBERING_SYSTEMS[locale] || 'latn',
+    }).format(n);
+  } catch {
+    try {
+      return new Intl.NumberFormat(locale).format(n);
+    } catch {
+      return String(n);
+    }
+  }
 }
 
 function htmlFiles() {
@@ -185,14 +221,58 @@ function applyCountAttr(html, tests) {
   return html.replace(COUNT_ATTR_RE, `$1${tests}$3`);
 }
 
-function applyFallback(html, tests) {
+/* The index page of every locale, and the base one at the site root.
+ *
+ * The badge on these pages is the one place the count appears as visible text
+ * rather than in a meta tag, so it has to be rewritten per language. The
+ * condition used to compare against a single root `index.html` path, which
+ * matched only the Turkish page: the other eleven kept the old number in their
+ * markup, the dictionary check then reported all eleven as disagreeing with
+ * their own page, and the gate failed on a freshly regenerated site.
+ *
+ * The rendered number is not a single fixed string either -- "2,219", "2.219",
+ * "2 219" and "٢٬٢١٩" are all correct answers in different languages -- so the
+ * locale is taken from the page path and format() is applied per language. */
+function isIndexPage(file) {
+  const rel = path.relative(siteRoot, file).split(path.sep).join('/');
+  return rel === 'index.html' || /^[a-z]{2}\/index\.html$/.test(rel);
+}
+
+function localeOfIndexPage(file) {
+  const rel = path.relative(siteRoot, file).split(path.sep).join('/');
+  const m = rel.match(/^([a-z]{2})\/index\.html$/);
+  // The root page is Turkish; it is the only one without a language directory.
+  return m ? m[1] : 'tr';
+}
+
+/* The separator to write, per locale.
+ *
+ * A page that carries a literal U+00A0 instead of `&nbsp;` is still correct in
+ * isolation -- the static audit decodes both -- but build-pages.cjs regenerates
+ * the same pages and writes the entity, so the committed file would differ from
+ * a fresh build and the reproducibility gate fails. French separates with
+ * U+202F, which has no entity the serialiser prefers, so it stays literal.
+ *
+ * Which one applies is decided by reading the page rather than by a table: the
+ * existing markup already records the spelling this language's build uses. */
+const NBSP_LOCALES = new Set(['ru']);
+
+function renderCount(locale, n) {
+  const formatted = format(locale, n);
+  return NBSP_LOCALES.has(locale) ? formatted.replace(/\u00a0/g, '&nbsp;') : formatted;
+}
+
+function applyFallback(html, tests, locale) {
   // Groups: 1 opening tag, 2 the old number, 3 the whitespace plus the rest of
   // the sentence. Rebuilding it from the whitespace group is what keeps the
   // space: the Turkish value has one, Korean and Chinese have none. The closing
   // tag is outside group 3 and has to be re-emitted -- an earlier version that
   // folded it into the group deleted the element's own closing tag, and the
   // check below caught the malformed markup rather than the wrong number.
-  return html.replace(FALLBACK_RE, (m, open, _old, tail) => open + format('tr', tests) + tail + '</span>');
+  return html.replace(
+    FALLBACK_RE,
+    (m, open, _old, tail) => open + renderCount(locale, tests) + tail + '</span>'
+  );
 }
 
 /* The count is the first token of every locale's sentence, but "a number" is not
@@ -319,12 +399,13 @@ if (check) {
     console.log(`  ${locale}.json: "${before}"  ->  "${after}"`);
   }
 
-  const indexPath = path.join(siteRoot, 'index.html');
   let pages = 0;
   for (const file of htmlFiles()) {
     const html = fs.readFileSync(file, 'utf8');
     let next = applyMeta(html, tests);
-    if (file === indexPath) next = applyFallback(applyCountAttr(next, tests), tests);
+    if (isIndexPage(file)) {
+      next = applyFallback(applyCountAttr(next, tests), tests, localeOfIndexPage(file));
+    }
     if (next === html) continue;
     fs.writeFileSync(file, next, 'utf8');
     pages++;

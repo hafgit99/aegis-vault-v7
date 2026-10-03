@@ -811,8 +811,10 @@ export default function LockScreen({ onUnlock = () => {}, isAutofillPending = fa
           onClearLockoutState={clearLockoutState}
         />
 
-        {/* Legal Terms & Privacy Policy Modal */}
+        {/* Legal Terms & Privacy Policy Modal. Keyed so the tab always matches the
+            link that was followed. */}
         <LegalTermsModal
+          key={showLegalModal ? legalModalTab : 'closed'}
           isOpen={showLegalModal}
           onClose={() => setShowLegalModal(false)}
           initialTab={legalModalTab}
