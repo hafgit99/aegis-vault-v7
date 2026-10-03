@@ -185,14 +185,41 @@ function applyCountAttr(html, tests) {
   return html.replace(COUNT_ATTR_RE, `$1${tests}$3`);
 }
 
-function applyFallback(html, tests) {
+/* The index page of every locale, and the base one at the site root.
+ *
+ * The badge on these pages is the one place the count appears as visible text
+ * rather than in a meta tag, so it has to be rewritten per language. The
+ * condition used to compare against a single root `index.html` path, which
+ * matched only the Turkish page: the other eleven kept the old number in their
+ * markup, the dictionary check then reported all eleven as disagreeing with
+ * their own page, and the gate failed on a freshly regenerated site.
+ *
+ * The rendered number is not a single fixed string either -- "2,219", "2.219",
+ * "2 219" and "٢٬٢١٩" are all correct answers in different languages -- so the
+ * locale is taken from the page path and format() is applied per language. */
+function isIndexPage(file) {
+  const rel = path.relative(siteRoot, file).split(path.sep).join('/');
+  return rel === 'index.html' || /^[a-z]{2}\/index\.html$/.test(rel);
+}
+
+function localeOfIndexPage(file) {
+  const rel = path.relative(siteRoot, file).split(path.sep).join('/');
+  const m = rel.match(/^([a-z]{2})\/index\.html$/);
+  // The root page is Turkish; it is the only one without a language directory.
+  return m ? m[1] : 'tr';
+}
+
+function applyFallback(html, tests, locale) {
   // Groups: 1 opening tag, 2 the old number, 3 the whitespace plus the rest of
   // the sentence. Rebuilding it from the whitespace group is what keeps the
   // space: the Turkish value has one, Korean and Chinese have none. The closing
   // tag is outside group 3 and has to be re-emitted -- an earlier version that
   // folded it into the group deleted the element's own closing tag, and the
   // check below caught the malformed markup rather than the wrong number.
-  return html.replace(FALLBACK_RE, (m, open, _old, tail) => open + format('tr', tests) + tail + '</span>');
+  return html.replace(
+    FALLBACK_RE,
+    (m, open, _old, tail) => open + format(locale, tests) + tail + '</span>'
+  );
 }
 
 /* The count is the first token of every locale's sentence, but "a number" is not
@@ -319,12 +346,13 @@ if (check) {
     console.log(`  ${locale}.json: "${before}"  ->  "${after}"`);
   }
 
-  const indexPath = path.join(siteRoot, 'index.html');
   let pages = 0;
   for (const file of htmlFiles()) {
     const html = fs.readFileSync(file, 'utf8');
     let next = applyMeta(html, tests);
-    if (file === indexPath) next = applyFallback(applyCountAttr(next, tests), tests);
+    if (isIndexPage(file)) {
+      next = applyFallback(applyCountAttr(next, tests), tests, localeOfIndexPage(file));
+    }
     if (next === html) continue;
     fs.writeFileSync(file, next, 'utf8');
     pages++;
