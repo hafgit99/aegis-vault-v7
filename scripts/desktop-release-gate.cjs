@@ -194,6 +194,7 @@ const steps = [
   { command: 'npm', args: ['run', 'security:no-js-master-string'] },
   { command: 'npm', args: ['run', 'security:csp'] },
   { command: 'npm', args: ['run', 'security:dependencies'] },
+  { command: 'npm', args: ['run', 'icons:verify'] },
 ];
 
 if (!skipVersionCheck) {

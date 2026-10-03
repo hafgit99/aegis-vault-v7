@@ -1,4 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adaptive-icon background.
+
+  `tauri icon` writes #fff here. That is the Android Studio default and it is
+  wrong for this mark: ic_launcher_foreground.png already paints the obsidian
+  squircle, sized to sit inside the 66dp safe zone instead of bleeding to the
+  canvas edge. On a white background the launcher rendered a white tile with a
+  smaller dark tile floating in the middle of it.
+
+  #080a0f is the artwork's own mid-stop (ks-bg in
+  src-tauri/icon-source/kalderashield-icon.svg), so the foreground's squircle
+  edge blends into whatever mask the launcher applies.
+
+  scripts/android-icons.cjs rewrites this file after every `tauri icon` run.
+-->
 <resources>
-  <color name="ic_launcher_background">#fff</color>
+  <color name="ic_launcher_background">#080a0f</color>
 </resources>
