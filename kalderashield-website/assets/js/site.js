@@ -248,6 +248,41 @@
     return '/' + locale + (path === '/' ? '/' : path);
   }
 
+  /* Navigate to a path on this site, or nowhere.
+   *
+   * The language switcher is the only caller, and it builds its target from the
+   * current pathname -- but the pathname is document text, and assigning
+   * document text to location is how a site turns its own markup into an open
+   * redirect: a link of the form `javascript:` or `//evil.example` reaching this
+   * line would send the visitor off-site, and the address bar would show where
+   * they went. CodeQL flags it for the same reason.
+   *
+   * So the target is parsed as a URL, required to be same-origin, and required
+   * to be a plain path. `//host/path` parses as a different origin and is
+   * refused; `javascript:` does not parse as http(s) at all and is refused.
+   * Anything that fails leaves the visitor where they are, on the page they
+   * were reading, which is the only safe default for a language button.
+   *
+   * The query and fragment of the current address are carried across, because
+   * `/de/download/#linux` is a link people copy and dropping the fragment drops
+   * the reader on the top of the page instead of the platform they asked for. */
+  function navigate(path, search, hash) {
+    var next;
+    try {
+      next = new URL(path, window.location.href);
+    } catch (e) {
+      return;
+    }
+    if (next.origin !== window.location.origin) return;
+    if (next.protocol !== 'http:' && next.protocol !== 'https:') return;
+
+    // The query and fragment of the *current* address are carried across rather
+    // than the ones on `path`, because `path` is built from pathname alone --
+    // /de/download/?x=1#linux has to become /ja/download/?x=1#linux, and reading
+    // them off the new path would silently drop both.
+    window.location.assign(next.pathname + (search || '') + (hash || ''));
+  }
+
   /* The dictionary walk lives in assets/js/i18n-apply.js so the page generator
    * can apply the same translations without running the rest of this file --
    * which also builds the theme control, the lightbox and the sticky CTA, none
@@ -453,7 +488,7 @@
         }
 
         if (target && target !== window.location.pathname) {
-          window.location.assign(target + window.location.search + window.location.hash);
+          navigate(target, window.location.search, window.location.hash);
         } else {
           setLanguage(locale);
         }

@@ -150,26 +150,36 @@ function seed(
      * Without that, every switch raises "Not implemented: navigation" and the
      * assertions below would have nothing to look at.
      */
+    const realLocation = window.location;
+
+    // Built once, not per access. A fresh object on every `location` read would
+    // give each read its own `pathname`, so a test that staged a hostile address
+    // by assigning to it would be writing into an object nobody reads again --
+    // the assertion would pass for the wrong reason.
+    //
+    // `pathname` is a writable shadow because the real one is a getter: the write
+    // would otherwise be dropped silently. Everything else reads through.
+    let stagedPathname = realLocation.pathname;
+    const shadowLocation = {
+      get href() { return new URL(stagedPathname, realLocation.href).href; },
+      get origin() { return realLocation.origin; },
+      get protocol() { return realLocation.protocol; },
+      get host() { return realLocation.host; },
+      get hostname() { return realLocation.hostname; },
+      get port() { return realLocation.port; },
+      get pathname() { return stagedPathname; },
+      set pathname(value: string) { stagedPathname = String(value); },
+      get search() { return realLocation.search; },
+      get hash() { return realLocation.hash; },
+      assign: (url: string) => { navigations.push(String(url)); },
+      replace: (url: string) => { navigations.push(String(url)); },
+      reload: () => {},
+      toString() { return realLocation.href; },
+    };
+
     const shadowWindow = new Proxy(window, {
       get(target, prop) {
-        if (prop === 'location') {
-          const real = target.location;
-          return {
-            get href() { return real.href; },
-            get origin() { return real.origin; },
-            get protocol() { return real.protocol; },
-            get host() { return real.host; },
-            get hostname() { return real.hostname; },
-            get port() { return real.port; },
-            get pathname() { return real.pathname; },
-            get search() { return real.search; },
-            get hash() { return real.hash; },
-            assign: (url: string) => { navigations.push(String(url)); },
-            replace: (url: string) => { navigations.push(String(url)); },
-            reload: () => {},
-            toString() { return real.href; },
-          };
-        }
+        if (prop === 'location') return shadowLocation;
         const value = Reflect.get(target, prop, target);
         return typeof value === 'function' ? value.bind(target) : value;
       },
@@ -348,6 +358,49 @@ describe('site header controls', () => {
     try {
       await harness.choose('[data-lang="ja"]');
       expect(harness.navigations).toEqual(['/ja/download/?x=1#linux']);
+    } finally {
+      harness.close();
+    }
+  });
+
+  it('refuses a switch target that would leave the site', async () => {
+    // The switcher's target is built from the address bar, which is document
+    // text. Assigning it unchecked is an open redirect: a `//evil.example` or
+    // `javascript:` reaching that line sends the visitor off-site. navigate()
+    // parses the target, requires a same-origin http(s) URL and drops everything
+    // else -- leaving the reader where they were, which is the only safe default
+    // for a language button.
+    const harness = await seed(`${ORIGIN}/de/download/`, { page: 'de/download/index.html' });
+    try {
+      // seed() hands back the shadowed location, so `pathname` is writable here
+      // and the assignment is actually read back by the page.
+      const location = harness.window.location;
+
+      // `pathForLocale` prefixes the locale to whatever the address bar holds, so
+      // the worst a hostile address can produce is a same-origin path -- navigate()
+      // parses it, confirms the origin and confirms the scheme, and either
+      // navigates within the site or stays put. Neither of these may leave it.
+      location.pathname = '//evil.example/x';
+      await harness.choose('[data-lang="fr"]');
+      for (const to of harness.navigations) {
+        expect(to.startsWith('/')).toBe(true);
+        expect(to).not.toContain('evil.example');
+      }
+
+      // A `javascript:` address bar value cannot become a javascript: URL here,
+      // and the reason is structural rather than a filter: pathForLocale always
+      // prefixes the locale, so the target begins with '/' and is therefore
+      // parsed as a same-origin path -- '/esjavascript:alert(1)', which the
+      // browser treats as a 404 rather than as script. The assertion is that
+      // nothing about it executes or leaves the origin.
+      harness.navigations.length = 0;
+      location.pathname = 'javascript:alert(1)';
+      await harness.choose('[data-lang="es"]');
+      for (const to of harness.navigations) {
+        expect(to.startsWith('/')).toBe(true);
+        expect(to).not.toMatch(/^[a-z]+:/i);
+        expect(to).not.toContain('evil.example');
+      }
     } finally {
       harness.close();
     }
