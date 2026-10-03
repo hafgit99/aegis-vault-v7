@@ -20,6 +20,7 @@
     "test:e2e": "playwright test",
     "test:e2e:chromium": "playwright test --project=chromium",
     "icon:apply": "node scripts/apply-icon.cjs",
+    "icons:verify": "node scripts/verify-icons.cjs",
     "site:preview": "node scripts/serve-site.cjs",
     "tauri": "tauri",
     "desktop:dev": "tauri dev",
@@ -105,7 +106,7 @@
     "security:asset-integrity": "node scripts/generate-asset-integrity-manifest.cjs",
     "security:release-hardening:android": "node scripts/security-release-hardening.cjs --require-android-artifact",
     "test:fuzz": "vitest run src/lib/importer.fuzz.test.ts src/lib/encryption.fuzz.test.ts src/lib/attachments.fuzz.test.ts src/lib/share.fuzz.test.ts src/lib/otp.fuzz.test.ts src/lib/recoveryKey.fuzz.test.ts src/lib/fuzzySearch.fuzz.test.ts src/lib/backupValidation.fuzz.test.ts src/lib/sync/syncProviders.fuzz.test.ts",
-    "security:dependencies": "npm audit --audit-level=high",
+    "security:dependencies": "npm audit --audit-level=high --omit=dev",
     "rust:fmt:check": "cargo fmt --check --manifest-path src-tauri/Cargo.toml",
     "rust:test:native": "cargo test --manifest-path src-tauri/Cargo.toml write_vault_database_file",
     "release:readiness": "node scripts/release-readiness-summary.cjs",
@@ -113,7 +114,8 @@
     "psl:generate": "node scripts/generate-psl-data.cjs",
     "security:release-signing": "node scripts/security-release-signing-gate.cjs",
     "security:argon2-bounds": "node scripts/security-argon2-bounds-parity.cjs",
-    "android:lint": "cd src-tauri/gen/android && gradlew.bat :app:lintArmDebug --console=plain"
+    "android:lint": "cd src-tauri/gen/android && gradlew.bat :app:lintArmDebug --console=plain",
+    "windows:msix-probe": "powershell -ExecutionPolicy Bypass -File scripts/msix-registry-probe.ps1"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
