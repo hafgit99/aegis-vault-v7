@@ -12,6 +12,17 @@
 //   128px  public/splash-icon.png            index.html splash (96px), which
 //                                           paints before the bundle is parsed
 
+// Each render also writes `<out>.icon-source` beside the PNG, holding the
+// sha256 of the SVG it was rasterised from. That is what proves the raster
+// matches the master in CI, where no browser exists to re-render and compare.
+// The gate compared mtimes instead, which is a coin flip: `git checkout` writes
+// files in directory order, so kalderashield-icon.svg lands after the PNGs whose
+// names sort before it, and the gate reported drift on a tree that was
+// perfectly consistent -- failing CI on a clean checkout. A recorded hash is
+// evidence; a timestamp is not.
+
+const crypto = require('crypto');
+const fs = require('fs');
 const path = require('path');
 const { readIconSource, renderSvgToPng } = require('./icon-render.cjs');
 
@@ -21,6 +32,13 @@ const TARGETS = [
   { size: 256, outPath: path.join(root, 'assets', 'KalderaShield-app-icon.png'), label: 'lock screen + sidebar logo' },
   { size: 128, outPath: path.join(root, 'public', 'splash-icon.png'), label: 'splash logo' },
 ];
+
+/* Written after a successful render, never before: a stamp beside a half-written
+ * PNG would let the gate pass on a render that failed. */
+function writeProvenance(outPath, svg) {
+  const digest = crypto.createHash('sha256').update(svg).digest('hex');
+  fs.writeFileSync(outPath + '.icon-source', digest + '\n', 'utf8');
+}
 
 (async () => {
   const svg = readIconSource(root);
@@ -32,6 +50,7 @@ const TARGETS = [
       height: size,
       outPath,
     });
+    writeProvenance(outPath, svg);
     console.log(`  ${path.relative(root, outPath)} (${rendered}, ${kb} KB) - ${label}`);
   }
 })().catch((error) => {

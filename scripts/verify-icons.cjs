@@ -21,9 +21,11 @@
 //     nowhere else in the product.
 //
 // Run standalone (`npm run icons:verify`) or as the last step of icon:apply.
-// The gate is byte comparison for copied surfaces and mtime comparison for
-// surfaces produced by a browser render, because a browser is not available in
-// CI to re-render the master and compare pixels.
+// The gate is byte comparison for copied surfaces and a recorded sha256 for
+// surfaces produced by a browser render: rendering the master again would need a
+// browser, which CI does not have. The digest is written beside each raster at
+// render time by render-app-logo.cjs, so a stale render is detectable without
+// one.
 
 const crypto = require('crypto');
 const fs = require('fs');
@@ -184,15 +186,44 @@ function collectIssues() {
     }
   }
 
-  const masterMtime = fs.statSync(masterSvg).mtimeMs;
+  /* Rasterised surfaces are checked against the sha256 of the master recorded
+   * beside them at render time, not against their mtime.
+   *
+   * mtime was a coin flip. `git checkout` writes files in directory order, so
+   * src-tauri/icon-source/kalderashield-icon.svg is written after the PNGs whose
+   * names sort before it -- KalderaShield-app-icon.png, splash-icon.png -- and
+   * every clean checkout therefore looked like the renders predated the master.
+   * The gate passed locally only because those files happened to be touched in
+   * a lucky order, and failed on CI's clean checkout of the very same commit.
+   * A timestamp cannot distinguish "stale render" from "written earlier in the
+   * same second by a checkout", and only the hash can tell them apart.
+   *
+   * A missing .icon-source is reported rather than skipped: the stamp is what
+   * makes this check possible at all, so a render made before it existed has to
+   * be re-made rather than quietly unverified. */
+  const masterDigest = sha256(masterSvg);
   for (const relPath of RENDERED_ICON_FILES) {
     const file = path.join(rootDir, ...relPath.split('/'));
     if (!fs.existsSync(file)) {
       add(`missing ${relPath}; run \`npm run icon:apply\``);
       continue;
     }
-    if (fs.statSync(file).mtimeMs < masterMtime) {
-      add(`${relPath} is older than ${rel(masterSvg)}; run \`npm run icon:apply\``);
+
+    const stampFile = file + '.icon-source';
+    if (!fs.existsSync(stampFile)) {
+      add(
+        `missing ${rel(stampFile)}: ${relPath} has no record of which master it was ` +
+          'rendered from; run `npm run icon:apply`'
+      );
+      continue;
+    }
+
+    const recorded = readText(stampFile).trim();
+    if (recorded !== masterDigest) {
+      add(
+        `${relPath} was rendered from a different ${rel(masterSvg)}; ` +
+          'run `npm run icon:apply`'
+      );
     }
   }
 
