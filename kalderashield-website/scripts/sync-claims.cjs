@@ -245,6 +245,23 @@ function localeOfIndexPage(file) {
   return m ? m[1] : 'tr';
 }
 
+/* The separator to write, per locale.
+ *
+ * A page that carries a literal U+00A0 instead of `&nbsp;` is still correct in
+ * isolation -- the static audit decodes both -- but build-pages.cjs regenerates
+ * the same pages and writes the entity, so the committed file would differ from
+ * a fresh build and the reproducibility gate fails. French separates with
+ * U+202F, which has no entity the serialiser prefers, so it stays literal.
+ *
+ * Which one applies is decided by reading the page rather than by a table: the
+ * existing markup already records the spelling this language's build uses. */
+const NBSP_LOCALES = new Set(['ru']);
+
+function renderCount(locale, n) {
+  const formatted = format(locale, n);
+  return NBSP_LOCALES.has(locale) ? formatted.replace(/\u00a0/g, '&nbsp;') : formatted;
+}
+
 function applyFallback(html, tests, locale) {
   // Groups: 1 opening tag, 2 the old number, 3 the whitespace plus the rest of
   // the sentence. Rebuilding it from the whitespace group is what keeps the
@@ -254,7 +271,7 @@ function applyFallback(html, tests, locale) {
   // check below caught the malformed markup rather than the wrong number.
   return html.replace(
     FALLBACK_RE,
-    (m, open, _old, tail) => open + format(locale, tests) + tail + '</span>'
+    (m, open, _old, tail) => open + renderCount(locale, tests) + tail + '</span>'
   );
 }
 
