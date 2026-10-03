@@ -26,6 +26,16 @@
     "strict": true,
     "noUncheckedIndexedAccess": true
   },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src-extension/**/*.ts",
+    "src-extension/**/*.tsx",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "vitest.release.config.ts",
+    "playwright.config.ts"
+  ],
   "exclude": [
     "dist",
     "dist-extension",
@@ -33,6 +43,7 @@
     "coverage",
     "node_modules",
     "src-tauri/target",
-    "src-tauri/gen"
+    "src-tauri/gen",
+    "kalderashield-website"
   ]
 }

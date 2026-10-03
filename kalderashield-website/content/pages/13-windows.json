@@ -1,0 +1,170 @@
+{
+  "section": "platformlar",
+  "slug": "windows",
+  "i18n": {
+    "en": {
+      "title": "KalderaShield for Windows — KalderaShield",
+      "description": "Install KalderaShield on Windows 10 and 11 (x64): NSIS installer, MSI package or portable executable. Windows Hello (TPM 2.0) unlock and capture exclusion.",
+      "eyebrow": "Platforms / Windows",
+      "h1": "KalderaShield on Windows",
+      "lead": "Windows 10 and 11 on x64 are supported with three install shapes: a standard NSIS setup wizard, an MSI package for managed deployment, and a portable executable that runs without installation.",
+      "primary": "Download for Windows",
+      "secondary": "Verify the checksum",
+      "primaryHref": "/download/",
+      "whatLabel": "What you get",
+      "whatTitle": "Three ways to install",
+      "what": [
+        "The setup.exe wizard installs per-user or per-machine, adds Start-menu shortcuts and its own uninstaller. The MSI package exists for environments where software deployment expects that format. The portable executable needs none of that: unpack it and run.",
+        "All three build the same application. The vault file, encrypted backups and settings are portable between them, and the SHA-256 checksums are published for every artifact so you can verify the exact file you install.",
+        "Windows-specific protections are active: windows are requested with WDA_EXCLUDEFROMCAPTURE, which keeps the app out of ordinary screenshots, screen recordings and the task-switcher preview, and Windows Hello wraps the convenience-unlock payload with a TPM 2.0-backed platform authenticator."
+      ],
+      "stepsTitle": "Getting started on Windows",
+      "steps": [
+        {
+          "title": "Download and verify",
+          "desc": "Fetch the installer from the download page, then compare its SHA-256 hash with the matching line in SHA256SUMS.txt before running it."
+        },
+        {
+          "title": "Create the vault",
+          "desc": "Choose a master password — Argon2id with 64 MiB, 4 iterations and 2 lanes stretches it into the vault key — and store the 24-word BIP-39 recovery key somewhere outside the app."
+        },
+        {
+          "title": "Optionally add Windows Hello",
+          "desc": "Enroll platform unlock so daily access is a glance or a PIN, backed by TPM 2.0. The master password always remains the real root of the vault."
+        }
+      ],
+      "secTitle": "Windows specifics you should know",
+      "secLabel": "Signatures and SmartScreen",
+      "secBody": "Windows installers do not carry an Authenticode signature yet: the project has no code-signing certificate, and its release gate blocks unsigned artifacts from being published as official releases. Until that changes, Windows SmartScreen may show \"Windows protected your PC\" for files you obtain from a build — verify the SHA-256 hash against the published checksums, and see the verification page for what that warning does and does not mean.",
+      "tech": [
+        {
+          "tag": "Windows 10 / 11",
+          "title": "x64",
+          "desc": "One download serves both. The application ships as a Tauri desktop app with a WebView-based front end."
+        },
+        {
+          "tag": "TPM 2.0",
+          "title": "Windows Hello unlock",
+          "desc": "The WebAuthn PRF platform authenticator wraps the unlock payload; the wrapping key material never leaves secure hardware."
+        },
+        {
+          "tag": "WDA_EXCLUDEFROMCAPTURE",
+          "title": "Capture exclusion",
+          "desc": "App windows are excluded from ordinary screen capture. Privileged capture software is outside the threat model, as everywhere."
+        }
+      ],
+      "faqTitle": "Windows questions",
+      "faq": [
+        {
+          "q": "Setup.exe, MSI or portable — which should I pick?",
+          "a": "For a personal machine, the setup wizard. For managed deployment, the MSI. For a USB stick or a machine where you prefer no installation, the portable executable."
+        },
+        {
+          "q": "Why does SmartScreen warn about the installer?",
+          "a": "Because it is unsigned and has no download reputation. Verify the SHA-256 hash against SHA256SUMS.txt; the verification page explains the full picture, including why this disappears once a signing certificate is in place."
+        },
+        {
+          "q": "Can I move my vault to another Windows PC?",
+          "a": "Yes. Export an encrypted .ks backup, move it, and restore it with the master password. The vault file is portable, not tied to one machine or one install shape."
+        }
+      ],
+      "relatedTitle": "Related pages",
+      "related": [
+        {
+          "href": "/guvenlik/dogrulama/",
+          "label": "Verify your download"
+        },
+        {
+          "href": "/guvenlik/",
+          "label": "Security overview"
+        },
+        {
+          "href": "/eklenti/",
+          "label": "Browser extension"
+        }
+      ]
+    },
+    "tr": {
+      "title": "Windows için KalderaShield — KalderaShield",
+      "description": "KalderaShield'ı Windows 10 ve 11'e (x64) kurun: NSIS kurucu, MSI paketi veya portable çalıştırılabilir. Windows Hello (TPM 2.0) kilit açma ve ekran yakalama dışlaması dahil.",
+      "eyebrow": "Platformlar / Windows",
+      "h1": "Windows'ta KalderaShield",
+      "lead": "Windows 10 ve 11 (x64) üç kurulum biçimiyle desteklenir: standart NSIS kurulum sihirbazı, yönetilen dağıtım için MSI paketi ve kurulum gerektirmeden çalışan bir portable çalıştırılabilir.",
+      "primary": "Windows için indirin",
+      "secondary": "Sağlama toplamını doğrulayın",
+      "primaryHref": "/download/",
+      "whatLabel": "Nedir elde ettiğiniz",
+      "whatTitle": "Kurulmanın üç yolu",
+      "what": [
+        "setup.exe sihirbazı kullanıcı başına veya makine başına kurar, Başlat menüsü kısayolları ve kendi kaldırıcısını ekler. MSI paketi, yazılım dağıtımının bu biçimi beklediği ortamlar içindir. Portable çalıştırılabilir hiçbirini gerektirmez: açın ve çalıştırın.",
+        "Üçü de aynı uygulamayı derler. Kasa dosyası, şifreli yedekler ve ayarlar aralarında taşınabilirdir ve kurduğunuz tam dosyayı doğrulayabilmeniz için her dosyanın SHA-256 sağlaması yayımlanır.",
+        "Windows'a özgü korumalar etkindir: pencereler WDA_EXCLUDEFROMCAPTURE ile istenir — uygulama sıradan ekran görüntülerinden, ekran kayıtlarından ve görev değiştirici önizlemesinden dışlanır — ve Windows Hello, kolay-kilit-açma yükünü TPM 2.0 destekli bir platform doğrulayıcısıyla sarar."
+      ],
+      "stepsTitle": "Windows'ta başlangıç",
+      "steps": [
+        {
+          "title": "İndirin ve doğrulayın",
+          "desc": "Kurucuyu indirme sayfasından alın, çalıştırmadan önce SHA-256 karmasını SHA256SUMS.txt'deki eşleşen satırla karşılaştırın."
+        },
+        {
+          "title": "Kasayı oluşturun",
+          "desc": "Ana parolayı seçin — Argon2id, 64 MiB, 4 iterasyon ve 2 hat ile onu kasa anahtarına uzatır — ve 24 kelimelik BIP-39 kurtarma anahtarını uygulamanın dışında bir yerde saklayın."
+        },
+        {
+          "title": "İsterseniz Windows Hello ekleyin",
+          "desc": "Günlük erişim bir bakış ya da PIN olsun diye platform kilit açmasını kaydedin, TPM 2.0 destekli. Ana parola her zaman kasanın gerçek kökü kalır."
+        }
+      ],
+      "secTitle": "Bilmeniz gereken Windows ayrıntıları",
+      "secLabel": "İmzalar ve SmartScreen",
+      "secBody": "Windows kurucuları henüz Authenticode imzası taşımıyor: projede kod imzalama sertifikası yok ve sürüm kapısı, imzasız dosyaların resmi sürüm olarak yayımlanmasını engelliyor. Bu değişene kadar, bir derlemeden elde ettiğiniz dosyalarda Windows SmartScreen \"PC'niz korundu\" gösterebilir — SHA-256 karmasını yayımlanan sağlamalarla doğrulayın ve uyarının neyi neyi anlamadığı için doğrulama sayfasına bakın.",
+      "tech": [
+        {
+          "tag": "Windows 10 / 11",
+          "title": "x64",
+          "desc": "Tek indirme ikisine de hizmet eder. Uygulama, WebView tabanlı ön yüzlü bir Tauri masaüstü uygulaması olarak gelir."
+        },
+        {
+          "tag": "TPM 2.0",
+          "title": "Windows Hello ile açma",
+          "desc": "WebAuthn PRF platform doğrulayıcısı kilit açma yükünü sarmalar; sarma anahtar malzemesi güvenli donanımdan hiç çıkmaz."
+        },
+        {
+          "tag": "WDA_EXCLUDEFROMCAPTURE",
+          "title": "Yakalama dışlaması",
+          "desc": "Uygulama pencereleri sıradan ekran yakalamadan dışlanır. Yetkili yakalama yazılımı her yerde olduğu gibi tehdit modelinin dışındadır."
+        }
+      ],
+      "faqTitle": "Windows soruları",
+      "faq": [
+        {
+          "q": "Setup.exe, MSI yoksa portable — hangisini seçmeliyim?",
+          "a": "Kişisel makine için kurulum sihirbazı. Yönetilen dağıtım için MSI. USB bellek ya da kurulum istemediğiniz bir makine için portable çalıştırılabilir."
+        },
+        {
+          "q": "SmartScreen kurucu için neden uyarıyor?",
+          "a": "İmzasız olduğu ve indirme itibarı olmadığı için. SHA-256 karmasını SHA256SUMS.txt ile doğrulayın; doğrulama sayfası, imza sertifikası geldiğinde bunun neden kalkacağı dahil bütün resmi anlatır."
+        },
+        {
+          "q": "Kasamı başka bir Windows bilgisayara taşıyabilir miyim?",
+          "a": "Evet. Şifreli bir .ks yedeği dışa aktarın, taşıyın ve ana parolayla geri yükleyin. Kasa dosyası taşınabilirdir, tek makineye ya da tek kurulum biçimine bağlı değildir."
+        }
+      ],
+      "relatedTitle": "İlgili sayfalar",
+      "related": [
+        {
+          "href": "/guvenlik/dogrulama/",
+          "label": "İndirdiğinizi doğrulayın"
+        },
+        {
+          "href": "/guvenlik/",
+          "label": "Güvenlik genel bakışı"
+        },
+        {
+          "href": "/eklenti/",
+          "label": "Tarayıcı eklentisi"
+        }
+      ]
+    }
+  }
+}

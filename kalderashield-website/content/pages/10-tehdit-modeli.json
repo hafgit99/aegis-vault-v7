@@ -1,0 +1,180 @@
+{
+  "section": "guvenlik",
+  "slug": "tehdit-modeli",
+  "i18n": {
+    "en": {
+      "title": "Threat Model — KalderaShield",
+      "description": "Which attacks KalderaShield defends against, which it only partially defends against, and which are explicitly out of scope — including malware in your own OS session.",
+      "eyebrow": "Security / Threat model",
+      "h1": "What we defend against — and what we do not",
+      "lead": "A password manager that claims to stop every attack is lying to you. This page is the public summary of the desktop threat model: the attacks the design defends against, the ones it only partially defends against, and the ones it deliberately does not.",
+      "primary": "Read the full model",
+      "secondary": "Security overview",
+      "primaryHref": "https://github.com/hafgit99/kalderashield/blob/main/docs/THREAT_MODEL.md",
+      "whatLabel": "The scope",
+      "whatTitle": "A local-first desktop vault",
+      "what": [
+        "The model covers the desktop application running as a local vault: master password setup, unlock, lock and reset; persistence in the wa-sqlite backend and legacy OPFS/JSON stores awaiting guarded migration; encrypted backups; attachment encryption; biometric convenience unlock; and clipboard and revealed-field behaviour while the app is unlocked.",
+        "Protected assets include the master password, every vault item secret — passwords, cards, API keys, passkey records, identities, notes, TOTP seeds and ownership-revealing metadata — attachment contents, encrypted backup files and the biometric-wrapped unlock payload.",
+        "Trust boundaries are explicit. Browser-like storage APIs count as persistence, not secret storage. OPFS and localStorage fallbacks are treated as attacker-readable at rest unless the app encrypted them. Imported CSV/JSON data and user-selected backup files are untrusted input until parsed and validated."
+      ],
+      "stepsTitle": "Three tiers of defence",
+      "steps": [
+        {
+          "title": "Defended",
+          "desc": "A copied encrypted .ks backup without its password. Reading the persisted database payload while locked. Tampering with AES-GCM backup or attachment payloads. Malformed import files. Brief physical access after the app has locked."
+        },
+        {
+          "title": "Partially defended",
+          "desc": "A process with your OS user account reading application storage: item payloads and attachments are encrypted, but profile settings and some metadata may remain readable. A valid unlocked session: auto-lock and reveal reset reduce exposure, but unlocked is still trusted."
+        },
+        {
+          "title": "Not defended — out of scope",
+          "desc": "Malware running as your OS user while the vault is unlocked. A compromised OS, WebView or runtime. Memory inspection, keylogging, privileged screen capture and clipboard capture by hostile local software. Losing the master password with no valid backup. Cloud sync, multi-device conflict resolution and enterprise policy are not shipped features and are outside the model."
+        }
+      ],
+      "heroShot": {
+        "src": "/assets/images/app-audit.webp",
+        "w": 1800,
+        "h": 884
+      },
+      "secTitle": "The extension bridge is part of the model",
+      "secLabel": "How the browser extension talks to the vault",
+      "secBody": "The native messaging bridge binds only to local loopback TCP (127.0.0.1, port range 49155–49165), authenticates with a 256-bit CSPRNG pairing token stored in an OS-protected file, and then encrypts every frame with XChaCha20-Poly1305 under a session key derived with HKDF-SHA256. Cached credentials carry a five-minute lease and are zeroized on expiry; broad queries return sanitized metadata so a single message cannot bulk-exfiltrate the vault. Malware with your OS privileges can still read the token file — that residual risk is documented, not denied.",
+      "tech": [
+        {
+          "tag": "Zeroized session",
+          "title": "Memory discipline",
+          "desc": "Vault session state is a zeroized Uint8Array in process memory. Safer than sessionStorage, but not an OS secret enclave — setup and unlock input still crosses the UI boundary."
+        },
+        {
+          "tag": "Capture exclusion",
+          "title": "Screen protection",
+          "desc": "Windows builds request WDA_EXCLUDEFROMCAPTURE and Android sets FLAG_SECURE. This reduces ordinary screenshots and task-switcher previews; it does not stop privileged capture software."
+        },
+        {
+          "tag": "XChaCha20-Poly1305",
+          "title": "IPC frame encryption",
+          "desc": "Every extension bridge frame carries a fresh 24-byte nonce; unauthenticated or version-mismatched frames terminate the connection immediately."
+        }
+      ],
+      "faqTitle": "About the threat model",
+      "faq": [
+        {
+          "q": "Can antivirus software detect my vault contents?",
+          "a": "No. The vault file and backups are ciphertext on disk, and the master password never touches sessionStorage. Malware running in your own session while the vault is unlocked is a different question — that is explicitly out of scope."
+        },
+        {
+          "q": "Why are some attacks left out of scope?",
+          "a": "Because no local application can win them. Claiming protection from keyloggers or a compromised OS would be false comfort. Writing the boundary down lets you decide what KalderaShield can and cannot be responsible for."
+        },
+        {
+          "q": "Does the model change?",
+          "a": "Yes. It is reviewed on every release, and a residual-risk register records each known gap, its status and the planned mitigation — including an accepted, documented trade-off in the extension autofill path."
+        }
+      ],
+      "relatedTitle": "Related pages",
+      "related": [
+        {
+          "href": "/guvenlik/dogrulama/",
+          "label": "Verify your download"
+        },
+        {
+          "href": "/guvenlik/denetim-durumu/",
+          "label": "Audit status"
+        },
+        {
+          "href": "/urun/autofill/",
+          "label": "Browser extension autofill"
+        }
+      ]
+    },
+    "tr": {
+      "title": "Tehdit Modeli — KalderaShield",
+      "description": "KalderaShield hangi saldırılara karşı savunur, hangilerine yalnızca kısmen savunur ve hangileri açıkça kapsam dışıdır — kendi OS oturumunuzdaki kötü amaçlı yazılım dahil.",
+      "eyebrow": "Güvenlik / Tehdit modeli",
+      "h1": "Neye karşı savunuyoruz — neye karşı savunmuyoruz",
+      "lead": "Her saldırıyı durdurmayı iddia eden bir parola yöneticisi size yalan söylüyor. Bu sayfa, masaüstü tehdit modelinin herkese açık özetidir: tasarımın savunduğu saldırılar, yalnızca kısmen savundukları ve bilinçli olarak savunmadıkları.",
+      "primary": "Tam modeli okuyun",
+      "secondary": "Güvenlik genel bakışı",
+      "primaryHref": "https://github.com/hafgit99/kalderashield/blob/main/docs/THREAT_MODEL.md",
+      "whatLabel": "Kapsam",
+      "whatTitle": "Cihazda çalışan yerel-öncelikli masaüstü kasa",
+      "what": [
+        "Model, yerel kasa olarak çalışan masaüstü uygulamasını kapsar: ana parola kurulumu, kilidi açma, kilitleme ve sıfırlama; wa-sqlite arka ucunda ve denetimli göç bekleyen eski OPFS/JSON depolarında kalıcılık; şifreli yedekler; ek şifrelemesi; biyometrik kolaylık kilit açma; ve uygulama açıkken pano ile görünen alan davranışı.",
+        "Korunan varlıklar arasında ana parola, her kasa öğesi sırrı — parolalar, kartlar, API anahtarları, passkey kayıtları, kimlikler, notlar, TOTP tohumları ve sahiplik ifşa eden üst veri — ek içerikleri, şifreli yedek dosyaları ve biyometrik sarılı kilit açma yükü bulunur.",
+        "Güven sınırları açıkça yazılıdır. Tarayıcı türü depolama API'leri kalıcılık sayılır, gizli depolama değil. OPFS ve localStorage yedekleri, uygulama şifrelemediyse dinlenme halinde saldırgan-okunur kabul edilir. İçe aktarılan CSV/JSON verisi ve kullanıcı seçimli yedek dosyaları, ayrıştırılıp doğrulanana kadar güvenilmeyen girdidir."
+      ],
+      "stepsTitle": "Üç katmanlı savunma",
+      "steps": [
+        {
+          "title": "Savunulan",
+          "desc": "Parolası bilinmeyen kopyalanmış şifreli .ks yedeği. Kilitliyken kalıcı veritabanı yükünün okunması. AES-GCM yedek veya ek yüklerinin kurcalanması. Bozuk içe aktarma dosyaları. Uygulama kilitlendikten sonra kısa süreli fiziksel erişim."
+        },
+        {
+          "title": "Kısmen savunulan",
+          "desc": "OS kullanıcı hesabınızla uygulama depolamasını okuyan bir süreç: öğe yükleri ve ekler şifrelidir, ancak profil ayarları ve bazı üst veriler okunabilir kalabilir. Geçerli açık bir oturum: otomatik kilit ve görünürlük sıfırlaması maruziyeti azaltır, ama açık oturum yine güvenilen durumdur."
+        },
+        {
+          "title": "Savunulmayan — kapsam dışı",
+          "desc": "Kasa açıkken OS kullanıcınız olarak çalışan kötü amaçlı yazılım. Ele geçirilmiş OS, WebView veya çalışma zamanı. Bellek incelemesi, tuş kaydı, yetkili ekran yakalama ve düşmanca yerel yazılımın panoyu yakalaması. Geçerli yedeği olmadan ana parolayı kaybetmek. Bulut eşitleme, çoklu cihaz çakışma çözümü ve kurumsal politika gönderilen özellikler değildir ve modelin dışındadır."
+        }
+      ],
+      "heroShot": {
+        "src": "/assets/images/app-audit.webp",
+        "w": 1800,
+        "h": 884
+      },
+      "secTitle": "Eklenti köprüsü de modelin parçasıdır",
+      "secLabel": "Tarayıcı eklentisi kasayla nasıl konuşur",
+      "secBody": "Native messaging köprüsü yalnızca yerel loopback TCP'ye (127.0.0.1, 49155–49165 port aralığı) bağlanır, OS-korumalı bir dosyada saklanan 256 bitlik CSPRNG eşleştirme jetonuyla kimlik doğrular ve ardından her çerçeveyi HKDF-SHA256 ile türetilen oturum anahtarı altında XChaCha20-Poly1305 ile şifreler. Önbellekteki kimlik bilgileri beş dakikalık kiraya tabidir ve süresi dolunca sıfırlanır; geniş sorgular temizlenmiş üst veri döndürür, böylece tek bir ileti kasayı topluca ele geçiremez. OS yetkiniz olan kötü amaçlı yazılım jeton dosyasını yine de okuyabilir — bu artık risk inkâr edilmez, belgelenir.",
+      "tech": [
+        {
+          "tag": "Sıfırlanan oturum",
+          "title": "Bellek disiplini",
+          "desc": "Kasa oturum durumu, süreç belleğinde sıfırlanan bir Uint8Array'dir. sessionStorage'dan güvenlidir, ama bir OS gizli bölgesi değildir — kurulum ve kilit açma girdisi yine UI sınırından geçer."
+        },
+        {
+          "tag": "Yakalama dışlama",
+          "title": "Ekran koruması",
+          "desc": "Windows derlemeleri WDA_EXCLUDEFROMCAPTURE ister, Android FLAG_SECURE ayarlar. Bu, sıradan ekran görüntülerini ve görev değiştirici önizlemelerini azaltır; yetkili yakalama yazılımını durdurmaz."
+        },
+        {
+          "tag": "XChaCha20-Poly1305",
+          "title": "IPC çerçeve şifreleme",
+          "desc": "Her eklenti köprüsü çerçevesi taze 24 baytlık bir nonce taşır; kimliksiz veya sürüm uyuşmazlığı olan çerçeveler bağlantıyı anında sonlandırır."
+        }
+      ],
+      "faqTitle": "Tehdit modeli hakkında",
+      "faq": [
+        {
+          "q": "Antivirüs yazılımı kasa içeriğimi görebilir mi?",
+          "a": "Hayır. Kasa dosyası ve yedekler diskte şifreli metindir ve ana parola sessionStorage'a hiç dokunmaz. Kasa açıkken kendi oturumunuzda çalışan kötü amaçlı yazılım başka bir sorudur — o açıkça kapsam dışıdır."
+        },
+        {
+          "q": "Bazı saldırılar neden kapsam dışı bırakılıyor?",
+          "a": "Çünkü hiçbir yerel uygulama onları kazanamaz. Tuş kaydedicilerden veya ele geçirilmiş bir OS'tan koruma iddia etmek yanlış güvence olur. Sınırı yazmak, KalderaShield'ın neyden sorumlu olup olamayacağına sizin karar vermenizi sağlar."
+        },
+        {
+          "q": "Model değişir mi?",
+          "a": "Evet. Her sürümde gözden geçirilir ve bir artık-risk kaydı, bilinen her boşluğun durumunu ve planlanan önlemi tutar — eklenti otomatik doldurma yolundaki kabul edilmiş, belgelenmiş bir ödünleşim dahil."
+        }
+      ],
+      "relatedTitle": "İlgili sayfalar",
+      "related": [
+        {
+          "href": "/guvenlik/dogrulama/",
+          "label": "İndirdiğinizi doğrulayın"
+        },
+        {
+          "href": "/guvenlik/denetim-durumu/",
+          "label": "Denetim durumu"
+        },
+        {
+          "href": "/urun/autofill/",
+          "label": "Tarayıcı eklentisi otomatik doldurma"
+        }
+      ]
+    }
+  }
+}

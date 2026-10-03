@@ -1,0 +1,100 @@
+{
+  "slug": "vault-history",
+  "i18n": {
+    "en": {
+      "menuLabel": "Vault history",
+      "menuDesc": "Snapshots, trash and password history",
+      "title": "Vault History and Backups — KalderaShield",
+      "description": "Versioned encrypted snapshots, per-item password history, automatic backups and a trash that holds deleted records for 15 days.",
+      "eyebrow": "Product / History and recovery",
+      "h1": "Mistakes are reversible, on your own schedule",
+      "lead": "Deleted records stay recoverable for 15 days, every item keeps its own password history, and encrypted snapshots let you travel back without asking anyone.",
+      "primary": "Download KalderaShield",
+      "secondary": "View the source",
+      "whatLabel": "What it does",
+      "whatTitle": "Three separate ways to undo a mistake",
+      "what": [
+        "Deletion is not destruction. Removing an entry moves it into an encrypted local trash that is cleaned automatically after fifteen days, and you can restore it or purge it at any point inside that window.",
+        "Every item keeps its own password history, so you can see what a password used to be and roll it back when it turns out to have been rotated somewhere you forgot about.",
+        "Snapshots are versioned: the app can take one on demand or automatically on a schedule you choose, encrypts each before writing, and prunes the oldest once your retention limit is reached."
+      ],
+      "stepsTitle": "How a snapshot is taken",
+      "steps": [
+        { "title": "The vault is captured", "desc": "A snapshot records the current state of your vault, either when you press the button or on the schedule you configured." },
+        { "title": "It is encrypted first", "desc": "Each snapshot is encrypted on device before it is written to storage, so a snapshot file is never readable on its own." },
+        { "title": "Old ones are pruned", "desc": "Once the retention limit is reached the oldest snapshots are removed, so the local history cannot grow without bound." }
+      ],
+      "heroShot": { "src": "/assets/images/app-backup.webp", "w": 1800, "h": 752 },
+      "shots": [
+        { "src": "/assets/images/app-trash.webp", "w": 1800, "h": 889, "title": "Fifteen days of grace", "desc": "The trash explains its own behaviour in the product: deleted records stay on your device and can be restored or permanently removed at any time inside the window." }
+      ],
+      "secTitle": "Where backups are stored, and who holds the key",
+      "secLabel": "Optional sync is end-to-end encrypted",
+      "secBody": "Local snapshots and exported backups are encrypted with Argon2id and AES-256-GCM, and the password for an exported backup can be your master password. Optional cloud sync is off by default; if you enable it against your own WebDAV or S3 storage, your vault is encrypted on the device before it is sent, so the provider only ever receives ciphertext. That convenience depends on your storage account staying reachable — the vault file itself remains portable and restorable without it.",
+      "tech": [
+        { "tag": "AES-256-GCM", "title": "Encrypted before writing", "desc": "A snapshot or exported backup is encrypted on device, so the file is useless on its own without your password." },
+        { "tag": "E2EE", "title": "Your storage, your keys", "desc": "Sync providers receive ciphertext only. Nobody but you can decrypt what you store there." },
+        { "tag": "Import", "title": "Bring what you already have", "desc": "Bitwarden, LastPass, 1Password, Chrome CSV and JSON exports are processed entirely on your device." }
+      ],
+      "faqTitle": "About backups and recovery",
+      "faq": [
+        { "q": "Is a deleted record really gone?", "a": "Not for fifteen days. It sits in an encrypted local trash that you can restore from or purge early." },
+        { "q": "Do I need cloud sync?", "a": "No. Snapshots, encrypted exports and restores all work on a single device with no account and no network." },
+        { "q": "Can I move my vault to another manager later?", "a": "Nothing prevents it, but note that exports are your choice: use the encrypted backup format rather than a plaintext JSON dump if you want the file to stay protected." }
+      ],
+      "relatedTitle": "Related pages",
+      "related": [
+        { "href": "/urun/password-vault/", "label": "Password vault" },
+        { "href": "/#verification", "label": "Verification" }
+      ]
+    },
+
+    "tr": {
+      "menuLabel": "Kasa geçmişi",
+      "menuDesc": "Anlık görüntüler, çöp kutusu ve şifre geçmişi",
+      "title": "Kasa Geçmişi ve Yedekler — KalderaShield",
+      "description": "Sürümlenmiş şifreli anlık görüntüler, kayıt bazında şifre geçmişi, otomatik yedekleme ve silinen kayıtları 15 gün tutan çöp kutusu.",
+      "eyebrow": "Ürün / Geçmiş ve kurtarma",
+      "h1": "Hatalar kendi zamanınızda geri alınabilir",
+      "lead": "Silinen kayıtlar 15 gün geri alınabilir durumda kalır, her kayıt kendi şifre geçmişini tutar ve şifreli anlık görüntüler kimseye sormadan geriye dönmenizi sağlar.",
+      "primary": "KalderaShield'i indirin",
+      "secondary": "Kaynağı görün",
+      "whatLabel": "Ne yapar",
+      "whatTitle": "Bir hatayı geri almanın üç ayrı yolu",
+      "what": [
+        "Silmek yok etmek değildir. Bir kaydı kaldırmak onu şifreli yerel çöp kutusuna taşır; kutu on beş gün sonra otomatik temizlenir ve bu süre içinde istediğiniz anda geri yükleyebilir ya da kalıcı olarak silebilirsiniz.",
+        "Her kayıt kendi şifre geçmişini tutar; böylece bir şifrenin önceden ne olduğunu görür, unuttuğunuz bir yerde değiştirilmişse eski haline döndürebilirsiniz.",
+        "Anlık görüntüler sürümlenir: uygulama istediğinizde veya seçtiğiniz takvimde bir tane alır, her birini yazmadan önce şifreler ve saklama sınırınız dolduğunda en eskileri temizler."
+      ],
+      "stepsTitle": "Anlık görüntü nasıl alınır",
+      "steps": [
+        { "title": "Kasa kaydedilir", "desc": "Bir anlık görüntü, kasanın o andaki durumunu kaydeder: düğmeye bastığınızda ya da yapılandırdığınız takvimde." },
+        { "title": "Önce şifrelenir", "desc": "Her anlık görüntü depoya yazılmadan önce cihazda şifrelenir; böylece dosya tek başına okunamaz." },
+        { "title": "Eskiler temizlenir", "desc": "Saklama sınırına ulaşıldığında en eski anlık görüntüler silinir; yerel geçmiş sınırsız büyümez." }
+      ],
+      "heroShot": { "src": "/assets/images/app-backup.webp", "w": 1800, "h": 752 },
+      "shots": [
+        { "src": "/assets/images/app-trash.webp", "w": 1800, "h": 889, "title": "On beş günlük süre", "desc": "Çöp kutusu davranışını ürünün içinde açıklar: silinen kayıtlar cihazınızda kalır ve bu süre içinde geri yüklenebilir ya da kalıcı olarak kaldırılabilir." }
+      ],
+      "secTitle": "Yedekler nerede durur ve anahtarı kimde",
+      "secLabel": "İsteğe bağlı senkronizasyon uçtan uca şifrelidir",
+      "secBody": "Yerel anlık görüntüler ve dışa aktarılan yedekler Argon2id ve AES-256-GCM ile şifrelenir; dışa aktarılan yedeğin parolası ana parolanız olabilir. İsteğe bağlı bulut senkronizasyonu varsayılan olarak kapalıdır; kendi WebDAV veya S3 depolamanıza karşı etkinleştirirseniz kasanız gönderilmeden önce cihazda şifrelenir, dolayısıyla sağlayıcı yalnızca şifreli veri görür. Bu kolaylık depolama hesabınızın erişilebilir olmasına bağlıdır; kasa dosyasının kendisi taşınabilirdir ve onsuz da geri yüklenebilir.",
+      "tech": [
+        { "tag": "AES-256-GCM", "title": "Yazmadan önce şifrelenir", "desc": "Anlık görüntü ya da dışa aktarılan yedek cihazda şifrelenir; parolanız olmadan dosya tek başına işe yaramaz." },
+        { "tag": "E2EE", "title": "Sizin depolamanız, sizin anahtarlarınız", "desc": "Senkronizasyon sağlayıcıları yalnızca şifreli veri alır. Orada sakladığınız şeyi yalnızca siz çözebilirsiniz." },
+        { "tag": "İthalat", "title": "Elinizdekini getirin", "desc": "Bitwarden, LastPass, 1Password, Chrome CSV ve JSON dışa aktarımları tümüyle cihazınızda işlenir." }
+      ],
+      "faqTitle": "Yedekleme ve kurtarma hakkında",
+      "faq": [
+        { "q": "Silinen kayıt gerçekten gitti mi?", "a": "On beş gün boyunca hayır. Şifreli yerel çöp kutusunda durur; oradan geri yükleyebilir ya da daha erken kalıcı olarak silebilirsiniz." },
+        { "q": "Bulut senkronizasyonu gerekli mi?", "a": "Hayır. Anlık görüntüler, şifreli dışa aktarımlar ve geri yükleme, hesap ve ağ olmadan tek cihazda çalışır." },
+        { "q": "Kasayı ileride başka bir yönetic taşıyabilir miyim?", "a": "Hiçbir şey engellemez, ancak dışa aktarımın biçimini siz seçersiniz: dosyanın korunmasını istiyorsanız düz JSON yerine şifreli yedek biçimini kullanın." }
+      ],
+      "relatedTitle": "İlgili sayfalar",
+      "related": [
+        { "href": "/urun/password-vault/", "label": "Şifre kasası" },
+        { "href": "/#verification", "label": "Doğrulama" }
+      ]
+    }
+  }
+}

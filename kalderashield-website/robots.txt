@@ -1,6 +1,11 @@
 User-agent: *
 Allow: /
 
-# The site is a single static page plus its translations. Nothing here is worth
-# crawling except the pages a visitor might land on from a search result, and
-# there is no server-side content to index.
+# The site is a set of static pages: the homepage, the download page, the
+# generated product/security/platform pages and the legal documents. The
+# sitemap lists every indexable URL; nothing else exists to crawl.
+
+# Without this line a crawler has to guess where the sitemap lives. The token is
+# substituted at deploy time like every other absolute URL here, and
+# check-placeholders.cjs fails the build if it is ever left unfilled.
+Sitemap: https://{{DOMAIN}}/sitemap.xml

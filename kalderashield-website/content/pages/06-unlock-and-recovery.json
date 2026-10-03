@@ -1,0 +1,100 @@
+{
+  "slug": "unlock-and-recovery",
+  "i18n": {
+    "en": {
+      "menuLabel": "Unlock and recovery",
+      "menuDesc": "Biometrics, security keys and the 24-word kit",
+      "title": "Unlock and Recovery — KalderaShield",
+      "description": "Unlock with Windows Hello, Touch ID, Face ID, Android biometrics or a FIDO2 security key, and recover with a 24-word BIP-39 kit when you forget both.",
+      "eyebrow": "Product / Unlock and recovery",
+      "h1": "Convenient unlock, without giving up recovery",
+      "lead": "Biometrics and hardware keys can stand in for the master password. They only remove friction: the vault key still derives from master password plus secret key, and a 24-word recovery kit stays available.",
+      "primary": "Download KalderaShield",
+      "secondary": "View the source",
+      "whatLabel": "What it does",
+      "whatTitle": "Two independent ways back into the vault",
+      "what": [
+        "Unlock can be delegated to the hardware you already carry. Windows Hello, Touch ID, Face ID, Android biometrics or a FIDO2 key such as YubiKey can satisfy the authentication step, so you do not type a long master password every morning.",
+        "Recovery is a separate path entirely. A 24-word BIP-39 recovery phrase can unlock and reset the vault if the master password and the device are both gone, and the emergency kit that carries it is written to a file you control rather than to a vendor.",
+        "A password hint exists for the in-between case, stored in plaintext on purpose so it can actually remind you — which is why the product warns you not to put the password itself in it."
+      ],
+      "stepsTitle": "What hardware binding does, precisely",
+      "steps": [
+        { "title": "The authenticator wraps the vault key", "desc": "Inside a non-exportable keystore, PBKDF2-SHA256 and AES-GCM wrap the vault key so that unlocking can be authorised by the platform authenticator." },
+        { "title": "The underlying derivation is unchanged", "desc": "Vault access always derives from master password plus secret key through Argon2id. Hardware binding is a layer on top, never the foundation." },
+        { "title": "Losing the authenticator costs convenience only", "desc": "A lost or replaced authenticator does not affect the vault file, its backups, or any record inside it." }
+      ],
+      "heroShot": { "src": "/assets/images/app-security.webp", "w": 1800, "h": 666 },
+      "shots": [
+        { "src": "/assets/images/app-onboarding.webp", "w": 1800, "h": 827, "title": "Where all three secrets are chosen", "desc": "Master password, account secret key and the emergency kit are collected once, at setup, on your own device — there is no server-side account to recover them from." }
+      ],
+      "secTitle": "Where convenience ends and risk begins",
+      "secLabel": "A hint is a hint, not a backup",
+      "secBody": "Hardware unlock means anyone who can authenticate on the device, or who holds your security key, can open the vault — that is the point, and it is why device and key security matter. The password hint is stored in plaintext precisely so it can be read back to you, so it must never contain the password itself. A recovery phrase should be written down and kept offline: anyone who reads it can reset your vault.",
+      "tech": [
+        { "tag": "TPM 2.0", "title": "Windows Hello", "desc": "The platform authenticator is TPM-backed on Windows, and the wrapping key material does not leave that boundary." },
+        { "tag": "Secure Enclave", "title": "macOS", "desc": "On macOS the platform authenticator output is sealed by the Secure Enclave." },
+        { "tag": "BIP-39", "title": "Recovery kit", "desc": "A 24-word recovery phrase can unlock and reset the vault when the password and the device are both unavailable." }
+      ],
+      "faqTitle": "About unlocking and recovery",
+      "faq": [
+        { "q": "Does enabling hardware unlock weaken the vault?", "a": "It changes who can open the vault, not how it is encrypted. The records stay encrypted with the same keys, and access still derives from your master password and secret key." },
+        { "q": "What happens if I lose my security key?", "a": "You fall back to the master password, and if you have lost that too, the recovery kit. The vault itself is unaffected — only the convenience factor is gone." },
+        { "q": "Where should I keep the recovery kit?", "a": "Offline, physically, somewhere you would still find it in several years. It is a master key: whoever reads it can reset your vault." }
+      ],
+      "relatedTitle": "Related pages",
+      "related": [
+        { "href": "/urun/password-vault/", "label": "Password vault" },
+        { "href": "/#security", "label": "Security architecture" }
+      ]
+    },
+
+    "tr": {
+      "menuLabel": "Kilit açma ve kurtarma",
+      "menuDesc": "Biyometri, güvenlik anahtarı ve 24 kelimelik kit",
+      "title": "Kilit Açma ve Kurtarma — KalderaShield",
+      "description": "Windows Hello, Touch ID, Face ID, Android biyometrisi veya FIDO2 güvenlik anahtarıyla kilit açın; ikisini de unutursanız 24 kelimelik BIP-39 kitiyle kurtarın.",
+      "eyebrow": "Ürün / Kilit açma ve kurtarma",
+      "h1": "Kolay kilit açma, kurtarabilmeden ödün vermeden",
+      "lead": "Biyometri ve donanım anahtarları ana parolanın yerini alabilir. Bunlar yalnızca sürtünmeyi azaltır: kasa anahtarı hâlâ ana parola ve secret key'den türetilir, 24 kelimelik kurtarma kiti de elde kalır.",
+      "primary": "KalderaShield'i indirin",
+      "secondary": "Kaynağı görün",
+      "whatLabel": "Ne yapar",
+      "whatTitle": "Kasaya geri dönmenin iki bağımsız yolu",
+      "what": [
+        "Kilit açma işini zaten taşıdığınız donanıma devredebilirsiniz. Windows Hello, Touch ID, Face ID, Android biyometrisi veya YubiKey gibi bir FIDO2 anahtarı kimlik doğrulama adımını karşılayabilir; böylece her sabah uzun bir ana parola yazmazsınız.",
+        "Kurtarma ise tamamen ayrı bir yoldur. Ana parola ve cihaz birlikte kaybolduğunda 24 kelimelik BIP-39 kurtarma cümlesi kasayı açıp sıfırlayabilir; onu taşıyan acil durum kiti bir tedarikçiye değil, kontrolünüzdeki bir dosyaya yazılır.",
+        "Aradaki durumlar için bir şifre ipucu vardır; hatırlatabilmesi için bilinçli olarak düz metin saklanır — bu yüzden ürün onun içine şifrenin kendisini yazmamanızı söyler."
+      ],
+      "stepsTitle": "Donanım bağlama tam olarak ne yapar",
+      "steps": [
+        { "title": "Doğrulayıcı kasa anahtarını sarar", "desc": "Dışa aktarılamayan bir anahtar deposunda, PBKDF2-SHA256 ve AES-GCM ile kasa anahtarı sarılır; böylece kilidi platform doğrulayıcısı açabilir." },
+        { "title": "Alttaki türetme değişmez", "desc": "Kasa erişimi her zaman ana parola ve secret key'den Argon2id ile türetilir. Donanım bağlama üstte bir katmandır, asla temel değil." },
+        { "title": "Doğrulayıcıyı kaybetmek yalnızca kolaylık kaybettirir", "desc": "Kaybolan ya da değiştirilen bir doğrulayıcı kasa dosyasını, yedeklerini veya içindeki hiçbir kaydı etkilemez." }
+      ],
+      "heroShot": { "src": "/assets/images/app-security.webp", "w": 1800, "h": 666 },
+      "shots": [
+        { "src": "/assets/images/app-onboarding.webp", "w": 1800, "h": 827, "title": "Üç sırın da seçildiği yer", "desc": "Ana parola, hesap secret key'i ve acil durum kiti bir kez, kurulumda, kendi cihazınızda toplanır — kurtarılacak bir sunucu hesabı yoktur." }
+      ],
+      "secTitle": "Kolaylığın bittiği ve riskin başladığı yer",
+      "secLabel": "İpucu, yedek değildir",
+      "secBody": "Donanım kilidi, cihazda kimlik doğrulayabilen ya da güvenlik anahtarınızı elinde tutan herkesin kasayı açabileceği anlamına gelir — bu amacın kendisidir ve bu yüzden cihaz ile anahtar güvenliği önemlidir. Şifre ipucu size geri okunabilsin diye bilinçli olarak düz metin saklanır, dolayısıyla şifrenin kendisini asla içermemelidir. Kurtarma cümlesi yazılıp çevrimdışı saklanmalıdır: onu okuyan herkes kasayı sıfırlayabilir.",
+      "tech": [
+        { "tag": "TPM 2.0", "title": "Windows Hello", "desc": "Windows'ta platform doğrulayıcısı TPM desteklidir ve anahtar materyali bu sınırın dışına çıkmaz." },
+        { "tag": "Secure Enclave", "title": "macOS", "desc": "macOS'ta platform doğrulayıcısının çıktısı Secure Enclave tarafından mühürlenir." },
+        { "tag": "BIP-39", "title": "Kurtarma kiti", "desc": "24 kelimelik kurtarma cümlesi, parola ve cihaz birlikte yokken kasayı açıp sıfırlayabilir." }
+      ],
+      "faqTitle": "Kilit açma ve kurtarma hakkında",
+      "faq": [
+        { "q": "Donanım kilidini açmak kasayı zayıflatır mı?", "a": "Kasayı kimin açabileceğini değiştirir, nasıl şifrelendiğini değil. Kayıtlar aynı anahtarlarla şifrelenmeye devam eder ve erişim hâlâ ana parolanız ile secret key'den türetilir." },
+        { "q": "Güvenlik anahtarımı kaybedersem ne olur?", "a": "Ana parolaya düşersiniz; onu da kaybettiyseniz kurtarma kitine. Kasanın kendisi etkilenmez; yalnızca kolaylık kaybolur." },
+        { "q": "Kurtarma kitini nerede saklamalıyım?", "a": "Çevrimdışı, fiziksel olarak ve birkaç yıl sonra hâlâ bulabileceğiniz bir yerde. Bu bir ana anahtardır: onu okuyan herkes kasayı sıfırlayabilir." }
+      ],
+      "relatedTitle": "İlgili sayfalar",
+      "related": [
+        { "href": "/urun/password-vault/", "label": "Şifre kasası" },
+        { "href": "/#security", "label": "Güvenlik mimarisi" }
+      ]
+    }
+  }
+}

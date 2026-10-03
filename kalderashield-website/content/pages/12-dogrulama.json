@@ -1,0 +1,172 @@
+{
+  "section": "guvenlik",
+  "slug": "dogrulama",
+  "i18n": {
+    "en": {
+      "title": "Verify Your Download — KalderaShield",
+      "description": "How to verify a KalderaShield download: SHA-256 checksums, minisign updater signatures and what to do when Windows SmartScreen warns about an unsigned installer.",
+      "eyebrow": "Security / Verification",
+      "h1": "Trust the file you installed, not the page it came from",
+      "lead": "Every KalderaShield release publishes SHA-256 checksums and updater signatures. Verifying takes one command. It is the difference between running a file that someone mirrored with modifications and running the file the pipeline built.",
+      "primary": "Go to downloads",
+      "secondary": "Audit status",
+      "primaryHref": "/download/#verify",
+      "whatLabel": "What is published",
+      "whatTitle": "Three layers of artifact evidence",
+      "what": [
+        "SHA-256 checksums: every release ships a SHA256SUMS.txt next to the installers. The hash is computed by the release pipeline from the exact files it collected, and the collection step refuses artifacts that are not from the current build — a half-failed build cannot silently reuse an old installer.",
+        "Updater signatures: the Tauri updater bundles are signed with minisign, and the public key is embedded in the application itself. If an updater offer is not correctly signed, the app refuses it.",
+        "Release signatures: the tag-gated release pipeline signs every published artifact with cosign in keyless Sigstore mode, bound to the workflow run's OIDC identity. The pipeline also enforces a signing gate: Windows and macOS releases are blocked from publishing unless their artifacts are verified as signed.",
+        "One honest caveat: while no code-signing certificate exists, Windows installers you build or download from CI are unsigned by Authenticode. The signing gate keeps them out of public releases; if you obtain one through a build, verify the SHA-256 hash before running it."
+      ],
+      "stepsTitle": "How to verify in three steps",
+      "steps": [
+        {
+          "title": "Compute the hash of your file",
+          "desc": "On Windows, run Get-FileHash in PowerShell. On Linux and macOS, run sha256sum or shasum -a 256. Compare the output with the matching line in SHA256SUMS.txt."
+        },
+        {
+          "title": "Check the checksum file itself",
+          "desc": "Checksums are published with the release they describe. If you download SHA256SUMS.txt from the official release and your installer's hash matches it, the file is the one the pipeline produced."
+        },
+        {
+          "title": "Let the updater verify itself",
+          "desc": "In-app updates are checked against the minisign public key compiled into the application. You never need to trust a downloaded update file manually."
+        }
+      ],
+      "secTitle": "About SmartScreen and antivirus warnings",
+      "secLabel": "Expected, until a signing certificate exists",
+      "secBody": "An unsigned executable with no download reputation is exactly the shape of file that Windows SmartScreen and antivirus heuristics warn about — this is a cost of having no certificate, not evidence of malware. Verify the SHA-256 hash, and if your antivirus still flags a hash that matches the published checksum, report the false positive to its vendor. The build workflow comments in the repository document this limitation openly.",
+      "tech": [
+        {
+          "tag": "SHA-256",
+          "title": "Integrity",
+          "desc": "Published per artifact in SHA256SUMS.txt; the collector rejects installers older than the recorded build timestamp."
+        },
+        {
+          "tag": "minisign",
+          "title": "Updater authenticity",
+          "desc": "Updater bundles are signed at build time; the verification key ships inside the app and latest.json points to the signature."
+        },
+        {
+          "tag": "cosign",
+          "title": "Release authenticity",
+          "desc": "Published release artifacts are signed keylessly through Sigstore, bound to the GitHub Actions OIDC identity of the release run."
+        }
+      ],
+      "faqTitle": "About verification",
+      "faq": [
+        {
+          "q": "Windows says \"Windows protected your PC\". What do I do?",
+          "a": "That is SmartScreen reacting to an unsigned file, not a virus report. Verify the SHA-256 hash against SHA256SUMS.txt. If it matches, the file is the pipeline's output; the warning disappears permanently once releases carry a signing certificate."
+        },
+        {
+          "q": "Where do I find SHA256SUMS.txt?",
+          "a": "Next to the installers in every release, and on the download page's verification section. A checksum that arrives only through a chat message is not verification — use the published one."
+        },
+        {
+          "q": "Can I verify without trusting any downloaded file?",
+          "a": "Build from source: the repository builds reproducibly with documented npm and cargo commands, and the local release script produces the same artifact naming with its own checksums."
+        }
+      ],
+      "relatedTitle": "Related pages",
+      "related": [
+        {
+          "href": "/download/#verify",
+          "label": "Download and verify"
+        },
+        {
+          "href": "/guvenlik/denetim-durumu/",
+          "label": "Audit status"
+        },
+        {
+          "href": "/guvenlik/",
+          "label": "Security overview"
+        }
+      ]
+    },
+    "tr": {
+      "title": "İndirdiğinizi Doğrulayın — KalderaShield",
+      "description": "KalderaShield indirmesini doğrulama: SHA-256 sağlama toplamları, minisign güncelleme imzaları, cosign sürüm imzalama ve Windows SmartScreen imzasız kurucuyu uyardığında ne yapılacağı.",
+      "eyebrow": "Güvenlik / Doğrulama",
+      "h1": "Kurduğunuz dosyaya güvenin, geldiği sayfaya değil",
+      "lead": "Her KalderaShield sürümü SHA-256 sağlama toplamlarını ve güncelleme imzalarını yayımlar. Doğrulama tek komut sürer. Bu, birinin değiştirilmiş kopyasını mı çalıştırdığınızı yoksa boru hattının ürettiği dosyayı mı ayırt etmektir.",
+      "primary": "İndirmelere git",
+      "secondary": "Denetim durumu",
+      "primaryHref": "/download/#verify",
+      "whatLabel": "Ne yayımlanır",
+      "whatTitle": "Üç katmanlı dosya kanıtı",
+      "what": [
+        "SHA-256 sağlama toplamları: her sürüm, kurucuların yanında SHA256SUMS.txt ile gelir. Karma, boru hattı tarafından topladığı tam dosyalardan hesaplanır ve toplama adımı, geçerli derlemeden gelmeyen dosyaları reddeder — yarım kalmış bir derleme eski bir kurucuyu sessizce yeniden kullanamaz.",
+        "Güncelleme imzaları: Tauri güncelleme paketleri minisign ile imzalanır ve açık anahtar uygulamanın kendisine gömülüdür. Doğru imzalanmamış bir güncelleme teklifini uygulama kabul etmez.",
+        "Sürüm imzaları: etiket-kapılı sürüm boru hattı, yayımlanan her dosyayı iş akışının OIDC kimliğine bağlanan keyless Sigstore modunda cosign ile imzalar. Boru hattı ayrıca bir imza kapısı uygular: Windows ve macOS sürümleri, dosyaları imzalı olarak doğrulanmadıkça yayımlanamaz.",
+        "Dürüst bir not: kod imzalama sertifikası var olmadığından, CI'dan derlediğiniz veya indirdiğiniz Windows kurucuları Authenticode açısından imzasızdır. İmza kapısı onları herkese açık sürümlerden uzak tutar; bir derlemeden elde ettiyseniz çalıştırmadan önce SHA-256 karmasını doğrulayın."
+      ],
+      "stepsTitle": "Üç adımda doğrulama",
+      "steps": [
+        {
+          "title": "Dosyanızın karmasını hesaplayın",
+          "desc": "Windows'ta PowerShell'de Get-FileHash çalıştırın. Linux ve macOS'ta sha256sum veya shasum -a 256 çalıştırın. Çıktıyı SHA256SUMS.txt'deki eşleşen satırla karşılaştırın."
+        },
+        {
+          "title": "Sağlama dosyasının kendisini de kontrol edin",
+          "desc": "Sağlama toplamları, anlattıkları sürümle birlikte yayımlanır. SHA256SUMS.txt'yi resmi sürümden indirdiyseniz ve kurucunuzun karması eşleşiyorsa, dosya boru hattının çıktısıdır."
+        },
+        {
+          "title": "Güncelleyicinin kendini doğrulamasına izin verin",
+          "desc": "Uygulama içi güncellemeler, uygulamaya derlenmiş minisign açık anahtarıyla denetlenir. İndirilen bir güncelleme dosyasına elle güvenmeniz gerekmez."
+        }
+      ],
+      "secTitle": "SmartScreen ve antivirüs uyarıları hakkında",
+      "secLabel": "Sertifika var olana kadar beklenen durum",
+      "secBody": "İndirme itibarı olmayan imzasız bir çalıştırılabilir, Windows SmartScreen'in ve antivirüs sezgisellerinin uyarması beklenen dosya görünümüdür — bu, sertifikanın olmayışının maliyetidir, kötü amaçlı yazılım kanıtı değil. SHA-256 karmasını doğrulayın; antivirüsünüz yayımlanan sağlama ile eşleşen bir karmayı hâlâ işaretliyorsa üreticisine yanlış pozitif olarak bildirin. Depodaki derleme iş akışı yorumları bu sınırlamayı açıkça belgeler.",
+      "tech": [
+        {
+          "tag": "SHA-256",
+          "title": "Bütünlük",
+          "desc": "SHA256SUMS.txt'de her dosya için yayımlanır; toplayıcı, kayıtlı derleme zaman damgasından eski kurucuları reddeder."
+        },
+        {
+          "tag": "minisign",
+          "title": "Güncelleyici özgünlüğü",
+          "desc": "Güncelleme paketleri derleme sırasında imzalanır; doğrulama anahtarı uygulamanın içinde taşınır ve latest.json imzayı işaret eder."
+        },
+        {
+          "tag": "cosign",
+          "title": "Sürüm özgünlüğü",
+          "desc": "Yayımlanan sürüm dosyaları Sigstore üzerinden keyless imzalanır ve sürüm çalıştırmasının GitHub Actions OIDC kimliğine bağlanır."
+        }
+      ],
+      "faqTitle": "Doğrulama hakkında",
+      "faq": [
+        {
+          "q": "Windows \"PC'niz korundu\" diyor. Ne yapmalıyım?",
+          "a": "Bu, SmartScreen'in imzasız dosyaya verdiği tepedir, virüs raporu değildir. SHA-256 karmasını SHA256SUMS.txt ile doğrulayın. Eşleşiyorsa dosya boru hattının çıktısıdır; uyarı, sürümler imza sertifikası taşıdığında kalıcı olarak kalkar."
+        },
+        {
+          "q": "SHA256SUMS.txt'yi nerede bulurum?",
+          "a": "Her sürümde kurucuların yanında ve indirme sayfasının doğrulama bölümünde. Yalnızca bir sohbet iletisiyle gelen sağlama doğrulama değildir — yayımlanmış olanı kullanın."
+        },
+        {
+          "q": "İndirilmiş hiçbir dosyaya güvenmeden doğrulayabilir miyim?",
+          "a": "Kaynaktan derleyin: depo, belgelenmiş npm ve cargo komutlarıyla derlenir ve yerel sürüm betiği kendi sağlama toplamlarıyla aynı dosya adlandırmasını üretir."
+        }
+      ],
+      "relatedTitle": "İlgili sayfalar",
+      "related": [
+        {
+          "href": "/download/#verify",
+          "label": "İndirin ve doğrulayın"
+        },
+        {
+          "href": "/guvenlik/denetim-durumu/",
+          "label": "Denetim durumu"
+        },
+        {
+          "href": "/guvenlik/",
+          "label": "Güvenlik genel bakışı"
+        }
+      ]
+    }
+  }
+}

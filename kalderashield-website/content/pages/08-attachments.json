@@ -1,0 +1,100 @@
+{
+  "slug": "attachments",
+  "i18n": {
+    "en": {
+      "menuLabel": "Attachments",
+      "menuDesc": "Files encrypted inside the vault",
+      "title": "Encrypted Attachments — KalderaShield",
+      "description": "Attach PDFs, images, video and archives to a vault record. Each file is encrypted locally and stored in an encrypted IndexedDB, with a 250 MB limit per file.",
+      "eyebrow": "Product / Attachments",
+      "h1": "Keep the file with the credential, not in a downloads folder",
+      "lead": "Recovery codes, identity documents, certificates and warranty files attach to the record they belong to, and they are encrypted with that record rather than sitting in a plain downloads folder.",
+      "primary": "Download KalderaShield",
+      "secondary": "View the source",
+      "whatLabel": "What it does",
+      "whatTitle": "Files treated like credentials, not like downloads",
+      "what": [
+        "An attachment belongs to a record. Delete the record and the file goes with it, and restore the record and the file comes back with it. It is stored the way the record is stored, not as a loose file somewhere in your profile.",
+        "The file is encrypted on your device before it is written. A single record can hold up to 250 MB, so a scanned ID, a certificate bundle or a short video fits inside the encrypted database rather than in plaintext on disk.",
+        "Attachments follow the record when you export an encrypted backup, which means a full restore on another device brings the files along with the credentials."
+      ],
+      "stepsTitle": "How a file is stored",
+      "steps": [
+        { "title": "You add the file", "desc": "Drag a file into the record, or pick one. The size limit is 250 MB per file." },
+        { "title": "It is encrypted locally", "desc": "The content is encrypted on the device using the same scheme as the record it belongs to." },
+        { "title": "It goes into encrypted storage", "desc": "Only ciphertext is written to the encrypted IndexedDB; nothing readable is left behind on disk." }
+      ],
+      "heroShot": { "src": "/assets/images/app-item-editor.webp", "w": 1800, "h": 1034 },
+      "shots": [
+        { "src": "/assets/images/app-vault.webp", "w": 1800, "h": 893, "title": "The record the file belongs to", "desc": "Payment cards keep their number, expiry, CVV and ATM PIN in separate masked fields, with the file attached alongside them under one encrypted record." }
+      ],
+      "secTitle": "What attachments do not change",
+      "secLabel": "Encryption is not a smaller attack surface",
+      "secBody": "An attachment is encrypted at rest like the rest of your vault, so a stolen device file does not hand over your documents. It does not change the rest of the model: a weak master password, a compromised device or a vault you have already unlocked still exposes what is inside. Attachments make a record larger and more valuable, not safer than the record itself. Treat a vault holding identity documents as more sensitive than one holding only passwords.",
+      "tech": [
+        { "tag": "250 MB", "title": "Per file", "desc": "Enough for a scanned document, a certificate bundle or a short clip without leaving encrypted storage." },
+        { "tag": "IndexedDB", "title": "Encrypted at rest", "desc": "Files land in an encrypted IndexedDB rather than the plain filesystem." },
+        { "tag": "Exports", "title": "Travel with the record", "desc": "Attachments are included in an encrypted backup and restored together with the credential." }
+      ],
+      "faqTitle": "About attachments",
+      "faq": [
+        { "q": "What file types are allowed?", "a": "The editor accepts the common document, image, video and archive types and encrypts whatever it accepts. A single file is limited to 250 MB." },
+        { "q": "Can I open an attachment from another device?", "a": "Yes, after restoring the encrypted backup. The file travels with the record rather than as a separate download." },
+        { "q": "What happens to attachments when I delete a record?", "a": "They follow the record into the encrypted trash for the same 15 day window, and are removed with it if you delete permanently." }
+      ],
+      "relatedTitle": "Related pages",
+      "related": [
+        { "href": "/urun/password-vault/", "label": "Password vault" },
+        { "href": "/urun/vault-history/", "label": "Vault history" }
+      ]
+    },
+
+    "tr": {
+      "menuLabel": "Ekler",
+      "menuDesc": "Kasa içinde şifreli dosyalar",
+      "title": "Şifreli Ekler — KalderaShield",
+      "description": "PDF, görsel, video ve arşiv dosyalarını bir kasa kaydına ekleyin. Her dosya yerelde şifrelenir ve şifreli IndexedDB'de saklanır; dosya başına sınır 250 MB'dır.",
+      "eyebrow": "Ürün / Ekler",
+      "h1": "Dosyayı kimlik bilgisiyle birlikte tutun, indirilenler klasöründe değil",
+      "lead": "Kurtarma kodları, kimlik belgeleri, sertifikalar ve garanti dosyaları ait oldukları kayda bağlanır ve o kayıtla birlikte şifrelenir; profilinizde düz bir dosya olarak durmaz.",
+      "primary": "KalderaShield'i indirin",
+      "secondary": "Kaynağı görün",
+      "whatLabel": "Ne yapar",
+      "whatTitle": "İndirme değil, kimlik bilgisi gibi ele alınan dosyalar",
+      "what": [
+        "Bir ek, bir kayda aittir. Kaydı sildiğinizde dosya onunla birlikte gider; kaydı geri yüklediğinizde dosya da geri gelir. Kaydın saklandığı şekilde saklanır, profilinizin bir yerinde gevşek bir dosya olarak değil.",
+        "Dosya cihazınıza yazılmadan önce şifrelenir. Bir kayıt 250 MB'a kadar tutabilir; böylece taranmış kimlik belgesi, sertifika paketi veya kısa bir video şifreli veritabanında, diskte düz metin olarak değil kalır.",
+        "Eşler şifreli yedeği dışa aktardığınızda kaydı takip eder; böylece başka bir cihazda tam geri yükleme, dosyaları kimlik bilgileriyle birlikte getirir."
+      ],
+      "stepsTitle": "Dosya nasıl saklanır",
+      "steps": [
+        { "title": "Dosyayı eklersiniz", "desc": "Dosyayı kayda sürükleyin veya seçin. Dosya başına sınır 250 MB." },
+        { "title": "Yerelde şifrelenir", "desc": "İçerik, ait olduğu kayıtla aynı şemayla cihazda şifrelenir." },
+        { "title": "Şifreli depoya yazılır", "desc": "Yalnızca şifreli metin şifreli IndexedDB'ye yazılır; diskte okunabilir bir şey kalmaz." }
+      ],
+      "heroShot": { "src": "/assets/images/app-item-editor.webp", "w": 1800, "h": 1034 },
+      "shots": [
+        { "src": "/assets/images/app-vault.webp", "w": 1800, "h": 893, "title": "Dosyanın ait olduğu kayıt", "desc": "Ödeme kartları numarasını, son kullanma tarihini, CVV ve ATM PIN bilgisini ayrı maskeli alanlarda tutar; dosya da bunların yanında tek bir şifreli kayıt altında yer alır." }
+      ],
+      "secTitle": "Eklilerin değiştirmediği şey",
+      "secLabel": "Şifreleme saldırı yüzeyini küçültmez",
+      "secBody": "Bir ek, kalan kasanız gibi diskte şifrelidir; yani çalınan bir cihaz dosyası size belgelerinizi vermez. Ama modelin geri kalanını değiştirmez: zayıf bir ana parola, ele geçirilmiş bir cihaz veya hâlihazırda açılmış bir kasa içindekileri yine açığa çıkarır. Ekler bir kaydı daha büyük ve daha değerli yapar, onu daha güvenli değil. Kimlik belgesi taşıyan bir kasayı yalnızca şifre tutan bir kasadan daha hassas sayın.",
+      "tech": [
+        { "tag": "250 MB", "title": "Dosya başına", "desc": "Taranmış bir belge, sertifika paketi veya kısa bir klip, şifreli depodan çıkmadan sığar." },
+        { "tag": "IndexedDB", "title": "Diskte şifreli", "desc": "Dosyalar düz dosya sistemine değil, şifreli bir IndexedDB'ye yazılır." },
+        { "tag": "Dışa aktarım", "title": "Kaydıyla birlikte taşınır", "desc": "Eşler şifreli yedeğe dâhil edilir ve kimlik bilgisiyle birlikte geri yüklenir." }
+      ],
+      "faqTitle": "Ekler hakkında",
+      "faq": [
+        { "q": "Hangi dosya türleri kabul ediliyor?", "a": "Düzenleyici yaygın belge, görsel, video ve arşiv türlerini kabul eder ve kabul ettiğini şifreler. Dosya başına sınır 250 MB." },
+        { "q": "Eki başka bir cihazdan açabilir miyim?", "a": "Evet, şifreli yedeği geri yükledikten sonra. Dosya ayrı bir indirme olarak değil, kaydın parçası olarak taşınır." },
+        { "q": "Bir kaydı sildiğimde ekler ne olur?", "a": "Aynı 15 günlük süre boyunca şifreli çöp kutusuna kayıtla birlikte giderler; kalıcı olarak silerseniz o da onlarla birlikte kaldırılır." }
+      ],
+      "relatedTitle": "İlgili sayfalar",
+      "related": [
+        { "href": "/urun/password-vault/", "label": "Şifre kasası" },
+        { "href": "/urun/vault-history/", "label": "Kasa geçmişi" }
+      ]
+    }
+  }
+}

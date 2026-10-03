@@ -1,0 +1,210 @@
+{
+  "section": "sss",
+  "slug": "sss",
+  "i18n": {
+    "en": {
+      "title": "FAQ — KalderaShield",
+      "description": "Frequently asked questions about KalderaShield: cost, accounts, recovery, import, backups, the browser extension and what the product deliberately does not do.",
+      "eyebrow": "Support / FAQ",
+      "h1": "Questions people actually ask",
+      "lead": "Short answers, no marketing layer. Every answer that makes a claim links to the page that backs it.",
+      "primary": "Download KalderaShield",
+      "secondary": "Read the security overview",
+      "primaryHref": "/download/",
+      "whatLabel": "The basics",
+      "whatTitle": "What KalderaShield is",
+      "what": [
+        "KalderaShield is a free, open-source password manager under the Apache-2.0 license. There is no paid tier, no subscription and no premium version — the roadmap deliberately contains none, and a pricing page would be misleading for a product with no price.",
+        "It is local-first: your vault is stored encrypted on your device, there is no KalderaShield account and no server-side copy of your data. Optional sync through your own WebDAV or S3 storage uploads only the encrypted payload.",
+        "It runs on Windows, Linux and macOS desktops, on Android, and as a browser extension for Chromium and Firefox that fills credentials from the paired desktop app."
+      ],
+      "stepsTitle": "Before you start",
+      "steps": [
+        {
+          "title": "Choose a master password you can remember",
+          "desc": "Argon2id stretches it into the vault key, but no parameter change can recover a password you did not store. The 24-word recovery key is the second path — save it outside the app."
+        },
+        {
+          "title": "Make an encrypted backup on day one",
+          "desc": "The .ks backup is encrypted with your backup password and restorable on any platform. Keep one copy outside the device."
+        },
+        {
+          "title": "Verify your download",
+          "desc": "Compare the installer's SHA-256 hash with the published checksums. One command, and you know you are running the pipeline's output."
+        }
+      ],
+      "secTitle": "What KalderaShield deliberately does not do",
+      "secLabel": "The honest list",
+      "secBody": "No cloud sync between KalderaShield servers. No account system, no email-based password reset. No recovery of a lost master password — nobody, including us, can re-derive it. No protection against malware running in your own OS session while the vault is unlocked. No pricing page, because there is nothing to buy. Each of these is a design decision documented in the threat model or the plan, not a missing feature.",
+      "tech": [
+        {
+          "tag": "Import",
+          "title": "From other managers",
+          "desc": "CSV and JSON import normalizes data from common managers before saving; the fuzz gate hammers the importer with malformed files on every release run."
+        },
+        {
+          "tag": "Backups",
+          "title": "Portable and encrypted",
+          "desc": "The .ks format uses Argon2id and AES-256-GCM. Backups restore on Windows, Linux, macOS and Android alike."
+        },
+        {
+          "tag": "Telemetry",
+          "title": "None",
+          "desc": "The air-gap policy blocks unexpected outbound traffic; the extension declares data collection of none. There is nothing to opt out of."
+        }
+      ],
+      "faqTitle": "All questions",
+      "faq": [
+        {
+          "q": "Is KalderaShield really free?",
+          "a": "Yes, under the Apache-2.0 license. No subscription, no premium tier, no feature locked behind payment."
+        },
+        {
+          "q": "Do I need an account?",
+          "a": "No. There is no account and no server-side vault. You create a local vault protected by a master password, optionally wrapped by your device's biometrics."
+        },
+        {
+          "q": "What happens if I forget my master password?",
+          "a": "Unlock with the 24-word BIP-39 recovery key, or restore an encrypted backup. Without one of those, the data cannot be recovered — by you, by the app, or by anyone else."
+        },
+        {
+          "q": "Can I import from 1Password, Bitwarden or LastPass?",
+          "a": "Yes, through CSV and JSON export files. The importer normalizes the common formats before saving, and malformed input is handled by a fuzz-tested parser rather than trusted."
+        },
+        {
+          "q": "How do I move my vault to a new device?",
+          "a": "Export an encrypted .ks backup, transfer the file yourself, and restore it with the master password on any platform. The vault is portable by design."
+        },
+        {
+          "q": "Is my data synced between devices?",
+          "a": "Not automatically. There is no KalderaShield cloud. Optional sync uploads only the encrypted payload to WebDAV or S3 storage that you configure and own."
+        },
+        {
+          "q": "Can the browser extension leak my passwords?",
+          "a": "The extension stores no vault — it holds nothing when the desktop app is absent. Fills are bound to validated tab URLs at eTLD+1, bridge frames are encrypted, and broad credential queries return sanitized metadata. The residual risks are documented in the threat model."
+        },
+        {
+          "q": "Has KalderaShield been security-audited?",
+          "a": "No independent audit has been completed yet — the audit status page states this openly along with the automated verification that exists. Claiming otherwise would be easy; auditing is how it gets fixed."
+        }
+      ],
+      "relatedTitle": "Related pages",
+      "related": [
+        {
+          "href": "/guvenlik/",
+          "label": "Security overview"
+        },
+        {
+          "href": "/download/",
+          "label": "Download"
+        },
+        {
+          "href": "/kaynak-kodu/",
+          "label": "Source code"
+        }
+      ]
+    },
+    "tr": {
+      "title": "SSS — KalderaShield",
+      "description": "KalderaShield hakkında sık sorulan sorular: maliyet, hesap, kurtarma, içe aktarma, yedekler, tarayıcı eklentisi ve ürünün bilinçli olarak yapmadıkları.",
+      "eyebrow": "Destek / SSS",
+      "h1": "İnsanların gerçekten sorduğu sorular",
+      "lead": "Kısa yanıtlar, pazarlama katmanı yok. İddia yapan her yanıt, arkasındaki sayfaya bağlanır.",
+      "primary": "KalderaShield'ı indirin",
+      "secondary": "Güvenlik genel bakışını okuyun",
+      "primaryHref": "/download/",
+      "whatLabel": "Temeller",
+      "whatTitle": "KalderaShield nedir",
+      "what": [
+        "KalderaShield, Apache-2.0 lisansıyla ücretsiz ve açık kaynak bir parola yöneticisidir. Ücretli katman yok, abonelik yok, premium sürüm yok — yol haritası bilinçli olarak hiçbirini içermiyor ve fiyatı olmayan bir ürün için fiyatlandırma sayfası yanıltıcı olurdu.",
+        "Yerel-önceliklidir: kasanız cihazınızda şifreli olarak saklanır, KalderaShield hesabı yoktur ve verinizin sunucu tarafında kopyası yoktur. İsteğe bağlı eşitleme, kendi WebDAV veya S3 depolamanız üzerinden yalnızca şifreli yükü yükler.",
+        "Windows, Linux ve macOS masaüstlerinde, Android'de ve eşlenmiş masaüstü uygulamasından kimlik bilgilerini dolduran Chromium ile Firefox tarayıcı eklentisinde çalışır."
+      ],
+      "stepsTitle": "Başlamadan önce",
+      "steps": [
+        {
+          "title": "Hatırlayabileceğiniz bir ana parola seçin",
+          "desc": "Argon2id onu kasa anahtarına uzatır, ama hiçbir parametre değişikliği saklamadığınız bir parolayı geri getiremez. 24 kelimelik kurtarma anahtarı ikinci yoldur — uygulamaya dışında saklayın."
+        },
+        {
+          "title": "İlk günden şifreli yedek alın",
+          "desc": ".ks yedeği yedek parolanızla şifrelenir ve her platformda geri yüklenebilir. Cihaz dışında bir kopyasını tutun."
+        },
+        {
+          "title": "İndirdiğinizi doğrulayın",
+          "desc": "Kurucunun SHA-256 karmasını yayımlanan sağlamalarla karşılaştırın. Tek komut, ve boru hattının çıktısını çalıştırdığınızı bilirsiniz."
+        }
+      ],
+      "secTitle": "KalderaShield bilinçli olarak ne yapmaz",
+      "secLabel": "Dürüst liste",
+      "secBody": "KalderaShield sunucuları arasında bulut eşitleme yok. Hesap sistemi yok, e-posta tabanlı parola sıfırlama yok. Kaybedilen ana parolanın kurtarılması yok — biz dahil hiçkimse onu yeniden türetemez. Kasa açıkken kendi OS oturumunuzda çalışan kötü amaçlı yazılımdan koruma yok. Fiyatlandırma sayfası yok, çünkü satın alınacak bir şey yok. Bunların her biri tehdit modelinde ya da planda belgelenmiş bir tasarım kararıdır, eksik özellik değildir.",
+      "tech": [
+        {
+          "tag": "İçe aktarma",
+          "title": "Diğer yöneticilerden",
+          "desc": "CSV ve JSON içe aktarma, kaydetmeden önce yaygın yöneticilerin verisini normalleştirir; fuzz kapısı her sürüm çalıştırmasında içe aktarıcıya bozuk dosyalarla saldırır."
+        },
+        {
+          "tag": "Yedekler",
+          "title": "Taşınabilir ve şifreli",
+          "desc": ".ks biçimi Argon2id ve AES-256-GCM kullanır. Yedekler Windows, Linux, macOS ve Android'de aynı şekilde geri yüklenir."
+        },
+        {
+          "tag": "Telemetri",
+          "title": "Yok",
+          "desc": "Hava boşluğu politikası beklenmeyen giden trafiği engeller; eklenti veri toplamayı yok bildirir. Devre dışı bırakılacak bir şey bile yoktur."
+        }
+      ],
+      "faqTitle": "Tüm sorular",
+      "faq": [
+        {
+          "q": "KalderaShield gerçekten ücretsiz mi?",
+          "a": "Evet, Apache-2.0 lisansı altında. Abonelik yok, premium katman yok, ödeme arkasına kilitli özellik yok."
+        },
+        {
+          "q": "Hesap açmam gerekiyor mu?",
+          "a": "Hayır. Hesap yok, sunucu tarafında kasa yok. Ana parolayla korunan yerel bir kasa oluşturursunuz; isterseniz cihazınızın biyometrisiyle sarmalarsınız."
+        },
+        {
+          "q": "Ana parolamı unutursam ne olur?",
+          "a": "24 kelimelik BIP-39 kurtarma anahtarıyla açın veya şifreli bir yedeği geri yükleyin. Bunlardan biri yoksa veri kurtarılamaz — sizin tarafınızdan, uygulamanın tarafından ya da başkasının tarafından."
+        },
+        {
+          "q": "1Password, Bitwarden veya LastPass'ten içe aktarabilir miyim?",
+          "a": "Evet, CSV ve JSON dışa aktarma dosyalarıyla. İçe aktarıcı yaygın biçimleri kaydetmeden önce normalleştirir ve bozuk girdi, güvenilmek yerine fuzz testli ayrıştırıcıyla ele alınır."
+        },
+        {
+          "q": "Kasamı yeni bir cihaza nasıl taşırım?",
+          "a": "Şifreli bir .ks yedeği dışa aktarın, dosyayı kendiniz taşıyın ve herhangi bir platformda ana parolayla geri yükleyin. Kasa, tasarım gereği taşınabilirdir."
+        },
+        {
+          "q": "Verim cihazlar arasında eşitleniyor mu?",
+          "a": "Otomatik olarak hayır. KalderaShield bulutu yoktur. İsteğe bağlı eşitleme, yalnızca şifreli yükü sizin yapılandırıp sahiplendiğiniz WebDAV veya S3 depolamasına yükler."
+        },
+        {
+          "q": "Tarayıcı eklentisi parolalarımı sızdırabilir mi?",
+          "a": "Eklenti kasa tutmaz — masaüstü uygulaması yokken hiçbir şey taşımaz. Doldurmalar eTLD+1'de doğrulanmış sekme URL'lerine bağlanır, köprü çerçeveleri şifrelidir ve geniş kimlik sorguları temizlenmiş üst veri döndürür. Artık riskler tehdit modelinde belgelenmiştir."
+        },
+        {
+          "q": "KalderaShield güvenlik denetiminden geçti mi?",
+          "a": "Bağımsız bir denetim henüz tamamlanmadı — denetim durumu sayfası bunu, yerinde olan otomatik doğrulamayla birlikte açıkça yazar. Öyle demek kolay; denetlemek bunun düzelme yoludur."
+        }
+      ],
+      "relatedTitle": "İlgili sayfalar",
+      "related": [
+        {
+          "href": "/guvenlik/",
+          "label": "Güvenlik genel bakışı"
+        },
+        {
+          "href": "/download/",
+          "label": "İndir"
+        },
+        {
+          "href": "/kaynak-kodu/",
+          "label": "Kaynak kodu"
+        }
+      ]
+    }
+  }
+}

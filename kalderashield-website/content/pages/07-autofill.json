@@ -1,0 +1,100 @@
+{
+  "slug": "autofill",
+  "i18n": {
+    "en": {
+      "menuLabel": "Autofill",
+      "menuDesc": "eTLD+1 matching, no cross-site leaks",
+      "title": "Browser Autofill — KalderaShield",
+      "description": "Autofill your logins from the browser extension. Sites are matched by eTLD+1 against the full Mozilla Public Suffix List, and the dropdown runs in a closed Shadow DOM.",
+      "eyebrow": "Product / Autofill",
+      "h1": "One click, and only on the site you meant",
+      "lead": "The extension matches by registrable domain, not by URL string, so a shared host never receives the wrong credential. The dropdown renders inside a closed Shadow DOM the page cannot reach.",
+      "primary": "Download KalderaShield",
+      "secondary": "Get the extension",
+      "whatLabel": "What it does",
+      "whatTitle": "Matching that cannot be fooled by a lookalike host",
+      "what": [
+        "A URL is reduced to its registrable domain using the full Mozilla Public Suffix List, embedded in the extension as a hash-pinned snapshot. Hostnames are never compared as raw strings, so a subdomain cannot borrow a credential that belongs to a different site.",
+        "The dropdown, the password generator and the phishing warning all render inside a closed Shadow DOM attached to the page. The page's own JavaScript cannot read them, rewrite them, or overlay them to capture what you type.",
+        "The extension talks to the desktop app over a dynamic loopback port, and message frames are encrypted. Copying a password puts it on the clipboard on a timer, so it does not sit there indefinitely."
+      ],
+      "stepsTitle": "How a match is made",
+      "steps": [
+        { "title": "You focus a field", "desc": "The content script notices a login field and asks the app for the credentials that belong to this site." },
+        { "title": "The domain is reduced", "desc": "Your URL is normalised to eTLD+1 with the embedded Public Suffix List, then matched against the vault's stored domains." },
+        { "title": "You choose, and it fills", "desc": "The dropdown shows only the records for that domain, and the chosen one is typed into the field." }
+      ],
+      "heroShot": { "src": "/assets/images/ext-autofill.webp", "w": 540, "h": 510 },
+      "shots": [
+        { "src": "/assets/images/app-passkey.webp", "w": 1800, "h": 793, "title": "The same app, on desktop and mobile", "desc": "The extension is one front end to the same local vault, so a credential you add on the desktop is available to the browser immediately." }
+      ],
+      "secTitle": "What autofill does not protect you from",
+      "secLabel": "Autofill is convenience, not a control",
+      "secBody": "Autofill fills a form; it does not decide whether the site is honest. The extension checks for obvious phishing by comparing the domain against what your vault already knows, but a site that impersonates a domain you have never saved will look new rather than familiar. A password manager reduces typing errors and reuse. It does not replace two-factor authentication, and it cannot help once credentials have already been entered into a page that was hostile all along.",
+      "tech": [
+        { "tag": "eTLD+1", "title": "Registrable domain matching", "desc": "Built on the full Mozilla Public Suffix List as a hash-pinned snapshot, so shared hosting is handled correctly." },
+        { "tag": "Shadow DOM", "title": "Closed and isolated", "desc": "Dropdown, generator and phishing warning render where the page's own script cannot see or modify them." },
+        { "tag": "Permissions", "title": "Scoped deliberately", "desc": "Content scripts match http and https only, so internal browser schemes are out of scope." }
+      ],
+      "faqTitle": "About the extension",
+      "faq": [
+        { "q": "Does the extension need an internet connection?", "a": "No. Everything it needs is on your device: the vault is local, and the connection to the desktop app is a loopback port on your own machine." },
+        { "q": "What happens if the desktop app is closed?", "a": "The popup says the vault is locked and the dropdown reports no records. Nothing is cached in the browser, so a closed app means no autofill." },
+        { "q": "Which browsers are supported?", "a": "Chrome, Edge and Firefox, using Manifest V3. A Safari build exists and needs a local wrapper to run it." }
+      ],
+      "relatedTitle": "Related pages",
+      "related": [
+        { "href": "/urun/password-vault/", "label": "Password vault" },
+        { "href": "/urun/vault-history/", "label": "Vault history" }
+      ]
+    },
+
+    "tr": {
+      "menuLabel": "Otomatik doldurma",
+      "menuDesc": "eTLD+1 eşleşmesi, siteler arası sızıntı yok",
+      "title": "Tarayıcıda Otomatik Doldurma — KalderaShield",
+      "description": "Giriş bilgilerinizi tarayıcı eklentisiyle otomatik doldurun. Siteler tam Public Suffix List'e göre eşleştirilir; eşleşmeler kapalı Shadow DOM içinde tutulur.",
+      "eyebrow": "Ürün / Otomatik doldurma",
+      "h1": "Tek tıkla, ama yalnızca kastettiğiniz sitede",
+      "lead": "Eklenti URL metnini değil kayıtlı alan adını karşılaştırır; ortak bir barındırma alanı yanlış kimlik bilgisini asla almaz. Açılır liste sayfanın erişemediği kapalı Shadow DOM içinde çizilir.",
+      "primary": "KalderaShield'i indirin",
+      "secondary": "Eklentiyi edinin",
+      "whatLabel": "Ne yapar",
+      "whatTitle": "Benzer görünen bir host'un kandıramadığı eşleşme",
+      "what": [
+        "URL, Mozilla Public Suffix List'in tamamı kullanılarak kayıtlı alan adına indirgenir; liste eklentiye hash sabitlenmiş anlık görüntü olarak gömülüdür. Alan adları ham metin olarak karşılaştırılmaz, böylece bir alt alan adı başka bir siteye ait kimlik bilgisini ödünç alamaz.",
+        "Açılır liste, şifre üretici ve oltalamaca uyarısı sayfaya iliştirilmiş kapalı Shadow DOM içinde çizilir. Sayfanın kendi JavaScript'i bunları okuyamaz, değiştiremez ve yazdığınızı yakalamak için üzerine binelemez.",
+        "Eklenti masaüstü uygulamasıyla dinamik bir loopback portu üzerinden konuşur ve mesaj çerçeveleri şifrelenir. Şifre kopyalamak panoyu bir zamanlayıcıyla temizler; şifre orada süresiz beklemez."
+      ],
+      "stepsTitle": "Eşleşme nasıl yapılır",
+      "steps": [
+        { "title": "Bir alana odaklanırsınız", "desc": "İçerik betiği bir giriş alanı fark eder ve uygulamadan bu siteye ait kimlik bilgilerini ister." },
+        { "title": "Alan adı indirgenir", "desc": "Adresiniz gömülü Public Suffix List ile eTLD+1'e normalleştirilir, ardından kasadaki alan adlarıyla karşılaştırılır." },
+        { "title": "Seçersiniz ve doldurur", "desc": "Açılır liste yalnızca o alan adına ait kayıtları gösterir, seçtiğiniz alana yazılır." }
+      ],
+      "heroShot": { "src": "/assets/images/ext-autofill.webp", "w": 540, "h": 510 },
+      "shots": [
+        { "src": "/assets/images/app-passkey.webp", "w": 1800, "h": 793, "title": "Aynı uygulama, masaüstünde ve mobilde", "desc": "Eklenti aynı yerel kasanın bir arayüzüdür; masaüstünde eklediğiniz bir kimlik bilgisi tarayıcıda hemen kullanılabilir olur." }
+      ],
+      "secTitle": "Otomatik doldurmanın sizi korumadığı şey",
+      "secLabel": "Otomatik doldurma kolaylıktır, bir güvenlik aracı değil",
+      "secBody": "Otomatik doldurma bir formu doldurur; sitenin dürüst olup olmadığına karar vermez. Eklenti, alan adını kasada zaten bildiğiniz şeylerle karşılaştırarak bariz oltalamayı denetler; ama daha önce hiç kaydetmediğiniz bir alan adını taklit eden bir site yabancı görünür, tanıdık değil. Şifre yöneticisi yazım hatalarını ve tekrar kullanımı azaltır. İki faktörlü doğrulamanın yerini tutmaz ve kimlik bilgileri en baştan kötü niyetli bir sayfaya girildiyse artık yardımcı olamaz.",
+      "tech": [
+        { "tag": "eTLD+1", "title": "Kayıtlı alan adı eşleşmesi", "desc": "Hash sabitlenmiş anlık görüntü olarak gömülen tam Mozilla Public Suffix List üzerine kurulu; ortak barındırma doğru şekilde ele alınır." },
+        { "tag": "Shadow DOM", "title": "Kapalı ve yalıtılmış", "desc": "Açılır liste, üretici ve oltalamaca uyarısı sayfanın kendi betiğinin göremeyeceği yerde çizilir." },
+        { "tag": "İzinler", "title": "Bilerek daraltılmış", "desc": "İçerik betikleri yalnızca http ve https ile eşleşir; tarayıcının kendi şemaları kapsam dışıdır." }
+      ],
+      "faqTitle": "Eklenti hakkında",
+      "faq": [
+        { "q": "Eklentinin internet bağlantısı gerekiyor mu?", "a": "Hayır. İhtiyacı olan her şey cihazınızda: kasa yerel, masaüstü uygulamasına bağlantı da makinenizdeki bir loopback portu." },
+        { "q": "Masaüstü uygulaması kapalıysa ne olur?", "a": "Popup kasanın kilitli olduğunu söyler ve açılır liste kayıt bulunamadı der. Tarayıcıda hiçbir şey önbelleğe alınmaz; yani uygulama kapalıysa otomatik doldurma da çalışmaz." },
+        { "q": "Hangi tarayıcılar destekleniyor?", "a": "Chrome, Edge ve Firefox, Manifest V3 kullanılarak. Safari için bir yapı mevcut ancak yerel bir sarmalayıcıyla çalıştırılması gerekiyor." }
+      ],
+      "relatedTitle": "İlgili sayfalar",
+      "related": [
+        { "href": "/urun/password-vault/", "label": "Şifre kasası" },
+        { "href": "/urun/vault-history/", "label": "Kasa geçmişi" }
+      ]
+    }
+  }
+}

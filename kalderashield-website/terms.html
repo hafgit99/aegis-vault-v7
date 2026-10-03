@@ -1,8 +1,10 @@
-<!doctype html>
-<html lang="tr" dir="ltr" data-site-version="7.0.18">
-<head>
+<!DOCTYPE html><html lang="tr" dir="ltr" data-site-version="7.0.18"><head>
 <meta charset="utf-8">
+<meta name="x-test-count" content="2210">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#08090e" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#fcfbf9" media="(prefers-color-scheme: light)">
+<link rel="sitemap" href="/sitemap.xml" type="application/xml">
 
 <title>Kullanım Şartları — KalderaShield</title>
 <meta name="description" content="KalderaShield kullanım şartları: Apache-2.0 lisansı, sorumluluk reddi ve kullanım koşulları.">
@@ -11,6 +13,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="KalderaShield">
 <meta property="og:title" content="Kullanım Şartları — KalderaShield">
+<meta property="og:image" content="https://{{DOMAIN}}/assets/images/og-card.png">
 <meta property="og:description" content="Apache-2.0 lisansı, sorumluluk reddi ve kullanım koşulları.">
 <meta property="og:url" content="https://{{DOMAIN}}/terms.html">
 
@@ -19,6 +22,36 @@
 <link rel="apple-touch-icon" href="/assets/images/icon-192.png">
 <link rel="manifest" href="/site.webmanifest">
 <link rel="stylesheet" href="/assets/css/site.css">
+<link rel="alternate" hreflang="ar" href="https://{{DOMAIN}}/ar/terms.html">
+<link rel="alternate" hreflang="de" href="https://{{DOMAIN}}/de/terms.html">
+<link rel="alternate" hreflang="en" href="https://{{DOMAIN}}/en/terms.html">
+<link rel="alternate" hreflang="es" href="https://{{DOMAIN}}/es/terms.html">
+<link rel="alternate" hreflang="fr" href="https://{{DOMAIN}}/fr/terms.html">
+<link rel="alternate" hreflang="it" href="https://{{DOMAIN}}/it/terms.html">
+<link rel="alternate" hreflang="ja" href="https://{{DOMAIN}}/ja/terms.html">
+<link rel="alternate" hreflang="ko" href="https://{{DOMAIN}}/ko/terms.html">
+<link rel="alternate" hreflang="pt" href="https://{{DOMAIN}}/pt/terms.html">
+<link rel="alternate" hreflang="ru" href="https://{{DOMAIN}}/ru/terms.html">
+<link rel="alternate" hreflang="tr" href="https://{{DOMAIN}}/terms.html">
+<link rel="alternate" hreflang="zh" href="https://{{DOMAIN}}/zh/terms.html">
+<link rel="alternate" hreflang="x-default" href="https://{{DOMAIN}}/terms.html">
+
+<script type="application/ld+json">{
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "KalderaShield",
+      "item": "https://{{DOMAIN}}/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Kullanım Şartları"
+    }
+  ]
+}</script>
 </head>
 <body>
 
@@ -31,36 +64,32 @@
       Kaldera<span class="brand-accent">Shield</span>
     </a>
 
-    <nav class="site-nav">
+    <nav class="site-nav" id="site-nav">
       <a href="/#features" data-i18n="nav-features">Özellikler</a>
-      <a href="/#security" data-i18n="nav-security">Güvenlik</a>
-      <a href="/#comparison" data-i18n="nav-comparison">Karşılaştırma</a>
-      <a href="/download/" data-i18n="nav-download">İndir</a>
+      <a href="/guvenlik/" data-i18n="nav-security">Güvenlik</a>
+      <a href="/eklenti/" data-i18n="nav-extensions">Eklentiler</a>
+      <a href="/sss/" data-i18n="nav-faq">SSS</a>
+      <a class="nav-cta" href="/download/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5v11"></path><path d="M7.5 10.5l4.5 4.5 4.5-4.5"></path><path d="M4.5 19.5h15"></path></svg><span data-i18n="nav-download">İndir</span></a>
 
       <details class="lang">
-        <summary data-i18n-attr="aria-label:lang-switch-label">
-          <span class="lang-code" data-lang-code>TR</span>
-          <span data-lang-current>Türkçe</span>
+        <summary data-i18n-attr="aria-label:lang-switch-label" aria-label="Dil seç">
+          <span class="lang-code" data-lang-code="">TR</span>
+          <span data-lang-current="">Türkçe</span>
         </summary>
         <div class="lang-menu" id="lang-menu"></div>
       </details>
 
       <details class="theme">
-        <summary data-i18n-attr="aria-label:theme-switch-label">
+        <summary data-i18n-attr="aria-label:theme-switch-label" aria-label="Tema seç">
           <span class="theme-glyph" aria-hidden="true">◐</span>
-          <span class="theme-current" data-theme-current data-i18n="theme-system">Sistem</span>
-        </summary>
-        <div class="theme-menu" id="theme-menu"></div>
-      </details>
-
-      <details class="theme">
-        <summary data-i18n-attr="aria-label:theme-switch-label">
-          <span class="theme-glyph" aria-hidden="true">◐</span>
-          <span class="theme-current" data-theme-current data-i18n="theme-system">Sistem</span>
+          <span class="theme-current" data-theme-current="" data-i18n="theme-system">Sistem</span>
         </summary>
         <div class="theme-menu" id="theme-menu"></div>
       </details>
     </nav>
+      <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="site-nav" data-i18n-attr="aria-label:nav-menu-label" aria-label="Menü">
+        <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
+      </button>
   </div>
 </header>
 
@@ -69,25 +98,34 @@
   <div class="wrap">
     <span class="eyebrow" data-i18n="terms-eyebrow">Yasal</span>
     <h1 data-i18n="terms-title">Kullanım Şartları</h1>
-    <p class="muted prose" data-i18n="terms-updated">Son güncelleme: Eylül 2026 · Bu şartlar Türkçe ve İngilizce olarak sunulur; Türkçe metin esas alınır.</p>
+    <p class="muted prose" data-i18n="terms-updated">Son güncelleme: Ekim 2026 · 12 dilde sunulur.</p>
   </div>
 
   <section>
     <div class="wrap prose">
-      <h2 data-i18n="terms-h2-1">1. Lisans</h2>
-      <p data-i18n="terms-p1-1">KalderaShield, <strong>Apache License 2.0</strong> koşullarıyla kaynak kodu açık olarak yayımlanır. Yazılımı kullanabilir, inceleyebilir, değiştirebilir ve lisans koşullarına uygun şekilde dağıtabilirsiniz. Tam lisans metnine <a href="https://github.com/hafgit99/kalderashield/blob/main/LICENSE" rel="noopener noreferrer">GitHub deposundan</a> ulaşabilirsiniz.</p>
+      <h2 data-i18n="terms-h2-1">1. Kabul ve kapsam</h2>
+      <p data-i18n="terms-p1-1">Bu şartlar, KalderaShield yazılımının (masaüstü uygulaması, Android uygulaması ve tarayıcı eklentisi) ve bu web sitesinin kullanımınızı düzenler. Yazılımı indiren, kuran veya kullanan herkes bu şartları kabul etmiş sayılır. Yazılım Apache License 2.0 altında sağlanır; bu şartlarla lisans arasında çelişki olması hâlinde lisans metni geçerlidir.</p>
 
-      <h2 data-i18n="terms-h2-2">2. Sorumluluk Reddi</h2>
-      <p data-i18n="terms-p1-2">Yazılım "OLDUĞU GİBİ" sağlanır ve ticari elverişlilik, belirli bir amaca uygunluk ve ihlal etmeme taahhütleri dâhil, zımni hiçbir garanti içermez. <strong>Şifre yöneticisi olarak KalderaShield, ana parolanızı veya kurtarma anahtarınızı bilmez; bu bilgilerin kaybı hâlinde kasanıza erişimi geri getirebilecek bir kurtarma mekanizması mevcut değildir.</strong> Ana parolanızı ve kurtarma anahtarınızı güvenli şekilde yedeklemek sizin sorumluluğunuzdadır.</p>
+      <h2 data-i18n="terms-h2-2">2. Lisans</h2>
+      <p data-i18n="terms-p1-2">KalderaShield, <strong>Apache License 2.0</strong> koşullarıyla kaynak kodu açık olarak yayımlanır. Yazılımı lisans koşullarına uygun şekilde kullanabilir, inceleyebilir, değiştirebilir ve dağıtabilirsiniz. Tam lisans metnine <a href="https://github.com/hafgit99/kalderashield/blob/main/LICENSE" rel="noopener noreferrer">GitHub deposundan</a> ulaşabilirsiniz.</p>
 
-      <h2 data-i18n="terms-h2-3">3. İndirmeler ve Doğrulama</h2>
-      <p data-i18n="terms-p1-3">Kurulum paketleri GitHub Releases üzerinden sunulur. Yayınlanan her dosyanın SHA-256 özeti ve imzaları sürüm sayfasında paylaşılır; kurulum öncesi bütünlük doğrulaması yapmanız önerilir. Üçüncü taraf kaynaklardan indirilen paketlerin bütünlüğü garanti edilemez.</p>
+      <h2 data-i18n="terms-h2-3">3. Garanti yokluğu ve sorumluluğun sınırı</h2>
+      <p data-i18n="terms-p1-3">Yazılım "OLDUĞU GİBİ" sağlanır; ticari elverişlilik, belirli bir amaca uygunluk ve ihlal etmeme taahhütleri dâhil, zımni hiçbir garanti içermez. Yasaların izin verdiği azami ölçüde, yazılımın veya web sitesinin kullanımından ya da kullanılamamasından doğan hiçbir zarardan — doğrudan, dolaylı, arızi, özel veya sonuçsal dâhil — KalderaShield'ın sahibi sorumlu tutulamaz.</p>
 
-      <h2 data-i18n="terms-h2-4">4. Kullanım Koşulları</h2>
-      <p data-i18n="terms-p1-4">Yazılımı ve web sitesini yasaya aykırı herhangi bir amaçla kullanamaz, kalderashield adını ve logosunu ürünün resmi sürümleriyle karıştırılacak biçimde izinsiz kullanamazsınız. "KalderaShield" adı ve logosu sahibinin mülkiyetindedir.</p>
+      <h2 data-i18n="terms-h2-4">4. Ana parola ve veri kaybı</h2>
+      <p data-i18n="terms-p1-4">KalderaShield ana parolanızı veya kurtarma anahtarınızı bilmez. Sıfır-bilgi tasarım gereği, bu bilgilerin kaybı hâlinde kasanıza erişimi geri getirebilecek <strong>bir kurtarma mekanizması mevcut değildir</strong>. Ana parolanızı ve 24 kelimelik kurtarma anahtarınızı güvenli şekilde yedeklemek ve en az bir şifreli yedek tutmak sizin sorumluluğunuzdadır.</p>
 
-      <h2 data-i18n="terms-h2-5">5. İletişim</h2>
-      <p data-i18n="terms-p1-5">Şartlar hakkındaki sorularınız için: <a href="mailto:admin@{{DOMAIN}}">admin@{{DOMAIN}}</a></p>
+      <h2 data-i18n="terms-h2-5">5. İndirmeler ve doğrulama</h2>
+      <p data-i18n="terms-p1-5">Kurulum paketleri GitHub Releases üzerinden sunulur. Yayınlanan her dosyanın SHA-256 özeti ve imzaları sürüm sayfasında paylaşılır; kurulum öncesi bütünlük doğrulaması yapmanız önerilir. Üçüncü taraf kaynaklardan indirilen paketlerin bütünlüğü garanti edilemez.</p>
+
+      <h2 data-i18n="terms-h2-6">6. Üçüncü taraf hizmetler</h2>
+      <p data-i18n="terms-p1-6">İsteğe bağlı eşitleme, yalnızca şifreli yükü sizin yapılandırıp sahiplendiğiniz WebDAV/S3 depolamasına gönderir; o depolamanın güvenlik ve gizlilik uygulamaları sağlayıcınızın şartlarına tabidir. İndirmeler GitHub Releases'te barındırılır ve GitHub'ın kendi şartları geçerlidir.</p>
+
+      <h2 data-i18n="terms-h2-7">7. Kabul edilebilir kullanım ve marka</h2>
+      <p data-i18n="terms-p1-7">Yazılımı ve web sitesini yasaya aykırı herhangi bir amaçla kullanamazsınız; "KalderaShield" adını ve logosunu, ürünün resmi sürümleriyle karıştırılabilecek biçimde izinsiz kullanamazsınız. "KalderaShield" adı ve logosu sahibinin mülkiyetindedir.</p>
+
+      <h2 data-i18n="terms-h2-8">8. Değişiklikler, uygulanacak hukuk ve iletişim</h2>
+      <p data-i18n="terms-p1-8">Bu şartlar zaman zaman güncellenebilir; güncel hâli bu sayfada yayımlandığı anda geçerli olur. Bu şartlar Türk hukukuna tabidir. Sorularınız için: <a href="mailto:admin@{{DOMAIN}}">admin@{{DOMAIN}}</a></p>
 
       <p class="muted" data-i18n="terms-governing">Çeviri ile Türkçe metin arasında bir farklılık olması hâlinde Türkçe metin esas alınır.</p>
     </div>
@@ -105,6 +143,8 @@
   </div>
 </footer>
 
+<script src="/assets/js/i18n-apply.js" defer></script>
 <script src="/assets/js/site.js" defer></script>
-</body>
-</html>
+
+
+</body></html>
