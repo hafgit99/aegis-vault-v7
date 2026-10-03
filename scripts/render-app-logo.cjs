@@ -1,63 +1,38 @@
-// Renders the in-app logo at the size the lock screen actually displays it.
+// Renders every in-app logo raster from the master vector.
 //
-// src/components/LockScreen.tsx imports this file and draws it at 40px and
-// 56px. The previous copy was 1024px and 656 KB, which is the number
-// docs/COLD_START_PERFORMANCE_AUDIT.md already flagged. 256px keeps headroom
-// for a 2x display at that size and lands around 20 KB.
+// These are the assets the icon set never reached: tauri icon writes
+// src-tauri/icons, the Android mipmaps and the iOS set, but the React tree and
+// the HTML splash import from public/ and assets/ directly. Without this step
+// the app keeps showing the previous mark on the lock screen, in the sidebar
+// and on the splash after every other surface has changed.
 //
-// Run through `npm run icon:apply`, which is why this exists as its own step:
-// the lock screen logo was the one place the icon set never reached, so the app
-// shipped the lock screen in the old mark while every window, installer and
-// launcher used the new one.
+// Sizes are chosen for where each one is actually drawn:
+//   256px  assets/KalderaShield-app-icon.png  lock screen (40px/56px) and
+//                                           sidebar (28px); 2x headroom
+//   128px  public/splash-icon.png            index.html splash (96px), which
+//                                           paints before the bundle is parsed
 
-const fs = require('fs');
 const path = require('path');
-const { chromium } = require('playwright');
+const { readIconSource, renderSvgToPng } = require('./icon-render.cjs');
 
-const SIZE = 256;
 const root = path.resolve(__dirname, '..');
-const svgPath = path.join(root, 'src-tauri', 'icon-source', 'kalderashield-icon.svg');
-const outPath = path.join(root, 'assets', 'KalderaShield-app-icon.png');
 
-if (!fs.existsSync(svgPath)) {
-  throw new Error(`icon source not found: ${path.relative(root, svgPath)}`);
-}
-
-const svg = fs.readFileSync(svgPath, 'utf8');
-
-const html = `<!doctype html>
-<html><head><meta charset="utf-8"><style>
-  html, body { margin: 0; padding: 0; background: transparent; }
-  svg { display: block; width: ${SIZE}px; height: ${SIZE}px; }
-</style></head>
-<body>${svg}</body></html>`;
-
-async function launch() {
-  let lastError;
-  for (const channel of [undefined, 'msedge', 'chrome']) {
-    try {
-      return await chromium.launch(channel ? { channel } : {});
-    } catch (error) {
-      lastError = error;
-    }
-  }
-  throw lastError;
-}
+const TARGETS = [
+  { size: 256, outPath: path.join(root, 'assets', 'KalderaShield-app-icon.png'), label: 'lock screen + sidebar logo' },
+  { size: 128, outPath: path.join(root, 'public', 'splash-icon.png'), label: 'splash logo' },
+];
 
 (async () => {
-  const browser = await launch();
-  try {
-    const page = await browser.newPage({
-      viewport: { width: SIZE, height: SIZE },
-      deviceScaleFactor: 1,
+  const svg = readIconSource(root);
+
+  for (const { size, outPath, label } of TARGETS) {
+    const { size: rendered, kb } = await renderSvgToPng({
+      svg,
+      width: size,
+      height: size,
+      outPath,
     });
-    await page.setContent(html, { waitUntil: 'load' });
-    fs.mkdirSync(path.dirname(outPath), { recursive: true });
-    await page.screenshot({ path: outPath, omitBackground: true, type: 'png' });
-    const kb = (fs.statSync(outPath).size / 1024).toFixed(1);
-    console.log(`[3/4] Wrote ${path.relative(root, outPath)} (${SIZE}x${SIZE}, ${kb} KB)`);
-  } finally {
-    await browser.close();
+    console.log(`  ${path.relative(root, outPath)} (${rendered}, ${kb} KB) - ${label}`);
   }
 })().catch((error) => {
   console.error(error);

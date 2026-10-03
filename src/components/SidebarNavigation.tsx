@@ -3,7 +3,10 @@ import { Clock, HeartHandshake, KeyRound, Lock, Settings, ShieldCheck, Trash2 } 
 import { useLanguage } from '../i18n/LanguageContext';
 import { APP_NAME } from '../lib/branding';
 import type { ActiveTab } from '../types';
-import KalderaShieldLogo from '../../src-tauri/icons/icon.png';
+// Same raster as the lock screen logo. It used to import src-tauri/icons/icon.png
+// directly, which meant this surface tracked the desktop bundle while the lock
+// screen tracked assets/ -- two files for one mark, so they drifted apart.
+import KalderaShieldLogo from '../../assets/KalderaShield-app-icon.png';
 
 interface SidebarNavigationProps {
   activeTab: ActiveTab;

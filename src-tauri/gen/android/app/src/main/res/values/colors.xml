@@ -7,6 +7,12 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="ic_launcher_background">#FFFFFFFF</color>
+<!--
+      ic_launcher_background is intentionally absent. It is owned by
+      values/ic_launcher_background.xml, which `tauri icon` generates into
+      src-tauri/icons/android and scripts/android-icons.cjs mirrors into res/.
+      Defining it here as well gave the project two definitions of the same
+      color, which is a duplicate resource, not a fallback that wins.
+    -->
     <color name="app_background">#FF121412</color>
 </resources>
