@@ -25,7 +25,7 @@ describe('LegalTermsModal', () => {
     expect(screen.queryByTestId('legal-terms-modal')).toBeNull();
   });
 
-  it('renders modal in Turkish by default and allows tab switching', () => {
+  it('renders every published section of the terms, not a summary', async () => {
     const onClose = vi.fn();
     render(
       <LanguageProvider>
@@ -34,53 +34,85 @@ describe('LegalTermsModal', () => {
     );
 
     expect(screen.getByTestId('legal-terms-modal')).toBeTruthy();
-    expect(screen.getByText('Yasal Bilgilendirme ve Güvenlik Koşulları')).toBeTruthy();
-    expect(screen.getByText(/KalderaShield, yerel-öncelikli/i)).toBeTruthy();
 
-    // Switch to privacy tab
-    fireEvent.click(screen.getByTestId('legal-terms-tab-privacy'));
-    expect(screen.getByText(/hiçbir kişisel veri/i)).toBeTruthy();
+    // The regression this replaced: the modal showed three paragraphs while the
+    // website published eight numbered sections, so the document a user agreed
+    // to was not the document the site served.
+    for (let n = 1; n <= 8; n++) {
+      expect(screen.getByTestId(`legal-terms-heading-${n}`)).toBeTruthy();
+    }
+    expect(screen.getByText(/1\. Kabul ve kapsam/)).toBeTruthy();
+    expect(screen.getByText(/Ana parola ve veri kaybı/)).toBeTruthy();
 
-    // Click confirm/close button
     fireEvent.click(screen.getByTestId('legal-terms-modal-confirm-btn'));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('renders modal with English translations when locale is en', () => {
-    window.localStorage.setItem(languageStorageKey, 'en');
-    const onClose = vi.fn();
-
+  it('renders every published section of the privacy policy', async () => {
     render(
       <LanguageProvider>
-        <LegalTermsModal isOpen={true} onClose={onClose} initialTab="privacy" />
+        <LegalTermsModal isOpen={true} onClose={vi.fn()} initialTab="privacy" />
       </LanguageProvider>
     );
 
-    expect(screen.getByText('Legal Information & Security Terms')).toBeTruthy();
-    expect(screen.getByText(/does not collect, log, track, or share any personal data/i)).toBeTruthy();
-    expect(screen.getByText('Understood & Close')).toBeTruthy();
-
-    // Switch to Terms tab
-    fireEvent.click(screen.getByTestId('legal-terms-tab-terms'));
-    expect(screen.getByText(/offline-first, zero-knowledge secure password/i)).toBeTruthy();
-
-    // Click top-right close icon
-    fireEvent.click(screen.getByTestId('legal-terms-close-icon'));
-    expect(onClose).toHaveBeenCalledTimes(1);
+    for (let n = 1; n <= 8; n++) {
+      expect(screen.getByTestId(`legal-privacy-heading-${n}`)).toBeTruthy();
+    }
+    expect(screen.getByText(/Kasa veriniz: asla toplanmaz/)).toBeTruthy();
+    // KVKK m.11 and GDPR are named in the website's rights section; they were
+    // absent from the three-paragraph version entirely.
+    expect(screen.getByText(/KVKK/)).toBeTruthy();
   });
 
-  it('renders modal in Arabic (RTL support and localized copy)', () => {
-    window.localStorage.setItem(languageStorageKey, 'ar');
-    const onClose = vi.fn();
-
-    render(
+  it('keeps the emphasised legal claims as markup, not raw tags', async () => {
+    // The <strong> in section 2 of the privacy policy is the sentence promising
+    // vault data is never collected. Rendered as text it would be a wall of
+    // angles, and the claim would stop standing out.
+    const { container } = render(
       <LanguageProvider>
-        <LegalTermsModal isOpen={true} onClose={onClose} initialTab="terms" />
+        <LegalTermsModal isOpen={true} onClose={vi.fn()} initialTab="privacy" />
       </LanguageProvider>
     );
 
-    expect(screen.getByText('المعلومات القانونية وشروط الأمان')).toBeTruthy();
-    expect(screen.getByText(/KalderaShield هو مخزن كلمات مرور/i)).toBeTruthy();
+    const strongs = container.querySelectorAll('strong');
+    expect(strongs.length).toBeGreaterThan(0);
+    expect(container.textContent).not.toContain('<strong>');
+    expect(container.textContent).toContain('hiçbir koşulda toplamaz');
+  });
+
+  it('opens on the requested tab', async () => {
+    render(
+      <LanguageProvider>
+        <LegalTermsModal isOpen={true} onClose={vi.fn()} initialTab="privacy" />
+      </LanguageProvider>
+    );
+    expect(screen.getByTestId('legal-privacy-heading-1')).toBeTruthy();
+    expect(screen.queryByTestId('legal-terms-heading-1')).toBeNull();
+  });
+
+  it('renders the English documents when the locale is en', () => {
+    window.localStorage.setItem(languageStorageKey, 'en');
+    render(
+      <LanguageProvider>
+        <LegalTermsModal isOpen={true} onClose={vi.fn()} initialTab="terms" />
+      </LanguageProvider>
+    );
+
+    expect(screen.getByTestId('legal-terms-heading-1')).toBeTruthy();
+    expect(screen.getByText(/Acceptance and scope/i)).toBeTruthy();
+    expect(screen.getByText('Understood & Close')).toBeTruthy();
+  });
+
+  it('renders the Arabic documents in the active locale', () => {
+    window.localStorage.setItem(languageStorageKey, 'ar');
+    render(
+      <LanguageProvider>
+        <LegalTermsModal isOpen={true} onClose={vi.fn()} initialTab="terms" />
+      </LanguageProvider>
+    );
+
+    expect(screen.getByTestId('legal-terms-heading-1')).toBeTruthy();
+    expect(screen.getByText(/القبول والنطاق/)).toBeTruthy();
     expect(screen.getByText('فهمت وإغلاق')).toBeTruthy();
   });
 });

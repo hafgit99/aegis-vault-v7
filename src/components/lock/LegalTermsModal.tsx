@@ -1,12 +1,31 @@
 /**
- * @license
- * SPDX-License-Identifier: Apache-2.0
+ * @file LegalTermsModal.tsx
+ * @description The privacy policy and terms of use, as they appear in the app.
+ *
+ * The copy here used to be a three-paragraph summary written separately from the
+ * website's, and the two documents disagreed. For a legal document that is the
+ * worst possible state: a user agrees to one set of terms and is shown another
+ * at first run, and neither side is authoritative. The website's text is now the
+ * single source -- it is what ships, it is what was reviewed, and it already
+ * existed in all twelve languages -- and scripts/sync-legal-copy.cjs copies it
+ * into every locale under legal.*.
+ *
+ * Both documents are reproduced in full, all eight sections each. Summarising
+ * them would leave the app carrying a second, shorter legal text, which is the
+ * thing this change exists to end.
+ *
+ * Inline markup goes through LegalRichText rather than dangerouslySetInnerHTML:
+ * the strings come from a translation table, and a locale file must not be able
+ * to introduce script into the app.
+ *
+ * @license SPDX-License-Identifier: Apache-2.0
  */
 
 import React, { useState } from 'react';
-import { ShieldCheck, FileText, Lock, X, CheckCircle2, Shield } from 'lucide-react';
+import { ShieldCheck, FileText, Lock, X } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { Modal } from '../ui/Modal';
+import { LegalRichText } from './LegalRichText';
 
 export type LegalTermsTab = 'terms' | 'privacy';
 
@@ -16,28 +35,40 @@ interface LegalTermsModalProps {
   initialTab?: LegalTermsTab;
 }
 
+/* The documents count their own sections in their headings, so the list is read
+ * from the translation rather than derived: a hardcoded length would drift the
+ * moment a section were added to either document. */
+const PRIVACY_SECTIONS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
+const TERMS_SECTIONS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
+
 export function LegalTermsModal({
   isOpen,
   onClose,
   initialTab = 'terms',
 }: LegalTermsModalProps) {
   const { t } = useLanguage();
+  // The tab is state because the reader switches between the two documents, but
+  // it is seeded from the prop and reset by keying the modal at each call site
+  // (see `key={...}` in SettingsPanel and LockScreen). The alternative -- an
+  // effect that copies initialTab into state -- re-renders on every open and is
+  // what React's set-state-in-effect rule exists to discourage.
   const [activeTab, setActiveTab] = useState<LegalTermsTab>(initialTab);
-
-  // Sync initial tab when modal opens
-  React.useEffect(() => {
-    if (isOpen) {
-      setActiveTab(initialTab);
-    }
-  }, [isOpen, initialTab]);
 
   if (!isOpen) return null;
 
+  const sections = activeTab === 'terms' ? TERMS_SECTIONS : PRIVACY_SECTIONS;
+  const prefix = activeTab === 'terms' ? 'terms' : 'privacy';
+  const key = (suffix: string) => t(`legal.${prefix}-${suffix}` as never);
+
   return (
     <Modal open={isOpen} onClose={onClose} zIndex={200} overlayTestId="legal-terms-modal" closeOnBackdrop={false}>
-      <div className="w-full max-w-lg surface-panel rounded-2xl border border-brand-primary/20 p-5 sm:p-6 space-y-4 shadow-2xl flex flex-col max-h-[85vh] animate-scale-up">
+      <div
+        className="w-full max-w-2xl surface-panel rounded-2xl border border-brand-primary/20 p-5 sm:p-6 space-y-4 shadow-2xl flex flex-col max-h-[85vh] animate-scale-up"
+        role="document"
+        aria-label={key('title')}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-outline-variant/15 pb-4">
+        <div className="flex items-center justify-between border-b border-outline-variant/15 pb-4 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center shrink-0">
               <ShieldCheck className="w-5 h-5 text-brand-primary" />
@@ -68,6 +99,7 @@ export function LegalTermsModal({
             data-testid="legal-terms-tab-terms"
             type="button"
             onClick={() => setActiveTab('terms')}
+            aria-pressed={activeTab === 'terms'}
             className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'terms'
                 ? 'bg-brand-primary text-brand-on-primary shadow-sm'
@@ -81,6 +113,7 @@ export function LegalTermsModal({
             data-testid="legal-terms-tab-privacy"
             type="button"
             onClick={() => setActiveTab('privacy')}
+            aria-pressed={activeTab === 'privacy'}
             className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'privacy'
                 ? 'bg-brand-primary text-brand-on-primary shadow-sm'
@@ -92,51 +125,33 @@ export function LegalTermsModal({
           </button>
         </div>
 
-        {/* Scrollable Document Content */}
-        <div className="flex-1 overflow-y-auto pr-1 space-y-3.5 text-xs text-on-surface-variant/90 leading-relaxed custom-scrollbar">
-          {activeTab === 'terms' ? (
-            <>
-              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-brand-primary/5 border border-brand-primary/10">
-                <CheckCircle2 className="w-4 h-4 text-brand-primary shrink-0 mt-0.5" />
-                <p className="text-on-surface leading-relaxed font-medium">
-                  {t('lock.terms.modal.termsP1')}
-                </p>
-              </div>
-              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-surface-lowest/80 border border-outline-variant/10">
-                <Lock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                <p className="text-on-surface-variant leading-relaxed">
-                  {t('lock.terms.modal.termsP2')}
-                </p>
-              </div>
-              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-surface-lowest/80 border border-outline-variant/10">
-                <Shield className="w-4 h-4 text-brand-primary shrink-0 mt-0.5" />
-                <p className="text-on-surface-variant leading-relaxed">
-                  {t('lock.terms.modal.termsP3')}
-                </p>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <p className="text-on-surface leading-relaxed font-medium">
-                  {t('lock.terms.modal.privacyP1')}
-                </p>
-              </div>
-              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-surface-lowest/80 border border-outline-variant/10">
-                <Lock className="w-4 h-4 text-brand-primary shrink-0 mt-0.5" />
-                <p className="text-on-surface-variant leading-relaxed">
-                  {t('lock.terms.modal.privacyP2')}
-                </p>
-              </div>
-              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-surface-lowest/80 border border-outline-variant/10">
-                <CheckCircle2 className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-                <p className="text-on-surface-variant leading-relaxed">
-                  {t('lock.terms.modal.privacyP3')}
-                </p>
-              </div>
-            </>
-          )}
+        {/* The document, in full. */}
+        <div
+          className="flex-1 overflow-y-auto pr-1 space-y-4 text-[13px] text-on-surface-variant/90 leading-relaxed custom-scrollbar"
+          data-testid="legal-terms-document"
+        >
+          <div className="space-y-1">
+            <h3 className="font-display text-base font-bold text-on-surface">{key('title')}</h3>
+            <p className="text-[11px] text-on-surface-variant/60 font-mono">{key('updated')}</p>
+          </div>
+
+          {sections.map((n) => (
+            <section key={n} className="space-y-1.5">
+              <h4
+                className="font-bold text-on-surface text-[13px] pt-1"
+                data-testid={`legal-${prefix}-heading-${n}`}
+              >
+                <LegalRichText>{key(`h2-${n}`)}</LegalRichText>
+              </h4>
+              <p className="text-on-surface-variant/90">
+                <LegalRichText>{key(`p1-${n}`)}</LegalRichText>
+              </p>
+            </section>
+          ))}
+
+          <p className="pt-2 mt-1 border-t border-outline-variant/10 text-[11px] text-on-surface-variant/70 italic">
+            <LegalRichText>{key('governing')}</LegalRichText>
+          </p>
         </div>
 
         {/* Footer Action */}

@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { useState } from 'react';
 import { Settings } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { isAndroidAutofillSupported } from '../lib/androidAutofill';
@@ -18,6 +19,9 @@ import { SettingsLanguageCard } from './settings/SettingsLanguageCard';
 import { SettingsThemeCard } from './settings/SettingsThemeCard';
 import { SettingsPasswordCard } from './settings/SettingsPasswordCard';
 import { SettingsStatsCard } from './settings/SettingsStatsCard';
+import { SettingsLegalCard } from './settings/SettingsLegalCard';
+import { LegalTermsModal } from './lock/LegalTermsModal';
+import type { LegalTermsTab } from './lock/LegalTermsModal';
 import { BlockedRequestsPanel } from './settings/BlockedRequestsPanel';
 import { SettingsBiometricCard } from './settings/SettingsBiometricCard';
 import { SettingsAutofillCard } from './settings/SettingsAutofillCard';
@@ -48,6 +52,11 @@ export default function SettingsPanel({
   onNotify,
 }: SettingsPanelProps) {
   const { language, setLanguage, t } = useLanguage();
+
+  // Which document the legal modal opens on. Null means closed; the card passes
+  // the tab it was clicked from, so Settings -> Terms lands on the terms rather
+  // than on whichever one was read last.
+  const [legalTab, setLegalTab] = useState<LegalTermsTab | null>(null);
 
   const {
     items,
@@ -182,6 +191,10 @@ export default function SettingsPanel({
       />
 
       <SettingsThemeCard />
+
+      {/* The legal documents are permanent, not a first-run obstacle, so they are
+          readable from inside the app without locking the vault first. */}
+      <SettingsLegalCard onOpenLegal={(tab) => setLegalTab(tab)} />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6" id="settings-top-row">
         <SettingsStatsCard
@@ -324,6 +337,16 @@ export default function SettingsPanel({
         errorMessage={passwordPromptError}
         onConfirm={handleConfirmBiometricPassword}
         onCancel={closePasswordPrompt}
+      />
+
+      {/* Privacy Policy and Terms of Use, opened from the card above. The key
+          makes each open a fresh instance, so the tab matches the button that
+          was clicked rather than whatever was read last. */}
+      <LegalTermsModal
+        key={legalTab ?? 'closed'}
+        isOpen={legalTab !== null}
+        initialTab={legalTab ?? 'terms'}
+        onClose={() => setLegalTab(null)}
       />
     </div>
   );
