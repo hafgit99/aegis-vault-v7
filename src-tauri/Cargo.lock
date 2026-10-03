@@ -1966,7 +1966,7 @@ dependencies = [
 
 [[package]]
 name = "kalderashield"
-version = "7.0.18"
+version = "7.0.19"
 dependencies = [
  "argon2",
  "base64 0.23.1",
