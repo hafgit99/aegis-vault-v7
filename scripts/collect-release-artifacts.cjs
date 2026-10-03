@@ -302,11 +302,81 @@ function copyBrowserExtensions() {
       .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs)[0];
 
     if (xpi) {
-      artifacts.push(copyFile(xpi, `KalderaShield-${version}-firefox-signed.xpi`));
+      // The filename used to be applied unconditionally, so an XPI built by
+      // `npm run package:firefox:xpi` -- which is unsigned -- was published as
+      // "-firefox-signed.xpi". Nothing downstream noticed: the signing report
+      // classifies .xpi as not-applicable, because the signing it knows how to
+      // check is Authenticode and codesign, neither of which applies here.
+      //
+      // That artifact is worse than useless. Firefox Release and Beta reject an
+      // unsigned XPI outright, so the name promised something the file did not
+      // have, and a user who installed it from the name either fell back to
+      // signature-check-disabled ESR or concluded the extension was tampered
+      // with. Unsigned extensions are also exactly what antivirus heuristic
+      // engines flag hardest in a credential-handling product.
+      const name = isAmoSigned(xpi)
+        ? `KalderaShield-${version}-firefox-signed.xpi`
+        : `KalderaShield-${version}-firefox-UNSIGNED.xpi`;
+
+      if (!isAmoSigned(xpi)) {
+        console.log(
+          `  ⚠ ${path.basename(xpi)} carries no Mozilla signature. Publishing it as UNSIGNED.\n` +
+          '    Run `npm run sign:firefox:xpi` with AMO credentials before distributing the extension.'
+        );
+      }
+
+      artifacts.push(copyFile(xpi, name));
     }
   }
 
   return artifacts;
+}
+
+/**
+ * Whether an XPI carries a Mozilla signature.
+ *
+ * AMO signs by writing `META-INF/mozilla.*` alongside `META-INF/manifest.mf`
+ * into the package. Reading the zip's central directory is enough and avoids a
+ * dependency: the archive does not have to be extracted or inflated to answer
+ * the question, and the signature is presence-checked only -- verifying the RSA
+ * chain is Firefox's job at install time, not ours.
+ */
+function isAmoSigned(xpiPath) {
+  try {
+    const buffer = fs.readFileSync(xpiPath);
+    // Locate the end-of-central-directory record so the file count and entry
+    // offsets can be walked. A zip file is small enough here to read whole.
+    const view = buffer;
+    let eocd = -1;
+    for (let i = view.length - 22; i >= 0 && i >= view.length - 22 - 0xffff; i--) {
+      if (view.readUInt32LE(i) === 0x06054b50) {
+        eocd = i;
+        break;
+      }
+    }
+    if (eocd < 0) return false;
+
+    const entryCount = view.readUInt16LE(eocd + 10);
+    let pointer = view.readUInt32LE(eocd + 16);
+
+    for (let i = 0; i < entryCount; i++) {
+      if (pointer + 46 > view.length) return false;
+      if (view.readUInt32LE(pointer) !== 0x02014b50) return false;
+
+      const nameLength = view.readUInt16LE(pointer + 28);
+      const extraLength = view.readUInt16LE(pointer + 30);
+      const commentLength = view.readUInt16LE(pointer + 32);
+      const name = view.toString('utf8', pointer + 46, pointer + 46 + nameLength);
+      if (/^META-INF\/mozilla\.(rsa|sf)$/i.test(name)) return true;
+
+      pointer += 46 + nameLength + extraLength + commentLength;
+    }
+    return false;
+  } catch (_) {
+    // A file we cannot parse is not a signed one. Treating an unreadable archive
+    // as signed would defeat the entire point of the check.
+    return false;
+  }
 }
 
 function sha256(file) {
