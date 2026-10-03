@@ -1,8 +1,20 @@
+/*
+  Cold-start splash.
+
+  The mark and the accent colours come from
+  src-tauri/icon-source/kalderashield-icon.svg: the obsidian-and-magma caldera.
+  This file used to be emerald, with a Lucide ShieldCheck glyph inline in
+  index.html -- neither the icon nor the palette matched anything else the app
+  ships, so the splash was the first thing a user saw that was not the brand.
+  scripts/render-app-logo.cjs renders public/splash-icon.png from that master;
+  run `npm run icon:apply` after changing the SVG.
+*/
+
 html.splash-root,
 html.splash-root body {
   margin: 0;
   padding: 0;
-  background: radial-gradient(ellipse at center, #1a2e1a 0%, #121412 70%, #050605 100%);
+  background: radial-gradient(ellipse at center, #2b1508 0%, #121412 70%, #050605 100%);
   color-scheme: dark;
   overflow: hidden;
 }
@@ -20,31 +32,29 @@ html.splash-root body {
   text-align: center;
 }
 
-/* Çok daha büyük logo */
+/* Logo tile. The mark already carries its own rounded-square plate, so the box
+   is a glow ring rather than a second plate. */
 .splash-icon-box {
-  width: 120px;          /* 64'ten 120'ye */
+  width: 120px;
   height: 120px;
   margin-bottom: 32px;
   border-radius: 28px;
-  background: rgba(34, 197, 94, 0.15);
-  border: 2px solid rgba(34, 197, 94, 0.4);
+  background: rgba(255, 109, 0, 0.14);
+  border: 2px solid rgba(255, 145, 0, 0.42);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 
-    0 0 50px rgba(34, 197, 94, 0.4),
-    inset 0 0 30px rgba(34, 197, 94, 0.1);
+  box-shadow:
+    0 0 50px rgba(255, 77, 0, 0.4),
+    inset 0 0 30px rgba(255, 77, 0, 0.1);
   animation: splash-glow 1.5s ease-in-out infinite;
 }
 
-.splash-icon-box svg {
-  width: 64px;           /* 32'den 64'e */
-  height: 64px;
-  stroke: #4ade80;       /* daha parlak yeşil */
-  stroke-width: 2.5;
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.splash-icon-box img {
+  width: 96px;
+  height: 96px;
+  display: block;
+  border-radius: 22px;
 }
 
 /* Büyük başlık */
@@ -54,7 +64,7 @@ html.splash-root body {
   letter-spacing: 0.08em;
   color: #ffffff;
   margin: 0 0 12px;
-  text-shadow: 0 0 30px rgba(34, 197, 94, 0.6);
+  text-shadow: 0 0 30px rgba(255, 109, 0, 0.6);
 }
 
 /* Belirgin alt başlık */
@@ -70,11 +80,11 @@ html.splash-root body {
 .splash-spinner {
   width: 40px;            /* 20'den 40'a */
   height: 40px;
-  border: 3px solid rgba(34, 197, 94, 0.25);
-  border-top-color: #4ade80;
+  border: 3px solid rgba(255, 109, 0, 0.25);
+  border-top-color: #ff8a00;
   border-radius: 50%;
   animation: splash-spin 0.7s linear infinite;
-  box-shadow: 0 0 25px rgba(34, 197, 94, 0.3);
+  box-shadow: 0 0 25px rgba(255, 109, 0, 0.3);
 }
 
 /* İlerleme çubuğu - mevcut splash-progress'i de güzelleştir */
@@ -85,7 +95,7 @@ html.splash-root body {
   transform: translateX(-50%);
   width: 280px;
   height: 3px;
-  background: rgba(34, 197, 94, 0.1);
+  background: rgba(255, 109, 0, 0.1);
   border-radius: 2px;
   overflow: hidden;
 }
@@ -95,9 +105,9 @@ html.splash-root body {
   display: block;
   width: 30%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, #4ade80, transparent);
+  background: linear-gradient(90deg, transparent, #ff8a00, transparent);
   animation: progress-indeterminate 1.2s ease-in-out infinite;
-  box-shadow: 0 0 12px rgba(34, 197, 94, 0.6);
+  box-shadow: 0 0 12px rgba(255, 109, 0, 0.6);
 }
 
 @keyframes progress-indeterminate {
@@ -110,14 +120,14 @@ html.splash-root body {
 }
 
 @keyframes splash-glow {
-  0%, 100% { 
-    box-shadow: 
-      0 0 50px rgba(34, 197, 94, 0.4),
-      inset 0 0 30px rgba(34, 197, 94, 0.1);
+  0%, 100% {
+    box-shadow:
+      0 0 50px rgba(255, 77, 0, 0.4),
+      inset 0 0 30px rgba(255, 77, 0, 0.1);
   }
-  50% { 
-    box-shadow: 
-      0 0 80px rgba(34, 197, 94, 0.6),
-      inset 0 0 40px rgba(34, 197, 94, 0.2);
+  50% {
+    box-shadow:
+      0 0 80px rgba(255, 77, 0, 0.6),
+      inset 0 0 40px rgba(255, 77, 0, 0.2);
   }
 }
